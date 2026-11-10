@@ -1499,8 +1499,8 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   cursor, as in darma. Enter opens.
 - **Done** (`H`) leaves Attention; whether the email was opened first is recorded for triage, never
   asked. Only Attention mail not yet Done offers it (#93). **Trash** (`E`) offers Undo for 6 seconds, as v1 does, in the export's `.toast` (a 40 px pill
-  at the top centre in the header's band, at the bottom on the phone, #92; not drawn on a board). The
-  six seconds drain as a hairline and wait while the pointer rests on the toast (#147).
+  at the bottom centre of the main area, as on the phone, #351; not drawn on a board). The six
+  seconds drain as a hairline, and swiping the toast left or right takes it away sooner (#147, #351).
 - **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, ⌘J Light or Night (#342), Esc closes the
   topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to the next unread email, #309) ⇧I ⇧U ⌘Enter
   Tab ⇧Tab (the views, #338);
@@ -1807,7 +1807,8 @@ was decided; the audit itself was retired by D480.
 32. **One toast for the whole app,** drawn above every page and above Settings and its scrim, so a
     line raised while Settings is open is seen. It keeps the Undo toast's look and 6 seconds; any
     page can show a line, an error, or a line with one action (Undo, Try again). A new toast
-    replaces the last (Andy, 2026-10-09; darma SV-25 D54).
+    replaces the last (Andy, 2026-10-09; darma SV-25 D54). It sits at the bottom centre and swipes
+    away (#351).
 33. **`/` or ⌘F with a search open selects its whole query,** chips with the words (the chips take
     the selection's tint), in Mail and Calendar alike: typing or Backspace replaces it all, and a
     click, an arrow key or End keeps it to add to (Andy, 2026-10-09; darma SV-25 D54).
@@ -1991,8 +1992,9 @@ was decided; the audit itself was retired by D480.
     each choice below is his to overrule):
     - **A calendar delete is held behind Undo** (amending #19): Delete, Backspace or the card's
       Delete takes the item off the grid and says "Deleted Dentist · Undo" ("Deleted 2 items");
-      the delete is sent once the toast has gone, or at once if the page is closed. Undo or ⌘Z
-      meanwhile keeps it and sends nothing.
+      the delete is sent once the toast has gone, however it goes but by its Undo (its time ended,
+      swiped away, or replaced by a newer toast), or at once if the page is closed. Undo or ⌘Z
+      meanwhile keeps it and sends nothing (#351).
     - **The calendar says what each change did, with Undo:** "Moved Dentist to Thu, Oct 8",
       "Completed Pay rent" ("Reopened"), "Cloned Gym", "Pasted Dentist on Tue, Oct 13", "Changed the
       colour of Dinner with Sam"; a create says nothing (#247). The toast's
@@ -2124,7 +2126,7 @@ was decided; the audit itself was retired by D480.
     centre: Done and Trash are clicked in the reader's tools at the top, and the next email opens at
     the same moment, so "Marked Done · Undo" at the bottom went unseen. Every toast moves. The phone
     keeps it at the bottom, where its Done is (the reader's bottom bar) (Andy, 2026-10-10; darma
-    SV-35 D72).
+    SV-35 D72). Reversed by #351: the toast is back at the bottom, and ⌘Z covers a missed one.
 93. **Done is offered only on Attention mail not yet Done:** the reader's tool, the phone's button,
     ⌘K's command and `H`. Elsewhere it did nothing you could see: opening an FYI or Noise email to
     reach Done already read it, and read mail leaves the Inbox anyway; All lists Done mail; and
@@ -2470,8 +2472,9 @@ was decided; the audit itself was retired by D480.
     failure, which also wears an `alert` ring (40%) and an 8% `alert` wash on its fill, its words
     staying `ink`, and stays 8 seconds rather than 6 so the provider's words can be read. Any other
     line has no glyph. A line with an action shows its time draining as a 2 px hairline (`ink3` at
-    45%) along its foot, and both wait while the pointer rests on it (Andy, 2026-10-11, polish audit
-    shell-03, shell-04, shell-12, motion-03, states-07).
+    45%) along its foot (Andy, 2026-10-11, polish audit shell-03, shell-04, shell-12, motion-03,
+    states-07). Since #351 it rises from 8 px below, as on the phone, and nothing waits under the
+    pointer.
 148. **Overlays arrive with the motion Tokens names:** every menu and popover (the reader's More,
     Settings' selects and row menus, the editor's menus, pickers and Places, the proposal's menus,
     News's Upcoming, the attachment preview) grows in over 180 ms from 4 px and .97 at its anchor's
@@ -4342,3 +4345,20 @@ was decided; the audit itself was retired by D480.
     is unchanged, its plain ring and its unavailable footer Complete (D275). A 16 px icon among five others was easy to miss and far from the
     title it acted on; chosen over keeping a second control in the footer or a labelled Complete
     beside Edit.
+351. **The toast sits at the bottom and swipes away** (amending #32, #76, #92 and #147; Andy,
+    2026-11-09; darma SV-244, SV-247, D506). On the desktop the one toast is at the bottom centre of
+    the main area, 24 px up, as on the phone, so it covers no header control (the Inbox's Views, the
+    calendar's stepper, Jobs' filter). It no longer waits under the pointer: it always goes after
+    its 6 seconds (a failure 8), its hairline draining with it. The hairline runs the pill's whole
+    width, clipped by its shape, so it starts out in the rounded ends rather than where the flat
+    edge begins. Swiping it left or right takes it
+    away: a drag with the pointer or two fingers across a trackpad. While dragged it follows and
+    fades (to 35% at 72 px), goes once let go past 72 px, carrying on 48 px the way it went as it
+    fades, and snaps back short of it; a two-finger swipe goes as it passes 72 px and snaps back
+    once the fingers rest. A press that moves under 4 px is a click, so Undo stays a click. Under
+    the pointer it lifts 2 px with a grab cursor (grabbing while dragged). There's no ×, and no hint
+    that it swipes. The phone's toast is unchanged and doesn't swipe (D275). A calendar delete is
+    sent when its toast goes however it goes but by Undo: its time ended, swiped away, or replaced
+    by a newer one; before, a toast held under the pointer outlived the delete's own timer, and its
+    Undo then restored nothing (SV-247). ⌘Z in the Inbox and Calendar closes only its own toast.
+    Chosen over a × on the pill at the top.

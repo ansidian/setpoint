@@ -93,7 +93,7 @@ test('Done on the open email opens the next, which reads it; Attention\'s count 
     // Done on Northwind opens Contoso University's exams, the row after it in Attention, read already.
     await page.keyboard.press('h');
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
-    // The pointer rests on its toast, so its Undo waits while the check reads the server.
+    // Its toast is held, so its Undo waits while the check reads the server.
     await holdToast(page);
     await until('Attention\'s count drops again', () => attentionCount(page), text => text === '1');
     assert.equal(await page.locator('.list .row.open', {hasText: 'Contoso University'}).count(), 1);

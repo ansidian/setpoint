@@ -140,7 +140,7 @@ test('SV-181: a schedule dropped on the grid is reviewed, imported one at a time
     assert.equal(await page.locator('.failed-card').count(), 0);
     await row(page, 'Poster session').getByRole('button', {name: 'Retry'}).click();
     await page.locator('.toast', {hasText: 'Imported 4 events to Jobs'}).waitFor({timeout: 10_000});
-    // The pointer rests on it, so its Undo waits while the check reads the server.
+    // Held, so its Undo waits while the check reads the server.
     await holdToast(page);
     await pane.waitFor({state: 'detached'});
 

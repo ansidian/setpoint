@@ -13,7 +13,7 @@ import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
-import {cleanUp, pauseClock, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
+import {cleanUp, holdToast, pauseClock, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 const GAP = 8;
@@ -45,7 +45,7 @@ async function openCalendar(page: Page, base: string) {
 
 /**
  * Runs the page's clock (a check that installs one) past the Undo of a delete, as 6 s waited out are
- * the most a check here spends, then sees its items off the grid. The delete's timer starts with its
+ * the most a check here spends, then sees its items off the grid. The delete goes with its
  * toast, so this goes from that; the clock may be stopped (pauseClock), the chips' fold being on it too.
  */
 async function passUndo(page: Page, ...deleted: [date: string, title: string][]) {
@@ -451,6 +451,57 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
     await until('the delete is sent', dentists, list => list.length === 0, AFTER_UNDO);
     await setpoint.idle();
     assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-247, D506: a delete is sent when its toast goes, however it goes but by Undo: held past 6 s its Undo still keeps it, swiped away or replaced it\'s sent at once', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    await openCalendar(page, setpoint.base);
+    // Stopped, so nothing here goes by time unless the check moves it.
+    await pauseClock(page);
+    const titled = async (date: string, title: string) => (await items(setpoint, date)).filter(item => item.title === title);
+    const toast = page.locator('.toast:not(.leaving)');
+
+    // Held past its 6 s, the toast and its Undo stay, and Undo keeps Dentist: nothing was sent.
+    await chip(page, '2026-10-07', 'Dentist').click();
+    await page.keyboard.press('Delete');
+    await page.locator('.toast', {hasText: 'Deleted Dentist'}).waitFor();
+    await holdToast(page);
+    await page.clock.runFor(UNDO_MS * 2);
+    assert.equal(await toast.count(), 1, 'held, it stays past its 6 s');
+    await toast.getByRole('button', {name: 'Undo'}).click();
+    await chip(page, '2026-10-07', 'Dentist').waitFor();
+    await setpoint.idle();
+    assert.equal((await titled('2026-10-07', 'Dentist')).length, 1, 'Undo kept it');
+
+    // Swiped away (dragged past its distance), the delete is sent at once, the clock still stopped.
+    await chip(page, '2026-10-07', 'Dentist').click();
+    await page.keyboard.press('Delete');
+    await page.locator('.toast', {hasText: 'Deleted Dentist'}).waitFor();
+    const box = (await rested(() => toast.boundingBox()))!;
+    await page.mouse.move(box.x + 30, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 30 + 150, box.y + box.height / 2);
+    await page.mouse.up();
+    await until('the swiped toast goes', () => toast.count(), count => count === 0);
+    await until('the delete is sent', () => titled('2026-10-07', 'Dentist'), list => list.length === 0, AFTER_UNDO);
+
+    // Replaced by a newer toast, the first delete is sent at once and the newer one is held.
+    await chip(page, '2026-10-09', 'Dinner with Sam').click();
+    await page.keyboard.press('Delete');
+    await page.locator('.toast', {hasText: 'Deleted Dinner with Sam'}).waitFor();
+    await chip(page, '2026-10-09', 'Study group').click();
+    await page.keyboard.press('Delete');
+    await page.locator('.toast', {hasText: 'Deleted Study group'}).waitFor();
+    await until('the replaced delete is sent', () => titled('2026-10-09', 'Dinner with Sam'), list => list.length === 0, AFTER_UNDO);
+    await setpoint.idle();
+    assert.equal((await titled('2026-10-09', 'Study group')).length, 1, 'the newer delete is still held');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

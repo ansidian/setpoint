@@ -48,7 +48,7 @@ import {useCommands} from '../palette/commands.ts';
 import {useCompact} from '../Phone.tsx';
 import {SearchField} from '../search/Search.tsx';
 import {useCalendarSearch} from '../search/state.ts';
-import {dismissToast, failureLine, showToast, toastFailure, UNDO_MS} from '../toast.ts';
+import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
 import {AnchoredCard} from './AnchoredCard.tsx';
 import {setVisible, showHidden} from './CalendarSidebar.tsx';
 import './calendar.css';
@@ -147,7 +147,7 @@ type Ask =
   | {kind: 'colour'; item: ItemOut; from: string; colour: EventColour | null; scope: RecurringScope};
 
 /**
- * Deletes waiting out their Undo (UNDO_MS) before they're sent, kept here so leaving Calendar
+ * Deletes waiting out their Undo toast before they're sent, kept here so leaving Calendar
  * neither loses nor shows them again; one still waiting as the page goes away is sent then, kept
  * alive past it.
  */
@@ -685,40 +685,42 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
 
   /**
    * Takes the items off the grid at once and says so with Undo ("Deleted Dentist · Undo", UX #1);
-   * the delete is sent once the Undo has gone, and a refusal brings it back. Undo, or ⌘Z meanwhile,
-   * keeps it and sends nothing.
+   * the delete is sent when that toast goes, however it goes but by its Undo (its time ended, swiped
+   * away, or replaced), so Undo works for as long as it shows (SV-247), and a refusal brings it back.
+   * Undo, or ⌘Z meanwhile, keeps it and sends nothing.
    */
   const drop = (list: {item: Pick<ItemOut, 'id' | 'key' | 'occurrence_start' | 'title'>; scope: RecurringScope}[]) => {
     if (!list.length) return;
     const entries = list.map(({item, scope}) => ({id: item.id, scope, occurrence_start: item.occurrence_start, sent: false}));
     if (list.some(({item}) => item.key === selectedKey)) selectDay(selectedDay);
-    let timer = 0;
-    const send = (keepalive = false) => {
-      window.clearTimeout(timer);
+    // Still held: neither sent (the toast went, or the page did) nor kept by Undo.
+    const held = () => entries.some(entry => heldDeletes.has(entry));
+    const letGo = () => {
       entries.forEach(entry => heldDeletes.delete(entry));
       const at = undos.current.indexOf(undo);
       if (at >= 0) undos.current.splice(at, 1);
+    };
+    const send = (keepalive = false) => {
+      if (!held()) return;
+      letGo();
       sendDeletes(entries, list.map(({item}) => item.title), keepalive);
     };
     const keys = list.map(({item}) => item.key);
+    let toast = 0;
     const undo = () => {
-      if (!entries.some(entry => heldDeletes.has(entry))) return;
-      window.clearTimeout(timer);
-      entries.forEach(entry => heldDeletes.delete(entry));
-      const at = undos.current.indexOf(undo);
-      if (at >= 0) undos.current.splice(at, 1);
-      dismissToast();
+      if (!held()) return;
+      letGo();
+      dismissToast(toast);
       // Back as it went, then its tint lands.
       forAWhile(setRestoring, keys, RESTORE_MS);
       setDeleting(current => [...current]);
     };
     entries.forEach(entry => heldDeletes.set(entry, send));
-    timer = window.setTimeout(send, UNDO_MS);
     undos.current.push(undo);
     // Off the grid now, folding away first: the held entries are read by `present`.
     forAWhile(setRemoving, keys, FOLD_MS);
     setDeleting(current => [...current]);
-    showToast(list.length === 1 ? `Deleted ${list[0]!.item.title}` : `Deleted ${list.length} items`, {label: 'Undo', run: undo});
+    toast = showToast(list.length === 1 ? `Deleted ${list[0]!.item.title}` : `Deleted ${list.length} items`, {label: 'Undo', run: undo}, undefined, () => send());
   };
 
   /** Try again on a failed change: pending at once, as every change shows (SV-42); a refusal of the retry itself brings the failure back. */

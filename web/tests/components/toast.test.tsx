@@ -1,5 +1,6 @@
-// The one toast (ToastPill.tsx on toast.ts): a new one replaces the last, it waits under the pointer
-// and fades out; a failure stays longer. Its look is by eye (D269).
+// The one toast (ToastPill.tsx on toast.ts): a new one replaces the last, it doesn't wait under the
+// pointer, it swipes away (D506) and fades out; a failure stays longer; what's held back until it goes
+// is let go however it goes. Its look and its motion are by eye (D269): a swipe is read by its outcome.
 // The clock is Vitest's, so its six and eight seconds pass at once.
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -59,30 +60,92 @@ test('a new line replaces the last as a new toast, so it drops in afresh, and a 
   expect(toast.element().querySelector('.tone')).toBeNull();
 });
 
-test('under the pointer it waits past its time; left, it runs on with what it had left, then fades out before it goes', async () => {
+test('under the pointer it doesn\'t wait: it goes at its six seconds all the same', async () => {
   const seen = classes();
   const shown = Date.now();
   showToast('Moved to Trash', {label: 'Undo', run: () => {}});
-  await expect.element(toast).toBeVisible();
-  // Only the test moves the clock until the pointer is on it, or a busy machine could run it out.
-  vi.setTimerTickMode('manual');
-  vi.advanceTimersByTime(UNDO_MS - 2000);
   await userEvent.hover(toast);
-  vi.setTimerTickMode('interval');
-  await expect.element(toast).toHaveClass('held');
-  vi.advanceTimersByTime(UNDO_MS * 2);
-  await expect.element(toast).toMatchTextContent('Moved to Trash');
-  await expect.element(toast).not.toHaveClass('leaving');
-
-  await userEvent.unhover(toast);
-  await expect.element(toast).not.toHaveClass('held');
-  // Its six seconds, less the time under the pointer: neither started again nor cut short.
-  const held = seen().find(worn => wearing(worn, 'held'))!;
-  const left = seen().find(worn => worn.at >= held.at && !wearing(worn, 'held'))!;
-  advanceTo(left.at + UNDO_MS - (held.at - shown));
+  advanceTo(shown + UNDO_MS);
   await expect.element(toast).not.toBeInTheDocument();
-  const leaving = seen().find(worn => wearing(worn, 'leaving'))!;
-  expect(Math.abs(held.at - shown + leaving.at - left.at - UNDO_MS)).toBeLessThan(1000);
+  expect(Math.abs(seen().find(worn => wearing(worn, 'leaving'))!.at - shown - UNDO_MS)).toBeLessThan(1000);
+});
+
+/** A press on the pill, carried `by` px across and let go, as a pointer does. */
+function drag(by: number) {
+  const pill = toast.element();
+  const {x, y, height} = pill.getBoundingClientRect();
+  const at = {clientX: x + 30, clientY: y + height / 2, pointerId: 1, button: 0, bubbles: true};
+  pill.dispatchEvent(new PointerEvent('pointerdown', at));
+  document.dispatchEvent(new PointerEvent('pointermove', {...at, clientX: at.clientX + by}));
+  document.dispatchEvent(new PointerEvent('pointerup', {...at, clientX: at.clientX + by}));
+}
+
+test('dragged either way past its distance it goes, its action unrun; dragged short it stays', async () => {
+  const run = vi.fn();
+  for (const by of [150, -150]) {
+    showToast('Moved to Trash', {label: 'Undo', run});
+    await expect.element(toast).toBeVisible();
+    drag(by);
+    vi.advanceTimersByTime(motion.fast);
+    await expect.element(toast).not.toBeInTheDocument();
+  }
+  showToast('Moved to Trash', {label: 'Undo', run});
+  await expect.element(toast).toBeVisible();
+  drag(30);
+  vi.advanceTimersByTime(motion.fast);
+  await expect.element(toast).not.toHaveClass('leaving');
+  expect(run).not.toHaveBeenCalled();
+});
+
+test('two fingers across a trackpad swipe it away, and the page doesn\'t take the swipe; a vertical scroll doesn\'t', async () => {
+  showToast('Moved to Trash', {label: 'Undo', run: () => {}});
+  await expect.element(toast).toBeVisible();
+  const scroll = new WheelEvent('wheel', {deltaY: 150, bubbles: true, cancelable: true});
+  toast.element().dispatchEvent(scroll);
+  expect(scroll.defaultPrevented).toBe(false);
+  await expect.element(toast).not.toHaveClass('leaving');
+  const swipe = new WheelEvent('wheel', {deltaX: 150, bubbles: true, cancelable: true});
+  toast.element().dispatchEvent(swipe);
+  expect(swipe.defaultPrevented).toBe(true);
+  vi.advanceTimersByTime(motion.fast);
+  await expect.element(toast).not.toBeInTheDocument();
+});
+
+test('what waits on a toast is let go once, however it goes: its time, a swipe, a newer toast, or its action', async () => {
+  const gone = vi.fn();
+  const shown = Date.now();
+  showToast('Deleted Dentist', {label: 'Undo', run: () => {}}, undefined, gone);
+  advanceTo(shown + UNDO_MS);
+  await expect.element(toast).not.toBeInTheDocument();
+  expect(gone).toHaveBeenCalledTimes(1);
+
+  showToast('Deleted Dentist', {label: 'Undo', run: () => {}}, undefined, gone);
+  await expect.element(toast).toBeVisible();
+  drag(150);
+  expect(gone).toHaveBeenCalledTimes(2);
+
+  showToast('Deleted Dentist', {label: 'Undo', run: () => {}}, undefined, gone);
+  showToast('Deleted Gym');
+  expect(gone).toHaveBeenCalledTimes(3);
+
+  showToast('Deleted Dentist', {label: 'Undo', run: () => {}}, undefined, gone);
+  await toast.getByRole('button', {name: 'Undo'}).click();
+  expect(gone).toHaveBeenCalledTimes(4);
+  vi.runAllTimers();
+  expect(gone).toHaveBeenCalledTimes(4);
+});
+
+test('a check\'s hold keeps it past its time until it goes another way, and the next one runs its own time', async () => {
+  const shown = Date.now();
+  showToast('Moved to Trash', {label: 'Undo', run: () => {}});
+  document.documentElement.setAttribute('data-hold-toast', '');
+  advanceTo(shown + UNDO_MS * 3);
+  await expect.element(toast).not.toHaveClass('leaving');
+  const next = Date.now();
+  showToast('Marked Done', {label: 'Undo', run: () => {}});
+  expect(document.documentElement.hasAttribute('data-hold-toast')).toBe(false);
+  advanceTo(next + UNDO_MS);
+  await expect.element(toast).not.toBeInTheDocument();
 });
 
 test('its action runs once, and the toast goes with it', async () => {

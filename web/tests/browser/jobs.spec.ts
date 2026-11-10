@@ -486,7 +486,7 @@ test('Paste the posting while it\'s looked up (SV-170): the lookup stops, Esc le
     await pane.getByRole('textbox', {name: 'Location'}).fill('Austin, TX');
     await page.keyboard.press('Enter');
     await until('the toast', () => toast(page).textContent(), value => value === 'Location setUndo');
-    // The pointer rests on it, so its Undo waits while the check reads the server.
+    // Held, so its Undo waits while the check reads the server.
     await holdToast(page);
     assert.equal(await pane.locator('.jb-facts').textContent(), 'Austin, TX');
     await until('saved', () => setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`), detail => detail.posting?.location === 'Austin, TX');

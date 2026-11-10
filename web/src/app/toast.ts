@@ -1,12 +1,14 @@
 // The app's one toast (DESIGN.md › Interaction rules: Trash offers Undo for 6 seconds, as v1 does,
-// in the export's `.toast`, a 40 px pill at the top centre, at the bottom on the phone, #92), drawn
-// once by App.tsx above every page and Settings. Any page shows a line with showToast("Added to
+// in the export's `.toast`, a 40 px pill at the bottom centre of the main area, 24 px up, as on the
+// phone, D506), drawn once by App.tsx above every page and Settings. Any page shows a line with showToast("Added to
 // Classes"), an error with showToast(error.message, null, 'failed'), or a line with its action:
 // showToast("Moved to Trash", {label: 'Undo', run}) or {label: 'Try again', run}. One at a time: a new
 // one replaces the last, whose action is then gone. A failed change says what failed and why with
-// toastFailure("Couldn't pin it"). A line leads with its tone's glyph (logic/toast.ts), stays 6
-// seconds (a failure 8), and waits while the pointer rests on it; going, it stays drawn for
-// motion.fast to fade out, unless a new one takes its place.
+// toastFailure("Couldn't pin it"). A line leads with its tone's glyph (logic/toast.ts) and stays 6
+// seconds (a failure 8), the pointer resting on it or not (D506); swiping it away ends it sooner.
+// Going, it stays drawn for motion.fast to fade out, unless a new one takes its place. A caller that
+// holds something back until the toast goes (Calendar's delete) passes `onGone`, run once however it
+// goes: its time ended, swiped away, replaced, or its action run.
 import {useSyncExternalStore} from 'react';
 import {ApiFailure} from '../api/client.ts';
 import {TOAST_MS, toastMs, toastTone} from '../logic/toast.ts';
@@ -26,34 +28,50 @@ export interface Toast {
   text: string;
   action: ToastAction | null;
   tone: ToastTone | null;
-  // How long it stays, unheld.
+  // How long it stays.
   ms: number;
-  // While the pointer rests on it: its time, and its Undo hairline, wait.
-  held: boolean;
   // Going: drawn for its fade only, taking no clicks.
   leaving: boolean;
 }
 
 let current: Toast | null = null;
 let timer: number | undefined;
-// When the shown toast goes, unheld; while held, the time it had left.
-let endsAt = 0;
-let left = 0;
+// What the shown toast runs once it goes, however it goes.
+let gone: (() => void) | null = null;
 let nextId = 1;
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach(listener => listener());
 
-function startTimer(id: number, ms: number) {
-  window.clearTimeout(timer);
-  endsAt = Date.now() + ms;
-  timer = window.setTimeout(() => dismissToast(id), ms);
+/**
+ * Checks only: while the page's root has `data-hold-toast` the toast showing doesn't run out of time,
+ * so a check can read the server before pressing Undo (the browser harness's holdToast). Nothing in
+ * the app sets it; the toast's going clears it, so the next one runs its own time.
+ */
+const HOLD = 'data-hold-toast';
+const heldForCheck = () => document.documentElement.hasAttribute(HOLD);
+
+function ended() {
+  document.documentElement.removeAttribute(HOLD);
+  const then = gone;
+  gone = null;
+  then?.();
 }
 
-/** Shows the line, replacing any other, with its tone (by default the one its words have); answers its id, for dismissToast(id). */
-export function showToast(text: string, action: ToastAction | null = null, tone: ToastTone | null = toastTone(text)): number {
+function startTimer(id: number, ms: number) {
+  window.clearTimeout(timer);
+  timer = window.setTimeout(() => (heldForCheck() ? startTimer(id, ms) : dismissToast(id)), ms);
+}
+
+/**
+ * Shows the line, replacing any other (whose `onGone` then runs), with its tone (by default the one its
+ * words have); answers its id, for dismissToast(id). `onGone` runs once when this toast goes, however.
+ */
+export function showToast(text: string, action: ToastAction | null = null, tone: ToastTone | null = toastTone(text), onGone: (() => void) | null = null): number {
+  ended();
   const ms = toastMs(tone);
-  const toast: Toast = {id: nextId++, text, action, tone, ms, held: false, leaving: false};
+  const toast: Toast = {id: nextId++, text, action, tone, ms, leaving: false};
   current = toast;
+  gone = onGone;
   startTimer(toast.id, ms);
   notify();
   return toast.id;
@@ -77,7 +95,7 @@ export const toastFailure = (what: string) => (error: unknown) => {
 export function dismissToast(id?: number) {
   if (!current || current.leaving || (id !== undefined && current.id !== id)) return;
   window.clearTimeout(timer);
-  const going = {...current, held: false, leaving: true};
+  const going = {...current, leaving: true};
   current = going;
   timer = window.setTimeout(() => {
     if (current === going) {
@@ -86,19 +104,7 @@ export function dismissToast(id?: number) {
     }
   }, motion.fast);
   notify();
-}
-
-/** The pointer rests on the toast (true) or leaves it: its time stops, then runs on with what it had left. */
-export function holdToast(id: number, held: boolean) {
-  if (!current || current.id !== id || current.leaving || current.held === held) return;
-  if (held) {
-    window.clearTimeout(timer);
-    left = Math.max(0, endsAt - Date.now());
-  } else {
-    startTimer(id, left);
-  }
-  current = {...current, held};
-  notify();
+  ended();
 }
 
 const subscribe = (listener: () => void) => {

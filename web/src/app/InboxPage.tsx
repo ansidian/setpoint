@@ -379,11 +379,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (refused.length) toastFailure(failed(refused.length))(refused[0]!.error);
       return ids.filter(id => !refused.some(one => one.id === id));
     });
+    let toastId = 0;
     const back = () => {
       const at = undos.indexOf(back);
       if (at < 0) return;
       undos.splice(at, 1);
-      dismissToast();
+      dismissToast(toastId);
       for (const id of ids) beats.delete(id);
       const sends = new Map(ids.map(id => [id, undo(id)]));
       void sent.then(took => changeEach(took, id => sends.get(id)!()).then(outcomes => {
@@ -394,7 +395,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (wasOpen !== null) reopen(wasOpen);
     };
     undos.push(back);
-    showToast(toast, {label: 'Undo', run: back});
+    toastId = showToast(toast, {label: 'Undo', run: back});
   }
 
   // What each action does to emails `ids`: one email for H, E, P and the rest on `target` or a row's
@@ -482,11 +483,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
     markRead: (ids: number[]) => {
       const unread = on.read(ids);
       if (!unread.length) return;
+      let toast = 0;
       const back = () => {
         const at = undos.indexOf(back);
         if (at < 0) return;
         undos.splice(at, 1);
-        dismissToast();
+        dismissToast(toast);
         if (searching) for (const id of unread) search.mark(id, {unread: true});
         void changeEach(unread, id => markUnread(id)).then(outcomes => {
           const refused = refusals(unread, outcomes);
@@ -494,7 +496,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         });
       };
       undos.push(back);
-      showToast(counted(unread.length, 'Marked as read', n => `Marked ${n} as read`), {label: 'Undo', run: back});
+      toast = showToast(counted(unread.length, 'Marked as read', n => `Marked ${n} as read`), {label: 'Undo', run: back});
     },
   };
 
@@ -551,15 +553,16 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (!ids.length) return;
       // Undo, from the toast or ⌘Z as Done's and Trash's are (UX #17), marks those same emails unread,
       // at once, before the server's list has them (SV-37).
+      let toast = 0;
       const back = () => {
         const at = undos.indexOf(back);
         if (at < 0) return;
         undos.splice(at, 1);
-        dismissToast();
+        dismissToast(toast);
         ids.forEach(id => void markUnread(id).catch((error: Error) => showToast(error.message, null, 'failed')));
       };
       undos.push(back);
-      showToast(`Marked ${ids.length} as read`, {label: 'Undo', run: back});
+      toast = showToast(`Marked ${ids.length} as read`, {label: 'Undo', run: back});
     },
     close,
   };

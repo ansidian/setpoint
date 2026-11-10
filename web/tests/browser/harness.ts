@@ -516,14 +516,15 @@ export async function pauseClock(page: Page): Promise<void> {
 }
 
 /**
- * Rests the pointer on the toast, as a person reading it would, so its time (and its Undo) waits
- * while the check reads the server before pressing Undo: its 6 s run on real time otherwise, which
- * a busy machine can use up (SV-195). Answers the toast.
+ * Holds the toast showing so its time (and its Undo) waits while the check reads the server before
+ * pressing Undo: its 6 s run on real time otherwise, which a busy machine can use up (SV-195). The
+ * toast no longer waits under the pointer (D506), so this sets the app's test-only hold, which the
+ * toast's going clears. Answers the toast.
  */
 export async function holdToast(page: Page): Promise<Locator> {
   const toast = page.locator('.toast:not(.leaving)');
-  await toast.hover();
-  await until('the toast held', () => toast.getAttribute('class'), classes => Boolean(classes?.split(' ').includes('held')));
+  await toast.waitFor();
+  await page.evaluate(() => document.documentElement.setAttribute('data-hold-toast', ''));
   return toast;
 }
 

@@ -279,7 +279,7 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     assert.equal(await hiddenMark.count(), 0);
     const toast = page.locator('.toast');
     await until('the toast', () => toast.textContent(), line => line?.startsWith('Showed 5 calendars') ?? false);
-    // The pointer rests on it, so its Undo waits while the check reads the server.
+    // Held, so its Undo waits while the check reads the server.
     await holdToast(page);
     await until('kept', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.every(calendar => calendar.visible));
     await toast.getByRole('button', {name: 'Undo'}).click();
