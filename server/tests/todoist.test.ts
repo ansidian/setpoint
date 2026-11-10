@@ -652,10 +652,12 @@ describe('changes through the command layer', () => {
     test('a sweep while the hold lasts keeps the token, so a pushed sync after Move back still applies the change', async () => {
       const {w, todoist, engine, source, run, task, renamed} = await heldWorld('t-rent');
       w.store.db.update(t.sources).set({syncMode: 'push'}).where(eq(t.sources.id, source.id)).run();
+      const fullSyncs = () => todoist.requests.filter(request => request.path === '/api/v1/sync' && (request.body as Record<string, string>).sync_token === '*').length;
+      const before = fullSyncs();
       todoist.put({...todoist.task('t-rent')!, due: {date: '2026-10-09', string: 'Oct 9', is_recurring: false}});
       w.advance(5 * 60_000);
       await run();
-      expect(todoist.requests.some(request => request.path === '/api/v1/sync' && (request.body as Record<string, string>).sync_token === '*')).toBe(true);
+      expect(fullSyncs()).toBe(before + 1);
       expect(task('t-rent').dueDate).toBe('2026-10-07');
       moveBackCommand(w.store, renamed.id);
       engine.pushed(source.id);
