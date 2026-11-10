@@ -113,7 +113,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
                 event.preventDefault();
                 onSelectItem(task);
               }}>
-              <button className="check" aria-label={task.done ? `Reopen ${task.title}` : `Complete ${task.title}`} disabled={!!task.command || (task.done && task.recurring)}
+              <button className="check" aria-label={task.done ? `Reopen ${task.title}` : `Complete ${task.title}`} disabled={!!task.command || (task.done && !task.can_reopen)}
                 onClick={event => {
                   event.preventDefault();
                   event.stopPropagation();

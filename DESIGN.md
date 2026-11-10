@@ -1878,8 +1878,10 @@ was decided; the audit itself was retired by D480.
 39. **A task's floating detail completes it:** its ring beside the title is **Complete**, its done
     check **Reopen** (#350, which took the ringed-check icon out of the footer). It goes through
     the same completion as the agenda's ring: pending at .5 until Todoist confirms, ⌘Z and a
-    failure's Undo as #10 and #19 say. It has no key; a repeating task once done, and a task
-    waiting on Todoist, show it disabled (Andy, 2026-10-09; darma SV-25 D54, D55).
+    failure's Undo as #10 and #19 say. It has no key; an older done occurrence of a repeating task,
+    and a task waiting on Todoist, show it disabled (Andy, 2026-10-09; darma SV-25 D54, D55). A
+    repeating task's latest done occurrence reopens, putting the task back on that day with its
+    repeat (Andy, 2026-11-09; darma SV-249, D510).
 40. **Copy and ⌘C on the calendar say what they took,** in the toast: "Copied Dinner with Sam, ⌘V
     pastes on the selected day", or "Copied 3 items, …" for several (Andy, 2026-10-09; darma SV-25
     D54).
@@ -2236,7 +2238,8 @@ was decided; the audit itself was retired by D480.
     list's rows do (#13), and Undo or a refusal folds it back. While it shows done, the line takes
     no clicks, so a double-click completes that task alone, not the one that moves up under the
     pointer. A repeating task does the same, then shows its next date if it's due by tomorrow (Andy,
-    2026-10-11, polish audit shell-01).
+    2026-10-11, polish audit shell-01), and its toast has Undo too, which puts it back open on the
+    day it was completed (Andy, 2026-11-09; darma SV-249, D510).
 107. **The reader's tools fit a narrow pane:** under 600 px of pane the tools' key hints drop (the
     keys still work, and ⌘K lists them) and their padding goes from 10 to 9 px, so previous, next
     and More stay in view down to the pane's 480 px (#22), with Done and More both shown. News's
@@ -3951,7 +3954,7 @@ was decided; the audit itself was retired by D480.
     is left. Its right-click menu, on the grid and in the Today block, leaves the same actions out
     and opens with the reason as a note: `lock` and the words in `ink3`, at full strength, which the
     cursor passes over and a click doesn't run, then what still works (Open ‹link›, Open in
-    Calendar). Any other disabled menu item (a change on its way, a done repeating task's Reopen, a
+    Calendar). Any other disabled menu item (a change on its way, an older done occurrence's Reopen, a
     select's unavailable choice) is drawn in `ink3` at .6, and the right-click menu leaves out its
     key hint. Board audit: no board draws it.
 308. **The floating detail shows a long title whole** (Andy, 2026-11-05; darma SV-197, amending
@@ -4390,8 +4393,9 @@ was decided; the audit itself was retired by D480.
     old 24% fill too quiet, so this applies to every ring that completes: the Today block's lines,
     the day pane's rows and the card. On Calendar, where a done task
     stays on its card, its done check is Reopen; on the Today block the card closes and the line
-    folds away as before (#106). A repeating task once done, and a task waiting on Todoist, keep it
-    disabled with the tips the footer's button had; it still has no key. The footer's Complete icon
+    folds away as before (#106). An older done occurrence of a repeating task, and a task waiting on
+    Todoist, keep it disabled with the tips the footer's button had; a repeating task's latest done
+    occurrence reopens (SV-249, D510); it still has no key. The footer's Complete icon
     goes, leaving Edit, Open in Calendar, Clone, Copy, Colour and Delete. The phone's read-only card
     is unchanged, its plain ring and its unavailable footer Complete (D275). A 16 px icon among five others was easy to miss and far from the
     title it acted on; chosen over keeping a second control in the footer or a labelled Complete

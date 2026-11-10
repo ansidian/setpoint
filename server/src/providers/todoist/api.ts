@@ -1,9 +1,10 @@
-// Todoist's unified API (v1, as v1 used) over plain fetch: the Sync endpoint for the mirror, the
+// Todoist's unified API (v1, as v1 used) over plain fetch: the Sync endpoint for the mirror (and,
+// SV-249, a repeating task's undo, a Sync command), the
 // completed-tasks list for occurrences completed in Todoist's own apps, and the task endpoints for
 // changes. Errors carry Todoist's own words; 401 and 403 mean the connection was revoked (v1 never
 // treated them so, see SV-6), 429 waits.
 import {createHash} from 'node:crypto';
-import {ProviderError} from '../../sync/errors.ts';
+import {kindOfStatus, ProviderError} from '../../sync/errors.ts';
 import {reasonPhrase, requestJson} from '../http.ts';
 import type {HttpOptions, Refusal} from '../http.ts';
 import type {TodoistDue} from './due.ts';
@@ -94,6 +95,20 @@ export class TodoistApi {
   /** Items, projects and labels since `syncToken` ("*" for everything). */
   sync(syncToken: string): Promise<SyncAnswer> {
     return this.call('POST', 'sync', {body: new URLSearchParams({sync_token: syncToken, resource_types: JSON.stringify(['items', 'projects', 'labels'])})});
+  }
+
+  /**
+   * One Sync command (SV-249), its uuid the command's request id so Todoist drops a repeat. Todoist
+   * answers 200 either way: `sync_status[uuid]` is "ok", or its refusal with Todoist's own words.
+   */
+  async command(type: string, args: Record<string, unknown>, uuid: string): Promise<void> {
+    const answer = await this.call<{sync_status?: Record<string, unknown>}>('POST', 'sync', {body: new URLSearchParams({commands: JSON.stringify([{type, uuid, args}])})});
+    const status = answer?.sync_status?.[uuid];
+    if (status === 'ok') return;
+    if (!status || typeof status !== 'object') throw new ProviderError('transient', 'Todoist didn\'t say whether it took the change.');
+    const code = typeof (status as {http_code?: unknown}).http_code === 'number' ? (status as {http_code: number}).http_code : 400;
+    const refusal = readTodoistRefusal(code, JSON.stringify(status));
+    throw new ProviderError(refusal.kind ?? kindOfStatus(code), refusal.message, {status: code});
   }
 
   /** Tasks completed between two instants, every page. */

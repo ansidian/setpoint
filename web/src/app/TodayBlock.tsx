@@ -10,7 +10,7 @@
 // "in 12m" warms to `caution` from 15 minutes before and `alert` once under way. A completed task
 // shows its done check for a moment (the one completion moment, `ring-done`, which the calendar's pane
 // and card share), then its line folds away as the mail list's rows do (app/fold.ts), and Undo folds
-// it back.
+// it back, a repeating task's too, reopening the occurrence it completed (SV-249, D510).
 // Folded to the rail (D509), it's one slot instead: a clock over the time until today's next timed
 // item, event or task alike, named in its tooltip with what else is left, opening the same card;
 // nothing once no timed item is left today.
@@ -156,9 +156,10 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     }
     hide(task);
     void completeItem(task.id, true, task.recurring ? task.due_date : null)
-      .then(() => showToast(`Completed ${task.title}`, task.recurring ? null : {
+      // SV-249 (D510): a repeating task's Undo reopens the done occurrence the completion made.
+      .then(done => showToast(`Completed ${task.title}`, {
         label: 'Undo',
-        run: () => void completeItem(task.id, false).catch(toastFailure(`Couldn't reopen ${task.title}`)),
+        run: () => void completeItem(task.recurring ? done.target_id : task.id, false).catch(toastFailure(`Couldn't reopen ${task.title}`)),
       }))
       .catch(toastFailure(`Couldn't complete ${task.title}`))
       .finally(() => unhide(task));

@@ -5,7 +5,7 @@
 // once it's time to go and gone once the event starts, as in the day agenda, SV-56), attendees, a
 // recurring event's repeat (#126), reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
 // selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
-// Delete; a Todoist task's ring completes it, its done check reopening it (SV-25, D55; SV-242, D503). Google's own kinds
+// Delete; a Todoist task's ring completes it, its done check reopening it (SV-25, D55; SV-242, D503), a repeating task's only from its latest done occurrence (SV-249, D510). Google's own kinds
 // of event take none of them. Off Calendar (the Today block's card, #78) a page offers the ones it
 // can carry out and Open in Calendar; the others aren't drawn. A read-only event (a calendar the user
 // can only read, or one of Google's own kinds) says so on its calendar's line, `lock` and "Read-only ·
@@ -96,10 +96,10 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const markClass = `fd-mark${pending ? ' pending' : ''}${justDone.has(item.key) ? ' just-done' : ''}`;
   // SV-242 (D503): with actions, a task's ring completes it, and its done check reopens it, as the
   // Today block's lines and the day pane's rows do (#175). Without them (the phone) it's a mark.
-  const stuck = !!item.command || (item.done && item.recurring);
+  const stuck = !!item.command || (item.done && !item.can_reopen);
   const mark = complete && actions ? (
     <button className={`${markClass} check`} type="button" aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled={fixed || stuck || undefined}
-      data-tip={item.command ? 'Waiting for Todoist' : item.done && item.recurring ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
+      data-tip={item.command ? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
       onClick={act(task => !stuck && actions.complete(task))}>
       {item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
     </button>
@@ -166,7 +166,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {/* The phone's card (no actions) keeps its footer Complete, unavailable, as before D503 (D275). */}
         {complete && !actions && (
           <button className={item.done ? 'ibtn sm' : 'ibtn sm affirm'} aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled
-            data-tip={item.command ? 'Waiting for Todoist' : item.done && item.recurring ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}>
+            data-tip={item.command ? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}>
             <Icon name={item.done ? 'undo' : 'task_alt'} size={16} />
           </button>
         )}

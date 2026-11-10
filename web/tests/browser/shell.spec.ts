@@ -8,7 +8,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, describe, pagePx, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, describe, holdToast, pagePx, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -287,6 +287,40 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await lines.filter({hasText: 'Pay rent'}).waitFor();
     assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-249: a repeating task completed from Today has Undo, which puts it back open on its day (D510)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      database.prepare('UPDATE items SET due_recurring = 1, due_string = ? WHERE title = ?').run('every month', 'Pay rent');
+    } finally {
+      database.close();
+    }
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    const lines = page.locator('.sb .today-row');
+    await until('the Today block', () => lines.allTextContents(), texts => texts.includes('Pay rent'));
+    await lines.filter({hasText: 'Pay rent'}).getByRole('button', {name: 'Complete Pay rent'}).click();
+    const toast = await holdToast(page);
+    await toast.filter({hasText: 'Completed Pay rent'}).waitFor();
+    await lines.filter({hasText: 'Pay rent'}).waitFor({state: 'detached'});
+    await setpoint.idle();
+    const payRent = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-08')).items.filter(item => item.title === 'Pay rent');
+    await until('the completion lands', payRent, list => list.every(task => !task.command));
+    assert.deepEqual((await payRent()).map(task => [task.done, task.can_reopen]), [[true, true]]);
+
+    await toast.getByRole('button', {name: 'Undo'}).click();
+    await lines.filter({hasText: 'Pay rent'}).waitFor();
+    await setpoint.idle();
+    await until('the reopen lands', payRent, list => list.every(task => !task.command));
+    assert.deepEqual((await payRent()).map(task => [task.done, task.due_date, task.repeat]), [[false, '2026-10-07', 'every month']]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

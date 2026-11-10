@@ -1,6 +1,8 @@
 // A fake Todoist on 127.0.0.1: API v1's Sync endpoint (sync tokens, full and incremental), the
 // completed-tasks list, the task endpoints, a project's update (its colour), and OAuth's token exchange. Repeating tasks move on
-// when closed, as Todoist's do, and the closed occurrence goes to the completed list. Errors are
+// when closed, as Todoist's do, and the closed occurrence goes to the completed list. The Sync
+// endpoint takes `item_update_date_complete` with `is_forward: 0`, the undo of a repeating task's
+// completion (SV-249), and `reopen` does nothing on a task that isn't checked, as Todoist's doesn't. Errors are
 // Todoist's: 401 for a token it didn't issue (or revoked), 400 for a sync token it doesn't know,
 // 404 for a task that isn't there.
 import type {TodoistLabel, TodoistProject, TodoistTask} from '../../src/providers/todoist/api.ts';
@@ -22,6 +24,7 @@ export async function fakeTodoist() {
   const labels = new Map<string, TodoistLabel & {seq: number}>();
   const completed: (TodoistTask & {completed_at: string})[] = [];
   const requestIds: string[] = [];
+  const refusals: Record<string, unknown>[] = [];
   let clock = () => new Date();
 
   const authorized = (request: FakeRequest) => tokens.has((request.headers.authorization ?? '').replace(/^Bearer /, ''));
@@ -56,9 +59,29 @@ export async function fakeTodoist() {
     return recurring ?? null;
   };
 
+  // Sync commands: each answered in `sync_status` by its uuid, "ok" or Todoist's refusal.
+  const runCommands = (commands: {type: string; uuid: string; args: Record<string, unknown>}[]): FakeResponse => {
+    const status: Record<string, unknown> = {};
+    for (const {type, uuid, args} of commands) {
+      requestIds.push(uuid);
+      const task = tasks.get(String(args.id));
+      const refused = refusals.shift();
+      if (refused) status[uuid] = refused;
+      else if (type !== 'item_update_date_complete' || args.is_forward !== 0) status[uuid] = {error: 'Unknown command', error_code: 0, error_tag: 'UNKNOWN_COMMAND', http_code: 400, error_extra: {}};
+      else if (!task || task.is_deleted) status[uuid] = {error: 'Item not found', error_code: 22, error_tag: 'ITEM_NOT_FOUND', http_code: 404, error_extra: {}};
+      else {
+        save({...task, due: args.due as TodoistTask['due']});
+        status[uuid] = 'ok';
+      }
+    }
+    return {status: 200, body: {sync_status: status, temp_id_mapping: {}, sync_token: `sync-${seq}`, full_sync: false}};
+  };
+
   const server = await fakeServer([
     on('POST', /^\/api\/v1\/sync$/, request => {
       if (!authorized(request)) return unauthorized();
+      const commands = (request.body as Record<string, string>).commands;
+      if (commands) return runCommands(JSON.parse(commands));
       const token = (request.body as Record<string, string>).sync_token;
       if (token !== '*' && !/^sync-\d+$/.test(token ?? '')) return todoistError(400, 'Invalid sync token', 'INVALID_SYNC_TOKEN');
       const full = token === '*';
@@ -123,7 +146,8 @@ export async function fakeTodoist() {
         return {status: 204};
       }
       if (match[2] === 'reopen') {
-        save({...task, checked: false});
+        // Nothing to reopen: Todoist answers 204 and changes nothing (SV-249's live test).
+        if (task.checked) save({...task, checked: false});
         return {status: 204};
       }
       completed.push({...show(task), completed_at: clock().toISOString()});
@@ -173,6 +197,10 @@ export async function fakeTodoist() {
       return found ? show(found) : undefined;
     },
     tasks: () => [...tasks.values()].map(show),
+    /** Todoist refuses the next Sync command with this, in its `sync_status`. */
+    refuseCommand(error: Record<string, unknown>) {
+      refusals.push(error);
+    },
     /** The user completes a task in Todoist's own app. */
     completeInTodoist(id: string, at: Date) {
       const task = tasks.get(id)!;

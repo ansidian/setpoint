@@ -20,7 +20,7 @@ const URL_OF_FAIR = 'https://www.careers.example.edu/fair/fall-2026/schedule?tra
 function event(fields: Partial<ItemOut>): ItemOut {
   return {
     key: '4', id: 4, calendar_id: 2, kind: 'event', title: 'Career fair', time_zone: SEED_TIME_ZONE, recurring: false, recurrence: null, occurrence_start: null,
-    place: 'University Student Union', address: null, attendees: [], reminders: [], leave_reminder: false, project: null, done: false, done_at: null, command: null,
+    place: 'University Student Union', address: null, attendees: [], reminders: [], leave_reminder: false, project: null, done: false, done_at: null, can_reopen: false, command: null,
     all_day: false, starts_at: '2026-10-15T17:00:00.000Z', ends_at: '2026-10-15T21:00:00.000Z', start_date: null, end_date: null, due_date: null, due_at: null,
     read_only: false, due_string: null, time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', ...fields,
   };
@@ -152,8 +152,8 @@ test('SV-197: on the 360 px card a read-only holiday\'s calendar line fits on on
 });
 
 // SV-242 (D503, #350): with actions, a task's ring beside its title is its Complete, its done check
-// Reopen, through actions.complete; a done repeating task and a task waiting on Todoist keep it
-// disabled with their tips, and the footer has no Complete. Without actions (the phone's read-only
+// Reopen, through actions.complete; a repeating task's latest done occurrence reopens too (SV-249,
+// D510), and an older one and a task waiting on Todoist keep it disabled with their tips, and the footer has no Complete. Without actions (the phone's read-only
 // card, D275) the ring stays a mark and the footer keeps its unavailable Complete.
 function task(fields: Partial<ItemOut>): ItemOut {
   return event({key: '8', id: 8, kind: 'task', title: 'Pay rent', place: null, starts_at: null, ends_at: null, due_date: '2026-10-07', project: 'Home', ...fields});
@@ -188,17 +188,27 @@ test('SV-242: an open task\'s ring beside its title completes it, and the footer
 
 test('SV-242: a done task\'s check reopens it through the same action', async () => {
   const completed: boolean[] = [];
-  await taskCard(task({done: true, done_at: '2026-10-07T16:00:00.000Z'}), one => completed.push(one.done));
+  await taskCard(task({done: true, done_at: '2026-10-07T16:00:00.000Z', can_reopen: true}), one => completed.push(one.done));
   await expect.element(ring()).toHaveAccessibleName('Reopen');
   await expect.element(ring()).toHaveAttribute('data-tip', 'Reopen');
   await ring().click();
   expect(completed).toEqual([true]);
 });
 
-test('SV-242: a done repeating task and a task waiting on Todoist keep the ring disabled, with their tips, and a click does nothing', async () => {
+test('SV-249: a repeating task\'s latest done occurrence reopens through the same action', async () => {
+  const reopened: [number, boolean][] = [];
+  await taskCard(task({key: '9', id: 9, done: true, done_at: '2026-10-07T16:00:00.000Z', recurring: true, due_string: 'every month', can_reopen: true}), one => reopened.push([one.id, one.done]));
+  await expect.element(ring()).toHaveAccessibleName('Reopen');
+  await expect.element(ring()).not.toHaveAttribute('aria-disabled');
+  await expect.element(ring()).toHaveAttribute('data-tip', 'Reopen');
+  await ring().click();
+  expect(reopened).toEqual([[9, true]]);
+});
+
+test('SV-242, SV-249: an older done occurrence of a repeating task and a task waiting on Todoist keep the ring disabled, with their tips, and a click does nothing', async () => {
   const completed: string[] = [];
   for (const [item, tip] of [
-    [task({done: true, done_at: '2026-10-07T16:00:00.000Z', recurring: true, due_string: 'every month'}), 'Todoist has moved this repeating task on'],
+    [task({done: true, done_at: '2026-10-07T16:00:00.000Z', recurring: true, due_string: 'every month', can_reopen: false}), 'Todoist has moved this repeating task on'],
     [task({command: WAITING}), 'Waiting for Todoist'],
   ] as const) {
     const screen = await taskCard(item, one => completed.push(one.title));

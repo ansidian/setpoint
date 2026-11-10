@@ -1,13 +1,14 @@
 // The Todoist adapter: one source, polled every 5 minutes (the webhook comes at cutover), with the
 // access token from Todoist's OAuth (stored as the source's key; Todoist's tokens don't expire).
 // Changes go through the command layer: create, change, complete (a repeating task's occurrence),
-// reopen and delete, and a project's colour (SV-25), each pending until Todoist answers. Adapted from v1's `todoist` and
+// reopen (a repeating task's done occurrence by a Sync command, SV-249) and delete, and a project's colour (SV-25), each pending until Todoist answers. Adapted from v1's `todoist` and
 // `tasks-service` (see SV-6): `due_lang: en` so a due string reads as English, the occurrence check
 // before a repeating task is closed (src/commands/items.ts), Todoist's own words when it refuses.
 import {and, eq} from 'drizzle-orm';
 import type {CommandRow} from '../../commands/index.ts';
 import type {ItemRow} from '../../commands/itemMirror.ts';
 import * as t from '../../db/schema.ts';
+import {localDay, localTime} from '../../domain/time.ts';
 import {getSettings} from '../../settings.ts';
 import {isoNow} from '../../store.ts';
 import type {Store} from '../../store.ts';
@@ -31,6 +32,15 @@ const itemRow = (store: Store, id: number) => store.db.select().from(t.items).wh
 
 /** A row's due as Todoist is sent it: with its repeat, when it repeats. */
 const dueOf = (store: Store, row: ItemRow) => ({...writeDue({dueDate: row.dueDate, dueAt: row.dueAt, repeat: row.dueRecurring ? repeatOf(row.dueString) : null}, store.timeZone), due_lang: 'en'});
+
+/**
+ * SV-249: the due a reopened occurrence puts back, as the Sync command takes it: the day (with its
+ * time, wall-clock in the user's zone), the repeat as Todoist words it.
+ */
+function occurrenceDue(store: Store, row: ItemRow) {
+  const date = row.dueAt ? `${localDay(row.dueAt, store.timeZone)}T${localTime(row.dueAt, store.timeZone)}:00` : row.dueDate;
+  return {date, string: row.dueString, lang: 'en', is_recurring: true};
+}
 
 /** Todoist's answer is the truth for the due it worked out: "every mon starting Wed" lands on Monday. */
 function takeDue(store: Store, rowId: number, task: TodoistTask) {
@@ -118,7 +128,11 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
       return;
     }
     case 'item_reopen':
-      if (target) await todoist.reopenTask(target.providerId, requestId());
+      if (!target) return;
+      // SV-249: a repeating task's done occurrence reopens as Todoist's own Undo does, by the Sync
+      // command that puts the task back on that day; Todoist's reopen does nothing on it.
+      if (typeof command.payload.occurrence_date === 'string') await todoist.command('item_update_date_complete', {id: target.providerId, due: occurrenceDue(store, target), is_forward: 0}, requestId());
+      else await todoist.reopenTask(target.providerId, requestId());
       return;
     case 'item_delete': {
       const row = itemRow(store, command.payload.item_id as number);

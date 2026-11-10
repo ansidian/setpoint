@@ -18,7 +18,7 @@ const item = (fields: Partial<ItemOut>): ItemOut => {
   const id = nextId++;
   return {
     key: String(id), id, calendar_id: 1, kind: 'event', title: 'Item', time_zone: zone, recurring: false, recurrence: null, occurrence_start: null,
-    place: null, address: null, attendees: [], reminders: [10], leave_reminder: false, project: null, done: false, done_at: null, command: null,
+    place: null, address: null, attendees: [], reminders: [10], leave_reminder: false, project: null, done: false, done_at: null, can_reopen: false, command: null,
     all_day: false, starts_at: null, ends_at: null, start_date: null, end_date: null, due_date: null, due_at: null, read_only: false, due_string: null,
     time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', ...fields,
   };

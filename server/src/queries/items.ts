@@ -4,6 +4,7 @@ import type {CalendarOut, CommandOut, ItemOut, ItemsOut, RecentPlaceOut, TimeToL
 import {eventLink, isTodoistColour} from '@setpoint/shared';
 import {and, asc, eq, gte, isNotNull, lt} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
+import {reopenableOccurrences} from '../commands/itemMirror.ts';
 import * as t from '../db/schema.ts';
 import {calendarWritable} from '../domain/calendarAccess.ts';
 import {occurrenceDates, parseRule} from '../domain/recurrence.ts';
@@ -24,7 +25,7 @@ function readOnlyCalendars(store: Store): Set<number> {
   return new Set(rows.filter(row => !calendarWritable(row.accessRole)).map(row => row.id));
 }
 
-function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, occurrence?: {start: string; end: string}, leave: Map<string, TimeToLeaveOut> = new Map()): ItemOut {
+function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, reopenable: Set<number>, occurrence?: {start: string; end: string}, leave: Map<string, TimeToLeaveOut> = new Map()): ItemOut {
   const start = occurrence?.start ?? row.startsAt;
   return {
     key: occurrence ? `${row.id}@${occurrence.start}` : String(row.id),
@@ -35,6 +36,7 @@ function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, 
     occurrence_start: occurrence?.start ?? null,
     place: row.place, address: row.address, attendees: row.attendees ?? [], reminders: row.reminders ?? [], leave_reminder: row.leaveReminder, project: row.project,
     done: row.doneAt !== null, done_at: row.doneAt, command,
+    can_reopen: row.kind === 'task' && row.doneAt !== null && (row.recurringItemId === null ? !row.dueRecurring : reopenable.has(row.id)),
     read_only: row.readOnly || locked.has(row.calendarId), due_string: row.dueString, time_to_leave: (row.leaveReminder && start && leave.get(`${row.id}@${start}`)) || null, colour: row.colour,
     labels: row.labels ?? [], repeat: row.dueRecurring ? repeatOf(row.dueString) : null,
     link: row.kind === 'event' ? eventLink({place: row.place, address: row.address, source_url: row.sourceUrl}) : null,
@@ -82,6 +84,7 @@ export function itemsInRange(store: Store, from: string, to: string): ItemsOut {
   const toAt = zonedInstant(to, '00:00', store.timeZone);
   const commands = itemCommands(store);
   const locked = readOnlyCalendars(store);
+  const reopenable = reopenableOccurrences(store);
   const rows = store.db.select().from(t.items).all();
   const replaced = new Map<number, Set<string>>();
   for (const row of rows) {
@@ -95,16 +98,16 @@ export function itemsInRange(store: Store, from: string, to: string): ItemsOut {
     if (row.kind === 'task') {
       // A repeating task done on this day is its completed occurrence's row, not the task's.
       const doneHere = row.recurringItemId === null && replaced.get(row.id)?.has(row.dueDate!);
-      if (row.dueDate! >= from && row.dueDate! < to && !doneHere) items.push(present(row, command, locked));
+      if (row.dueDate! >= from && row.dueDate! < to && !doneHere) items.push(present(row, command, locked, reopenable));
     } else if (row.expanded && row.recurringItemId === null) {
       // Google expands this series: its occurrences are rows.
       continue;
     } else if (row.allDay) {
-      if (row.startDate! < to && row.endDate! > from) items.push(present(row, command, locked));
+      if (row.startDate! < to && row.endDate! > from) items.push(present(row, command, locked, reopenable));
     } else if (row.recurrence && row.recurringItemId === null) {
-      for (const occurrence of occurrences(row, from, to, fromAt, toAt, replaced.get(row.id) ?? new Set(), store.timeZone)) items.push(present(row, command, locked, occurrence, leave));
+      for (const occurrence of occurrences(row, from, to, fromAt, toAt, replaced.get(row.id) ?? new Set(), store.timeZone)) items.push(present(row, command, locked, reopenable, occurrence, leave));
     } else if (row.startsAt! < toAt && row.endsAt! > fromAt) {
-      items.push(present(row, command, locked, undefined, leave));
+      items.push(present(row, command, locked, reopenable, undefined, leave));
     }
   }
   const when = (item: ItemOut) => item.starts_at ?? zonedInstant(item.start_date ?? item.due_date!, '00:00', store.timeZone);
@@ -118,13 +121,14 @@ export function itemPresenter(store: Store): (row: ItemRow, occurrence?: {start:
   const commands = itemCommands(store);
   const locked = readOnlyCalendars(store);
   const leave = leaveTimes(store);
-  return (row, occurrence) => present(row, commands.get(row.id) ?? null, locked, occurrence, leave);
+  const reopenable = reopenableOccurrences(store);
+  return (row, occurrence) => present(row, commands.get(row.id) ?? null, locked, reopenable, occurrence, leave);
 }
 
 export function itemDetail(store: Store, itemId: number): ItemOut {
   const row = store.db.select().from(t.items).where(eq(t.items.id, itemId)).get();
   if (!row || row.cancelled) throw notFound('No such item.');
-  return present(row, itemCommands(store).get(row.id) ?? null, readOnlyCalendars(store));
+  return present(row, itemCommands(store).get(row.id) ?? null, readOnlyCalendars(store), reopenableOccurrences(store));
 }
 
 export function calendarList(store: Store): CalendarOut[] {

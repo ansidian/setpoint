@@ -378,8 +378,90 @@ describe('changes through the command layer', () => {
     await run();
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
     expect(() => completeItem(w.store, task('t-plants').id, true, '2026-10-07')).toThrow(/already done/);
-    // And it can't be reopened here (Todoist would drop the recurrence).
-    expect(() => completeItem(w.store, task('t-plants').id, false)).toThrow(/reopens in Todoist/);
+    // The task itself isn't reopened: its done occurrence is (SV-249).
+    expect(() => completeItem(w.store, task('t-plants').id, false)).toThrow(/from its done occurrence/);
+  });
+
+  // SV-249 (D510): the toast's Undo and a done occurrence's Reopen. Todoist's reopen does nothing on
+  // a repeating task, so the undo is the Sync command Todoist's own Undo sends.
+  async function doneOccurrenceWorld() {
+    const world = await todoistWorld();
+    await world.run();
+    const plants = world.task('t-plants');
+    completeItem(world.w.store, plants.id, true, '2026-10-07');
+    await world.run();
+    // A poll after the close, as by the time the toast's Undo is pressed.
+    world.w.advance(5 * 60_000);
+    await world.run();
+    const occurrences = () => world.w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, plants.id)).all();
+    return {...world, plants, occurrences};
+  }
+
+  test('SV-249: a repeating task\'s latest done occurrence reopens: Todoist puts the task back on its day with its repeat, and a poll leaves it so', async () => {
+    const {w, todoist, run, command, task, tasks, day, plants, occurrences} = await doneOccurrenceWorld();
+    expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
+    expect(day('2026-10-07').find(item => item.title === 'Water plants')).toMatchObject({done: true, can_reopen: true});
+    expect(day('2026-10-07').find(item => item.title === 'Pay rent')).toMatchObject({done: false, can_reopen: false});
+    const reopened = completeItem(w.store, occurrences()[0]!.id, false);
+    // At once: open on Oct 7 again, the done row gone, the change on the task.
+    expect(reopened.targetId).toBe(plants.id);
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '○ Water plants']);
+    expect(occurrences()).toEqual([]);
+    await run();
+    expect(command(reopened.id).state).toBe('confirmed');
+    const sent = todoist.requests.filter(request => request.path === '/api/v1/sync' && (request.body as Record<string, string>).commands);
+    expect(sent).toHaveLength(1);
+    const [sync] = JSON.parse((sent[0]!.body as Record<string, string>).commands!) as {uuid: string}[];
+    expect(sync).toEqual({
+      type: 'item_update_date_complete', uuid: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/),
+      args: {id: 't-plants', due: {date: '2026-10-07', string: 'every wed', lang: 'en', is_recurring: true}, is_forward: 0},
+    });
+    expect(todoist.requests.filter(request => request.path === '/api/v1/tasks/t-plants/reopen')).toEqual([]);
+    expect(todoist.task('t-plants')!.due).toMatchObject({date: '2026-10-07', string: 'every wed', is_recurring: true});
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '○ Water plants']);
+    expect(tasks('2026-10-14')).toEqual([]);
+    expect(occurrences()).toEqual([]);
+    expect(task('t-plants')).toMatchObject({dueDate: '2026-10-07', dueRecurring: true, dueString: 'every wed', doneAt: null});
+    // And it completes again as before.
+    completeItem(w.store, plants.id, true, '2026-10-07');
+    await run();
+    expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
+  });
+
+  test('SV-249: a reopen Todoist refuses fails in place with Todoist\'s words; Move back brings the done occurrence back', async () => {
+    const {w, todoist, run, command, task, tasks, occurrences} = await doneOccurrenceWorld();
+    todoist.refuseCommand({error: 'Item not found', error_code: 22, error_tag: 'ITEM_NOT_FOUND', http_code: 404, error_extra: {}});
+    const reopened = completeItem(w.store, occurrences()[0]!.id, false);
+    await run();
+    expect(command(reopened.id)).toMatchObject({state: 'failed', providerMessage: 'Item not found (404 Not Found)'});
+    w.advance(5 * 60_000);
+    await run();
+    expect(command(reopened.id).state).toBe('failed');
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '○ Water plants']);
+    moveBackCommand(w.store, reopened.id);
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
+    expect(occurrences().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
+    expect(task('t-plants').dueDate).toBe('2026-10-14');
+    expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
+  });
+
+  test('SV-249: an older done occurrence is history and isn\'t reopened; the latest one is', async () => {
+    const {w, run, task, day, plants, occurrences} = await doneOccurrenceWorld();
+    w.advance(7 * 24 * 60 * 60_000);
+    await run();
+    completeItem(w.store, task('t-plants').id, true, '2026-10-14');
+    await run();
+    const [older, latest] = occurrences().sort((a, b) => a.originalStart!.localeCompare(b.originalStart!));
+    expect([older!.originalStart, latest!.originalStart]).toEqual(['2026-10-07', '2026-10-14']);
+    expect(day('2026-10-07').find(item => item.title === 'Water plants')).toMatchObject({done: true, can_reopen: false});
+    expect(day('2026-10-14').find(item => item.title === 'Water plants')).toMatchObject({done: true, can_reopen: true});
+    expect(() => completeItem(w.store, older!.id, false)).toThrow(/only its latest done occurrence reopens/);
+    expect(() => completeItem(w.store, latest!.id, true)).toThrow(/already done/);
+    completeItem(w.store, latest!.id, false);
+    expect(task('t-plants').id).toBe(plants.id);
+    expect(task('t-plants').dueDate).toBe('2026-10-14');
   });
 
   test('a repeating task completed in Todoist\'s own app is kept done on its day', async () => {

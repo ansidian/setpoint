@@ -5,7 +5,7 @@
 // confirmation); a provider adapter makes the same change at the provider.
 import {randomBytes} from 'node:crypto';
 import type {ItemChanges, ItemWhen, RecurringScope} from '@setpoint/shared';
-import {and, eq, inArray} from 'drizzle-orm';
+import {and, eq, inArray, isNotNull, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {localDay, weekday} from '../domain/time.ts';
 import {invalid} from '../errors.ts';
@@ -58,6 +58,25 @@ function snapshot(store: Store, ids: number[]): ItemSnapshot[] {
 }
 
 /** Move back: deletes what the change created and puts the changed rows back as they were. */
+/**
+ * SV-249 (D510): the done occurrences that reopen: each repeating task's latest, while the task still
+ * repeats. Todoist puts the task back on that day; an older one is a record of work done, as Todoist
+ * treats it.
+ */
+export function reopenableOccurrences(store: Store): Set<number> {
+  const done = store.db.select({id: t.items.id, taskId: t.items.recurringItemId, day: t.items.originalStart}).from(t.items)
+    .where(and(eq(t.items.kind, 'task'), isNotNull(t.items.recurringItemId), isNotNull(t.items.doneAt))).all();
+  const latest = new Map<number, {id: number; day: string}>();
+  for (const row of done) {
+    const seen = latest.get(row.taskId!);
+    if (!seen || row.day! > seen.day) latest.set(row.taskId!, {id: row.id, day: row.day!});
+  }
+  if (!latest.size) return new Set();
+  const repeating = new Set(store.db.select({id: t.items.id}).from(t.items)
+    .where(and(inArray(t.items.id, [...latest.keys()]), isNull(t.items.recurringItemId), eq(t.items.dueRecurring, true), eq(t.items.cancelled, false))).all().map(row => row.id));
+  return new Set([...latest].filter(([taskId]) => repeating.has(taskId)).map(([, occurrence]) => occurrence.id));
+}
+
 export function restoreItems(store: Store, rows: ItemSnapshot[], created: number[]) {
   if (created.length) store.db.delete(t.items).where(inArray(t.items.id, created)).run();
   for (const row of rows) {

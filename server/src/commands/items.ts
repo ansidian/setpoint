@@ -14,7 +14,7 @@ import {createCommand} from './index.ts';
 import type {CommandRow} from './index.ts';
 import {repeatAfter} from '../providers/todoist/due.ts';
 import {todoistCalendar} from '../providers/todoist/sync.ts';
-import {changeItemInMirror, localProviderId, whenOf} from './itemMirror.ts';
+import {changeItemInMirror, localProviderId, reopenableOccurrences, whenOf} from './itemMirror.ts';
 import type {ItemRow} from './itemMirror.ts';
 
 function calendar(store: Store, calendarId: number) {
@@ -138,13 +138,15 @@ export function deleteItem(store: Store, itemId: number, input: ItemScopeInput):
  * Completes or reopens a task. A repeating task completes one occurrence, named by its due date
  * (v1's tasks-service): only the one Todoist has open now, and only once. The completed occurrence
  * becomes a row of its own, done on its day, which stays after Todoist moves the task on (the
- * tombstone); the task itself is hidden on that day meanwhile.
+ * tombstone); the task itself is hidden on that day meanwhile. SV-249 (D510): the task's latest done
+ * occurrence reopens, by its own id: the row goes and the task is back on that day, the change the
+ * task's own; an older one stays done.
  */
 export function completeItem(store: Store, itemId: number, done: boolean, occurrenceDate: string | null = null): CommandRow {
   const row = item(store, itemId);
   if (row.kind !== 'task') throw invalid('Only tasks are completed.');
   if (row.dueRecurring && row.recurringItemId === null) {
-    if (!done) throw invalid('A repeating task reopens in Todoist.');
+    if (!done) throw invalid('A repeating task reopens from its done occurrence.');
     const date = occurrenceDate ?? row.dueDate!;
     if (date !== row.dueDate) throw conflict('occurrence_not_open', `This task isn't open on ${date} in Todoist.`);
     const already = store.db.select({id: t.items.id}).from(t.items).where(and(eq(t.items.recurringItemId, row.id), eq(t.items.originalStart, date))).get();
@@ -160,7 +162,19 @@ export function completeItem(store: Store, itemId: number, done: boolean, occurr
       },
     });
   }
-  if (row.recurringItemId !== null && !done) throw invalid('A repeating task reopens in Todoist.');
+  if (row.recurringItemId !== null && !done) {
+    const task = item(store, row.recurringItemId);
+    if (!reopenableOccurrences(store).has(row.id)) throw invalid('Todoist has moved this repeating task on; only its latest done occurrence reopens.');
+    if (!task.dueString) throw invalid('Todoist didn\'t say how this task repeats, so it reopens in Todoist.');
+    return createCommand(store, {
+      target: 'item', kind: 'item_reopen', sourceId: calendarSourceId(store, row.calendarId), payload: {item_id: task.id, done, occurrence_date: row.originalStart},
+      prepare: () => {
+        store.db.delete(t.items).where(eq(t.items.id, row.id)).run();
+        store.db.update(t.items).set({dueDate: row.dueDate, dueAt: row.dueAt}).where(eq(t.items.id, task.id)).run();
+        return {targetId: task.id, previous: {items: [row, task]}, touched: {items: [row.id, task.id], calendars: [row.calendarId]}};
+      },
+    });
+  }
   if ((row.doneAt !== null) === done) throw conflict('unchanged', done ? 'That task is already done.' : 'That task is already open.');
   return createCommand(store, {
     target: 'item', kind: done ? 'item_complete' : 'item_reopen', sourceId: calendarSourceId(store, row.calendarId), payload: {item_id: row.id, done},

@@ -831,7 +831,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     // A read-only event leaves out what it can't do, saying why, and keeps its link (D447).
     if (item.read_only) return [{id: 'read-only', label: readOnlyReason(calendar), icon: 'lock', note: true, run: () => {}}, ...openIt];
     return [
-      ...(item.kind === 'task' ? [{id: 'complete', label: item.done ? 'Reopen' : 'Complete', icon: item.done ? 'undo' : 'task_alt', disabled: fixed || (item.done && item.recurring), run: () => complete(item)} satisfies MenuAction] : []),
+      ...(item.kind === 'task' ? [{id: 'complete', label: item.done ? 'Reopen' : 'Complete', icon: item.done ? 'undo' : 'task_alt', disabled: fixed || (item.done && !item.can_reopen), run: () => complete(item)} satisfies MenuAction] : []),
       // Edit opens the editor at once, the item's day selected, with no card to hand it over (#248).
       {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', disabled: fixed, run: () => openEditor({kind: item.kind, date, item}, false, addressOf({page: 'calendar', date, item: null, at: null}))},
       ...openIt,
@@ -909,8 +909,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const complete = (task: ItemOut, undoing = false) => {
     setSending(map => new Map(map).set(task.key, sending({...task, done: !task.done})));
     void completeItem(task.id, !task.done, task.recurring ? task.due_date : null)
-      .then(() => {
-        if (!undoing) said(`${task.done ? 'Reopened' : 'Completed'} ${task.title}`, task.recurring ? null : () => complete({...task, done: !task.done}, true));
+      // SV-249 (D510): the undo goes to the item the change was on, a repeating task's done
+      // occurrence after Complete and the task itself after Reopen.
+      .then(command => {
+        if (!undoing) said(`${task.done ? 'Reopened' : 'Completed'} ${task.title}`, () => complete({...task, id: command.target_id, key: String(command.target_id), done: !task.done}, true));
       })
       .catch(toastFailure(`Couldn't complete ${task.title}`))
       .finally(() => setSending(map => {

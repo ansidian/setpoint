@@ -50,6 +50,9 @@ export interface ItemOut extends ItemWhen {
   project: string | null;
   done: boolean;
   done_at: string | null;
+  // SV-249 (D510): whether a done task's check reopens it: a one-off task, or a repeating task's
+  // latest done occurrence while it still repeats. False while open, and on an older occurrence.
+  can_reopen: boolean;
   command: CommandOut | null;
   // Google's own kinds of event (birthdays, focus time, out of office): shown, never changed here.
   read_only: boolean;
