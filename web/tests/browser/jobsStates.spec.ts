@@ -226,7 +226,7 @@ test('board 39a: Settings › Jobs: its count, the switch, Reads as a select on 
   }
 });
 
-test('board 39b: Settings › AI\'s Jobs group: three models by name, this month with no meter', async () => {
+test('board 39b: Settings › AI\'s Jobs group: three models by name, its spend only on Usage this month\'s line (D515)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -239,9 +239,8 @@ test('board 39b: Settings › AI\'s Jobs group: three models by name, this month
       ['Each email', 'Role title, requisition ID, the event, the match · needs a key', 'Claude Haiku 5.5'],
       ['Finding the JD', 'When the email\'s link and the platforms miss · needs a key', 'Claude Sonnet 5.5 with web search'],
       ['Reading the JD', 'Summary, must-haves and nice-to-haves, salary and setting · needs a key', 'Claude Haiku 5.5'],
-      ['This month', 'No cap: a JD is worth finding while the posting is up', '$3.85'],
     ]);
-    // No cap, so no meter and nothing to choose.
+    // No cap, so no meter and nothing to choose; the spend shows once, on Usage this month's Jobs line (D515).
     assert.equal(await jobs.locator('.meter, .select, [role="meter"]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

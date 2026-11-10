@@ -1391,10 +1391,12 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
     the JD** ("When the email's link and the platforms miss"), Claude Sonnet 5.5 with web search;
     **Reading the JD** ("Summary, must-haves and nice-to-haves, salary and setting"), Claude Haiku
     5.5. Names, not selects, as News's are (override 26).
-  - **This month** ("No cap: a JD is worth finding while the posting is up"), "$3.85" in `ink` 12.5.
-    No cap, so no meter.
-  - **Usage this month** adds a Jobs row broken into its three parts, as News's is: "Emails $0.62 ·
-    finding JDs $2.71 · reading JDs $0.52", $3.85; the label's total takes it in ($25.20).
+  - No **This month** row (#359): with no cap there's no meter to show, so Jobs' spend shows once,
+    in Usage this month.
+  - **Usage this month** adds a Jobs row broken into its three parts, as News's is, ending "no cap":
+    "Emails $0.62 · finding JDs $2.71 · reading JDs $0.52 · no cap", $3.85; its tip adds the calls
+    and tokens and "No cap: a JD is worth finding while the posting is up" (#359). The label's total
+    takes it in ($25.20).
 
 ### Light
 
@@ -1717,6 +1719,9 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
 50. **Time to Leave is on Settings › Calendar** (#358): board 18b draws its group on Notifications,
     with a "Leave from" row; the app's is under Calendar's Home, its switch and Buffer, and
     Notifications ends with Reminder defaults and Alerts.
+51. **AI's Jobs group has no This month row** (#359): board 39b draws one under Reading the JD,
+    "No cap: a JD is worth finding while the posting is up" and $3.85; the app's group ends at
+    Reading the JD, and Usage this month's Jobs line ends "· no cap".
 
 ## Not designed yet
 
@@ -4540,6 +4545,16 @@ was decided; the audit itself was retired by D480.
     keep Notifications' heights (the switch row's two lines leave it at 57.42 px, as Weather's and
     every two-line Settings row with a switch is today, not changed here; #360 made it 58), and its
     save errors show under its own group.
+359. **Jobs' spend shows once, on Usage this month's line** (amending Jobs in Settings › AI and board
+    39b; Andy, 2026-11-09; darma SV-253, D515, which also names #273): AI's Jobs group loses its
+    **This month** row, so it's Each email, Finding the JD and Reading the JD; News keeps its row,
+    which carries the cap's meter. Usage this month's Jobs line takes the "No cap" note as its last
+    part: "Emails $0.62 · finding JDs $2.71 · reading JDs $0.52 · no cap", 345 px in a line 450 px
+    wide at the 820 px modal (670 at 1040), with room for two-digit amounts. The whole note
+    appended measured 602 px and clipped at 820, so its reason goes in the line's tip after the
+    calls and tokens: "497 calls · 1.3M tokens in · 80k out. No cap: a JD is worth finding while the
+    posting is up". Decided for Andy overnight: the words "no cap", lower-case as "· needs a key" is,
+    and the reason in the tip.
 360. **FYI mail says "Set a server first" without a server, and every row lands on whole pixels**
     (amending #252 and Settings' rows; Andy, 2026-11-09; darma SV-253, D517): while ntfy has no
     server, FYI mail's row says "Set a server first" under its title, as `setpoint-reminders`,

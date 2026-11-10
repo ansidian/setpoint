@@ -162,7 +162,7 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
       ['Search reading', '48 calls · 60k tokens in · 2k out', '$0.01'],
       ['Alfred', '18 calls · 112k tokens in · 8k out', '$0.85'],
       ['News', 'Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20', '$18.40'],
-      ['Jobs', 'Emails $0.62 · finding JDs $2.71 · reading JDs $0.52', '$3.85'],
+      ['Jobs', 'Emails $0.62 · finding JDs $2.71 · reading JDs $0.52 · no cap', '$3.85'],
     ]);
     // The month's total in the label.
     assert.equal(await usage.locator('.set-label .r').textContent(), '$25.25');

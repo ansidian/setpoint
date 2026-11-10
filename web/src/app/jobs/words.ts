@@ -393,11 +393,18 @@ export const fromHistorySetting = (waiting: number) =>
 /** A model's name and how it runs: "Claude Sonnet 5.5 with web search". */
 export const jobsModelWith = (label: string, search = false) => (search ? `${label} with web search` : label);
 
-/** Usage this month's Jobs row (39b): "Emails $0.62 · finding JDs $2.71 · reading JDs $0.52". */
+/**
+ * Usage this month's Jobs row (39b), where Jobs' spend shows once (D515): "Emails $0.62 · finding JDs
+ * $2.71 · reading JDs $0.52 · no cap". The whole note didn't fit the row at the 820 px modal; its
+ * reason, NO_CAP_WHY, is the line's tip.
+ */
 export function jobsUsageParts(month: JobsAiOut['this_month']): string {
   const parts: [string, number][] = [['Emails', month.emails.cost_usd], ['finding JDs', month.finding_jds.cost_usd], ['reading JDs', month.reading_jds.cost_usd]];
-  return parts.map(([name, cost]) => `${name} ${dollars(cost, true)}`).join(' · ');
+  return [...parts.map(([name, cost]) => `${name} ${dollars(cost, true)}`), 'no cap'].join(' · ');
 }
+
+/** Why Jobs has no cap (decision 61), in the Jobs usage line's tip. */
+export const NO_CAP_WHY = 'No cap: a JD is worth finding while the posting is up';
 
 /** A side of a pane row's change (SV-220, D470): its label and the table's mark, Ghosted its own. */
 export const moveSide = (status: JobMoveOut['to']): {label: string; mark: Mark} =>

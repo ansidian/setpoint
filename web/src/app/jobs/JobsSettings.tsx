@@ -6,9 +6,9 @@
 //   account for what Jobs reads there (#273, D383), a change while it's on starting the history pass
 //   over what's new to it; and History: the pass's progress or when it finished, and
 //   From history's waiting items with Show, which opens Jobs with them unfolded.
-// - Settings › AI's Jobs group (39b, D315): its three models by name, not selects (override 26), and
-//   this month's spend with no meter (no cap, decision 61); Usage this month's Jobs row in its three
-//   parts, whose total the label's takes in.
+// - Settings › AI's Jobs group (39b, D315): its three models by name, not selects (override 26). Its
+//   spend shows once (D515), on Usage this month's Jobs row: its three parts and "no cap" (decision
+//   61), the reason in the line's tip; the label's total takes it in.
 // - Jobs off's Turn on (38c) opens Settings › Jobs with the switch focused, so turning it on is a
 //   choice made where the accounts it reads are listed.
 import type {CSSProperties} from 'react';
@@ -25,7 +25,7 @@ import {HealthGlyph, Line, Page, Row, Section, Select, SkeletonRows, Switch, use
 import {closeSettings, openSettings} from '../settings/store.ts';
 import {AI_PATH, SETTINGS_PATH, setReads, turnJobs} from './api.ts';
 import {
-  applicationsCount, fromHistorySetting, historyRuns, historySetting, historyShare, jobsModelWith, jobsUsageParts, READS_WORDS,
+  applicationsCount, fromHistorySetting, historyRuns, historySetting, historyShare, jobsModelWith, jobsUsageParts, NO_CAP_WHY, READS_WORDS,
 } from './words.ts';
 
 /** What Settings loads as it opens, so Settings › Jobs and AI's Jobs group show at once. */
@@ -123,33 +123,33 @@ export function JobsSettingsPage() {
 }
 
 /**
- * Settings › AI's Jobs group (39b): the models by name, and this month with no meter. `label` names a
- * model from Settings › AI's own answer; until that has come (null), the group is its skeleton.
+ * Settings › AI's Jobs group (39b): the models by name; this month's spend is Usage this month's
+ * (D515). `label` names a model from Settings › AI's own answer; until that has come (null), the
+ * group is its skeleton.
  */
 export function JobsAiGroup({label}: {label: ((model: string) => string) | null}) {
   const {data: ai} = useResource<JobsAiOut>(AI_PATH);
   const needsKey = ai?.missing ? ' · needs a key' : '';
   return (
     <Section label="Jobs">
-      {!ai || !label ? <SkeletonRows count={4} /> : (
+      {!ai || !label ? <SkeletonRows count={3} /> : (
         <div className="set-group">
           <Row title="Each email" sub={`Role title, requisition ID, the event, the match${needsKey}`} kind="ctl"><span className="val">{label(ai.models.emails)}</span></Row>
           <Row title="Finding the JD" sub={`When the email's link and the platforms miss${needsKey}`} kind="ctl"><span className="val">{jobsModelWith(label(ai.models.finding), true)}</span></Row>
           <Row title="Reading the JD" sub={`Summary, must-haves and nice-to-haves, salary and setting${needsKey}`} kind="ctl"><span className="val">{label(ai.models.reading)}</span></Row>
-          <Row title="This month" sub="No cap: a JD is worth finding while the posting is up" kind="ctl"><span className="jb-spent num">{dollars(ai.this_month.cost_usd, true)}</span></Row>
         </div>
       )}
     </Section>
   );
 }
 
-/** Usage this month's Jobs row (39b), in its three parts; nothing until it's answered. */
+/** Usage this month's Jobs row (39b), in its three parts and with no cap (D515); nothing until it's answered. */
 export function JobsUsageRow() {
   const {data: ai} = useResource<JobsAiOut>(AI_PATH);
   if (!ai) return null;
   const month = ai.this_month;
   return (
-    <Row title="Jobs" sub={<span className="num" data-tip={usageLine(month)} data-tip-quick>{jobsUsageParts(month)}</span>}>
+    <Row title="Jobs" sub={<span className="num" data-tip={`${usageLine(month)}. ${NO_CAP_WHY}`} data-tip-quick>{jobsUsageParts(month)}</span>}>
       <span className="cost num">{dollars(month.cost_usd, true)}</span>
     </Row>
   );

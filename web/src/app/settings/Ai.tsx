@@ -3,8 +3,8 @@
 // each changeable at will (triage's cheap and strong, the history pass, and Alfred; Default is the
 // built-in choice for the keys that are set); News's group (N5): its two models, fixed (D90), the
 // monthly cap, and this month's spend on its meter, saying so at the cap; Jobs's group (J8, board 39b,
-// from jobs/, a wiring point); then this month's usage, Triage, Search terms, Search reading, Alfred,
-// News and Jobs in their parts.
+// from jobs/, a wiring point), its models only; then this month's usage, Triage, Search terms, Search
+// reading, Alfred, News and Jobs in their parts, Jobs' line the one place its spend shows (D515).
 import type {AiModelChoiceOut, AiOut, SecretName, SecretOut, Settings} from '@setpoint/shared';
 import {useState} from 'react';
 import {timeZone} from '../../api/auth.ts';

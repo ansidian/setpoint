@@ -460,10 +460,9 @@
 .jb-empty .lnk:active { background: var(--sub3); transform: scale(.97); }
 
 /* Settings › Jobs (39a): each account's dot and label, then a select for what Jobs reads there (#273);
-   the group's foot under it. Settings › AI's This month (39b): the amount in ink, with no meter. */
+   the group's foot under it. */
 .settings .jb-reads .acc { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); min-width: 0; }
 .settings .jb-note { height: auto; margin: 0; padding: 8px 4px 0; }
-.settings .jb-spent { color: var(--ink); font-size: 12.5px; flex: none; white-space: nowrap; }
 
 /* ---------- Menus (34a, 35a, 35b; #266–#268): the reader's menu, from its anchor's corner ---------- */
 .jb-menu { position: fixed; z-index: 40; padding: 6px; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 16px); overflow-y: auto; }
