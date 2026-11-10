@@ -90,9 +90,9 @@ test('Settings loading: each page draws its groups\' skeleton rows, never a defa
   try {
     const page = await setpoint.page('target');
     const release = await hold(page, SETTINGS_PATHS);
-    await visit(page, `${setpoint.base}/settings/todoist`);
+    await visit(page, `${setpoint.base}/settings/calendar`);
     const main = page.locator('.settings .set-main');
-    for (const name of ['Todoist', 'Accounts', 'Calendar', 'Notifications', 'Mail', 'News', 'AI', 'Security']) {
+    for (const name of ['Calendar', 'Accounts', 'Notifications', 'Mail', 'News', 'AI', 'Security']) {
       await page.locator('.settings .set-nav').getByRole('button', {name, exact: true}).click();
       await main.locator('.set-title', {hasText: name}).waitFor();
       await shown(page, 'settings');
@@ -101,9 +101,10 @@ test('Settings loading: each page draws its groups\' skeleton rows, never a defa
     }
     await release();
     await main.locator('.set-row', {hasText: 'Recovery'}).or(main.locator('.set-row', {hasText: 'left'})).first().waitFor();
-    await page.locator('.settings .set-nav .nav', {hasText: 'Todoist'}).click();
-    await main.locator('.set-row', {hasText: 'Connected'}).waitFor();
-    // Connected is the sources' alone; the page's other answers (nothing is held now) are in and drawn too.
+    // Calendar's Todoist section once it knows Todoist is connected: its projects and default project.
+    await page.locator('.settings .set-nav .nav', {hasText: 'Calendar'}).click();
+    await main.locator('.set-row', {hasText: 'Default project'}).waitFor();
+    // Connected is the sources' answer; the page's other answers (nothing is held now) are in and drawn too.
     await setpoint.idle();
     assert.equal(await page.locator('.settings [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);

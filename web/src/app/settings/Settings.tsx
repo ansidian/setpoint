@@ -29,7 +29,6 @@ import {NewsSettingsPage} from './News.tsx';
 import {NotificationsPage} from './Notifications.tsx';
 import {SecurityPage} from './Security.tsx';
 import {closeSettings, openSettings, useSettingsPage} from './store.ts';
-import {TodoistPage} from './Todoist.tsx';
 import './settings.css';
 
 // Every page's answers, loaded as Settings opens so a page switched to shows at once (settings-05).
@@ -41,7 +40,7 @@ const PAGE_PATHS = [
 const PREFETCH_AFTER_MS = 250;
 
 const PAGES: Record<SettingsPage, () => JSX.Element> = {
-  accounts: AccountsPage, calendar: CalendarPage, todoist: TodoistPage, notifications: NotificationsPage,
+  accounts: AccountsPage, calendar: CalendarPage, notifications: NotificationsPage,
   mail: MailPage, news: NewsSettingsPage, jobs: JobsSettingsPage, ai: AiPage, appearance: AppearancePage, security: SecurityPage,
 };
 

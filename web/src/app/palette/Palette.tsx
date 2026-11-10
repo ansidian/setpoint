@@ -30,9 +30,8 @@ const THEME_ICONS = {system: 'contrast', light: 'light_mode', night: 'dark_mode'
 
 // Settings' sections, found by typing what they hold ("rules", "ntfy", "keys"; UX #20), each with its nav's glyph (#123).
 const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
-  {page: 'accounts', keywords: 'gmail google icloud reconnect connect'},
-  {page: 'calendar', keywords: 'calendars home weather forecast maps places'},
-  {page: 'todoist', keywords: 'projects tasks'},
+  {page: 'accounts', keywords: 'gmail google icloud todoist reconnect connect'},
+  {page: 'calendar', keywords: 'calendars home todoist projects tasks weather forecast maps places'},
   {page: 'notifications', keywords: 'ntfy reminders time to leave buffer alerts'},
   {page: 'mail', keywords: 'rules domains trusted codes expiry triage'},
   {page: 'news', keywords: 'sources feeds airnow'},

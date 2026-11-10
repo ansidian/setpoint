@@ -8,7 +8,6 @@ import type {SettingsPage} from './route.ts';
 export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}> = {
   accounts: {label: 'Accounts', icon: 'alternate_email'},
   calendar: {label: 'Calendar', icon: 'calendar_month'},
-  todoist: {label: 'Todoist', icon: 'task_alt'},
   notifications: {label: 'Notifications', icon: 'notifications'},
   mail: {label: 'Mail', icon: 'mail'},
   news: {label: 'News', icon: 'newspaper'},
@@ -239,24 +238,28 @@ export const TASK_TIMES = ['07:00', '08:00', '09:00', '10:00', '12:00', '17:00',
 /** Code expiry's presets (Settings › Mail): "5 min", "1 hour". */
 export const expiryLabel = (minutes: number) => (minutes === 60 ? '1 hour' : `${minutes} min`);
 
+/** Whether Todoist is connected: its source has a token, or is the dev run's invented one. */
+export const todoistConnected = (sources: SourceOut[]) => sources.some(source => source.provider === 'todoist' && (source.has_credentials || source.dev));
+
 /**
  * What a provider's return to Settings says (Connect Gmail's callback: ?connected=<id> or
- * ?error=<code>; Todoist's: ?connected=1 or 0), for a toast; null for a plain link.
+ * ?error=<code>; Todoist's, to Accounts since D514: ?todoist=1 or 0), for a toast; null for a plain link.
  */
-export function connectNote(page: string, search: string): string | null {
+export function connectNote(search: string): string | null {
   const query = new URLSearchParams(search);
   const connected = query.get('connected');
   const error = query.get('error');
-  if (page === 'todoist' && connected !== null) return connected === '1' ? 'Todoist is connected' : 'Todoist couldn’t be connected, try again';
+  const todoist = query.get('todoist');
+  if (todoist !== null) return todoist === '1' ? 'Todoist is connected' : 'Todoist couldn’t be connected, try again';
   if (error) return error === 'google_not_configured' ? 'Google sign-in isn’t set up on this Setpoint' : `Gmail couldn’t be connected, ${error.replace(/_/g, ' ')}`;
   if (connected !== null) return 'Gmail is connected';
   return null;
 }
 
 /** Whether connectNote's line says the connection failed, so the toast leads with the failure's glyph. */
-export function connectFailed(page: string, search: string): boolean {
+export function connectFailed(search: string): boolean {
   const query = new URLSearchParams(search);
-  return page === 'todoist' && query.get('connected') !== null ? query.get('connected') !== '1' : query.has('error');
+  return query.get('todoist') !== null ? query.get('todoist') !== '1' : query.has('error');
 }
 
 /** The settings with a change applied, as they show at once before the server answers: each section's fields over its own. */

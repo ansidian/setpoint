@@ -49,8 +49,8 @@ export function App({arrive = false}: {arrive?: boolean}) {
   useEffect(() => {
     if (!settingsLink) return;
     // Back from Google's or Todoist's consent: say how it went.
-    const note = connectNote(settingsLink, window.location.search);
-    if (note) showToast(note, null, connectFailed(settingsLink, window.location.search) ? 'failed' : null);
+    const note = connectNote(window.location.search);
+    if (note) showToast(note, null, connectFailed(window.location.search) ? 'failed' : null);
     openSettings(settingsLink);
     navigate(toInbox(), {replace: true});
   }, [settingsLink]);

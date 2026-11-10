@@ -24,7 +24,7 @@ export type TodoistOptions = TodoistApiOptions;
 
 function api(options: TodoistOptions, context: AdapterContext): TodoistApi {
   const credentials = context.credentials();
-  if (credentials?.kind !== 'api_key') throw new ProviderError('auth', 'Todoist isn\'t connected; connect it in Settings › Todoist.');
+  if (credentials?.kind !== 'api_key') throw new ProviderError('auth', 'Todoist isn\'t connected; connect it in Settings › Accounts.');
   return new TodoistApi(options, credentials.key, context.signal);
 }
 

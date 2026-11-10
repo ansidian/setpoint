@@ -583,7 +583,7 @@ describe('connecting Todoist', () => {
     // Todoist's redirect back: cross-site, so no session cookie, only the binding.
     const back = await c.send('GET', `${CALLBACK}?code=code-1&state=${url.searchParams.get('state')}`, {headers: {cookie: cookie.split(';')[0]!}});
     expect(back.status).toBe(200);
-    expect(back.body).toContain('url=/settings/todoist?connected=1');
+    expect(back.body).toContain('url=/settings/accounts?todoist=1');
     const source = w.store.db.select().from(t.sources).where(eq(t.sources.provider, 'todoist')).get()!;
     expect(readSourceCredentials(w.store, source.id)).toEqual({kind: 'api_key', key: 'todoist-token-new'});
     expect(todoist.requests.find(request => request.path === '/oauth/access_token')!.body).toMatchObject({

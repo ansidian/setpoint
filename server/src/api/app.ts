@@ -373,10 +373,10 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
         code: c.req.query('code') ?? null, state: c.req.query('state') ?? null, bind, redirectUri: new URL(TODOIST_CALLBACK_PATH, origin(c)).href,
       });
       enqueueJob(store, {kind: 'sync', key: `sync:${sourceId}`, sourceId});
-      return page(200, 'Todoist is connected.', '/settings/todoist?connected=1');
+      return page(200, 'Todoist is connected.', '/settings/accounts?todoist=1');
     } catch (error) {
       if (!(error instanceof TodoistOAuthError)) console.error('Todoist callback', error);
-      return page(400, 'Todoist couldn\'t be connected. Try again from Settings › Todoist.', '/settings/todoist?connected=0');
+      return page(400, 'Todoist couldn\'t be connected. Try again from Settings › Accounts.', '/settings/accounts?todoist=0');
     }
   });
 

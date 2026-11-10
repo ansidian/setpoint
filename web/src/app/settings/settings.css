@@ -44,6 +44,8 @@
 /* The group doesn't clip, so a row's menu shows whole over what follows (darma SV-21); its first and
    last rows take its corners instead. */
 .settings .set-group { border-radius: var(--settingsGroupRadius); background: var(--sub); }
+/* A second group under the same label (Calendar's Todoist: its projects, then Default project, D514). */
+.settings .set-group.next { margin-top: 8px; }
 .settings .set-group > :first-child { border-top-left-radius: inherit; border-top-right-radius: inherit; }
 .settings .set-group > :last-child { border-bottom-left-radius: inherit; border-bottom-right-radius: inherit; }
 .settings .set-row { min-height: var(--settingsRow); display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--hair); }
@@ -96,8 +98,6 @@
 .settings .hg.stale { color: var(--ink3); }
 .settings .hg.caution { color: var(--caution); }
 .settings .spin.hg { margin: 0; vertical-align: 0; color: var(--ink3); }
-/* Todoist's Connection row: the glyph before "Connected". */
-.settings .health-t { display: inline-flex; align-items: center; gap: 8px; }
 :is(.settings, .cal-import) .anchor { position: relative; display: inline-flex; flex: none; }
 /* A row's menu and a select's: the app's one menu (styles.css), under its button's right edge, or
    its left with `.left`. The import review's Into select takes the same (SV-189). */

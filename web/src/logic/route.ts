@@ -17,7 +17,7 @@
 import {ITEM_KINDS, NEWS_SECTIONS} from '@setpoint/shared';
 import type {ItemKind, NewsSection} from '@setpoint/shared';
 
-export const SETTINGS_PAGES = ['accounts', 'calendar', 'todoist', 'notifications', 'mail', 'news', 'jobs', 'ai', 'appearance', 'security'] as const;
+export const SETTINGS_PAGES = ['accounts', 'calendar', 'notifications', 'mail', 'news', 'jobs', 'ai', 'appearance', 'security'] as const;
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 export type Compose = {kind: ItemKind; message: number | null; upcoming?: number};

@@ -4,7 +4,7 @@ import type {HealthOut, RuleMatch, RuleOut, SourceOut} from '@setpoint/shared';
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, wordsMatch,
+  connectFailed, connectNote, todoistConnected, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, wordsMatch,
   shifts, splitRules, taskTime, waitingChoices, waitingTitle, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
@@ -170,11 +170,17 @@ describe('Settings', () => {
   test.each([
     ['accounts', '', null, false], ['accounts', '?connected=6', 'Gmail is connected', false], ['accounts', '?error=access_denied', 'Gmail couldn’t be connected, access denied', true],
     ['accounts', '?error=google_not_configured', 'Google sign-in isn’t set up on this Setpoint', true],
-    ['todoist', '?connected=1', 'Todoist is connected', false], ['todoist', '?connected=0', 'Todoist couldn’t be connected, try again', true], ['notifications', '', null, false],
-  ])('back at /settings/%s%s: %j, a failure %s', (page, search, note, failed) => {
-    expect(connectNote(page, search)).toBe(note);
-    expect(connectFailed(page, search)).toBe(failed);
+    ['accounts', '?todoist=1', 'Todoist is connected', false], ['accounts', '?todoist=0', 'Todoist couldn’t be connected, try again', true], ['notifications', '', null, false],
+  ])('back at /settings/%s%s: %j, a failure %s', (_page, search, note, failed) => {
+    expect(connectNote(search)).toBe(note);
+    expect(connectFailed(search)).toBe(failed);
   });
+
+  const todoist = (fields: Partial<SourceOut>) => ({provider: 'todoist', has_credentials: false, dev: false, ...fields}) as SourceOut;
+  test.each([
+    ['no Todoist source', [], false], ['a source with no token', [todoist({})], false], ['a token', [todoist({has_credentials: true})], true],
+    ['the dev run\'s source', [todoist({dev: true})], true], ['only another provider', [{...todoist({has_credentials: true}), provider: 'weather'} as SourceOut], false],
+  ])('Todoist with %s: connected %s', (_case, sources, connected) => expect(todoistConnected(sources as SourceOut[])).toBe(connected));
 });
 
 describe('usageLine: Settings › AI\'s 30 days, saying what it counts', () => {

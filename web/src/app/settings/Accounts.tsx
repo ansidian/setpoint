@@ -1,7 +1,8 @@
 // Settings › Accounts (board 17): Connect Gmail and Connect iCloud; each mail account with its drag
 // handle (order; ↑ ↓ on the handle too), colour from darma's 11 swatches, icon, label, address, how
 // it syncs and its state, Reconnect when it needs sign-in; then the sources (Google Calendar,
-// Todoist, Weather) the same way.
+// Todoist, Weather) the same way. Todoist's row is its only connection (D514): Connect Todoist while
+// it isn't connected, Reconnect in its menu once it is.
 import type {AccountOut, CalendarOut, Settings, SourceOut, TodoistProjectOut} from '@setpoint/shared';
 import {SWATCH_COLOURS} from '@setpoint/shared';
 import {useState} from 'react';
@@ -10,10 +11,10 @@ import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
-import {authorizeGmail, connectIcloud, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
+import {authorizeGmail, connectIcloud, connectTodoist, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
 import {sourceState, syncLine} from '../../logic/health.ts';
 import type {SourceState} from '../../logic/health.ts';
-import {mergeSources, moved} from '../../logic/settings.ts';
+import {mergeSources, moved, todoistConnected} from '../../logic/settings.ts';
 import type {IconName} from '../../ui/glyphs.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -40,6 +41,7 @@ export function AccountsPage() {
   const settings = settingsLoad.data;
   const now = useNow();
   const connect = useAttempt();
+  const todoistConnect = useAttempt();
   // The iCloud form: a new account, or an account's new app password (Reconnect).
   const [icloud, setIcloud] = useState<{address: string} | null>(null);
 
@@ -55,6 +57,11 @@ export function AccountsPage() {
   const todoist = sources?.find(source => source.provider === 'todoist');
   const weather = sources?.find(source => source.provider === 'weather');
   const defaultProject = projects?.find(project => project.name === settings?.todoist.default_project) ?? projects?.find(project => project.inbox);
+  // Todoist's consent, a new connection or a new token for the one there.
+  const authorizeTodoist = () => void todoistConnect.attempt(connectTodoist, ({url}) => {
+    window.location.assign(url);
+    return null;
+  });
   const order = useLiveOrder(list, 'text/x-setpoint-account', ids => void reorderAccounts(ids).catch(toastFailure('Couldn\'t reorder accounts')));
 
   return (
@@ -81,13 +88,17 @@ export function AccountsPage() {
       </Section>
       {!sources ? (
         <Section label="Sources" style={{marginTop: 18}}><SkeletonRows count={3} tile /></Section>
-      ) : (google || todoist || weather) && (
+      ) : (
         <Section label="Sources" style={{marginTop: 18}}>
           <div className="set-group">
             {google && <SourceRow source={google} name="Google Calendar" sub={calendars?.filter(calendar => calendar.provider === 'google').map(calendar => calendar.name).join(' · ') ?? ''} now={now} />}
-            {todoist && <SourceRow source={todoist} name="Todoist" sub={projects ? `${defaultProject?.name ?? 'No default project'} · ${projects.length} project${projects.length === 1 ? '' : 's'}` : ''} now={now} />}
+            {todoist && todoistConnected(sources)
+              ? <SourceRow source={todoist} name="Todoist" sub={projects ? `${defaultProject?.name ?? 'No default project'} · ${projects.length} project${projects.length === 1 ? '' : 's'}` : ''} now={now}
+                onReconnect={authorizeTodoist} busy={todoistConnect.busy} />
+              : <TodoistConnectRow onConnect={authorizeTodoist} busy={todoistConnect.busy} />}
             {weather && <SourceRow source={weather} name="Weather" sub={settings ? settings.calendar.home?.label ?? 'No home set' : ''} now={now} />}
           </div>
+          <Line text={todoistConnect.line?.text ?? null} tone={todoistConnect.line?.tone} />
         </Section>
       )}
     </Page>
@@ -185,7 +196,8 @@ const warnRow = (state: SourceState) => state.kind === 'failing' || state.kind =
 /** Its state's words: `caution` in trouble, `ink2` once checks stopped, under an `ink3` glyph (settings-01). */
 const stateClass = (state: SourceState, checkFailed: boolean) => (state.tone === 'caution' || checkFailed ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state');
 
-function SourceRow({source, name, sub, now}: {source: SourceOut; name: string; sub: string; now: number}) {
+/** A source's row; one with `onReconnect` (Todoist) offers it in its menu, and by its state when it needs sign-in. */
+function SourceRow({source, name, sub, now, onReconnect, busy}: {source: SourceOut; name: string; sub: string; now: number; onReconnect?: () => void; busy?: boolean}) {
   const state = sourceState(source.health, now, timeZone());
   const check = useCheckNow(source, SOURCES_PATH);
   return (
@@ -196,13 +208,46 @@ function SourceRow({source, name, sub, now}: {source: SourceOut; name: string; s
       <span className={stateClass(state, check.failed)} data-tip={check.text ?? source.health.reason ?? undefined} data-tip-quick>
         <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
+        {state.reconnect && onReconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} disabled={busy} onClick={onReconnect}>Reconnect</button>}
       </span>
       <Menu label={`${name} options`} button={<button className="ibtn sm" type="button" aria-label={`${name} options`}><Icon name="more_horiz" /></button>}>
         {close => (
-          <button className="menu-i" type="button" role="menuitem" onClick={() => {
+          <>
+            <button className="menu-i" type="button" role="menuitem" onClick={() => {
+              close();
+              check.run();
+            }}><Icon name="refresh" size={16} />Check now</button>
+            {onReconnect && <button className="menu-i" type="button" role="menuitem" disabled={busy} onClick={() => {
+              close();
+              onReconnect();
+            }}><Icon name="sync_problem" size={16} />Reconnect</button>}
+          </>
+        )}
+      </Menu>
+    </div>
+  );
+}
+
+/**
+ * Todoist's row while it isn't connected (D514): what it brings, "Not connected" where the state
+ * goes, and Connect Todoist, by the state as an account's Reconnect is and in its menu.
+ */
+function TodoistConnectRow({onConnect, busy}: {onConnect: () => void; busy: boolean}) {
+  return (
+    <div className="set-row" data-source="todoist">
+      <span className="aico"><Icon name={SOURCE_ICONS.todoist!} size={16} /></span>
+      <div className="lines grow"><span className="t">Todoist</span><span className="s ell">Tasks on the calendar</span></div>
+      <span className="prov" />
+      <span className="state">
+        <span className="num ell">Not connected</span>
+        <button className="btn sm" type="button" style={{marginLeft: 4}} disabled={busy} onClick={onConnect}>Connect Todoist</button>
+      </span>
+      <Menu label="Todoist options" button={<button className="ibtn sm" type="button" aria-label="Todoist options"><Icon name="more_horiz" /></button>}>
+        {close => (
+          <button className="menu-i" type="button" role="menuitem" disabled={busy} onClick={() => {
             close();
-            check.run();
-          }}><Icon name="refresh" size={16} />Check now</button>
+            onConnect();
+          }}><Icon name="add" size={16} />Connect Todoist</button>
         )}
       </Menu>
     </div>

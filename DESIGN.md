@@ -1443,14 +1443,15 @@ stretching toward its travel as it's pressed (#151). A reconnect link opens it a
 page scrolls, its title and × stay at the top, a `hair` line under them once it has scrolled, and a
 section's label stays under the title (#132).
 
-- **Nav:** Accounts, Calendar, Todoist, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), Jobs (after News, [Jobs in Settings](#jobs-in-settings)), AI, Appearance, Security.
+- **Nav:** Accounts, Calendar, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), Jobs (after News, [Jobs in Settings](#jobs-in-settings)), AI, Appearance, Security.
 - **Accounts** (board 17): **Connect Gmail** and **Connect iCloud**; under **Mail**, each account with
   drag handle, icon, label, address, how it syncs ("Gmail · Push", "iCloud · IMAP every 2 min") and
   its state, led by its glyph (#219): "Checked 9:11 AM" after a `good` dot when healthy, "Checks
   stopped, as of 9:14 PM" muted after `history` when stale, the reason in `caution` after `warning`
   on a `caution` 7% row when failing, "Needs sign-in" in `caution` with **Reconnect**; under **Sources**, Google Calendar ("Push · watch renews
-  Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way. Board 17's
-  Attention precision row is gone (#346).
+  Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way. Todoist's row is
+  its connection's only place: "Not connected" with **Connect Todoist** while it isn't, Reconnect in
+  its menu once it is (#356). Board 17's Attention precision row is gone (#346).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
   domains, the code expiry presets, and the note that protected mail can't be moved, marked read or
   trashed by any rule (a written rule's actions, [Decided while building](#decided-while-building) #347).
@@ -1463,7 +1464,10 @@ section's label stays under the title (#132).
   9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49), **Time to Leave** (live routes; leave from Home, set in Calendar; a 5 min
   buffer; on for the events given it, #86) and **Alerts** (Reconnect alerts, once per source), every
   group labelled (#135).
-- **Calendar, Todoist, AI, Appearance, Security** follow the same row pattern ([BRIEF.md ›
+- **Calendar** (not drawn): **Calendars**, **Home**, **Todoist** (each project's colour, #28, then
+  Default project; while Todoist isn't connected, "Not connected" with **Connect in Accounts**) and
+  **Weather and places** (#69); the page scrolls (#356).
+- **AI, Appearance, Security** follow the same row pattern ([BRIEF.md ›
   Settings](BRIEF.md#settings)).
 - Sign out isn't drawn; it follows darma (the foot of the nav, and ⌘K).
 - **Loading** (#226): opening Settings loads every page's answers, so a page switched to shows at
@@ -1699,6 +1703,9 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
     app has neither.
 47. **No attention precision** (#346): board 17 ends Accounts with Attention precision, 82%, and
     its sparkline. The app has neither.
+48. **Settings has no Todoist page** (#356): where a board's Settings nav lists Todoist (17, 18a,
+    18b, 30a, 30b, 39a), the app's doesn't; its projects and default project are on Calendar, its
+    connection on Accounts' Todoist row.
 
 ## Not designed yet
 
@@ -1706,7 +1713,7 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
 - Full phone parity; ntfy action buttons.
 - Sign-in and first-run screens (they follow darma's sign-in card), and Sign out.
 - The Trash Undo toast on a board (its component exists in the export).
-- Settings › Calendar, Todoist, AI, Appearance and Security in detail (rows per the brief).
+- Settings › Calendar, AI, Appearance and Security in detail (rows per the brief).
 - Empty states beyond the Inbox and search (an empty day, a source with nothing yet).
 - News's tuning round (muting, "less like this", choosing sources) and News on the phone.
 - Jobs on the phone and in the iPhone app (decision 49).
@@ -1833,7 +1840,7 @@ was decided; the audit itself was retired by D480.
     title "bring wine"). Otherwise a place still runs to the next day, time, repeat or calendar. A
     picked place's address shows in `ink3` under the Place field (Andy, 2026-10-09; darma SV-27 D52,
     D53).
-28. **Todoist projects have colours, Todoist's own:** Settings › Todoist lists each project with a
+28. **Todoist projects have colours, Todoist's own:** Settings › Todoist (Settings › Calendar's Todoist section since #356) lists each project with a
     swatch menu of Todoist's 20 colours (by Todoist's names, "Berry red" to "Taupe"), and a pick is
     written to Todoist, waiting at .5 with the spinner and failing in place with Todoist's words,
     **Try again** and **Change back**, as a calendar's colour does with Google. An open task's ring
@@ -2975,7 +2982,7 @@ was decided; the audit itself was retired by D480.
     Inbox's needs-reconnect bar too. Glyphs are 16 px in lines and rows (the finding's 15 in rows
     isn't a role size, #123), the lines' gaps unchanged (Andy, 2026-10-11, polish audit states-04).
 219. **Every source's state in Settings leads with its glyph:** in Accounts (Mail and Sources), News
-    and Todoist's Connection row, a 7 px `good` dot before "Checked 9:11 AM", `history` in `ink3`
+    and Todoist's Connection row (gone with its page, #356), a 7 px `good` dot before "Checked 9:11 AM", `history` in `ink3`
     before "Checks stopped, as of 9:14 PM" (the words a step up, `ink2`, still muted), `warning` in
     `caution` before a failing source's reason with its row at `caution` 7%, as News's failing rows
     were, and `sync_problem` before "Needs sign-in"; while Check now runs, the shared spinner. The
@@ -4491,3 +4498,16 @@ was decided; the audit itself was retired by D480.
     stays pinned, as the user chose it. Merging keeps the pin if either had one, from the earlier pin.
     No cap and no count (D314). Chosen over pinned rows sorting first in the filtered table and over a
     gutter mark alone.
+356. **Settings has no Todoist page** (amending Settings, #28, #219; Andy, 2026-11-09; darma SV-253,
+    D514). Its Projects and Default project are a **Todoist** section on Settings › Calendar, after
+    Home and before Weather and places (Time to Leave's group comes between Home and Todoist, D513):
+    the projects' colour rows as #28 drew them, then a second group, 8 px under, with Default
+    project. The page scrolls. Its connection is Accounts › Sources' Todoist row only: while Todoist
+    isn't connected the row reads "Tasks on the calendar", "Not connected" where the state goes and
+    **Connect Todoist** beside it, as an account's Reconnect sits, and in its menu; connected, its
+    menu adds **Reconnect** under Check now, and a Todoist needing sign-in shows Reconnect by its
+    state. Calendar's section says "Not connected" with **Connect in Accounts** until it is. Todoist's
+    consent returns to Settings › Accounts (`?todoist=1` or `0`), its toast as before; an old
+    /settings/todoist link opens Accounts. ⌘K's Settings › Accounts and Settings › Calendar take the
+    word "todoist", Calendar also "projects tasks". Decided for Andy overnight: the one section label
+    over two groups, the not-connected rows' words, and the return's address.
