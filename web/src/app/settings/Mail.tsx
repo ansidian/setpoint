@@ -4,7 +4,8 @@
 // trashes, SV-238), the note that protected mail can't be moved,
 // marked read or trashed by any rule, learned rules (from pattern
 // prompts) with Undo on the day they were learned and × after, the trusted remote-content domains
-// with a filter, and Verification codes' expiry presets.
+// (their count and a filter once there are more than Show all's 11, SV-253 F7), and Verification
+// codes' expiry presets.
 import type {Kind, Lane, RuleOut, RuleTrash, RuleWaiting, Settings, TrustedDomainOut} from '@setpoint/shared';
 import {CODE_EXPIRY_PRESETS, KINDS, RULE_TRASH} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
@@ -13,7 +14,7 @@ import {useResource} from '../../api/client.ts';
 import {SETTINGS_PATH} from '../../api/items.ts';
 import {createRule, deleteRule, patchSettings, reorderRules, RULES_PATH, setRuleEnabled, TRUSTED_PATH, untrustDomain} from '../../api/settings.ts';
 import {localDate} from '../../logic/format.ts';
-import {expiryLabel, laneTag, matchesThisMonth, moved, ruleActionWords, ruleWords, senderMatch, splitRules, TRASH_LABELS, waitingChoices, waitingTitle, wordsMatch} from '../../logic/settings.ts';
+import {DOMAINS_SHOWN, domainTools, expiryLabel, laneTag, matchesThisMonth, moved, ruleActionWords, ruleWords, senderMatch, splitRules, TRASH_LABELS, waitingChoices, waitingTitle, wordsMatch} from '../../logic/settings.ts';
 import {placeMenu} from '../../ui/popover.ts';
 import {ScopePrompt} from '../calendar/ScopePrompt.tsx';
 import {Icon} from '../../ui/Icon.tsx';
@@ -26,9 +27,6 @@ import type {RuleDraft} from './store.ts';
 import type {RuleFilter} from '../../logic/settings.ts';
 import type {DragProps} from './order.ts';
 import {escapeCancels, Line, Menu, Page, Section, Select, SkeletonRows, Switch, useAttempt} from './parts.tsx';
-
-// The domains shown before Show all.
-const DOMAINS_SHOWN = 11;
 
 const DESTINATIONS: {value: string; label: string}[] = [
   {value: 'attention', label: 'Attention'},
@@ -255,12 +253,12 @@ function TrustedDomains({domains}: {domains: TrustedDomainOut[] | undefined}) {
   const matching = filter.trim() ? sorted.filter(row => row.domain.includes(filter.trim().toLowerCase())) : sorted;
   const shown = all || filter.trim() || matching.length <= DOMAINS_SHOWN + 1 ? matching : matching.slice(0, DOMAINS_SHOWN);
   return (
-    <Section label="Trusted remote-content domains" right={(
+    <Section label="Trusted remote-content domains" right={domains && domainTools(domains.length, filter) ? (
       <>
-        {domains && <span className="num">{domains.length} domain{domains.length === 1 ? '' : 's'}</span>}
+        <span className="num">{domains.length} domain{domains.length === 1 ? '' : 's'}</span>
         <label className="mini-field"><Icon name="search" size={16} /><input value={filter} placeholder="Filter" aria-label="Filter domains" onChange={event => setFilter(event.target.value)} /></label>
       </>
-    )}>
+    ) : undefined}>
       {!domains ? <SkeletonRows count={2} one /> : <div className="set-group">
         {/* Nothing to list is one plain line across the group, not a cell of the domains' grid. */}
         {!matching.length ? <div className="set-row one"><span className="s">{filter ? 'No domain matches' : 'None yet · the reader’s “Always show from …” adds one'}</span></div> : (

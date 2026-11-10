@@ -245,6 +245,15 @@ export const TASK_TIMES = ['07:00', '08:00', '09:00', '10:00', '12:00', '17:00',
 /** Code expiry's presets (Settings › Mail): "5 min", "1 hour". */
 export const expiryLabel = (minutes: number) => (minutes === 60 ? '1 hour' : `${minutes} min`);
 
+/** Trusted domains shown before Show all (Settings › Mail). */
+export const DOMAINS_SHOWN = 11;
+
+/**
+ * Whether Trusted domains' label shows its count and Filter: once there are more domains than Show
+ * all's 11 (SV-253, F7), or while a filter is still applied, so it can be cleared.
+ */
+export const domainTools = (count: number, filter: string) => count > DOMAINS_SHOWN || filter.trim() !== '';
+
 /** Whether Todoist is connected: its source has a token, or is the dev run's invented one. */
 export const todoistConnected = (sources: SourceOut[]) => sources.some(source => source.provider === 'todoist' && (source.has_credentials || source.dev));
 

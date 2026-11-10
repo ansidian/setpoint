@@ -4,7 +4,7 @@ import type {HealthOut, RuleMatch, RuleOut, SourceOut} from '@setpoint/shared';
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  connectFailed, connectNote, todoistConnected, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, wordsMatch,
+  connectFailed, connectNote, DOMAINS_SHOWN, domainTools, todoistConnected, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, wordsMatch,
   shifts, splitRules, stateTip, taskTime, waitingChoices, waitingTitle, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
@@ -200,4 +200,14 @@ describe('a source\'s state names itself in its tip, its reason after', () => {
     ['Failing, 404 since 6:02 AM', '404 Not Found', 'Failing, 404 since 6:02 AM, 404 Not Found'],
     ['Gmail answered 503.', 'Gmail answered 503.', 'Gmail answered 503.'],
   ])('%s with %s', (words, reason, tip) => expect(stateTip(words, reason)).toBe(tip));
+});
+
+describe('Trusted domains\' count and Filter show once there are more than Show all\'s 11 (SV-253, F7)', () => {
+  test.each([
+    [0, '', false], [3, '', false], [DOMAINS_SHOWN, '', false], [DOMAINS_SHOWN + 1, '', true], [78, '', true],
+    // A filter still applied keeps its field, so it can be cleared after removals take the list to 11.
+    [DOMAINS_SHOWN, 'wood', true], [0, ' x ', true], [5, '  ', false],
+  ])('%i domains, filter "%s": %s', (count, filter, shown) => {
+    expect(domainTools(count, filter)).toBe(shown);
+  });
 });
