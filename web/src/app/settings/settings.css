@@ -95,7 +95,9 @@
 .settings .switch:disabled { opacity: .5; }
 
 /* Accounts (board 17). */
-.settings .handle { color: var(--ink3); margin: 0 -4px 0 -6px; display: grid; cursor: grab; }
+/* The handle's glyph is 18 px; its hit area reaches 24 without moving it (SV-253, F11). */
+.settings .handle { color: var(--ink3); margin: 0 -4px 0 -6px; display: grid; cursor: grab; position: relative; }
+.settings .handle::after { content: ""; position: absolute; inset: -3px; }
 .settings .sw { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; flex: none; }
 .settings .sw::before { content: ""; width: 12px; height: 12px; border-radius: 999px; background: var(--c); }
 .settings .sw:enabled:hover, .settings .sw.on { background: var(--sub2); }
@@ -182,7 +184,9 @@
 .settings .rule.off { opacity: .5; }
 /* An empty state's action, as the agenda's "No events · New event" (DESIGN.md › Copy). Not `.empty`, the
    Inbox's centred All caught up, which would stack it in a tall box. */
-.settings .set-empty button { color: var(--ink2); }
+.settings .set-empty button { color: var(--ink2); position: relative; }
+/* Its words are 17 px tall; its hit area reaches 25 without moving them (SV-253, F11). */
+.settings .set-empty button::after { content: ""; position: absolute; inset: -4px -2px; }
 /* An empty group's line leads with its glyph, 20 px in ink3, the row's 12 px before the words (#124). */
 .settings .set-empty-icon { display: grid; color: var(--ink3); }
 .settings .set-empty button:focus-visible { color: var(--ink); }
