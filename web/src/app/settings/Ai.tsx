@@ -105,7 +105,7 @@ export function AiPage() {
 
       <JobsAiGroup label={ai ? label : null} />
 
-      <Section label="Usage this month" right={usage && jobsSpend !== undefined && <span className="num ink2">{dollars(monthTotal(usage) + jobsSpend, true)}</span>}>
+      <Section label="Usage this month" right={usage && jobsSpend !== undefined && <span className="num total">{dollars(monthTotal(usage) + jobsSpend, true)}</span>}>
         {!usage ? <SkeletonRows count={3} /> : <div className="set-group">
           <Row title="Triage" sub={usage ? usageLine(usage.triage) : ''}>{usage && <span className="cost num">{dollars(usage.triage.cost_usd, true)}</span>}</Row>
           <Row title="Search terms" sub={usage ? usageLine(usage.search_terms) : ''}>{usage && <span className="cost num">{dollars(usage.search_terms.cost_usd, true)}</span>}</Row>
