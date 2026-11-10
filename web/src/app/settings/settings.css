@@ -179,6 +179,8 @@
 .settings .rule-form .rule-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .settings .rule-form .rule-line.add { grid-column: 2; }
 .settings .rule-form .filter { min-width: 170px; }
+/* One label size (SV-253, F9): a filter's, Mark read and Trash take the 13 px of If from and the other inline forms' labels. */
+.settings .rule-form :is(.filter, .pair > .s) { font-size: 13px; }
 /* The rule form's last line (DESIGN.md #347, #364, D518): Mark read's switch, Trash's presets, then Add
    and Cancel at its right end. Each label wraps with its control, so a narrow modal drops a pair whole. */
 .settings .rule-form .rule-line.last { flex-wrap: wrap; gap: 8px 16px; }
