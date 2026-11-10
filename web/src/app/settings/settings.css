@@ -192,6 +192,18 @@
 .settings .rule-form .ends > .btn.quiet:last-child { margin-right: -10px; }
 /* Its error line takes a whole-pixel line box, so the form stays on whole pixels when it shows. */
 .settings .rule-form > [role="alert"] { line-height: 17px; }
+/* Narrower than the 820 px modal (a window under 852, down to the compact tier's 640) the two columns no
+   longer hold a filter's line or Trash's presets, so the form is one column: each lead over its line,
+   a line wrapping where it runs short, and the presets a little tighter (SV-256). */
+@media (min-width: 640px) and (max-width: 851px) {
+  .settings .form.rule-form { grid-template-columns: minmax(0, 1fr); }
+  .settings .rule-form .rule-line { flex-wrap: wrap; }
+  .settings .rule-form .rule-line.add { grid-column: 1; }
+  .settings .rule-form .filter { min-width: 0; }
+  .settings .rule-form .pair { flex-wrap: wrap; }
+  .settings .rule-form :is(.lead, .filter, .pair > .s) { line-height: 18px; }
+  .settings .rule-form .seg > * { padding: 0 6px; }
+}
 
 /* Mail (board 18a). */
 .settings .rule { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; }

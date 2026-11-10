@@ -4688,3 +4688,12 @@ was decided; the audit itself was retired by D480.
     the group's edge. Below 820, a width the audit didn't cover, the presets can't fit their column
     and pass the group from a modal of about 752. Decided for Andy overnight: Add and Cancel at 30
     with the other inline forms, 13 px for the labels, and the filters' labels taking it too.
+365. **Add rule is one column where the modal is narrower than 820** (amending #364; decided for
+    Andy, 2026-11-10; darma SV-256, D529): the modal is the window less 32 px, so 608 at the compact
+    tier's 640, where the two columns left about 204 px for a filter's line (412) and Trash's presets
+    (333). In a window under 852 px the form is one column: each lead (If from, and, then send to)
+    sits over its line, a line wraps where it runs short (a filter's field under its label, Trash's
+    presets under "Trash"), the presets take 6 px of padding a side (285 px wide), and Add and Cancel
+    keep the last line's right end. Nothing passes the group and Settings doesn't scroll sideways down
+    to 640; the form, with one filter, is 314 px at 851, 342 at 720 and 394 at 640, on whole pixels.
+    At 852 and wider it's #364's.
