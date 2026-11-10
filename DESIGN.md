@@ -4681,9 +4681,10 @@ was decided; the audit itself was retired by D480.
       Cancel's words end 16 px in (#362); and… stays 26, with its row. The error line takes a 17 px
       line box, so the form stays on whole pixels when it shows.
     Measured in Night with Add rule open, with and without a "Sender name doesn't contain" filter and
-    with each Trash choice selected (the presets stay 333 px wide whichever is chosen): the form is
-    200 px at 1040 × 720 (one last line), 236 at 992 (two) and 264 at 820 (three), every line and the
-    form on whole pixels, Add and Cancel in the same place for every choice, Cancel's box 6 px inside
+    with each Trash choice selected (the presets stay 333 px wide whichever is chosen): with one filter
+    the form is 200 px at 1040 × 720 (one last line), 236 at 992 (two) and 264 at 820 (three), and
+    without one 159 at 1040; the last line stays one line from a modal of about 1016 up. Every line
+    and the form are on whole pixels, Add and Cancel in the same place for every choice, Cancel's box 6 px inside
     the group's edge. Below 820, a width the audit didn't cover, the presets can't fit their column
     and pass the group from a modal of about 752. Decided for Andy overnight: Add and Cancel at 30
     with the other inline forms, 13 px for the labels, and the filters' labels taking it too.

@@ -63,8 +63,8 @@
 .settings .set-row.dragging { opacity: .5; }
 /* A button at a row's end is 30 px, the height of the selects and stepper beside it (D516); the shared
    `.btn.sm` stays 26 elsewhere, as do a label's buttons and the head's Connect buttons. Only the row's
-   own buttons, its state's and its form's: Add rule's form (D518), a rule's prompt and the pairing
-   panel's Copy keep theirs. */
+   own buttons, its state's and its form's: a rule's prompt and the pairing panel's Copy keep theirs, and
+   Add rule's form takes 30 for its Add and Cancel only, by its own rule below (D518). */
 .settings .set-row:not(.rule-form) > .btn.sm, .settings .set-row > :is(.state, .form) > .btn.sm { height: 30px; }
 /* A quiet one at a row's very end lands its words on the rows' 16 px edge, where an outlined one's edge
    is (SV-253, F12). */
