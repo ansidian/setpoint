@@ -158,6 +158,32 @@ describe('a fake adapter through the four health states', () => {
     await engine.settled();
     expect(fake.calls.map(call => call.kind)).toEqual(['sweep', 'sync']);
   });
+
+  test('SV-251: a push while its sync is running syncs again once that one is done, since the running one may have read the provider before the change', async () => {
+    const w = world();
+    const fake = fakeAdapter();
+    const account = w.store.db.insert(t.accounts).values({provider: 'gmail', label: 'Work', address: 'user@work.example.org', colour: 'comf', icon: 'work', position: 0, createdAt: w.store.now().toISOString()}).returning().get();
+    w.store.db.insert(t.sources).values({provider: 'gmail', accountId: account.id, syncMode: 'push', intervalSeconds: 300, createdAt: w.store.now().toISOString()}).run();
+    const engine = new SyncEngine({store: w.store, adapters: new Adapters({gmail: fake.adapter})});
+    await engine.tick();
+    await engine.settled();
+    fake.hang();
+    engine.pushed(1);
+    await engine.tick();
+    expect(fake.calls.map(call => call.kind)).toEqual(['sweep', 'sync']);
+    // Two more pushes while it runs: one more sync, not two.
+    engine.pushed(1);
+    engine.pushed(1);
+    fake.succeed();
+    fake.release();
+    await engine.settled();
+    await engine.tick();
+    await engine.settled();
+    expect(fake.calls.map(call => call.kind)).toEqual(['sweep', 'sync', 'sync']);
+    await engine.tick();
+    await engine.settled();
+    expect(fake.calls.map(call => call.kind)).toEqual(['sweep', 'sync', 'sync']);
+  });
 });
 
 describe('one Google consent, one reconnect alert', () => {

@@ -27,7 +27,7 @@ import type {GoogleCalendarApi, GoogleEvent} from './api.ts';
 import {colorIdOf, eventBody, isFirstOccurrence, joinLocation, ruleEndingBefore, withRule} from './normalize.ts';
 import {claimProviderId} from '../../commands/itemMirror.ts';
 import {importOf} from '../../calendar/icsImport.ts';
-import {enqueueJob} from '../../sync/jobs.ts';
+import {wakeSync} from '../../sync/jobs.ts';
 import type {IcsImportEvent} from '@setpoint/shared';
 import {eventTimes} from './normalize.ts';
 
@@ -294,5 +294,5 @@ async function importOne(store: Store, api: GoogleCalendarApi, command: CommandR
       originalStartTime: change.original_start_at ? {dateTime: change.original_start_at, timeZone: zone} : {date: change.original_start_date!},
     });
   }
-  if (sourceId !== undefined && (event.recurrence.length || event.changes.length)) enqueueJob(store, {kind: 'sync', key: `sync:${sourceId}`, sourceId});
+  if (sourceId !== undefined && (event.recurrence.length || event.changes.length)) wakeSync(store, sourceId);
 }

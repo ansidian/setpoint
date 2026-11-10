@@ -64,7 +64,7 @@ import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.t
 import {searchCalendar} from '../search/calendar.ts';
 import {SearchReader} from '../search/reading.ts';
 import type {SearchReaderOptions} from '../search/reading.ts';
-import {enqueueJob} from '../sync/jobs.ts';
+import {enqueueJob, wakeSync} from '../sync/jobs.ts';
 import {ProviderError} from '../sync/errors.ts';
 import {accountList, reorderAccounts, sourceList, updateAccount} from '../queries/sources.ts';
 import {haStatus} from '../queries/status.ts';
@@ -329,7 +329,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     const admitted = admitPush(store, c.req.raw.headers, providers.calendarApi ?? CALENDAR_API);
     if (!admitted.accepted) return c.body(null, 401);
     try {
-      enqueueJob(store, {kind: 'sync', key: `sync:${admitted.sourceId}`, sourceId: admitted.sourceId});
+      wakeSync(store, admitted.sourceId);
     } catch (error) {
       console.error('Calendar push', error);
       return c.body(null, 503);

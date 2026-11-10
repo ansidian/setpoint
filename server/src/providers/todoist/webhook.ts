@@ -8,7 +8,7 @@
 import {createHmac, timingSafeEqual} from 'node:crypto';
 import {and, eq, isNull, lt} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';
-import {enqueueJob} from '../../sync/jobs.ts';
+import {wakeSync} from '../../sync/jobs.ts';
 import {isoNow, transaction} from '../../store.ts';
 import type {Store} from '../../store.ts';
 
@@ -42,7 +42,7 @@ export function admitTodoistWebhook(store: Store, body: Buffer, headers: Headers
     const source = store.db.select().from(t.sources).where(and(eq(t.sources.provider, 'todoist'), isNull(t.sources.accountId), eq(t.sources.dev, false))).get();
     // Nothing to sync (not connected, or needs signing in again): still a 200, so Todoist keeps the webhook on.
     if (!source || source.needsReconnectAt) return 'no_source';
-    enqueueJob(store, {kind: 'sync', key: `sync:${source.id}`, sourceId: source.id});
+    wakeSync(store, source.id);
     return 'queued';
   });
 }

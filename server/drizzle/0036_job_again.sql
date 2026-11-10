@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` ADD `again` integer DEFAULT false NOT NULL;

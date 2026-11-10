@@ -23,6 +23,17 @@ export function enqueueJob(store: Store, job: {kind: JobKind; key: string; sourc
   return result.changes === 1;
 }
 
+/**
+ * A source's sync, now: queued, or, while one is running, run again once it's done (SV-251). The
+ * running one may have read the provider before the change that woke it, which would otherwise
+ * wait for the next scheduled check.
+ */
+export function wakeSync(store: Store, sourceId: number) {
+  const key = `sync:${sourceId}`;
+  if (enqueueJob(store, {kind: 'sync', key, sourceId})) return;
+  store.db.update(t.jobs).set({again: true}).where(and(eq(t.jobs.key, key), eq(t.jobs.state, 'running'))).run();
+}
+
 export const hasActiveJob = (store: Store, key: string) =>
   store.db.select({id: t.jobs.id}).from(t.jobs).where(and(eq(t.jobs.key, key), inArray(t.jobs.state, ['queued', 'running']))).get() !== undefined;
 
@@ -45,7 +56,8 @@ export function claimDueJobs(store: Store, skip: ReadonlySet<number>, limit = 20
 }
 
 export function finishJob(store: Store, jobId: number) {
-  store.db.update(t.jobs).set({state: 'done', finishedAt: isoNow(store), leaseUntil: null}).where(eq(t.jobs.id, jobId)).run();
+  const job = store.db.update(t.jobs).set({state: 'done', finishedAt: isoNow(store), leaseUntil: null}).where(eq(t.jobs.id, jobId)).returning().get();
+  if (job?.again) enqueueJob(store, {kind: job.kind, key: job.key, sourceId: job.sourceId, commandId: job.commandId, messageId: job.messageId, newsSourceId: job.newsSourceId});
 }
 
 /** A failed attempt: queued again after the policy's delay, or failed for good. Returns whether it will retry. */
@@ -53,7 +65,7 @@ export function failJob(store: Store, job: Job, error: ProviderError): boolean {
   const decision = retryAfterFailure(error.kind, job.attempts, error.retryAfterMs);
   const now = store.now();
   if (decision.retry) {
-    store.db.update(t.jobs).set({state: 'queued', runAt: new Date(now.getTime() + decision.delayMs).toISOString(), leaseUntil: null, lastError: error.message})
+    store.db.update(t.jobs).set({state: 'queued', runAt: new Date(now.getTime() + decision.delayMs).toISOString(), leaseUntil: null, lastError: error.message, again: false})
       .where(eq(t.jobs.id, job.id)).run();
     return true;
   }

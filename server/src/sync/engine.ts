@@ -17,7 +17,7 @@ import type {Store} from '../store.ts';
 import type {AdapterContext, AdapterRegistry, AttachmentBytes, SourceAdapter, SourceRow} from './adapter.ts';
 import {asProviderError, ProviderError} from './errors.ts';
 import {recordFailure, recordSuccess, sourceHealth} from './health.ts';
-import {claimDueJobs, enqueueJob, failJob, finishJob, hasActiveJob, pruneJobs} from './jobs.ts';
+import {claimDueJobs, enqueueJob, failJob, finishJob, hasActiveJob, pruneJobs, wakeSync} from './jobs.ts';
 import type {Job} from './jobs.ts';
 
 /** Runs one kind of job that isn't a source's (triage), and may queue more of it each tick. */
@@ -111,7 +111,7 @@ export class SyncEngine {
 
   /** A provider pushed: sync that source now. */
   pushed(sourceId: number) {
-    enqueueJob(this.store, {kind: 'sync', key: `sync:${sourceId}`, sourceId});
+    wakeSync(this.store, sourceId);
   }
 
   /** Settings' "check now": the source's scheduled check, now. */

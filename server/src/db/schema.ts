@@ -481,7 +481,8 @@ export const JOB_STATES = ['queued', 'running', 'done', 'failed'] as const;
 /**
  * Durable work: a source's sync, sweep or push renewal, or a command for its provider. A job is
  * claimed with a lease, so one left running by a crash is taken up again; failures follow the one
- * retry policy (src/domain/retry.ts). `key` keeps one queued or running job per purpose.
+ * retry policy (src/domain/retry.ts). `key` keeps one queued or running job per purpose; `again`
+ * asks a running sync for one more once it's done (a push that came while it ran, SV-251).
  */
 export const jobs = sqliteTable('jobs', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -500,6 +501,7 @@ export const jobs = sqliteTable('jobs', {
   lastError: text('last_error'),
   createdAt: text('created_at').notNull(),
   finishedAt: text('finished_at'),
+  again: integer('again', {mode: 'boolean'}).notNull().default(false),
 }, table => [
   uniqueIndex('jobs_active_key').on(table.key).where(sql`${table.state} in ('queued', 'running')`),
   index('jobs_due').on(table.state, table.runAt),

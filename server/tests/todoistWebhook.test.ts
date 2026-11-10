@@ -37,6 +37,16 @@ describe('Todoist webhook', () => {
     expect(jobs()).toHaveLength(1);
   });
 
+  test('SV-251: a delivery while the sync is running brings one more sync once it\'s done, so a change made just after the sync read Todoist isn\'t left for the next poll', async () => {
+    const {w, sourceId, signed, jobs} = setup();
+    expect(await signed('delivery-1')).toBe(200);
+    w.store.db.update(t.jobs).set({state: 'running'}).run();
+    expect(await signed('delivery-2')).toBe(200);
+    expect(await signed('delivery-3')).toBe(200);
+    finishJob(w.store, jobs()[0]!.id);
+    expect(jobs().map(job => [job.key, job.state])).toEqual([[`sync:${sourceId}`, 'done'], [`sync:${sourceId}`, 'queued']]);
+  });
+
   test('a redelivery queues nothing new', async () => {
     const {w, signed, jobs} = setup();
     expect(await signed('delivery-1')).toBe(200);
