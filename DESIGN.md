@@ -288,14 +288,17 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
 
 Each line's title wraps to two lines (an ellipsis only past that) over its time or date in `ink3`
 (#318): the next event ("Dentist" over "2:30 PM · in 5h", the "in" part `caution` from 15 minutes
-before and `alert` once under way), led by its calendar's bar running down both lines where tasks
-have their rings (#199), then each open task due today by name, behind its ring in its project's
-colour on the title's first line. Under a second label, **Tomorrow** (#319), tomorrow's timed events
-by their start, each over its time alone ("6:00 PM"), then its open tasks; no label when nothing's
-on. An event's line has 7 px above and below its text; a task is one 28 px line. Today's lines never
-fold; more than three of tomorrow's show the first two and "3 more due tomorrow" (`ink3`, "3 more
-tomorrow" when an event is among them), which shows the rest. Confirmed data only; nothing shows for
-an empty line.
+before and `alert` once under way), led by its calendar's bar, 3 × 13 on the title's first line (#352), where tasks
+have their rings (#199), and each open task due today, behind its ring in its project's colour on
+the title's first line, a timed one over its time alone ("9:00 AM"), in one list by time: the next
+event and the timed tasks by their time (an event first at the same time), then the untimed tasks
+(#352). An open task whose time has passed keeps its place at the top until it's completed, with no
+mark of its own. Under a second label, **Tomorrow** (#319), tomorrow's timed events, each over its
+time alone ("6:00 PM"), and its open tasks, in the same order; no label when nothing's on. An
+event's line, and a timed task's, has 7 px above and below its text; an untimed task is one 28 px
+line. Today's lines never fold; more than three of tomorrow's show the first two in that order and
+"3 more due tomorrow" (`ink3`, "3 more tomorrow" when an event is among them), which shows the rest.
+Confirmed data only; nothing shows for an empty line.
 
 A line opens the floating detail's card (without its grip) 8 px right of the sidebar, its title
 level with the line, over the page, which stays as it was; the line turns `sub2`. **Edit E** opens
@@ -537,7 +540,10 @@ once under way carrying the now-line in its row with "45m left" and its bar fill
 by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
 then gone, #112), "Overlaps Study group until 8:30 PM" under an event that starts while another is
 on (board 12b), leaving free events out (#303), the **now-line** in `alert` with the time, 1.5 px with an 8 px dot on the colour
-bars as the week's (#184), then **Tasks · due today** with their projects. Another day picked slides its items in 6 px from its side and fades its heading in (#190).
+bars as the week's (#184), then **Tasks · due today** with their projects, a timed one's title over
+its start ("9:00 AM") with its ring on the title's line, the timed by their time and the untimed
+last, a done one keeping the place its time gives it (#352); the now-line and the next event's lift
+stay with Events. Another day picked slides its items in 6 px from its side and fades its heading in (#190).
 An empty day offers New event C and New task D as dashed ghost rows (#191); one whose items are only
 hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
 editor, calendar search results and an .ics file's import review (#304); while those show, the grid dims what they don't match (#195). Until the day's items and the calendars have come, its line is
@@ -3999,8 +4005,10 @@ was decided; the audit itself was retired by D480.
     darma SV-210, D459). The event's line was 28 px with its time boxed at 58 px, so "12:30 PM" and
     "in 2h" wrapped, the title got about 76 px, cutting most short, and the wrapped text spilled out of
     the hover fill. Now every Today line's title takes the whole width in `ink`, wrapping to two
-    lines with an ellipsis only past that, over "12:30 PM · in 2h" (or a task's "Tomorrow") in
-    `ink3`, which never wraps; the event's bar runs down both lines and a task's ring sits on the
+    lines with an ellipsis only past that, over "12:30 PM · in 2h" (or a task's "Tomorrow"; since
+    #319 and #352, a timed task's "9:00 AM") in
+    `ink3`, which never wraps; the event's bar runs down both lines (since #352, 13 px on the title's
+    first line) and a task's ring sits on the
     title's first line. A line with two parts has 7 px above and below its text, so the hover, `on`
     and pressed fills sit clear of it; a task with no date stays one 28 px line. Radius 10 and the
     10 px side padding are unchanged; the skeleton's first line is as tall as the event's. The phone
@@ -4009,7 +4017,8 @@ was decided; the audit itself was retired by D480.
     darma SV-213, D460). With two-line Today lines, "Renew car registration" over "Tomorrow" read as
     one of today's. Now a second `sb-label`, "Tomorrow", follows Today's lines (10 px more above it),
     listing tomorrow's timed events by their start, each over its time alone with no "in", which
-    are new to the block, then tomorrow's open tasks in Today's order. The per-line "Tomorrow" goes,
+    are new to the block, then tomorrow's open tasks in Today's order (since #352, events and timed
+    tasks together by time, then the untimed tasks). The per-line "Tomorrow" goes,
     so a tomorrow task is one 28 px line again. The fold moves under the label: Today never folds,
     and past three of tomorrow's lines the first two show with "N more due tomorrow" ("N more
     tomorrow" when an event is among them). No label when nothing's on tomorrow, and none for Today
@@ -4362,3 +4371,20 @@ was decided; the audit itself was retired by D480.
     by a newer one; before, a toast held under the pointer outlived the delete's own timer, and its
     Undo then restored nothing (SV-247). ⌘Z in the Inbox and Calendar closes only its own toast.
     Chosen over a × on the pill at the top.
+352. **Timed tasks show their time and sort by it** (amending #78, #318 and #319 and the right pane;
+    Andy, 2026-11-09; darma SV-241, D501, D502). Todoist tasks with a time showed only their title,
+    and the Today block put tasks after its events, the untimed first. Now on the Today block a
+    timed task's title is over its start alone ("9:00 AM", as the week's all-day row writes it),
+    with 7 px above and below as an event's line, and under Today the next event and today's open
+    timed tasks are one list by time, the untimed tasks after; an open task whose time has passed
+    stays at the top until it's completed, with no mark. Today still shows only the next event.
+    So that the mixed marks read as one column, an event's bar is the ring's size, 3 × 13, on its
+    title's first line where the ring sits, rather than running down both lines.
+    Under Tomorrow, its events and timed tasks are one list by time, then the untimed tasks, and
+    the fold past three lines counts that list in that order. On Calendar's day pane the Events and
+    Tasks sections stay apart, so the now-line and the next event's lift stay with Events; a timed
+    task's row is its title over its start in `ink3` 12.5, as an event's line, its ring on the
+    title's line as a search result's, and the Tasks section sorts by time with the untimed last, a
+    done task keeping its place. Tasks have no duration, so it's a start alone. Chosen over a time
+    label with tasks kept below the event, and, on the day pane, over one merged list. The phone's
+    agenda is unchanged (D275).

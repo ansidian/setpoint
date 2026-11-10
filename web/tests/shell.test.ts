@@ -8,7 +8,7 @@ import {offlineRefuses, pathsForEvent} from '../src/logic/live.ts';
 import {parseRoute, routePath} from '../src/logic/route.ts';
 import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
-import {shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
+import {byTime, shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
 import {toastTone} from '../src/logic/toast.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -70,14 +70,54 @@ describe('the Today block', () => {
     ['done tasks don\'t count', [task('Pay rent', '2026-10-07', {done: true}), task('Renew', '2026-10-08')], [['Renew', true]]],
     ['a task being completed isn\'t confirmed open', [task('Pay rent', '2026-10-07', {command: {state: 'pending'} as ItemOut['command']})], []],
     ['overdue and later tasks aren\'t today\'s', [task('Late', '2026-10-06'), task('Later', '2026-10-09')], []],
-    ['today\'s come first, then tomorrow\'s, each day\'s timed ones by their time', [
+    // D501: each day's timed ones by their time, then the untimed.
+    ['today\'s come first, then tomorrow\'s, each day\'s timed ones by their time, then the untimed', [
       task('Tomorrow', '2026-10-08'),
       task('Evening', '2026-10-07', {all_day: false, due_at: '2026-10-08T01:00:00.000Z'}),
       task('Any time', '2026-10-07'),
       task('Morning', '2026-10-07', {all_day: false, due_at: '2026-10-07T16:00:00.000Z'}),
-    ], [['Any time', false], ['Morning', false], ['Evening', false], ['Tomorrow', true]]],
+      task('Tomorrow at 9', '2026-10-08', {all_day: false, due_at: '2026-10-08T16:00:00.000Z'}),
+    ], [['Morning', false], ['Evening', false], ['Any time', false], ['Tomorrow at 9', true], ['Tomorrow', true]]],
   ])('%s', (_name, items, expected) => {
     expect(lines(todayBlock(items, now, zone))).toEqual(expected);
+  });
+
+  // D501: a timed task says its time alone, as the week's all-day row; an untimed one says none.
+  test('a task\'s time', () => {
+    const today = todayBlock([task('Call the bank', '2026-10-07', {all_day: false, due_at: '2026-10-07T15:00:00.000Z'}), task('Pay rent', '2026-10-07')], now, zone);
+    expect(today.tasks.map(line => [line.title, line.time])).toEqual([['Call the bank', '8:00 AM'], ['Pay rent', null]]);
+  });
+
+  // D501: a day's events and tasks in one list by time, an event first at the same time, the untimed
+  // tasks last in the order given; a task whose time has passed sorts by it, so it leads.
+  test.each([
+    ['the seed\'s morning with timed tasks: the passed one first, the event among them, the untimed last', [
+      task('Any time', '2026-10-07'),
+      task('Evening', '2026-10-07', {due_at: '2026-10-08T01:00:00.000Z'}),
+      dentist,
+      task('Passed', '2026-10-07', {due_at: '2026-10-07T15:00:00.000Z'}),
+      task('Also any time', '2026-10-07'),
+    ], ['Passed', 'Dentist', 'Evening', 'Any time', 'Also any time']],
+    ['an event and a task at the same time: the event first', [
+      task('Floss', '2026-10-07', {due_at: '2026-10-07T21:30:00.000Z'}),
+      dentist,
+    ], ['Dentist', 'Floss']],
+    ['events alone, by their start', [dentist, gym], ['Gym', 'Dentist']],
+    ['untimed tasks alone keep their order', [task('B', '2026-10-07'), task('A', '2026-10-07')], ['B', 'A']],
+  ])('in time order, %s', (_name, items, expected) => {
+    expect(byTime(items, one => one).map(one => one.title)).toEqual(expected);
+  });
+
+  // D501: tomorrow's fold counts the list in time order, so a timed task before an event shows first.
+  test('tomorrow\'s fold in time order', () => {
+    const lines = byTime([
+      lecture,
+      task('Book flights', '2026-10-08', {due_at: '2026-10-08T22:00:00.000Z'}),
+      task('Renew car registration', '2026-10-08'),
+      task('Standup notes', '2026-10-08', {due_at: '2026-10-08T16:30:00.000Z'}),
+    ], one => one);
+    const cut = shownTomorrow(lines, false, one => one.kind === 'event');
+    expect([cut.shown.map(one => one.title), cut.more]).toEqual([['Standup notes', 'Book flights'], '2 more tomorrow']);
   });
 
   // D460: tomorrow's timed events by their start; all-day and pending ones, and today's, aren't listed.

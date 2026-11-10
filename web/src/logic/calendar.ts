@@ -356,7 +356,8 @@ export function agendaPlace(item: Pick<ItemOut, 'place' | 'address'>): AgendaPla
 /**
  * The selected day's agenda (DESIGN.md › Right pane): its events with their times and lines, the
  * now-line after what has ended (today only), so one under way carries it (#321), the next event today
- * lifted with "in 5h" or, under way, "45m left" (polish audit calpanes-01), then its tasks.
+ * lifted with "in 5h" or, under way, "45m left" (polish audit calpanes-01), then its tasks, the timed
+ * ones by their time and the untimed after, a done one keeping its place (D502).
  */
 export function agenda(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, now: number, timeZone: string): Agenda {
   const names = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.name]));
@@ -379,7 +380,8 @@ export function agenda(day: string, items: ItemOut[], calendars: CalendarOut[] |
       left: item === next && under ? timeLeft(item.ends_at!, now) : null,
       progress: item === next && under ? (now - Date.parse(item.starts_at!)) / (Date.parse(item.ends_at!) - Date.parse(item.starts_at!)) : null,
     })),
-    tasks: items.filter(item => item.kind === 'task'),
+    tasks: items.filter(item => item.kind === 'task')
+      .sort((a, b) => (a.due_at ? Date.parse(a.due_at) : Infinity) - (b.due_at ? Date.parse(b.due_at) : Infinity) || 0),
     nowAt: today ? (ahead < 0 ? events.length : ahead) : null,
   };
 }

@@ -127,14 +127,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row .evbar > i { width: 3px; height: 14px; border-radius: 2px; background: var(--c); }
 /* SV-210: the event's and tasks' lines put the title, wrapping to two lines, over its time or date in
    ink3 ("12:30 PM · in 2h", "Tomorrow"), with room above and below so a fill sits clear of the text. A
-   task with no date stays 28 px; the event's bar runs the height of its lines, a task's ring sits on
+   task with no date stays 28 px; the event's bar and a task's ring sit on
    the title's first line. */
 .today-row.event, .today-row.task { height: auto; min-height: 28px; align-items: flex-start; padding-top: 5px; padding-bottom: 5px; }
-.today-row.event { padding-top: 7px; padding-bottom: 7px; }
-.today-row.event { align-items: stretch; }
-.today-row.event .evbar { height: auto; place-items: stretch center; padding: 2px 0; }
-.today-row.event .evbar > i { height: auto; }
-.today-row.task .check { height: 1.35em; }
+.today-row.event, .today-row.task.timed { padding-top: 7px; padding-bottom: 7px; }
+/* SV-241: the event's bar is the ring's size on the title's first line, so every line's mark sits in
+   one column at one height as events and timed tasks share a list. */
+.today-row.event .evbar, .today-row.task .check { height: 1.35em; }
+.today-row.event .evbar > i { height: 13px; }
 .today-row .lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
 .today-row .lines > .title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .today-row .when { color: var(--ink3); font-size: 12px; white-space: nowrap; }

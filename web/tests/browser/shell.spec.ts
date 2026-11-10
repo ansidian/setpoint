@@ -3,6 +3,8 @@
 // rings, the account filter, the page keys, the tab title, and live updates from a change made
 // elsewhere.
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
@@ -285,6 +287,37 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await lines.filter({hasText: 'Pay rent'}).waitFor();
     assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-241: a timed task shows its time and takes its place by it, among the Today block\'s events (D501) and in the day pane\'s tasks (D502)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    // Pay rent at 8:00 AM, before the seed's 9:12 AM; tomorrow's Renew car registration at 9:30 AM.
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      const timed = database.prepare('UPDATE items SET due_at = ? WHERE title = ?');
+      timed.run('2026-10-07T15:00:00.000Z', 'Pay rent');
+      timed.run('2026-10-08T16:30:00.000Z', 'Renew car registration');
+    } finally {
+      database.close();
+    }
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    const lines = page.locator('.sb .today-row');
+    await until('the Today block', () => lines.allTextContents(), texts => texts.length === 5);
+    assert.deepEqual(await lines.allTextContents(),
+      ['Pay rent8:00 AM', 'Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Renew car registration9:30 AM', 'CS 101 lecture6:00 PM']);
+
+    // The day pane keeps its Events and Tasks apart; its tasks by time, the untimed last.
+    await page.goto(`${setpoint.base}/calendar/2026-10-07`);
+    const tasks = page.locator('.rpane .ag-task');
+    await until('the day\'s tasks', () => tasks.allTextContents(), texts => texts.length === 2);
+    assert.deepEqual(await tasks.allTextContents(), ['Pay rent8:00 AMHome', 'CS 101 lab reportSchool']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

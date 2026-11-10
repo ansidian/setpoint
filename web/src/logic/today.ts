@@ -1,7 +1,8 @@
 // The sidebar's Today block on mail pages (DESIGN.md › The Today block; BRIEF.md › The sidebar's
-// Today block): the next event ("2:30 PM  Dentist  in 5h") and the open tasks due today by name;
-// then, under its own Tomorrow label, tomorrow's events by their time and its open tasks (DESIGN.md ›
-// Decided while building #78, D460). Confirmed data only, and nothing for an empty line.
+// Today block): the next event ("2:30 PM  Dentist  in 5h") and the open tasks due today, a timed one
+// with its time ("9:00 AM"), in one list by time with the untimed tasks after; then, under its own
+// Tomorrow label, tomorrow's events and its open tasks in the same order (DESIGN.md › Decided while
+// building #78, D460, D501). Confirmed data only, and nothing for an empty line.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, localDate, startsIn} from './format.ts';
 
@@ -29,6 +30,8 @@ export function urgency(startsAt: string, now: number): TodayEvent['urgency'] {
 export interface TodayTask {
   item: ItemOut;
   title: string;
+  // A timed task's time ("9:00 AM"), null for one due on a day alone (D501).
+  time: string | null;
   // Which label it's under: Today's, or Tomorrow's (D460).
   tomorrow: boolean;
 }
@@ -66,11 +69,27 @@ export function todayRange(now: number, timeZone: string): {from: string; to: st
   return {from, to: addDays(from, 2)};
 }
 
+/** Where an item sits in a day's time order: an event's start, a timed task's time; null for an untimed task. */
+export const lineTime = (item: ItemOut): string | null => (item.kind === 'task' ? item.due_at : item.starts_at);
+
+/**
+ * A day's lines in time order (D501): the timed ones by their time, an event before a task at the
+ * same time, then the untimed in the order given. A timed task whose time has passed sorts by it too,
+ * so an open one stays at the top until it's completed.
+ */
+export function byTime<T>(lines: readonly T[], itemOf: (line: T) => ItemOut): T[] {
+  const at = (line: T) => {
+    const time = lineTime(itemOf(line));
+    return time ? Date.parse(time) : Infinity;
+  };
+  const rank = (line: T) => (itemOf(line).kind === 'task' ? 1 : 0);
+  return [...lines].sort((a, b) => at(a) - at(b) || rank(a) - rank(b));
+}
+
 /**
  * The next timed event today that hasn't ended (one under way says "now"); tomorrow's timed events by
- * their start; open tasks due today and tomorrow, each day's untimed ones first, then the timed by
- * their time. Items still waiting for
- * their provider (pending) aren't confirmed, so they don't count.
+ * their start; open tasks due today and tomorrow, each day's timed ones by their time, then the
+ * untimed. Items still waiting for their provider (pending) aren't confirmed, so they don't count.
  */
 export function todayBlock(items: ItemOut[], now: number, timeZone: string): Today {
   const today = localDate(now, timeZone);
@@ -81,16 +100,16 @@ export function todayBlock(items: ItemOut[], now: number, timeZone: string): Tod
       && localDate(item.starts_at, timeZone) === today && Date.parse(item.ends_at) > now)
     .sort((a, b) => Date.parse(a.starts_at!) - Date.parse(b.starts_at!))[0];
   const due = (day: string) => confirmed
-    .filter(item => item.kind === 'task' && !item.done && item.due_date === day)
-    .sort((a, b) => (a.due_at ? Date.parse(a.due_at) : 0) - (b.due_at ? Date.parse(b.due_at) : 0));
+    .filter(item => item.kind === 'task' && !item.done && item.due_date === day);
+  const taskTime = (item: ItemOut) => (item.due_at ? clockTime(item.due_at, timeZone) : null);
   const tomorrowEvents = confirmed
     .filter(item => item.kind === 'event' && !item.all_day && item.starts_at && localDate(item.starts_at, timeZone) === tomorrow)
     .sort((a, b) => Date.parse(a.starts_at!) - Date.parse(b.starts_at!));
   return {
     event: next ? {item: next, id: next.id, key: next.key, title: next.title, time: clockTime(next.starts_at!, timeZone), in: startsIn(next.starts_at!, now), urgency: urgency(next.starts_at!, now), occurrence_start: next.occurrence_start} : null,
     tasks: [
-      ...due(today).map(item => ({item, title: item.title, tomorrow: false})),
-      ...due(tomorrow).map(item => ({item, title: item.title, tomorrow: true})),
+      ...byTime(due(today), item => item).map(item => ({item, title: item.title, time: taskTime(item), tomorrow: false})),
+      ...byTime(due(tomorrow), item => item).map(item => ({item, title: item.title, time: taskTime(item), tomorrow: true})),
     ],
     tomorrowEvents: tomorrowEvents.map(item => ({item, key: item.key, title: item.title, time: clockTime(item.starts_at!, timeZone)})),
     today,
@@ -99,7 +118,7 @@ export function todayBlock(items: ItemOut[], now: number, timeZone: string): Tod
 }
 
 /**
- * Tomorrow's lines to show (Today's never fold): every one when they fit or the block's been opened;
+ * Tomorrow's lines, in time order, to show (Today's never fold): every one when they fit or the block's been opened;
  * otherwise the first two and "3 more due tomorrow" for the rest ("3 more tomorrow" when an event is
  * among them), which opens them all.
  */

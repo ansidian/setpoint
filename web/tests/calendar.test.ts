@@ -215,6 +215,13 @@ describe('the right pane', () => {
     expect(day.tasks.map(one => one.title)).toEqual(['CS 101 lab report', 'Pay rent']);
   });
 
+  // D502: the Tasks section by time, the untimed last in the grid's order, a done one keeping its place.
+  test('the tasks in time order, the untimed last', () => {
+    const timed = (title: string, time: string, fields: Partial<ItemOut> = {}) => task(title, '2026-10-07', {all_day: false, due_at: at('2026-10-07', time), ...fields});
+    const day = agenda('2026-10-07', [...tasks, timed('Submit timesheet', '17:00'), timed('Call the bank', '08:00', {done: true}), timed('Pick up prescription', '12:00')], calendars, now, zone);
+    expect(day.tasks.map(one => one.title)).toEqual(['Call the bank', 'Pick up prescription', 'Submit timesheet', 'CS 101 lab report', 'Pay rent']);
+  });
+
   test('an event at a street address: its calendar in the line, its street on the place\'s', () => {
     const lunch = event('Lunch', '2026-10-07', '12:00', '13:00', {address: '1420 Elm St, Los Angeles, CA 90026'});
     expect(agenda('2026-10-07', [lunch], calendars, now, zone).events.map(one => [one.line, one.place])).toEqual([['12:00 – 1:00 PM · Personal', {text: '1420 Elm St', video: false}]]);

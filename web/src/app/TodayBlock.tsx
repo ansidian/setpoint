@@ -1,7 +1,8 @@
 // The sidebar's Today block on mail pages (DESIGN.md › The Today block, Decided while building #78):
-// "2:30 PM  Dentist  in 5h", then the open tasks due today by name; under a Tomorrow label of its own
-// (D460, none when nothing's on), tomorrow's events at their time ("9:00 AM") and its open tasks, the
-// first two and "3 more due tomorrow" when there are more than three. Today's lines never fold.
+// "Dentist" over "2:30 PM · in 5h" and the open tasks due today, a timed one over its time ("9:00 AM"),
+// in one list by time with the untimed tasks after (D501); under a Tomorrow label of its own (D460,
+// none when nothing's on), tomorrow's events and open tasks in the same order, the first two and "3
+// more due tomorrow" when there are more than three. Today's lines never fold.
 // A line opens the floating detail's card beside the sidebar instead of leaving the page: Edit (E)
 // goes to Calendar's editor, a task completes there or from its ring, an item that isn't a repeating
 // event deletes, and Open in Calendar shows it there. Esc, the close button or a click elsewhere
@@ -21,8 +22,8 @@ import type {Entry, FoldRules} from '../logic/fold.ts';
 import {localDate} from '../logic/format.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
-import {DONE_MOMENT_MS, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
-import type {TodayTask, TomorrowEvent} from '../logic/today.ts';
+import {byTime, DONE_MOMENT_MS, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
+import type {TodayEvent, TodayTask, TomorrowEvent} from '../logic/today.ts';
 import {Icon, TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle} from './accounts.ts';
@@ -53,6 +54,7 @@ interface TaskLine extends TodayTask {
 
 /** A line under the Tomorrow label: one of its events, or a task. */
 type TomorrowLine = {event: TomorrowEvent} | {task: TaskLine};
+const tomorrowItem = (line: TomorrowLine) => ('event' in line ? line.event.item : line.task.item);
 
 // Every line that goes folds out, and one that comes back (Undo, a refused change) folds in.
 const FOLDS: FoldRules<TaskLine> = {folds: () => true, arrives: () => true};
@@ -81,11 +83,12 @@ export function TodayBlock() {
     for (const {line, at} of [...ticked.values()].sort((a, b) => a.at - b.at)) listed.splice(Math.min(at, listed.length), 0, {...line, done: true});
     return listed;
   }, [today, ticked]);
-  // Tomorrow's lines fold to two and "N more" (D460): its events first, then its tasks, as Today's.
-  const {shown: tomorrowShown, more} = useMemo(() => shownTomorrow<TomorrowLine>([
+  // Tomorrow's lines fold to two and "N more" (D460), counted in time order with the untimed tasks
+  // last, as Today's (D501).
+  const {shown: tomorrowShown, more} = useMemo(() => shownTomorrow<TomorrowLine>(byTime([
     ...today.tomorrowEvents.map(event => ({event})),
     ...tasks.filter(task => task.tomorrow).map(task => ({task})),
-  ], all, line => 'event' in line), [today, tasks, all]);
+  ], tomorrowItem), all, line => 'event' in line), [today, tasks, all]);
   const tomorrowEvents = tomorrowShown.flatMap(line => ('event' in line ? [line.event] : []));
   const shown = useMemo(() => [
     ...tasks.filter(task => !task.tomorrow),
@@ -105,8 +108,19 @@ export function TodayBlock() {
     );
   }
   if (!today.event && !folded.length && !tomorrowEvents.length) return null;
-  const todayLines = folded.filter(line => !line.item.tomorrow);
-  const tomorrowTasks = folded.filter(line => line.item.tomorrow);
+  // Each day's events and tasks in one list by time, untimed tasks last (D501); a task folding away
+  // keeps the place its time gives it.
+  type Folded = (typeof folded)[number];
+  type Line = {event: TodayEvent | TomorrowEvent} | {task: Folded};
+  const lineItem = (line: Line) => ('event' in line ? line.event.item : line.task.item.item);
+  const todayLines = byTime<Line>([
+    ...(today.event ? [{event: today.event}] : []),
+    ...folded.filter(line => !line.item.tomorrow).map(task => ({task})),
+  ], lineItem);
+  const tomorrowLines = byTime<Line>([
+    ...tomorrowEvents.map(event => ({event})),
+    ...folded.filter(line => line.item.tomorrow).map(task => ({task})),
+  ], lineItem);
 
   // The card goes with its item.
   const hide = (item: ItemOut) => {
@@ -196,10 +210,10 @@ export function TodayBlock() {
     </a>
   );
 
-  const taskLine = ({key, item: {item, title, done}, fold}: (typeof folded)[number]) => {
+  const taskLine = ({key, item: {item, title, time, done}, fold}: Folded) => {
     // A line folding away keeps its look, without its key or the pointer.
     const leaving = fold === 'out';
-    const classes = [lineClass(item), 'task', done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
+    const classes = [lineClass(item), 'task', time && 'timed', done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
     return (
       <a key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : item.key}
         href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={leaving ? undefined : lineMenu(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
@@ -211,9 +225,11 @@ export function TodayBlock() {
           }}>
           {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
         </button>
-        {/* The title wraps to two lines, as the event's (SV-210); the label says its day (D460). */}
+        {/* The title wraps to two lines, as the event's (SV-210), over a timed task's time alone (D501);
+            the label says its day (D460). */}
         <span className="lines">
           <span className="ell title" data-tip={title}>{title}</span>
+          {time && <span className="when"><span className="t num">{time}</span></span>}
         </span>
       </a>
     );
@@ -221,14 +237,14 @@ export function TodayBlock() {
 
   return (
     <div className="sb-sec today">
-      {(today.event || todayLines.length > 0) && <div className="sb-label">Today</div>}
-      {today.event && eventLine(today.event.item, today.event.key, today.event.title, <>
-        <span className="t num">{today.event.time}</span> · <span className={today.event.urgency ? `in num ${today.event.urgency}` : 'in num'}>{today.event.in}</span>
-      </>, true)}
-      {todayLines.map(taskLine)}
-      {(tomorrowEvents.length > 0 || tomorrowTasks.length > 0) && <div className="sb-label tomorrow">Tomorrow</div>}
-      {tomorrowEvents.map(event => eventLine(event.item, event.key, event.title, <span className="t num">{event.time}</span>))}
-      {tomorrowTasks.map(taskLine)}
+      {todayLines.length > 0 && <div className="sb-label">Today</div>}
+      {todayLines.map(line => ('task' in line ? taskLine(line.task) : 'in' in line.event
+        ? eventLine(line.event.item, line.event.key, line.event.title, <>
+          <span className="t num">{line.event.time}</span> · <span className={line.event.urgency ? `in num ${line.event.urgency}` : 'in num'}>{line.event.in}</span>
+        </>, true)
+        : null))}
+      {tomorrowLines.length > 0 && <div className="sb-label tomorrow">Tomorrow</div>}
+      {tomorrowLines.map(line => ('task' in line ? taskLine(line.task) : eventLine(line.event.item, line.event.key, line.event.title, <span className="t num">{line.event.time}</span>)))}
       {more && (
         <button className="today-row today-more" type="button" onClick={() => setAll(true)}>
           <span className="ring-space" />

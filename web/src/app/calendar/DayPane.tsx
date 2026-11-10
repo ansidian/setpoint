@@ -2,7 +2,8 @@
 // ("Sunny · 78° / 61°") or else what it holds ("6 events · 2 tasks"), its events (time, colour bar,
 // title, "7:00 – 8:00 AM · Personal", the place on its own line, #125, the recurring glyph, the next lifted with "in 5h" or "45m left" under way (calpanes-01), "Leave by 2:05 PM
 // · 18 min", in `caution` once it's time to go and gone once the event starts, SV-56), the now-line
-// in `alert` today, riding the event under way (#321), and its tasks with their projects; the footer's keys. F6 adds the line under an
+// in `alert` today, riding the event under way (#321), and its tasks with their projects, a timed one
+// over its start and in time order, the untimed last (D502); the footer's keys. F6 adds the line under an
 // event that starts during another ("Overlaps Study group until 8:30 PM", board 12b), "Moving to Thu,
 // Oct 8" while a drop waits on its scope (board 15b), completing a task from its ring, and a change
 // waiting for its provider (a spinner, board 19b). SV-20 adds the calendar's sources' stale and
@@ -18,6 +19,7 @@ import {SOURCES_PATH} from '../../api/settings.ts';
 import {clockTime} from '../../logic/format.ts';
 import {agenda, dayCounts, dayTitle, tasksHeading, timeRange, weatherOf} from '../../logic/calendar.ts';
 import {agendaOverlap} from '../../logic/conflict.ts';
+import {taskTime} from '../../logic/week.ts';
 import {leaveLine} from '../../logic/detail.ts';
 import {calendarHealthLines} from '../../logic/health.ts';
 import type {SourceLine} from '../../logic/health.ts';
@@ -103,26 +105,31 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
         ))}
         {day.events.length > 0 && day.nowAt === day.events.length && nowLine}
         {day.tasks.length > 0 && <div className="ag-day">{tasksHeading(date, today)}</div>}
-        {day.tasks.map(task => (
-          <a key={task.key} className={['ag-item ag-task', task.done && 'done', justDone.has(task.key) && 'just-done', selected.has(task.key) && 'sel', task.command?.state === 'pending' && 'pending', fade(task.calendar_id)].filter(Boolean).join(' ')} href="#" data-key={task.key}
-            onClick={event => {
-              event.preventDefault();
-              onSelectItem(task);
-            }}>
-            <button className="check" aria-label={task.done ? `Reopen ${task.title}` : `Complete ${task.title}`} disabled={!!task.command || (task.done && task.recurring)}
+        {day.tasks.map(task => {
+          const time = taskTime(task, timeZone);
+          return (
+            <a key={task.key} className={['ag-item ag-task', time && 'timed', task.done && 'done', justDone.has(task.key) && 'just-done', selected.has(task.key) && 'sel', task.command?.state === 'pending' && 'pending', fade(task.calendar_id)].filter(Boolean).join(' ')} href="#" data-key={task.key}
               onClick={event => {
                 event.preventDefault();
-                event.stopPropagation();
-                onComplete(task);
+                onSelectItem(task);
               }}>
-              {task.done ? <TaskGlyph done size={15} /> : <span className="ring" style={ring(task.project)}><Icon name="check" size={11} /></span>}
-            </button>
-            <span className="grow title"><span>{task.title}</span></span>
-            {/* Waiting, the spinner comes before the project, which stays (polish audit calpanes-08). */}
-            {task.command?.state === 'pending' && <Spinner />}
-            {task.project && <span className="ink3 project">{task.project}</span>}
-          </a>
-        ))}
+              <button className="check" aria-label={task.done ? `Reopen ${task.title}` : `Complete ${task.title}`} disabled={!!task.command || (task.done && task.recurring)}
+                onClick={event => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onComplete(task);
+                }}>
+                {task.done ? <TaskGlyph done size={15} /> : <span className="ring" style={ring(task.project)}><Icon name="check" size={11} /></span>}
+              </button>
+              {time
+                ? <span className="grow"><span className="title"><span>{task.title}</span></span><span className="ink3 num line">{time}</span></span>
+                : <span className="grow title"><span>{task.title}</span></span>}
+              {/* Waiting, the spinner comes before the project, which stays (polish audit calpanes-08). */}
+              {task.command?.state === 'pending' && <Spinner />}
+              {task.project && <span className="ink3 project">{task.project}</span>}
+            </a>
+          );
+        })}
         {/* An empty day is room to plan (polish audit calpanes-09): New event C and New task D as dashed ghost rows. */}
         {!day.events.length && !day.tasks.length && (hidden > 0
           ? <div className="ag-empty"><Icon name="visibility_off" size={16} />{hidden} hidden · <button onClick={onShowAll}>Show all</button></div>
