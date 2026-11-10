@@ -902,6 +902,8 @@ the list (#333). No board draws it.
   - Rows are 44 px: an icon tile; the source's name with what's read ("Feed, Local News only");
     how often ("Every 15 min"); and its state, as on Accounts ("Checked 9:10 AM", or "Failing, 404
     since 6:02 AM" in `caution` on a `caution` 7% row).
+  - A section's rows share their columns: the sync 96 px, the state 230, giving way first so the
+    name keeps 200 at the narrow modal; cut words show in a tip (#361).
   - Read-only: no handles, no switches, until the tuning round.
 - **AI** (board 30b) adds a **News** group:
   - **Articles and grouping** (Claude Haiku 5.5) and **Stories and ranking** (Claude Sonnet 5.5)
@@ -1456,6 +1458,8 @@ section's label stays under the title (#132).
   Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way. Todoist's row is
   its connection's only place: "Not connected" with **Connect Todoist** while it isn't, Reconnect in
   its menu once it is (#356). Board 17's Attention precision row is gone (#346).
+  A group's rows share their sync and state columns, which give way before the name (120 px) as the
+  modal narrows, the state at half the sync's rate; cut words show in a tip (#361).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
   domains, the code expiry presets, and the note that protected mail can't be moved, marked read or
   trashed by any rule (a written rule's actions, [Decided while building](#decided-while-building) #347).
@@ -1722,6 +1726,8 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
 51. **AI's Jobs group has no This month row** (#359): board 39b draws one under Reading the JD,
     "No cap: a JD is worth finding while the posting is up" and $3.85; the app's group ends at
     Reading the JD, and Usage this month's Jobs line ends "· no cap".
+52. **News's sync column is 96 px** (#361): board 30a draws it 186 px, as Accounts' is; the app's is
+    96, its words never wider than "Every 30 min", and the name takes the rest.
 
 ## Not designed yet
 
@@ -4567,3 +4573,23 @@ was decided; the audit itself was retired by D480.
     label is off a whole pixel, and nothing clips or overflows; two-line rows grew 0.58 px each (mono
     1.25), so News's 65 rows run 37 px longer. Decided for Andy overnight: every two-line row, not
     just FYI mail's, since Token and the topic rows above it were fractional too, and 18 / 17 px.
+361. **A Settings group's rows share their sync and state columns, and cut words show in a tip**
+    (amending SV-99's give-way and board 30a; Andy, 2026-11-09; darma SV-253, F1, F2, D524): a row's
+    name and line no longer size its columns, so as the modal narrows every row of Accounts' Mail and
+    Sources and of each News section gives way alike, and its sync starts at one x and its state is
+    one width. The sync and state still give way before the name, which keeps 120 px on Accounts and
+    200 on News. On Accounts the state gives way at half the sync's rate. On News the sync is 96 px
+    (its words are never wider than "Every 30 min", 76) and holds, and only the state gives way. A
+    cut name, address, line, sync or state shows its words in the shared tip, and only while cut; a
+    state with a reason keeps the reason. Measured in Night at 1040, 992 and 820:
+    - **Accounts' Mail:** sync started at 3 places at 992 and 4 at 820, as far as 22 px apart. It now
+      starts at one, and the state is 214, 214 and 151 wide.
+    - **Accounts' Sources:** Google Calendar's sync started 39 px right of the others at 1040. It now
+      starts with them, and the state is 214, 214 and 172.
+    - **News:** at 992 the sync started at 7 places in Local alone, and at 820 nearly every row's
+      differed. It now starts at one per section, and the state is 230, 230 and 135.
+    - **Cut texts, Accounts:** 1, 4 and 6, down from 1, 4 and 11.
+    - **Cut texts, News:** 0, 0 and 9, down from 5, 10 and 82.
+    Rows stay 58 / 57 and 54 / 53 px, on whole pixels, and none overflows. Decided for Andy
+    overnight: the sync stays in its column at 820 rather than under the name (a longer second line
+    on 65 News rows, for 6 and 9 cut texts that have tips), and the 120 / 200 px minimums.
