@@ -198,6 +198,16 @@ describe('MIME parsing', () => {
     expect(email.snippet).toContain('Thank you for applying');
     expect(email.html).toContain('data:image/png;base64,');
   });
+
+  test('an HTML-only email with its images or attachments beside it gets body text too (mailparser left it none)', async () => {
+    const email = await parseEmail(Buffer.from([
+      'From: news@contosocoffee.example', 'Subject: Roasts', 'Date: Wed, 07 Oct 2026 15:00:00 +0000', 'Content-Type: multipart/related; boundary="r"', '',
+      '--r', 'Content-Type: text/html; charset=utf-8', '', '<p>Ethiopia is back</p><img alt="Beans" src="cid:beans@contosocoffee.example">',
+      '--r', 'Content-Type: image/png', 'Content-ID: <beans@contosocoffee.example>', 'Content-Transfer-Encoding: base64', '', 'cG5n', '--r--', '',
+    ].join('\r\n')));
+    expect(email.text).toBe('Ethiopia is back\n\nBeans');
+    expect(email.snippet).toBe('Ethiopia is back Beans');
+  });
 });
 
 describe('the backfill\'s progress', () => {
