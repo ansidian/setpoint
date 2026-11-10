@@ -1084,6 +1084,37 @@ test('menus: Sources\' last row (Weather · Check now), the last account\'s and 
   }
 });
 
+test('SV-253 (F3, D518): Add rule at the narrow modal stays inside its group with a filter and every Trash choice, and Settings doesn\'t scroll sideways', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    // The modal at 820 wide (the window less its 16 px each side), where the Trash control ran past the group.
+    const page = await setpoint.page({width: 852, height: 760});
+    await openAt(page, setpoint.base, 'mail');
+    await page.locator('.settings .set-label').getByRole('button', {name: 'Add rule'}).click();
+    await page.getByRole('button', {name: 'and…'}).click();
+    await page.getByRole('menuitem', {name: 'Sender name doesn’t contain'}).click();
+    const form = page.locator('.settings .rule-form');
+    const trash = page.getByRole('radiogroup', {name: 'Trash'});
+    for (const choice of ['Never', 'Now', '15 min', '1 hour', '1 day', '1 week']) {
+      await trash.getByRole('radio', {name: choice, exact: true}).click();
+      await trash.getByRole('radio', {name: choice, exact: true, checked: true}).waitFor();
+      const fit = await rested(() => form.evaluate(element => {
+        const edge = element.closest('.set-group')!.getBoundingClientRect().right;
+        const main = element.closest('.set-main')!;
+        return {
+          past: [...element.querySelectorAll('*')].filter(each => each.getBoundingClientRect().right > edge + 0.5).map(each => each.textContent || each.className),
+          sideways: main.scrollWidth - main.clientWidth,
+        };
+      }));
+      assert.deepEqual(fit.past, [], `with ${choice}, nothing in Add rule passes the group's edge`);
+      assert.equal(fit.sideways, 0, `with ${choice}, Settings doesn't scroll sideways`);
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 /** Each Settings group's rows with a sync column: where each row's sync starts and how wide its state is. */
 const columns = (page: Page) => page.locator('.settings .set-group').evaluateAll(groups => groups
   .map(group => [...group.querySelectorAll(':scope > .set-row')].filter(row => row.querySelector('.prov')).map(row => ({
