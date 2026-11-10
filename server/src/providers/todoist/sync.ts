@@ -160,23 +160,29 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean): bool
  * Tasks completed in Todoist's apps since the last look, from its completed list: a one-off task is
  * marked done. The list never holds a repeating task's occurrence (those come from the activity log,
  * syncActivity); a repeating task in it was completed for good, and its last occurrence becomes its
- * done row on its day (once).
+ * done row on its day (once). A look that left a held task alone ends where it began, so the next
+ * one reads it again (SV-260).
  */
 export async function syncCompleted(store: Store, api: TodoistApi, since: string | null): Promise<string> {
   const until = isoNow(store);
   const from = since ?? new Date(store.now().getTime() - COMPLETED_FIRST_LOOK_MS).toISOString();
   const completed = await api.completed(from, until);
-  transaction(store, () => {
+  const skipped = transaction(store, () => {
     const calendar = todoistCalendar(store);
     const held = itemsHeldByCommands(store);
     const touched = new Set<number>();
+    let skipped = false;
     const ids = [...new Set(completed.map(task => task.id))];
     const tasks = ids.length ? store.db.select().from(t.items).where(and(eq(t.items.calendarId, calendar.id), inArray(t.items.providerId, ids), isNull(t.items.recurringItemId))).all() : [];
     const byId = new Map(tasks.map(row => [row.providerId, row]));
     for (const task of completed) {
       const row = byId.get(task.id);
       const due = task.due ? readDue(task.due, store.timeZone) : null;
-      if (!row || !due || held.has(row.id)) continue;
+      if (!row || !due) continue;
+      if (held.has(row.id)) {
+        skipped = true;
+        continue;
+      }
       const doneAt = task.completed_at ? new Date(task.completed_at).toISOString() : until;
       if (task.due?.is_recurring || row.dueRecurring) {
         // The occurrence it completed, unless Setpoint already holds it.
@@ -193,8 +199,9 @@ export async function syncCompleted(store: Store, api: TodoistApi, since: string
       }
     }
     if (touched.size) noteLive(store, {type: 'items', items: [...touched].sort((a, b) => a - b), calendars: [calendar.id], commands: []});
+    return skipped;
   });
-  return until;
+  return skipped ? from : until;
 }
 
 /**

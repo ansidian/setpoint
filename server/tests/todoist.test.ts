@@ -675,6 +675,19 @@ describe('changes through the command layer', () => {
       expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
       expect(task('t-plants').dueDate).toBe('2026-10-14');
     });
+
+    test('a repeating task completed for good in Todoist\'s app while the hold lasts keeps its last occurrence done after Move back, from the completed list', async () => {
+      const {w, todoist, run, task, renamed} = await heldWorld('t-last', {id: 't-last', content: 'Last lesson', project_id: 'inbox', due: {date: '2026-10-07', string: 'every wed until oct 7', is_recurring: true}});
+      todoist.completeInTodoist('t-last');
+      w.advance(5 * 60_000);
+      await run();
+      moveBackCommand(w.store, renamed.id);
+      w.advance(5 * 60_000);
+      await run();
+      const last = task('t-last');
+      expect(last.doneAt).not.toBeNull();
+      expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, last.id)).all().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
+    });
   });
 });
 
