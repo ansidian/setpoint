@@ -250,7 +250,11 @@
 .settings .set-head .head-note.after { margin-left: 4px; }
 .settings .set-label .n { letter-spacing: 0; color: var(--ink2); }
 .settings .set-row.slim { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+/* Its sync is "Every 30 min" at most (76 px), so it holds 96 and only the state gives way; the name keeps 200. */
+.settings .news-src .prov { width: 96px; flex-shrink: 0; }
 .settings .news-src .state { width: 230px; }
+.settings .news-src .lines.cols ~ .state { flex-shrink: 1; }
+.settings .news-src .lines.cols { min-width: 200px; }
 /* AI's News group (board 30b): a model in use, this month's 160 × 6 meter and its amount. The money reads
    first: the amount and each cost in ink, the costs at 500. The meter is neutral, `ink3` on a `sub2` track
    (3.4:1 in Night, 4.1:1 in Light), as a usage meter is neither "you are here" nor an identity, and turns
