@@ -161,6 +161,8 @@ export async function fakeTodoist() {
       if (!authorized(request)) return unauthorized();
       const query = request.query;
       const from = query.get('date_from');
+      // The Free plan's week of history: asking for more is refused, the whole read.
+      if (from && Date.parse(from) < clock().getTime() - 7 * 86_400_000) return todoistError(403, 'Activity older than the plan\'s history limit is a premium only feature', 'PREMIUM_ONLY');
       const to = query.get('date_to');
       const matching = activities
         .filter(event => (!query.get('object_type') || event.object_type === query.get('object_type')) && (!query.get('event_type') || event.event_type === query.get('event_type')))
@@ -282,6 +284,10 @@ export async function fakeTodoist() {
       logDueChange(task, save({...task, due}));
     },
     activities: () => [...activities],
+    /** Todoist's own connector's form of the log: the same fields camel-cased (SV-251). */
+    camelCaseLog() {
+      for (const event of activities) event.extra_data = Object.fromEntries(Object.entries(event.extra_data).map(([key, value]) => [key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase()), value]));
+    },
     /** The consent page would hand this code back for this token. */
     grant(code: string, token: string) {
       codes.set(code, token);

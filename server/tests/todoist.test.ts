@@ -514,15 +514,15 @@ describe('changes through the command layer', () => {
     expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-rent').id)).all()).toEqual([]);
   });
 
-  test('SV-251: the first look reads a week of the activity log, every page', async () => {
-    const {w, todoist, run, tasks} = await todoistWorld();
+  test('SV-251: a look at the activity log stays inside the week Todoist\'s Free plan keeps, every page read', async () => {
+    const {w, todoist, run, tasks, source} = await todoistWorld();
     const DAY = 86_400_000;
     // Completed in the app before Setpoint first looks: Oct 7's eight days before, past what
-    // Todoist's Free plan keeps and the first look, and Oct 14's within the week.
+    // Todoist keeps, and Oct 14's five days before.
     todoist.completeInTodoist('t-plants');
-    w.advance(DAY);
+    w.advance(3 * DAY);
     todoist.completeInTodoist('t-plants');
-    w.advance(7 * DAY - 60 * 60_000);
+    w.advance(5 * DAY);
     // A busy week: more completions than one page holds, newer than Oct 14's.
     for (let close = 0; close < 230; close += 1) todoist.completeInTodoist('t-call');
     w.advance(60_000);
@@ -530,9 +530,25 @@ describe('changes through the command layer', () => {
     expect(tasks('2026-10-07')).toEqual(['○ Pay rent']);
     expect(tasks('2026-10-14')).toEqual(['● Water plants']);
     expect(tasks('2026-10-21')).toEqual(['○ Water plants']);
-    const reads = todoist.requests.filter(request => request.path === '/api/v1/activities' && request.query.get('event_type') === 'completed');
-    expect(reads[0]!.query.get('date_from')).toBe(new Date(w.store.now().getTime() - 7 * DAY).toISOString());
-    expect(reads.map(request => request.query.get('cursor'))).toEqual([null, 'o.200']);
+    const reads = () => todoist.requests.filter(request => request.path === '/api/v1/activities' && request.query.get('event_type') === 'completed');
+    expect(reads()[0]!.query.get('date_from')).toBe(new Date(w.store.now().getTime() - 6 * DAY).toISOString());
+    expect(reads().map(request => request.query.get('cursor'))).toEqual([null, 'o.200']);
+    // Setpoint away for ten days: its next look starts six days back, not at its last, which
+    // Todoist would refuse; the connection stays healthy.
+    w.advance(10 * DAY);
+    await run();
+    expect(reads().at(-1)!.query.get('date_from')).toBe(new Date(w.store.now().getTime() - 6 * DAY).toISOString());
+    expect(sourceList(w.store).find(row => row.id === source.id)).toMatchObject({health: {state: 'healthy'}});
+  });
+
+  test('SV-251: the log\'s fields are read in the camel case Todoist\'s own connector shows too', async () => {
+    const {w, todoist, run, tasks} = await todoistWorld();
+    await run();
+    todoist.completeInTodoist('t-plants');
+    todoist.camelCaseLog();
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
   });
 
   test('SV-251: Undo on Todoist\'s pop-up puts the occurrence back open, whether the poll read the completion before it or with it', async () => {

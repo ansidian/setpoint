@@ -25,8 +25,10 @@ import {readDue} from './due.ts';
 const DAY = 86_400_000;
 // How far back the first look at completed tasks goes.
 export const COMPLETED_FIRST_LOOK_MS = 14 * DAY;
-// How far back the first look at the activity log goes: what Todoist's Free plan keeps (SV-251).
-export const ACTIVITY_FIRST_LOOK_MS = 7 * DAY;
+// How far back any look at the activity log goes, the first included: inside the week Todoist's
+// Free plan keeps. Asked for more, Todoist refuses the whole read (403 PREMIUM_ONLY, seen on the
+// user's account), which would read as a revoked connection (SV-251).
+export const ACTIVITY_LOOK_MS = 6 * DAY;
 
 /** The one Todoist calendar row ("Todoist", one more toggle), made on connect. */
 export function todoistCalendar(store: Store) {
@@ -182,6 +184,17 @@ export async function syncCompleted(store: Store, api: TodoistApi, since: string
   return until;
 }
 
+/**
+ * An event's extra data by its API names (`completed_due_date_local`). Todoist's own connector shows
+ * the same fields camel-cased (`completedDueDateLocal`), the only form seen on the user's account,
+ * so either is read.
+ */
+function extraOf(event: TodoistActivity): Record<string, unknown> {
+  const extra: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(event.extra_data ?? {})) extra[key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)] = value;
+  return extra;
+}
+
 /** A due in the activity log as a local day: an instant's in the user's zone, a floating time's own. */
 function logDay(value: unknown, timeZone: string): string | null {
   if (typeof value !== 'string') return null;
@@ -202,9 +215,10 @@ function logDay(value: unknown, timeZone: string): string | null {
  */
 export async function syncActivity(store: Store, api: TodoistApi, since: string | null): Promise<string> {
   const until = isoNow(store);
-  const from = since ?? new Date(store.now().getTime() - ACTIVITY_FIRST_LOOK_MS).toISOString();
+  const earliest = new Date(store.now().getTime() - ACTIVITY_LOOK_MS).toISOString();
+  const from = since && since > earliest ? since : earliest;
   const events: TodoistActivity[] = [...await api.activities('completed', from, until), ...await api.activities('updated', from, until)]
-    .sort((a, b) => a.event_date.localeCompare(b.event_date) || (a.id ?? 0) - (b.id ?? 0));
+    .sort((a, b) => Date.parse(a.event_date) - Date.parse(b.event_date) || (a.id ?? 0) - (b.id ?? 0));
   transaction(store, () => {
     const calendar = todoistCalendar(store);
     const held = itemsHeldByCommands(store);
@@ -215,7 +229,7 @@ export async function syncActivity(store: Store, api: TodoistApi, since: string 
     const settled = new Map<string, {task: ItemRow; day: string; done: {at: string; dueAt: string | null} | null}>();
     for (const event of events) {
       const task = byId.get(event.object_id);
-      const extra = event.extra_data ?? {};
+      const extra = extraOf(event);
       if (!task || held.has(task.id)) continue;
       if (event.event_type === 'completed') {
         if (extra.is_recurring !== true) continue;
