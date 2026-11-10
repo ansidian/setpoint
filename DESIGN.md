@@ -1471,7 +1471,8 @@ section's label stays under the title (#132).
   written rule's actions, [Decided while building](#decided-while-building) #347). Trusted domains'
   label shows the count and Filter only once there are more than the 11 shown before Show all, and
   its empty line leads with `image` (#363, D520). A group's note is 34 px at least and grows by whole
-  lines with 8 px of air when it wraps (#363).
+  lines with 8 px of air when it wraps (#363). Add rule's last line holds Mark read, Trash, then Add
+  and Cancel at its right end, wrapping a pair at a time where the modal is narrow (#364, D518).
 - **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", or "Failing, …" by a
   `caution` dot; Send test, which turns while it sends and says under the group how it went, #217;
   Server, Token ([Decided while building](#decided-while-building) #82)), the
@@ -4383,7 +4384,7 @@ was decided; the audit itself was retired by D480.
       no "is exactly" or "starts with" (an anchored regex covers the rare need), and `none_includes`
       stays as it is. A match of exclusions alone has nothing to match. Add rule reads as a
       sentence (D496): **If from** [domain or address], an **and** row per filter, **then send to**
-      [lane] with Add and Cancel. Filters come from an **and…** menu of six (Subject, Sender name,
+      [lane], with Add and Cancel at the right end of the form's last line (#364, D518). Filters come from an **and…** menu of six (Subject, Sender name,
       Body, each contains or doesn't contain), each once, a row its label, one phrase and ×. Alone,
       an exclusion reads "not named “x”", "without “x” in the subject", "not mentioning “x”".
     - **Actions:** under Send to, the rule form gains **Mark read** (a switch) and **Trash**, a
@@ -4619,8 +4620,8 @@ was decided; the audit itself was retired by D480.
       Change back, a learned rule's Undo, and an inline form's Save, Connect, Add and Cancel. The shared
       `.btn.sm` stays 26 everywhere else, as do a section label's buttons (Add rule, Add passkey, Add
       iPhone, and ntfy's Send test, outlined, with them), the head's Connect Gmail and Connect iCloud,
-      the pairing panel's Copy, a rule's Turn off and Delete prompt, and Add rule's form, whose actions
-      move with D518. Fields stay 34 and the segmented control 28.
+      the pairing panel's Copy, a rule's Turn off and Delete prompt, and Add rule's and… (its Add and
+      Cancel are 30 as an inline form's, #364). Fields stay 34 and the segmented control 28.
     - **A row's "…" (F4):** a 30 px icon button with its 18 px glyph, 6 px around it as the × has, on
       Accounts' rows and Mail's rules. Decided for Andy overnight: the button to 30 rather than the
       glyph to 16, since it now matches the 30 px buttons beside it.
@@ -4662,3 +4663,27 @@ was decided; the audit itself was retired by D480.
     line at all three, and every row and label on Mail and Jobs on whole pixels, nothing cut or
     overflowing. Decided for Andy overnight: "more than 11" literally, so 12 shows the count and Filter
     though it has no Show all; the field stays while a filter is applied; `image` from the glyph set.
+364. **Add rule's Add and Cancel end the form's last line, and its labels are one size** (amending
+    #347's D496 and #362; Andy, 2026-11-09; darma SV-253, D518, F3, F9, D516):
+    - **The last line (D518):** under "then send to" and its select, one line holds **Mark read** and
+      its switch, **Trash** and its presets, then **Add** and **Cancel** at its right end (they were on
+      the "then send to" line). A label wraps with its control, and Add with Cancel, 16 px between the
+      pairs and 8 px between lines, so a narrower modal drops a pair whole: at 1040 × 720 it's
+      one line, at 992 Add and Cancel drop to a second line at its right end, and at 820 Trash and its
+      presets take the second line and Add and Cancel a third, at the right end under the presets.
+      Nothing passes the group's edge and Settings doesn't scroll sideways (F3: at 820 the presets
+      ended 30 px past the group and "Mark read" wrapped onto two lines). Tab runs From, each filter,
+      and…, Send to, Mark read, Trash's presets, then Add and Cancel; Enter adds and Esc cancels.
+    - **Labels (F9):** If from, and, a filter's label, then send to, Mark read and Trash are all 13 px,
+      the size the other inline forms' labels take ("New password", "Name it"); a filter's, Mark read
+      and Trash were 12.5. They keep `ink3`, and Mark read and Trash don't wrap.
+    - **Buttons (D516):** Add and Cancel are 30 px, as every inline form's Save and Cancel are, and
+      Cancel's words end 16 px in (#362); and… stays 26, with its row. The error line takes a 17 px
+      line box, so the form stays on whole pixels when it shows.
+    Measured in Night with Add rule open, with and without a "Sender name doesn't contain" filter and
+    with each Trash choice selected (the presets stay 333 px wide whichever is chosen): the form is
+    200 px at 1040 × 720 (one last line), 236 at 992 (two) and 264 at 820 (three), every line and the
+    form on whole pixels, Add and Cancel in the same place for every choice, Cancel's box 6 px inside
+    the group's edge. Below 820, a width the audit didn't cover, the presets can't fit their column
+    and pass the group from a modal of about 752. Decided for Andy overnight: Add and Cancel at 30
+    with the other inline forms, 13 px for the labels, and the filters' labels taking it too.
