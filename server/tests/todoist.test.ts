@@ -733,14 +733,17 @@ describe('SV-25: a project\'s colour, written to Todoist', () => {
     const world = await colourWorld();
     world.todoist.addProject({id: 'p-home', name: 'Home', child_order: 1, color: 'orange'});
     await world.run();
-    world.todoist.fault({method: 'POST', path: /\/projects\/p-home$/, response: {status: 403, body: {error: 'Insufficient permissions', error_code: 403, http_code: 403}}});
+    // A 400, not a 401 or 403: those mark the connection as needing reconnect, which stops its syncs (SV-266).
+    world.todoist.fault({method: 'POST', path: /\/projects\/p-home$/, response: {status: 400, body: {error: 'Invalid argument value', error_code: 400, http_code: 400}}});
     const picked = setProjectColour(world.w.store, 'p-home', 'grape');
     await world.run();
-    expect(world.command(picked.id)).toMatchObject({state: 'failed', providerMessage: 'Insufficient permissions (403 Forbidden)'});
+    expect(world.command(picked.id)).toMatchObject({state: 'failed', providerMessage: 'Invalid argument value (400 Bad Request)'});
+    // The sync runs and names both projects: School's new colour arrives, while Home keeps the failed grape over Todoist's orange.
     world.todoist.addProject({id: 'p-home', name: 'Home', child_order: 1, color: 'orange'});
+    world.todoist.addProject({id: 'p-school', name: 'School', child_order: 2, color: 'sky_blue'});
     world.w.advance(5 * 60_000);
     await world.run();
-    expect(world.colours()).toContainEqual(['Home', 'grape', 'failed']);
+    expect(world.colours()).toEqual([['Inbox', null, null], ['Home', 'grape', 'failed'], ['School', 'sky_blue', null]]);
     moveBackCommand(world.w.store, picked.id);
     expect(world.colours()).toContainEqual(['Home', 'orange', null]);
     world.todoist.fault({method: 'POST', path: /\/projects\/p-home$/, response: {status: 404, body: {error: 'Project not found', error_code: 404, http_code: 404}}});
