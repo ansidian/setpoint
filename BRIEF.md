@@ -867,9 +867,9 @@ darma's Settings: a **1040 × 720 modal** with a 220 px nav, not in the address 
 the sidebar and ⌘K, and openable straight to a page (a reconnect link goes to Accounts).
 
 - **Accounts:** connect Gmail (Google sign-in) and iCloud (app password); reconnect; label,
-  colour, icon, order; each source's health.
-- **Calendar:** which calendars show; home location; Time to Leave and its buffer; weather on or off.
-- **Todoist:** connection, default project.
+  colour, icon, order; each source's health; Todoist's connection, on its Sources row.
+- **Calendar:** which calendars show; home location; Time to Leave and its buffer; Todoist's
+  project colours and default project; weather on or off.
 - **Notifications:** ntfy server and topics, reminder defaults, alerts.
 - **Mail:** rules (written and learned; written ones can mark read and trash), trusted
   remote-content domains, the code expiry.
