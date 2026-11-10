@@ -228,17 +228,21 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
         </span>
       )}
       <span className="lead">then send to</span>
-      <span className="rule-line">
-        <Select value={destination} options={DESTINATIONS} label="Send to" onChange={setDestination} />
-        <span className="grow" />
-        <button className="btn sm" type="submit" disabled={send.busy}>Add</button>
-        <button className="btn quiet sm" type="button" onClick={onDone}>Cancel</button>
-      </span>
-      <span className="rule-line add">
-        <span className="s">Mark read</span>
-        <Switch on={markRead} label="Mark read" onChange={setMarkRead} />
-        <span className="s gap">Trash</span>
-        <Segmented role="radio" label="Trash" value={trash} segments={RULE_TRASH.map(value => ({value, label: TRASH_LABELS[value]}))} onChange={setTrash} />
+      <span className="rule-line"><Select value={destination} options={DESTINATIONS} label="Send to" onChange={setDestination} /></span>
+      {/* The last line (D518): each label wraps with its control, and Add and Cancel keep its right end. */}
+      <span className="rule-line add last">
+        <span className="pair">
+          <span className="s">Mark read</span>
+          <Switch on={markRead} label="Mark read" onChange={setMarkRead} />
+        </span>
+        <span className="pair">
+          <span className="s">Trash</span>
+          <Segmented role="radio" label="Trash" value={trash} segments={RULE_TRASH.map(value => ({value, label: TRASH_LABELS[value]}))} onChange={setTrash} />
+        </span>
+        <span className="pair ends">
+          <button className="btn sm" type="submit" disabled={send.busy}>Add</button>
+          <button className="btn quiet sm" type="button" onClick={onDone}>Cancel</button>
+        </span>
       </span>
       {send.line && <span className="s rule-line add" style={{color: 'var(--alert)'}} role="alert">{send.line.text}</span>}
     </form>

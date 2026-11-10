@@ -179,8 +179,12 @@
 .settings .rule-form .rule-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .settings .rule-form .rule-line.add { grid-column: 2; }
 .settings .rule-form .filter { min-width: 170px; }
-/* The rule form's actions under Send to (DESIGN.md #347): Mark read's switch, then Trash's presets. */
-.settings .rule-form .rule-line .gap { margin-left: 16px; }
+/* The rule form's last line (DESIGN.md #347, #364, D518): Mark read's switch, Trash's presets, then Add
+   and Cancel at its right end. Each label wraps with its control, so a narrow modal drops a pair whole. */
+.settings .rule-form .rule-line.last { flex-wrap: wrap; gap: 8px 16px; }
+.settings .rule-form .pair { display: flex; align-items: center; gap: 8px; }
+.settings .rule-form .pair > .s { white-space: nowrap; }
+.settings .rule-form .ends { margin-left: auto; }
 
 /* Mail (board 18a). */
 .settings .rule { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; }
