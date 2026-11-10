@@ -76,7 +76,8 @@ function writeCursor(store: Store, sourceId: number, scope: string, cursor: stri
   store.db.insert(t.syncCursors).values({sourceId, scope, cursor, updatedAt}).onConflictDoUpdate({target: [t.syncCursors.sourceId, t.syncCursors.scope], set: {cursor, updatedAt}}).run();
 }
 
-async function poll(options: TodoistOptions, context: AdapterContext, cursor: string | null, full: boolean): Promise<string> {
+/** A poll: the sync, then the completed list and the activity log; the sync's next cursor, null to keep the one there is. */
+async function poll(options: TodoistOptions, context: AdapterContext, cursor: string | null, full: boolean): Promise<string | null> {
   const todoist = api(options, context);
   const next = await syncTodoist(context.store, todoist, full ? null : cursor);
   writeCursor(context.store, context.source.id, 'completed', await syncCompleted(context.store, todoist, readCursor(context.store, context.source.id, 'completed')));
@@ -158,7 +159,8 @@ export function todoistAdapter(options: TodoistOptions = {}): SourceAdapter {
     },
     // The sweep: everything again, repairing what an incremental sync missed.
     async sweep(context) {
-      writeCursor(context.store, context.source.id, '', await poll(options, context, null, true));
+      const next = await poll(options, context, null, true);
+      if (next !== null) writeCursor(context.store, context.source.id, '', next);
     },
     execute: (context, command) => execute(options, context, command),
   };

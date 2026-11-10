@@ -431,7 +431,7 @@ describe('changes through the command layer', () => {
   });
 
   test('SV-249: a reopen Todoist refuses fails in place with Todoist\'s words; Move back brings the done occurrence back', async () => {
-    const {w, todoist, run, command, tasks, occurrences} = await doneOccurrenceWorld();
+    const {w, todoist, run, command, task, tasks, occurrences} = await doneOccurrenceWorld();
     todoist.refuseCommand({error: 'Item not found', error_code: 22, error_tag: 'ITEM_NOT_FOUND', http_code: 404, error_extra: {}});
     const reopened = completeItem(w.store, occurrences()[0]!.id, false);
     await run();
@@ -444,6 +444,11 @@ describe('changes through the command layer', () => {
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
     expect(occurrences().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
     expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
+    // The close's move to Oct 14 was skipped while the reopen held the task; the next poll applies it (SV-260).
+    w.advance(5 * 60_000);
+    await run();
+    expect(task('t-plants').dueDate).toBe('2026-10-14');
+    expect(occurrences().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
   });
 
   test('SV-249: an older done occurrence is history and isn\'t reopened; the latest one is', async () => {
@@ -616,6 +621,47 @@ describe('changes through the command layer', () => {
     const renamed = updateItem(w.store, task('t-plants').id, itemUpdateInput.parse({changes: {title: 'Water the plants'}}));
     await run();
     expect(command(renamed.id)).toMatchObject({state: 'failed', providerMessage: 'Content is too long (400 Bad Request)'});
+  });
+
+  describe('SV-260: a change made in Todoist while a change of Setpoint\'s holds its task is applied once the hold ends', () => {
+    /** A rename Todoist refuses, failed in place: it holds the task until Try again or Move back. */
+    async function heldWorld(providerId: string, put?: Parameters<Awaited<ReturnType<typeof fakeTodoist>>['put']>[0]) {
+      const world = await todoistWorld();
+      if (put) world.todoist.put(put);
+      await world.run();
+      world.todoist.fault({method: 'POST', path: new RegExp(`/tasks/${providerId}$`), response: {status: 400, body: {error: 'Content is too long', error_code: 400, http_code: 400}}});
+      const renamed = updateItem(world.w.store, world.task(providerId).id, itemUpdateInput.parse({changes: {title: 'Renamed'}}));
+      await world.run();
+      expect(world.command(renamed.id).state).toBe('failed');
+      return {...world, renamed};
+    }
+
+    test('a due moved in Todoist is left alone while the failed change holds the task, and applied by the first poll after Move back', async () => {
+      const {w, todoist, run, task, renamed} = await heldWorld('t-rent');
+      todoist.put({...todoist.task('t-rent')!, due: {date: '2026-10-09', string: 'Oct 9', is_recurring: false}});
+      w.advance(5 * 60_000);
+      await run();
+      expect(task('t-rent')).toMatchObject({title: 'Renamed', dueDate: '2026-10-07'});
+      moveBackCommand(w.store, renamed.id);
+      expect(task('t-rent')).toMatchObject({title: 'Pay rent', dueDate: '2026-10-07'});
+      w.advance(5 * 60_000);
+      await run();
+      expect(task('t-rent')).toMatchObject({title: 'Pay rent', dueDate: '2026-10-09'});
+    });
+
+    test('a sweep while the hold lasts keeps the token, so a pushed sync after Move back still applies the change', async () => {
+      const {w, todoist, engine, source, run, task, renamed} = await heldWorld('t-rent');
+      w.store.db.update(t.sources).set({syncMode: 'push'}).where(eq(t.sources.id, source.id)).run();
+      todoist.put({...todoist.task('t-rent')!, due: {date: '2026-10-09', string: 'Oct 9', is_recurring: false}});
+      w.advance(5 * 60_000);
+      await run();
+      expect(todoist.requests.some(request => request.path === '/api/v1/sync' && (request.body as Record<string, string>).sync_token === '*')).toBe(true);
+      expect(task('t-rent').dueDate).toBe('2026-10-07');
+      moveBackCommand(w.store, renamed.id);
+      engine.pushed(source.id);
+      await run();
+      expect(task('t-rent')).toMatchObject({title: 'Pay rent', dueDate: '2026-10-09'});
+    });
   });
 });
 

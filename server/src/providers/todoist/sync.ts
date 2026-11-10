@@ -50,8 +50,12 @@ function taskColumns(task: TodoistTask, projects: Map<string, string>, timeZone:
   };
 }
 
-/** One sync: incremental from `cursor`, or everything; returns the next cursor. */
-export async function syncTodoist(store: Store, api: TodoistApi, cursor: string | null): Promise<string> {
+/**
+ * One sync: incremental from `cursor`, or everything; returns the next cursor, or null to keep the
+ * one there is when a change held a task the answer named (SV-260): Todoist's token can't move past
+ * one task's change alone, so the next sync reads it again, until the hold has ended and it applies.
+ */
+export async function syncTodoist(store: Store, api: TodoistApi, cursor: string | null): Promise<string | null> {
   let answer: SyncAnswer;
   let full = !cursor;
   try {
@@ -62,12 +66,12 @@ export async function syncTodoist(store: Store, api: TodoistApi, cursor: string 
     answer = await api.sync('*');
   }
   full = full || Boolean(answer.full_sync);
-  applySync(store, answer, full);
-  return answer.sync_token;
+  return applySync(store, answer, full) ? null : answer.sync_token;
 }
 
-export function applySync(store: Store, answer: SyncAnswer, full: boolean) {
-  transaction(store, () => {
+/** Applies a sync's answer; true when it left a task as it was because a change holds it. */
+export function applySync(store: Store, answer: SyncAnswer, full: boolean): boolean {
+  return transaction(store, () => {
     const calendar = todoistCalendar(store);
     // Projects first, so tasks get their names. A full sync lists them all, so one it leaves out is
     // gone; the others keep their ids, which a colour change's command names (SV-25).
@@ -105,11 +109,15 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean) {
     const seen = new Set<number>();
     const touched = new Set<number>();
     const now = isoNow(store);
+    let skipped = false;
 
     for (const task of answer.items ?? []) {
       const found = byId.get(task.id);
       if (found) seen.add(found.id);
-      if (found && held.has(found.id)) continue;
+      if (found && held.has(found.id)) {
+        skipped = true;
+        continue;
+      }
       const columns = task.is_deleted ? null : taskColumns(task, projects, store.timeZone);
       if (!columns) {
         // Deleted, or no longer dated: it leaves the calendar (with its completed occurrences).
@@ -133,13 +141,18 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean) {
     // (a full sync leaves completed tasks out).
     if (full) {
       for (const row of tasks) {
-        if (seen.has(row.id) || held.has(row.id) || row.doneAt !== null || row.providerId.startsWith('local-')) continue;
+        if (seen.has(row.id) || row.doneAt !== null || row.providerId.startsWith('local-')) continue;
+        if (held.has(row.id)) {
+          skipped = true;
+          continue;
+        }
         store.db.delete(t.items).where(eq(t.items.id, row.id)).run();
         touched.add(row.id);
       }
     }
     // A project's new colour redraws its tasks' rings.
     if (touched.size || projectsChanged) noteLive(store, {type: 'items', items: [...touched].sort((a, b) => a - b), calendars: [calendar.id], commands: []});
+    return skipped;
   });
 }
 
