@@ -1466,8 +1466,12 @@ section's label stays under the title (#132).
   A group's rows share their sync and state columns, which give way before the name (120 px) as the
   modal narrows, the state at half the sync's rate; cut words show in a tip (#361).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
-  domains, the code expiry presets, and the note that protected mail can't be moved, marked read or
-  trashed by any rule (a written rule's actions, [Decided while building](#decided-while-building) #347).
+  domains, the code expiry presets under **Verification codes** ("Codes leave the Inbox after", #135,
+  #363), and the note that protected mail can't be moved, marked read or trashed by any rule (a
+  written rule's actions, [Decided while building](#decided-while-building) #347). Trusted domains'
+  label shows the count and Filter only once there are more than the 11 shown before Show all, and
+  its empty line leads with `image` (#363, D520). A group's note is 34 px at least and grows by whole
+  lines with 8 px of air when it wraps (#363).
 - **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", or "Failing, …" by a
   `caution` dot; Send test, which turns while it sends and says under the group how it went, #217;
   Server, Token ([Decided while building](#decided-while-building) #82)), the
@@ -1737,6 +1741,10 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
     Reconnect and "…" at the export's 26 (`.btn.sm`, a 26 px icon button); the app's are 30, the
     height of the selects and stepper beside them, and a section label's text ends 16 px in, on the
     rows' controls, where the boards end it 4 px in.
+54. **Mail's code expiry is labelled "Verification codes"** (#363): board 18a draws the group with no
+    label and the line "Verification codes leave the Inbox after"; the app's group is labelled and its
+    line reads "Codes leave the Inbox after". The board's 78 domains show the count and Filter as the
+    app does; with 11 or fewer the app's label has neither.
 
 ## Not designed yet
 
@@ -1881,7 +1889,7 @@ was decided; the audit itself was retired by D480.
 29. **Settings › Mail's trusted domains with none to show** read as one plain line across the group
     ("None yet · the reader's “Always show from …” adds one", or "No domain matches" while filtering),
     a row like "No rules yet", not a cell of the domains' grid: no pill on hover, nothing cut off
-    (Andy, 2026-10-09; darma SV-25 D54).
+    (Andy, 2026-10-09; darma SV-25 D54). "None yet" leads with a 20 px `image` in `ink3` (#363, D520).
 30. **Esc in an inline Settings form cancels the form first,** from any of its fields, as Rename
     does: Add rule, Connect iCloud, Change password and Add passkey. Settings stays open; the next
     Esc closes it (Andy, 2026-10-09; darma SV-25 D54).
@@ -4633,3 +4641,24 @@ was decided; the audit itself was retired by D480.
     iCloud 86 (88 before, now a `ctl` row). With the 30 px "…", Accounts' columns at 820 start where
     they did and the state is 150 (Mail) and 170 (Sources) wide, 1 and 2 px narrower: "Needs sign-in"
     beside Reconnect is cut to 31 px and "Not connected" beside Connect Todoist to 43, both with tips.
+363. **Settings › Mail's trusted domains, Verification codes and the group notes** (amending #29 and
+    board 18a; Andy, 2026-11-09; darma SV-253, D520, F6, F7, F10):
+    - **Verification codes (F6):** Code expiry's group takes the label "Verification codes", as #135
+      gives every group one, and its line reads "Codes leave the Inbox after", which stays on one line
+      at 820 (it wrapped there to leave "after" alone, a 74 px row; now 57).
+    - **Trusted domains' count and Filter (F7):** the label shows "N domains" and the Filter field only
+      once there are more domains than the 11 shown before Show all, and keeps them while a filter is
+      still applied, so it can be cleared. With 12 every domain shows with no Show all, and the count and
+      Filter show.
+    - **The empty line (D520):** "None yet · the reader's “Always show from …” adds one" leads with a
+      20 px `image` in `ink3`, 12 px before its words, as Rules' and Passkeys' do (#124); these are the
+      domains whose remote images show. "No domain matches" keeps its plain line.
+    - **Notes (F10):** a group's note (Mail › Rules' protected-mail note, Jobs › Reads' Career mail
+      note) is 34 px at least, in 17 px lines with 8 px above and below, so a wrapped one is 50 and no
+      longer touches the group above or the label under it.
+    Measured in Night at 1040 × 720, 992 and 820: Mail with 0, 3, 11, 12 and 16 domains (the count and
+    Filter only at 12 and 16, the Filter's right edge on the code expiry control's; Show all only at
+    16), the protected-mail note 34 at 1040 and 992 and 50 on two lines at 820, Jobs' note 34 on one
+    line at all three, and every row and label on Mail and Jobs on whole pixels, nothing cut or
+    overflowing. Decided for Andy overnight: "more than 11" literally, so 12 shows the count and Filter
+    though it has no Show all; the field stays while a filter is applied; `image` from the glyph set.
