@@ -52,8 +52,9 @@ function taskColumns(task: TodoistTask, projects: Map<string, string>, timeZone:
 
 /**
  * One sync: incremental from `cursor`, or everything; returns the next cursor, or null to keep the
- * one there is when a change held a task the answer named (SV-260): Todoist's token can't move past
- * one task's change alone, so the next sync reads it again, until the hold has ended and it applies.
+ * one there is when a change held a task or project the answer named (SV-260, SV-262): Todoist's
+ * token can't move past one change alone, so the next sync reads it again, until the hold has ended
+ * and it applies.
  */
 export async function syncTodoist(store: Store, api: TodoistApi, cursor: string | null): Promise<string | null> {
   let answer: SyncAnswer;
@@ -69,7 +70,7 @@ export async function syncTodoist(store: Store, api: TodoistApi, cursor: string 
   return applySync(store, answer, full) ? null : answer.sync_token;
 }
 
-/** Applies a sync's answer; true when it left a task as it was because a change holds it. */
+/** Applies a sync's answer; true when it left a task or a project's colour as it was because a change holds it. */
 export function applySync(store: Store, answer: SyncAnswer, full: boolean): boolean {
   return transaction(store, () => {
     const calendar = todoistCalendar(store);
@@ -78,8 +79,11 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean): bool
     const projectRows = answer.projects ?? [];
     const before = JSON.stringify(store.db.select().from(t.todoistProjects).all());
     if (full) store.db.delete(t.todoistProjects).where(notInArray(t.todoistProjects.providerId, projectRows.map(project => project.id))).run();
-    // A colour waiting for Todoist, or failed in place, stays until Try again or Change back.
+    // A colour waiting for Todoist, or failed in place, stays until Try again or Change back. As for a
+    // held task (D541), naming a held project counts as a skip, so the token stays and the next sync
+    // reads its colour again once the hold has ended (SV-262).
     const heldProjects = new Set(activeCommands(store, 'project').map(row => row.targetId));
+    let skipped = false;
     for (const project of projectRows) {
       if (project.is_deleted || project.is_archived) {
         store.db.delete(t.todoistProjects).where(eq(t.todoistProjects.providerId, project.id)).run();
@@ -87,6 +91,7 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean): bool
       }
       const values = {name: project.name, position: project.child_order ?? 0, inbox: Boolean(project.inbox_project), colour: isTodoistColour(project.color) ? project.color : null};
       const found = store.db.select().from(t.todoistProjects).where(eq(t.todoistProjects.providerId, project.id)).get();
+      if (found && heldProjects.has(found.id)) skipped = true;
       if (found) store.db.update(t.todoistProjects).set(heldProjects.has(found.id) ? {...values, colour: found.colour} : values).where(eq(t.todoistProjects.id, found.id)).run();
       else store.db.insert(t.todoistProjects).values({providerId: project.id, ...values}).run();
     }
@@ -109,7 +114,6 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean): bool
     const seen = new Set<number>();
     const touched = new Set<number>();
     const now = isoNow(store);
-    let skipped = false;
 
     for (const task of answer.items ?? []) {
       const found = byId.get(task.id);

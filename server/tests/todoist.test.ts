@@ -752,6 +752,49 @@ describe('SV-25: a project\'s colour, written to Todoist', () => {
     expect(world.command(again.id).state).toBe('confirmed');
     expect(world.todoist.project('p-home')!.color).toBe('grape');
   });
+
+  describe('SV-262: a colour changed in Todoist while a colour change of Setpoint\'s holds its project is applied once the hold ends', () => {
+    /** A colour Todoist refuses, failed in place: it holds the project until Try again or Change back. */
+    async function heldColourWorld() {
+      const world = await colourWorld();
+      world.todoist.addProject({id: 'p-home', name: 'Home', child_order: 1, color: 'orange'});
+      await world.run();
+      world.todoist.fault({method: 'POST', path: /\/projects\/p-home$/, response: {status: 400, body: {error: 'Invalid argument value', error_code: 400, http_code: 400}}});
+      const picked = setProjectColour(world.w.store, 'p-home', 'grape');
+      await world.run();
+      expect(world.command(picked.id).state).toBe('failed');
+      return {...world, picked};
+    }
+
+    test('a colour changed in Todoist is left alone while the failed change holds the project, and applied by the first poll after Change back', async () => {
+      const {w, todoist, run, colours, picked} = await heldColourWorld();
+      todoist.addProject({id: 'p-home', name: 'Home', child_order: 1, color: 'sky_blue'});
+      w.advance(5 * 60_000);
+      await run();
+      expect(colours()).toContainEqual(['Home', 'grape', 'failed']);
+      moveBackCommand(w.store, picked.id);
+      expect(colours()).toContainEqual(['Home', 'orange', null]);
+      w.advance(5 * 60_000);
+      await run();
+      expect(colours()).toContainEqual(['Home', 'sky_blue', null]);
+    });
+
+    test('a sweep while the hold lasts keeps the token, so a pushed sync after Change back still applies the colour', async () => {
+      const {w, todoist, engine, source, run, colours, picked} = await heldColourWorld();
+      w.store.db.update(t.sources).set({syncMode: 'push'}).where(eq(t.sources.id, source.id)).run();
+      const fullSyncs = () => todoist.requests.filter(request => request.path === '/api/v1/sync' && (request.body as Record<string, string>).sync_token === '*').length;
+      const before = fullSyncs();
+      todoist.addProject({id: 'p-home', name: 'Home', child_order: 1, color: 'sky_blue'});
+      w.advance(5 * 60_000);
+      await run();
+      expect(fullSyncs()).toBe(before + 1);
+      expect(colours()).toContainEqual(['Home', 'grape', 'failed']);
+      moveBackCommand(w.store, picked.id);
+      engine.pushed(source.id);
+      await run();
+      expect(colours()).toContainEqual(['Home', 'sky_blue', null]);
+    });
+  });
 });
 
 describe('connecting Todoist', () => {
