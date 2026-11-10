@@ -1,5 +1,6 @@
-// The shell's small rules as tables: the Today block, the tab title, the routes, a plain-text
-// body's paragraphs, what a live event refreshes, and the toast's tone.
+// The shell's small rules as tables: the Today block and the rail's next-up slot, whether the sidebar
+// is the rail, the tab title, the routes, a plain-text body's paragraphs, what a live event refreshes,
+// and the toast's tone.
 import type {ItemOut, LiveEvent} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE, deepLinkPath} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -8,7 +9,8 @@ import {offlineRefuses, pathsForEvent} from '../src/logic/live.ts';
 import {parseRoute, routePath} from '../src/logic/route.ts';
 import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
-import {byTime, shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
+import {sidebarChoice, sidebarFoldable, sidebarFolded} from '../src/logic/sidebar.ts';
+import {byTime, nextUp, shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
 import {toastTone} from '../src/logic/toast.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -306,4 +308,53 @@ describe('the toast\'s tone by its words (the one toast: done, taken away, faile
     // Every other line has no glyph.
     ['Moved Dentist to Thu, Oct 8', null], ['Reopened Pay rent', null],
   ])('%s: %s', (text, tone) => expect(toastTone(text)).toBe(tone));
+});
+
+// D509: the folded rail's one slot, today's next timed item alike for an event or a task (the seed's
+// clock is 9:12 AM): its countdown, warmth and what else is left today, or none.
+describe('the rail\'s next-up slot', () => {
+  const timed = (title: string, due: string) => task(title, '2026-10-07', {all_day: false, due_at: due});
+  const slot = (items: ItemOut[]) => {
+    const next = nextUp(items, now, zone);
+    return next && [next.title, next.time, next.in, next.urgency, next.more];
+  };
+  test.each([
+    ['the seed\'s day: Gym is over, Dentist is next, two tasks and nothing else left', seedItems, ['Dentist', '2:30 PM', '5h', null, 2]],
+    ['a timed task before the event is next', [...seedItems, timed('Call the bank', '2026-10-07T17:00:00.000Z')], ['Call the bank', '10:00 AM', '48m', null, 3]],
+    ['within 15 minutes it warms', [event('Standup', '2026-10-07T16:20:00.000Z', '2026-10-07T16:35:00.000Z')], ['Standup', '9:20 AM', '8m', 'soon', 0]],
+    ['an event under way is now', [event('Standup', '2026-10-07T16:00:00.000Z', '2026-10-07T17:00:00.000Z'), dentist], ['Standup', '9:00 AM', 'now', 'now', 1]],
+    ['an event and a task at the same time: the event', [timed('Call the bank', '2026-10-07T21:30:00.000Z'), dentist], ['Dentist', '2:30 PM', '5h', null, 1]],
+    ['a timed task whose time has passed isn\'t next', [timed('Call the bank', '2026-10-07T15:00:00.000Z'), task('Pay rent', '2026-10-07')], null],
+    ['untimed tasks alone: none', [task('Pay rent', '2026-10-07')], null],
+    ['tomorrow\'s event isn\'t today\'s', [lecture, task('Renew car registration', '2026-10-08')], null],
+    ['a pending event doesn\'t count', [{...dentist, command: {state: 'pending'} as ItemOut['command']}], null],
+    ['an all-day event has no time', [event('Holiday', '2026-10-07T07:00:00.000Z', '2026-10-08T07:00:00.000Z', {all_day: true})], null],
+  ] as const)('%s', (_name, items, expected) => expect(slot([...items])).toEqual(expected));
+});
+
+// D507: the rail under 1100 px always; from there the choice made by hand, else the width (the
+// rail below 1600). The width is the window's, so the 1.075 zoom at 1591 doesn't move it.
+describe('whether the sidebar is the rail', () => {
+  test.each([
+    ['the compact tier: always', 1000, null, true],
+    ['the compact tier, though opened by hand', 1099, 'open', true],
+    ['1100, nothing chosen: the rail', 1100, null, true],
+    ['1100, opened by hand', 1100, 'open', false],
+    ['a MacBook\'s 1591, nothing chosen: the rail', 1591, null, true],
+    ['1599: the rail', 1599, null, true],
+    ['1600: open', 1600, null, false],
+    ['the design target: open', 1677, null, false],
+    ['the design target, folded by hand', 1677, 'rail', true],
+    ['wide, opened by hand', 2400, 'open', false],
+  ] as const)('%s', (_name, width, choice, expected) => expect(sidebarFolded(width, choice)).toBe(expected));
+
+  test.each([
+    ['rail', 'rail'],
+    ['open', 'open'],
+    [null, null],
+    ['wide', null],
+    ['', null],
+  ] as const)('the kept choice %j reads as %j', (stored, expected) => expect(sidebarChoice(stored)).toBe(expected));
+
+  test.each([[1099, false], [1100, true]] as const)('opens and folds by hand at %i: %s', (width, expected) => expect(sidebarFoldable(width)).toBe(expected));
 });

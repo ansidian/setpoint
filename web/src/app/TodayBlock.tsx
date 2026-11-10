@@ -11,6 +11,9 @@
 // shows its done check for a moment (the one completion moment, `ring-done`, which the calendar's pane
 // and card share), then its line folds away as the mail list's rows do (app/fold.ts), and Undo folds
 // it back.
+// Folded to the rail (D509), it's one slot instead: a clock over the time until today's next timed
+// item, event or task alike, named in its tooltip with what else is left, opening the same card;
+// nothing once no timed item is left today.
 import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent, ReactNode} from 'react';
@@ -22,7 +25,7 @@ import type {Entry, FoldRules} from '../logic/fold.ts';
 import {localDate} from '../logic/format.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
-import {byTime, DONE_MOMENT_MS, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
+import {byTime, DONE_MOMENT_MS, nextUp, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
 import type {TodayEvent, TodayTask, TomorrowEvent} from '../logic/today.ts';
 import {Icon, TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
@@ -59,8 +62,8 @@ const tomorrowItem = (line: TomorrowLine) => ('event' in line ? line.event.item 
 // Every line that goes folds out, and one that comes back (Undo, a refused change) folds in.
 const FOLDS: FoldRules<TaskLine> = {folds: () => true, arrives: () => true};
 
-/** The block, or three lines of skeleton until today's items come. */
-export function TodayBlock() {
+/** The block, or three lines of skeleton until today's items come; in the rail, its next-up slot. */
+export function TodayBlock({rail = false}: {rail?: boolean}) {
   const now = useNow();
   const zone = timeZone();
   const range = todayRange(now, zone);
@@ -78,6 +81,7 @@ export function TodayBlock() {
   const [ticked, setTicked] = useState<ReadonlyMap<string, {line: TodayTask; at: number}>>(new Map());
 
   const today = useMemo(() => todayBlock((data?.items ?? []).filter(item => !gone.has(item.key)), now, zone), [data, gone, now, zone]);
+  const next = useMemo(() => (rail ? nextUp((data?.items ?? []).filter(item => !gone.has(item.key)), now, zone) : null), [rail, data, gone, now, zone]);
   const tasks = useMemo(() => {
     const listed: TaskLine[] = today.tasks.filter(task => !ticked.has(task.item.key)).map(task => ({...task, done: false}));
     for (const {line, at} of [...ticked.values()].sort((a, b) => a.at - b.at)) listed.splice(Math.min(at, listed.length), 0, {...line, done: true});
@@ -100,6 +104,7 @@ export function TodayBlock() {
   const opened = lines.find(item => item.key === openKey) ?? null;
 
   if (!data) {
+    if (rail) return null;
     return (
       <div className="sb-sec today">
         <div className="sb-label">Today</div>
@@ -234,6 +239,24 @@ export function TodayBlock() {
       </a>
     );
   };
+
+  if (rail) {
+    if (!next) return null;
+    const tip = `${next.title} · ${next.time} · ${next.in === 'now' ? 'now' : `in ${next.in}`}${next.more ? ` · +${next.more} more today` : ''}`;
+    return (
+      <div className="sb-sec today next-up">
+        <a className={`${lineClass(next.item)} next`} data-key={next.key} href={routePath(itemRoute(next.item))} onClick={toggle(next.item)} onContextMenu={lineMenu(next.item)}
+          aria-haspopup="dialog" aria-expanded={openKey === next.key} aria-label={tip} data-tip={tip}>
+          <Icon name="schedule" />
+          <span className={next.urgency ? `in num ${next.urgency}` : 'in num'}>{next.in}</span>
+        </a>
+        {opened && (
+          <TodayCard item={opened} calendar={calendars?.find(calendar => calendar.id === opened.calendar_id)} timeZone={zone}
+            actions={actionsFor(opened)} onClose={() => setOpenKey(null)} onEdit={() => navigate(itemRoute(opened, true))} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="sb-sec today">

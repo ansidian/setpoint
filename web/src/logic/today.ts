@@ -128,3 +128,38 @@ export function shownTomorrow<T>(lines: T[], open: boolean, isEvent: (line: T) =
   const rest = lines.slice(TODAY_TASKS - 1);
   return {shown, more: `${rest.length} more ${rest.some(isEvent) ? '' : 'due '}tomorrow`};
 }
+
+/** The folded rail's one slot (D509): the next timed item today, its countdown and what else is left. */
+export interface NextUp {
+  item: ItemOut;
+  key: string;
+  title: string;
+  // "2:30 PM".
+  time: string;
+  // "5h", "40m", "now": the Today block's "in 5h" without its "in".
+  in: string;
+  urgency: TodayEvent['urgency'];
+  // Today's other events not yet over and open tasks, timed or not.
+  more: number;
+}
+
+/**
+ * Today's next timed item, an event or a task alike (D509): an event under way or still to start, or
+ * a timed task still to come, the earliest first, an event before a task at the same time. A timed
+ * task whose time has passed isn't next. None once nothing timed is left today; pending items don't count.
+ */
+export function nextUp(items: ItemOut[], now: number, timeZone: string): NextUp | null {
+  const today = localDate(now, timeZone);
+  const confirmed = items.filter(item => item.command?.state !== 'pending');
+  const events = confirmed.filter(item => item.kind === 'event' && !item.all_day && item.starts_at && item.ends_at
+    && localDate(item.starts_at, timeZone) === today && Date.parse(item.ends_at) > now);
+  const tasks = confirmed.filter(item => item.kind === 'task' && !item.done && item.due_date === today);
+  const upcoming = [...events, ...tasks.filter(item => item.due_at && Date.parse(item.due_at) > now)];
+  const next = byTime(upcoming, item => item)[0];
+  if (!next) return null;
+  const at = lineTime(next)!;
+  return {
+    item: next, key: next.key, title: next.title, time: clockTime(at, timeZone),
+    in: startsIn(at, now).replace(/^in /, ''), urgency: urgency(at, now), more: events.length + tasks.length - 1,
+  };
+}

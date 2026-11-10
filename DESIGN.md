@@ -245,6 +245,22 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   - **The page's section** (18 px above, 11.5 uppercase label): **Today** on mail pages, the
     mini-month and **Calendars** on Calendar.
   - **Settings**, pinned to the bottom, with its ⌘, hint.
+- **The rail:** below 1600 px of window width the sidebar starts folded to the 56 px rail of
+  [Compact](#compact-640-to-1099-px), and from 1600 it starts open; from 1100 up, `` ` ``, a click on
+  its right edge or ⌘K's **Open the sidebar** / **Fold the sidebar** (under Appearance, with its `` ` ``
+  hint) opens and folds it, and this browser keeps that choice over the width's in both directions.
+  The edge is the reading pane's (#210): at rest only the border, under the pointer a 2 px `accent`
+  line and a 14 × 30 pill with the chevron the way it goes, named "Open the sidebar · \`" or "Fold the
+  sidebar · \`". Folded, it's the compact rail exactly; open, the page's section is back, and the
+  list and panes take what the rail frees or gives. Folded from 1100 up, a mouse resting 200 ms on
+  the rail brings the whole sidebar out over the page (248 px, the popover shadow, uncovered from the
+  rail's edge rightward over 180 ms), nothing under it moving; 100 ms with the pointer off it, or
+  out of the window, folds it back, while a Today card opened from it or a menu counts as on it and
+  an open Today card holds it out until it closes. Resting on the rail's next-up slot, or with its
+  card open, doesn't bring it out. Its edge then reads "Keep the sidebar open · \`",
+  and it or `` ` `` keeps it open. With nothing chosen it follows the window across
+  1600 px as it's resized; it changes at once, with no slide ([Decided while
+  building](#decided-while-building) #354).
 - **Header** 56 px, `hair` bottom border, padding 0 16 0 24: title (15 / 500), the segmented control
   (28 px; the Inbox's views, #338, Month | Week on Calendar), a spacer, then **search** (mail: a 380 × 32
   field with its `/` hint; Calendar: a 30 px icon button) and the primary action (Calendar: **New**
@@ -265,10 +281,16 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
 An iPad or a half-width window keeps the shell's parts and stops squeezing them
 ([Decided while building](#decided-while-building) #140):
 
-- **Rail:** the sidebar is a 56 px rail: the mark, then Inbox, Calendar, News, Jobs (after News, while it's on) and Settings as 40 × 40
+- **Rail:** the sidebar is a 56 px rail, always (no edge, and `` ` `` does nothing; from 1100 px it opens
+  and folds, [Shell](#shell)): the mark, then Inbox, Calendar, News, Jobs (after News, while it's on) and Settings as 40 × 40
   icons, each named in its tooltip, the current page the `navOn` chip with its icon in `accent` (#166). Inbox's unread badge is 16 px on its icon (2 px from its
   top, 2 px past its right, 10.5 / 600, a 2 px `panel` ring). The Today block, the
-  mini-month and Calendars give way; ⌘K shows or hides each calendar.
+  mini-month and Calendars give way to one **next-up** slot, on every page: 18 px under the icons, a
+  40 px `schedule` clock over the time until today's next timed item, event or task alike ("5h",
+  "40m", 11 / 500 `ink2`, warming as the Today block's "in 12m" does, "now" while an event is on),
+  named in its tooltip ("Dentist · 2:30 PM · in 5h · +3 more today"); a click opens that item's
+  Today card beside the rail. A timed task whose time has passed isn't next, and once nothing timed
+  is left today the slot goes (D509, #354). ⌘K shows or hides each calendar.
 - **Reading pane and story pane:** an open email or story covers the list under the header, its tools
   led by Back (`arrow_back`, "Back · Esc"); Esc, J / K and ↑ ↓ work as beside the list, and the edge
   doesn't drag. With nothing open the pane is away; a 30 px `right_panel_open` button before search
@@ -1395,7 +1417,7 @@ Offer). A theme switch has no motion of its own (#291).
 The palette (board 20, about 637 px wide, radius 18) runs commands, not search. On an open email it
 lists **This email** (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Add to calendar, Add as task, Ask about
 this email, Mark unread), **Go to** (Inbox 1, Calendar 2, News 3 after 2.0, Jobs 4 after News, Settings ⌘,) and **Appearance** (System,
-Light, Night, the current one ticked). As in darma, typing also finds every other command that has a
+Light, Night, the current one ticked; from 1100 px, Open the sidebar or Fold the sidebar with `` ` ``, #354). As in darma, typing also finds every other command that has a
 key (New event, New task, Mark all as read).
 
 ## Settings
@@ -2445,7 +2467,8 @@ was decided; the audit itself was retired by D480.
     Calendar's grid takes the width (764 px at 820) and the right pane lies over it while it holds
     the editor or search, the day's pane not drawn and its health lines atop the grid; the header's
     search narrows first. ⌘K keeps the rail's lost filters: "Inbox · Jobs", and Show or Hide each
-    calendar (Andy, 2026-10-11, polish audit phone-06).
+    calendar (Andy, 2026-10-11, polish audit phone-06). From 1100 px the rail is also the sidebar's
+    folded state, its own from the rest of this tier (#354).
 141. **Phone search has a way out, and acts only on what it shows:** while searching, a 32 px round
     clear button (an 18 px `close` in `ink3`; `sub2` and `ink` while pressed) stands where the
     desktop's Esc hint is, and a tap empties the field and lets go of it. Mark all as read leaves the
@@ -4409,3 +4432,27 @@ was decided; the audit itself was retired by D480.
     the reading pane's, and every row reads them from the one place; nothing sizes itself on load.
     A right-click on the headings offers **Reset column widths**. Under a 600 px column the edges
     go and the fractions apply. Chosen over columns that fit themselves on load.
+354. **The sidebar starts as the rail below 1600 px and opens by hand** (amending Layout › Shell and
+    #140; Andy, 2026-11-09; darma SV-245, D507). On a MacBook's 1591 px window the 1.075 zoom made the
+    sidebar about 265 px and left the list about 610. The rail is now the sidebar's own state, apart
+    from the compact tier: below 1600 px of window width it starts folded, from 1600 open, and from 1100
+    up `` ` ``, a click on its right edge or ⌘K's Open the sidebar / Fold the sidebar opens and folds it,
+    kept by this browser and winning over the width's default either way. The width is the window's, as
+    the media queries read it, so the zoom doesn't move it: 1591 gets the rail at 1.075. Under 1100 px
+    it's the rail as before, with no edge, and `` ` `` doesn't change what's kept. Folded it's the compact
+    rail, its icons, tooltips and badges, the Today block, mini-month and Calendars hidden; open,
+    they're back, and a Today line's card is placed from the sidebar's width as it is. An open email
+    covering the list, the calendar's day pane behind a button and the header's narrowing stay at 1100.
+    `` ` `` was free (the pages use 1-4, letters and arrows) and replaced `[`, the first choice, as nearer the hand (Andy, 2026-11-09). With nothing chosen, resizing across 1600 px
+    follows the width; the change is instant, as a slide would move the list's rows under the pointer.
+    Andy then asked to try a reveal on hover: a mouse resting 200 ms on the folded rail brings the whole
+    sidebar out over the page without moving it, folding back 100 ms after the pointer leaves it, what
+    it opened, or the window, an open Today card holding it out; `` ` `` or its edge keeps it open. Hover is
+    chosen over the sidebar pushing the page aside and over replacing the key and the edge; the whole is
+    chosen over a rail with nothing more and a Today icon opening a popover. Then, so the folded rail
+    still says what's next (D509), its page section gives way to one next-up slot: a neutral clock over
+    the time until today's next timed item, an event or a task alike, its tooltip naming it with what
+    else is left today, a click opening its Today card beside the rail, and nothing once no timed item
+    is left. Andy chose it over the rail showing events only, tasks only or one count for both, and over
+    an event's bar and a task's ring side by side in 56 px. Resting on the slot doesn't bring the
+    sidebar out, so it can be clicked.

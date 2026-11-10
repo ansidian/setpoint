@@ -1,6 +1,6 @@
 // Jobs in the shell (DESIGN.md › Jobs › Shell; D313, D325): the sidebar's item under News, `work`, its
-// count the Needs you count in ink2 (gone at zero), its tooltip "Jobs · 3 need you"; in a narrow
-// window the rail's slot after News, its count a neutral 16 px badge (jobs.css). Only while Jobs is on:
+// count the Needs you count in ink2 (gone at zero), its tooltip "Jobs · 3 need you"; in the rail
+// its slot after News, its count a neutral 16 px badge (jobs.css). Only while Jobs is on:
 // turned on, it folds in under News over 180 ms (39a); off, it has no item, and `4` opens the off page
 // (38c). ⌘K's Go to lists "Jobs 4" only while it's on, as the sidebar does. What this browser last saw is
 // kept, so the item draws before its answer and `4` knows whether it's on.
@@ -13,8 +13,8 @@ import {Icon} from '../../ui/Icon.tsx';
 import {Count} from '../Count.tsx';
 import type {Command} from '../palette/commands.ts';
 import {foldRef} from '../fold.ts';
-import {useCompact} from '../Phone.tsx';
 import {navigate} from '../router.ts';
+import {useRail} from '../sidebarRail.ts';
 import {cachedNav, NAV_PATH} from './api.ts';
 
 const KEY = 'setpoint.jobsNav';
@@ -61,7 +61,7 @@ export function JobsNavItem({current}: {current: boolean}) {
   // Turned on while Setpoint is open: the item folds in, rather than being there at once.
   const [was, setWas] = useState({on, arrives: false});
   if (was.on !== on) setWas({on, arrives: on});
-  const rail = useCompact();
+  const rail = useRail();
   if (!nav?.enabled) return null;
   const count = nav.needs_you;
   const tip = count > 0 ? `Jobs · ${count} need${count === 1 ? 's' : ''} you` : 'Jobs';

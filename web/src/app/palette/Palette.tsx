@@ -1,6 +1,6 @@
 // ⌘K (DESIGN.md › ⌘K; board 20): commands, not search. ⌘K opens it over everything with the scrim
 // behind; on an open email it lists This email (the reader's, commands.ts), then Go to and
-// Appearance with the current theme ticked. Typing finds every command, the ones that only have a
+// Appearance with the current theme ticked (and, from 1100 px, Open or Fold the sidebar). Typing finds every command, the ones that only have a
 // key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill; Enter runs; Esc closes it, and focus
 // goes back where it was. It rises in over 180 ms and closes at once (DESIGN.md › Motion).
 import {useEffect, useRef, useState} from 'react';
@@ -8,6 +8,7 @@ import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {markAllRead} from '../../api/mail.ts';
 import {matchedRuns, paletteList, SECTION_LABELS, stepCursor} from '../../logic/palette.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
+import {sidebarFoldable} from '../../logic/sidebar.ts';
 import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
 import {useFocusReturn} from '../../ui/focusReturn.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -17,6 +18,7 @@ import type {SettingsPage} from '../../logic/route.ts';
 import {navigate} from '../router.ts';
 import {openSettings} from '../settings/store.ts';
 import {askSignOut} from '../signOut.ts';
+import {isRail, toggleSidebar} from '../sidebarRail.ts';
 import {setThemeChoice, useThemeChoice} from '../theme.ts';
 import {showToast} from '../toast.ts';
 import {toInbox} from '../toInbox.ts';
@@ -40,6 +42,12 @@ const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
   {page: 'security', keywords: 'password passkeys recovery codes'},
 ];
 
+/** Open the sidebar or Fold the sidebar, as it is now. */
+const sidebarCommand = (rail: boolean): Command => ({
+  id: 'sidebar', section: 'appearance', label: rail ? 'Open the sidebar' : 'Fold the sidebar', icon: rail ? 'chevron_right' : 'chevron_left', hint: '`',
+  keywords: `sidebar rail ${rail ? 'expand' : 'collapse'}`, run: () => void toggleSidebar(),
+});
+
 /** The palette's own commands: Go to, Appearance, and the ones with a key that typing finds. */
 function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
   return [
@@ -52,6 +60,8 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
       id: `theme-${choice}`, section: 'appearance', label: THEME_LABELS[choice], icon: THEME_ICONS[choice], ticked: theme === choice,
       keywords: `theme appearance${choice === 'night' ? ' dark' : ''}`, run: () => setThemeChoice(choice),
     })),
+    // Under Appearance, with `` ` ``, from 1100 px up, where the sidebar opens and folds (D507).
+    ...(sidebarFoldable(window.innerWidth) ? [sidebarCommand(isRail())] : []),
     {id: 'new-event', section: 'more', label: 'New event', icon: 'event', hint: 'C', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null}})},
     {id: 'new-task', section: 'more', label: 'New task', icon: 'task_alt', hint: 'D', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'task', message: null}})},
     {id: 'mark-all-read', section: 'more', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I',

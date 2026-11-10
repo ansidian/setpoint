@@ -352,11 +352,12 @@ export const layout = {
 } as const;
 
 /**
- * The design target, the phone layout's breakpoint, the compact tier's (the rail, panes over what
- * they'd squeeze), and the page's zoom steps (1.075 from 1440 px for a MacBook, darma's 1.25 from
- * 2200). CSS media queries spell them out; Phone.tsx's hooks read the breakpoints from here.
+ * The design target, the phone layout's breakpoint, the compact tier's (the rail always, panes over
+ * what they'd squeeze), the width below which the sidebar starts as the rail (D507), and the page's
+ * zoom steps (1.075 from 1440 px for a MacBook, darma's 1.25 from 2200). CSS media queries spell
+ * them out; Phone.tsx's hooks and sidebarRail.ts read the breakpoints from here.
  */
-export const viewport = {target: {width: 1677, height: 1050}, phoneBelow: 640, compactBelow: 1100, zoom: [{from: 1440, zoom: 1.075}, {from: 2200, zoom: 1.25}]} as const;
+export const viewport = {target: {width: 1677, height: 1050}, phoneBelow: 640, compactBelow: 1100, railBelow: 1600, zoom: [{from: 1440, zoom: 1.075}, {from: 2200, zoom: 1.25}]} as const;
 
 const accountVariables = () => Object.fromEntries(Object.entries(accountColour).map(([name, token]) => [`--a-${name}`, `var(--${token})`]));
 const calendarVariables = () => Object.fromEntries(Object.entries(calendarColour).map(([name, token]) => [`--c-${name}`, `var(--${token})`]));

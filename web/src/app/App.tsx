@@ -1,9 +1,11 @@
 // The shell (DESIGN.md › Layout): the sidebar, then the page under its header, with the offline
 // pill over it while Setpoint's live stream is down, and the one toast (ToastPill.tsx) above it all,
 // Settings included. The keys that work everywhere: `1` Inbox, `2` Calendar, `3` News, `/` search,
-// ⌘K the palette, ⌘, Settings, ⌘J Light or Night, and `4` Jobs (jobs/, a wiring point; off, its page says so). Settings is a modal over the page, not in the address bar: /settings/<page>
-// opens it over the Inbox. Below 640 px the phone's shell (Phone.tsx) takes the sidebar's place,
-// Calendar is the agenda, and Settings, ⌘K, News and Jobs stay on the desktop (their addresses open the Inbox).
+// ⌘K the palette, ⌘, Settings, ⌘J Light or Night, `4` Jobs (jobs/, a wiring point; off, its page says
+// so), and `` ` `` opening or folding the sidebar from 1100 px (sidebarRail.ts; D507). Settings is a modal
+// over the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
+// phone's shell (Phone.tsx) takes the sidebar's place, Calendar is the agenda, and Settings, ⌘K, News
+// and Jobs stay on the desktop (their addresses open the Inbox).
 import {useEffect} from 'react';
 import {useDown, useOfflineSince} from '../api/live.ts';
 import {connectFailed, connectNote} from '../logic/settings.ts';
@@ -21,6 +23,7 @@ import {selectSearch} from './search/Search.tsx';
 import {Settings} from './settings/Settings.tsx';
 import {openSettings} from './settings/store.ts';
 import {Sidebar} from './Sidebar.tsx';
+import {toggleSidebar, useRail} from './sidebarRail.ts';
 import {OfflinePill} from './states/States.tsx';
 import {Tip} from './Tip.tsx';
 import {flipTheme} from './theme.ts';
@@ -39,6 +42,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
   // From the moment the stream drops, before the pill: what would change something takes no pointer (states-05).
   const down = useDown();
   const phone = usePhone();
+  const rail = useRail();
 
   // An address for a Settings page opens the modal over the Inbox, and the address becomes the Inbox's.
   const settingsLink = route.page === 'settings' && !phone ? route.section : null;
@@ -89,6 +93,8 @@ export function App({arrive = false}: {arrive?: boolean}) {
         navigate({page: 'news', view: 'all', story: null, article: null});
       } else if (plainKey(event, '4') && !isPhone()) {
         if (goToJobs()) event.preventDefault();
+      } else if (plainKey(event, '`') && !isPhone() && toggleSidebar()) {
+        event.preventDefault();
       } else if (plainKey(event, '/') && selectSearch()) {
         event.preventDefault();
       }
@@ -98,7 +104,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
   }, []);
 
   return (
-    <div className={arrive ? 'app boot-after' : 'app'}>
+    <div className={['app', arrive && 'boot-after', rail && !phone && 'rail'].filter(Boolean).join(' ')}>
       {!phone && <Sidebar route={route} />}
       <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
         {route.page === 'inbox' ? <InboxPage route={route} />

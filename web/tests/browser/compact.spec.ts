@@ -4,8 +4,8 @@
 // (and Esc, J and K, at 640), the header whole, nothing scrolling sideways; Calendar's grid taking
 // the width with the editor and search over it and its sources' health atop it; ⌘K keeping the
 // rail's lost filters; the day's pane brought over the grid by its header button (D183), and the
-// empty pane over Inbox, News and Jobs by theirs (SV-217). At 1100 the full sidebar and the panes
-// beside return, the empty one with nothing open.
+// empty pane over Inbox, News and Jobs by theirs (SV-217). At 1100 the panes beside return, the empty
+// one with nothing open, and the rail opens to the full sidebar by `` ` `` (D507).
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
@@ -25,16 +25,16 @@ const headerWhole = (page: Page) => page.locator('.hd').evaluate(header => {
 });
 const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
-test('the rail, and an email or a story over the list, at 640 and 1099 px; the full sidebar again at 1100', async () => {
+test('the rail, and an email or a story over the list, at 640 and 1099 px; at 1100 the panes beside again and the rail opening', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     for (const width of WIDTHS) {
       const page = await setpoint.page({width, height: HEIGHT});
       await page.goto(`${setpoint.base}/inbox`);
       await page.locator('.list .row').first().waitFor();
-      // The rail: Inbox, Calendar, News, Jobs and Settings, named in their tooltips; no Today.
+      // The rail: Inbox, Calendar, News, Jobs and Settings, named in their tooltips; of Today, only the next-up slot (D509).
       assert.deepEqual(await page.locator('.sb .nav').evaluateAll(links => links.map(link => link.getAttribute('data-tip'))), ['Inbox', 'Calendar', 'News', 'Jobs · 3 need you', 'Settings · ⌘,'], `${width}: the rail's items`);
-      assert.equal(await page.locator('.sb .today-row, .sb .sb-sec, .sb .sb-name').count(), 0);
+      assert.equal(await page.locator('.sb .today-row:not(.next), .sb .sb-sec:not(.next-up), .sb .sb-name').count(), 0);
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: the Inbox's header`);
       assert.equal(await sideways(page), 0);
 
@@ -74,11 +74,13 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       await page.close();
     }
 
-    // At 1100 the sidebar and the pane beside the list are back.
+    // At 1100 the pane beside the list is back; the sidebar starts as the rail and `` ` `` opens it (D507).
     const wide = await setpoint.page({width: 1100, height: HEIGHT});
     await wide.goto(`${setpoint.base}/inbox`);
     await wide.locator('.list .row').first().waitFor();
-    assert.ok(await wide.locator('.sb .sb-name').isVisible());
+    await wide.locator('.sb.rail').waitFor();
+    await wide.keyboard.press('`');
+    await wide.locator('.sb .sb-name').waitFor();
     // The empty pane is there with nothing open (SV-217); no button.
     assert.equal(await wide.locator('section.pane.idle').count(), 1);
     assert.equal(await wide.locator('.hd .pane-open').count(), 0);

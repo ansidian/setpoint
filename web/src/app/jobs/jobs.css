@@ -4,10 +4,8 @@
 /* ---------- The shell's item: Needs you's count in ink2, never caution (D313) ---------- */
 .sb .nav.jobs > .cnt { color: var(--ink2); }
 /* The rail: the count as a 16 px badge placed as the Inbox's, but neutral (32b). */
-@media (min-width: 640px) and (max-width: 1099px) {
-  .sb .nav.jobs > .cnt { display: grid; place-items: center; position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
-    background: var(--sub4); color: var(--ink); font-size: 10.5px; font-weight: 600; box-shadow: 0 0 0 2px var(--panel); }
-}
+.sb.rail .nav.jobs > .cnt { display: grid; place-items: center; position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+  background: var(--sub4); color: var(--ink); font-size: 10.5px; font-weight: 600; box-shadow: 0 0 0 2px var(--panel); }
 
 /* ---------- Header: the two numbers and search ---------- */
 .jb-hd .hd-title { animation: jb-fade var(--dur-fast) var(--ease); }

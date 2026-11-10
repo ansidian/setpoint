@@ -1,7 +1,7 @@
 // The shell in the browser: signing in (claiming with a setup token, then the password, or a
 // recovery code), the layout's fixed sizes (DESIGN.md › Layout) at the desktop size, no focus
-// rings, the account filter, the page keys, the tab title, and live updates from a change made
-// elsewhere.
+// rings, the account filter, the page keys, the tab title, the sidebar folding to its rail and its
+// next-up slot (D507, D509), and live updates from a change made elsewhere.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -318,6 +318,75 @@ test('SV-241: a timed task shows its time and takes its place by it, among the T
     const tasks = page.locator('.rpane .ag-task');
     await until('the day\'s tasks', () => tasks.allTextContents(), texts => texts.length === 2);
     assert.deepEqual(await tasks.allTextContents(), ['Pay rent8:00 AMHome', 'CS 101 lab reportSchool']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-245: below 1600 px the sidebar starts as the rail with its next-up slot; [, its edge and ⌘K open and fold it, kept on reload; the pointer resting on it brings it out over the page (D507, D509)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    // A MacBook's window, where the 1.075 zoom applies.
+    const page = await setpoint.page({width: 1591, height: 900});
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    const rail = page.locator('.sb.rail');
+    const name = page.locator('.sb .sb-name');
+    await rail.waitFor();
+    assert.equal(await name.count(), 0);
+
+    // The next-up slot, named in its tooltip, opens its item's card beside the rail.
+    const slot = page.locator('.sb .next-up .today-row');
+    const tip = (await slot.getAttribute('data-tip'))!;
+    assert.match(tip, /^.+ · \d{1,2}:\d\d [AP]M · (in \d+[mh]|now)/);
+    await slot.click();
+    const card = page.locator('.today-card');
+    await card.waitFor();
+    assert.equal(await card.getAttribute('aria-label'), tip.split(' · ')[0]);
+    const [sidebar, placed] = [(await rested(() => rail.boundingBox()))!, (await rested(() => card.boundingBox()))!];
+    assert.ok(placed.x >= sidebar.x + sidebar.width, 'the card beside the rail, not over it');
+    await page.keyboard.press('Escape');
+    await until('the card closes', () => card.count(), count => count === 0);
+
+    // [ opens it, kept on reload; its edge folds it, kept too.
+    await page.keyboard.press('`');
+    await name.waitFor();
+    assert.equal(await page.locator('.sb .next-up').count(), 0);
+    await page.reload();
+    await name.waitFor();
+    await page.locator('.sb-edge').click();
+    await rail.waitFor();
+    await page.reload();
+    await rail.waitFor();
+    assert.equal(await page.evaluate(() => localStorage.getItem('setpoint.sidebarRail')), 'rail');
+
+    // ⌘K offers it, under Appearance with its key.
+    await page.keyboard.press('Meta+k');
+    const command = page.locator('.palette .item', {hasText: 'Open the sidebar'});
+    assert.equal(await command.locator('.kbd').textContent(), '`');
+    await page.keyboard.press('Escape');
+
+    // Resting on the rail brings the whole sidebar out over the page, nothing under it moving; off it, it folds back.
+    const main = (await rested(() => page.locator('.main').boundingBox()))!;
+    await page.mouse.move(sidebar.x + sidebar.width / 2, sidebar.y + sidebar.height - 120);
+    await page.locator('.sb.peek').waitFor();
+    await name.waitFor();
+    assert.deepEqual(await rested(() => page.locator('.main').boundingBox()), main);
+    await page.mouse.move(main.x + main.width / 2, main.y + main.height / 2);
+    await rail.waitFor();
+
+    // At 1600 it starts open; under 1100 it's always the rail, with no edge, and [ changes nothing kept.
+    await page.evaluate(() => localStorage.removeItem('setpoint.sidebarRail'));
+    await page.setViewportSize({width: 1600, height: 900});
+    await page.reload();
+    await name.waitFor();
+    await page.setViewportSize({width: 1000, height: 900});
+    await rail.waitFor();
+    assert.equal(await page.locator('.sb-edge').count(), 0);
+    await page.keyboard.press('`');
+    await setpoint.idle();
+    assert.deepEqual([await rail.count(), await page.evaluate(() => localStorage.getItem('setpoint.sidebarRail'))], [1, null]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

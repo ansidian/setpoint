@@ -763,20 +763,49 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .menu-i.danger:not(:disabled):hover .icon { color: var(--alert); }
 }
 
+/* ---------- The rail (DESIGN.md › Layout › Shell and Compact; #140, D507) ---------- */
+/* The sidebar folded to 56 px of icons: always from 640 to 1099 px, and from 1100 below 1600 px until
+   `` ` `` or its edge opens it (sidebarRail.ts puts `.rail` on the shell and on the sidebar). */
+.app.rail { grid-template-columns: var(--rail) minmax(0, 1fr); }
+.app.rail > .main { grid-column: 2; }
+.sb.rail { padding: 12px 8px; align-items: center; gap: 4px; }
+.sb.rail .sb-top { width: 40px; padding: 0; justify-content: center; }
+.sb.rail .nav { position: relative; width: 40px; height: 40px; padding: 0; justify-content: center; flex: none; }
+.sb.rail .nav > .grow, .sb.rail .nav > .cnt, .sb.rail .nav > .kbd { display: none; }
+/* The unread badge, at 16 px on Inbox's icon. */
+.sb.rail .nav > .ubadge { position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10.5px; box-shadow: 0 0 0 2px var(--panel); }
+/* The next-up slot (TodayBlock.tsx; D509): 18 px under the icons, a 40 px clock over its countdown in
+   `ink2` 11 / 500, warming as the Today block's "in 12m" does. */
+.sb.rail .today.next-up { margin-top: 18px; }
+.sb.rail .today-row.next { flex-direction: column; justify-content: center; gap: 2px; width: 40px; height: auto; padding: 6px 0; }
+.sb.rail .today-row.next .icon { color: var(--ink2); }
+.sb.rail .today-row.next .in { margin: 0; font-size: 11px; font-weight: 500; }
+.sb.rail .today-row.next .in:not(.soon, .now) { color: var(--ink2); }
+/* From 1100 px the pointer resting on the rail brings the whole sidebar out over the page (Sidebar.tsx ›
+   usePeek), nothing under it moving: 248 px with the popover shadow, uncovered from the rail's edge
+   rightward over 180 ms. */
+.sb.peek { position: absolute; top: 0; bottom: 0; left: 0; width: var(--sidebar); z-index: 7; box-shadow: var(--shadow-pop); animation: sb-peek var(--dur-medium) var(--ease); }
+@keyframes sb-peek { from { clip-path: inset(0 calc(100% - var(--rail)) 0 0); } to { clip-path: inset(0 -60px 0 0); } }
+/* Its right edge, from 1100 px: a click opens or folds it, and while it's out keeps it open. As the
+   reading pane's edge, at rest only the border; under the pointer, after 80 ms, a 2 px `accent` line
+   over it and a pill at its middle (14 × 30, an `accent` ring, the chevron the way it goes) fading up
+   and swelling from .7. Beside the sidebar, as it clips. */
+.sb-edge { position: absolute; top: 0; bottom: 0; left: calc(var(--sidebar) - 6px); width: 10px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 6; outline: none; }
+.app.rail .sb-edge { left: calc(var(--rail) - 6px); }
+.app.rail .sb.peek ~ .sb-edge { left: calc(var(--sidebar) - 6px); z-index: 8; }
+.sb-edge::before { content: ""; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+.sb-edge .grip { position: absolute; left: -2px; top: 50%; width: 14px; height: 30px; margin-top: -15px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent); display: grid; place-items: center; pointer-events: none; opacity: 0; transform: scale(.7); transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+:is(.sb-edge:hover, .sb-edge:focus-visible)::before { opacity: 1; }
+:is(.sb-edge:hover, .sb-edge:focus-visible) .grip { opacity: 1; transform: none; transition-duration: var(--dur-fast), var(--dur-medium); }
+.sb-edge:hover::before, .sb-edge:hover .grip { transition-delay: 80ms; }
+
 /* ---------- The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; #140) ---------- */
-/* An iPad or a half-width window: the sidebar is a 56 px rail of icons, an open email or story covers
-   the list rather than squeezing it (its tools lead with Back; Esc, J / K and ↑ ↓ as before), and the
+/* An iPad or a half-width window: the sidebar is the rail (above), an open email or story covers the
+   list rather than squeezing it (its tools lead with Back; Esc, J / K and ↑ ↓ as before), and the
    header's search gives way before anything else does. Calendar.css has the grid's part. */
 .rd-tools .rd-back { display: none; margin: 0 4px 0 -8px; }
 @media (min-width: 640px) and (max-width: 1099px) {
-  .app { --sidebar: var(--rail); }
-  .sb { padding: 12px 8px; align-items: center; gap: 4px; }
-  .sb-top { width: 40px; padding: 0; justify-content: center; }
-  .sb .nav { position: relative; width: 40px; height: 40px; padding: 0; justify-content: center; flex: none; }
-  .sb .nav > .grow, .sb .nav > .cnt, .sb .nav > .kbd { display: none; }
-  /* The unread badge, at 16 px on Inbox's icon. */
-  .sb .nav > .ubadge { position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10.5px; box-shadow: 0 0 0 2px var(--panel); }
-
   /* The header keeps everything on screen down to 640: the search field narrows first, then a
      calendar title longer than its 128 px ("Sep 27 – Oct 3, 2026") ends in "…". */
   .hd { gap: 10px; }
