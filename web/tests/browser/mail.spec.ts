@@ -321,6 +321,38 @@ test('Pin and Unpin (D105): P on a day\'s row moves it to the shelf at once, Unp
   }
 });
 
+test('SV-252: a code email due for the trash at its expiry keeps the row\'s one countdown, the reader says "Trash when the code expires"; P takes it away and Unpin before expiry puts it back', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const id = await idOf(setpoint, 'Your code is 482913');
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      // As triage arms new mail with a code (the seed's codes are from before SV-252).
+      database.prepare('UPDATE messages SET code_trash = 1, trash_due_at = code_expires_at WHERE id = ?').run(id);
+    } finally {
+      database.close();
+    }
+    const page = await load(setpoint);
+    const row = page.locator(`.list.all .row[data-id="${id}"]:not(.shelf)`);
+    await row.waitFor();
+    assert.equal(await row.locator('.trash-in').count(), 0);
+    // The sender, clear of the code's Copy in the row's middle.
+    await row.locator('.from').click();
+    await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
+    assert.equal(await page.locator('.rd-meta .rd-right .trash-in').textContent(), 'Trash when the code expires');
+    await page.keyboard.press('p');
+    await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).waitFor();
+    assert.equal(await page.locator('.rd-meta .trash-in').count(), 0);
+    await until('the server spared it', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.pinned && message.trash_due_at === null);
+    await page.keyboard.press('p');
+    await page.locator('.rd-meta .rd-right .trash-in', {hasText: 'Trash when the code expires'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('SV-237: a rule\'s waiting trash shows as auto_delete and "22 h" on the row and "Trash in 22 h" under the reader\'s time; P takes both away at once, and the server forgets it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

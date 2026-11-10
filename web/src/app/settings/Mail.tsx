@@ -89,7 +89,7 @@ export function MailPage() {
       <Section label="Verification codes">
         {!settings ? <SkeletonRows count={1} /> : <div className="set-group">
           <div className="set-row">
-            <div className="lines grow"><span className="t">Code expiry</span><span className="s">Codes leave the Inbox after</span></div>
+            <div className="lines grow"><span className="t">Code expiry</span><span className="s">Codes are trashed after</span></div>
             <Segmented role="radio" label="Code expiry" value={settings.mail.code_expiry_minutes}
               segments={CODE_EXPIRY_PRESETS.map(minutes => ({value: minutes, label: expiryLabel(minutes)}))}
               onChange={minutes => void save.attempt(() => patchSettings({mail: {code_expiry_minutes: minutes}}))} />

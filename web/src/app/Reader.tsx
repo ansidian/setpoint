@@ -431,14 +431,19 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           </div>
           <div className="to"><span data-tip={account?.address} data-tip-quick>to you</span></div>
         </div>
-        {/* The account and time, and under them a rule's waiting trash in words, as the row shows it:
-            reading doesn't spare it, pinning does (DESIGN.md #347, D490). */}
+        {/* The account and time, and under them a waiting trash in words, as the row shows it: reading
+            doesn't spare it, pinning does (DESIGN.md #347, D490). A code's own trash names its expiry
+            rather than a second countdown beside the code card's (SV-252). */}
         <div className="rd-right">
           <div>
             <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
             <span className="time" data-tip={fullTimestamp(listed.received_at, timeZone)} data-tip-quick>{readerTime(listed.received_at, now, timeZone)}</span>
           </div>
-          {listed.trash_due_at && !listed.pinned && <span className="trash-in num"><Icon name="auto_delete" size={14} />Trash in {trashLeft(listed.trash_due_at, now)}</span>}
+          {listed.trash_due_at && !listed.pinned && (
+            <span className="trash-in num"><Icon name="auto_delete" size={14} />
+              {listed.code && listed.trash_due_at === listed.code.expires_at ? 'Trash when the code expires' : `Trash in ${trashLeft(listed.trash_due_at, now)}`}
+            </span>
+          )}
         </div>
       </div>
       {/* A verification code lifted out of the body, with Copy and its countdown (reader-04), from the row at once. */}
