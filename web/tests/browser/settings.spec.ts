@@ -1116,6 +1116,37 @@ for (const width of [852, 640]) test(`SV-253 (F3, D518), SV-256: Add rule in a $
   }
 });
 
+// A rule's sentence where the modal is narrow (SV-257, #368): at 820 it's two lines and nothing in it is
+// cut (before, its sender was "From wingtip…" with no tip); at 608 what's still cut shows the whole of it.
+for (const width of [852, 640]) test(`SV-257 (#368): in a ${width} px window ${width === 852 ? 'no mail rule\'s words are cut' : 'a mail rule\'s cut words show in its tip'}`, async () => {
+  const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
+  try {
+    await setpoint.api('POST', '/mail/rules', {match: {from_domains: ['shipment-tracking.wingtiptoys.example']}, lane: 'fyi', kind: 'deliveries', mark_read: true, trash: '1d'});
+    const page = await setpoint.page({width, height: 760});
+    await openAt(page, setpoint.base, 'mail');
+    await page.locator('.settings [data-rule]', {hasText: 'shipment-tracking.wingtiptoys.example'}).waitFor();
+    // Each half of each rule, and whether some of its words are cut (as the tip decides it, Tip.tsx), once
+    // the modal has risen into place, so the mouse rests where the half does.
+    const halves = await rested(() => page.locator('.settings [data-rule] .rule > *:not(.to)').evaluateAll(elements => elements.map(element => ({
+      words: (element as HTMLElement).dataset.tip ?? '',
+      cut: [element, ...element.querySelectorAll('*')].some(each => each.scrollWidth > each.clientWidth && getComputedStyle(each).overflowX !== 'visible'),
+    }))));
+    assert.ok(halves.length >= 10, `every rule's two halves are there (${halves.length})`);
+    if (width === 852) {
+      assert.deepEqual(halves.filter(half => half.cut).map(half => half.words), [], 'no rule\'s words are cut at 820');
+    } else {
+      const cut = halves.filter(half => half.cut);
+      assert.ok(cut.length > 0, 'the long rule is cut at 608');
+      const half = page.locator('.settings [data-rule] .rule > *:not(.to)').nth(halves.indexOf(cut[0]!));
+      await half.hover();
+      await page.locator('.tip[role="tooltip"]', {hasText: cut[0]!.words}).waitFor();
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('SV-255 (D514): Todoist not connected says so on Accounts with Connect Todoist, which says why it can\'t here, and on Calendar with a way to Accounts', async () => {
   const setpoint = await startSetpoint({fixtures: ['todoist-off'], clock: 'frozen'});
   try {

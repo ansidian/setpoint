@@ -102,12 +102,18 @@ export function MailPage() {
 }
 
 function RuleText({rule}: {rule: Pick<RuleOut, 'match' | 'lane' | 'kind' | 'enabled' | 'mark_read' | 'trash'>}) {
+  const words = ruleWords(rule.match);
+  const actions = ruleActionWords(rule);
   return (
     <div className={rule.enabled ? 'rule grow' : 'rule grow off'}>
-      <span className="ell">{ruleWords(rule.match).map((run, index) => (run.bold ? <b key={index}>{run.text}</b> : <span key={index}>{run.text}</span>))}</span>
-      <span className="to"><Icon name="arrow_forward" size={16} /></span>
-      {/* The actions go on after the lane tag, as the sentence does: "→ Noise, mark read, trash now". */}
-      <span className="lane"><span className="tag">{laneTag(rule.lane, rule.kind)}</span>{ruleActionWords(rule)}</span>
+      {/* Where the modal is narrow the sender is cut ("From wingtip…"); resting on it shows the whole of it (F2). */}
+      <span className="ell" data-tip={words.map(run => run.text).join('')} data-tip-quick>{words.map((run, index) => (run.bold ? <b key={index}>{run.text}</b> : <span key={index}>{run.text}</span>))}</span>
+      {/* The actions go on after the lane tag, as the sentence does: "→ Noise, mark read, trash now". Where
+          the modal is narrow this half is the row's second line, under the sender (#368). */}
+      <span className="send" data-tip={`${laneTag(rule.lane, rule.kind)}${actions}`} data-tip-quick>
+        <span className="to"><Icon name="arrow_forward" size={16} /></span>
+        <span className="lane"><span className="tag">{laneTag(rule.lane, rule.kind)}</span>{actions && <span className="ell">{actions}</span>}</span>
+      </span>
     </div>
   );
 }

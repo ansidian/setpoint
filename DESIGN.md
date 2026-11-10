@@ -1473,7 +1473,9 @@ section's label stays under the title (#132).
   label shows the count and Filter only once there are more than the 11 shown before Show all, and
   its empty line leads with `image` (#363, D520). A group's note is 34 px at least and grows by whole
   lines with 8 px of air when it wraps (#363). Add rule's last line holds Mark read, Trash, then Add
-  and Cancel at its right end, wrapping a pair at a time where the modal is narrow (#364, D518).
+  and Cancel at its right end, wrapping a pair at a time where the modal is narrow (#364, D518). Where
+  the modal is narrower than its full 1040, a rule is two lines, its sender over "→ lane, actions"
+  (#368).
 - **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", or "Failing, …" by a
   `caution` dot; Send test, which turns while it sends and says under the group how it went, #217;
   Server, Token ([Decided while building](#decided-while-building) #82)), the
@@ -4721,3 +4723,12 @@ was decided; the audit itself was retired by D480.
     taken for a row's fill. Chosen over no fill (a double rule that read as two lines), one line with a
     gap, a 2 px line and a plain `panel` band, none of which read as a divider, and over a `hair`
     hatch (nearly gone in Night) and a 10 px band (loud).
+368. **A mail rule is two lines where the Settings modal is narrow** (amending board 18a's rule row;
+    Andy, 2026-11-10; darma SV-257): in a window of 640 to 1071 px (a modal under its full 1040), a
+    written or learned rule's row puts its sender ("From wingtiptoys.example") on the first line, out
+    to the menu, and "→ lane, actions" on the second with the count ("2 this month", "Learned Oct 5")
+    at its right; the drag handle and the "…" (or a learned rule's × or Undo) sit across both lines.
+    Rows are 52 px on whole pixels (an 18 px line, 2, then the 20 px tag). Each half that's still cut,
+    in the 640 tier, shows the whole of it in its tip; in the full modal the rule stays one line, only
+    its sender gives way, with the same tip. Before, at the 820 modal the sender cut to "From
+    wingtip…" with no tip, and at 640 it was gone and the lane tag cut to "FYI · Deliveri".

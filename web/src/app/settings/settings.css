@@ -213,8 +213,24 @@
 .settings .rule { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; }
 .settings .rule b { font-weight: 500; color: var(--ink); }
 .settings .rule .to { color: var(--ink3); display: grid; }
-.settings .rule .lane { display: flex; align-items: center; }
+.settings .rule .send { display: flex; align-items: center; gap: 8px; flex: none; }
+.settings .rule .lane { display: flex; align-items: center; min-width: 0; }
 .settings .rule.off { opacity: .5; }
+/* Where the modal is narrower than its full 1040 (a window under 1072), a rule is two lines, so neither
+   half is cut: the sender out to the menu, then "→ lane, actions" with the count at its right; the handle
+   and the menu (or a learned rule's Undo) sit across both (#368). What's still cut, in the 640 tier, has
+   its tip. */
+@media (min-width: 640px) and (max-width: 1071px) {
+  .settings .set-row[data-rule] { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "handle words words end" "handle send when end"; gap: 2px 12px; }
+  .settings .set-row[data-rule]:not(:has(> .handle)) { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "words words end" "send when end"; }
+  .settings .set-row[data-rule] > .rule { display: contents; }
+  .settings .set-row[data-rule] > .rule.off > * { opacity: .5; }
+  .settings .set-row[data-rule] > .handle { grid-area: handle; }
+  .settings .set-row[data-rule] > .rule > .ell { grid-area: words; line-height: 18px; }
+  .settings .set-row[data-rule] > .rule > .send { grid-area: send; height: 20px; flex: initial; min-width: 0; overflow: hidden; }
+  .settings .set-row[data-rule] > .when { grid-area: when; width: auto; line-height: 20px; }
+  .settings .set-row[data-rule] > :last-child { grid-area: end; }
+}
 /* An empty state's action, as the agenda's "No events · New event" (DESIGN.md › Copy). Not `.empty`, the
    Inbox's centred All caught up, which would stack it in a tall box. */
 .settings .set-empty button { color: var(--ink2); position: relative; }
