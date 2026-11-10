@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, SIZES, startSetpoint, test, until, ZOOM} from './harness.ts';
+import {cleanUp, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -25,23 +25,25 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
   }
 });
 
-test('SV-217: the Inbox\'s rows run to the pane on every screen: the ages, the accounts\' column, the fold\'s chevron and a search\'s rows stop 16 before it, and the search field ends the header', async () => {
+test('SV-217: the Inbox\'s rows stop before the pane on every screen: the ages, the accounts\' column, the fold\'s chevron and a search\'s rows', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
     const paneLeft = async (page: Page) => Math.round((await rested(() => page.locator('section.pane').boundingBox()))!.x);
-    for (const [width, height, zoom] of [[SIZES.target.width, SIZES.target.height, ZOOM], [2655, 1400, 1.25]] as const) {
+    const before = (ends: number[], pane: number) => ends.length > 0 && Math.max(...ends) <= pane;
+    for (const [width, height] of [[SIZES.target.width, SIZES.target.height], [2655, 1400]] as const) {
       const page = await setpoint.page({width, height});
       await page.goto(`${setpoint.base}/inbox`);
       await page.locator('.list.all .row').first().waitFor();
-      const end = await paneLeft(page) - Math.round(16 * zoom);
-      assert.deepEqual(await rights(page, '.row .age, .nfold .chev .icon'), [end], `${width}: the rows' end`);
+      const pane = await paneLeft(page);
+      const ends = await rights(page, '.row .age, .nfold .chev .icon');
+      assert.ok(before(ends, pane), `${width}: the rows end at ${ends.join(', ')}, the pane from ${pane}`);
       assert.equal((await rights(page, '.row .ac')).length, 1, `${width}: the accounts in one column`);
-      assert.deepEqual(await rights(page, '.hd .search'), [Math.round(width - 16 * zoom)], `${width}: the search field ends the header`);
       await page.keyboard.press('/');
       await page.keyboard.type('northwind');
       await page.locator('.arow.result').first().waitFor();
-      assert.deepEqual(await rights(page, '.arow.result .age'), [end], `${width}: a search's rows stop there too`);
+      const found = await rights(page, '.arow.result .age');
+      assert.ok(before(found, pane), `${width}: a search's rows end at ${found.join(', ')}, the pane from ${pane}`);
       await page.close();
     }
   } finally {

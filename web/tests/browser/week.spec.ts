@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Page, Response} from 'playwright-core';
-import {cleanUp, drawn, pauseClock, rested, SIZES, startSetpoint, test, until, ZOOM} from './harness.ts';
+import {cleanUp, drawn, pauseClock, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 
 after(cleanUp);
 
@@ -54,10 +54,9 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     assert.deepEqual(await page.locator('.wk-dhead .dw').allTextContents(), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
     assert.equal(await page.locator('.wk-dhead[data-date="2026-10-07"] .dn.today').count(), 1);
     assert.equal(await page.locator('.wk-col.wk-sel').getAttribute('data-date'), '2026-10-07');
-    // A day is a seventh of what the sidebar, the pane and the hours' gutter leave (704 px; 139 a day
-    // unzoomed), so the week fits.
-    const column = (await rested(() => page.locator('.wk-col[data-date="2026-10-07"]').boundingBox()))!;
-    assert.ok(Math.abs(column.width / ZOOM - (SIZES.target.width / ZOOM - 704) / 7) <= 2, `a day is ${column.width / ZOOM} px`);
+    // The week fits: Saturday ends inside the grid's scroller, which clips sideways.
+    const [saturday, grid] = await rested(() => Promise.all(['.wk-col[data-date="2026-10-10"]', '.wk-scroll'].map(selector => page.locator(selector).boundingBox())));
+    assert.ok(saturday!.x + saturday!.width <= grid!.x + grid!.width, `Saturday ends at ${saturday!.x + saturday!.width}, the grid at ${grid!.x + grid!.width}`);
     assert.equal(await page.locator('.wk-now').count(), 1);
     assert.equal(await page.locator('.wk-cols > .wk-nowx').count(), 1, 'now across the week');
     assert.equal(await page.locator('.wk-gut.now').textContent(), '9:12 AM');

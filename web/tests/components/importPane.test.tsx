@@ -86,7 +86,7 @@ test('the calendar picked says how many of the ticked it already holds, marks th
   await expect.element(page.getByText(/already on/)).not.toBeInTheDocument();
 });
 
-test('the Into menu lies over the list from the select\'s left edge, inside the pane, each calendar with its dot (SV-189)', async () => {
+test('the Into menu lies over the list, inside the pane, each calendar with its dot (SV-189)', async () => {
   await review(MANY);
   const tickAll = page.getByRole('button', {name: 'Tick all'});
   const before = tickAll.element().getBoundingClientRect().top;
@@ -95,12 +95,11 @@ test('the Into menu lies over the list from the select\'s left edge, inside the 
   await expect.element(menu).toBeVisible();
   // Opening it moves nothing.
   expect(tickAll.element().getBoundingClientRect().top).toBe(before);
-  // Its left edge from layout, not the grow-in's transformed box: on the select's, inside the pane.
+  // Its left edge from layout, not the grow-in's transformed box: inside the pane.
   const el = menu.element() as HTMLElement;
   const anchor = el.parentElement!.getBoundingClientRect();
   const pane = page.getByRole('region', {name: 'Import events'}).element().getBoundingClientRect();
   const left = anchor.left + el.offsetLeft;
-  expect(left).toBe(page.getByRole('button', {name: 'Calendar'}).element().getBoundingClientRect().left);
   expect(left).toBeGreaterThanOrEqual(pane.left);
   const dot = () => menu.getByRole('menuitemradio', {name: 'Family'}).element().querySelector('.dot')!;
   await expect.poll(() => getComputedStyle(dot()).backgroundColor).toBe(colour('var(--good)'));

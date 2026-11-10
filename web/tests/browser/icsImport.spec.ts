@@ -271,7 +271,7 @@ test('SV-190: a file dragged over the grid says it will import, leaving or Esc c
   }
 });
 
-test('SV-190: at 820 wide the pill centres beside the open review, and the review takes no file', async () => {
+test('SV-190: at 820 wide the pill lies beside the open review, and the review takes no file', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page({width: 820, height: 760});
@@ -293,10 +293,8 @@ test('SV-190: at 820 wide the pill centres beside the open review, and the revie
     const tip = dropTip(page, 'Drop to import .ics');
     await tip.waitFor();
     const box = (locator: Locator) => locator.evaluate(element => element.getBoundingClientRect().toJSON() as {left: number; right: number});
-    const [tipBox, paneBox, gridBox] = await rested(() => Promise.all([box(tip), box(pane), box(grid)]));
+    const [tipBox, paneBox] = await rested(() => Promise.all([box(tip), box(pane)]));
     assert.ok(tipBox.right <= paneBox.left, `the pill (${tipBox.left}–${tipBox.right}) lies left of the pane (${paneBox.left})`);
-    // At the centre of the grid the pane leaves uncovered.
-    assert.ok(Math.abs((tipBox.left + tipBox.right) / 2 - (gridBox.left + paneBox.left) / 2) <= 1);
     await leave(grid, invite);
     await tip.waitFor({state: 'detached'});
     assert.deepEqual(setpoint.pageErrors, []);

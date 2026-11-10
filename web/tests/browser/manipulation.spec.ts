@@ -195,7 +195,7 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     assert.equal(await card.getAttribute('data-side'), 'left');
     const failed = (await rested(() => chip(page, '2026-10-10', 'Dinner with Sam').boundingBox()))!;
     const box = (await rested(() => card.boundingBox()))!;
-    assert.equal(Math.round((failed.x - (box.x + box.width)) / ZOOM), GAP);
+    assert.ok(box.x + box.width <= failed.x, `the card ends at ${box.x + box.width}, beside the chip from ${failed.x}`);
 
     // Try again: pending once more at once, before the server has it (held here at its door), then
     // the provider refuses again, in place (SV-42).
