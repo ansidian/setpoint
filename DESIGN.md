@@ -197,7 +197,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   the story pane's tools and 30 px icon buttons; 17 beside a label in a button (Add, More options,
   the reader's actions) and in facts; 16 in small buttons, menus and inline links; 14 in chips and
   tags. A card's or popover's ×, and Add, in a 26 px icon button are 16; × is 18 only in a 30 px
-  header button (Settings', the editor's). One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
+  header button (Settings', the editor's) and a Settings row's "…" (#362). One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, a Settings page its nav's glyph wherever it's named.
 - **Tones** (#218): `caution` and `alert` are close in hue, so a state's shape says how serious it is
@@ -1444,7 +1444,12 @@ A **1040 × 720 modal** (radius 26, modal shadow, `scrim` behind), not in the ad
 **220 px nav** on `panel`. Rows are 52 px minimum inside `sub` groups of radius 16, a row's title and
 line in whole-pixel line boxes (18 and 17 px) so every row and label lands on a whole pixel (#360);
 switches are 34 × 20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3`
-(#176), the knob stretching toward its travel as it's pressed (#151). A reconnect link opens it at
+(#176), the knob stretching toward its travel as it's pressed (#151). A button at a row's end
+(Change, Set key, Reconnect, Revoke, a row's "…", an inline form's Save and Cancel) is 30 px, the
+height of the selects and stepper beside it (#362, D516); a section label's quiet buttons and the
+head's Connect buttons stay 26. A label's right-hand words, fields and buttons end on the rows' 16 px
+edge, as their controls do, and AI's month total there takes its costs' look, `ink` 13 px 500 (#362,
+D519). A reconnect link opens it at
 Accounts. While a
 page scrolls, its title and × stay at the top, a `hair` line under them once it has scrolled, and a
 section's label stays under the title (#132).
@@ -1728,6 +1733,10 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
     Reading the JD, and Usage this month's Jobs line ends "· no cap".
 52. **News's sync column is 96 px** (#361): board 30a draws it 186 px, as Accounts' is; the app's is
     96, its words never wider than "Every 30 min", and the name takes the rest.
+53. **A Settings row's end buttons are 30 px** (#362): boards 17, 18a and 18b draw a row's Change,
+    Reconnect and "…" at the export's 26 (`.btn.sm`, a 26 px icon button); the app's are 30, the
+    height of the selects and stepper beside them, and a section label's text ends 16 px in, on the
+    rows' controls, where the boards end it 4 px in.
 
 ## Not designed yet
 
@@ -4594,3 +4603,33 @@ was decided; the audit itself was retired by D480.
     Rows stay 58 / 57 and 54 / 53 px, on whole pixels, and none overflows. Decided for Andy
     overnight: the sync stays in its column at 820 rather than under the name (a longer second line
     on 65 News rows, for 6 and 9 cut texts that have tips), and the 120 / 200 px minimums.
+362. **A Settings row's buttons are 30 px, and a label's right side lines up with the rows** (amending
+    #134 and Settings' rows; Andy, 2026-11-09; darma SV-253, D516, D519, F4, F5, F11, F12):
+    - **Row buttons (D516):** a button at a row's end is 30 px tall, the height of the selects and
+      stepper beside it, its shape and type unchanged: Change, Set key, Set token, Set Home, Reconnect,
+      Show, Revoke, Make new codes, Connect Todoist, Connect in Accounts, a failed colour's Try again and
+      Change back, a learned rule's Undo, and an inline form's Save, Connect, Add and Cancel. The shared
+      `.btn.sm` stays 26 everywhere else, as do a section label's buttons (Add rule, Add passkey, Add
+      iPhone, and ntfy's Send test, outlined, with them), the head's Connect Gmail and Connect iCloud,
+      the pairing panel's Copy, a rule's Turn off and Delete prompt, and Add rule's form, whose actions
+      move with D518. Fields stay 34 and the segmented control 28.
+    - **A row's "…" (F4):** a 30 px icon button with its 18 px glyph, 6 px around it as the × has, on
+      Accounts' rows and Mail's rules. Decided for Andy overnight: the button to 30 rather than the
+      glyph to 16, since it now matches the 30 px buttons beside it.
+    - **A label's right side (F5):** the label takes the rows' 16 px on its right, so ntfy's "Not set
+      up", Mail's Filter and AI's total end on the controls under them; a quiet button there (Add rule,
+      Add passkey, Add iPhone) lands its words on that edge through its own padding.
+    - **AI's month total (D519):** in the "Usage this month" label still, it takes the costs' look,
+      `ink`, 13 px, 500 (was `ink2` 12.5), its right edge on the cost column's.
+    - **Small targets (F11):** the drag handle's hit area is 24 × 24 around its 18 px glyph, and an
+      empty group's "Add rule" and "Add passkey" reach 25 px tall, neither moving what's drawn.
+    - **Row ends (F12):** a quiet button at a row's very end (Revoke, Remove, a form's Cancel) lands its
+      words 16 px in, where an outlined one's edge is (they ended 26 in). Connect iCloud's form row is a
+      `ctl` row, 48 px as Add passkey's and Home's are (it was 54); Change password's is 49 (48 and its
+      hairline) and the Set key row 51, unchanged by the 30 px buttons, which fit their rows.
+    Measured in Night at 1040 × 720, 992 and 820 on all nine pages: every row and label lands where it
+    did, on whole pixels, nothing newly cut and nothing overflowing. At 820 the inline forms wrap, as
+    they did, and their wrapped line is 4 px taller: Change password 87, Set key 86, and Connect
+    iCloud 86 (88 before, now a `ctl` row). With the 30 px "…", Accounts' columns at 820 start where
+    they did and the state is 150 (Mail) and 170 (Sources) wide, 1 and 2 px narrower: "Needs sign-in"
+    beside Reconnect is cut to 31 px and "Not connected" beside Connect Todoist to 43, both with tips.
