@@ -5,6 +5,8 @@
 // each format is description.test.ts's table; the save reaching the API stays in editor.spec.ts.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
+import {useLayoutEffect} from 'react';
+import type {ReactNode} from 'react';
 import {expect, test} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
@@ -102,6 +104,33 @@ test('the detail: a long description folds to 6 lines under More, which opens it
   await less.click();
   await expect.element(more).toBeVisible();
   expect(shown().clientHeight).toBe(120);
+});
+
+/** A parent that reads the card's height in its own layout effect, as the floating detail's motion does before it places and glides the card. */
+function Measured({heights, children}: {heights: number[]; children: ReactNode}) {
+  useLayoutEffect(() => {
+    heights.push(document.querySelector<HTMLElement>('.fd-layer')!.offsetHeight);
+  });
+  return <>{children}</>;
+}
+
+test('the detail: a description\'s row has its final height when the card is first drawn, More included, so the card is measured once (SV-267)', async () => {
+  for (const description of [LONG, 'One line']) {
+    const heights: number[] = [];
+    const one = item({description});
+    const drawn = await render(
+      <Measured heights={heights}>
+        <div className="fd" style={{position: 'relative'}}><div className="card float"><div className="fd-body"><div className="fd-layer in">
+          <DetailContent target={{item: one, date: '2026-10-09', calendar: CALENDAR}} timeZone={SEED_TIME_ZONE} onClose={() => {}} onEdit={() => {}} />
+        </div></div></div></div>
+      </Measured>,
+    );
+    await expect.element(page.getByText('Sam Lee')).toBeVisible();
+    // The first reading is the height it keeps: nothing is added to the card after it's measured.
+    expect(heights[0]).toBe(document.querySelector<HTMLElement>('.fd-layer')!.offsetHeight);
+    expect(page.getByRole('button', {name: 'More'}).elements()).toHaveLength(description === LONG ? 1 : 0);
+    await drawn.unmount();
+  }
 });
 
 // ---- The editor's field ----

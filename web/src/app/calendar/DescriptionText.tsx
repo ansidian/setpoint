@@ -39,19 +39,23 @@ export function DescriptionText({blocks}: {blocks: Block[]}) {
 /**
  * The description in the floating detail (D546): up to 6 lines, then it fades under More, which
  * opens it in place to 320 px and lets it scroll inside from there; Less folds it again.
+ *
+ * Whether it runs past 6 lines is written to the row itself (`data-long`, which description.css
+ * reads to draw the fade and More), not kept as state: a state would draw More one render after the
+ * text, after the floating detail's motion has measured the card to place and glide it (SV-267).
  */
 export function DescriptionFold({blocks}: {blocks: Block[]}) {
+  const row = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [long, setLong] = useState(false);
   useLayoutEffect(() => {
     const element = text.current;
-    if (element && !open) setLong(element.scrollHeight > element.clientHeight + 1);
+    if (row.current && element && !open) row.current.toggleAttribute('data-long', element.scrollHeight > element.clientHeight + 1);
   }, [blocks, open]);
   return (
-    <div className="grow fd-desc-wrap">
-      <div ref={text} className={`desc fd-desc${open ? ' open' : long ? ' long' : ''}`} tabIndex={open ? 0 : undefined} aria-label={open ? 'Description' : undefined}><DescriptionText blocks={blocks} /></div>
-      {(long || open) && <button type="button" className="btn quiet sm fd-more" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Less' : 'More'}</button>}
+    <div ref={row} className="grow fd-desc-wrap">
+      <div ref={text} className={`desc fd-desc${open ? ' open' : ''}`} tabIndex={open ? 0 : undefined} aria-label={open ? 'Description' : undefined}><DescriptionText blocks={blocks} /></div>
+      <button type="button" className="btn quiet sm fd-more" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Less' : 'More'}</button>
     </div>
   );
 }
