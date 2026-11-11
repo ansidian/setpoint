@@ -62,6 +62,47 @@ const FORMATS: {command: Format; label: string; icon: IconName; keys?: string}[]
   {command: 'insertUnorderedList', label: 'Bulleted list', icon: 'format_list_bulleted'},
 ];
 
+const isList = (node: Element | null | undefined): node is HTMLOListElement | HTMLUListElement => node instanceof HTMLOListElement || node instanceof HTMLUListElement;
+
+/** The list nested in an item, made (the kind of the list it's in) when it has none. */
+function subList(item: Element, kind: string): Element {
+  const last = item.lastElementChild;
+  if (isList(last)) return last;
+  const made = document.createElement(kind);
+  item.append(made);
+  return made;
+}
+
+/**
+ * The item moved into the list under the item before it, with its own nested list: Google's
+ * shape, a nested list inside its item. The browser's own indent puts it beside the item instead,
+ * and its outdent then breaks the list, so the move is made here. False when there's no item before.
+ */
+export function indent(item: HTMLLIElement): boolean {
+  const before = item.previousElementSibling;
+  if (isList(before)) before.append(item);
+  else if (before instanceof HTMLLIElement) subList(before, item.parentElement!.localName).append(item);
+  else return false;
+  return true;
+}
+
+/**
+ * The item moved out to its parent's list, right after the item it hung from, the items after it
+ * coming along as its own nested ones (as Google Calendar does). False at the top level.
+ */
+export function outdent(item: HTMLLIElement): boolean {
+  const list = item.parentElement!;
+  const holder = list.parentElement;
+  const after = holder instanceof HTMLLIElement ? holder : isList(holder) ? list : null;
+  if (!after) return false;
+  const following: Element[] = [];
+  for (let next = item.nextElementSibling; next; next = next.nextElementSibling) following.push(next);
+  if (following.length) subList(item, list.localName).append(...following);
+  after.after(item);
+  if (!list.children.length) list.remove();
+  return true;
+}
+
 /** A typed address as a link: its own scheme when it's one Setpoint opens, else https. */
 export function linkTarget(typed: string): string | null {
   const text = typed.trim();
@@ -151,7 +192,34 @@ export function DescriptionField({blocks, kind, note, onChange}: DescriptionFiel
     else run('createLink', target);
   };
 
+  // Tab and Shift-Tab in a list nest its item under the one before or bring it out a level, as
+  // Google Calendar's editor does (SV-268). A first item has nothing to nest under and a top-level
+  // one nothing to come out of, so there they do nothing; outside a list Tab moves on as ever.
+  const tab = (event: KeyboardEvent) => {
+    const selection = document.getSelection();
+    const anchor = selection?.anchorNode;
+    const item = (anchor instanceof Element ? anchor : anchor?.parentElement)?.closest('li');
+    if (!selection || !item || !inField(item)) return;
+    event.preventDefault();
+    const range = selection.rangeCount ? selection.getRangeAt(0) : null;
+    const kept = range && [range.startContainer, range.startOffset, range.endContainer, range.endOffset] as const;
+    if (!(event.shiftKey ? outdent(item) : indent(item))) return;
+    // The item's own nodes moved, so the caret goes back where it was in them.
+    if (kept) {
+      const back = document.createRange();
+      back.setStart(kept[0], kept[1]);
+      back.setEnd(kept[2], kept[3]);
+      selection.removeAllRanges();
+      selection.addRange(back);
+    }
+    read();
+    mark();
+  };
   const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      tab(event);
+      return;
+    }
     const command = event.metaKey || event.ctrlKey;
     // A task has no underline to keep.
     if (command && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'u' && kind === 'task') event.preventDefault();

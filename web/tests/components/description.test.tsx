@@ -289,3 +289,42 @@ test('the field: it grows with its text to 8 lines, then keeps its height with t
   expect(box.element().scrollHeight).toBeGreaterThan(174);
   expect(getComputedStyle(box.element()).overflowY).toBe('auto');
 });
+
+// SV-268: Tab and Shift-Tab in a list nest and un-nest its item, as Google Calendar's editor does.
+const LIST = '<ul><li>Laptop</li><li>Charger</li><li>Pen</li></ul>';
+const into = async (text: string) => {
+  await page.getByText(text, {exact: true}).click();
+  await userEvent.keyboard('{End}');
+};
+
+test('the field: in a list, Tab nests the item under the one before and Shift-Tab brings it back, the caret staying in its text', async () => {
+  await field('event', readHtml(LIST).blocks);
+  await into('Charger');
+  await userEvent.keyboard('{Tab}');
+  expect(writeHtml(read!)).toBe('<ul><li>Laptop<ul><li>Charger</li></ul></li><li>Pen</li></ul>');
+  await expect.element(box).toHaveFocus();
+  await userEvent.keyboard('!');
+  expect(writeHtml(read!)).toBe('<ul><li>Laptop<ul><li>Charger!</li></ul></li><li>Pen</li></ul>');
+  await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+  expect(writeHtml(read!)).toBe(LIST.replace('Charger', 'Charger!'));
+  await expect.element(box).toHaveFocus();
+});
+
+test('the field: Shift-Tab brings the items after it along under it, as Google does; a first item can\'t nest and a top-level one can\'t come out, and Tab stays in the field there', async () => {
+  await field('event', readHtml('<ul><li>Laptop<ul><li>Charger</li><li>Pen</li></ul></li></ul>').blocks);
+  await into('Charger');
+  await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+  expect(writeHtml(read!)).toBe('<ul><li>Laptop</li><li>Charger<ul><li>Pen</li></ul></li></ul>');
+  await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+  await into('Laptop');
+  await userEvent.keyboard('{Tab}');
+  expect(writeHtml(read!)).toBe('<ul><li>Laptop</li><li>Charger<ul><li>Pen</li></ul></li></ul>');
+  await expect.element(box).toHaveFocus();
+});
+
+test('the field: outside a list, Tab moves on to the bar as before', async () => {
+  await field('event', readHtml('Agenda').blocks);
+  await page.getByText('Agenda').click();
+  await userEvent.keyboard('{Tab}');
+  await expect.element(page.getByRole('button', {name: 'Bold'})).toHaveFocus();
+});
