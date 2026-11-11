@@ -4753,10 +4753,11 @@ was decided; the audit itself was retired by D480.
     Calendar's description and Todoist's task description show and are edited in Setpoint, each
     kept in its provider's own format (Google's HTML, Todoist's Markdown) and drawn only from a
     fixed list of formats: lines, bold, italic, underline, strikethrough, code, links, numbered and
-    bulleted lists, headings and quotes. Nothing else in a description is drawn, run or loaded;
+    bulleted lists (nested, each level its own kind, as Google writes them; SV-268, D550), headings
+    and quotes. Nothing else in a description is drawn, run or loaded;
     a link opens in a new tab, and a bare web address in the text is one too.
     - **The floating detail:** a fact row under `notes`, after attendees and before the repeat,
-      reminders and calendar. Up to **6 lines**, then it fades under **More**, which opens it in
+      reminders and calendar. A nested list's bullets are hollow, then square, as Google's. Up to **6 lines**, then it fades under **More**, which opens it in
       place to 320 px with the rest scrolling inside; **Less** folds it. The card is placed again
       as it grows, so it stays in the grid.
     - **The editor:** a **Description** field under reminders (and a new event's repeat), above the
@@ -4764,6 +4765,9 @@ was decided; the audit itself was retired by D480.
       scrolling inside. While it has focus a bar sits **under the text, inside the field** (not
       above it, so the text doesn't move when it's clicked into): Bold ⌘B, Italic ⌘I, Underline ⌘U,
       Numbered list, Bulleted list, Link (an address typed under the text; none removes the link).
+      In a list, **Tab** nests the item under the one before and **Shift-Tab** brings it out a
+      level, the items after it coming along under it, as Google Calendar's editor does; a first
+      item and a top-level one stay put, and outside a list Tab moves on as ever (SV-268, D550).
       A task has no Underline, as Markdown has none; headings, quotes, code and strikethrough
       written in Todoist show and are kept, with no buttons to make them. A paste keeps only the
       formats in the list.
