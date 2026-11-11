@@ -166,14 +166,14 @@ describe('F6b: a drag held near the grid\'s top or bottom edge scrolls it', () =
 });
 
 describe('clone, copy and paste (v1\'s clone and clipboard payloads)', () => {
-  test('a clone of one Gym is an event of its own on the same day, with its reminders, Time to Leave and colour', () => {
-    expect(copyOf({...gym, colour: 'good', leave_reminder: true}, 0, zone)).toEqual({
+  test('a clone of one Gym is an event of its own on the same day, with its reminders, Time to Leave, colour and description', () => {
+    expect(copyOf({...gym, colour: 'good', leave_reminder: true, description: 'Locker <b>114</b>'}, 0, zone)).toEqual({
       kind: 'event', calendar_id: 1, title: 'Gym', all_day: false, starts_at: at('2026-10-07', '07:00'), ends_at: at('2026-10-07', '08:00'),
       start_date: null, end_date: null, due_date: null, due_at: null, time_zone: zone, recurrence: null, place: null, address: null, attendees: [],
-      reminders: [10], leave_reminder: true, project: null, colour: 'good',
+      reminders: [10], leave_reminder: true, project: null, colour: 'good', description: 'Locker <b>114</b>',
     });
   });
-  test('a task\'s copy keeps its project', () => expect(copyOf(task('Pay rent', '2026-10-07', {project: 'Home'}), 2, zone)).toMatchObject({kind: 'task', due_date: '2026-10-09', project: 'Home', colour: null}));
+  test('a task\'s copy keeps its project', () => expect(copyOf(task('Pay rent', '2026-10-07', {project: 'Home'}), 2, zone)).toMatchObject({kind: 'task', due_date: '2026-10-09', project: 'Home', colour: null, description: null}));
   test('pasting: the first copied day lands on the day pasted on; the others keep their distance', () => {
     const pasted = pasteOn([dinner, gym, task('Pay rent', '2026-10-07')], '2026-10-14', zone);
     expect(pasted.map(input => [input.title, input.starts_at ?? input.due_date])).toEqual([

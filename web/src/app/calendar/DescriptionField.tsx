@@ -5,10 +5,11 @@
 // task doesn't (Markdown has none).
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {ClipboardEvent, KeyboardEvent} from 'react';
-import {isEmpty, readHtml, safeHref, writeHtml} from '../../logic/description.ts';
+import {fitting, isEmpty, readHtml, safeHref, writeHtml} from '../../logic/description.ts';
 import type {Block, Run} from '../../logic/description.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import type {IconName} from '../../ui/glyphs.ts';
+import './description.css';
 
 const TAGS = {code: 'code', strike: 's', underline: 'u', italic: 'i', bold: 'b'} as const;
 
@@ -153,7 +154,7 @@ export function DescriptionField({blocks, kind, note, onChange}: DescriptionFiel
     // A task has no underline to keep.
     if (command && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'u' && kind === 'task') event.preventDefault();
   };
-  // A paste goes in as the reader takes it: the formats in the list, and nothing else of the page it came from.
+  // A paste goes in as the reader takes it and as this item's provider writes: nothing else of the page it came from.
   const onPaste = (event: ClipboardEvent) => {
     event.preventDefault();
     const html = event.clipboardData.getData('text/html');
@@ -161,11 +162,7 @@ export function DescriptionField({blocks, kind, note, onChange}: DescriptionFiel
       run('insertText', event.clipboardData.getData('text/plain'));
       return;
     }
-    const pasted = readHtml(html).blocks.map(block => {
-      const plain = (runs: Run[]) => (kind === 'task' ? runs.map(one => ({...one, marks: one.marks.filter(mark => mark !== 'underline')})) : runs);
-      return block.type === 'list' ? {...block, items: block.items.map(plain)} : block.type === 'code' ? block : {...block, runs: plain(block.runs)};
-    });
-    run('insertHTML', writeHtml(pasted));
+    run('insertHTML', writeHtml(fitting(kind, readHtml(html).blocks)));
   };
 
   return (

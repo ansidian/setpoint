@@ -85,11 +85,3 @@
 .ctx-menu .menu-inline .swatch { width: 16px; height: 16px; flex: none; }
 .ctx-menu .menu-inline .swatch:disabled { opacity: .35; }
 .menu-inline { display: flex; flex-direction: column; gap: 2px; }
-
-/* SV-264 (D546): the description's row. Up to 6 lines, then it fades under More, which opens it in
-   place to 320 px and lets it scroll inside from there. */
-.fd .fd-desc-wrap { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.fd .fd-desc { width: 100%; max-height: 120px; overflow: hidden; }
-.fd .fd-desc.long { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
-.fd .fd-desc.open { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
-.fd .fd-more { margin-left: -10px; }

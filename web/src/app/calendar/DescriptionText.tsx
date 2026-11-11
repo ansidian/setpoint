@@ -5,6 +5,7 @@ import {useLayoutEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
 import {withLinks} from '../../logic/description.ts';
 import type {Block, Run} from '../../logic/description.ts';
+import './description.css';
 
 function Runs({runs}: {runs: Run[]}) {
   return <>{runs.flatMap(withLinks).map((run, index) => {

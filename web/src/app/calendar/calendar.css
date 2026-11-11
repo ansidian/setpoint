@@ -470,19 +470,3 @@
 .imp-progress.failing { color: var(--caution); }
 .imp-foot .btn.quiet { margin-left: auto; }
 .imp-foot .btn.quiet .kbd { margin-left: 4px; }
-
-/* SV-264 (D546, D547): an item's description, in the floating detail and the editor's field alike:
-   its lines, lists, links and the few formats logic/description.ts reads, at the card's own size. */
-.desc { min-width: 0; overflow-wrap: anywhere; line-height: 20px; color: var(--ink); user-select: text; -webkit-user-select: text; }
-.desc p, .desc div, .desc ol, .desc ul, .desc blockquote, .desc pre, .desc h1, .desc h2, .desc h3, .desc h4, .desc h5, .desc h6 { margin: 0; }
-.desc .gap { height: 20px; }
-.desc b, .desc strong { font-weight: 600; }
-.desc a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-.desc ol, .desc ul { padding-left: 22px; }
-.desc ol { list-style: decimal; }
-.desc ul { list-style: disc; }
-.desc .head, .desc h1, .desc h2, .desc h3, .desc h4, .desc h5, .desc h6 { font-size: inherit; font-weight: 600; }
-.desc blockquote { padding-left: 10px; box-shadow: inset 2px 0 0 var(--sub3); color: var(--ink2); }
-.desc code, .desc pre { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }
-.desc code { padding: 1px 4px; border-radius: 4px; background: var(--sub2); }
-.desc pre { padding: 6px 8px; border-radius: 8px; background: var(--sub2); white-space: pre-wrap; }

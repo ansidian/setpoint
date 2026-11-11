@@ -2,7 +2,7 @@
 // screen draws, and written back as that provider's own editor writes one. The two long fixtures
 // are the shapes read from a real Google event and Todoist task (2026-11-10), with invented text.
 import {describe, expect, test} from 'vitest';
-import {isEmpty, plainText, readDescription, readHtml, readInline, readMarkdown, safeHref, sameDescription, withLinks, writeDescription, writeHtml, writeMarkdown} from '../src/logic/description.ts';
+import {fitting, isEmpty, plainText, readDescription, readHtml, readInline, readMarkdown, safeHref, sameDescription, withLinks, writeDescription, writeHtml, writeMarkdown} from '../src/logic/description.ts';
 import type {Block, Mark, Run} from '../src/logic/description.ts';
 
 const run = (text: string, marks: Mark[] = [], href: string | null = null): Run => ({text, marks, href});
@@ -39,6 +39,8 @@ describe('Google\'s HTML', () => {
     ['strong and em are bold and italic, nested formats add up', '<strong>a <em>b</em></strong>', [p(run('a ', ['bold']), run('b', ['bold', 'italic']))]],
     ['entities are their characters', 'Tom &amp; Jo &lt;3 &#39;quoted&#39; &nbsp;&mdash; done', [p(run('Tom & Jo <3 \'quoted\'  — done'))]],
     ['a lone < is text', 'a < b and c<d', [p(run('a < b and c<d'))]],
+    ['an address or a link in angle brackets is text, as invites write them', 'Sam Lee <sam@example.org>\nJoin the meeting<https://example.com/j/1>', [p(run('Sam Lee <sam@example.org>')), p(run('Join the meeting<https://example.com/j/1>'))]],
+    ['a <br> among plain lines leaves their line breaks', 'Line one\nLine two<br>Line three', [p(run('Line one')), p(run('Line two')), p(run('Line three'))]],
     ['a blank line is two breaks', 'One<br><br>Two', [p(run('One')), blank, p(run('Two'))]],
     ['headings, quotes and preformatted text', '<h2>Plan</h2><blockquote>Said so</blockquote><pre>a\n  b</pre>', [{type: 'heading', level: 2, runs: [run('Plan')]}, {type: 'quote', runs: [run('Said so')]}, {type: 'code', text: 'a\n  b'}]],
     ['a div is a line, as the browser\'s editable field writes them', 'One<div>Two</div><div><br></div><div><b>Three</b></div>', [p(run('One')), p(run('Two')), blank, p(run('Three', ['bold']))]],
@@ -136,6 +138,24 @@ describe('Todoist\'s Markdown', () => {
   ])('written: %s', (_, blocks, markdown) => {
     expect(writeMarkdown(blocks)).toBe(markdown);
     expect(plainText(readMarkdown(markdown).blocks)).toBe(plainText(blocks));
+  });
+});
+
+describe('what each provider\'s own editor writes', () => {
+  const pasted: Block[] = [
+    {type: 'heading', level: 2, runs: [run('Plan', ['bold'])]},
+    {type: 'quote', runs: [run('Said so', ['underline', 'strike'])]},
+    {type: 'code', text: 'a\n\nb'},
+    {type: 'list', ordered: false, items: [[run('x', ['code', 'italic'], 'https://example.com')]]},
+  ];
+  test('an event keeps Google\'s set: bold, italic, underline, lists and links, the rest as plain lines', () => {
+    expect(fitting('event', pasted)).toEqual([
+      p(run('Plan', ['bold'])), p(run('Said so', ['underline'])), p(run('a')), blank, p(run('b')),
+      {type: 'list', ordered: false, items: [[run('x', ['italic'], 'https://example.com')]]},
+    ]);
+  });
+  test('a task keeps everything but underline', () => {
+    expect(fitting('task', pasted)).toEqual([pasted[0], {type: 'quote', runs: [run('Said so', ['strike'])]}, pasted[2], pasted[3]]);
   });
 });
 

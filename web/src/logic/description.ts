@@ -114,7 +114,8 @@ interface Tag {
 
 /** The tag starting at `at` ("<" there), its end found past any quoted attribute; null when it isn't one. */
 function tagAt(html: string, at: number): Tag | null {
-  const open = /^<(\/?)([a-zA-Z][a-zA-Z0-9]*)/.exec(html.slice(at, at + 40));
+  // A name, then a space, a slash or the end: "<sam@example.org>" and "<https://…>" are text, as invites write them.
+  const open = /^<(\/?)([a-zA-Z][a-zA-Z0-9]*)(?=[\s/>])/.exec(html.slice(at, at + 40));
   if (!open) return null;
   let index = at + open[0].length;
   let quote: string | null = null;
@@ -142,12 +143,14 @@ const SKIPPED = new Set(['script', 'style', 'head', 'title', 'template', 'noscri
 // Wrappers that change nothing on their own.
 const PLAIN = new Set(['span', 'html', 'body', 'meta', 'link', 'wbr', 'section', 'article', 'header', 'footer', 'main', 'address', 'label', 'small', 'abbr', 'time', 'nobr']);
 const LINE_BREAKING = new Set(['div', 'p', 'section', 'article', 'header', 'footer', 'main', 'address', 'table', 'tr', 'hr', 'dl', 'dt', 'dd', 'center', 'figure', 'figcaption']);
-const BLOCK_OR_BREAK = /<(br|p|div|li|ol|ul|table|tr|h[1-6]|blockquote|pre)\b/i;
+// A <br> alone doesn't count: a line of plain text ended by one still has the others' newlines.
+const BLOCKS = /<(p|div|li|ol|ul|table|tr|h[1-6]|blockquote|pre)[\s/>]/i;
 
 /**
  * HTML as a description. `literal` is the editor's own markup, where white space is kept as typed;
- * a provider's keeps its newlines only when it has no line of its own markup (a plain-text
- * description, as an invite's or an .ics file's), else white space folds as a browser folds it.
+ * a provider's keeps its newlines unless it has paragraphs, lists or other blocks of its own (plain
+ * text, as an invite's or an .ics file's, with or without a <br>), where white space folds as a
+ * browser folds it.
  */
 export function readHtml(html: string, {literal = false}: {literal?: boolean} = {}): Description {
   const blocks: Block[] = [];
@@ -161,7 +164,7 @@ export function readHtml(html: string, {literal = false}: {literal?: boolean} = 
   let pre: string | null = null;
   // A paragraph element just closed: the next line stands apart from it.
   let apart = false;
-  const newlines = literal || !BLOCK_OR_BREAK.test(html);
+  const newlines = literal || !BLOCKS.test(html);
 
   const hasText = () => line.some(run => run.text.trim() !== '');
   const endLine = (force: boolean) => {
@@ -543,6 +546,22 @@ export function writeMarkdown(blocks: Block[]): string {
 }
 
 // ---- Either ----
+
+/**
+ * A description as its provider's own editor would write it, for what's pasted in: an event keeps
+ * Google's set (bold, italic, underline, lists, links), the rest as plain lines; a task keeps
+ * everything but underline, which Markdown doesn't have.
+ */
+export function fitting(kind: 'event' | 'task', blocks: Block[]): Block[] {
+  const kept: Mark[] = kind === 'event' ? ['bold', 'italic', 'underline'] : ['bold', 'italic', 'strike', 'code'];
+  const runs = (list: Run[]) => list.map(one => ({...one, marks: one.marks.filter(mark => kept.includes(mark))}));
+  return blocks.flatMap((block): Block[] => {
+    if (block.type === 'list') return [{...block, items: block.items.map(runs)}];
+    if (block.type === 'code') return kind === 'task' ? [block] : block.text.split('\n').map(line => ({type: 'paragraph', runs: line ? [{text: line, marks: [], href: null}] : []}));
+    if (block.type === 'paragraph' || kind === 'task') return [{...block, runs: runs(block.runs)}];
+    return [{type: 'paragraph', runs: runs(block.runs)}];
+  });
+}
 
 const NONE: Description = {blocks: [], lossy: false};
 

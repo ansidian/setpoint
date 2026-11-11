@@ -78,7 +78,7 @@ export function pendingItem(input: ItemCreateInput, id: number, at: string): Ite
     // copyOf and the editor leave the server's defaults out (no repeat, no labels).
     ...input, key: `new:${-id}`, id, recurring: !!input.recurrence || !!input.repeat, occurrence_start: null, reminders: input.reminders ?? [],
     labels: input.labels ?? [], repeat: input.repeat ?? null, done: false, done_at: null, can_reopen: false, command, read_only: false, due_string: input.repeat ?? null, time_to_leave: null,
-    link: null, transparency: input.kind === 'event' ? 'opaque' : null,
+    link: null, transparency: input.kind === 'event' ? 'opaque' : null, description: input.description ?? null,
   };
 }
 
@@ -153,7 +153,8 @@ export function copyOf(item: ItemOut, days: number, timeZone: string): ItemCreat
   return {
     kind: item.kind, calendar_id: item.calendar_id, title: item.title, ...when, ...(days ? shiftedBy(item, days, timeZone) : {}),
     time_zone: item.time_zone, recurrence: null, place: item.place, address: item.address, attendees: [], reminders: item.reminders,
-    leave_reminder: item.leave_reminder, project: item.project, colour: item.colour,
+    // SV-264: its description goes with it, as its provider wrote it.
+    leave_reminder: item.leave_reminder, project: item.project, colour: item.colour, description: item.description,
   } as ItemCreateInput;
 }
 

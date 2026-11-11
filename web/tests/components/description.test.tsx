@@ -8,7 +8,6 @@ import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {expect, test} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
-import '../../src/app/calendar/calendar.css';
 import '../../src/app/calendar/detail/detail.css';
 import '../../src/app/calendar/editor.css';
 import {DescriptionField, linkTarget} from '../../src/app/calendar/DescriptionField.tsx';
