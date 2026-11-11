@@ -4810,7 +4810,7 @@ was decided; the audit itself was retired by D480.
     to cancel". The "Label · key" tooltips stay. The overlap line reads the same in the editor and
     on a proposal card: "Overlaps Study group and 1 more · 1h 30m".
 372. **The proposal card's Description, and links back to the email** (amending Proposal and #370;
-    Andy, 2026-11-11; darma SV-270, D552–D556).
+    Andy, 2026-11-11; darma SV-270, D552–D557).
     - **On the card:** the editor's Description field shows in place on every proposal card (the
       reader's, Alfred's answers', and the editor News's Add to calendar opens), with no hand-off to
       Calendar; the timeline preview and batch drafts stay off it (D552).
@@ -4833,4 +4833,4 @@ was decided; the audit itself was retired by D480.
     - **The editor's glyphs** are always in their marks' colours: the day and time `cool`, the
       place `comf`, reminders `remind`, the calendar its colour and a task's project its Todoist
       colour; repeat, labels and description stay `ink3`. A row the typed line fills grows its
-      glyph once as it lands, except with reduced motion.
+      glyph once as it lands, except with reduced motion (D557).
