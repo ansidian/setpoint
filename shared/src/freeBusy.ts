@@ -53,5 +53,5 @@ export function proposalConflict(proposal: {all_day: boolean; starts_at: string 
     return {free: true, label: `Free that ${hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'}`};
   }
   const [first] = overlaps;
-  return {free: false, label: `Overlaps ${first!.item.title} · ${durationLabel(first!.minutes)}${more(overlaps.length - 1)}`};
+  return {free: false, label: `Overlaps ${first!.item.title}${more(overlaps.length - 1)} · ${durationLabel(first!.minutes)}`};
 }

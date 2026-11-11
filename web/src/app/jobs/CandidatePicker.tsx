@@ -72,7 +72,7 @@ export function CandidatePicker({candidates, active, picked, onPick, onNone}: {
       {candidates.map((candidate, index) => row(index, (
         <>
           <Icon name={picked === candidate.id ? 'check_circle' : 'radio_button_unchecked'} size={16} className={picked === candidate.id ? 'ok' : undefined} />
-          <span className="ell"><span className="t">{candidate.title}</span> <span className="ink3">· {candidateWhere(candidate)}</span></span>
+          <span className="ell"><span className="t">{candidate.title}</span>{candidateWhere(candidate) && <span className="ink3"> · {candidateWhere(candidate)}</span>}</span>
           {candidate.unreadable && <span className="ink3 cant">{CANT_READ}</span>}
         </>
       ), candidate))}

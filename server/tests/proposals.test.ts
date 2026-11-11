@@ -105,7 +105,7 @@ describe('the pure rules', () => {
   const dinner = {all_day: false, starts_at: '2026-10-10T02:00:00.000Z', ends_at: '2026-10-10T04:00:00.000Z', startHour: 19};
   test('the conflict line', () => {
     expect(conflictLine(dinner, day)).toEqual({free: false, label: 'Overlaps Study group · 1h 30m'});
-    expect(conflictLine({...dinner, starts_at: '2026-10-09T13:30:00.000Z', ends_at: '2026-10-10T03:00:00.000Z'}, day)).toEqual({free: false, label: 'Overlaps Gym · 1h and 1 more'});
+    expect(conflictLine({...dinner, starts_at: '2026-10-09T13:30:00.000Z', ends_at: '2026-10-10T03:00:00.000Z'}, day)).toEqual({free: false, label: 'Overlaps Gym and 1 more · 1h'});
     expect(conflictLine({...dinner, starts_at: '2026-10-10T04:00:00.000Z', ends_at: '2026-10-10T05:00:00.000Z', startHour: 21}, day)).toEqual({free: true, label: 'Free that evening'});
     expect(conflictLine({...dinner, starts_at: '2026-10-09T16:00:00.000Z', ends_at: '2026-10-09T17:00:00.000Z', startHour: 9}, day)).toEqual({free: true, label: 'Free that morning'});
     expect(conflictLine({...dinner, starts_at: '2026-10-09T21:00:00.000Z', ends_at: '2026-10-09T22:00:00.000Z', startHour: 14}, day)).toEqual({free: true, label: 'Free that afternoon'});
@@ -160,7 +160,7 @@ describe('proposals over the seed', () => {
   test('the overlap line: a proposal for Sam\'s dinner meets the study group, and the dinner already on the calendar', () => {
     const w = world({seed: true});
     const dinner = proposeFromMessage(w.store, idOf(w, 'Dinner Friday?'), 'event', {title: 'Dinner with Sam', date: '2026-10-09', start: '19:00', end: '21:00', place: 'Blue Door'});
-    expect(dinner.conflict).toEqual({free: false, label: 'Overlaps Study group · 1h 30m and 1 more'});
+    expect(dinner.conflict).toEqual({free: false, label: 'Overlaps Study group and 1 more · 1h 30m'});
     w.store.db.delete(t.items).where(eq(t.items.title, 'Dinner with Sam')).run();
     expect(proposeFromMessage(w.store, idOf(w, 'Dinner Friday?'), 'event', {title: 'Dinner with Sam', date: '2026-10-09', start: '19:00', end: '21:00'}).conflict)
       .toEqual({free: false, label: 'Overlaps Study group · 1h 30m'});
