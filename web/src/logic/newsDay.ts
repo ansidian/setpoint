@@ -45,6 +45,6 @@ export const wholeDollars = (usd: number) => (usd >= 10 ? `$${Math.round(usd).to
 /** "8,214 stories · $38 of AI this month."; "No stories yet · $0.00 of AI this month." */
 export function newsKeptLine(day: Pick<NewsDayOut, 'stories_total' | 'ai_this_month_usd'>): string {
   const ai = `${wholeDollars(day.ai_this_month_usd)} of AI this month`;
-  if (!day.stories_total) return `No stories yet · ${ai}.`;
-  return `${n(day.stories_total)} ${day.stories_total === 1 ? 'story' : 'stories'} · ${ai}.`;
+  if (!day.stories_total) return `No stories yet, ${ai}.`;
+  return `${n(day.stories_total)} ${day.stories_total === 1 ? 'story' : 'stories'}, ${ai}.`;
 }

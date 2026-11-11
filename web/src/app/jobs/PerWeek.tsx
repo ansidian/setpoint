@@ -27,7 +27,7 @@ export function PerWeek({weeks, today}: {weeks: JobWeekOut[]; today: string}) {
         ))}
       </span>
       <span><span className="v">{current}</span><span className="words"> this week</span></span>
-      {tip && <span className="jb-tip" role="tooltip" style={{left: pointed!.left}}>{tip.when} <span className="ink3">· {tip.count}</span></span>}
+      {tip && <span className="jb-tip" role="tooltip" style={{left: pointed!.left}}>{tip.when} <span className="ink3">{tip.count}</span></span>}
     </span>
   );
 }

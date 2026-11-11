@@ -69,12 +69,12 @@ function HistoryLine({history, done, phase, onMoveOn}: {history: Pick<JobsHistor
   );
 }
 
-/** Jobs off (38c): "Jobs is off · Turn on". */
+/** Jobs off (38c): "Jobs is off" and its Turn on pill. */
 export function JobsOff() {
   return (
     <div className="jb-empty">
       <Icon name="work" size={20} />
-      <div className="line"><span>Jobs is off</span><span className="sep">·</span><button className="lnk" type="button" onClick={openJobsSettings}>Turn on</button></div>
+      <div className="line"><span>Jobs is off</span><button className="lnk" type="button" onClick={openJobsSettings}>Turn on</button></div>
     </div>
   );
 }

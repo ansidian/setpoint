@@ -391,7 +391,7 @@ export const firstRunShare = (run: {sorted: number; total: number}) => (run.tota
 export function firstRunLine(status: Pick<NewsStatusOut, 'first_run'>): string | null {
   const run = status.first_run;
   if (!run) return null;
-  return `Sorting the last 48 hours · ${run.sorted.toLocaleString('en-US')} of ${count(run.total, 'article', 'articles')} · showing what’s sorted so far`;
+  return `Sorting the last 48 hours · ${run.sorted.toLocaleString('en-US')} of ${count(run.total, 'article', 'articles')}, showing what’s sorted so far`;
 }
 
 /** A whole section stale or failing (29a): "AI, as of 7:02 AM", under its header; its stories stay. */

@@ -59,12 +59,12 @@ test('board 38a: the history pass: its line, an application landing at its date\
     await line.waitFor();
     assert.equal((await setpoint.api<JobsPageOut>('GET', '/jobs')).history.read, 3);
     // A muted line at the top of the column, with the counts.
-    assert.equal(await line.textContent(), 'Reading history · 3 of 330 emails · showing what’s read so far');
+    assert.equal(await line.textContent(), 'Reading history · 3 of 330 emails, showing what’s read so far');
 
     // Each application lands at its date's place, and the counts move in place.
     jobsChange(setpoint, `${TASMANIAN}; ${readMore(1)}`);
     await poke(setpoint);
-    await until('the count moved', () => line.textContent(), text => text === 'Reading history · 4 of 330 emails · showing what’s read so far');
+    await until('the count moved', () => line.textContent(), text => text === 'Reading history · 4 of 330 emails, showing what’s read so far');
     await page.locator('.jb-tr', {hasText: 'Tasmanian Traders'}).waitFor();
     // At its date's place, Sep 12, where the server's newest-first order puts it.
     const {rows} = await setpoint.api<JobsPageOut>('GET', '/jobs');
@@ -118,7 +118,7 @@ test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable sinc
   }
 });
 
-test('board 38c: Jobs off: the header alone and "Jobs is off · Turn on", no sidebar item, `4` opens it; Turn on opens Settings › Jobs with the switch focused, and on brings Jobs back under News', async () => {
+test('board 38c: Jobs off: the header alone and "Jobs is off" and Turn on, no sidebar item, `4` opens it; Turn on opens Settings › Jobs with the switch focused, and on brings Jobs back under News', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     await setpoint.api('PATCH', '/jobs/settings', {enabled: false});
@@ -136,7 +136,7 @@ test('board 38c: Jobs off: the header alone and "Jobs is off · Turn on", no sid
     await setpoint.idle();
     assert.equal(await page.locator('.hd').textContent(), 'Jobs');
     assert.equal(await page.locator('.hd .jb-status, .hd .jb-week, .hd .search').count(), 0);
-    assert.equal(await empty.textContent(), 'Jobs is off·Turn on');
+    assert.equal(await empty.textContent(), 'Jobs is offTurn on');
     // `/` and J find nothing to search or move to.
     await page.keyboard.press('/');
     await page.keyboard.press('j');
@@ -236,9 +236,9 @@ test('board 39b: Settings › AI\'s Jobs group: three models by name, its spend 
     await jobs.locator('.set-row').first().waitFor();
     // Names, not selects (override 26); no key yet, so each says one is needed, as News's do.
     assert.deepEqual(await jobs.locator('.set-row').evaluateAll(rows => rows.map(row => [row.querySelector('.t')!.textContent, row.querySelector('.s')!.textContent, row.lastElementChild!.textContent])), [
-      ['Each email', 'Role title, requisition ID, the event, the match · needs a key', 'Claude Haiku 5.5'],
-      ['Finding the JD', 'When the email\'s link and the platforms miss · needs a key', 'Claude Sonnet 5.5 with web search'],
-      ['Reading the JD', 'Summary, must-haves and nice-to-haves, salary and setting · needs a key', 'Claude Haiku 5.5'],
+      ['Each email', 'Role title, requisition ID, the event, the match, needs a key', 'Claude Haiku 5.5'],
+      ['Finding the JD', 'When the email\'s link and the platforms miss, needs a key', 'Claude Sonnet 5.5 with web search'],
+      ['Reading the JD', 'Summary, must-haves and nice-to-haves, salary and setting, needs a key', 'Claude Haiku 5.5'],
     ]);
     // No cap, so no meter and nothing to choose; the spend shows once, on Usage this month's Jobs line (D515).
     assert.equal(await jobs.locator('.meter, .select, [role="meter"]').count(), 0);

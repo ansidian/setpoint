@@ -67,7 +67,7 @@ test('SV-218: with nothing open the Inbox\'s pane says how the day is going; a D
     const tiles = () => pane.locator('.md-tile').evaluateAll(all => all.map(tile => [tile.querySelector('dd')!.textContent, tile.querySelector('dt')!.textContent, tile.classList.contains('lit')]));
     await until('the day', () => pane.locator('.md-need').textContent(), text => text === '3 need you, 1 overdue');
     assert.deepEqual(await tiles(), [['0', 'Done today', false], ['8', 'Sorted to FYI', true], ['3', 'Sorted to Noise', true]]);
-    assert.equal(await pane.locator('.pane-foot .md-kept').textContent(), '34 emails · 192 KB, since Mar 2026.');
+    assert.equal(await pane.locator('.pane-foot .md-kept').textContent(), '34 emails, 192 KB, since Mar 2026.');
     // Done from elsewhere (the phone) reaches the pane through the live stream.
     await setpoint.api('POST', `/mail/messages/${await idOf(setpoint, 'Your recovery email was changed')}/done`, {done: true});
     await until('one fewer needs the user', () => pane.locator('.md-need').textContent(), text => text === '2 need you, 1 overdue');
@@ -1026,8 +1026,8 @@ test('the facts card and protected line on security mail, and no Add to calendar
     assert.equal(await page.locator('.protected-line').count(), 0);
     assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Ask about this email']);
     await rowOf(page, 'Your recovery email was changed').click();
-    await page.locator('.protected-line', {hasText: 'Protected · always stays in Attention'}).waitFor();
-    assert.equal(await page.locator('.facts .unfamiliar').textContent(), '· not a place you use');
+    await page.locator('.protected-line', {hasText: 'Protected, always stays in Attention'}).waitFor();
+    assert.equal(await page.locator('.facts .unfamiliar').textContent(), 'not a place you use');
     // Others propose.
     await rowOf(page, 'Pick a 30-minute slot').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
@@ -1167,7 +1167,7 @@ test('days first: Attention, the shelf, then the days, Today first; lanes, kinds
     // and Enter opens it in place.
     const coffee = page.locator('.list.all .row', {hasText: 'Contoso Coffee'});
     const noise = page.locator('.list.all .nfold').first();
-    assert.equal(await noise.textContent(), 'Noise 3Tailspin Toys · Contoso Coffee · Litware');
+    assert.equal(await noise.textContent(), 'Noise 3Tailspin Toys, Contoso Coffee, Litware');
     assert.equal(await coffee.count(), 0);
     for (let press = 0; press < 13; press++) await page.keyboard.press('j');
     await page.locator('.list.all .nfold.cur').waitFor();

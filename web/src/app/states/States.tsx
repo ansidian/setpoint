@@ -92,7 +92,6 @@ function ReconnectBar({text, accounts, phase, onMoveOn}: {text: string; accounts
     <div ref={ref} className="hbar caution" role="alert">
       <Icon name="sync_problem" size={16} />
       <span>{text}</span>
-      <span>·</span>
       <button className="act" type="button" onClick={() => reconnectFrom(accounts)}>Reconnect</button>
     </div>
   );
@@ -122,16 +121,11 @@ function HealthBar({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase;
   );
 }
 
-/** " · Check now" after a line's words: the button, "Checking…" while it runs, or why it couldn't start. */
+/** Check now after a line's words, a pill the gap sets apart: the button, "Checking…" while it runs, or why it couldn't start. */
 export function CheckNow({check}: {check: ReturnType<typeof useCheckNow>}) {
-  return (
-    <>
-      <span className="sep">·</span>
-      {check.text === null
-        ? <button className="check-now" type="button" onClick={check.run}>Check now</button>
-        : <span className={check.failed ? 'check-now failed' : 'check-now checking'} role="status">{check.text}</span>}
-    </>
-  );
+  return check.text === null
+    ? <button className="check-now" type="button" onClick={check.run}>Check now</button>
+    : <span className={check.failed ? 'check-now failed' : 'check-now checking'} role="status">{check.text}</span>;
 }
 
 /** The Unsorted group's "Triage is down, as of 9:09 AM", while it is. */

@@ -125,7 +125,7 @@
 
 /* ---------- A failed load (#228): the failing health line's look, in place of what didn't load ---------- */
 .load-failed { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; color: var(--caution); font-size: 12.5px; min-width: 0; }
-.load-failed .act { color: var(--ink); height: 26px; padding: 0 10px 0 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; margin-left: -10px; flex: none; transition: background-color var(--dur-fast) var(--ease); }
+.load-failed .act { color: var(--ink); height: 26px; padding: 0 10px 0 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; flex: none; transition: background-color var(--dur-fast) var(--ease); }
 .load-failed .act .icon { color: var(--ink2); }
 .load-failed .act:disabled { opacity: .5; }
 @media (hover: hover) { .load-failed .act:enabled:hover { background: var(--sub); } }

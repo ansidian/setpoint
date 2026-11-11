@@ -76,7 +76,7 @@ export function factRows(facts: SecurityFacts, receivedAt: string, now: number, 
   if (facts.app) rows.push({icon: 'lock', label: 'App', value: facts.app, note: null});
   if (facts.unfamiliar) {
     const place = rows.find(row => row.icon === 'location_on') ?? rows.find(row => row.icon === 'computer');
-    if (place) place.note = '· not a place you use';
+    if (place) place.note = 'not a place you use';
   }
   return rows;
 }

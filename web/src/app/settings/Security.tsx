@@ -105,7 +105,7 @@ export function SecurityPage() {
 
       <Section label="Recovery codes">
         {!security ? <SkeletonRows count={1} /> : <div className="set-group">
-          <Row title="Recovery codes" sub={security.recovery.generated_at ? `Made ${when(security.recovery.generated_at)} · each works once` : 'Each works once'}>
+          <Row title="Recovery codes" sub={security.recovery.generated_at ? `Made ${when(security.recovery.generated_at)}, each works once` : 'Each works once'}>
             <span className="val num">{security.recovery.remaining} left</span>
             <button className="btn out sm" type="button" disabled={locked} onClick={() => void change.attempt(regenerateRecoveryCodes).then(made => made && setCodes(made))}>Make new codes</button>
           </Row>

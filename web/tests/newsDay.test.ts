@@ -20,9 +20,9 @@ describe('News\'s day\'s words', () => {
   });
 
   test.each([
-    [{stories_total: 8214, ai_this_month_usd: 38.4}, '8,214 stories · $38 of AI this month.'],
-    [{stories_total: 1, ai_this_month_usd: 0.4}, '1 story · $0.40 of AI this month.'],
-    [{stories_total: 0, ai_this_month_usd: 0}, 'No stories yet · $0.00 of AI this month.'],
+    [{stories_total: 8214, ai_this_month_usd: 38.4}, '8,214 stories, $38 of AI this month.'],
+    [{stories_total: 1, ai_this_month_usd: 0.4}, '1 story, $0.40 of AI this month.'],
+    [{stories_total: 0, ai_this_month_usd: 0}, 'No stories yet, $0.00 of AI this month.'],
   ])('the quiet facts for %j', (day, line) => expect(newsKeptLine(day)).toBe(line));
 
   test('whole dollars from $10', () => expect([wholeDollars(9.99), wholeDollars(10), wholeDollars(1234.5)]).toEqual(['$9.99', '$10', '$1,235']));

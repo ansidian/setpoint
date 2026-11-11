@@ -44,6 +44,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .mono { font-family: var(--mono); }
 .ink2 { color: var(--ink2); }
 .ink3 { color: var(--ink3); }
+/* A name's dim detail after it, a calendar's account in a menu (SV-191): the colour and this gap set it apart, no dot (SV-271). */
+.detail { margin-left: 6px; }
 .grow { flex: 1 1 auto; min-width: 0; }
 .ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .icon, .mark { flex: none; display: block; }
@@ -529,8 +531,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .pt-card { position: absolute; bottom: calc(100% + 8px); left: 50%; translate: -50% 0; z-index: 6; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; white-space: nowrap; transform-origin: bottom center; animation-name: pop-in-up; }
 .pt-card::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }
 .pt-line { display: flex; align-items: center; gap: 8px; min-height: 28px; color: var(--alert); font-size: 13px; }
-.pt-line > .sep { color: var(--ink3); }
-.pt-line > .act { color: var(--ink); height: 26px; padding: 0 10px; margin-left: -10px; border-radius: 999px; }
+.pt-line > .act { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; }
 .pt-line > .act:hover { background: var(--sub); }
 .pane-keys { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; font-size: 12px; }
 .pane-keys > li { display: inline-flex; align-items: center; gap: 4px; }
@@ -615,7 +616,6 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .facts .unfamiliar { color: var(--alert); }
 /* The images-hidden bar (board 02). */
 .imgbar { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 6px 0 12px; border-radius: var(--r-bar); background: var(--sub); color: var(--ink2); font-size: 12.5px; flex: none; }
-.imgbar .sep { color: var(--ink3); }
 .imgbar .lnk { color: var(--ink); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; border-radius: 999px; white-space: nowrap; }
 @media (hover: hover) { .imgbar .lnk:hover { background: var(--sub2); } }
 /* An HTML email: a sandboxed frame as wide as the reading pane, on a white card of radius 14, as tall as its page says it is. */

@@ -84,10 +84,10 @@ export function NotificationsPage() {
             </span>
           </Row>
           <SecretRow name="ntfy_token" title="Token" noun="token" sub="If the server asks for one" secrets={secrets} />
-          <Row title={ntfy.topics.reminders} sub={noServer ? 'Set a server first' : 'Reminders · Time to Leave · Reconnect alerts'} mono>
+          <Row title={ntfy.topics.reminders} sub={noServer ? 'Set a server first' : 'Reminders, Time to Leave, Reconnect alerts'} mono>
             <Switch on={ntfy.reminders && !noServer} disabled={noServer} label={ntfy.topics.reminders} onChange={on => change({notifications: {reminders: on}})} />
           </Row>
-          <Row title={ntfy.topics.mail} sub={noServer ? 'Set a server first' : ntfy.attention_mail ? 'Attention mail' : 'Attention mail · Off for now'} mono>
+          <Row title={ntfy.topics.mail} sub={noServer ? 'Set a server first' : ntfy.attention_mail ? 'Attention mail' : 'Attention mail, off for now'} mono>
             <Switch on={ntfy.attention_mail && !noServer} disabled={noServer} label={ntfy.topics.mail} onChange={on => change({notifications: {attention_mail: on}})} />
           </Row>
           {/* Like its siblings, it says what's missing without a server; with one, no second line (D517). */}

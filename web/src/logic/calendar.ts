@@ -301,7 +301,7 @@ export function dayCounts(items: ItemOut[]): string {
   const tasks = items.length - events;
   const part = (count: number, one: string) => `${count} ${one}${count === 1 ? '' : 's'}`;
   if (!events && !tasks) return 'Nothing planned';
-  return [events ? part(events, 'event') : null, tasks ? part(tasks, 'task') : null].filter(Boolean).join(' · ');
+  return [events ? part(events, 'event') : null, tasks ? part(tasks, 'task') : null].filter(Boolean).join(', ');
 }
 
 /** "Tasks · due today", "Tasks · due tomorrow", "Tasks · due Sat". */

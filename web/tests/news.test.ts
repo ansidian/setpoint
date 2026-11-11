@@ -349,8 +349,8 @@ describe('the Unsorted line (29a): only while sorting is down and articles wait'
 
 describe('the first run\'s line (29b), a section\'s line, and a section with nothing to show', () => {
   test('the first run says how far it is', () => {
-    expect(firstRunLine({first_run: {sorted: 186, total: 312}})).toBe('Sorting the last 48 hours · 186 of 312 articles · showing what’s sorted so far');
-    expect(firstRunLine({first_run: {sorted: 0, total: 1}})).toBe('Sorting the last 48 hours · 0 of 1 article · showing what’s sorted so far');
+    expect(firstRunLine({first_run: {sorted: 186, total: 312}})).toBe('Sorting the last 48 hours · 186 of 312 articles, showing what’s sorted so far');
+    expect(firstRunLine({first_run: {sorted: 0, total: 1}})).toBe('Sorting the last 48 hours · 0 of 1 article, showing what’s sorted so far');
     expect(firstRunLine({first_run: null})).toBeNull();
     // How far it has come, for the line's foot (news-13).
     expect([firstRunShare({sorted: 186, total: 312}), firstRunShare({sorted: 0, total: 0}), firstRunShare({sorted: 5, total: 4})]).toEqual([186 / 312, 0, 1]);

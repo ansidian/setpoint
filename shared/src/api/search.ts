@@ -132,7 +132,7 @@ export interface SearchOut {
   results: SearchResultOut[];
   // B4: the next page's offset, or null on the last page.
   next_offset: number | null;
-  // During the first backfill: "Indexing · 62% · showing what's indexed so far".
+  // During the first backfill: "Indexing · 62%, showing what's indexed so far".
   indexing: {progress: number} | null;
   // SV-138: null unless the request had `read`.
   reading: SearchReadingOut | null;

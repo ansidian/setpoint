@@ -203,7 +203,7 @@ export function Row({row, state, query, line, now, timeZone, today, fold = null,
         </span>
       )}
       {line !== undefined && (
-        <span className="snip" data-tip={line}><span className="lab">Full posting · </span>“{query ? <Marked parts={marks(line, query)} /> : line}”</span>
+        <span className="snip" data-tip={line}><span className="lab">Full posting </span>“{query ? <Marked parts={marks(line, query)} /> : line}”</span>
       )}
     </div>
   );

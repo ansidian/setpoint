@@ -96,7 +96,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
 
     // From history, folded until a click (D311).
     const fold = page.locator('.jb-fold-t');
-    assert.equal(await fold.textContent(), 'From history 6· what the history pass wasn\'t sure of');
+    assert.equal(await fold.textContent(), 'From history 6,what the history pass wasn\'t sure of');
     assert.equal(await fold.getAttribute('aria-expanded'), 'false');
     assert.equal(await page.locator('.jb-hist-wrap').getAttribute('inert'), '');
     await fold.click();
@@ -115,7 +115,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     assert.equal(await status('Proseware', 'Software Engineer, Platform'), 'Ghosted· no email in 48 days');
     assert.equal(await status('Woodgrove Bank', 'Application Developer'), 'Offer· Oct 6');
     const alpine = row(page, await applicationId(setpoint, 'Alpine Ski House', 'Web Developer'));
-    assert.equal(await alpine.locator('.st .by').getAttribute('data-tip'), 'Set by you on Sep 10 · only an email that sets a status changes it');
+    assert.equal(await alpine.locator('.st .by').getAttribute('data-tip'), 'Set by you on Sep 10, only an email that sets a status changes it');
     // The JD column: a glyph, how it was found or where it stands in its tip; nothing for a closed one
     // from history (D311).
     const jd = async (company: string, title: string) => {
@@ -170,7 +170,7 @@ test('an application opens where the reading pane sits: its head, its JD, its ti
     assert.equal(await pane.locator('.jb-src').textContent(), 'Full postingFound on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
     // The timeline, oldest first (D317); then Applied before at the company (D306).
     assert.deepEqual(await pane.locator('.jb-ev').allTextContents(), [
-      'Oct 1AppliedThank you for applying to Northwind Talent', 'Oct 1Verify your email· No longer in Gmail', 'TodayInterviewInterview availability for Software Engineer I',
+      'Oct 1AppliedThank you for applying to Northwind Talent', 'Oct 1Verify your email, no longer in Gmail', 'TodayInterviewInterview availability for Software Engineer I',
     ]);
     assert.equal(await pane.locator('.jb-before').textContent(), 'Junior Developer· Applied Feb 9Rejected Mar 14');
 
@@ -285,7 +285,7 @@ test('search (36a, 36b): humongous gives both applications, kubernetes Woodgrove
     await until('Woodgrove, by its JD', () => companies(page), found => found.join() === 'Woodgrove Bank');
     assert.equal(await page.locator('.jb-none').textContent(), 'No company or role matches “kubernetes”');
     assert.equal(await page.locator('.jb-scroll > .gh').textContent(), 'In a job description 1');
-    assert.equal(await page.locator('.jb-tr.two .snip').textContent(), 'Full posting · “…our services run on Kubernetes across two regions, so you’ll pick it up from day one…”');
+    assert.equal(await page.locator('.jb-tr.two .snip').textContent(), 'Full posting “…our services run on Kubernetes across two regions, so you’ll pick it up from day one…”');
     assert.deepEqual(await page.locator('.jb-tr.two .snip mark.hl').allTextContents(), ['Kubernetes']);
 
     // Loose on company names (decision 62).
@@ -539,7 +539,7 @@ test('an event opens its email in the mail reader; one whose email is gone says 
     assert.deepEqual(await events.evaluateAll(all => all.map(one => Boolean(one.querySelector('button.open')))), [true, false, true]);
     const gone = events.nth(1);
     assert.equal(await gone.getAttribute('data-tip'), 'Gmail no longer has this email, so Jobs keeps only its line');
-    assert.equal(await gone.locator('.gonetxt').textContent(), '· No longer in Gmail');
+    assert.equal(await gone.locator('.gonetxt').textContent(), ', no longer in Gmail');
     await gone.hover();
     // Its ··· (shown on hover) has no Open email; the one whose email is there has.
     await gone.locator('.go .ibtn').click();
@@ -1193,7 +1193,7 @@ test('Merge with… (35b): More\'s submenu, its field focused, the company\'s ot
     await more.waitFor();
     assert.deepEqual(await more.getByRole('menuitem').allTextContents(), [
       'PinP', 'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
-      'Not an applicationHides it · its emails never make one again', 'DeleteForgets it · a later email can make it again',
+      'Not an applicationHides it, its emails never make one again', 'DeleteForgets it, a later email can make it again',
     ]);
     // A saved JD is never replaced: Look up the JD again waits for Not this posting.
     assert.equal(await more.getByRole('menuitem', {name: 'Look up the JD again'}).isDisabled(), true);
@@ -1427,7 +1427,7 @@ test('a row\'s right-click (#268): its actions at the pointer, the cursor on it 
     await menu.waitFor();
     assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
       'Open↵', 'Open postingO', 'PinP', 'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
-      'Not an applicationHides it · its emails never make one again', 'DeleteForgets it · a later email can make it again', 'Copy company and role', 'Copy posting link',
+      'Not an applicationHides it, its emails never make one again', 'DeleteForgets it, a later email can make it again', 'Copy company and role', 'Copy posting link',
     ]);
     // At the pointer; the cursor on the row, and the row not opened.
     const at = (await rested(() => menu.boundingBox()))!;

@@ -17,10 +17,10 @@ describe('the mail day\'s words', () => {
   ])('today\'s strip for %j, lit only above 0', (day, tiles) => expect(todayTiles(day).map(tile => [tile.value, tile.label, tile.lit])).toEqual(tiles));
 
   test.each([
-    [{total: 12408, bytes: 1.3 * 1024 ** 3, oldest_at: '2019-03-14T18:00:00.000Z'}, '12,408 emails · 1.3 GB, since Mar 2019.'],
-    [{total: 1, bytes: 2048, oldest_at: '2026-10-07T16:00:00.000Z'}, '1 email · 2 KB, since Oct 2026.'],
+    [{total: 12408, bytes: 1.3 * 1024 ** 3, oldest_at: '2019-03-14T18:00:00.000Z'}, '12,408 emails, 1.3 GB, since Mar 2019.'],
+    [{total: 1, bytes: 2048, oldest_at: '2026-10-07T16:00:00.000Z'}, '1 email, 2 KB, since Oct 2026.'],
     // The oldest arrived on New Year's Eve in Los Angeles, though it's already January in UTC.
-    [{total: 2, bytes: 4096, oldest_at: '2026-01-01T05:00:00.000Z'}, '2 emails · 4 KB, since Dec 2025.'],
+    [{total: 2, bytes: 4096, oldest_at: '2026-01-01T05:00:00.000Z'}, '2 emails, 4 KB, since Dec 2025.'],
     [{total: 0, bytes: 0, oldest_at: null}, 'No emails yet.'],
   ])('the quiet facts for %j', (day, line) => expect(keptLine(day, SEED_TIME_ZONE)).toBe(line));
 });

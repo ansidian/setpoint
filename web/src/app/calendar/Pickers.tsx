@@ -24,7 +24,7 @@ export interface ProjectOption {
 
 /** SV-191: a calendar's name, with its account's label after it in `ink3` when calendarLabel gives one. */
 export const CalendarName = ({label}: {label: {name: string; account: string | null}}) =>
-  <>{label.name}{label.account && <span className="ink3"> · {label.account}</span>}</>;
+  <>{label.name}{label.account && <span className="ink3 detail">{label.account}</span>}</>;
 
 /** A project's dot in its own colour (SV-29), as a calendar's in the Calendar menu, clamped per theme as its tasks' rings (#175). */
 export const ProjectDot = ({colour}: {colour: TodoistColour | null | undefined}) =>

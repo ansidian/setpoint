@@ -135,7 +135,7 @@ export function AppliedBefore({before, today, large = false}: {before: NonNullab
   const company = before.latest.company;
   return (
     <button type="button" className={large ? 'jb-badge lg' : 'jb-badge'} data-jobs="applied-before"
-      data-tip={large ? `Open in Jobs · every application at ${company}` : `Open Jobs searched for ${company}`}
+      data-tip={large ? `Open in Jobs, every application at ${company}` : `Open Jobs searched for ${company}`}
       onMouseDown={event => event.stopPropagation()}
       onClick={event => {
         // On a row, the badge opens Jobs, not the email.

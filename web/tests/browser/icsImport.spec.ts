@@ -122,7 +122,7 @@ test('SV-181: a schedule dropped on the grid is reviewed, imported one at a time
     // The past mixer starts unticked; nothing went to Google.
     assert.equal(await row(page, 'Welcome mixer').locator('.imp-row').getAttribute('aria-pressed'), 'false');
     await row(page, 'Welcome mixer').getByText('Wed, Sep 30 · 6:00 – 8:00 PM · past').waitFor();
-    await pane.getByText('Left out: 1 event cancelled · categories on 5 events').waitFor();
+    await pane.getByText('Left out: 1 event cancelled, categories on 5 events').waitFor();
     await setpoint.idle();
     assert.deepEqual(await lines(setpoint, '2026-10-15'), ['Career fair 10:00 AM – 2:00 PM', 'CS 101 lecture 6:00 PM – 7:15 PM']);
     // Into Jobs, which already holds the Career fair: it will be updated, not made twice.

@@ -179,7 +179,7 @@ test('a load that fails says so in place, and Try again loads it (states-06)', a
     await visit(page, `${setpoint.base}/inbox`);
     const line = page.locator('section.list .load-failed');
     await line.waitFor();
-    assert.equal(await line.innerText(), 'Couldn’t load the Inbox, Something went wrong.\n·\nTry again');
+    assert.equal(await line.innerText(), 'Couldn’t load the Inbox, Something went wrong.\nTry again');
     assert.equal(await page.locator('[data-skeleton="all"]').count(), 0, 'no skeleton says it\'s still coming');
     failing = false;
     await line.getByRole('button', {name: 'Try again'}).click();

@@ -306,7 +306,7 @@ test('the first backfill: search says what it has indexed so far', async () => {
     await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('/');
     await page.keyboard.type('lease');
-    const line = page.locator('.search-list .bar.muted', {hasText: 'Indexing · 62% · showing what’s indexed so far'});
+    const line = page.locator('.search-list .bar.muted', {hasText: 'Indexing · 62%, showing what’s indexed so far'});
     await line.waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

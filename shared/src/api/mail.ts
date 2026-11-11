@@ -142,7 +142,7 @@ export type RemoteContentReason = (typeof REMOTE_CONTENT_REASONS)[number];
 
 /**
  * Remote content loads when the sender passed DMARC and the email isn't Noise, or its domain is
- * trusted; otherwise "Images hidden · Show · Always show from contosocoffee.example".
+ * trusted; otherwise "Images hidden", Show and Always show from contosocoffee.example.
  */
 export interface RemoteContentOut {
   // The sender's domain (accounts.google.com), as the reader's head shows it.

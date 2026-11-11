@@ -129,7 +129,7 @@ export function JobsSettingsPage() {
  */
 export function JobsAiGroup({label}: {label: ((model: string) => string) | null}) {
   const {data: ai} = useResource<JobsAiOut>(AI_PATH);
-  const needsKey = ai?.missing ? ' · needs a key' : '';
+  const needsKey = ai?.missing ? ', needs a key' : '';
   return (
     <Section label="Jobs">
       {!ai || !label ? <SkeletonRows count={3} /> : (

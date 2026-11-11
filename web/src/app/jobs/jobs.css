@@ -386,7 +386,7 @@
 @media (hover: hover) { .jb-ev:hover .go { opacity: 1; } }
 .jb-ev.menu .go, .jb-ev .go:focus-within { opacity: 1; }
 .jb-ev .go .ibtn[aria-expanded="true"] { background: var(--sub3); color: var(--ink); }
-.jb-ev .gonetxt { color: var(--ink3); font-size: 12.5px; flex: none; white-space: nowrap; }
+.jb-ev .gonetxt { color: var(--ink3); font-size: 12.5px; flex: none; white-space: nowrap; margin-left: -8px; }
 .jb-ev .d { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .jb-ev .d.now { color: var(--ink); }
 .jb-ev .node { position: relative; height: 38px; display: grid; place-items: center; }
@@ -453,8 +453,7 @@
 /* Jobs off (38c): the one-line empty state, `work` over "Jobs is off · Turn on", Turn on an ink pill. */
 .jb-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--ink3); padding-bottom: 80px; }
 .jb-empty .line { display: flex; align-items: center; gap: 12px; color: var(--ink2); }
-.jb-empty .sep { color: var(--ink3); }
-.jb-empty .lnk { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; margin-left: -4px;
+.jb-empty .lnk { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center;
   transition: background-color var(--dur-fast) var(--ease), transform var(--dur-press) var(--ease); }
 @media (hover: hover) { .jb-empty .lnk:hover { background: var(--sub2); } }
 .jb-empty .lnk:active { background: var(--sub3); transform: scale(.97); }

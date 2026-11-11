@@ -225,7 +225,7 @@ function Suggestion({search}: {search: Search}) {
   return (
     <button className="suggest" type="button" data-tip={`${filters} · ${count}`} onMouseDown={event => event.preventDefault()} onClick={search.acceptSuggestion}>
       <span className="ell">{filters}</span>
-      <span className="num ink3">· {count}</span>
+      <span className="num ink3">{count}</span>
       <span className="kbd">Tab</span>
     </button>
   );

@@ -17,15 +17,15 @@
 .progress::after { width: var(--done, 0%); background: var(--ink3); border-radius: 0 2px 2px 0; transition: width var(--dur-slow) var(--ease); }
 .list > .hbar { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px 0 24px; font-size: 13px; }
 .list > .hbar.caution { min-height: 40px; color: var(--caution); background: color-mix(in oklch, var(--caution) 9%, var(--page)); border-bottom: 1px solid color-mix(in oklch, var(--caution) 22%, transparent); }
-.list > .hbar.caution .act { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; margin-left: -10px; }
+.list > .hbar.caution .act { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; }
 .list > .hbar.caution .act:hover { background: var(--sub); }
 .list > .hbar.muted { min-height: 32px; color: var(--ink3); font-size: 12.5px; }
 .list > .hbar.failing { min-height: 32px; color: var(--caution); font-size: 12.5px; }
-/* The fix on the line (states-08): " · Check now" after a stale or failing line's words, in the `.act`
-   look of the bar's Reconnect but `ink2`, 12.5 and 24 px tall, `sub` and `ink` under the pointer;
-   "Checking…" in its place until the check lands. The Inbox's lines and the calendar pane's. */
-.hbar > .sep, .rp-act > .sep { flex: none; color: var(--ink3); }
-.check-now { flex: none; height: 24px; padding: 0 9px; margin-left: -9px; border-radius: 999px; display: inline-flex; align-items: center; color: var(--ink2); font-size: 12.5px; white-space: nowrap;
+/* The fix on the line (states-08): Check now after a stale or failing line's words, no dot before it
+   since the pill and the gap set it apart (SV-271), in the `.act` look of the bar's Reconnect but
+   `ink2`, 12.5 and 24 px tall, `sub` and `ink` under the pointer; "Checking…" in its place until the
+   check lands. The Inbox's lines and the calendar pane's. */
+.check-now { flex: none; height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; color: var(--ink2); font-size: 12.5px; white-space: nowrap;
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 button.check-now:hover { background: var(--sub); color: var(--ink); }
 .check-now.failed { display: block; line-height: 24px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--caution); }

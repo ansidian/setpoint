@@ -80,10 +80,10 @@ test('a bar under the pointer turns ink and names its week in a tip; it has no p
   await render(<PerWeek weeks={WEEKS} today={TODAY} />);
   const busiest = bars()[10]!;
   await userEvent.hover(busiest);
-  await expect.element(page.getByRole('tooltip')).toHaveTextContent('Sep 27 – Oct 3 · 8 applications');
+  await expect.element(page.getByRole('tooltip')).toHaveTextContent('Sep 27 – Oct 3 8 applications');
   await expect.poll(() => getComputedStyle(busiest).backgroundColor).toBe(colour('var(--ink)'));
   await userEvent.hover(bars()[4]!);
-  await expect.element(page.getByRole('tooltip')).toHaveTextContent('Aug 16 – Aug 22 · 0 applications');
+  await expect.element(page.getByRole('tooltip')).toHaveTextContent('Aug 16 – Aug 22 0 applications');
   // Information only: nothing on the chart is a control.
   expect(document.querySelectorAll('.jb-week button, .jb-week a, .jb-week [tabindex]')).toHaveLength(0);
   await userEvent.unhover(bars()[4]!);
@@ -738,7 +738,7 @@ test('Applied before (37c): on the row and in the reader, each with its tip; a c
     );
     const [row, reader] = [page.getByRole('button').nth(0), page.getByRole('button').nth(1)];
     await expect.element(row).toHaveAttribute('data-tip', 'Open Jobs searched for Contoso Pharmaceuticals');
-    await expect.element(reader).toHaveAttribute('data-tip', 'Open in Jobs · every application at Contoso Pharmaceuticals');
+    await expect.element(reader).toHaveAttribute('data-tip', 'Open in Jobs, every application at Contoso Pharmaceuticals');
     await expect.element(row).toHaveTextContent('Applied Sep 16 · Rejected Oct 5');
     await expect.element(reader).toHaveTextContent('Applied Sep 16 · Rejected Oct 5');
     await userEvent.hover(row);
@@ -775,8 +775,8 @@ test.each<[string, JobsReadingOut, JobsHistoryOut, string | null]>([
 
 test('the history pass\'s line (38a): its counts in place and how far it has come; Settings › Jobs\'s row as it runs, once done and before', () => {
   const running: JobsHistoryOut = {...DONE, state: 'running', read: 140, finished_at: null};
-  expect(historyLine(running)).toBe('Reading history · 140 of 330 emails · showing what’s read so far');
-  expect(historyLine({read: 1200, total: 1310})).toBe('Reading history · 1,200 of 1,310 emails · showing what’s read so far');
+  expect(historyLine(running)).toBe('Reading history · 140 of 330 emails, showing what’s read so far');
+  expect(historyLine({read: 1200, total: 1310})).toBe('Reading history · 1,200 of 1,310 emails, showing what’s read so far');
   expect([historyShare(running), historyShare({read: 0, total: 0}), historyShare({read: 12, total: 10})]).toEqual([140 / 330, 0, 1]);
   expect(historySetting(running, NOW, ZONE)).toBe('Reading history · 140 of 330 emails');
   expect(historySetting(DONE, NOW, ZONE)).toBe('Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM');

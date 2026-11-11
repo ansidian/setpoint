@@ -97,7 +97,6 @@ export function LoadFailed({what, loads, className}: {what: string; loads: Load[
     <div className={className ? `load-failed ${className}` : 'load-failed'} role="alert">
       <Icon name="warning" size={16} />
       <span className="ell" data-tip={failureLine(`Couldn’t load ${what}`, first.error)}>{failureLine(`Couldn’t load ${what}`, first.error)}</span>
-      <span>·</span>
       <button className="act" type="button" disabled={trying} onClick={again}><Icon name="refresh" size={16} />Try again</button>
     </div>
   );

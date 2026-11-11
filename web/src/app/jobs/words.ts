@@ -56,7 +56,7 @@ export function statusStep(row: ApplicationRowOut, today: string): string | null
 }
 
 /** The pencil's tip on a status set by hand (D322). */
-export const setByYou = (row: ApplicationRowOut, today: string) => `Set by you on ${dayWord(row.status_on, today)} · only an email that sets a status changes it`;
+export const setByYou = (row: ApplicationRowOut, today: string) => `Set by you on ${dayWord(row.status_on, today)}, only an email that sets a status changes it`;
 
 /** When something was found, as the JD column's tip says it: "7h ago" today, else the day. */
 function foundWhen(at: string, now: number, timeZone: string): string {
@@ -206,9 +206,9 @@ export const itemWhat = (item: NeedsYouItemOut) => (item.kind === 'jd_to_confirm
 /** Who it's from, after line one: "Humongous Insurance via iCIMS", or the company. */
 export const itemFrom = (item: NeedsYouItemOut) => (item.platform && item.kind === 'update_to_assign' ? `${item.company} via ${item.platform}` : item.company);
 
-/** A From history row's words after its subject (34b): "Relecloud · names a role neither application has", "Is this the posting? · 3 candidates". */
+/** A From history row's words after its subject (34b): "Relecloud · names a role neither application has", "Is this the posting? 3 candidates". */
 export function historyWhy(item: NeedsYouItemOut): string {
-  if (item.kind === 'jd_to_confirm') return `Is this the posting? · ${item.candidates.length} ${item.candidates.length === 1 ? 'candidate' : 'candidates'}`;
+  if (item.kind === 'jd_to_confirm') return `Is this the posting? ${item.candidates.length} ${item.candidates.length === 1 ? 'candidate' : 'candidates'}`;
   return `${item.company} · ${whyLine(item)}`;
 }
 
@@ -338,7 +338,7 @@ const emails = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'email' 
 
 /** The history pass's line while it runs (38a): "Reading history · 140 of 330 emails · showing what’s read so far". */
 export const historyLine = (history: Pick<JobsHistoryOut, 'read' | 'total'>) =>
-  `Reading history · ${history.read.toLocaleString('en-US')} of ${emails(history.total)} · showing what’s read so far`;
+  `Reading history · ${history.read.toLocaleString('en-US')} of ${emails(history.total)}, showing what’s read so far`;
 
 /** How far the pass has come, 0 to 1, for its line's foot. */
 export const historyShare = (history: Pick<JobsHistoryOut, 'read' | 'total'>) => (history.total > 0 ? Math.min(1, history.read / history.total) : 0);

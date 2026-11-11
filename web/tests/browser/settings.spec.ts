@@ -857,7 +857,7 @@ test('AI: a key set write-only and removed, and each model changed at will', asy
     await anthropic.getByRole('button', {name: 'Remove'}).click();
     await settled('removed', secrets, list => list.find(secret => secret.name === 'anthropic_api_key')?.set === false);
     // With no key, each model waits for it (UX #14).
-    await until('every model waits for the key', async () => (await choices()).slice(1), models => models.length > 0 && models.every(model => model.disabled && model.text?.endsWith(' · no key')));
+    await until('every model waits for the key', async () => (await choices()).slice(1), models => models.length > 0 && models.every(model => model.disabled && model.text?.endsWith(', no key')));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

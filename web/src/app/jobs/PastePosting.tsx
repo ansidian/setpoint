@@ -40,7 +40,7 @@ export function PastePosting({onSave, onCancel}: {onSave: (text: string) => Prom
       <div className="acts">
         <button className="btn sm" type="button" disabled={saving} onClick={save}>Save</button>
         <button className="btn quiet sm" type="button" onClick={onCancel}>Cancel</button>
-        <span className="jb-hint">⌘Enter to save · Esc</span>
+        <span className="jb-hint">⌘Enter to save, Esc to cancel</span>
       </div>
     </div>
   );

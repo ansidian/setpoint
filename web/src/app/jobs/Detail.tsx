@@ -196,7 +196,7 @@ function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSa
           </h1>
         </div>
       )}
-      {editing && <div className="jb-hint">Enter to save · Esc</div>}
+      {editing && <div className="jb-hint">Enter to save, Esc to cancel</div>}
       <div className="jb-stat">
         {/* One click on the chip sets the status by hand (D309, #267). Its tip is only Ghosted, which its label doesn't say (SV-171). */}
         <button type="button" className="jb-stchip" data-tip={row.ghosted && row.status === 'applied' ? markLabel(row) : undefined} aria-haspopup="menu" aria-expanded={chipOpen} onClick={event => onChip(event.currentTarget)}>
@@ -355,7 +355,7 @@ export function JdFacts({posting, location, reading = true}: {posting: PostingOu
       <span className="jb-place">
         <Icon name="location_on" size={16} />
         <EditField label="Location" value={posting.location ?? ''} small emptied onSave={location.onSave} onCancel={location.onCancel} />
-        <span className="jb-hint">Enter to save · Esc</span>
+        <span className="jb-hint">Enter to save, Esc to cancel</span>
       </span>
     ) : (
       <button type="button" className={posting.location ? 'jb-tbtn jb-place' : 'jb-tbtn jb-place none'} onClick={location.onEdit}
@@ -458,7 +458,7 @@ function Timeline({events, timeZone, today, onEmail, menuOpen, onMenu}: {
                   <button type="button" className="s open" onClick={() => onEmail(messageId)}>{event.subject}</button>
                 ) : <span className="s">{event.subject}</span>}
                 {event.first_seen && <span className="tag">First seen</span>}
-                {messageId === null && <span className="gonetxt">· No longer in Gmail</span>}
+                {messageId === null && <span className="gonetxt">, no longer in Gmail</span>}
               </span>
               <span className="go">
                 <button type="button" className="ibtn sm" aria-label="Event actions" data-tip="More" aria-haspopup="menu" aria-expanded={open}

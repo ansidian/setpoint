@@ -232,7 +232,7 @@ export function wordsBack(typed: string, text: string, left: readonly SearchChip
 
 /** "Indexing · 62% · showing what's indexed so far", during the first backfill. */
 export const indexingLine = (indexing: SearchOut['indexing']) =>
-  indexing ? `Indexing · ${Math.round(indexing.progress * 100)}% · showing what’s indexed so far` : null;
+  indexing ? `Indexing · ${Math.round(indexing.progress * 100)}%, showing what’s indexed so far` : null;
 
 /** A chip as words: its label, with "!" before a Not chip's ("!Confirmation"), which the grammar reads as the same chip. */
 export const chipWords = (chip: SearchChip) => (chip.not ? `!${chip.label}` : chip.label);

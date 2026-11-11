@@ -91,7 +91,7 @@ export function AccountsPage() {
       ) : (
         <Section label="Sources" style={{marginTop: 18}}>
           <div className="set-group">
-            {google && <SourceRow source={google} name="Google Calendar" sub={calendars?.filter(calendar => calendar.provider === 'google').map(calendar => calendar.name).join(' · ') ?? ''} now={now} />}
+            {google && <SourceRow source={google} name="Google Calendar" sub={calendars?.filter(calendar => calendar.provider === 'google').map(calendar => calendar.name).join(', ') ?? ''} now={now} />}
             {todoist && todoistConnected(sources)
               ? <SourceRow source={todoist} name="Todoist" sub={projects ? `${defaultProject?.name ?? 'No default project'} · ${projects.length} project${projects.length === 1 ? '' : 's'}` : ''} now={now}
                 onReconnect={authorizeTodoist} busy={todoistConnect.busy} />

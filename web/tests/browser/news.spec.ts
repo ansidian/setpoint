@@ -415,7 +415,7 @@ test('SV-219: News\'s pane says when the page was ranked and is next, what today
     assert.match(await fresh.textContent() ?? '', day.updated_at ? /^Updated \d{1,2}:\d\d [AP]M, next around \d{1,2}:\d\d( [AP]M)?$/ : /^Not ranked yet$/);
     const tiles = await pane.locator('.md-tile').evaluateAll(all => all.map(tile => tile.querySelector('dt')!.textContent));
     assert.deepEqual(tiles, ['Articles fetched', 'Stories started', 'Outlets']);
-    assert.match(await pane.locator('.pane-foot .md-kept').textContent() ?? '', /^[\d,]+ stories · \$[\d.,]+ of AI this month\.$/);
+    assert.match(await pane.locator('.pane-foot .md-kept').textContent() ?? '', /^[\d,]+ stories, \$[\d.,]+ of AI this month\.$/);
     assert.equal(await pane.locator('.nd-failing').count(), 0, 'no feed failing for 6 hours');
     // A feed failing every attempt since seven hours ago.
     await newsChange(setpoint, `UPDATE news_sources SET failing_since = '2026-10-07T08:00:00.000Z', last_error = '404 Not Found'

@@ -120,7 +120,7 @@ test('board 29b: the first run, sorting the last 48 hours; no recap; nothing sor
     const line = page.locator('.nw-state.muted');
     await line.waitFor();
     await row(page, 'Brush fire near the 210').waitFor();
-    assert.equal(await line.textContent(), 'Sorting the last 48 hours · 186 of 312 articles · showing what’s sorted so far');
+    assert.equal(await line.textContent(), 'Sorting the last 48 hours · 186 of 312 articles, showing what’s sorted so far');
     await page.locator('.pane.idle .nd-fresh').waitFor();
     assert.equal(await page.locator('.nd-recap').count(), 0, 'no recap');
     assert.equal(await page.locator('.nw-state.failing').count(), 0, 'articles waiting while sorting runs are no Unsorted line');

@@ -102,7 +102,7 @@ function TroubleChip({trouble}: {trouble: PaneTrouble[]}) {
           {trouble.map(one => (
             <span key={one.text} className="pt-line">
               <Icon name={one.glyph} size={16} /><span className="num">{one.text}</span>
-              {one.fix && <><span className="sep">·</span><button className="act" type="button" onClick={one.fix.run}>{one.fix.label}</button></>}
+              {one.fix && <button className="act" type="button" onClick={one.fix.run}>{one.fix.label}</button>}
             </span>
           ))}
         </span>

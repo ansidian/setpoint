@@ -43,7 +43,7 @@ export function AiPage() {
   const meter = news ? capMeter(news) : null;
   const capped = news && ai ? cappedLine(news, ai.usage_this_month.since, timeZone(), label) : null;
   const capValue = settings?.news.monthly_cap_usd ?? news?.monthly_cap_usd ?? 40;
-  const needsKey = news?.missing ? ' · needs a key' : '';
+  const needsKey = news?.missing ? ', needs a key' : '';
   const usage = ai?.usage_this_month;
   const jobsSpend = useJobsSpend();
 
@@ -68,11 +68,11 @@ export function AiPage() {
             const defaultLabel = builtIn ? `Default (${label(builtIn)})` : 'Default';
             const options = [
               {value: DEFAULT, label: defaultLabel},
-              ...(ai?.models ?? []).map(model => ({value: model.id, label: `${model.label}${ai?.keys[model.provider] ? '' : ' · no key'}`, disabled: !ai?.keys[model.provider]})),
+              ...(ai?.models ?? []).map(model => ({value: model.id, label: `${model.label}${ai?.keys[model.provider] ? '' : ', no key'}`, disabled: !ai?.keys[model.provider]})),
               ...(chosen && !ai?.models.some(model => model.id === chosen) ? [{value: chosen, label: chosen}] : []),
             ];
             return (
-              <Row key={setting} title={title} sub={inUse ? `${sub} · now ${label(inUse.model)}` : `${sub} · needs a key`} kind="ctl">
+              <Row key={setting} title={title} sub={inUse ? `${sub} · now ${label(inUse.model)}` : `${sub}, needs a key`} kind="ctl">
                 <Select value={chosen ?? DEFAULT} options={options} label={`${title} model`}
                   onChange={value => void save.attempt(() => patchSettings({ai: {[setting]: value || null}}))} />
               </Row>

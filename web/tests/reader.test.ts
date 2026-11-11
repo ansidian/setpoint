@@ -84,7 +84,7 @@ describe('factRows', () => {
       {icon: 'history', label: 'What happened', value: 'Recovery email changed', note: null},
       {icon: 'schedule', label: 'When', value: 'Today, 8:52 AM', note: null},
       {icon: 'computer', label: 'Device', value: 'Windows · Chrome', note: null},
-      {icon: 'location_on', label: 'Location', value: 'Phoenix, AZ', note: '· not a place you use'},
+      {icon: 'location_on', label: 'Location', value: 'Phoenix, AZ', note: 'not a place you use'},
     ]);
   });
 

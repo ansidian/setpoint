@@ -73,7 +73,7 @@ describe('the list\'s lines', () => {
     ['the conference schedule', {categories: 35}, 'Left out: categories on 35 events'],
     ['every reason, in the shared order', {
       cancelled: 2, not_an_event: 3, no_start: 1, alarm_after_start: 1, alarm_at_fixed_time: 2, alarm_over_limit: 1, categories: 1, duplicate: 2, occurrence_without_series: 1,
-    }, 'Left out: 2 events cancelled · 3 to-dos and notes · 1 event with no start · a reminder after the start · 2 reminders at a set time · a reminder past Google\'s limit · categories on 1 event · 2 second copies of an event · a changed occurrence without its event'],
+    }, 'Left out: 2 events cancelled, 3 to-dos and notes, 1 event with no start, a reminder after the start, 2 reminders at a set time, a reminder past Google\'s limit, categories on 1 event, 2 second copies of an event, a changed occurrence without its event'],
   ])('dropped: %s', (_, counts, line) => {
     expect(droppedLine({...none, ...counts})).toBe(line);
   });

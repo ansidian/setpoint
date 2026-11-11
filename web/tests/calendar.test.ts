@@ -270,8 +270,8 @@ describe('the right pane', () => {
   ])('%s: %s', (date, heading) => expect(tasksHeading(date, '2026-10-07')).toBe(heading));
 
   test.each([
-    ['board 11b', [...Array(6)].map(() => event('E', '2026-10-17', '09:00', '10:00')).concat(tasks), '6 events · 2 tasks'],
-    ['one of each', [gym, tasks[0]!], '1 event · 1 task'],
+    ['board 11b', [...Array(6)].map(() => event('E', '2026-10-17', '09:00', '10:00')).concat(tasks), '6 events, 2 tasks'],
+    ['one of each', [gym, tasks[0]!], '1 event, 1 task'],
     ['only tasks', tasks, '2 tasks'],
     ['nothing', [], 'Nothing planned'],
   ])('%s: %s', (_name, items, line) => expect(dayCounts(items)).toBe(line));

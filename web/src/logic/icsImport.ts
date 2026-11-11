@@ -99,7 +99,7 @@ const DROPPED_WORDS: Record<IcsDropReason, (count: number) => string> = {
 /** "Left out: categories on 35 events · 2 events cancelled", or null when the file had nothing to leave out. */
 export function droppedLine(dropped: IcsReadOut['dropped']): string | null {
   const parts = ICS_DROP_REASONS.filter(reason => dropped[reason] > 0).map(reason => DROPPED_WORDS[reason](dropped[reason]));
-  return parts.length ? `Left out: ${parts.join(' · ')}` : null;
+  return parts.length ? `Left out: ${parts.join(', ')}` : null;
 }
 
 /** A file with nothing to import says so, with what it had (D436: one that only cancels). */

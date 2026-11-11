@@ -386,7 +386,7 @@ export type NewsSortDownOut = z.infer<typeof newsSortDownSchema>;
 /**
  * The lines above the list. `unsorted` counts the articles waiting to be sorted (never a metered
  * paper's); the Unsorted line shows while `down` says why they wait. `first_run` is the first fill's
- * progress, "Sorting the last 48 hours · 186 of 312 articles · showing what's sorted so far", and is
+ * progress, "Sorting the last 48 hours · 186 of 312 articles, showing what's sorted so far", and is
  * null once it's done (DESIGN.md › States, 29b).
  */
 export const newsStatusSchema = z.strictObject({

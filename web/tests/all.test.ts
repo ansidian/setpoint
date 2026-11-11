@@ -100,8 +100,8 @@ describe('dayView', () => {
   });
 
   test.each([
-    ['folded: its count and first three organisations, no rows', false, {count: 5, preview: 'Contoso Coffee · Tailspin · Litware', open: false, rows: []}],
-    ['open: its rows newest first', true, {count: 5, preview: 'Contoso Coffee · Tailspin · Litware', open: true, rows: [coffee, digest, morePromo, news, ads]}],
+    ['folded: its count and first three organisations, no rows', false, {count: 5, preview: 'Contoso Coffee, Tailspin, Litware', open: false, rows: []}],
+    ['open: its rows newest first', true, {count: 5, preview: 'Contoso Coffee, Tailspin, Litware', open: true, rows: [coffee, digest, morePromo, news, ads]}],
   ])('Noise %s', (_name, open, noise) => {
     expect(dayView(day, open).noise).toEqual(noise);
   });

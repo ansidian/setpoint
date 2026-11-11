@@ -163,8 +163,8 @@ export function moreEntries(row: ApplicationRowOut, rows: ApplicationRowOut[], t
       submenu: () => searchApplications('Merge with', rows, {except: [row.id], company: row.company, today, placeholder: 'Search applications', run: on.merge})},
     {kind: 'sep'},
     ...jd,
-    {kind: 'item', id: 'not-an-application', icon: 'visibility_off', label: 'Not an application', sub: 'Hides it · its emails never make one again', run: on.notAnApplication},
-    {kind: 'item', id: 'delete', icon: 'delete', label: 'Delete', sub: 'Forgets it · a later email can make it again', danger: true, run: on.remove},
+    {kind: 'item', id: 'not-an-application', icon: 'visibility_off', label: 'Not an application', sub: 'Hides it, its emails never make one again', run: on.notAnApplication},
+    {kind: 'item', id: 'delete', icon: 'delete', label: 'Delete', sub: 'Forgets it, a later email can make it again', danger: true, run: on.remove},
   ];
 }
 

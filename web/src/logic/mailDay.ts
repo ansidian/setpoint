@@ -33,5 +33,5 @@ export function todayTiles(day: Pick<MailDayOut, 'done' | 'sorted_fyi' | 'sorted
 export function keptLine(day: Pick<MailDayOut, 'total' | 'bytes' | 'oldest_at'>, timeZone: string): string {
   if (!day.total || !day.oldest_at) return 'No emails yet.';
   const since = new Date(day.oldest_at).toLocaleDateString('en-US', {timeZone, month: 'short', year: 'numeric'});
-  return `${n(day.total)} ${day.total === 1 ? 'email' : 'emails'} · ${fileSize(day.bytes)}, since ${since}.`;
+  return `${n(day.total)} ${day.total === 1 ? 'email' : 'emails'}, ${fileSize(day.bytes)}, since ${since}.`;
 }

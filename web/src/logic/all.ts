@@ -92,7 +92,7 @@ export function dayView(day: Day, noiseOpen: boolean, noiseRows = false): DayVie
   if (noiseRows) return {date: day.date, lanes: noise.length ? [...lanes, {lane: 'noise', label: 'Noise', rows: noise.map(row => ({row, kind: null}))}] : lanes, noise: null};
   return {
     date: day.date, lanes,
-    noise: noise.length ? {count: noise.length, preview: [...new Set(noise.map(sender))].slice(0, 3).join(' · '), open: noiseOpen, rows: noiseOpen ? noise : []} : null,
+    noise: noise.length ? {count: noise.length, preview: [...new Set(noise.map(sender))].slice(0, 3).join(', '), open: noiseOpen, rows: noiseOpen ? noise : []} : null,
   };
 }
 

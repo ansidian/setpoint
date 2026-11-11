@@ -417,7 +417,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
   const summary = readerSummary(listed);
   return (
     <div className="rd-head">
-      {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected · always stays in Attention</div>}
+      {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected, always stays in Attention</div>}
       <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" role="img" aria-label="Unread" data-tip="Unread" />}{listed.subject}</h1>
       {/* Triage's summary, which the list shows in the subject's place, kept here once it's open (#238). */}
       {summary && <p className="rd-sum selectable">{summary}</p>}
@@ -498,9 +498,7 @@ function Body({message, marks, arrived}: {message: MessageOut; marks: string[]; 
         <div className="imgbar">
           <Icon name="hide_image" size={16} />
           <span>Images hidden</span>
-          <span className="sep">·</span>
           <button type="button" className="lnk" onClick={() => setShown(true)}>Show</button>
-          <span className="sep">·</span>
           <button type="button" className="lnk" onClick={() => void trustDomain(message.remote_content.trust_domain, message.id).catch(toastFailure(`Couldn't trust ${message.remote_content.trust_domain}`))}>
             Always show from {message.remote_content.trust_domain}
           </button>

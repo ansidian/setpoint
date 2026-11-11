@@ -73,7 +73,7 @@ export function MailPage() {
           ))}
           {!written.length && !showForm && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={() => setAdding(true)}>Add rule</button></span></div>}
         </div>}
-        <div className="note"><Icon name="shield" size={16} />Protected security mail always goes to Attention · it can’t be moved, marked read or trashed by any rule</div>
+        <div className="note"><Icon name="shield" size={16} />Protected security mail always goes to Attention. It can’t be moved, marked read or trashed by any rule</div>
       </Section>
 
       {learned.length > 0 && (
@@ -271,7 +271,7 @@ function TrustedDomains({domains}: {domains: TrustedDomainOut[] | undefined}) {
     ) : undefined}>
       {!domains ? <SkeletonRows count={2} one /> : <div className="set-group">
         {/* Nothing to list is one plain line across the group, not a cell of the domains' grid. */}
-        {!matching.length ? <div className="set-row one">{filter ? <span className="s">No domain matches</span> : <><span className="set-empty-icon"><Icon name="image" size={20} /></span><span className="s">None yet · the reader’s “Always show from …” adds one</span></>}</div> : (
+        {!matching.length ? <div className="set-row one">{filter ? <span className="s">No domain matches</span> : <><span className="set-empty-icon"><Icon name="image" size={20} /></span><span className="s">None yet, the reader’s “Always show from …” adds one</span></>}</div> : (
           <div className="doms">
             {shown.map(row => (
               <div key={row.domain} className="dom" data-domain={row.domain}>

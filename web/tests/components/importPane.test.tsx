@@ -107,7 +107,7 @@ test('the Into menu lies over the list, inside the pane, each calendar with its 
 
 test('what the file had that an import leaves out closes the list, and Cancel closes the review', async () => {
   await review();
-  await expect.element(page.getByText('Left out: 1 event cancelled · categories on 4 events')).toBeVisible();
+  await expect.element(page.getByText('Left out: 1 event cancelled, categories on 4 events')).toBeVisible();
   await userEvent.click(page.getByRole('button', {name: /^Cancel/}));
   await expect.element(page.getByText('Closed')).toBeVisible();
 });

@@ -65,7 +65,7 @@ export function Switch({on, label, disabled, onChange}: {on: boolean; label: str
 export function Select<T extends string | number>({value, options, label, align, onChange}: {value: T; options: {value: T; label: string; disabled?: boolean; colour?: Colour | null; detail?: string | null}[]; label: string; align?: 'left' | 'right'; onChange: (value: T) => void}) {
   const picked = options.find(option => option.value === value);
   // An option's detail (SV-191: a calendar's account, when its name appears twice) follows it in `ink3`.
-  const detail = (option: {detail?: string | null}) => option.detail && <span className="ink3"> · {option.detail}</span>;
+  const detail = (option: {detail?: string | null}) => option.detail && <span className="ink3 detail">{option.detail}</span>;
   const shown = picked ? <>{picked.label}{detail(picked)}</> : String(value);
   return (
     <Menu label={label} align={align} className="pick" button={(
