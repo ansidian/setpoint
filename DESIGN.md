@@ -577,7 +577,8 @@ a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" 
 - **Card:** 360 px wide (#308, wider than decision 46's 280), `card`, radius 18, `edgeOn` inset, popover shadow, a drag grip
   at the top. Content (board 12a): colour dot and title, date and time, place and address (a link
   as its host with Open, #245), Time to
-  Leave (as the right pane's, #112), attendees, a recurring event's repeat ("Weekly on Mon, Wed,
+  Leave (as the right pane's, #112), attendees, the description (`notes`, formatted, 6 lines then
+  More, #370), a recurring event's repeat ("Weekly on Mon, Wed,
   Fri", #126), reminders (the presets in one line, then each other one at its moment, #255),
   calendar (its glyph in the item's colour, #126); then **Edit E** and icon
   actions (duplicate, copy, colour, delete). A task's card draws its ring in its project's colour and
@@ -631,6 +632,7 @@ under it, one example of each kind of phrase and what it reads (#260). Then **Pl
 suggestions under the place, the calendar picker, recurrence, reminders (default from Settings ›
 Notifications; the presets, then **Custom…** last for a date and time, before or after the start,
 #255) with **Time to Leave** added from the same menu, never by default (#86), and the
+**Description** under them (`notes`, "Add description", formatted, #370), and the
 **conflict preview** (a small timeline of the day: "Overlaps Study group ·
 1h 30m"), which leaves free events out (#303). In the date picker the chosen day is the strongest mark and today a ring, and the editor's
 menus tick their current choice (#189). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
@@ -4747,3 +4749,32 @@ was decided; the audit itself was retired by D480.
     second countdown above the code card's (chosen over "Trash in 28 min"); when a rule's earlier
     delay is due it says the rule's "Trash in …". Settings › Mail's line reads **"Codes are trashed
     after"** (the board's "Verification codes leave the Inbox after", the app's short form kept).
+370. **An event's and a task's description** (Andy, 2026-11-10; darma SV-264, D542, D546–D548). Google
+    Calendar's description and Todoist's task description show and are edited in Setpoint, each
+    kept in its provider's own format (Google's HTML, Todoist's Markdown) and drawn only from a
+    fixed list of formats: lines, bold, italic, underline, strikethrough, code, links, numbered and
+    bulleted lists, headings and quotes. Nothing else in a description is drawn, run or loaded;
+    a link opens in a new tab, and a bare web address in the text is one too.
+    - **The floating detail:** a fact row under `notes`, after attendees and before the repeat,
+      reminders and calendar. Up to **6 lines**, then it fades under **More**, which opens it in
+      place to 320 px with the rest scrolling inside; **Less** folds it. The card is placed again
+      as it grows, so it stays in the grid.
+    - **The editor:** a **Description** field under reminders (and a new event's repeat), above the
+      conflict preview: one line reading "Add description" while empty, growing to 8 lines, then
+      scrolling inside. While it has focus a bar sits **under the text, inside the field** (not
+      above it, so the text doesn't move when it's clicked into): Bold ⌘B, Italic ⌘I, Underline ⌘U,
+      Numbered list, Bulleted list, Link (an address typed under the text; none removes the link).
+      A task has no Underline, as Markdown has none; headings, quotes, code and strikethrough
+      written in Todoist show and are kept, with no buttons to make them. A paste keeps only the
+      formats in the list.
+    - **Saving:** the description is sent only when it reads differently, so one left alone stays
+      exactly as its provider has it, and clearing it clears it there. A description holding more
+      than the list (a table, an image, colours) shows as its text; edited here, what's saved is
+      what was shown, under the line **"Saving drops formatting Setpoint can't show"**.
+    - **Not shown:** the day agenda's rows, the grid's chips, and the email proposal card's small
+      editor. The typed line never reads or writes it; each batch draft has its own. The mail
+      pages' item card and the phone layout's detail are the same content, so they show it folded
+      the same way; the iPhone app shows none until SI-75.
+    - **Clone, copy and paste** of an item carry its description. Text pasted into the field keeps
+      what its provider's own editor writes: bold, italic, underline, lists and links on an event,
+      everything but underline on a task.
