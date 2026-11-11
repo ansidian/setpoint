@@ -131,6 +131,11 @@ describe('the pure rules', () => {
 });
 
 const idOf = (w: World, subject: string) => w.store.db.select().from(t.messages).where(eq(t.messages.subject, subject)).get()!.id;
+const gmailOf = (w: World, subject: string) => {
+  const row = w.store.db.select({address: t.accounts.address, providerId: t.messages.providerId}).from(t.messages)
+    .innerJoin(t.accounts, eq(t.accounts.id, t.messages.accountId)).where(eq(t.messages.subject, subject)).get()!;
+  return `https://mail.google.com/mail/?authuser=${encodeURIComponent(row.address)}#all/${encodeURIComponent(row.providerId)}`;
+};
 const calendarId = (w: World, name: string) => w.store.db.select().from(t.calendars).where(eq(t.calendars.name, name)).get()!.id;
 
 describe('proposals over the seed', () => {
@@ -149,6 +154,7 @@ describe('proposals over the seed', () => {
       },
       from_email: ['title', 'date', 'time', 'place'],
       conflict: {free: true, label: 'Free that evening'},
+      source: {subject: 'Final exam schedule · CS 101', url: gmailOf(w, 'Final exam schedule · CS 101')},
     });
     // Nothing was created; Create is POST /api/items with the item as it stands.
     expect(w.store.db.select().from(t.items).all().length).toBe(before);
@@ -198,6 +204,36 @@ describe('proposals over the seed', () => {
     const allDay = {title: '', all_day: true, starts_at: null, ends_at: null, start_date: '2026-12-14', end_date: '2026-12-16', place: null};
     // An invite with no title leaves the subject's.
     expect(proposeFromMessage(w.store, exam, 'event', {}, allDay)).toMatchObject({item: {title: 'CS 101 final exam', all_day: true, start_date: '2026-12-14', end_date: '2026-12-16', starts_at: null, place: 'Contoso University · Room 214'}, from_email: ['title', 'date', 'place']});
+  });
+
+  test('SV-270 (D553–D555): the description\'s From: line links to the email in Gmail, as Open in Gmail does; another provider\'s has no link', async () => {
+    const w = world({seed: true});
+    const c = await signedIn(w);
+    const lease = idOf(w, 'Lease renewal terms');
+    const open = (await c.send('GET', `/api/mail/messages/${lease}`)).body.open_url;
+    expect(open).toMatch(/^https:\/\/mail\.google\.com\/mail\/\?authuser=.+#all\/.+$/);
+    expect(proposeFromMessage(w.store, lease, 'task').source).toEqual({subject: 'Lease renewal terms', url: open});
+    expect(proposeFromMessage(w.store, idOf(w, 'Bill is ready'), 'task').source).toEqual({subject: 'Bill is ready', url: null});
+  });
+
+  test('SV-270 (D555): a description\'s Gmail link is looked up by its account, in any case, and Gmail\'s id', async () => {
+    const w = world({seed: true});
+    const c = await signedIn(w);
+    const lease = idOf(w, 'Lease renewal terms');
+    const {address, providerId} = w.store.db.select({address: t.accounts.address, providerId: t.messages.providerId}).from(t.messages)
+      .innerJoin(t.accounts, eq(t.accounts.id, t.messages.accountId)).where(eq(t.messages.id, lease)).get()!;
+    const lookup = (account: string, id: string) => c.send('GET', `/api/mail/gmail-link?account=${encodeURIComponent(account)}&id=${encodeURIComponent(id)}`);
+    expect((await lookup(address, providerId)).body).toEqual({message_id: lease});
+    expect((await lookup(address.toUpperCase(), providerId)).body).toEqual({message_id: lease});
+    expect((await lookup(address, 'FMfcgzQXJWvmnoLhBTsMlpwbz')).body).toEqual({message_id: null});
+    expect((await lookup('someone@example.invalid', providerId)).body).toEqual({message_id: null});
+    // An iCloud email isn't Gmail's, whatever its id; a trashed one is gone from Setpoint's reader.
+    const bill = w.store.db.select().from(t.messages).where(eq(t.messages.subject, 'Bill is ready')).get()!;
+    const icloud = w.store.db.select().from(t.accounts).where(eq(t.accounts.id, bill.accountId)).get()!;
+    expect((await lookup(icloud.address, bill.providerId)).body).toEqual({message_id: null});
+    w.store.db.update(t.messages).set({trashedAt: '2026-10-07T12:00:00.000Z'}).where(eq(t.messages.id, lease)).run();
+    expect((await lookup(address, providerId)).body).toEqual({message_id: null});
+    expect((await c.send('GET', '/api/mail/gmail-link?account=')).status).toBe(400);
   });
 
   test('refuses a missing email', async () => {

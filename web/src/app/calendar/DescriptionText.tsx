@@ -1,11 +1,26 @@
 // An item's description on screen (DESIGN.md › The floating detail; SV-264, D546, D547): drawn from
 // the short list of formats logic/description.ts reads, as elements, never as the provider's own
-// markup. Links open in a new tab; a bare web address in the text is one too.
+// markup. Links open in a new tab; a bare web address in the text is one too. A Gmail link to an
+// email Setpoint has opens it in the reader instead, "Opens in Setpoint" (SV-270, D555, D556).
 import {useLayoutEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
 import {withLinks} from '../../logic/description.ts';
 import type {Block, List, Run} from '../../logic/description.ts';
+import {openEmail, OPENS_IN_SETPOINT, useLinkedEmail} from './descriptionLinks.ts';
 import './description.css';
+
+/** A link: a new tab, or the reader for an email Setpoint has (still Gmail's address, for ⌘-click and copying). */
+function Link({href, children}: {href: string; children: ReactNode}) {
+  const email = useLinkedEmail(href);
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" data-tip={email !== null ? OPENS_IN_SETPOINT : undefined}
+      onClick={event => {
+        if (email === null || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+        event.preventDefault();
+        openEmail(email);
+      }}>{children}</a>
+  );
+}
 
 function Runs({runs}: {runs: Run[]}) {
   return <>{runs.flatMap(withLinks).map((run, index) => {
@@ -15,7 +30,7 @@ function Runs({runs}: {runs: Run[]}) {
     if (run.marks.includes('underline')) node = <u>{node}</u>;
     if (run.marks.includes('italic')) node = <i>{node}</i>;
     if (run.marks.includes('bold')) node = <b>{node}</b>;
-    if (run.href) node = <a href={run.href} target="_blank" rel="noopener noreferrer">{node}</a>;
+    if (run.href) node = <Link href={run.href}>{node}</Link>;
     return <span key={index}>{node}</span>;
   })}</>;
 }

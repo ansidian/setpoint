@@ -23,6 +23,7 @@ import {wordsOf} from '../domain/searchChips.ts';
 import {localDay, localTime, zonedInstant} from '../domain/time.ts';
 import {invalid, notFound} from '../errors.ts';
 import {itemsInRange} from '../queries/items.ts';
+import {gmailUrl} from '../queries/mail.ts';
 import {attachmentFile} from '../queries/mailBody.ts';
 import {getSettings} from '../settings.ts';
 import type {Store} from '../store.ts';
@@ -143,11 +144,14 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
   // What the invite gave is the email's too.
   const marks = new Set([...fromEmail(email, fields, zone), ...invited]);
   const from_email = MARK_ORDER.filter(mark => marks.has(mark));
+  // D553–D555: the description's "From:" line, linking to the email in Gmail (plain text for another provider's).
+  const account = store.db.select({provider: t.accounts.provider, address: t.accounts.address}).from(t.accounts).where(eq(t.accounts.id, message.accountId)).get();
+  const source = {subject: message.subject, url: account?.provider === 'gmail' ? gmailUrl(account.address, message.providerId) : null};
 
   if (kind === 'task') {
     const {calendarId, project} = projectFor(store, fields.title);
     return {
-      kind, message_id: messageId, from_email, conflict: null,
+      kind, message_id: messageId, from_email, conflict: null, source,
       item: {
         kind, calendar_id: calendarId, title: fields.title, all_day: false, starts_at: null, ends_at: null, start_date: null, end_date: null,
         due_date: fields.date, due_at: startsAt, time_zone: zone, place: fields.place, project,
@@ -163,5 +167,5 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
   const conflict = fields.date
     ? conflictLine({all_day: allDay, starts_at: startsAt, ends_at: endsAt, startHour: fields.start ? Number(fields.start.slice(0, 2)) : null}, itemsInRange(store, fields.date, dayAfter(fields.date)).items)
     : null;
-  return {kind, message_id: messageId, item, from_email, conflict};
+  return {kind, message_id: messageId, item, from_email, conflict, source};
 }

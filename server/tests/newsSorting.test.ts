@@ -671,6 +671,7 @@ describe('the routes N4 and N5 use', () => {
 
     const upcoming = (await api.send('GET', '/api/news')).body.blocks.find((block: {section: string}) => block.section === 'tech').upcoming[0];
     const proposal = await api.send('POST', `/api/news/events/${upcoming.id}/proposal`);
+    const {headline} = (await api.send('GET', `/api/news/stories/${upcoming.story_id}`)).body;
     expect(proposal.status).toBe(200);
     expect(proposal.body).toEqual({
       kind: 'event', news_event_id: upcoming.id, story_id: upcoming.story_id, from_email: ['title', 'date', 'time'],
@@ -679,6 +680,8 @@ describe('the routes N4 and N5 use', () => {
         start_date: null, end_date: null, due_date: null, due_at: null, time_zone: 'America/Los_Angeles', place: null, project: null,
       },
       conflict: {free: true, label: 'Free that morning'},
+      // SV-270 (D553): its description's From: line names the story and links to it in Setpoint.
+      source: {subject: headline, url: `http://localhost/news/story/${upcoming.story_id}`},
     });
     expect((await api.send('POST', '/api/news/events/999/proposal')).status).toBe(404);
   });

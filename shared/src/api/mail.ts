@@ -14,6 +14,7 @@
 //   POST /api/mail/mark-all-read               {account_id?}       {commands: CommandOut[]}
 //   GET/POST /api/mail/trusted-domains, DELETE /api/mail/trusted-domains/:domain
 //   GET  /api/mail/indexing                    IndexingOut (the first backfill's progress)
+//   GET  /api/mail/gmail-link?account=&id=     GmailLinkOut (a description's Gmail link, D555)
 import {z} from 'zod';
 import type {InboxGroup, Kind, Lane, MessageType} from '../enums.ts';
 import type {SecurityFacts} from '../message.ts';
@@ -175,6 +176,15 @@ export const pinInput = z.strictObject({pinned: z.boolean()});
 export const markAllReadInput = z.strictObject({account_id: z.int().positive().optional()});
 export interface MarkAllReadOut {
   commands: CommandOut[];
+}
+
+/**
+ * SV-270 (D555): the email an Open in Gmail address names, by its account's address and Gmail's
+ * message id, so a description's link opens it in the reader; null when Setpoint doesn't have it.
+ */
+export const gmailLinkInput = z.strictObject({account: z.string().min(1), id: z.string().min(1)});
+export interface GmailLinkOut {
+  message_id: number | null;
 }
 
 /** Settings › Mail's trusted remote-content domains. */

@@ -2,7 +2,7 @@
 // screen draws, and written back as that provider's own editor writes one. The two long fixtures
 // are the shapes read from a real Google event and Todoist task (2026-11-10), with invented text.
 import {describe, expect, test} from 'vitest';
-import {fitting, isEmpty, plainText, readDescription, readHtml, readInline, readMarkdown, safeHref, sameDescription, withLinks, writeDescription, writeHtml, writeMarkdown} from '../src/logic/description.ts';
+import {fitting, gmailLinkOf, isEmpty, plainText, readDescription, readHtml, readInline, readMarkdown, safeHref, sameDescription, sourceLine, withLinks, writeDescription, writeHtml, writeMarkdown} from '../src/logic/description.ts';
 import type {Block, Item, List, Mark, Run} from '../src/logic/description.ts';
 
 const run = (text: string, marks: Mark[] = [], href: string | null = null): Run => ({text, marks, href});
@@ -236,5 +236,46 @@ describe('either format', () => {
     ['none', run('No address here'), [run('No address here')]],
   ])('on screen only, %s in the text is a link', (_, from, to) => {
     expect(withLinks(from)).toEqual(to);
+  });
+});
+
+describe('SV-270: a proposal\'s From: line', () => {
+  const GMAIL = 'https://mail.google.com/mail/?authuser=user%40example.com#all/18c2f0a9b1d3e4f5';
+  const subject = '[Action] 50% *off* <now> & more_';
+
+  test.each<['event' | 'task', string]>([
+    ['event', 'From: <a href="https://mail.google.com/mail/?authuser=user%40example.com#all/18c2f0a9b1d3e4f5">[Action] 50% *off* &lt;now&gt; &amp; more_</a>'],
+    ['task', expect.stringMatching(/^From: \[.+\]\(https:\/\/mail\.google\.com\/mail\/\?authuser=user%40example\.com#all\/18c2f0a9b1d3e4f5\)$/) as unknown as string],
+  ])('a subject with brackets, stars and angle brackets is written as a link the %s\'s provider reads back', (kind, written) => {
+    const blocks = sourceLine({subject, url: GMAIL});
+    expect(blocks).toEqual([p(run('From: '), run(subject, [], GMAIL))]);
+    const format = kind === 'event' ? 'html' : 'markdown';
+    const text = writeDescription(format, blocks);
+    expect(text).toEqual(written);
+    expect(readDescription(format, text).blocks).toEqual(blocks);
+  });
+
+  test('another provider\'s email has the line as text; a blank subject still says something', () => {
+    expect(sourceLine({subject: 'Bill is ready', url: null})).toEqual([p(run('From: Bill is ready'))]);
+    expect(writeDescription('markdown', sourceLine({subject: 'Bill is ready', url: null}))).toBe('From: Bill is ready');
+    expect(sourceLine({subject: '  ', url: null})).toEqual([p(run('From: (no subject)'))]);
+  });
+
+  test('cleared in the field, nothing is sent', () => {
+    expect(writeDescription('html', readHtml('<br>', {literal: true}).blocks)).toBeNull();
+    expect(writeDescription('markdown', readHtml('<div><br></div>', {literal: true}).blocks)).toBeNull();
+  });
+
+  test.each<[string, string, {account: string; id: string} | null]>([
+    ['Open in Gmail\'s address', GMAIL, {account: 'user@example.com', id: '18c2f0a9b1d3e4f5'}],
+    ['a seed id', 'https://mail.google.com/mail/?authuser=user.jobs%40example.com#all/seed-005', {account: 'user.jobs@example.com', id: 'seed-005'}],
+    ['an address-bar link from the Inbox', 'https://mail.google.com/mail/u/0/#inbox/FMfcgzQXJWvmnoLhBTsMlpwbz', null],
+    ['no account', 'https://mail.google.com/mail/#all/18c2f0a9b1d3e4f5', null],
+    ['a search', 'https://mail.google.com/mail/?authuser=user%40example.com#search/lease', null],
+    ['another host', 'https://mail.google.com.example.org/mail/?authuser=a%40b.c#all/1', null],
+    ['plain http', 'http://mail.google.com/mail/?authuser=a%40b.c#all/1', null],
+    ['not an address', 'From the email', null],
+  ])('%s → the email it names', (_, href, named) => {
+    expect(gmailLinkOf(href)).toEqual(named);
   });
 });

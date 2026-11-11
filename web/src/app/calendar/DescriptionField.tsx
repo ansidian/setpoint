@@ -2,13 +2,15 @@
 // field under a small bar of formats, with no library. What's in it is only ever read through
 // logic/description.ts's reader, so whatever is typed, pasted or dropped comes out as the short list
 // of formats and nothing else; a paste goes in already read that way. An event has underline, a
-// task doesn't (Markdown has none).
+// task doesn't (Markdown has none). Its links open on ⌘-click (Ctrl on Windows), as a typed field
+// can't open them on a plain one; a Gmail link to an email Setpoint has opens in the reader (SV-270).
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
-import type {ClipboardEvent, KeyboardEvent} from 'react';
+import type {ClipboardEvent, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {fitting, isEmpty, readHtml, safeHref, writeHtml} from '../../logic/description.ts';
 import type {Block, List, Run} from '../../logic/description.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import type {IconName} from '../../ui/glyphs.ts';
+import {knownEmail, linkedEmail, openEmail, OPENS_IN_SETPOINT} from './descriptionLinks.ts';
 import './description.css';
 
 const TAGS = {code: 'code', strike: 's', underline: 'u', italic: 'i', bold: 'b'} as const;
@@ -116,10 +118,12 @@ export interface DescriptionFieldProps {
   kind: 'event' | 'task';
   // Under the field once it's changed, when its source held formatting the list can't (D547).
   note: string | null;
+  // A proposal's "from the email" mark, at the field's top end until it's changed (SV-270).
+  mark?: ReactNode;
   onChange: (blocks: Block[]) => void;
 }
 
-export function DescriptionField({blocks, kind, note, onChange}: DescriptionFieldProps) {
+export function DescriptionField({blocks, kind, note, mark: source = null, onChange}: DescriptionFieldProps) {
   const field = useRef<HTMLDivElement>(null);
   const address = useRef<HTMLInputElement>(null);
   const [empty, setEmpty] = useState(() => isEmpty(blocks));
@@ -128,6 +132,40 @@ export function DescriptionField({blocks, kind, note, onChange}: DescriptionFiel
   // The link being set: the selection it's for, kept while the address is typed.
   const [linking, setLinking] = useState<{range: Range | null; url: string} | null>(null);
   const formats = FORMATS.filter(format => kind === 'event' || format.command !== 'underline');
+  // A press outside that takes the focus (the proposal card's Create, just under the field) keeps
+  // the bar until it ends: folded at once, the bar would move what was pressed from under the
+  // pointer before the press lands on it (SV-270).
+  const pressing = useRef(false);
+  useEffect(() => {
+    const down = () => {
+      pressing.current = true;
+    };
+    const up = () => {
+      pressing.current = false;
+    };
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('pointerup', up, true);
+    document.addEventListener('pointercancel', up, true);
+    return () => {
+      document.removeEventListener('pointerdown', down, true);
+      document.removeEventListener('pointerup', up, true);
+      document.removeEventListener('pointercancel', up, true);
+    };
+  }, []);
+  const unfocus = () => {
+    if (!pressing.current) {
+      setFocused(false);
+      return;
+    }
+    // The click comes after the press ends, on what was pressed; one that never comes (released elsewhere) ends with the next press.
+    const done = () => {
+      document.removeEventListener('click', done, true);
+      document.removeEventListener('pointerdown', done, true);
+      setFocused(false);
+    };
+    document.addEventListener('click', done, true);
+    document.addEventListener('pointerdown', done, true);
+  };
 
   useLayoutEffect(() => {
     if (field.current) mount(field.current, blocks);
@@ -192,6 +230,27 @@ export function DescriptionField({blocks, kind, note, onChange}: DescriptionFiel
     else run('createLink', target);
   };
 
+  // A link under the mouse says where ⌘-click takes it, once it's known which email it names (the
+  // tip shows as the mouse moves on it). The attribute is the field's own, never read as a format.
+  const hoverLink = (event: MouseEvent) => {
+    const link = linkAround(event.target as Node);
+    if (!link || link.dataset.tip) return;
+    const href = safeHref(link.getAttribute('href'));
+    link.dataset.tip = 'Open link · ⌘Click';
+    void linkedEmail(href).then(email => {
+      if (email !== null && link.isConnected && link.getAttribute('href') === href) link.dataset.tip = `${OPENS_IN_SETPOINT} · ⌘Click`;
+    });
+  };
+  const openLink = (event: MouseEvent) => {
+    const link = linkAround(event.target as Node);
+    const href = safeHref(link?.getAttribute('href'));
+    if (!href || !(event.metaKey || event.ctrlKey)) return;
+    event.preventDefault();
+    const email = knownEmail(href);
+    if (email !== null) openEmail(email);
+    else window.open(href, '_blank', 'noopener,noreferrer');
+  };
+
   // Tab and Shift-Tab in a list nest its item under the one before or bring it out a level, as
   // Google Calendar's editor does (SV-268). A first item has nothing to nest under and a top-level
   // one nothing to come out of, so there they do nothing; outside a list Tab moves on as ever.
@@ -236,13 +295,15 @@ export function DescriptionField({blocks, kind, note, onChange}: DescriptionFiel
   };
 
   return (
-    <div className={`desc-field${focused ? ' focus' : ''}`}
+    <div className={`desc-field${focused ? ' focus' : ''}${source ? ' marked' : ''}`}
       onFocus={() => setFocused(true)}
       onBlur={event => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+        if (!event.currentTarget.contains(event.relatedTarget)) unfocus();
       }}>
       <div ref={field} className="desc desc-edit" contentEditable role="textbox" aria-multiline="true" aria-label="Description" data-placeholder="Add description" data-empty={empty || undefined}
-        suppressContentEditableWarning spellCheck onInput={read} onKeyDown={onKeyDown} onPaste={onPaste} onDrop={event => event.preventDefault()} />
+        suppressContentEditableWarning spellCheck onInput={read} onKeyDown={onKeyDown} onPaste={onPaste} onDrop={event => event.preventDefault()}
+        onMouseOver={hoverLink} onClick={openLink} />
+      {source}
       {(focused || linking) && (linking ? (
         <div className="desc-bar linking">
           <Icon name="link" size={16} />

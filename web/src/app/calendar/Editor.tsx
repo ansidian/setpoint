@@ -25,7 +25,7 @@ import type {Mark, ParsedTitle, ReminderBase, ReminderRead} from '../../logic/co
 import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../../logic/plain.ts';
 import type {Span} from '../../logic/plain.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
-import {formatOf, isEmpty, readDescription, sameDescription, writeDescription} from '../../logic/description.ts';
+import {formatOf, isEmpty, readDescription, sameDescription, sourceLine, writeDescription} from '../../logic/description.ts';
 import type {Block} from '../../logic/description.ts';
 import {placeName} from '../../logic/place.ts';
 import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
@@ -126,8 +126,9 @@ interface Draft {
   // A task's Todoist labels and repeat (Todoist's words).
   labels: string[];
   repeat: string | null;
-  // Fields an email gave (More options on its proposal card), marked until they're changed.
-  fromEmail: ProposalField[];
+  // Fields an email gave (More options on its proposal card), marked until they're changed; the
+  // description's From: line among them (SV-270), a mark the server's list doesn't carry.
+  fromEmail: Marked[];
   // Fields set by hand: the line's parse no longer changes them.
   manual: Manual[];
   // SV-264: the description as the field reads it (logic/description.ts), written in its provider's
@@ -156,6 +157,9 @@ const DEFAULT_LENGTH = 60;
 let nextDraft = 1;
 
 /** A proposal as the editor opens on it. */
+/** A field that can carry the "from the email" mark. */
+type Marked = ProposalField | 'description';
+
 interface Handed {
   proposal: ProposalOut;
   // Null: Settings' default.
@@ -250,10 +254,13 @@ function fromProposal(draft: Draft, {proposal, reminders, newProject}: Handed, t
   const end = item.starts_at ? start! + (item.ends_at ? Math.round((Date.parse(item.ends_at) - Date.parse(item.starts_at)) / 60_000) : DEFAULT_LENGTH) : null;
   const days = item.kind === 'event' && item.all_day && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
   const base = {calendarId: item.calendar_id ?? draft.calendarId, place: item.place ?? '', project: item.project};
+  // D553: the description starts with "From: *subject*", marked as the email's (a keynote's has no marks, N5).
+  const source = proposal.source;
+  const marks: Marked[] = source && proposal.message_id ? [...proposal.from_email, 'description'] : proposal.from_email;
   return {
     ...draft, text: item.title, title: item.title, plain: wordSpans(item.title), date: date ?? draft.date, day: date ?? draft.day, undated: date === null,
     start, end, days, slot: {start, end, days}, place: base.place, address: null, calendarId: base.calendarId, project: base.project, newProject,
-    reminders: reminders ?? draft.reminders, fromEmail: proposal.from_email, manual: [], base,
+    reminders: reminders ?? draft.reminders, fromEmail: marks, manual: [], base, ...(source ? {description: sourceLine(source)} : {}),
   };
 }
 
@@ -628,15 +635,19 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // Upcoming: the keynote's proposal (N3), its name, day and time and the calendar an email's would
   // take. The news gave its fields, but "from the email" would be wrong of a keynote and DESIGN draws
   // no mark of the news's own, so they come with none, as if typed (N5).
+  const [seeded, setSeeded] = useState(false);
   useEffect(() => {
     // A kept draft already holds what the email gave, and what the user changed since.
     if ((!open.message && !open.upcoming) || open.kept || card) return;
     let live = true;
     const proposed: Promise<ProposalOut> = open.upcoming
-      ? newsProposal(open.upcoming).then(({kind, item, conflict}) => ({kind, message_id: 0, item, from_email: [], conflict}))
+      ? newsProposal(open.upcoming).then(({kind, item, conflict, source}) => ({kind, message_id: 0, item, from_email: [], conflict, source}))
       : proposalFrom(open.message!, open.kind);
     void proposed.then(proposal => {
-      if (live) setDrafts(list => list.map((one, index) => (index ? one : fromProposal(one, {proposal, reminders: null, newProject: false}, timeZone))));
+      if (!live) return;
+      setDrafts(list => list.map((one, index) => (index ? one : fromProposal(one, {proposal, reminders: null, newProject: false}, timeZone))));
+      // The Description field holds its own text once mounted, so it starts again with the From: line.
+      setSeeded(true);
     }).catch(() => {});
     return () => {
       live = false;
@@ -740,16 +751,17 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
   const change = (next: Partial<Draft>, manual: Manual[] = []) => {
     // A field changed by hand loses its "from the email" mark.
-    const edited: ProposalField[] = [];
+    const edited: Marked[] = [];
     if (next.title !== undefined) edited.push('title');
     // The day and times share one row and one mark: a change to either takes it (SV-208).
     if (next.date !== undefined || next.start !== undefined || next.end !== undefined) edited.push('date', 'time');
     if (next.place !== undefined) edited.push('place');
+    if (next.description !== undefined) edited.push('description');
     setDrafts(list => list.map(one => (one.id === draft.id
       ? {...one, ...next, manual: [...new Set([...one.manual, ...manual])], fromEmail: one.fromEmail.filter(field => !edited.includes(field))}
       : one)));
   };
-  const mark = (...fields: ProposalField[]) => (fields.some(field => draft.fromEmail.includes(field))
+  const mark = (...fields: Marked[]) => (fields.some(field => draft.fromEmail.includes(field))
     ? <span className="srcm" role="img" aria-label="From the email" data-tip="From the email"><Icon name="mail" size={14} /></span> : null);
   // The email's title is the line's, so its mark sits at the line's trailing edge (D290).
   const titleMark = mark('title');
@@ -758,7 +770,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const reread = (one: Draft, text: string) => {
     const next = original ? retypeEdit(one, text, original, today, calendarChoices, projectNames, taskTime) : retype(one, text, today, google, projectNames, taskTime);
     // What the line changed loses the email's mark, as a field changed by hand does (SV-208).
-    const edited: ProposalField[] = [];
+    const edited: Marked[] = [];
     if (next.title !== one.title) edited.push('title');
     if (next.date !== one.date || next.undated !== one.undated || next.start !== one.start || next.end !== one.end) edited.push('date', 'time');
     if (next.place !== one.place) edited.push('place');
@@ -1294,13 +1306,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             setMenu(null);
           }} />}
 
-          {!card && (
-            <>
-              <Icon name="notes" size={17} className="desc-glyph" />
-              <DescriptionField key={draft.id} blocks={raw.description} kind={kind} onChange={description => change({description})}
-                note={editing && original && draft.descriptionLossy && !sameDescription(draft.description, original.description) ? 'Saving drops formatting Setpoint can\'t show' : null} />
-            </>
-          )}
+          {/* D552: on the proposal card too, starting with the email's or story's From: line (D553). */}
+          <Icon name="notes" size={17} className="desc-glyph" />
+          <DescriptionField key={`${draft.id}${seeded ? ':seeded' : ''}`} blocks={raw.description} kind={kind} mark={mark('description')} onChange={description => change({description})}
+            note={editing && original && draft.descriptionLossy && !sameDescription(draft.description, original.description) ? 'Saving drops formatting Setpoint can\'t show' : null} />
         </div>
 
         {/* An empty new draft has nothing to conflict yet: the preview waits for a title or a time. */}

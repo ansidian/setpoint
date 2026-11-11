@@ -8,7 +8,7 @@ import {
   accountOrderInput, accountUpdateInput, allInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
-  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, weatherRangeInput,
+  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput,
 } from '@setpoint/shared';
 import type {
   ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
@@ -58,7 +58,7 @@ import {BIND_COOKIE, beginTodoistOAuth, completeTodoistOAuth, TODOIST_CALLBACK_P
 import type {TodoistOAuthOptions} from '../providers/todoist/oauth.ts';
 import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts';
 import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarShown, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
-import {allMail, inbox, indexing, mailCounts, mailDayOf, messageDetail, trustedDomains} from '../queries/mail.ts';
+import {allMail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
 import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
 import {searchCalendar} from '../search/calendar.ts';
@@ -538,6 +538,10 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.get('/api/mail/day', c => c.json(mailDayOf(store)));
   app.get('/api/mail/all', c => c.json(allMail(store, parse(allInput, c.req.query()))));
   app.get('/api/mail/messages/:id', c => c.json(messageDetail(store, id(c.req.param('id')))));
+  app.get('/api/mail/gmail-link', c => {
+    const input = parse(gmailLinkInput, c.req.query());
+    return c.json(gmailLink(store, input.account, input.id));
+  });
   // The HTML body as its own page, for the reader's sandboxed frame: its own policy, not the app's
   // (?frame=app is the iPhone app's, with no script). Plain-text email has none. ?images=show loads
   // its images (the rule's or the images bar's Show), ?images=hide doesn't, and without it the rule
@@ -731,7 +735,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   // ---- News (after 2.0, N1): its pages, Settings › News and stories seen (src/api/news.ts) ----
 
-  app.route('/api', newsApi(store, news));
+  app.route('/api', newsApi(store, {...news, origin}));
 
   // ---- A removable module's routes (Jobs, after News): whatever server.ts passes ----
 

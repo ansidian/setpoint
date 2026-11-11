@@ -31,9 +31,11 @@ async function body(c: Context): Promise<unknown> {
 export interface NewsApiOptions {
   // The data directory's news-images/; null serves no images (tests without a data directory).
   imagesDir?: string | null;
+  // Setpoint's public origin, which a keynote proposal's link to its story is made absolute on (SV-270).
+  origin?: (c: Context) => string;
 }
 
-export function newsApi(store: Store, {imagesDir = null}: NewsApiOptions = {}) {
+export function newsApi(store: Store, {imagesDir = null, origin = c => new URL(c.req.url).origin}: NewsApiOptions = {}) {
   const api = new Hono();
   api.get('/news', c => c.json(newsPage(store)));
   api.get('/news/sections/:section', c => c.json(newsSection(store, parse(newsSectionSchema, c.req.param('section')))));
@@ -45,7 +47,7 @@ export function newsApi(store: Store, {imagesDir = null}: NewsApiOptions = {}) {
   api.get('/news/status', c => c.json(newsStatus(store)));
   api.get('/news/unsorted', c => c.json(unsortedArticles(store)));
   api.get('/news/search', c => c.json(newsSearch(store, parse(newsSearchInput, c.req.query()))));
-  api.post('/news/events/:id/proposal', c => c.json(proposeFromNewsEvent(store, id(c.req.param('id')))));
+  api.post('/news/events/:id/proposal', c => c.json(proposeFromNewsEvent(store, id(c.req.param('id')), origin(c))));
   // A copy never changes under its id (a replaced one gets a new id), so the browser may keep it.
   api.get('/news/images/:id', c => {
     const image = readNewsImage(store, imagesDir, id(c.req.param('id')));

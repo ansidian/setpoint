@@ -12,6 +12,8 @@ export const COUNTS_PATH = '/mail/counts';
 // How the mail day is going: the Inbox's empty pane (SV-218).
 export const DAY_PATH = '/mail/day';
 export const messagePath = (id: number) => `/mail/messages/${id}`;
+/** SV-270 (D555): which email, if any, a description's Gmail link names. */
+export const gmailLinkPath = (account: string, id: string) => `/mail/gmail-link?account=${encodeURIComponent(account)}&id=${encodeURIComponent(id)}`;
 export const ACCOUNTS_PATH = '/accounts';
 
 /** A page of All: `before` is the previous page's `next_before`. */

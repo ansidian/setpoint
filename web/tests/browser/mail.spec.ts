@@ -10,7 +10,7 @@ import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import {deepLinkPath} from '@setpoint/shared';
-import type {AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AllOut, InboxOut, ItemsOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
@@ -1007,6 +1007,81 @@ test('a proposal\'s Cancel takes its card away at once, and the copy it leaves g
     await proposal.getByRole('button', {name: 'Cancel'}).click();
     assert.equal(await proposal.count(), 0, 'the card itself goes at once');
     await page.locator('.prop[aria-hidden="true"]').waitFor({state: 'detached'});
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-270: a proposal\'s Description starts "From:" its email, linked to Gmail; created, the link opens the email in Setpoint, from the detail and from the editor', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=100');
+    const exam = all.days.flatMap(day => day.rows).find(row => row.subject === 'Final exam schedule · CS 101')!;
+    const gmail = (await setpoint.api<MessageOut>('GET', `/mail/messages/${exam.id}`)).open_url!;
+    await rowOf(page, 'Final exam schedule').click();
+    await page.locator('.rd-acts .btn', {hasText: 'Add to calendar'}).click();
+    const proposal = page.getByRole('form', {name: 'Proposal: add to calendar'});
+    const field = proposal.getByRole('textbox', {name: 'Description'});
+    await field.waitFor();
+    assert.equal(await field.textContent(), 'From: Final exam schedule · CS 101');
+    assert.equal(await field.locator('a').getAttribute('href'), gmail);
+    await proposal.locator('.desc-field .srcm[aria-label="From the email"]').waitFor();
+    await proposal.getByRole('button', {name: 'Create event'}).click();
+    await proposal.waitFor({state: 'detached'});
+    await setpoint.idle();
+    const created = await until('the exam created', () => setpoint.api<ItemsOut>('GET', '/items?from=2026-12-09&to=2026-12-10'),
+      ({items}) => items.some(item => item.title === 'CS 101 final exam' && !item.command));
+    const item = created.items.find(one => one.title === 'CS 101 final exam')!;
+    assert.equal(item.description, `From: <a href="${gmail.replaceAll('&', '&amp;')}">Final exam schedule · CS 101</a>`);
+
+    // The detail: a plain description link, "Opens in Setpoint" once it's known, opening the reader.
+    await page.goto(`${setpoint.base}/calendar/item/${item.id}`);
+    const link = page.locator('.fd .fd-desc a', {hasText: 'Final exam schedule · CS 101'});
+    await page.locator('.fd .fd-desc a[data-tip="Opens in Setpoint"]').waitFor();
+    assert.equal(await link.getAttribute('href'), gmail);
+    await link.click();
+    await page.waitForURL(`**/inbox/${exam.id}`);
+    await page.locator('h1.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+
+    // The editor's field: ⌘-click opens it the same way, its tip saying so.
+    await page.goto(`${setpoint.base}/calendar/item/${item.id}/edit`);
+    const own = page.locator('.editor[aria-label="Edit event"]').getByRole('textbox', {name: 'Description'}).locator('a');
+    await own.hover();
+    await page.locator('.editor .desc-edit a[data-tip="Opens in Setpoint · ⌘Click"]').waitFor();
+    await own.click({modifiers: ['ControlOrMeta']});
+    await page.waitForURL(`**/inbox/${exam.id}`);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-270: another provider\'s email gives the From: line as text, and cleared it takes its mark and sends no description', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    const sent: {description?: unknown}[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && /\/api\/items$/.test(request.url())) sent.push(request.postDataJSON() as {description?: unknown});
+    });
+    await rowOf(page, 'Bill is ready').click();
+    await page.locator('.rd-acts .btn', {hasText: 'Add as task'}).click();
+    const proposal = page.getByRole('form', {name: 'Proposal: add as task'});
+    const field = proposal.getByRole('textbox', {name: 'Description'});
+    await field.waitFor();
+    assert.equal(await field.textContent(), 'From: Bill is ready');
+    assert.equal(await field.locator('a').count(), 0);
+    await proposal.locator('.desc-field .srcm').waitFor();
+    await field.click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('Backspace');
+    await proposal.locator('.desc-field .srcm').waitFor({state: 'detached'});
+    await proposal.getByRole('button', {name: 'Create task'}).click();
+    await proposal.waitFor({state: 'detached'});
+    await until('the task sent', async () => sent, list => list.length === 1);
+    assert.equal(sent[0]!.description, null);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

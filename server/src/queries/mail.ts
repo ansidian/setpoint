@@ -1,7 +1,7 @@
 // Mail's read queries over the message record (SV-2 decision D4): the Inbox's groups and counts,
 // All by day, and one email. Every view is a query; nothing is copied per view. The rules for what
 // the Inbox shows and counts are src/domain/inbox.ts.
-import type {AllOut, CommandOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AllOut, CommandOut, GmailLinkOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
 import {and, count, desc, eq, inArray, isNull, lt, or, sql} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
@@ -171,8 +171,21 @@ export function messageDetail(store: Store, messageId: number): MessageOut {
     security: row.securityFacts,
     attachments: attachments.map(file => ({id: file.id, filename: file.filename, mime_type: file.mimeType, size_bytes: file.sizeBytes, previewable: PREVIEWABLE.test(file.mimeType)})),
     remote_content: {domain, trust_domain: trustDomainOf(domain), sender_authenticated: row.senderAuthenticated, trusted, ...remoteContent({trusted, senderAuthenticated: row.senderAuthenticated, lane: row.lane})},
-    open_url: account.provider === 'gmail' ? `https://mail.google.com/mail/?authuser=${encodeURIComponent(account.address)}#all/${encodeURIComponent(row.providerId)}` : null,
+    open_url: account.provider === 'gmail' ? gmailUrl(account.address, row.providerId) : null,
   };
+}
+
+/** Open in Gmail's address for an email: its account and Gmail's message id (D554). */
+export const gmailUrl = (address: string, providerId: string) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(address)}#all/${encodeURIComponent(providerId)}`;
+
+/**
+ * SV-270 (D555): the email a Gmail address names, by its Gmail account's address (any case) and
+ * Gmail's message id; null when Setpoint doesn't have it, or has only trashed it.
+ */
+export function gmailLink(store: Store, address: string, providerId: string): GmailLinkOut {
+  const row = store.db.select({id: t.messages.id}).from(t.messages).innerJoin(t.accounts, eq(t.accounts.id, t.messages.accountId))
+    .where(and(eq(t.accounts.provider, 'gmail'), sql`lower(${t.accounts.address}) = ${address.toLowerCase()}`, eq(t.messages.providerId, providerId), isNull(t.messages.trashedAt))).get();
+  return {message_id: row?.id ?? null};
 }
 
 /**

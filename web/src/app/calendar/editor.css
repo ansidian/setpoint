@@ -221,3 +221,7 @@
 .editor .desc-bar.linking input { min-width: 0; height: 26px; outline: none; color: var(--ink); }
 .editor .desc-bar.linking input::placeholder { color: var(--ink3); opacity: 1; }
 .editor .desc-note { padding: 0 10px 8px; font-size: 12px; }
+/* SV-270: a proposal's From: line keeps the "from the email" mark at the field's top end until it's changed. */
+.editor .desc-field.marked { position: relative; }
+.editor .desc-field.marked > .desc-edit { padding-right: 32px; }
+.editor .desc-field.marked > .srcm { position: absolute; top: 9px; right: 10px; }

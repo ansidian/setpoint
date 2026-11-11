@@ -655,3 +655,38 @@ export function withLinks(run: Run): Run[] {
   if (from < run.text.length) out.push({...run, text: run.text.slice(from)});
   return out.length ? out : [run];
 }
+
+/**
+ * SV-270 (D553): a proposal's description, one line naming where it came from, "From: *subject*",
+ * the subject a link to it when it has an address (an email's in Gmail, a story's in Setpoint).
+ */
+export function sourceLine(source: {subject: string; url: string | null}): Block[] {
+  const subject = source.subject.trim() || '(no subject)';
+  const href = safeHref(source.url);
+  return [{type: 'paragraph', runs: href ? [{text: 'From: ', marks: [], href: null}, {text: subject, marks: [], href}] : [{text: `From: ${subject}`, marks: [], href: null}]}];
+}
+
+/**
+ * SV-270 (D555): the account and Gmail message id in a link of the form Open in Gmail writes,
+ * https://mail.google.com/mail/?authuser=<account>#all/<message id>; null for any other address,
+ * Gmail's own address-bar links (#inbox/FMfcg…) among them, which name a different id.
+ */
+export function gmailLinkOf(href: string | null): {account: string; id: string} | null {
+  if (!href) return null;
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || url.hostname !== 'mail.google.com' || !/^\/mail\/?$/.test(url.pathname)) return null;
+  const account = url.searchParams.get('authuser');
+  // An address-bar link pasted from All Mail has this shape too; its id just isn't found.
+  const id = /^#all\/([^/?#]+)$/.exec(url.hash)?.[1];
+  if (!account || !id) return null;
+  try {
+    return {account, id: decodeURIComponent(id)};
+  } catch {
+    return null;
+  }
+}

@@ -14,9 +14,11 @@ import type {Store} from '../store.ts';
 
 const HOUR = 60 * 60_000;
 
-export function proposeFromNewsEvent(store: Store, eventId: number): NewsProposalOut {
+/** `origin` is Setpoint's public URL, which the description's link to the story is made absolute on (SV-270). */
+export function proposeFromNewsEvent(store: Store, eventId: number, origin: string): NewsProposalOut {
   const event = store.db.select().from(t.newsEvents).where(eq(t.newsEvents.id, eventId)).get();
   if (!event) throw notFound('No such keynote.');
+  const story = store.db.select({headline: t.newsStories.headline}).from(t.newsStories).where(eq(t.newsStories.id, event.storyId)).get();
   const zone = store.timeZone;
   const date = localDay(event.startsAt, zone);
   const startsAt = event.allDay ? null : event.startsAt;
@@ -32,5 +34,7 @@ export function proposeFromNewsEvent(store: Store, eventId: number): NewsProposa
     },
     conflict: conflictLine({all_day: event.allDay, starts_at: startsAt, ends_at: endsAt, startHour: startsAt ? Number(localTime(startsAt, zone).slice(0, 2)) : null},
       itemsInRange(store, date, dayAfter(date)).items),
+    // D553: the description's "From:" line names the story and links to it in Setpoint.
+    source: {subject: story?.headline ?? event.name, url: new URL(`/news/story/${event.storyId}`, origin).href},
   };
 }

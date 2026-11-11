@@ -255,8 +255,19 @@ export interface ProposalItemOut {
 }
 
 /**
+ * SV-270 (D553–D555): where a proposal came from, for its description's first line, "From:
+ * *subject*": the email's subject and its Gmail address (null for a non-Gmail account), or the
+ * story's headline and Setpoint's address for it.
+ */
+export interface ProposalSourceOut {
+  subject: string;
+  url: string | null;
+}
+
+/**
  * A pre-filled event or task the user reviews before anything is created (board 08). `conflict` is "Free
  * that evening" or "Overlaps Study group · 1h 30m" for an event with a date, null otherwise.
+ * `source` is missing from an Alfred answer saved before SV-270.
  */
 export interface ProposalOut {
   kind: ItemKind;
@@ -264,6 +275,7 @@ export interface ProposalOut {
   item: ProposalItemOut;
   from_email: ProposalField[];
   conflict: {free: boolean; label: string} | null;
+  source?: ProposalSourceOut;
 }
 export const proposalKindSchema = z.enum(ITEM_KINDS);
 
