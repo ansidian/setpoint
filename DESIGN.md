@@ -398,7 +398,7 @@ Unsorted lane. Done mail stays in its day, quiet, with a ✓ Done tag (#241).
 - **Actions** (28 px outline buttons, labels `ink2` and icons `ink3`, `ink` under the pointer, #170):
   **Add to calendar**, **Add as task**, **Ask about this email**.
   Security mail has no Add to calendar; it shows the **facts card** instead (board 03: what happened,
-  when, device, location, "not a place you use" in `alert`), and protected mail says "Protected ·
+  when, device, location, "not a place you use" in `alert`), and protected mail says "Protected,
   always stays in Attention".
   On Security and Noise mail, Add to calendar and Add as task move into the tools' **More** menu
   ([Decided while building](#decided-while-building) #4).
@@ -409,8 +409,8 @@ Unsorted lane. Done mail stays in its day, quiet, with a ✓ Done tag (#241).
   the card dimmed to 95% in Night and ringed with a 1 px `mailEdge` hairline in Light (#171). The
   body starts 12 px under the actions (#170).
 - **Images:** remote content loads for a sender that passes DMARC and isn't Noise. Otherwise the
-  **images-hidden bar** (34 px, radius 12, `sub`): "Images hidden · Show · Always show from
-  contosocoffee.example" (trust per domain); each hidden image keeps its place as a hatched
+  **images-hidden bar** (34 px, radius 12, `sub`): "Images hidden", then the pills Show and Always show from
+  contosocoffee.example, no dot between (trust per domain; SV-271); each hidden image keeps its place as a hatched
   placeholder (#211).
 - **Attachments:** 44 px cards (radius 14, 280 wide, wider to show the whole name, #61) with the
   type's tile (#122), name and size, then the preview's eye and **Download** with its glyph; PDF,
@@ -889,7 +889,7 @@ the list (#333). No board draws it.
   When things break), or it has failed every attempt for 6 hours: then the empty pane's freshness
   line adds "· 1 feed failing" (#332).
 - **First run** (29b):
-  - The muted line "Sorting the last 48 hours · 186 of 312 articles · showing what's sorted so
+  - The muted line "Sorting the last 48 hours · 186 of 312 articles, showing what's sorted so
     far", its progress along its foot (#223).
   - No recap.
   - A section with nothing yet says "Nothing sorted in AI yet", turning as the first run's line does
@@ -1059,7 +1059,7 @@ desktop and keeps it (D325).
 - **The last item** leaving folds the whole band, header and all, over 180 ms.
 - **From history** (D311, D324):
   - Folded, a 36 px line under the items (padding 0 16 0 34, `hair` below, `ink2` 12.5):
-    `chevron_right` 16 in `ink3`, "From history" with its count in `ink3`, then "· what the history
+    `chevron_right` 16 in `ink3`, "From history" with its count in `ink3` and a comma, then "what the history
     pass wasn't sure of" in `ink3`. Under the pointer `sub` and `ink`. With nothing else waiting, it
     stays on its own.
   - Unfolded, its chevron turns 90° and its rows unfold over 180 ms; **Dismiss all**, a quiet small
@@ -1069,7 +1069,7 @@ desktop and keeps it (D325).
     50% behind it, `ink2` 12.5. Its kind's 16 px glyph in `ink3`, then the email's subject in `ink`
     and why in `ink2` ("**Thanks for your interest in the Support Specialist role** · Relecloud ·
     names a role neither application has"; "**Margie's Travel · Associate Developer** · Is this the
-    posting? · 3 candidates"); the date in `ink3` 12 ("Aug 30", "Applied Jun 2"); and two 24 px
+    posting? 3 candidates"); the date in `ink3` 12 ("Aug 30", "Applied Jun 2"); and two 24 px
     buttons at 12: outline **Assign to…**, **Choose…** or **Track this**, and quiet **Not about a
     job** or **None of these**.
   - **Choose…** (not drawn) opens a menu from the button's bottom-left corner, as Assign to… does:
@@ -1117,7 +1117,7 @@ desktop and keeps it (D325).
   - Ghosted is a flag on Applied after 30 days without an email, and it never moves an application
     to Rejected. It appears on the next draw after the 30 days, without motion.
   - **Set by hand** (D322): a 14 px `edit` in `ink3` after the step (`ink` under the pointer), its
-    tip "Set by you on Sep 10 · only an email that sets a status changes it".
+    tip "Set by you on Sep 10, only an email that sets a status changes it".
 - **Closed rows** (Rejected, Withdrawn) and **Ghosted** rows step down: Company `ink2`, Role `ink3`.
   Never a lower opacity, which means a change waiting for its provider.
 - **JD:** a 16 px glyph in `ink3`, how it was found in its tooltip:
@@ -1195,7 +1195,7 @@ desktop and keeps it (D325).
       `ink3` 12.5.
     - Hover `sub`, its 26 px ··· showing; with its menu open, `sub2` and the ··· `sub3` in `ink`.
     - An event whose email Gmail has purged keeps its line and opens nothing (D317): after its
-      subject "· No longer in Gmail" in `ink3`, no hover fill and the default cursor, its tip
+      subject ", no longer in Gmail" in `ink3`, no hover fill and the default cursor, its tip
       "Gmail no longer has this email, so Jobs keeps only its line", and its ··· without Open email
       (#269).
   - **Applied before at Northwind Talent** (D306): a label, then one 44 px card per earlier
@@ -1228,7 +1228,7 @@ desktop and keeps it (D325).
   picked that Jobs couldn't read says so instead (#276), and there Paste the posting leads, filled,
   with a quiet Look it up after it (#278).
 - **Paste the posting** (#278): in place under the card, never a modal, the actions leaving it: a
-  200 px area, max 600, focused, then Save, a quiet Cancel and "⌘Enter to save · Esc" in `ink3`. A
+  200 px area, max 600, focused, then Save, a quiet Cancel and "⌘Enter to save, Esc to cancel" in `ink3`. A
   refusal stays there in `alert` with the text kept. Saved, it says "JD saved for Fabrikam · Undo".
   The JD shows the moment it's saved with only its Full posting row, "Pasted by you · Oct 31, 9:12
   AM", and What they want, the facts and the lists fill in when Haiku has read it; a reading that
@@ -1255,10 +1255,10 @@ with Undo for 6 seconds and #147's glyph (override 36).
 
 - **The title in place** (35a): a click on it swaps the text for a field on the same baseline, with
   no jump (34 px, radius 10, `cardOn`, the `edgeFocus` ring arriving over 120 ms, 20 / 500, padding
-  0 6 0 10), with "Enter to save · Esc" under it in `ink3` 12. Enter saves and Esc cancels, both at
+  0 6 0 10), with "Enter to save, Esc to cancel" under it in `ink3` 12. Enter saves and Esc cancels, both at
   once. The company edits the same way from More.
 - **The location in place** (#300): a click on the JD's location, or on "Add location", swaps it
-  for the same small field as the company's, 240 wide, with "Enter to save · Esc" beside it.
+  for the same small field as the company's, 240 wide, with "Enter to save, Esc to cancel" beside it.
   Emptied and saved, the location goes. The toast says "Location set" or "Location removed".
 - **More** (35b, 300 wide) grows from its top-right corner:
   - **Pin** (`keep`) or **Unpin** (`keep_off`) with `P`, then a divider (#355)
@@ -1266,8 +1266,8 @@ with Undo for 6 seconds and #147's glyph (override 36).
     and **Merge with…** (`merge`), the last two with a `chevron_right` submenu
   - a divider, then **Not this posting** (`link_off`) and **Look up the JD again** (`manage_search`)
   - a divider, then the two that remove it, 44 px with a line saying how they differ (D321): **Not
-    an application** (`visibility_off`), "Hides it · its emails never make one again"; and
-    **Delete** (`delete`), "Forgets it · a later email can make it again". Delete is `ink2` at rest
+    an application** (`visibility_off`), "Hides it, its emails never make one again"; and
+    **Delete** (`delete`), "Forgets it, a later email can make it again". Delete is `ink2` at rest
     and `alert` on a 14% `alert` wash under the pointer.
 - **Merge with…** (330 wide) opens to More's left at its item, its field focused (32 px, `cardOn`,
   an `edgeFocus` ring, "Search applications"), then the company's other applications under its name,
@@ -1312,7 +1312,7 @@ with Undo for 6 seconds and #147's glyph (override 36).
   applications).
 - **In a job description** next, under its own header with `description`: a match only in a JD's
   text is a 56 px row (padding 9 at the top) whose second line, from Company to the row's end in
-  `ink3` 12.5, gives "Full posting · " and the line it matched, quoted, with an ellipsis at each
+  `ink3` 12.5, gives "Full posting" and the line it matched, quoted (the quote marks set it apart, no dot; SV-271), with an ellipsis at each
   end: “…our services run on **Kubernetes** across two regions, so you’ll pick it up from day one…”
   (36b). "Which one asked for Kubernetes?" answers itself without opening anything.
 - **No match in company or role:** a 36 px line in `ink3` 12.5 above the JD matches (padding 0 16 0
@@ -1351,14 +1351,14 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
     11.5 tabular), `history` 14 in `ink3`, "Applied Sep 16 · Rejected Oct 5"; its tooltip "Open Jobs
     searched for Contoso Pharmaceuticals".
   - **In the reader:** the same badge at 26 px (padding 0 10 0 8, 12.5, its glyph 16) where the JD
-    chip sits; its tip "Open in Jobs · every application at Contoso Pharmaceuticals".
+    chip sits; its tip "Open in Jobs, every application at Contoso Pharmaceuticals".
   - Both answer the pointer as the chip does and open Jobs searched for the company ("contoso
     pharmaceuticals"), showing every application there.
 
 ### States
 
 - **The history pass** (38a, D311, D326), a muted line at the top of the column (32 px, `ink3` 12.5,
-  `hair` below): the shared spinner, then "Reading history · 140 of 330 emails · showing what’s read
+  `hair` below): the shared spinner, then "Reading history · 140 of 330 emails, showing what’s read
   so far".
   - Its progress runs along its foot: a 2 px `sub2` track filling in `ink3` (radius 0 2 2 0), its
     width easing over 260 ms as each count comes; the counts change in place, tabular, unanimated.
@@ -1372,7 +1372,7 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
 - **No JD found**, **Ghosted** and **a status set by hand** are drawn above (The table, The
   application's detail), never animated.
 - **Jobs off** (38c): the header is "Jobs" alone; the page is the one-line empty state (#124), the
-  20 px `work` in `ink3` over "Jobs is off · Turn on", Turn on an `ink` link (a 26 px pill, `sub2`
+  20 px `work` in `ink3` over "Jobs is off" and Turn on, no dot between (SV-271), Turn on an `ink` link (a 26 px pill, `sub2`
   under the pointer). Turn on opens Settings › Jobs (its own 260 ms entrance) with the switch
   focused, so turning it on is a choice made where the accounts it reads are listed. While off, Jobs
   has no item in the sidebar or the rail and `4` opens this page; 38c draws the item there, current.
@@ -1482,8 +1482,8 @@ section's label stays under the title (#132).
 - **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", or "Failing, …" by a
   `caution` dot; Send test, which turns while it sends and says under the group how it went, #217;
   Server, Token ([Decided while building](#decided-while-building) #82)), the
-  topics in mono (`setpoint-reminders`: Reminders · Time to Leave · Reconnect alerts;
-  `setpoint-mail`: Attention mail · Off for now; then **FYI mail**, to the same topic, off,
+  topics in mono (`setpoint-reminders`: Reminders, Time to Leave, Reconnect alerts;
+  `setpoint-mail`: Attention mail, off for now; then **FYI mail**, to the same topic, off,
   [Decided while building](#decided-while-building) #252, with no second line once a server is set and
   "Set a server first" until one is, as each switch says, #360), **Reminder defaults** (Events 10 min before; Tasks
   9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49) and
@@ -1506,16 +1506,16 @@ section's label stays under the title (#132).
 | State | Treatment |
 | --- | --- |
 | **Healthy** | nothing on a page; in Settings a 7 px `good` dot before "Checked 9:11 AM" (#219) |
-| **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM · Check now" (#218, #220) |
+| **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM" then Check now (#218, #220, SV-271) |
 | **Failing** | the same line in `caution`, led by `warning`, with the reason and Check now (#218, #220) |
-| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect", Reconnect going straight to Google's sign-in for one Gmail account (#220); one ntfy notification; mantel's alert chip |
+| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in" then Reconnect (SV-271), Reconnect going straight to Google's sign-in for one Gmail account (#220); one ntfy notification; mantel's alert chip |
 | **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#123), once the stream has been down 2 s; everything under it dimmed but still readable (scroll, J / K, open), changes disabled from the moment it drops (#222) |
 | **Starting** | the mark at 36 px where the card's top sits, after 200 ms, fading in, then breathing; what follows fades in over 180 ms (#233) |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#218) |
 | **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#192). |
-| **First backfill** | search's status: the shared spinner, "Indexing · 62% · showing what's indexed so far", and its progress along the line's foot (#224) |
-| **A load failed** | in place of what didn't load, the failing line's look: `warning` in `caution`, "Couldn’t load the Inbox, Something went wrong." in the server's words, then · **Try again** with `refresh`; data already shown stays and says nothing (#228) |
+| **First backfill** | search's status: the shared spinner, "Indexing · 62%, showing what's indexed so far", and its progress along the line's foot (#224) |
+| **A load failed** | in place of what didn't load, the failing line's look: `warning` in `caution`, "Couldn’t load the Inbox, Something went wrong." in the server's words, then **Try again** with `refresh` (no dot, #371); data already shown stays and says nothing (#228) |
 
 Health means **the last check succeeded**, not that data changed; thresholds come from each source's
 schedule ([BRIEF.md › Health](BRIEF.md#health-and-states)).
@@ -1598,7 +1598,9 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 
 ## Copy
 
-Sentence case; " · " separates parts, " – " ranges, "…" is one character; times "2:30 PM"; ages
+Sentence case; " · " separates the parts of a metadata line, a comma the clauses of a sentence,
+status words and lists of like things, and nothing comes before a pill or a button with a glyph
+(#371); " – " ranges, "…" is one character; times "2:30 PM"; ages
 "now", "4m", "2h", "Yesterday", "Mon", "Oct 1" in the Inbox and search, clock times under All's day
 headings; full timestamps in tooltips. Empty states are one line and an action: "All caught up · Open
 All" (stacked under the mark, #203); the day pane's empty day is two dashed ghost rows instead, New event C and New task D (#191); a
@@ -1872,8 +1874,8 @@ was decided; the audit itself was retired by D480.
     repeating task's date changes in Todoist.", "Google Calendar, The calendar is read-only.",
     "Offline, as of 9:41 PM, retrying", "Triage is down, as of 9:09 AM", "Personal, as of 9:14 PM,
     Gmail answered 503." The middle dot stays for neutral details (a day and time, "PDF · 184 KB",
-    "FYI · Money") and before an action button ("Business needs sign-in · Reconnect") (Andy,
-    2026-10-08; darma SV-24 D50).
+    "FYI · Money") and before an action that's plain inline text ("4 hidden · Show all") (Andy,
+    2026-10-08; darma SV-24 D50); before a pill or a button with a glyph it goes since #371.
 26. **A task proposal makes a Todoist project only when asked:** Project's menu lists the projects
     whose names hold what's typed (any case) and, when none is exact, **New project “Work”**. Only
     that pick creates it, in Todoist, before the task. Create with an unknown name says “No project
@@ -1894,7 +1896,7 @@ was decided; the audit itself was retired by D480.
     the phone agenda; a task whose project has none keeps the plain ring. The done glyph stays `good`
     (Andy, 2026-10-09; darma SV-25 D54).
 29. **Settings › Mail's trusted domains with none to show** read as one plain line across the group
-    ("None yet · the reader's “Always show from …” adds one", or "No domain matches" while filtering),
+    ("None yet, the reader's “Always show from …” adds one", or "No domain matches" while filtering),
     a row like "No rules yet", not a cell of the domains' grid: no pill on hover, nothing cut off
     (Andy, 2026-10-09; darma SV-25 D54). "None yet" leads with a 20 px `image` in `ink3` (#363, D520).
 30. **Esc in an inline Settings form cancels the form first,** from any of its fields, as Rename
@@ -1993,7 +1995,7 @@ was decided; the audit itself was retired by D480.
     rows follow Unread's kind order, newest first within a kind, and the kind (11 uppercase `ink3`,
     84 px) shows in a left column, before the unread dot, only where its run starts; Attention and
     Unsorted leave it blank, and it drops with the reading pane open and on the phone, as the kind on the right it replaces
-    did. Each day's Noise is one line after a `hair`, "NOISE 3 Contoso Coffee · Tailspin · Litware"
+    did. Each day's Noise is one line after a `hair`, "NOISE 3 Contoso Coffee, Tailspin, Litware"
     and a chevron, that opens in place on a click or Enter; J and K stop on it while folded (Andy,
     2026-10-09; darma SV-26 D58).
 49. **A started draft stays until Create, Save, Cancel or Esc** (amending #47): New, C, D and E
@@ -3036,8 +3038,8 @@ was decided; the audit itself was retired by D480.
     nothing" for Settings, and board 17's bare healthy text) (Andy, 2026-10-11, polish audit
     settings-01, states-04).
 220. **The fix is on the line:** each stale or failing line on the Inbox and atop the calendar's pane
-    (Google Calendar, Todoist, Weather; above the grid in the compact tier) ends " · Check now", the
-    dot `ink3` and the button the bar's Reconnect look in `ink2` (12.5, 24 px tall, padding 0 9, `sub`
+    (Google Calendar, Todoist, Weather; above the grid in the compact tier) ends in Check now, no dot
+    before it since the pill and the gap set it apart (#371), the button the bar's Reconnect look in `ink2` (12.5, 24 px tall, padding 0 9, `sub`
     and `ink` under the pointer); it checks that account's or source's own (Google Calendar's worst
     account), and reads "Checking…" until the check lands, as Settings' rows do (#42), or why it
     couldn't start. On a failing calendar line that wraps, it sits beside the first line. The
@@ -3074,7 +3076,7 @@ was decided; the audit itself was retired by D480.
     Tech" (Andy, 2026-10-11, polish audit news-13).
 224. **Progress looks the same wherever it runs:** one spinner, `progress_activity` turning every
     900 ms (states.css; it was defined twice), and one progress line: search's first backfill leads
-    "Indexing · 62% · showing what's indexed so far" with the 16 px spinner in the line's `ink3` and
+    "Indexing · 62%, showing what's indexed so far" with the 16 px spinner in the line's `ink3` and
     draws the 62% along the line's foot, a 2 px `sub2` track over its hairline with the share in
     `ink3` (radius 0 2 2 0), its width easing over 260 ms, as News's first run does. The fill is
     neutral, as a usage meter's is (#134), where search-12 drew it in `cool`, which is Personal's and
@@ -3113,8 +3115,8 @@ was decided; the audit itself was retired by D480.
     500, a timeout) while Setpoint is reachable, the list, the reader's body, the right pane's day,
     News's list or the Settings page shows one 32 px line in its place, the failing line's look:
     a 16 px `warning` in `caution`, "Couldn’t load the Inbox, Something went wrong." (the server's
-    words after a comma; "this email", "this day", "News", "Settings › AI"), then " · " and **Try
-    again** in `ink` with its `refresh`, which asks again. Its skeleton goes, so nothing claims it's
+    words after a comma; "this email", "this day", "News", "Settings › AI"), then **Try
+    again** (no dot before it since #371) in `ink` with its `refresh`, which asks again. Its skeleton goes, so nothing claims it's
     still coming. A refresh failing under data already shown keeps the data and says nothing; the
     next live event tries again. Offline, the pill already says so, and the skeleton waits (Andy,
     2026-10-11, polish audit states-06).
@@ -3548,7 +3550,7 @@ was decided; the audit itself was retired by D480.
     `sun`, Light the deeper amber); their labels stay `ink3` and their rows still step down, so a
     table of mostly closed rows doesn't shout. The Full posting row, its unfolded head and the
     Looking for the posting row put how it was found straight after the title, 10 px apart, with no
-    "·"; the search snippet's "Full posting · " keeps it, as it introduces a quote. Board audit:
+    "·"; the search snippet's "Full posting · " kept it, as it introduces a quote (since #371 the quote marks do that alone). Board audit:
     the boards draw both marks in `ink3` and the dot after "Full posting".
 266. **From history's Choose… is a menu** (Andy, 2026-10-29; darma SV-124, D364): the candidates
     open from the button, as Assign to…'s applications do, so history's rows keep one height; a pick
@@ -3951,7 +3953,7 @@ was decided; the audit itself was retired by D480.
       chosen calendar's colour, the title (`ink3` and 400 while unticked), and "Thu, Oct 15 · 9:00 –
       10:00 AM" in `ink3` 12.5 with "repeats", "past" or "will update" after it. Past events start
       unticked. What the file had that an import leaves out closes the list in
-      `ink3`, one line: "Left out: 2 events cancelled · categories on 35 events", each reason as "2
+      `ink3`, one line: "Left out: 2 events cancelled, categories on 35 events", each reason as "2
       events cancelled", "3 to-dos and notes" (VTODO, VJOURNAL, VFREEBUSY), "1 event with no start",
       "a reminder after the start", "a reminder at a set time", "a reminder past Google's limit"
       (over 5, or over 4 weeks), "categories on 35 events", "a second copy of an event" and "a
@@ -4218,10 +4220,10 @@ was decided; the audit itself was retired by D480.
     wash (4%, 9% in Light) with its glyph `cool`, its number `ink`: too faint to read as `accent`, a
     deliberate exception to #163. Behind the block, a faint glow of the mark's three colours (10%,
     18% in Light, where its colours are darker) is gone well before the pane's edges. The foot, centred
-    at the bottom, holds "12,408 emails · 1.3 GB, since Mar 2019." at 12 `ink3` (every kept email, its
+    at the bottom, holds "12,408 emails, 1.3 GB, since Mar 2019." at 12 `ink3` (every kept email, its
     stored text and HTML plus its attachments at the provider's size, and the oldest one's month)
     over the keys: J K Move, Enter Open, U Next unread, H Done, E Trash, P Pin; trouble ("Business
-    needs sign-in · Reconnect", "Triage is down, as of 9:09 AM · Settings › AI") is folded into the
+    needs sign-in" and its Reconnect, no dot between (#371), "Triage is down, as of 9:09 AM · Settings › AI") is folded into the
     foot (#335). Today is since the user's midnight. There's no unread line (SV-221). The list's own reconnect bar stays.
 332. **News's empty pane holds the recap and News's facts** (amending #298's placement and #327's
     placeholder for News; Andy, 2026-11-06; darma SV-219, D466, D468). In the Inbox's shape (#331):
@@ -4234,7 +4236,7 @@ was decided; the audit itself was retired by D480.
     today's strip as the Inbox's, its numbers `ink` (`ink3` at zero) with no wash: Articles fetched
     (`article`, every article fetched since midnight, sorted or not), Stories started (`newspaper`,
     stories on the page first reported since midnight) and Outlets (`public`, those today's
-    articles came from), each with a tooltip saying what it counts. The foot holds "8,214 stories ·
+    articles came from), each with a tooltip saying what it counts. The foot holds "8,214 stories,
     $38 of AI this month." at 12 `ink3` (every story kept, News's AI this month in whole dollars
     from $10) over the keys: J K Move, Enter Open, O Original, Tab Section. Trouble (sorting stopped,
     with "Settings › AI" when that's the fix; each whole section stale, "AI, as of 7:02 AM") is
@@ -4583,7 +4585,7 @@ was decided; the audit itself was retired by D480.
     wide at the 820 px modal (670 at 1040), with room for two-digit amounts. The whole note
     appended measured 602 px and clipped at 820, so its reason goes in the line's tip after the
     calls and tokens: "497 calls · 1.3M tokens in · 80k out. No cap: a JD is worth finding while the
-    posting is up". Decided for Andy overnight: the words "no cap", lower-case as "· needs a key" is,
+    posting is up". Decided for Andy overnight: the words "no cap", lower-case as ", needs a key" is (a comma since #371),
     and the reason in the tip.
 360. **FYI mail says "Set a server first" without a server, and every row lands on whole pixels**
     (amending #252 and Settings' rows; Andy, 2026-11-09; darma SV-253, D517): while ntfy has no
@@ -4657,7 +4659,7 @@ was decided; the audit itself was retired by D480.
       once there are more domains than the 11 shown before Show all, and keeps them while a filter is
       still applied, so it can be cleared. With 12 every domain shows with no Show all, and the count and
       Filter show.
-    - **The empty line (D520):** "None yet · the reader's “Always show from …” adds one" leads with a
+    - **The empty line (D520):** "None yet, the reader's “Always show from …” adds one" leads with a
       20 px `image` in `ink3`, 12 px before its words, as Rules' and Passkeys' do (#124); these are the
       domains whose remote images show. "No domain matches" keeps its plain line.
     - **Notes (F10):** a group's note (Mail › Rules' protected-mail note, Jobs › Reads' Career mail
@@ -4782,3 +4784,21 @@ was decided; the audit itself was retired by D480.
     - **Clone, copy and paste** of an item carry its description. Text pasted into the field keeps
       what its provider's own editor writes: bold, italic, underline, lists and links on an event,
       everything but underline on a task.
+371. **The middle dot is for a metadata line's parts only** (amending Copy and #25; Andy, 2026-11-11;
+    darma SV-271, D551). No dot before a pill or a button with a glyph: Check now, Reconnect, Try
+    again, Turn on, the images bar's Show and Always show from, and Today's trouble fixes, with
+    no negative margin either, so the gap and the pill's padding set them apart. On a failing line
+    that wraps, Check now is centred on the words. Plain inline actions keep their dot ("4 hidden ·
+    Show all", "No rules yet · Add rule", the toasts' "· Undo", News's "1 feed failing", which is
+    underlined text, not a pill). A comma joins the clauses of a sentence ("Hides it, its emails
+    never make one again", "Made Oct 3, each works once"; Mail's protected note is two sentences),
+    a progress line's closing clause ("Indexing · 62%, showing what's indexed so far"), status
+    words (", needs a key", ", no key", "Attention mail, off for now", ", no longer in Gmail"),
+    the foot lines ("212 emails, 14 MB, since 6:00 AM.", "8,214 stories, $38 of AI this month.")
+    and lists of like things (a Google account's calendars, the ntfy topic's contents, the Noise
+    band's senders, "Left out: …", "6 events, 2 tasks"). Where a question mark, quote marks or
+    `ink3` and a gap already set a part apart, there's no dot: "Is this the posting? 3
+    candidates", "Full posting “…”", search's suggestion and its count, the per-week tip's count,
+    a calendar's account after its name in a menu. Save hints say both keys: "Enter to save, Esc
+    to cancel". The "Label · key" tooltips stay. The overlap line reads the same in the editor and
+    on a proposal card: "Overlaps Study group and 1 more · 1h 30m".
