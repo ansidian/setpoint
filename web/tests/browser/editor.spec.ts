@@ -435,6 +435,107 @@ test('a Todoist task in the same editor: its due day from the line and its proje
   }
 });
 
+test('SV-264: a description shows formatted in the detail; an edit that leaves it alone doesn\'t send it, one that changes it sends it as Google writes it, and clearing it sends none', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    // What each save sends for the item.
+    const sent: Record<string, unknown>[] = [];
+    page.on('request', request => {
+      if (request.method() === 'PATCH' && /\/api\/items\/\d+$/.test(request.url())) sent.push((request.postDataJSON() as {changes: Record<string, unknown>}).changes);
+    });
+    const study = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Study group')!;
+    const seeded = (await study()).description!;
+    assert.match(seeded, /^<b>Midterm review<\/b>/);
+    const edit = async () => {
+      await page.locator('.cell[data-date="2026-10-09"] .ev', {hasText: 'Study group'}).click();
+      await page.locator('.fd .fd-desc').waitFor();
+      await page.keyboard.press('e');
+      await page.locator('.editor[aria-label="Edit event"]').waitFor();
+    };
+    const save = async () => {
+      await page.keyboard.press('Meta+Enter');
+      await page.locator('.editor').waitFor({state: 'detached'});
+      await settled(setpoint, '2026-10-09');
+    };
+    await openCalendar(page, setpoint.base);
+    await page.locator('.cell[data-date="2026-10-09"] .ev', {hasText: 'Study group'}).click();
+    // The detail: formatted, after the time and before its calendar, its link to a new tab, folded under More.
+    await page.locator('.fd .fd-desc b', {hasText: 'Midterm review'}).waitFor();
+    assert.deepEqual(await page.locator('.fd .fd-desc ol li').allTextContents(), ['Recursion', 'Big O']);
+    assert.equal(await page.locator('.fd .fd-desc a', {hasText: 'Practice exam'}).getAttribute('target'), '_blank');
+    await page.locator('.fd').getByRole('button', {name: 'More'}).waitFor();
+    assert.deepEqual(await page.locator('.fd .card-b .fact').evaluateAll(facts => facts.map(fact => fact.className)), ['fact description', 'fact', 'fact cal']);
+
+    // The editor opens on it; another field's change leaves it out of what's sent, and as it was.
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit event"]').waitFor();
+    const field = page.getByRole('textbox', {name: 'Description'});
+    await field.locator('b', {hasText: 'Midterm review'}).waitFor();
+    await page.getByLabel('Start', {exact: true}).fill('6:00 PM');
+    await page.getByLabel('Start', {exact: true}).press('Enter');
+    await save();
+    assert.deepEqual(sent.map(changes => Object.keys(changes).sort()), [['all_day', 'end_date', 'ends_at', 'start_date', 'starts_at']]);
+    assert.equal((await study()).description, seeded);
+
+    // Changed: sent alone, in Google's own shape. Typed over the bold first words, it's bold as they were.
+    await edit();
+    await field.click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.type('Room 3B');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Bring notes');
+    await save();
+    assert.deepEqual(sent.at(-1), {description: '<b>Room 3B</b><br><b>Bring notes</b>'});
+    assert.equal((await study()).description, '<b>Room 3B</b><br><b>Bring notes</b>');
+
+    // Cleared: null, and the detail has no row for it.
+    await edit();
+    await field.click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('Backspace');
+    await save();
+    assert.deepEqual(sent.at(-1), {description: null});
+    assert.equal((await study()).description, null);
+    await page.locator('.cell[data-date="2026-10-09"] .ev', {hasText: 'Study group'}).click();
+    await page.locator('.fd .fact.cal').waitFor();
+    assert.equal(await page.locator('.fd .fact.description').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-264: a new task\'s description is written as Markdown, and a task\'s detail reads it back formatted', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('d');
+    const line = page.getByLabel('Describe the task');
+    await line.waitFor();
+    await line.pressSequentially('Water plants fri');
+    const field = page.getByRole('textbox', {name: 'Description'});
+    await field.click();
+    // A task's bar has no Underline: Markdown has none.
+    await page.getByRole('button', {name: 'Bold'}).waitFor();
+    assert.equal(await page.getByRole('button', {name: 'Underline'}).count(), 0);
+    await page.keyboard.type('Use the can');
+    await page.keyboard.press('Shift+Home');
+    await page.getByRole('button', {name: 'Bold'}).click();
+    await page.getByRole('button', {name: 'Create task'}).click();
+    await page.locator('.cell[data-date="2026-10-09"] .tk', {hasText: 'Water plants'}).waitFor();
+    await settled(setpoint, '2026-10-09');
+    const {items} = await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10');
+    assert.equal(items.find(item => item.title === 'Water plants')!.description, '**Use the can**');
+    await page.locator('.cell[data-date="2026-10-09"] .tk', {hasText: 'Water plants'}).click();
+    await page.locator('.fd .fd-desc b', {hasText: 'Use the can'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('SV-74: a new task\'s × takes its date off, its time and repeat with it; Todoist gets it with no date, and a refusal comes as a toast', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

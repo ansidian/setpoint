@@ -122,6 +122,30 @@ test('selecting items already in view never scrolls the grid: Dentist, then Dinn
   }
 });
 
+test('SV-264: a long description opened with More keeps the card, Edit included, inside the grid', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.setViewportSize({width: 1280, height: 720});
+    await page.goto(`${setpoint.base}/calendar`);
+    await chip(page, '2026-10-15', 'Career fair').click();
+    await card(page).getByRole('button', {name: 'More'}).click();
+    await card(page).getByRole('button', {name: 'Less'}).waitFor();
+    // The opened text is 320 px with the rest inside, and the card is placed again around it.
+    assert.equal(await page.locator('.fd .fd-desc').evaluate(text => text.clientHeight), 320);
+    const edges = () => page.evaluate(() => {
+      const grid = document.querySelector('.cal-month')!.getBoundingClientRect();
+      const edit = [...document.querySelectorAll('.fd .card-acts button')].find(button => button.textContent?.startsWith('Edit'))!.getBoundingClientRect();
+      const box = document.querySelector('.fd .card')!.getBoundingClientRect();
+      return {top: Math.round(box.top - grid.top), bottom: Math.round(grid.bottom - box.bottom), edit: Math.round(grid.bottom - edit.bottom)};
+    });
+    await until('the opened card inside the grid', edges, at => at.top >= 0 && at.bottom >= 0 && at.edit >= 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('Esc closes the card and lets the item go; so does a click on empty grid; × too', async () => {
   const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
   try {

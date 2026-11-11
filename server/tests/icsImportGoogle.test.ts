@@ -65,7 +65,8 @@ describe('SV-181: importing into Google', () => {
     const keynote = readImport(w.store, crlf(CONFERENCE_SCHEDULE)).events[0]!;
     const asked = importEvent(w.store, importInput(calendar(PERSONAL).id, keynote));
     expect(asked).toMatchObject({kind: 'item_create', state: 'pending'});
-    expect(day('2026-11-12').find(item => item.title === 'Opening keynote')).toMatchObject({command: {state: 'pending'}, transparency: 'transparent', link: 'https://devcon.example.com/sessions/101'});
+    // SV-264: the file's description shows on the event at once, before Google answers.
+    expect(day('2026-11-12').find(item => item.title === 'Opening keynote')).toMatchObject({command: {state: 'pending'}, transparency: 'transparent', link: 'https://devcon.example.com/sessions/101', description: 'Opening keynote, a session at Northwind DevCon.'});
     await run();
     expect(command(asked.id).state).toBe('confirmed');
     expect(google.imports).toHaveLength(1);
@@ -79,7 +80,7 @@ describe('SV-181: importing into Google', () => {
     const imported = google.events(PERSONAL).find(event => event.iCalUID === '101@devcon.example.com')!;
     w.advance(16 * 60_000);
     await run();
-    expect(day('2026-11-12').filter(item => item.title === 'Opening keynote')).toEqual([expect.objectContaining({command: null, reminders: []})]);
+    expect(day('2026-11-12').filter(item => item.title === 'Opening keynote')).toEqual([expect.objectContaining({command: null, reminders: [], description: 'Opening keynote, a session at Northwind DevCon.'})]);
     expect(w.store.sqlite.prepare('select provider_id, ical_uid from items where title = ?').all('Opening keynote')).toEqual([{provider_id: imported.id, ical_uid: '101@devcon.example.com'}]);
   });
 
