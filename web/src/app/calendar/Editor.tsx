@@ -1096,7 +1096,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
         </div>
 
         <div className="eg">
-          <Icon name="schedule" size={17} className={echo.when} />
+          <Icon name="schedule" size={17} className={`g-when ${echo.when ?? ''}`} />
           <div className={`prow${lastDay !== draft.date ? ' days' : ''}`}>
             <DateField className={`date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`} label={kind === 'task' ? 'Due date' : 'Date'}
               value={draft.undated ? null : draft.date} placeholder={kind === 'event' ? 'Pick a day' : 'No date'}
@@ -1176,7 +1176,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
           {kind === 'event' && (
             <>
-              <Icon name="location_on" size={17} className={echo.place} />
+              <Icon name="location_on" size={17} className={`g-place ${echo.place ?? ''}`} />
               <label className={`field${placeMenuShown ? ' focus' : ''}`}>
                 <input className="grow" aria-label="Place" placeholder="Add place" value={draft.place} onFocus={() => setPlaceAsked(true)}
                   onChange={event => change({place: event.target.value, address: null, picked: null}, ['place'])} />
@@ -1204,7 +1204,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
           {kind === 'event' ? (
             <>
-              <Icon name="calendar_today" size={17} className={echo.calendar} style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
+              <Icon name="calendar_today" size={17} className={`g-cal ${echo.calendar ?? ''}`} style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
               <span className="menu-host">
                 <button type="button" className="field" aria-label="Calendar" aria-expanded={menu === 'calendar'}
                   onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
@@ -1240,7 +1240,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </>
           ) : (
             <>
-              <Icon name="work" size={17} className={echo.project} style={projectTodoist ? {'--c': TODOIST_COLOURS[projectTodoist]} as CSSProperties : undefined} />
+              <Icon name="work" size={17} className={`g-proj ${echo.project ?? ''}`} style={projectTodoist ? {'--c': TODOIST_COLOURS[projectTodoist]} as CSSProperties : undefined} />
               <ProjectField value={draft.project ?? ''} isNew={draft.newProject} projects={projects ?? []} noNew={!!editing}
                 placeholder={settings?.todoist.default_project ?? projects?.find(one => one.inbox)?.name ?? 'Inbox'}
                 line={lineOpen ? {cur: lineCur} : null}
@@ -1280,7 +1280,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </>
           )}
 
-          <RemindersRow reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today} glyph={echo.reminder}
+          <RemindersRow reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today} glyph={`g-remind ${echo.reminder ?? ''}`}
             menuOpen={menu === 'reminder'} menuRef={menuRef} onMenu={open => setMenu(open ? 'reminder' : null)}
             onChange={list => {
               // Ticked beside the line's they're picked; one the line set taken out sets them by hand (SV-112).
