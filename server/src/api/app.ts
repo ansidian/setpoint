@@ -33,7 +33,7 @@ import {
 } from '../auth/passkeys.ts';
 import {alfredStep, askAlfred, conversation} from '../alfred/ask.ts';
 import type {AlfredOptions} from '../alfred/ask.ts';
-import {proposeFromMessage} from '../alfred/proposals.ts';
+import {inviteOf, proposeFromMessage} from '../alfred/proposals.ts';
 import {haTokenMatches} from '../auth/haToken.ts';
 import {bearerToken, findDevice, issuePairingCode, listDevices, pairDevice, revokeDevice, withdrawPairingCode} from '../auth/devices.ts';
 import type {Device} from '../auth/devices.ts';
@@ -631,9 +631,9 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   });
   app.post('/api/proposals/from-message', async c => {
     const input = parse(proposalInput, await body(c));
-    return c.json(proposeFromMessage(store, input.message_id, input.kind));
+    return c.json(proposeFromMessage(store, input.message_id, input.kind, {}, await inviteOf(store, engine, input.message_id)));
   });
-  app.post('/api/alfred/ask', async c => c.json(await askAlfred(store, parse(askInput, await body(c)), alfred)));
+  app.post('/api/alfred/ask', async c => c.json(await askAlfred(store, parse(askInput, await body(c)), {...alfred, engine})));
   app.get('/api/alfred/conversations/:id', c => c.json(conversation(store, id(c.req.param('id')))));
   app.get('/api/alfred/asks/:askId', c => c.json({step: alfredStep(store, c.req.param('askId'))}));
   // SV-71: the places events have used, before anything is typed. Before /api/places/:place_id.

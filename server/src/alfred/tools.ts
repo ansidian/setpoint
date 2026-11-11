@@ -20,6 +20,7 @@ import {searchMail} from '../search/search.ts';
 import type {Store} from '../store.ts';
 import {fenced} from './prompt.ts';
 import {proposeFromMessage} from './proposals.ts';
+import type {Invite} from './proposals.ts';
 
 const SEARCH_PAGE = 10;
 const BODY_LIMIT = 20_000;
@@ -40,6 +41,9 @@ export interface ToolContext {
   // The user's messages in this conversation, this one last.
   questions: string[];
   proposals: ProposalOut[];
+  // SV-263: the invite of an email a proposal is asked for, read before the tool runs (the tools
+  // themselves don't wait on a provider); an email with none has null or no entry.
+  invites?: Map<number, Invite | null>;
 }
 
 export interface ToolOutcome {
@@ -155,7 +159,7 @@ function proposeTool(context: ToolContext, input: Record<string, unknown>): Tool
     ...(date ? {date} : {}),
     ...(start ? {start, end: end || null} : {}),
     ...(text(input.place) ? {place: text(input.place)} : {}),
-  });
+  }, context.invites?.get(messageId) ?? null);
   context.proposals.push(proposal);
   return ok({ready: true, title: proposal.item.title, conflict: proposal.conflict?.label ?? null});
 }

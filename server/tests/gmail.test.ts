@@ -2,6 +2,8 @@
 // Gmail, a resumable 365-day backfill with progress, new mail by Pub/Sub pull, read elsewhere, opening
 // in Setpoint, Mark all as read in one batchModify, trash with undo, history too old (full resync),
 // 429, timeouts, an expired access token and a revoked one; with the counts following the rules.
+import {askAlfred} from '../src/alfred/ask.ts';
+import {setSecret} from '../src/secrets/store.ts';
 import {generateKeyPairSync} from 'node:crypto';
 import {SEED_NOW} from '@setpoint/shared';
 import type {IcsReadOut} from '@setpoint/shared';
@@ -24,6 +26,7 @@ import {Adapters} from '../src/sync/registry.ts';
 import {fakeGoogle} from './fakeGoogle.ts';
 import type {FakeGoogle} from './fakeGoogle.ts';
 import {fakeNtfy} from './fakeNtfy.ts';
+import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
 import {crlf, INTERVIEW_INVITE} from './fixtures/icsFiles.ts';
 import {client, liveEvents, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -490,6 +493,54 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     expect((await client(w).send('POST', `/api/mail/messages/${message.id}/attachments/${invite!.id}/ics`)).status).toBe(401);
     google.deleteForever(ADDRESS, message.providerId);
     expect((await api.send('POST', `/api/mail/messages/${message.id}/attachments/${invite!.id}/ics`)).status).toBe(404);
+  });
+  test('SV-263: Add to calendar takes its time, end and place from the email\'s invite, over the text; a file it can\'t use, or one Gmail no longer has, leaves the text\'s proposal', async () => {
+    const env = await setup({pageSize: 50});
+    const {w, google, api} = env;
+    const twoEvents = INTERVIEW_INVITE.flatMap(line => line === 'END:VCALENDAR'
+      ? ['BEGIN:VEVENT', 'UID:second@jobs.example.com', 'DTSTAMP:20261104T150000Z', 'SUMMARY:Second round', 'DTSTART:20261112T180000Z', 'DTEND:20261112T190000Z', 'END:VEVENT', line]
+      : [line]);
+    const email = (subject: string, text: string, attachments: {filename: string; contentType: string; content: string}[]) => google.deliver(ADDRESS, {raw: rawEmail({
+      from: 'Contoso Recruiting <recruiting@contoso.example.com>', subject, date: ago(DAY), text, received: gmailVerdict('contoso.example.com'), attachments,
+    }), date: ago(DAY), labels: ['INBOX']});
+    // The text says another time and no place: the invite is the one to believe.
+    email('Interview confirmed', 'Your interview is on Tue, Nov 10 · 9 AM. The invite is attached.', [
+      {filename: 'notes.ics', contentType: 'text/calendar', content: 'Not a calendar.'},
+      {filename: 'invite.ics', contentType: 'text/calendar', content: crlf(INTERVIEW_INVITE)},
+    ]);
+    email('Two rounds', 'Both rounds: Tue, Nov 10 · 9 AM · Room 4', [{filename: 'rounds.ics', contentType: 'text/calendar', content: crlf(twoEvents)}]);
+    email('Not a calendar', 'See you Tue, Nov 10 · 9 AM · Room 4', [{filename: 'notes.ics', contentType: 'text/calendar', content: 'Not a calendar.'}]);
+    email('Interview cancelled', 'It was Tue, Nov 10 · 9 AM · Room 4', [{filename: 'invite.ics', contentType: 'text/calendar', content: crlf(INTERVIEW_INVITE.map(line => (line === 'METHOD:REQUEST' ? 'METHOD:CANCEL' : line)))}]);
+    await connect(env);
+    await env.drain();
+    for (const subject of ['Interview confirmed', 'Two rounds', 'Not a calendar', 'Interview cancelled']) w.store.db.update(t.messages).set({keyDate: '2026-11-10'}).where(eq(t.messages.subject, subject)).run();
+    const propose = (subject: string, kind = 'event') => api.send('POST', '/api/proposals/from-message', {body: {message_id: bySubject(w, subject).id, kind}});
+    const fromText = {status: 200, body: {item: {all_day: false, starts_at: '2026-11-10T17:00:00.000Z', ends_at: '2026-11-10T18:00:00.000Z', place: 'Contoso Recruiting · Room 4'}, from_email: ['title', 'date', 'time', 'place']}};
+
+    const invited = await propose('Interview confirmed');
+    expect(invited).toMatchObject({status: 200, body: {
+      // 2 to 2:30 PM in New York, as the invite says.
+      item: {title: 'Interview confirmed', all_day: false, starts_at: '2026-11-10T19:00:00.000Z', ends_at: '2026-11-10T19:30:00.000Z', start_date: null, place: 'https://meet.example.com/j/482-193-775'},
+      from_email: ['title', 'date', 'time', 'place'],
+    }});
+    expect(await propose('Interview confirmed', 'task')).toMatchObject({status: 200, body: {item: {due_date: '2026-11-10', due_at: '2026-11-10T19:00:00.000Z'}}});
+    expect(await propose('Two rounds')).toMatchObject(fromText);
+    expect(await propose('Not a calendar')).toMatchObject(fromText);
+    // A cancellation is no event to take a time from.
+    expect(await propose('Interview cancelled')).toMatchObject(fromText);
+    // Alfred's proposal takes the invite too, under what he says himself: his title, the invite's time and place.
+    const fake = await fakeModels();
+    setSecret(w.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    const question = 'Put the interview on my calendar';
+    const interview = bySubject(w, 'Interview confirmed').id;
+    fake.answer(request => (JSON.stringify(request.body.messages.at(-1)).includes('tool_result')
+      ? {calls: [{name: 'answer', input: {found: true, text: 'Ready to review.', source_ids: []}}]}
+      : {calls: [{name: 'propose_item', input: {owner_instruction: question, message_id: interview, kind: 'event', title: 'Contoso interview'}}]}));
+    const asked = await askAlfred(w.store, {question, message_id: interview}, {endpoints: fake.endpoints, timeoutMs: 2000, engine: env.engine});
+    expect(asked.proposals).toMatchObject([{item: {title: 'Contoso interview', starts_at: '2026-11-10T19:00:00.000Z', ends_at: '2026-11-10T19:30:00.000Z', place: 'https://meet.example.com/j/482-193-775'}, from_email: ['date', 'time', 'place']}]);
+    // Gmail no longer has the email: the proposal is the text's, not an error.
+    google.deleteForever(ADDRESS, bySubject(w, 'Interview confirmed').providerId);
+    expect(await propose('Interview confirmed')).toMatchObject({status: 200, body: {item: {starts_at: '2026-11-10T17:00:00.000Z', place: null}, from_email: ['title', 'date', 'time']}});
   });
 });
 

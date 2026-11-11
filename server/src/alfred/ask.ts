@@ -21,10 +21,12 @@ import type {AiEndpoints, ConverseTurn, ToolResult} from '../providers/ai/index.
 import {getSettings} from '../settings.ts';
 import {isoNow, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
+import type {SyncEngine} from '../sync/engine.ts';
 import {ProviderError} from '../sync/errors.ts';
 import {aiKeys, anthropicKey} from '../triage/models.ts';
 import {chooseAlfredModel} from './models.ts';
 import {ALFRED_TOOLS, alfredSystem, ANSWER_NUDGE, fenced, MAX_OUTPUT_TOKENS} from './prompt.ts';
+import {inviteOf} from './proposals.ts';
 import {runTool} from './tools.ts';
 import type {ToolContext} from './tools.ts';
 
@@ -32,6 +34,8 @@ export interface AlfredOptions {
   // The provider's base URL; tests point it at a fake on 127.0.0.1.
   endpoints?: AiEndpoints;
   timeoutMs?: number;
+  // Reads an email's invite for a proposal (SV-263); without it a proposal is the text's.
+  engine?: SyncEngine | null;
 }
 
 /** Model turns per question before Alfred gives up (v1 allowed 12 tool rounds). */
@@ -177,7 +181,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   items.push(...client.userTurn(firstText, thread?.transcript.pending ?? []));
 
   const context: ToolContext = {
-    store, read: [], searched: [], proposals: [],
+    store, read: [], searched: [], proposals: [], invites: new Map(),
     seen: new Set([...(thread?.transcript.seen ?? []), ...(scope !== null ? [scope] : [])]),
     questions: [...earlier.map(turn => turn.question), input.question],
   };
@@ -205,6 +209,9 @@ export async function askAlfred(store: Store, input: {question: string; conversa
           } else {
             const step = input.ask_id ? stepOf(store, call.name, call.input) : null;
             if (step) steps.set(input.ask_id!, step);
+            // SV-263: a proposal takes what the email's invite says, read here since the tools don't wait.
+            const proposed = call.name === 'propose_item' ? Number(call.input?.message_id) : null;
+            if (proposed && context.seen.has(proposed) && !context.invites!.has(proposed)) context.invites!.set(proposed, await inviteOf(store, options.engine ?? null, proposed));
             const outcome = runTool(context, call.name, call.input);
             results.push({id: call.id, output: outcome.output, ...(outcome.error ? {error: true} : {})});
           }
