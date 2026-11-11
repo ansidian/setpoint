@@ -22,6 +22,10 @@ const CLASSES = 'classes@group.calendar.google.com';
 import {fakeNtfy} from './fakeNtfy.ts';
 import {liveEvents, world} from './helpers.ts';
 
+// SV-264: a description as Google Calendar's own editor writes one (read from a real event, 2026-11-10): lines joined by
+// <br> with no paragraphs, lists straight after a line, and an empty tag left behind.
+const GOOGLE_DESCRIPTION = '<b>Bring</b> the signed form<br><i>Room 204</i><br><u>Arrive early</u><br><ol><li><i>Check in</i></li><li>Badge</li></ol><ul><li>Laptop</li></ul><br><a href="https://example.com/visit">https://example.com/visit</a><i></i>';
+
 const conflict = {status: 409, body: {error: {code: 409, message: 'The requested event was modified by another client.', errors: [{domain: 'global', reason: 'conflict'}]}}};
 
 describe('an event\'s location line', () => {
@@ -143,6 +147,21 @@ describe('the mirror', () => {
     w.advance(16 * 60_000);
     await run();
     expect(day('2026-10-08').find(item => item.title === 'Workshop A: tooling')!.transparency).toBe('opaque');
+  });
+
+  test('SV-264: an event\'s description is kept as Google wrote it, none is null, and a row from before it was read gets its own on the daily full read', async () => {
+    const {w, google, run, item, day} = await calendarWorld();
+    google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, description: GOOGLE_DESCRIPTION});
+    await run();
+    expect(day('2026-10-09').map(entry => [entry.title, entry.description])).toEqual([['Gym', null], ['Dinner with Sam', GOOGLE_DESCRIPTION]]);
+    // As a row synced before SV-264 holds it: nothing changes in Google, so only a full read names the event again.
+    w.store.db.update(t.items).set({description: null}).where(eq(t.items.id, item('dinner').id)).run();
+    w.advance(16 * 60_000);
+    await run();
+    expect(item('dinner').description).toBeNull();
+    w.advance(25 * 3600_000);
+    await run();
+    expect(item('dinner').description).toBe(GOOGLE_DESCRIPTION);
   });
 
   test('pages are followed to the last, which carries the sync token', async () => {
@@ -418,6 +437,82 @@ describe('changes through the command layer', () => {
     await run();
     expect(day('2026-10-09').map(entry => [entry.title, entry.colour])).toEqual([['Gym', 'good'], ['Dinner with Sam and Jo', null]]);
     expect(day('2026-10-08').find(entry => entry.title === 'Coffee')!.colour).toBe('sun');
+  });
+
+  test('SV-264: a description is written to Google only when it changes, as given; null clears it; a new event carries its own', async () => {
+    const {w, google, run, item, calendar, command, day} = await calendarWorld();
+    google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, description: GOOGLE_DESCRIPTION});
+    await run();
+    // Another change leaves Google's description as it is.
+    const renamed = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {title: 'Dinner with Sam and Jo'}}));
+    await run();
+    expect(command(renamed.id).state).toBe('confirmed');
+    expect(google.patches.at(-1)).not.toHaveProperty('description');
+    expect(google.event(PERSONAL, 'dinner')!.description).toBe(GOOGLE_DESCRIPTION);
+    // A change goes as given, and shows at once.
+    const changed = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {description: '<b>Table for three</b><br>Ask for the patio'}}));
+    expect(day('2026-10-09').find(entry => entry.id === item('dinner').id)!.description).toBe('<b>Table for three</b><br>Ask for the patio');
+    await run();
+    expect(command(changed.id).state).toBe('confirmed');
+    expect(google.event(PERSONAL, 'dinner')!.description).toBe('<b>Table for three</b><br>Ask for the patio');
+    // Cleared: null deletes the field at Google (its patch semantics), and an empty one is none too.
+    const cleared = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {description: null}}));
+    await run();
+    expect(command(cleared.id).state).toBe('confirmed');
+    expect(google.patches.at(-1)).toMatchObject({description: null});
+    expect(google.event(PERSONAL, 'dinner')).not.toHaveProperty('description');
+    const emptied = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {description: ''}}));
+    expect(item('dinner').description).toBeNull();
+    await run();
+    expect(command(emptied.id).state).toBe('confirmed');
+    expect(google.event(PERSONAL, 'dinner')).not.toHaveProperty('description');
+    const created = createItem(w.store, itemCreateInput.parse({
+      kind: 'event', calendar_id: calendar(PERSONAL).id, title: 'Coffee', description: '<i>Bring the notes</i>', starts_at: zoned('2026-10-08', '10:00'), ends_at: zoned('2026-10-08', '10:30'),
+    }));
+    await run();
+    const row = w.store.db.select().from(t.items).where(eq(t.items.id, created.targetId)).get()!;
+    expect(google.event(PERSONAL, row.providerId)).toMatchObject({summary: 'Coffee', description: '<i>Bring the notes</i>'});
+    w.advance(25 * 3600_000);
+    await run();
+    expect(day('2026-10-08').find(entry => entry.title === 'Coffee')!.description).toBe('<i>Bring the notes</i>');
+    expect(day('2026-10-09').find(entry => entry.title === 'Dinner with Sam and Jo')!.description).toBeNull();
+  });
+
+  test('SV-264: a series\' description goes with its occurrences: one changed alone is written on that occurrence, and the new series of This and following carries the series\' own', async () => {
+    const {w, google, run, item, command} = await calendarWorld();
+    google.put(PERSONAL, {...google.event(PERSONAL, 'gym')!, description: 'Locker <b>114</b>'});
+    await run();
+    const one = updateItem(w.store, item('gym').id, itemUpdateInput.parse({changes: {description: 'Pool day'}, scope: 'this', occurrence_start: zoned('2026-10-09', '07:00')}));
+    await run();
+    expect(command(one.id).state).toBe('confirmed');
+    expect(google.event(PERSONAL, 'gym_20261009T140000Z')).toMatchObject({description: 'Pool day'});
+    expect(google.event(PERSONAL, 'gym')!.description).toBe('Locker <b>114</b>');
+    const moved = updateItem(w.store, item('gym').id, itemUpdateInput.parse({
+      changes: {starts_at: zoned('2026-10-15', '07:00'), ends_at: zoned('2026-10-15', '08:00')}, scope: 'following', occurrence_start: zoned('2026-10-14', '07:00'),
+    }));
+    await run();
+    expect(command(moved.id).state).toBe('confirmed');
+    const series = google.events(PERSONAL).filter(event => event.summary === 'Gym' && event.recurrence && event.id !== 'gym');
+    expect(series).toEqual([expect.objectContaining({description: 'Locker <b>114</b>'})]);
+  });
+
+  test('SV-264: a description change Google refuses is kept in place through a sync, as any held change is; Move back restores Google\'s', async () => {
+    const {w, google, run, item, command} = await calendarWorld();
+    google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, description: GOOGLE_DESCRIPTION});
+    await run();
+    google.fault({method: 'PATCH', path: /\/events\/dinner$/, response: conflict});
+    const changed = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {description: 'Ask for the patio'}}));
+    await run();
+    expect(command(changed.id).state).toBe('failed');
+    google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, description: 'Changed in Google'});
+    w.advance(25 * 3600_000);
+    await run();
+    expect(item('dinner').description).toBe('Ask for the patio');
+    moveBackCommand(w.store, changed.id);
+    expect(item('dinner').description).toBe(GOOGLE_DESCRIPTION);
+    w.advance(25 * 3600_000);
+    await run();
+    expect(item('dinner').description).toBe('Changed in Google');
   });
 
   test('SV-31: an event\'s Time to Leave reads from its private property, is written with every change, and is off for a new event', async () => {

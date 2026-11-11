@@ -31,7 +31,7 @@ export interface IcsFieldsOut {
   // The file's LOCATION, as the mirror splits Google's (a place, then its address).
   place: string | null;
   address: string | null;
-  // Google's description and `source.url`, never shown in Setpoint (D438).
+  // Google's description (shown since SV-264, D546) and `source.url`.
   description: string | null;
   url: string | null;
   transparency: Transparency;

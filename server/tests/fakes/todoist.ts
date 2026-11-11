@@ -198,7 +198,7 @@ export async function fakeTodoist() {
       if (!body.content) return todoistError(400, 'Required argument is missing', 'ARGUMENT_MISSING');
       const task = save({
         id: String((ids += 1)), content: String(body.content), project_id: (body.project_id as string) ?? 'inbox', due: dueFrom(body, null), checked: false, is_deleted: false,
-        labels: Array.isArray(body.labels) ? body.labels as string[] : [],
+        labels: Array.isArray(body.labels) ? body.labels as string[] : [], description: typeof body.description === 'string' ? body.description : '',
       });
       return {status: 200, body: show(task)};
     }),
@@ -208,7 +208,7 @@ export async function fakeTodoist() {
       const task = tasks.get(match[1]!);
       if (!task || task.is_deleted) return todoistError(404, 'Task not found', 'NOT_FOUND');
       const body = request.body as Record<string, unknown>;
-      const updated = save({...task, ...(body.content ? {content: String(body.content)} : {}), ...(Array.isArray(body.labels) ? {labels: body.labels as string[]} : {}), due: dueFrom(body, task.due)});
+      const updated = save({...task, ...(body.content ? {content: String(body.content)} : {}), ...(Array.isArray(body.labels) ? {labels: body.labels as string[]} : {}), ...(typeof body.description === 'string' ? {description: body.description} : {}), due: dueFrom(body, task.due)});
       logDueChange(task, updated);
       return {status: 200, body: show(updated)};
     }),

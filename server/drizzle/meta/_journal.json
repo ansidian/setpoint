@@ -260,6 +260,13 @@
       "when": 1794347440862,
       "tag": "0036_job_again",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1794361527353,
+      "tag": "0037_item_description",
+      "breakpoints": true
     }
   ]
 }

@@ -29,7 +29,7 @@ export function changeColumns(changes: ItemChanges): Partial<ItemRow> {
   const map: [keyof ItemChanges, keyof ItemRow][] = [
     ['calendar_id', 'calendarId'], ['title', 'title'], ['all_day', 'allDay'], ['starts_at', 'startsAt'], ['ends_at', 'endsAt'],
     ['start_date', 'startDate'], ['end_date', 'endDate'], ['due_date', 'dueDate'], ['due_at', 'dueAt'], ['time_zone', 'timeZone'],
-    ['recurrence', 'recurrence'], ['place', 'place'], ['address', 'address'], ['attendees', 'attendees'], ['reminders', 'reminders'], ['leave_reminder', 'leaveReminder'], ['project', 'project'], ['colour', 'colour'], ['labels', 'labels'],
+    ['recurrence', 'recurrence'], ['place', 'place'], ['address', 'address'], ['attendees', 'attendees'], ['reminders', 'reminders'], ['leave_reminder', 'leaveReminder'], ['project', 'project'], ['colour', 'colour'], ['labels', 'labels'], ['description', 'description'],
   ];
   for (const [from, to] of map) if (changes[from] !== undefined) (columns as Record<string, unknown>)[to] = changes[from];
   // A task's repeat is its due words until Todoist answers with its own (F6b).

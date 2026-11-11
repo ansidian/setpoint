@@ -33,7 +33,7 @@ export interface IcsEvent extends ItemWhen {
   // a single event written in UTC, or a zone the file names but nobody knows).
   time_zone: string | null;
   location: string | null;
-  // Google's description, not shown in Setpoint (D438).
+  // Google's description: the file's plain text, shown as the event's description (SV-264, D546).
   description: string | null;
   // Google's `source.url`: an http or https link only.
   url: string | null;

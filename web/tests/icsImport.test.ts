@@ -95,7 +95,7 @@ describe('what goes to the server', () => {
   const input = (fields: Partial<ItemCreateInput>): ItemCreateInput => ({
     kind: 'event', calendar_id: 2, title: 'Fabrikam sync', all_day: false, starts_at: '2026-11-03T18:00:00.000Z', ends_at: '2026-11-03T18:30:00.000Z', start_date: null, end_date: null,
     due_date: null, due_at: null, time_zone: null, recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=TU', place: 'Room 4', address: null, attendees: [], reminders: [15], leave_reminder: false,
-    project: null, colour: null, labels: [], repeat: null, ...fields,
+    project: null, colour: null, labels: [], repeat: null, description: null, ...fields,
   });
   test.each([
     ['the repeat kept: the file\'s lines and changes stay', input({}), {recurrence: series.recurrence, changes: series.changes}],

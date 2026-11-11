@@ -13,7 +13,7 @@ import type {EventTime, GoogleEvent} from './api.ts';
 
 /** The columns an event fills, as the mirror stores it. */
 export type EventColumns = Pick<ItemRow,
-  'title' | 'allDay' | 'startsAt' | 'endsAt' | 'startDate' | 'endDate' | 'timeZone' | 'recurrence' | 'place' | 'address' | 'attendees' | 'reminders' | 'leaveReminder' | 'etag' | 'expanded' | 'readOnly' | 'colour' | 'sourceUrl' | 'transparency' | 'icalUid'>;
+  'title' | 'allDay' | 'startsAt' | 'endsAt' | 'startDate' | 'endDate' | 'timeZone' | 'recurrence' | 'place' | 'address' | 'attendees' | 'reminders' | 'leaveReminder' | 'etag' | 'expanded' | 'readOnly' | 'colour' | 'sourceUrl' | 'transparency' | 'icalUid' | 'description'>;
 
 /** SV-31: an event's Time to Leave, as a private extended property only Setpoint reads ("on" or "off"). */
 export const LEAVE_PROPERTY = 'setpointTimeToLeave';
@@ -97,6 +97,8 @@ export function eventColumns(event: GoogleEvent, calendarZone: string, calendarD
     sourceUrl: event.source?.url?.trim() || null,
     transparency: event.transparency === 'transparent' ? 'transparent' : 'opaque',
     icalUid: event.iCalUID ?? null,
+    // SV-264: as Google holds it, untrimmed, so what's shown is what a change would replace.
+    description: event.description || null,
   };
 }
 
@@ -131,7 +133,14 @@ export function eventTimes(item: Pick<ItemRow, 'allDay' | 'startsAt' | 'endsAt' 
  */
 export const colorIdOf = (colour: ItemRow['colour']) => (colour && colour in EVENT_COLOUR_IDS ? EVENT_COLOUR_IDS[colour as keyof typeof EVENT_COLOUR_IDS] : null);
 
-/** The fields Setpoint writes: everything the editor changes, never what it doesn't know (conference links). The colour is the caller's (colorIdOf). */
+/**
+ * SV-264: a new event's description, as the user wrote it. On a change it goes only when it's what
+ * changed (the caller's, as the colour is): Setpoint shows a description through a short list of
+ * formats, so writing back what it read would strip an invite's own markup (D547).
+ */
+export const descriptionOf = (row: Pick<ItemRow, 'description'>): Partial<GoogleEvent> => (row.description ? {description: row.description} : {});
+
+/** The fields Setpoint writes: everything the editor changes, never what it doesn't know (conference links). The colour and the description are the caller's (colorIdOf, descriptionOf). */
 export function eventBody(item: ItemRow, fallbackZone: string): Partial<GoogleEvent> {
   return {
     summary: item.title,

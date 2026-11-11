@@ -71,7 +71,7 @@ function columnsOf(store: Store, event: IcsImportEvent): Partial<ItemRow> {
     // Until Google answers, the mirror expands the rule itself; the sync after brings its EXDATEs and changes.
     recurrence: rule, expanded: false, place: event.place, address: event.address, attendees: [],
     reminders: event.reminders, leaveReminder: event.leave_reminder, colour: event.colour, sourceUrl: event.url, transparency: event.transparency,
-    icalUid: event.ical_uid, readOnly: false,
+    icalUid: event.ical_uid, readOnly: false, description: event.description,
   };
 }
 

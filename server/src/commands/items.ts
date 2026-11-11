@@ -71,7 +71,7 @@ export function createItem(store: Store, input: ItemCreateInput): CommandRow {
         timeZone: input.time_zone ?? (input.recurrence ? store.timeZone : null), recurrence: input.recurrence, place: input.place, address: input.address,
         attendees: input.attendees, reminders: input.reminders ?? (input.kind === 'event' && settings.reminders.event_minutes_before !== null ? [settings.reminders.event_minutes_before] : []), leaveReminder: input.kind === 'event' && input.leave_reminder,
         project: input.kind === 'task' ? input.project ?? taskProjectByDefault(store, settings.todoist.default_project) : input.project, colour: input.colour,
-        labels: input.labels, dueString: input.repeat, dueRecurring: input.repeat !== null,
+        labels: input.labels, dueString: input.repeat, dueRecurring: input.repeat !== null, description: input.description,
       }).returning({id: t.items.id}).get().id;
       return {targetId: id, previous: {created: [id]}, touched: {items: [id], calendars: [input.calendar_id]}};
     },

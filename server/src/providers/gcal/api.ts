@@ -21,7 +21,8 @@ export interface GoogleEvent {
   status?: 'confirmed' | 'tentative' | 'cancelled';
   etag?: string;
   summary?: string;
-  description?: string;
+  // SV-264: HTML, as Google's own editor writes it; null in a patch deletes it (Google's patch semantics).
+  description?: string | null;
   location?: string;
   start?: EventTime;
   end?: EventTime;

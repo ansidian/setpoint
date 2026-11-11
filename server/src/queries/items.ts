@@ -41,6 +41,7 @@ function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, 
     labels: row.labels ?? [], repeat: row.dueRecurring ? repeatOf(row.dueString) : null,
     link: row.kind === 'event' ? eventLink({place: row.place, address: row.address, source_url: row.sourceUrl}) : null,
     transparency: row.kind === 'event' ? row.transparency : null,
+    description: row.description,
   };
 }
 

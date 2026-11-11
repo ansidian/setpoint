@@ -72,6 +72,8 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
   const stopped: {id: string; resourceId: string}[] = [];
   // Every events.import body, as sent (SV-181).
   const imports: {calendarId: string; body: GoogleEvent}[] = [];
+  // Every events.patch body, as sent (SV-264).
+  const patches: GoogleEvent[] = [];
   // iCalUIDs events.import refuses, with Google's code and words.
   const importRefusals = new Map<string, {code: number; message: string}>();
   const placesKeys = new Set(['maps-key']);
@@ -261,7 +263,10 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       const refused = ifMatch(request, event);
       if (refused) return refused;
       const body = request.body as GoogleEvent;
+      patches.push(body);
       const patched = {...publicEvent(event), ...body, start: patchedTime(event.start, body.start), end: patchedTime(event.end, body.end)};
+      // A null description deletes the field, as Google's patch semantics have it (SV-264).
+      if (patched.description === null) delete patched.description;
       const invalid = timeRefusal(patched);
       if (invalid) return invalid;
       return {status: 200, body: publicEvent(store(calendarId, patched))};
@@ -365,6 +370,7 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
     instances(calendarId: string, masterId: string, from: string, to: string) {
       return instancesOf(calendarId, calendarEvents(calendarId).get(masterId)!, from, to);
     },
+    patches,
     /** events.import refuses this iCalUID in Google's words until told otherwise (null). */
     refuseImport(uid: string, refusal: {code: number; message: string} | null) {
       if (refusal) importRefusals.set(uid, refusal);

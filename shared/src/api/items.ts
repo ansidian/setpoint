@@ -73,6 +73,9 @@ export interface ItemOut extends ItemWhen {
   // SV-180: an event's free/busy, as Google names it: `transparent` is free, left out of the
   // editor's conflict preview (D440). Tasks have none.
   transparency: Transparency | null;
+  // SV-264: the description as its provider wrote it (D547): HTML on an event (Google's), Markdown on
+  // a task (Todoist's); null for none. Never drawn as raw HTML: web/src/logic/description reads it.
+  description: string | null;
 }
 
 /** Time to Leave for one occurrence (DESIGN.md › Right pane). */
@@ -123,6 +126,10 @@ const editable = {
   // F6b: a task's repeat in Todoist's words ("every mon"); null for none. Sent to Todoist with the
   // due day and time as one due string, so a date change never drops the repeat.
   repeat: z.string().trim().min(1).max(100).nullable(),
+  // SV-264: the description in its provider's own format (HTML for an event, Markdown for a task),
+  // sent only when the user changed it; null or an empty one clears it. Each provider keeps its own
+  // limit and refuses in its own words.
+  description: z.string().max(65_536).nullable().transform(text => text || null),
 };
 
 /** Whether the time fields fit the kind: a timed event, an all-day event, or a task's due day (or none, SV-74). */
@@ -169,6 +176,7 @@ export const itemCreateInput = z.strictObject({
   colour: editable.colour.default(null),
   labels: editable.labels.default([]),
   repeat: editable.repeat.default(null),
+  description: editable.description.default(null),
 }).superRefine((item, context) => {
   const problem = whenProblem(item);
   if (problem) context.addIssue({code: 'custom', message: problem});

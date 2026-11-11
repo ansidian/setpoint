@@ -23,6 +23,8 @@ export interface TodoistTask {
   child_order?: number;
   // F6b: label names.
   labels?: string[];
+  // SV-264: Markdown; an empty string when the task has none.
+  description?: string;
 }
 
 export interface TodoistProject {

@@ -255,6 +255,9 @@ export const items = sqliteTable('items', {
   // SV-181: a Google event's iCalUID, the key an .ics import (Google's events.import) writes by, so
   // the review can say which of a file's events the chosen calendar already has (D436).
   icalUid: text('ical_uid'),
+  // SV-264: the description as its provider wrote it, never rewritten on the way in (D547): a Google
+  // event's HTML, a Todoist task's Markdown. Sent back only when the user changed it.
+  description: text('description'),
 }, table => [
   index('items_ical_uid').on(table.calendarId, table.icalUid),
   uniqueIndex('items_calendar_provider').on(table.calendarId, table.providerId),

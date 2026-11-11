@@ -373,7 +373,7 @@ function createInput(draft: Draft, timeZone: string, todoist: number | null): It
     return {
       kind: 'task', calendar_id: todoist, title: draft.title.trim(), all_day: true, starts_at: null, ends_at: null, start_date: null, end_date: null,
       due_date: dated ? draft.date : null, due_at: dated && draft.start !== null ? instantAt(draft.date, draft.start, timeZone) : null, time_zone: null, recurrence: null,
-      place: null, address: null, attendees: [], ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: dated ? draft.repeat : null,
+      place: null, address: null, attendees: [], ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: dated ? draft.repeat : null, description: null,
     };
   }
   // An email that gave no day leaves the event without one until it's picked (SV-24).
@@ -384,7 +384,7 @@ function createInput(draft: Draft, timeZone: string, todoist: number | null): It
   return {
     kind: 'event', calendar_id: draft.calendarId, title: draft.title.trim(), ...when, due_date: null, due_at: null, time_zone: timeZone,
     recurrence: draft.recurrence, place: draft.place.trim() || null, address: draft.place.trim() ? draft.address : null, attendees: [],
-    ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: draft.leaveReminder, project: null, colour: null, labels: [], repeat: null,
+    ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: draft.leaveReminder, project: null, colour: null, labels: [], repeat: null, description: null,
   };
 }
 

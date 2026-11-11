@@ -24,7 +24,7 @@ import type {Store} from '../../store.ts';
 import {ProviderError} from '../../sync/errors.ts';
 import {isAlreadyThere, isNotFound} from './api.ts';
 import type {GoogleCalendarApi, GoogleEvent} from './api.ts';
-import {colorIdOf, eventBody, isFirstOccurrence, joinLocation, ruleEndingBefore, withRule} from './normalize.ts';
+import {colorIdOf, descriptionOf, eventBody, isFirstOccurrence, joinLocation, ruleEndingBefore, withRule} from './normalize.ts';
 import {claimProviderId} from '../../commands/itemMirror.ts';
 import {importOf} from '../../calendar/icsImport.ts';
 import {wakeSync} from '../../sync/jobs.ts';
@@ -126,7 +126,7 @@ async function create(store: Store, api: GoogleCalendarApi, command: CommandRow)
   const id = row.providerId.startsWith('local-') ? chosenEventId(command, row.id) : row.providerId;
   // The id goes on the row first, so a sync that sees the new event meanwhile finds this row.
   claimProviderId(store, row.id, id);
-  const event = await insertOnce(api, calendar.providerId, id, {...eventBody(row, store.timeZone), ...(row.colour ? {colorId: colorIdOf(row.colour)} : {}), ...(row.recurrence ? {recurrence: [row.recurrence]} : {})});
+  const event = await insertOnce(api, calendar.providerId, id, {...eventBody(row, store.timeZone), ...descriptionOf(row), ...(row.colour ? {colorId: colorIdOf(row.colour)} : {}), ...(row.recurrence ? {recurrence: [row.recurrence]} : {})});
   claimProviderId(store, row.id, event.id, event.etag ?? null);
 }
 
@@ -154,6 +154,8 @@ async function update(store: Store, api: GoogleCalendarApi, command: CommandRow)
   const occurrenceStart = payload.occurrence_start ?? itemRow(store, payload.item_id)?.originalStart ?? null;
   // The colour goes to Google only when it's what changed (see colorIdOf).
   const colour = payload.changes.colour !== undefined ? {colorId: colorIdOf(payload.changes.colour)} : {};
+  // SV-264: the description too goes only when it's what changed; null deletes it at Google.
+  const description = payload.changes.description !== undefined ? {description: target.description ?? null} : {};
 
   // One occurrence on its own: the target is the exception the mirror made (or already had).
   if (target.recurringItemId !== null) {
@@ -165,7 +167,7 @@ async function update(store: Store, api: GoogleCalendarApi, command: CommandRow)
       [id, etag] = [instance.id, instance.etag ?? null];
       claimProviderId(store, target.id, id);
     }
-    const event = await api.patchEvent(calendarId, id, {...eventBody(target, store.timeZone), ...colour}, etag);
+    const event = await api.patchEvent(calendarId, id, {...eventBody(target, store.timeZone), ...colour, ...description}, etag);
     claimProviderId(store, target.id, event.id, event.etag ?? null);
     return;
   }
@@ -181,7 +183,7 @@ async function update(store: Store, api: GoogleCalendarApi, command: CommandRow)
       etag = moved.etag ?? null;
       if (Object.keys(payload.changes).every(key => key === 'calendar_id')) return;
     }
-    const body: Partial<GoogleEvent> = {...eventBody(target, store.timeZone), ...colour};
+    const body: Partial<GoogleEvent> = {...eventBody(target, store.timeZone), ...colour, ...description};
     if (target.recurrence) {
       // Keep the series' other lines (EXDATE, RDATE) and put the mirror's rule in place of its RRULE.
       const current = await api.getEvent(calendarId, target.providerId);
@@ -208,7 +210,7 @@ async function update(store: Store, api: GoogleCalendarApi, command: CommandRow)
   const newId = series.providerId.startsWith('local-') ? chosenEventId(command, series.id) : series.providerId;
   claimProviderId(store, series.id, newId);
   // The new series goes in its own calendar: another one when it moves there from this occurrence on.
-  const inserted = await insertOnce(api, calendarOf(store, series).providerId, newId, {...eventBody(series, store.timeZone), ...(series.colour ? {colorId: colorIdOf(series.colour)} : {}), recurrence: [series.recurrence!]});
+  const inserted = await insertOnce(api, calendarOf(store, series).providerId, newId, {...eventBody(series, store.timeZone), ...descriptionOf(series), ...(series.colour ? {colorId: colorIdOf(series.colour)} : {}), recurrence: [series.recurrence!]});
   claimProviderId(store, series.id, inserted.id, inserted.etag ?? null);
 }
 

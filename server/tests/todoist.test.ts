@@ -19,6 +19,9 @@ import {fakeTodoist} from './fakes/todoist.ts';
 import {client, signedIn, world} from './helpers.ts';
 
 const ZONE = 'America/Los_Angeles';
+// SV-264: a description as Todoist's own editor writes one (read from a real task, 2026-11-10): Markdown, single
+// newlines between lines, a blank line around lists.
+const TODOIST_DESCRIPTION = '**Bring** the signed form\n*Room 204*\n\n1. *Check in*\n2. Badge\n\n- Laptop\n\n[https://example.com/visit](https://example.com/visit)';
 
 describe('a Todoist due as a day and a time', () => {
   test.each([
@@ -273,6 +276,57 @@ describe('changes through the command layer', () => {
     expect(todoistLabels(w.store).map(label => label.name)).toEqual(['errand']);
     const personal = w.store.db.insert(t.calendars).values({provider: 'google', providerId: 'personal', name: 'Personal', colour: 'cool', position: 5}).returning().get();
     expect(() => createItem(w.store, itemCreateInput.parse({kind: 'event', calendar_id: personal.id, title: 'Lunch', starts_at: '2026-10-09T19:00:00.000Z', ends_at: '2026-10-09T20:00:00.000Z', labels: ['errand']}))).toThrow(/task's/);
+  });
+
+  test('SV-264: a task\'s description is kept as Todoist\'s Markdown, an empty one is none; written on create and only when it changes; an empty string clears it', async () => {
+    const {w, todoist, run, command, calendarId, task, day} = await todoistWorld();
+    todoist.put({...todoist.task('t-rent')!, description: TODOIST_DESCRIPTION});
+    todoist.put({...todoist.task('t-call')!, description: ''});
+    await run();
+    expect(day('2026-10-07').map(item => [item.title, item.description])).toEqual([['Call Mom', null], ['Pay rent', TODOIST_DESCRIPTION], ['Water plants', null]]);
+    const created = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Mail the form', due_date: '2026-10-09', description: '**Certified** mail'}));
+    await run();
+    expect(command(created.id).state).toBe('confirmed');
+    expect(todoist.requests.find(request => request.method === 'POST' && request.path === '/api/v1/tasks')!.body).toMatchObject({description: '**Certified** mail'});
+    // Another change leaves Todoist's description out of what's sent.
+    const renamed = updateItem(w.store, task('t-rent').id, itemUpdateInput.parse({changes: {title: 'Pay the rent'}}));
+    await run();
+    expect(command(renamed.id).state).toBe('confirmed');
+    expect(todoist.requests.at(-1)!.body).toEqual({content: 'Pay the rent'});
+    expect(todoist.task('t-rent')!.description).toBe(TODOIST_DESCRIPTION);
+    const changed = updateItem(w.store, task('t-rent').id, itemUpdateInput.parse({changes: {description: 'By *check* this month'}}));
+    expect(task('t-rent').description).toBe('By *check* this month');
+    await run();
+    expect(command(changed.id).state).toBe('confirmed');
+    expect(todoist.requests.at(-1)!.body).toEqual({description: 'By *check* this month'});
+    expect(todoist.task('t-rent')!.description).toBe('By *check* this month');
+    const cleared = updateItem(w.store, task('t-rent').id, itemUpdateInput.parse({changes: {description: null}}));
+    await run();
+    expect(command(cleared.id).state).toBe('confirmed');
+    expect(todoist.requests.at(-1)!.body).toEqual({description: ''});
+    expect(todoist.task('t-rent')!.description).toBe('');
+    w.advance(5 * 60_000);
+    await run();
+    expect(task('t-rent').description).toBeNull();
+  });
+
+  test('SV-264: a description change Todoist refuses is kept in place through a poll, and Todoist\'s own applies after Move back', async () => {
+    const {w, todoist, run, command, task} = await todoistWorld();
+    todoist.put({...todoist.task('t-rent')!, description: TODOIST_DESCRIPTION});
+    await run();
+    todoist.fault({method: 'POST', path: /\/tasks\/t-rent$/, response: {status: 400, body: {error: 'Description is too long', error_code: 400, http_code: 400}}});
+    const changed = updateItem(w.store, task('t-rent').id, itemUpdateInput.parse({changes: {description: 'By check'}}));
+    await run();
+    expect(command(changed.id).state).toBe('failed');
+    todoist.put({...todoist.task('t-rent')!, description: 'Changed in Todoist'});
+    w.advance(5 * 60_000);
+    await run();
+    expect(task('t-rent').description).toBe('By check');
+    moveBackCommand(w.store, changed.id);
+    expect(task('t-rent').description).toBe(TODOIST_DESCRIPTION);
+    w.advance(5 * 60_000);
+    await run();
+    expect(task('t-rent').description).toBe('Changed in Todoist');
   });
 
   test('F6b: a repeating task\'s date moves with its repeat in one due string, and lands where Todoist puts it', async () => {

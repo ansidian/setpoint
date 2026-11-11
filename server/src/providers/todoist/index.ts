@@ -103,6 +103,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
       const project = create ? await newProject(store, todoist, target.project!, requestId('project')) : projectId(store, target.project);
       const task = await todoist.createTask({
         content: target.title, ...(project ? {project_id: project} : {}), ...dueOf(store, target), ...(target.labels?.length ? {labels: target.labels} : {}),
+        ...(target.description ? {description: target.description} : {}),
       }, requestId());
       claimProviderId(store, target.id, task.id);
       takeDue(store, target.id, task);
@@ -115,6 +116,8 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
       if (changes.title !== undefined) body.content = target.title;
       if (changes.due_date !== undefined || changes.due_at !== undefined || changes.repeat !== undefined) Object.assign(body, dueOf(store, target));
       if (changes.labels !== undefined) body.labels = target.labels ?? [];
+      // SV-264: Todoist's update takes a string and keeps what's left out; an empty one clears it.
+      if (changes.description !== undefined) body.description = target.description ?? '';
       if (Object.keys(body).length) takeDue(store, target.id, await todoist.updateTask(target.providerId, body, requestId('update')));
       if (changes.project !== undefined) {
         const project = projectId(store, target.project);

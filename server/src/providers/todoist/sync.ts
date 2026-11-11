@@ -46,7 +46,7 @@ function taskColumns(task: TodoistTask, projects: Map<string, string>, timeZone:
   return {
     kind: 'task', title: task.content, allDay: true, startsAt: null, endsAt: null, startDate: null, endDate: null,
     dueDate: due.dueDate, dueAt: due.dueAt, dueString: task.due?.string ?? null, dueRecurring: Boolean(task.due?.is_recurring),
-    project: (task.project_id && projects.get(task.project_id)) || null, recurrence: null, labels: task.labels ?? [],
+    project: (task.project_id && projects.get(task.project_id)) || null, recurrence: null, labels: task.labels ?? [], description: task.description || null,
   };
 }
 
