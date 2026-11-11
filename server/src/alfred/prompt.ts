@@ -54,7 +54,7 @@ export const ALFRED_TOOLS: ToolSpec[] = [
   },
   {
     name: 'propose_item',
-    description: 'Prepare one event or task from an email for the user to review in Setpoint; they create it themselves. Nothing is created. Fields you leave out are filled from the email: the time, end and place from its invite (.ics) when it attaches one, else its key date and the time and place around the line naming that date; the title from its subject.',
+    description: 'Prepare one event or task from an email for the user to review in Setpoint; they create it themselves. Nothing is created. Fields you leave out are filled from the email: the title, time, end and place from its invite (.ics) when it attaches one, else the title from its subject, its key date and the time and place around the line naming that date.',
     schema: {
       type: 'object',
       properties: {

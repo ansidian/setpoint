@@ -188,15 +188,16 @@ describe('proposals over the seed', () => {
   test('SV-263: each field is Alfred\'s when he gives one, else the invite\'s, else the text\'s', () => {
     const w = world({seed: true});
     const exam = idOf(w, 'Final exam schedule · CS 101');
-    const invite = {all_day: false, starts_at: '2026-12-10T02:00:00.000Z', ends_at: '2026-12-12T02:00:00.000Z', start_date: null, end_date: null, place: 'Hall B'};
+    const invite = {title: 'CS 101 final', all_day: false, starts_at: '2026-12-10T02:00:00.000Z', ends_at: '2026-12-12T02:00:00.000Z', start_date: null, end_date: null, place: 'Hall B'};
     // The invite's instants as they are: an end two days later is kept.
-    expect(proposeFromMessage(w.store, exam, 'event', {}, invite)).toMatchObject({item: {starts_at: invite.starts_at, ends_at: invite.ends_at, place: 'Hall B'}, from_email: ['title', 'date', 'time', 'place']});
+    expect(proposeFromMessage(w.store, exam, 'event', {}, invite)).toMatchObject({item: {title: 'CS 101 final', starts_at: invite.starts_at, ends_at: invite.ends_at, place: 'Hall B'}, from_email: ['title', 'date', 'time', 'place']});
     // Alfred's own day and time stand over the invite's; the place he didn't give is still the invite's.
     expect(proposeFromMessage(w.store, exam, 'event', {date: '2026-12-20', start: '09:00', end: null}, invite))
       .toMatchObject({item: {starts_at: '2026-12-20T17:00:00.000Z', ends_at: '2026-12-20T18:00:00.000Z', place: 'Hall B'}, from_email: ['title', 'place']});
-    expect(proposeFromMessage(w.store, exam, 'event', {place: 'Library'}, invite)).toMatchObject({item: {starts_at: invite.starts_at, place: 'Library'}, from_email: ['title', 'date', 'time']});
-    const allDay = {all_day: true, starts_at: null, ends_at: null, start_date: '2026-12-14', end_date: '2026-12-16', place: null};
-    expect(proposeFromMessage(w.store, exam, 'event', {}, allDay)).toMatchObject({item: {all_day: true, start_date: '2026-12-14', end_date: '2026-12-16', starts_at: null, place: 'Contoso University · Room 214'}, from_email: ['title', 'date', 'place']});
+    expect(proposeFromMessage(w.store, exam, 'event', {place: 'Library', title: 'Study for the final'}, invite)).toMatchObject({item: {title: 'Study for the final', starts_at: invite.starts_at, place: 'Library'}, from_email: ['date', 'time']});
+    const allDay = {title: '', all_day: true, starts_at: null, ends_at: null, start_date: '2026-12-14', end_date: '2026-12-16', place: null};
+    // An invite with no title leaves the subject's.
+    expect(proposeFromMessage(w.store, exam, 'event', {}, allDay)).toMatchObject({item: {title: 'CS 101 final exam', all_day: true, start_date: '2026-12-14', end_date: '2026-12-16', starts_at: null, place: 'Contoso University · Room 214'}, from_email: ['title', 'date', 'place']});
   });
 
   test('refuses a missing email', async () => {

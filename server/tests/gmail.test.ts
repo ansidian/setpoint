@@ -494,7 +494,7 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     google.deleteForever(ADDRESS, message.providerId);
     expect((await api.send('POST', `/api/mail/messages/${message.id}/attachments/${invite!.id}/ics`)).status).toBe(404);
   });
-  test('SV-263: Add to calendar takes its time, end and place from the email\'s invite, over the text; a file it can\'t use, or one Gmail no longer has, leaves the text\'s proposal', async () => {
+  test('SV-263: Add to calendar takes its title, time, end and place from the email\'s invite, over the text; a file it can\'t use, or one Gmail no longer has, leaves the text\'s proposal', async () => {
     const env = await setup({pageSize: 50});
     const {w, google, api} = env;
     const twoEvents = INTERVIEW_INVITE.flatMap(line => line === 'END:VCALENDAR'
@@ -520,7 +520,7 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     const invited = await propose('Interview confirmed');
     expect(invited).toMatchObject({status: 200, body: {
       // 2 to 2:30 PM in New York, as the invite says.
-      item: {title: 'Interview confirmed', all_day: false, starts_at: '2026-11-10T19:00:00.000Z', ends_at: '2026-11-10T19:30:00.000Z', start_date: null, place: 'https://meet.example.com/j/482-193-775'},
+      item: {title: 'Interview with Contoso: Software Engineer', all_day: false, starts_at: '2026-11-10T19:00:00.000Z', ends_at: '2026-11-10T19:30:00.000Z', start_date: null, place: 'https://meet.example.com/j/482-193-775'},
       from_email: ['title', 'date', 'time', 'place'],
     }});
     expect(await propose('Interview confirmed', 'task')).toMatchObject({status: 200, body: {item: {due_date: '2026-11-10', due_at: '2026-11-10T19:00:00.000Z'}}});

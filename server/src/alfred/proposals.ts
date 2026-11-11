@@ -8,8 +8,8 @@
 // first calendar on the email's account, else the first Google calendar. A task goes to Todoist, in
 // the project whose tasks share the most words with it, else Settings' default project.
 //
-// An email with an invite (a text/calendar attachment, as a scheduler sends) takes its time, end and
-// place from the invite rather than its text (SV-263, D543): the file states them exactly. The
+// An email with an invite (a text/calendar attachment, as a scheduler sends) takes its title, time, end and
+// place from the invite rather than its subject and text (SV-263, D543): the file states them exactly. The
 // invite is read through the account's adapter, so it's the one step here that can wait on a
 // provider; whatever goes wrong there leaves the text's proposal.
 import type {ItemKind, ProposalField, ProposalOut} from '@setpoint/shared';
@@ -60,8 +60,9 @@ function projectFor(store: Store, title: string): {calendarId: number | null; pr
   return {calendarId: todoist?.id ?? null, project: similar ?? getSettings(store).todoist.default_project};
 }
 
-/** What an email's invite says of when and where. */
+/** What an email's invite says: its event's title ('' when it has none), when and where. */
 export interface Invite {
+  title: string;
   all_day: boolean;
   starts_at: string | null;
   ends_at: string | null;
@@ -88,7 +89,7 @@ export async function inviteOf(store: Store, engine: SyncEngine | null, messageI
       const read = readIcs(new Uint8Array((await attachmentFile(store, engine, messageId, file.id)).content), {timeZone: store.timeZone});
       const event = read.ok && read.drafts.length === 1 ? read.drafts[0]! : null;
       if (!event || !(event.all_day ? event.start_date : event.starts_at)) continue;
-      return {all_day: event.all_day, starts_at: event.starts_at, ends_at: event.ends_at, start_date: event.start_date, end_date: event.end_date, place: event.location};
+      return {title: event.title, all_day: event.all_day, starts_at: event.starts_at, ends_at: event.ends_at, start_date: event.start_date, end_date: event.end_date, place: event.location};
     } catch {
       // The provider is unreachable or no longer has the email: the text still gives a proposal.
     }
@@ -117,6 +118,11 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
     fields.start = when.all_day ? null : localTime(when.starts_at!, zone);
     fields.end = when.all_day || !when.ends_at ? null : localTime(when.ends_at, zone);
     invited.push('date', ...(when.all_day ? [] : ['time' as const]));
+  }
+  // The invite names the event ("In-person interview with Contoso"), the subject the email ("You scheduled an interview").
+  if (invite?.title && !overrides.title) {
+    fields.title = invite.title;
+    invited.push('title');
   }
   if (invite?.place && overrides.place === undefined) {
     fields.place = invite.place;
