@@ -8,6 +8,9 @@
 .desc ol, .desc ul { padding-left: 22px; }
 .desc ol { list-style: decimal; }
 .desc ul { list-style: disc; }
+/* SV-268: nested lists as Google Calendar draws them, a hollow bullet then a square. */
+.desc ul ul, .desc ol ul { list-style: circle; }
+.desc ul ul ul, .desc ol ul ul, .desc ul ol ul, .desc ol ol ul { list-style: square; }
 .desc .head, .desc h1, .desc h2, .desc h3, .desc h4, .desc h5, .desc h6 { font-size: inherit; font-weight: 600; }
 .desc blockquote { padding-left: 10px; box-shadow: inset 2px 0 0 var(--sub3); color: var(--ink2); }
 .desc code, .desc pre { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }

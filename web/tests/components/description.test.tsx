@@ -60,6 +60,14 @@ test('the detail: a description sits after who\'s coming, under the notes glyph,
   await expect.element(link).toHaveAttribute('rel', 'noopener noreferrer');
 });
 
+test('the detail: a nested list sits inside its item, as Google Calendar draws it (SV-268)', async () => {
+  await card(item({description: '<ul><li><b>Parking</b>:<ul><li>On the street</li><li>The lot behind</li></ul></li><li>Bring a pen</li></ul>'}));
+  await expect.element(page.getByText('On the street')).toBeVisible();
+  const outer = [...shown().querySelectorAll(':scope > ul > li')];
+  expect(outer.map(line => line.firstChild!.textContent)).toEqual(['Parking', 'Bring a pen']);
+  expect([...outer[0]!.querySelectorAll(':scope > ul > li')].map(line => line.textContent)).toEqual(['On the street', 'The lot behind']);
+});
+
 test('the detail: none has no row; a task\'s is read as Markdown, an event\'s never is', async () => {
   const none = await card(item({}));
   await expect.element(page.getByText('Sam Lee')).toBeVisible();

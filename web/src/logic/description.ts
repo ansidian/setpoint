@@ -3,9 +3,10 @@
 // short list of formats, which is all the screen ever draws (as elements, never as the provider's
 // markup, so nothing in a description can run or load anything), and written back in the shapes the
 // providers' own editors write (read from a real event and task, 2026-11-10):
-//   Google   <b>, <i>, <u>, lines ended by <br> with no paragraphs, <ol><li>, <ul><li>, <a href>
-//   Todoist  **bold**, *italic*, "1." and "-" lists with a blank line around them, single newlines
-//            between lines, [text](url)
+//   Google   <b>, <i>, <u>, lines ended by <br> with no paragraphs, <ol><li>, <ul><li> (a nested
+//            list inside its <li>, SV-268), <a href>
+//   Todoist  **bold**, *italic*, "1." and "-" lists with a blank line around them (nested by indent),
+//            single newlines between lines, [text](url)
 // Pure: no DOM, so the same reader takes the editor's own markup (`literal`).
 
 export type Mark = 'bold' | 'italic' | 'underline' | 'strike' | 'code';
@@ -18,13 +19,24 @@ export interface Run {
   href: string | null;
 }
 
+/** A list item: its line, and the list nested under it, as Google Calendar's editor writes one (SV-268). */
+export interface Item {
+  runs: Run[];
+  sub?: List;
+}
+
+export interface List {
+  ordered: boolean;
+  items: Item[];
+}
+
 /** A paragraph is one line; an empty one is a blank line. */
 export type Block =
   | {type: 'paragraph'; runs: Run[]}
   | {type: 'heading'; level: number; runs: Run[]}
   | {type: 'quote'; runs: Run[]}
   | {type: 'code'; text: string}
-  | {type: 'list'; ordered: boolean; items: Run[][]};
+  | ({type: 'list'} & List);
 
 export interface Description {
   blocks: Block[];
@@ -57,6 +69,19 @@ function tidyRuns(runs: Run[]): Run[] {
   return out;
 }
 
+function tidyList(list: List): List | null {
+  const items: Item[] = [];
+  for (const item of list.items) {
+    const runs = tidyRuns(item.runs);
+    const sub = item.sub && tidyList(item.sub);
+    if (runs.length || sub) items.push(sub ? {runs, sub} : {runs});
+  }
+  return items.length ? {ordered: list.ordered, items} : null;
+}
+
+/** Every line of a list, its nested ones in place. */
+const itemRuns = (list: List): Run[][] => list.items.flatMap(item => [item.runs, ...(item.sub ? itemRuns(item.sub) : [])]);
+
 const isBlank = (block: Block) => block.type === 'paragraph' && block.runs.length === 0;
 
 /** The same description in one form: runs merged, empty ones dropped, no blank lines at either end. */
@@ -64,8 +89,8 @@ export function tidy(blocks: Block[]): Block[] {
   const out: Block[] = [];
   for (const block of blocks) {
     if (block.type === 'list') {
-      const items = block.items.map(tidyRuns).filter(item => item.length);
-      if (items.length) out.push({type: 'list', ordered: block.ordered, items});
+      const list = tidyList(block);
+      if (list) out.push({type: 'list', ...list});
     } else if (block.type === 'code') {
       if (block.text.trim()) out.push(block);
     } else {
@@ -85,7 +110,7 @@ export const isEmpty = (blocks: Block[]) => tidy(blocks).length === 0;
 /** The description as plain text, a line per line. */
 export function plainText(blocks: Block[]): string {
   const text = (runs: Run[]) => runs.map(run => run.text).join('');
-  return tidy(blocks).map(block => (block.type === 'list' ? block.items.map(text).join('\n') : block.type === 'code' ? block.text : text(block.runs))).join('\n');
+  return tidy(blocks).map(block => (block.type === 'list' ? itemRuns(block).filter(runs => runs.length).map(text).join('\n') : block.type === 'code' ? block.text : text(block.runs))).join('\n');
 }
 
 // ---- HTML ----
@@ -158,8 +183,9 @@ export function readHtml(html: string, {literal = false}: {literal?: boolean} = 
   let line: Run[] = [];
   const depth: Record<Mark, number> = {bold: 0, italic: 0, underline: 0, strike: 0, code: 0};
   const links: (string | null)[] = [];
-  const lists: {ordered: boolean; items: Run[][]}[] = [];
-  let nested = 0;
+  // The lists open here, innermost last. `after` marks text that follows a nested list inside the
+  // same item, which an item can't hold: it shows as an item of its own.
+  const lists: (List & {after: boolean})[] = [];
   let context: {type: 'heading'; level: number} | {type: 'quote'} | null = null;
   let pre: string | null = null;
   // A paragraph element just closed: the next line stands apart from it.
@@ -178,7 +204,10 @@ export function readHtml(html: string, {literal = false}: {literal?: boolean} = 
     if (!runs.length && !force) return;
     const list = lists.at(-1);
     if (list) {
-      if (runs.length) list.items.push(runs);
+      if (runs.length) {
+        if (list.after) lossy = true;
+        list.items.push({runs});
+      }
       return;
     }
     if (runs.length && apart && blocks.length && !isBlank(blocks.at(-1)!)) blocks.push({type: 'paragraph', runs: []});
@@ -203,6 +232,24 @@ export function readHtml(html: string, {literal = false}: {literal?: boolean} = 
       if (index > 0) endLine(true);
       if (part) line.push({text: part, marks, href});
     });
+  };
+
+  // A list closed: a nested one goes under the item before it, inside that item (Google's) or after
+  // it (the browser's own indent); an outer one is a block.
+  const closeList = () => {
+    const {ordered, items} = lists.pop()!;
+    const parent = lists.at(-1);
+    if (!parent) {
+      if (items.length) blocks.push({type: 'list', ordered, items});
+      apart = false;
+      return;
+    }
+    if (!items.length) return;
+    if (!parent.items.length) parent.items.push({runs: []});
+    const above = parent.items.at(-1)!;
+    if (above.sub) above.sub.items.push(...items);
+    else above.sub = {ordered, items};
+    parent.after = true;
   };
 
   let at = 0;
@@ -264,22 +311,11 @@ export function readHtml(html: string, {literal = false}: {literal?: boolean} = 
       endLine(true);
     } else if (name === 'ol' || name === 'ul') {
       endLine(false);
-      if (!closing) {
-        if (lists.length) {
-          nested += 1;
-          lossy = true;
-        } else {
-          lists.push({ordered: name === 'ol', items: []});
-        }
-      } else if (nested) {
-        nested -= 1;
-      } else {
-        const list = lists.pop();
-        if (list?.items.length) blocks.push({type: 'list', ordered: list.ordered, items: list.items});
-        apart = false;
-      }
+      if (!closing) lists.push({ordered: name === 'ol', items: [], after: false});
+      else if (lists.length) closeList();
     } else if (name === 'li') {
       endLine(false);
+      if (lists.length) lists.at(-1)!.after = false;
     } else if (/^h[1-6]$/.test(name)) {
       endLine(false);
       context = closing ? null : {type: 'heading', level: Number(name[1])};
@@ -303,7 +339,7 @@ export function readHtml(html: string, {literal = false}: {literal?: boolean} = 
   flushText(html.length);
   if (pre !== null && pre.trim()) blocks.push({type: 'code', text: pre});
   endLine(false);
-  for (const list of lists) if (list.items.length) blocks.push({type: 'list', ordered: list.ordered, items: list.items});
+  while (lists.length) closeList();
   return {blocks: tidy(blocks), lossy};
 }
 
@@ -319,6 +355,12 @@ function runsHtml(runs: Run[]): string {
   }).join('');
 }
 
+/** A list as Google writes one: a nested list inside its item, before the item's </li>. */
+function listHtml(list: List): string {
+  const tag = list.ordered ? 'ol' : 'ul';
+  return `<${tag}>${list.items.map(item => `<li>${runsHtml(item.runs)}${item.sub ? listHtml(item.sub) : ''}</li>`).join('')}</${tag}>`;
+}
+
 /** The description as Google Calendar's editor writes one: lines ended by <br>, lists as they are. */
 export function writeHtml(blocks: Block[]): string {
   const tidied = tidy(blocks);
@@ -328,10 +370,7 @@ export function writeHtml(blocks: Block[]): string {
       case 'heading': return `<h${block.level}>${runsHtml(block.runs)}</h${block.level}>`;
       case 'quote': return `<blockquote>${runsHtml(block.runs)}</blockquote>`;
       case 'code': return `<pre>${escapeHtml(block.text)}</pre>`;
-      case 'list': {
-        const tag = block.ordered ? 'ol' : 'ul';
-        return `<${tag}>${block.items.map(item => `<li>${runsHtml(item)}</li>`).join('')}</${tag}>`;
-      }
+      case 'list': return listHtml(block);
     }
   }).join('');
 }
@@ -458,9 +497,10 @@ const LIST_ITEM = /^(\s*)(?:([-*+])|(\d{1,9})[.)])\s+(.*)$/;
 export function readMarkdown(source: string): Description {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
   const blocks: Block[] = [];
-  let lossy = false;
   const standsAlone = (block: Block | undefined) => block?.type === 'list' || block?.type === 'code';
   let edgeTaken = false;
+  // The list being read, innermost last, each with the indent its items start at.
+  let open: {list: List; indent: number}[] = [];
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]!;
     if (/^\s*```/.test(line)) {
@@ -479,13 +519,27 @@ export function readMarkdown(source: string): Description {
     }
     edgeTaken = false;
     const item = LIST_ITEM.exec(line);
+    const last = blocks.at(-1);
+    if (last?.type !== 'list') open = [];
     if (item) {
-      if (item[1]!.length >= 2) lossy = true;
+      const indent = item[1]!.replace(/\t/g, '    ').length;
       const ordered = item[3] !== undefined;
-      const last = blocks.at(-1);
       const runs = readInline(item[4]!);
-      if (last?.type === 'list' && last.ordered === ordered) last.items.push(runs);
-      else blocks.push({type: 'list', ordered, items: [runs]});
+      // Indented past its list's items, an item starts a list under the one before it.
+      while (open.length > 1 && indent < open.at(-1)!.indent) open.pop();
+      const inner = open.at(-1);
+      if (inner && indent >= inner.indent + 2) {
+        const above = inner.list.items.at(-1)!;
+        above.sub ??= {ordered, items: []};
+        above.sub.items.push({runs});
+        open.push({list: above.sub, indent});
+      } else if (inner && (inner.list.ordered === ordered || open.length > 1)) {
+        inner.list.items.push({runs});
+      } else {
+        const list: List = {ordered, items: [{runs}]};
+        blocks.push({type: 'list', ...list});
+        open = [{list: blocks.at(-1) as List, indent}];
+      }
       continue;
     }
     const heading = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
@@ -500,7 +554,7 @@ export function readMarkdown(source: string): Description {
     }
     blocks.push({type: 'paragraph', runs: readInline(line)});
   }
-  return {blocks: tidy(blocks), lossy};
+  return {blocks: tidy(blocks), lossy: false};
 }
 
 /** Text with the characters Markdown would read as formatting escaped. An underscore inside a word (a URL's) is left: it formats nothing. */
@@ -527,6 +581,15 @@ function runsMarkdown(runs: Run[]): string {
   return text.replace(/^(\s*)(#{1,6}\s|>|[-+]\s)/, '$1\\$2').replace(/^(\s*\d{1,9})([.)]\s)/, '$1\\$2');
 }
 
+/** A list's lines, a nested one indented to its item's text. */
+function listMarkdown(list: List, indent: string): string {
+  return list.items.map((item, at) => {
+    const marker = list.ordered ? `${at + 1}. ` : '- ';
+    const line = `${indent}${marker}${runsMarkdown(item.runs)}`;
+    return item.sub ? `${line}\n${listMarkdown(item.sub, indent + ' '.repeat(marker.length))}` : line;
+  }).join('\n');
+}
+
 /** The description as Todoist's editor writes one. Markdown has no underline: it goes as plain text. */
 export function writeMarkdown(blocks: Block[]): string {
   const tidied = tidy(blocks);
@@ -539,7 +602,7 @@ export function writeMarkdown(blocks: Block[]): string {
       case 'heading': out += `${'#'.repeat(block.level)} ${runsMarkdown(block.runs)}`; break;
       case 'quote': out += `> ${runsMarkdown(block.runs)}`; break;
       case 'code': out += `\`\`\`\n${block.text}\n\`\`\``; break;
-      case 'list': out += block.items.map((item, at) => `${block.ordered ? `${at + 1}.` : '-'} ${runsMarkdown(item)}`).join('\n'); break;
+      case 'list': out += listMarkdown(block, ''); break;
     }
   });
   return out;
@@ -555,8 +618,9 @@ export function writeMarkdown(blocks: Block[]): string {
 export function fitting(kind: 'event' | 'task', blocks: Block[]): Block[] {
   const kept: Mark[] = kind === 'event' ? ['bold', 'italic', 'underline'] : ['bold', 'italic', 'strike', 'code'];
   const runs = (list: Run[]) => list.map(one => ({...one, marks: one.marks.filter(mark => kept.includes(mark))}));
+  const fitList = (list: List): List => ({ordered: list.ordered, items: list.items.map(item => (item.sub ? {runs: runs(item.runs), sub: fitList(item.sub)} : {runs: runs(item.runs)}))});
   return blocks.flatMap((block): Block[] => {
-    if (block.type === 'list') return [{...block, items: block.items.map(runs)}];
+    if (block.type === 'list') return [{type: 'list', ...fitList(block)}];
     if (block.type === 'code') return kind === 'task' ? [block] : block.text.split('\n').map(line => ({type: 'paragraph', runs: line ? [{text: line, marks: [], href: null}] : []}));
     if (block.type === 'paragraph' || kind === 'task') return [{...block, runs: runs(block.runs)}];
     return [{type: 'paragraph', runs: runs(block.runs)}];

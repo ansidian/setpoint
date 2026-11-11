@@ -6,7 +6,7 @@
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {ClipboardEvent, KeyboardEvent} from 'react';
 import {fitting, isEmpty, readHtml, safeHref, writeHtml} from '../../logic/description.ts';
-import type {Block, Run} from '../../logic/description.ts';
+import type {Block, List, Run} from '../../logic/description.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import type {IconName} from '../../ui/glyphs.ts';
 import './description.css';
@@ -40,13 +40,15 @@ function mount(field: HTMLElement, blocks: Block[]) {
     made.append(...children);
     return made;
   };
+  // A nested list inside its item, as Google writes one.
+  const list = (of: List): Node => element(of.ordered ? 'ol' : 'ul', of.items.map(item => element('li', [...runNodes(item.runs), ...(item.sub ? [list(item.sub)] : [])])));
   field.replaceChildren(...blocks.map(block => {
     switch (block.type) {
       case 'paragraph': return element('div', block.runs.length ? runNodes(block.runs) : [document.createElement('br')]);
       case 'heading': return element(`h${Math.min(6, Math.max(1, block.level))}`, runNodes(block.runs));
       case 'quote': return element('blockquote', runNodes(block.runs));
       case 'code': return element('pre', [document.createTextNode(block.text)]);
-      case 'list': return element(block.ordered ? 'ol' : 'ul', block.items.map(item => element('li', runNodes(item))));
+      case 'list': return list(block);
     }
   }));
 }

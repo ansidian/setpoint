@@ -3,11 +3,13 @@
 // are the shapes read from a real Google event and Todoist task (2026-11-10), with invented text.
 import {describe, expect, test} from 'vitest';
 import {fitting, isEmpty, plainText, readDescription, readHtml, readInline, readMarkdown, safeHref, sameDescription, withLinks, writeDescription, writeHtml, writeMarkdown} from '../src/logic/description.ts';
-import type {Block, Mark, Run} from '../src/logic/description.ts';
+import type {Block, Item, List, Mark, Run} from '../src/logic/description.ts';
 
 const run = (text: string, marks: Mark[] = [], href: string | null = null): Run => ({text, marks, href});
 const p = (...runs: Run[]): Block => ({type: 'paragraph', runs});
 const blank = p();
+const li = (...runs: Run[]): Item => ({runs});
+const under = (item: Item, sub: List): Item => ({...item, sub});
 
 const GOOGLE = '<b>Bring</b> the signed form<br><i>Room 204</i><br><u>Arrive early</u><br><ol><li><i>Check in</i></li><li>Badge</li></ol><ul><li>Laptop</li></ul><br><a href="https://example.com/visit">https://example.com/visit</a><i></i>';
 const TODOIST = '**Bring** the signed form\n*Room 204*\nArrive early\n\n1. *Check in*\n2. Badge\n\n- Laptop\n\n\n[https://example.com/visit](https://example.com/visit)';
@@ -15,8 +17,8 @@ const SHOWN: Block[] = [
   p(run('Bring', ['bold']), run(' the signed form')),
   p(run('Room 204', ['italic'])),
   p(run('Arrive early', ['underline'])),
-  {type: 'list', ordered: true, items: [[run('Check in', ['italic'])], [run('Badge')]]},
-  {type: 'list', ordered: false, items: [[run('Laptop')]]},
+  {type: 'list', ordered: true, items: [li(run('Check in', ['italic'])), li(run('Badge'))]},
+  {type: 'list', ordered: false, items: [li(run('Laptop'))]},
   blank,
   p(run('https://example.com/visit', [], 'https://example.com/visit')),
 ];
@@ -74,7 +76,6 @@ describe('Google\'s HTML', () => {
     ['a table', '<table><tr><td>Mon</td><td>9 AM</td></tr><tr><td>Tue</td><td>10 AM</td></tr></table>', 'Mon 9 AM\nTue 10 AM'],
     ['an image', 'Logo <img src="https://example.com/logo.png" alt="x">', 'Logo'],
     ['colours and fonts', '<span style="color:red">Urgent</span> <font face="Arial">now</font>', 'Urgent now'],
-    ['a list inside a list', '<ul><li>One<ul><li>Inner</li></ul></li><li>Two</li></ul>', 'One\nInner\nTwo'],
   ])('formatting the list can\'t hold is marked, and shown as its text: %s', (_, html, text) => {
     const read = readHtml(html);
     expect(read.lossy).toBe(true);
@@ -88,6 +89,51 @@ describe('Google\'s HTML', () => {
 
   test('the editable field\'s own markup keeps white space as typed', () => {
     expect(readHtml('<div>a  b</div><div> c</div>', {literal: true}).blocks).toEqual([p(run('a  b')), p(run(' c'))]);
+  });
+});
+
+// SV-268: a list nests as Google Calendar's editor writes it (read from a real event, 2026-11-10,
+// with invented text), and as the browser's own indent leaves it in the editor's field.
+describe('nested lists', () => {
+  const NESTED = '<ul><li><b>Length</b>: one hour</li><li><b>Parking</b>:<ul><li>On the street</li><li>The lot behind</li></ul></li><li>Bring a pen</li></ul>';
+  const SHOWN_NESTED: Block[] = [{type: 'list', ordered: false, items: [
+    li(run('Length', ['bold']), run(': one hour')),
+    under(li(run('Parking', ['bold']), run(':')), {ordered: false, items: [li(run('On the street')), li(run('The lot behind'))]}),
+    li(run('Bring a pen')),
+  ]}];
+
+  test('Google\'s nested list reads as one, nothing lost, and is written back exactly as Google wrote it', () => {
+    expect(readHtml(NESTED)).toEqual({blocks: SHOWN_NESTED, lossy: false});
+    expect(writeHtml(SHOWN_NESTED)).toBe(NESTED);
+    expect(plainText(SHOWN_NESTED)).toBe('Length: one hour\nParking:\nOn the street\nThe lot behind\nBring a pen');
+  });
+
+  test.each<[string, string, Block[]]>([
+    ['the browser\'s indent puts the inner list after its item, not inside it', '<ul><li>a</li><ul><li>b</li></ul><li>c</li></ul>',
+      [{type: 'list', ordered: false, items: [under(li(run('a')), {ordered: false, items: [li(run('b'))]}), li(run('c'))]}]],
+    ['a numbered list inside a bulleted one keeps its own kind, three levels down', '<ul><li>a<ol><li>b<ul><li>c</li></ul></li></ol></li></ul>',
+      [{type: 'list', ordered: false, items: [under(li(run('a')), {ordered: true, items: [under(li(run('b')), {ordered: false, items: [li(run('c'))]})]})]}]],
+    ['an inner list with no item above it hangs from an empty one', '<ol><li><ul><li>b</li></ul></li></ol>',
+      [{type: 'list', ordered: true, items: [under(li(), {ordered: false, items: [li(run('b'))]})]}]],
+  ])('%s', (_, html, blocks) => {
+    expect(readHtml(html, {literal: true})).toEqual({blocks, lossy: false});
+  });
+
+  test('text after an inner list in the same item can\'t be held: it shows as an item of its own, and is marked', () => {
+    const read = readHtml('<ul><li>a<ul><li>b</li></ul>tail</li></ul>');
+    expect(read.lossy).toBe(true);
+    expect(plainText(read.blocks)).toBe('a\nb\ntail');
+  });
+
+  test('a task\'s list nests by indent, written to its item\'s text as CommonMark reads it', () => {
+    const markdown = '- **Length**: one hour\n- **Parking**:\n  - On the street\n  - The lot behind\n- Bring a pen';
+    expect(writeMarkdown(SHOWN_NESTED)).toBe(markdown);
+    expect(readMarkdown(markdown)).toEqual({blocks: SHOWN_NESTED, lossy: false});
+    const numbered: Block[] = [{type: 'list', ordered: true, items: [under(li(run('a')), {ordered: true, items: [li(run('b'))]}), li(run('c'))]}];
+    expect(writeMarkdown(numbered)).toBe('1. a\n   1. b\n2. c');
+    expect(readMarkdown('1. a\n    - b\n        - c\n2. d').blocks).toEqual([{type: 'list', ordered: true, items: [
+      under(li(run('a')), {ordered: false, items: [under(li(run('b')), {ordered: false, items: [li(run('c'))]})]}), li(run('d')),
+    ]}]);
   });
 });
 
@@ -123,8 +169,8 @@ describe('Todoist\'s Markdown', () => {
   test.each<[string, string, Block[]]>([
     ['headings, quotes and a code block', '# Plan\n> Said so\n\n```\na\n  b\n```', [{type: 'heading', level: 1, runs: [run('Plan')]}, {type: 'quote', runs: [run('Said so')]}, {type: 'code', text: 'a\n  b'}]],
     ['a blank line between lines is a blank line', 'One\n\nTwo', [p(run('One')), blank, p(run('Two'))]],
-    ['the blank line around a list is only its edge', 'One\n\n- a\n- b\n\nTwo', [p(run('One')), {type: 'list', ordered: false, items: [[run('a')], [run('b')]]}, p(run('Two'))]],
-    ['star and plus lists, and numbers with a bracket', '* a\n+ b\n1) c', [{type: 'list', ordered: false, items: [[run('a')], [run('b')]]}, {type: 'list', ordered: true, items: [[run('c')]]}]],
+    ['the blank line around a list is only its edge', 'One\n\n- a\n- b\n\nTwo', [p(run('One')), {type: 'list', ordered: false, items: [li(run('a')), li(run('b'))]}, p(run('Two'))]],
+    ['star and plus lists, and numbers with a bracket', '* a\n+ b\n1) c', [{type: 'list', ordered: false, items: [li(run('a')), li(run('b'))]}, {type: 'list', ordered: true, items: [li(run('c'))]}]],
   ])('%s', (_, markdown, blocks) => {
     expect(readMarkdown(markdown).blocks).toEqual(blocks);
     expect(readMarkdown(writeMarkdown(blocks)).blocks).toEqual(blocks);
@@ -146,12 +192,12 @@ describe('what each provider\'s own editor writes', () => {
     {type: 'heading', level: 2, runs: [run('Plan', ['bold'])]},
     {type: 'quote', runs: [run('Said so', ['underline', 'strike'])]},
     {type: 'code', text: 'a\n\nb'},
-    {type: 'list', ordered: false, items: [[run('x', ['code', 'italic'], 'https://example.com')]]},
+    {type: 'list', ordered: false, items: [li(run('x', ['code', 'italic'], 'https://example.com'))]},
   ];
   test('an event keeps Google\'s set: bold, italic, underline, lists and links, the rest as plain lines', () => {
     expect(fitting('event', pasted)).toEqual([
       p(run('Plan', ['bold'])), p(run('Said so', ['underline'])), p(run('a')), blank, p(run('b')),
-      {type: 'list', ordered: false, items: [[run('x', ['italic'], 'https://example.com')]]},
+      {type: 'list', ordered: false, items: [li(run('x', ['italic'], 'https://example.com'))]},
     ]);
   });
   test('a task keeps everything but underline', () => {
@@ -168,7 +214,7 @@ describe('either format', () => {
   });
 
   test('nothing left in it writes as null, which clears it at the provider', () => {
-    expect(writeDescription('html', [blank, p(run('')), {type: 'list', ordered: true, items: [[]]}])).toBeNull();
+    expect(writeDescription('html', [blank, p(run('')), {type: 'list', ordered: true, items: [li()]}])).toBeNull();
     expect(writeDescription('markdown', [])).toBeNull();
     expect(isEmpty([blank])).toBe(true);
     expect(writeDescription('html', [p(run('x'))])).toBe('x');

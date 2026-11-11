@@ -4,7 +4,7 @@
 import {useLayoutEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
 import {withLinks} from '../../logic/description.ts';
-import type {Block, Run} from '../../logic/description.ts';
+import type {Block, List, Run} from '../../logic/description.ts';
 import './description.css';
 
 function Runs({runs}: {runs: Run[]}) {
@@ -20,6 +20,11 @@ function Runs({runs}: {runs: Run[]}) {
   })}</>;
 }
 
+function ListOf({list}: {list: List}) {
+  const items = list.items.map((item, at) => <li key={at}><Runs runs={item.runs} />{item.sub && <ListOf list={item.sub} />}</li>);
+  return list.ordered ? <ol>{items}</ol> : <ul>{items}</ul>;
+}
+
 /** The description's lines, lists and the rest, formatted. */
 export function DescriptionText({blocks}: {blocks: Block[]}) {
   return <>{blocks.map((block, index) => {
@@ -28,10 +33,7 @@ export function DescriptionText({blocks}: {blocks: Block[]}) {
       case 'heading': return <p key={index} className="head" role="heading" aria-level={block.level}><Runs runs={block.runs} /></p>;
       case 'quote': return <blockquote key={index}><Runs runs={block.runs} /></blockquote>;
       case 'code': return <pre key={index}>{block.text}</pre>;
-      case 'list': {
-        const items = block.items.map((item, at) => <li key={at}><Runs runs={item} /></li>);
-        return block.ordered ? <ol key={index}>{items}</ol> : <ul key={index}>{items}</ul>;
-      }
+      case 'list': return <ListOf key={index} list={block} />;
     }
   })}</>;
 }
