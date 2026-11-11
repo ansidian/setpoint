@@ -302,8 +302,8 @@ const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'holidays' | 'todoist';
 ];
 
 type SampleItem = {calendar: (typeof CALENDARS)[number]['key']; title: string} & (
-  | {kind: 'event'; date: string; start: string; end: string; recurrence?: string; place?: string; address?: string; attendees?: string[]; reminders?: number[]; leave?: true; url?: string; free?: true; uid?: string}
-  | {kind: 'task'; due: string; project: string; done?: [string, string]}
+  | {kind: 'event'; date: string; start: string; end: string; recurrence?: string; place?: string; address?: string; attendees?: string[]; reminders?: number[]; leave?: true; url?: string; free?: true; uid?: string; description?: string}
+  | {kind: 'task'; due: string; project: string; done?: [string, string]; description?: string}
   | {kind: 'day'; date: string}
 );
 
@@ -320,14 +320,27 @@ export const SAMPLE_ITEMS: SampleItem[] = [
     // it's marked free, and an event during it has no conflict.
     place: 'University Student Union', reminders: [10], url: 'https://careers.example.edu/fair/fall-2026', free: true,
     // SV-181: as if imported from the fair's .ics, so a re-import finds it already on Jobs (will update).
-    uid: 'career-fair-fall-2026@careers.example.edu'},
+    uid: 'career-fair-fall-2026@careers.example.edu',
+    // SV-264: a long description as an .ics file's or an invite's comes: plain text with its own line
+    // breaks and a bare address.
+    description: [
+      'Fall 2026 Career Fair, open to all majors. Drop in any time between 10 and 2.',
+      '', 'Bring a few printed copies of your resume and your student ID. Business casual is fine.',
+      '', 'Employers on the main floor include Contoso, Fabrikam, Northwind Traders, Tailspin Toys and Trey Research. The full list and the floor map are at https://careers.example.edu/fair/fall-2026/employers',
+      '', '10:00 Doors open', '11:30 Resume reviews, Room 210', '13:00 Panel: your first year at work',
+      '', 'Questions: careers@example.edu',
+    ].join('\n')},
   // Fall term: Tue and Thu until finals week.
   {calendar: 'classes', kind: 'event', title: 'CS 101 lecture', date: '2026-08-25', start: '18:00', end: '19:15',
     recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=TU,TH;UNTIL=20261204T075959Z', reminders: [10]},
-  {calendar: 'classes', kind: 'event', title: 'Study group', date: '2026-10-09', start: '18:30', end: '20:30', reminders: [10]},
+  {calendar: 'classes', kind: 'event', title: 'Study group', date: '2026-10-09', start: '18:30', end: '20:30', reminders: [10],
+    // SV-264: a description as Google Calendar's own editor writes one (lines ended by <br>, lists as they are).
+    description: '<b>Midterm review</b>, library room 3B<br><i>Bring</i> last week\'s <u>problem set</u><br><ol><li>Recursion</li><li>Big O</li></ol><ul><li>Laptop</li><li>Snacks</li></ul><br><a href="https://classes.example.edu/cs101/midterm">Practice exam</a>'},
   {calendar: 'todoist', kind: 'task', title: 'CS 101 lab report', due: '2026-10-07', project: 'School'},
   {calendar: 'todoist', kind: 'task', title: 'Pay rent', due: '2026-10-07', project: 'Home'},
-  {calendar: 'todoist', kind: 'task', title: 'Renew car registration', due: '2026-10-08', project: 'Home'},
+  {calendar: 'todoist', kind: 'task', title: 'Renew car registration', due: '2026-10-08', project: 'Home',
+    // SV-264: a description as Todoist's own editor writes one (Markdown, a blank line around a list).
+    description: '**Due by Oct 31**, *online* is fastest\n\n1. Smog check\n2. Proof of insurance\n\n[Renew online](https://dmv.example.gov/renew)'},
   {calendar: 'todoist', kind: 'task', title: 'Return library books', due: '2026-10-05', project: 'Inbox', done: ['2026-10-05', '17:30']},
   // SV-191: an all-day event on the read-only holiday calendar, after October's busy weeks.
   {calendar: 'holidays', kind: 'day', title: 'Veterans Day', date: '2026-11-11'},
@@ -439,13 +452,13 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
           startsAt: zoned(item.date, item.start), endsAt: zoned(item.date, item.end), timeZone: SEED_TIME_ZONE,
           recurrence: item.recurrence ?? null, place: item.place ?? null, address: item.address ?? null,
           attendees: item.attendees ?? null, reminders: item.reminders ?? null, leaveReminder: item.leave ?? false, sourceUrl: item.url ?? null, transparency: item.free ? 'transparent' : 'opaque',
-          icalUid: item.uid ?? null,
+          icalUid: item.uid ?? null, description: item.description ?? null,
         }).run();
       } else if (item.kind === 'day') {
         tx.insert(t.items).values({...common, kind: 'event', allDay: true, startDate: item.date, endDate: addDays(item.date, 1)}).run();
       } else {
         tx.insert(t.items).values({
-          ...common, kind: 'task', allDay: true, dueDate: item.due, project: item.project, doneAt: item.done ? iso(item.done) : null,
+          ...common, kind: 'task', allDay: true, dueDate: item.due, project: item.project, doneAt: item.done ? iso(item.done) : null, description: item.description ?? null,
         }).run();
       }
     });

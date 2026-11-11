@@ -25,6 +25,8 @@ import type {Mark, ParsedTitle, ReminderBase, ReminderRead} from '../../logic/co
 import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../../logic/plain.ts';
 import type {Span} from '../../logic/plain.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
+import {formatOf, isEmpty, readDescription, sameDescription, writeDescription} from '../../logic/description.ts';
+import type {Block} from '../../logic/description.ts';
 import {placeName} from '../../logic/place.ts';
 import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
 import {dayOf} from '../../logic/manipulate.ts';
@@ -38,6 +40,7 @@ import {placeMenu, useMenuRef} from '../../ui/popover.ts';
 import {colourVar, useAccounts} from '../accounts.ts';
 import {LineReference} from './LineReference.tsx';
 import {CalendarName, DateField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
+import {DescriptionField} from './DescriptionField.tsx';
 import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
 import './editor.css';
@@ -127,6 +130,10 @@ interface Draft {
   fromEmail: ProposalField[];
   // Fields set by hand: the line's parse no longer changes them.
   manual: Manual[];
+  // SV-264: the description as the field reads it (logic/description.ts), written in its provider's
+  // format on save; `descriptionLossy` when the item's own held formatting that reading drops (D547).
+  description: Block[];
+  descriptionLossy: boolean;
   // What it opened with (an email's or a keynote's proposal), which the line falls back to where it
   // names none: a phrase typed changes the field, and taken out puts it back (SV-208).
   base: Base;
@@ -161,7 +168,7 @@ function emptyDraft(kind: ItemKind, date: string, slot: Slot | null = null): Dra
   return {
     id: nextDraft++, kind, text: '', title: '', plain: [], date, undated: false, day: date, slot: at,
     start: at ? at.start : kind === 'event' ? DEFAULT_START : null, end: at ? at.end : kind === 'event' ? DEFAULT_START + DEFAULT_LENGTH : null, days: at?.days ?? 1,
-    place: '', address: null, picked: null, calendarId: null, reminders: null, lineReminders: [], leaveReminder: false, recurrence: null, project: null, newProject: false, pickedProject: null, pickedCalendar: null, labels: [], repeat: null, fromEmail: [], manual: [], base: NO_BASE,
+    place: '', address: null, picked: null, calendarId: null, reminders: null, lineReminders: [], leaveReminder: false, recurrence: null, project: null, newProject: false, pickedProject: null, pickedCalendar: null, labels: [], repeat: null, description: [], descriptionLossy: false, fromEmail: [], manual: [], base: NO_BASE,
   };
 }
 
@@ -221,10 +228,11 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
   const start = timed ? minutesOf((item.kind === 'event' ? item.starts_at : item.due_at)!, timeZone) : null;
   const end = item.kind === 'event' && timed ? start! + Math.round((Date.parse(item.ends_at!) - Date.parse(item.starts_at!)) / 60_000) : null;
   const days = item.kind === 'event' && !timed && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
+  const description = readDescription(formatOf(item.kind), item.description);
   return {
     id: nextDraft++, kind: item.kind, text: item.title, title: item.title, plain: [], date, undated: false, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
     calendarId: item.calendar_id, reminders: item.reminders, lineReminders: [], leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
-    fromEmail: [], manual: [], base: NO_BASE,
+    description: description.blocks, descriptionLossy: description.lossy, fromEmail: [], manual: [], base: NO_BASE,
   };
 }
 
@@ -373,7 +381,7 @@ function createInput(draft: Draft, timeZone: string, todoist: number | null): It
     return {
       kind: 'task', calendar_id: todoist, title: draft.title.trim(), all_day: true, starts_at: null, ends_at: null, start_date: null, end_date: null,
       due_date: dated ? draft.date : null, due_at: dated && draft.start !== null ? instantAt(draft.date, draft.start, timeZone) : null, time_zone: null, recurrence: null,
-      place: null, address: null, attendees: [], ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: dated ? draft.repeat : null, description: null,
+      place: null, address: null, attendees: [], ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: dated ? draft.repeat : null, description: writeDescription('markdown', draft.description),
     };
   }
   // An email that gave no day leaves the event without one until it's picked (SV-24).
@@ -384,7 +392,7 @@ function createInput(draft: Draft, timeZone: string, todoist: number | null): It
   return {
     kind: 'event', calendar_id: draft.calendarId, title: draft.title.trim(), ...when, due_date: null, due_at: null, time_zone: timeZone,
     recurrence: draft.recurrence, place: draft.place.trim() || null, address: draft.place.trim() ? draft.address : null, attendees: [],
-    ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: draft.leaveReminder, project: null, colour: null, labels: [], repeat: null, description: null,
+    ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: draft.leaveReminder, project: null, colour: null, labels: [], repeat: null, description: writeDescription('html', draft.description),
   };
 }
 
@@ -415,6 +423,8 @@ function changesOf(draft: Draft, original: Draft, timeZone: string): ItemChanges
   if (draft.calendarId !== original.calendarId && draft.calendarId !== null) changes.calendar_id = draft.calendarId;
   if (draft.kind === 'task' && draft.repeat !== original.repeat) changes.repeat = draft.repeat;
   if (draft.kind === 'task' && draft.labels.join('\n') !== original.labels.join('\n')) changes.labels = draft.labels;
+  // SV-264 (D547): sent only when it reads differently, so one left alone stays as its provider has it.
+  if (!sameDescription(draft.description, original.description)) changes.description = writeDescription(formatOf(draft.kind), draft.description);
   return changes;
 }
 
@@ -874,7 +884,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     }
   }
 
-  const dirty = editing && original ? Object.keys(changesOf(draft, original, timeZone)).length > 0 : draftStarted(drafts);
+  const dirty = editing && original ? Object.keys(changesOf(draft, original, timeZone)).length > 0 : draftStarted(drafts) || drafts.some(one => !isEmpty(one.description));
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
 
   const inputs = filled.map(one => {
@@ -1283,6 +1293,14 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             change({recurrence}, ['recurrence']);
             setMenu(null);
           }} />}
+
+          {!card && (
+            <>
+              <Icon name="notes" size={17} className="desc-glyph" />
+              <DescriptionField key={draft.id} blocks={raw.description} kind={kind} onChange={description => change({description})}
+                note={editing && original && draft.descriptionLossy && !sameDescription(draft.description, original.description) ? 'Saving drops formatting Setpoint can\'t show' : null} />
+            </>
+          )}
         </div>
 
         {/* An empty new draft has nothing to conflict yet: the preview waits for a title or a time. */}

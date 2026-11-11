@@ -39,6 +39,10 @@ export function FloatingDetail({target, exit, section, scroller, timeZone, actio
     engine.setTarget(target, exit);
   }, [engine, target, exit]);
 
+  // SV-264: the card growing at rest (a description opened with More) is placed again, so it stays inside the grid.
+  const [grown] = useState(() => new ResizeObserver(() => engine.onResize()));
+  useEffect(() => () => grown.disconnect(), [grown]);
+
   // Every render: start what a new target asked for once its content is drawn, or keep by the item.
   useLayoutEffect(() => {
     engine.afterRender();
@@ -72,6 +76,8 @@ export function FloatingDetail({target, exit, section, scroller, timeZone, actio
       }}>
       <div className="card float" ref={element => {
         engine.attach({card: element});
+        grown.disconnect();
+        if (element) grown.observe(element);
       }}
         onPointerDown={event => {
           const at = event.target as Element;

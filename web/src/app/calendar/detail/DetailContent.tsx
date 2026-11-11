@@ -13,11 +13,12 @@
 // left (D447, amending #306).
 import type {CalendarOut, EventColour, ItemOut, Settings} from '@setpoint/shared';
 import {EVENT_COLOURS} from '@setpoint/shared';
-import {useState} from 'react';
+import {useMemo, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {describeTaskRepeat} from '../../../logic/compose.ts';
 import {useResource} from '../../../api/client.ts';
 import {SETTINGS_PATH} from '../../../api/items.ts';
+import {formatOf, readDescription} from '../../../logic/description.ts';
 import {attendeesLine, detailWhen, leaveBy, repeatLine} from '../../../logic/detail.ts';
 import {openLink, placeLines, placeLink} from '../../../logic/place.ts';
 import {reminderAnchor, reminderLines} from '../../../logic/reminders.ts';
@@ -26,6 +27,7 @@ import type {IconName} from '../../../ui/glyphs.ts';
 import {colourVar} from '../../accounts.ts';
 import {useNow} from '../../clock.ts';
 import {useRingColour} from '../Chip.tsx';
+import {DescriptionFold} from '../DescriptionText.tsx';
 import {useJustDone} from '../done.ts';
 import type {DetailTarget} from './motion.ts';
 
@@ -87,6 +89,8 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   // SV-179 (D439): with no link in its place, the event's own (Google's source.url) has a line of its own.
   const own = link ? null : openLink(item);
   const repeat = repeatLine(item, timeZone);
+  // SV-264 (D546): the description, formatted, after who's coming.
+  const description = useMemo(() => readDescription(formatOf(item.kind), item.description).blocks, [item.kind, item.description]);
   // A task's card is drawn as the task is on the grid (polish audit calflows-10, shell-15): its ring in
   // its project's colour, struck through once done, at .5 with the spinner while Todoist hasn't
   // confirmed, and Complete landing its done check as everywhere else (done.ts).
@@ -138,6 +142,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         )}
         {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}
         {attendees && <Fact icon="group"><span>{attendees}</span></Fact>}
+        {description.length > 0 && <Fact icon="notes" className="description"><DescriptionFold key={item.key} blocks={description} /></Fact>}
         {repeat && <Fact icon="repeat"><span>{repeat}</span></Fact>}
         {item.kind === 'task' && item.project && (
           <div className="fact project"><span className="fact-dot"><span className="dot" style={ring(item.project)} /></span><span>{item.project}</span></div>
