@@ -498,9 +498,13 @@ half strength until the answer is in (#108).
 the email's title in the line as words only, its line reading what's typed after it, the fields
 pre-filled from the email, each marked "from the email" until it changes, the conflict line ("Free
 that evening" or "Overlaps …", leaving free events out, #303) worked out again as the day and time
-change, and **Create**. Nothing is created until Andy creates it. The day is blank ("Pick a day")
+change, the **Description** (#372), and **Create**. Nothing is created until Andy creates it. The day is blank ("Pick a day")
 when the email gave none, and Create says so. A task's card has no Place, and its Project suggests
 Todoist's projects as Andy types, making a new one only when he picks **New project** (#26).
+The description starts with one line, "From: *subject*", the subject linking to the email in Gmail
+(Open in Gmail's address; plain text for a non-Gmail account), marked "from the email" until it's
+changed; cleared, none is sent (#372). News's Add to calendar starts its description the same way,
+"From: *headline*", linking to the story in Setpoint, with no mark.
 
 ### Pattern prompt
 
@@ -635,7 +639,9 @@ Notifications; the presets, then **Custom…** last for a date and time, before 
 **Description** under them (`notes`, "Add description", formatted, #370), and the
 **conflict preview** (a small timeline of the day: "Overlaps Study group ·
 1h 30m"), which leaves free events out (#303). In the date picker the chosen day is the strongest mark and today a ring, and the editor's
-menus tick their current choice (#189). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
+menus tick their current choice (#189). Each row's glyph is always in its mark's colour (the day
+and time `cool`, the place `comf`, reminders `remind`, the calendar or project its own; repeat,
+labels and description `ink3`), and a row the line fills grows its glyph once as it lands (#372). A mark still being typed is
 only dashed until it's picked and lands, and a field another's change moved flashes (#187). **Batch drafts** add a second event ("Create 2 events ⌘Enter"). A Todoist task uses the same
 editor with project, labels and due date; a new one's due date has an × that sends it with no date (#244).
 
@@ -4757,7 +4763,8 @@ was decided; the audit itself was retired by D480.
     fixed list of formats: lines, bold, italic, underline, strikethrough, code, links, numbered and
     bulleted lists (nested, each level its own kind, as Google writes them; SV-268, D550), headings
     and quotes. Nothing else in a description is drawn, run or loaded;
-    a link opens in a new tab, and a bare web address in the text is one too.
+    a link opens in a new tab, and a bare web address in the text is one too; a Gmail link to an
+    email Setpoint has opens it in the reader instead (#372).
     - **The floating detail:** a fact row under `notes`, after attendees and before the repeat,
       reminders and calendar. A nested list's bullets are hollow, then square, as Google's. Up to **6 lines**, then it fades under **More**, which opens it in
       place to 320 px with the rest scrolling inside; **Less** folds it. The card is placed again
@@ -4777,8 +4784,8 @@ was decided; the audit itself was retired by D480.
       exactly as its provider has it, and clearing it clears it there. A description holding more
       than the list (a table, an image, colours) shows as its text; edited here, what's saved is
       what was shown, under the line **"Saving drops formatting Setpoint can't show"**.
-    - **Not shown:** the day agenda's rows, the grid's chips, and the email proposal card's small
-      editor. The typed line never reads or writes it; each batch draft has its own. The mail
+    - **Not shown:** the day agenda's rows and the grid's chips. The email proposal card shows the
+      field, starting with its From: line (#372). The typed line never reads or writes it; each batch draft has its own. The mail
       pages' item card and the phone layout's detail are the same content, so they show it folded
       the same way; the iPhone app shows none until SI-75.
     - **Clone, copy and paste** of an item carry its description. Text pasted into the field keeps
@@ -4802,3 +4809,28 @@ was decided; the audit itself was retired by D480.
     a calendar's account after its name in a menu. Save hints say both keys: "Enter to save, Esc
     to cancel". The "Label · key" tooltips stay. The overlap line reads the same in the editor and
     on a proposal card: "Overlaps Study group and 1 more · 1h 30m".
+372. **The proposal card's Description, and links back to the email** (amending Proposal and #370;
+    Andy, 2026-11-11; darma SV-270, D552–D556).
+    - **On the card:** the editor's Description field shows in place on every proposal card (the
+      reader's, Alfred's answers', and the editor News's Add to calendar opens), with no hand-off to
+      Calendar; the timeline preview and batch drafts stay off it (D552).
+    - **The From: line:** a proposal's description starts "From: *subject*", the subject linking to
+      the email at Open in Gmail's address (D554), or for News "From: *headline*" linking to the
+      story's address in Setpoint. A non-Gmail account's email has it as plain text (D555). It
+      carries the "from the email" mark at the field's top end until it's changed, and cleared, no
+      description is sent. It's written in each provider's format, a link in Google's HTML and a
+      Markdown link in Todoist; nothing of the email's body and no AI summary goes in (D553).
+    - **Opening it in Setpoint:** wherever Setpoint draws a description, a link of the form
+      `mail.google.com/mail/?authuser=<account>#all/<message id>` is looked up by account and Gmail's
+      id. When Setpoint has the email, it opens in the reader and its tooltip reads **"Opens in
+      Setpoint"**; otherwise it opens Gmail in a new tab. Gmail's address-bar links
+      (`#inbox/FMfcg…`) aren't mapped. The link is drawn as any description link, with no pill or
+      button of its own (D555, D556).
+    - **In the editor's field**, where a click places the caret, **⌘-click** opens a link the same
+      way, its tooltip "Opens in Setpoint · ⌘Click" or "Open link · ⌘Click". A press outside the
+      field keeps its formatting bar until the press ends, so the card's Create doesn't move from
+      under the pointer.
+    - **The editor's glyphs** are always in their marks' colours: the day and time `cool`, the
+      place `comf`, reminders `remind`, the calendar its colour and a task's project its Todoist
+      colour; repeat, labels and description stay `ink3`. A row the typed line fills grows its
+      glyph once as it lands, except with reduced motion.
