@@ -129,3 +129,9 @@ pending_actions
 radio_button_checked
 radio_button_unchecked
 check_circle-fill
+notes
+format_bold
+format_italic
+format_underlined
+format_list_numbered
+format_list_bulleted
