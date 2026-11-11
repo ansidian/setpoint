@@ -1433,7 +1433,8 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
       picks => picks.join() === 'Classes,10 min before');
     assert.equal(await card.locator('input[aria-label="Place"]').inputValue(), 'Contoso University · Room 214');
     assert.equal(await card.locator('.conflict').textContent(), 'Free that evening');
-    assert.equal(await card.locator('.srcm').count(), 3);
+    // The title's, the day and time's, the place's and the description's From: line (SV-270).
+    assert.equal(await card.locator('.srcm').count(), 4);
     // The ? keeps to the line inside the card's padding: within its top and bottom (SV-208), and
     // inside its edge.
     const boxes = await card.evaluate(element => ['.nl', '.nl > .srcm', '.lr-q'].map(selector => element.querySelector(selector)!.getBoundingClientRect().toJSON() as DOMRect));
@@ -1462,7 +1463,8 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     await card.locator('input[aria-label="Date"]').press('Enter');
     assert.equal(await card.locator('input[aria-label="Date"]').inputValue(), 'Fri, Dec 11');
     await until('Friday\'s conflict line', () => card.locator('.conflict').textContent(), line => line === 'Free that evening');
-    assert.equal(await card.locator('.srcm').count(), 2);
+    // The title's, the place's and the From: line's are left.
+    assert.equal(await card.locator('.srcm').count(), 3);
     // The create held on its way, so the card is read while it waits.
     let create = () => {};
     const held = new Promise<void>(resolve => {
@@ -1490,7 +1492,8 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     await line.fill('Study for the final dec 8');
     await until('the line\'s day', () => card.locator('input[aria-label="Due date"]').inputValue(), day => day === 'Tue, Dec 8');
     assert.deepEqual(await card.locator('.nl [data-start]').allTextContents(), ['dec 8']);
-    assert.equal(await card.locator('.srcm').count(), 0, 'the title and day changed lose their marks');
+    // The title and day changed lose their marks; the description's From: line, left alone, keeps its own (SV-270).
+    assert.deepEqual(await card.locator('.srcm').evaluateAll(marks => marks.map(mark => !!mark.closest('.desc-field'))), [true]);
     // A phrase taken out puts the email's day back.
     await line.fill('Study for the final');
     await until('the email\'s day', () => card.locator('input[aria-label="Due date"]').inputValue(), day => day === 'Wed, Dec 9');
