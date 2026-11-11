@@ -60,7 +60,7 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
   const message = store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
   if (!message || message.trashedAt) throw notFound('No such email.');
   const email = {subject: message.subject, organisation: message.organisation, bodyText: message.bodyText, keyDate: message.keyDate};
-  const fields: ProposalFields = {...proposalFields(email)};
+  const fields: ProposalFields = {...proposalFields(email, store.timeZone)};
   if (overrides.title) fields.title = overrides.title;
   for (const key of ['date', 'start', 'end', 'place'] as const) if (overrides[key] !== undefined) fields[key] = overrides[key] ?? null;
   if (overrides.all_day) {
@@ -77,7 +77,7 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
   if (kind === 'task') {
     const {calendarId, project} = projectFor(store, fields.title);
     return {
-      kind, message_id: messageId, from_email: fromEmail(email, fields), conflict: null,
+      kind, message_id: messageId, from_email: fromEmail(email, fields, store.timeZone), conflict: null,
       item: {
         kind, calendar_id: calendarId, title: fields.title, all_day: false, starts_at: null, ends_at: null, start_date: null, end_date: null,
         due_date: fields.date, due_at: startsAt, time_zone: zone, place: fields.place, project,
@@ -93,5 +93,5 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
   const conflict = fields.date
     ? conflictLine({all_day: allDay, starts_at: startsAt, ends_at: endsAt, startHour: fields.start ? Number(fields.start.slice(0, 2)) : null}, itemsInRange(store, fields.date, dayAfter(fields.date)).items)
     : null;
-  return {kind, message_id: messageId, item, from_email: fromEmail(email, fields), conflict};
+  return {kind, message_id: messageId, item, from_email: fromEmail(email, fields, store.timeZone), conflict};
 }

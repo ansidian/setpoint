@@ -23,8 +23,8 @@ describe('the pure rules', () => {
 
   test('the key line gives the time and the place', () => {
     const body = 'Exams below.\n\nCS 3310 · Data structures — Tue, Dec 8 · 7:00 – 9:00 PM · Room 214\nCS 101 · Software engineering — Wed, Dec 9 · 7:00 – 9:00 PM · Room 214\n';
-    expect(keyLine(body, '2026-12-09')).toEqual({line: 'CS 101 · Software engineering — Wed, Dec 9 · 7:00 – 9:00 PM · Room 214', start: '19:00', end: '21:00'});
-    expect(keyLine('Sign by: Oct 31, 2026', '2026-10-31')).toEqual({line: 'Sign by: Oct 31, 2026', start: null, end: null});
+    expect(keyLine(body, '2026-12-09')).toEqual({line: 'CS 101 · Software engineering — Wed, Dec 9 · 7:00 – 9:00 PM · Room 214', date: '2026-12-09', start: '19:00', end: '21:00', near: []});
+    expect(keyLine('Sign by: Oct 31, 2026', '2026-10-31')).toEqual({line: 'Sign by: Oct 31, 2026', date: '2026-10-31', start: null, end: null, near: []});
     expect(keyLine('Nothing dated here.', '2026-10-31')).toBeNull();
     expect(keyLine('Sign by Oct 31, 2025.', '2026-10-31')).toBeNull();
   });
@@ -36,6 +36,61 @@ describe('the pure rules', () => {
     ['Sign by: Oct 31, 2026', 'Parkside Apartments', null],
   ])('place on "%s"', (line, organisation, place) => {
     expect(placeIn(line, organisation)).toBe(place);
+  });
+
+  // SV-263: real mail spreads the date, the time and the address over lines; these bodies are in
+  // the shapes of an interview scheduler's, a maintenance notice's and a shop's emails.
+  const LA = 'America/Los_Angeles';
+  const read = (bodyText: string, keyDate: string) => {
+    const {title: _title, ...fields} = proposalFields({subject: 'Details', organisation: null, bodyText, keyDate}, LA);
+    return fields;
+  };
+  test.each<[string, string, string, {date: string; start: string | null; end: string | null; place: string | null}]>([
+    ['the date, the time and the address on three lines, the address its own paragraph',
+      'You scheduled an interview with Contoso\n\nIn-person interview\n- Software Engineer\n- Thursday, November 12\n- 9 am to 9:45 am PT\n\n500 Harbor Blvd, Fairview, CA 90000\n\nCancel or reschedule\nhttps://jobs.example.com/cancel',
+      '2026-11-12', {date: '2026-11-12', start: '09:00', end: '09:45', place: '500 Harbor Blvd, Fairview, CA 90000'}],
+    ['a time under the date and no address: the link under it is no place',
+      'Video interview\n- Software Engineer\n- Monday, November 16\n- 3 pm to 3:45 pm PT\n\nJoin interview\nhttps://jobs.example.com/join/1\nCancel or reschedule\nhttps://jobs.example.com/cancel',
+      '2026-11-16', {date: '2026-11-16', start: '15:00', end: '15:45', place: null}],
+    ['the block further down the email',
+      'Hi Jordan,\n\nCan you make it to your interview with Contoso today?\n\nvideo Interview,\n- Software Engineer\n- Monday, November 16\n- 3 pm to 3:45 pm PT\n\nJoin interview:\nhttps://jobs.example.com/join/1',
+      '2026-11-16', {date: '2026-11-16', start: '15:00', end: '15:45', place: null}],
+    ['a later line with the time wins over an earlier one without, in the zone it names; the footer address is no place',
+      'Northwind is set to undergo scheduled maintenance on Saturday November 21, 2026\n\nMaintenance may affect performance starting Saturday, November 21 around 2pm ET, estimated to last up to 4 hours.\n\nNorthwind Inc. 100 Market Street, Floor 4 | Fairview, CA 90000 | US',
+      '2026-11-21', {date: '2026-11-21', start: '11:00', end: null, place: null}],
+    ['a deadline with no time and no address',
+      'Hello Jordan, Your return request is confirmed.\n\nDrop off by Sat, Oct 31 Dropoff location Any carrier dropoff location\n\nNorthwind Inc. 100 Market Street, Fairview, CA 90000.',
+      '2026-10-31', {date: '2026-10-31', start: null, end: null, place: null}],
+    ['a shipping address under a delivery date is no place',
+      'Arriving Tue, Nov 17\n\nShipping to: Jordan Lee, 12 Elm St, Fairview, CA 90000',
+      '2026-11-17', {date: '2026-11-17', start: null, end: null, place: null}],
+    ['nor is one over several lines',
+      'Arriving Tue, Nov 17\n\nJordan Lee\n12 Elm St\nFairview, CA 90000',
+      '2026-11-17', {date: '2026-11-17', start: null, end: null, place: null}],
+    ['a time in another zone that falls on the day before here',
+      'Launch stream: Fri, Nov 20 · 1 am ET',
+      '2026-11-20', {date: '2026-11-19', start: '22:00', end: null, place: null}],
+    ['a range in a named zone: its end moves with its start',
+      'Webinar: Tue, Nov 17 · 1 pm to 2 pm ET',
+      '2026-11-17', {date: '2026-11-17', start: '10:00', end: '11:00', place: null}],
+    ['a quoted email\'s own date and time are when it was written, not the time',
+      'See you Tue, Nov 17.\n\nOn Tue, Nov 17, 2026 at 9:14 AM Jordan Lee wrote:\n> Are we still on for Tue, Nov 17 at 8 AM?',
+      '2026-11-17', {date: '2026-11-17', start: null, end: null, place: null}],
+    ['a summer time in a named zone',
+      'Webinar: Wed, Jul 15 · 3 pm ET',
+      '2026-07-15', {date: '2026-07-15', start: '12:00', end: null, place: null}],
+    ['a time with no zone is the user\'s own',
+      'Dinner: Fri, Oct 9 · 7 PM · 2118 Sunset Blvd',
+      '2026-10-09', {date: '2026-10-09', start: '19:00', end: null, place: '2118 Sunset Blvd'}],
+  ])('SV-263: %s', (_, body, keyDate, fields) => {
+    expect(read(body, keyDate)).toEqual(fields);
+  });
+
+  test('SV-263: what the lines around the date gave is marked "from the email"', () => {
+    const email = {subject: 'Interview', organisation: null, keyDate: '2026-11-12', bodyText: 'In-person interview\n- Thursday, November 12\n- 9 am to 9:45 am PT\n\n500 Harbor Blvd, Fairview, CA 90000'};
+    expect(fromEmail(email, proposalFields(email, LA), LA)).toEqual(['title', 'date', 'time', 'place']);
+    const stream = {subject: 'Launch stream', organisation: null, keyDate: '2026-11-20', bodyText: 'Launch stream: Fri, Nov 20 · 1 am ET'};
+    expect(fromEmail(stream, proposalFields(stream, LA), LA)).toEqual(['title', 'date', 'time']);
   });
 
   test.each<[number, string]>([[90, '1h 30m'], [120, '2h'], [45, '45m']])('%i minutes → %s', (minutes, label) => {
