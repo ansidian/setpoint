@@ -4834,3 +4834,28 @@ was decided; the audit itself was retired by D480.
       place `comf`, reminders `remind`, the calendar its colour and a task's project its Todoist
       colour; repeat, labels and description stay `ink3`. A row the typed line fills grows its
       glyph once as it lands, except with reduced motion (D557).
+373. **A task's subtasks** (Andy, 2026-11-13; darma SV-272, D558–D563). A Todoist task's subtasks
+    are mirrored and drawn as a checklist with their task; one with no date of its own is never a
+    row of its own on the grid, in the agenda or in Calendar search (D558). One with a date shows on
+    its day as any task and in the checklist too; only a task's direct subtasks are drawn (D563).
+    - **In the floating detail:** after the description, a header line, the list glyph and
+      **"Subtasks 1/4"** (the count, done of all, in `ink3`), then the subtasks a column in from it,
+      in Todoist's order. Each is its ring in the task's project colour and its title; done, the done
+      check and the title struck through in `ink3`; at .5 while Todoist hasn't confirmed (D560).
+    - **Checking one** completes it alone, and its done check reopens it, with the task's own toast
+      and Undo: "Completed ‹title›", "Reopened ‹title›" (D559). Checking them all never completes
+      the task, which is completed on its own; completing the task completes them in Todoist, as
+      Todoist does (D558).
+    - **Reordering:** the column the subtasks are set in by holds each one's handle
+      (`drag_indicator`), shown under the pointer or with focus. Dragging it reorders them live, as
+      Settings' lists do (#14), and ↑ ↓ on it move the subtask a place. The new order shows at once
+      and is the task's change: while it waits for Todoist the task is pending and the handles are
+      gone, and a refusal is the task's failed card, its Move back putting the subtasks back (D560).
+      Todoist is sent one new order key, for the subtask that moved (D562).
+    - **In the agenda rail:** a task with subtasks shows the glyph and count before its project, a
+      button that opens the same checklist under its row, and closes it (D561).
+    - **On the grid:** its chip ends in the glyph and count at the right in `ink3`, the title cut
+      before it with an ellipsis; the chip is no taller, so a day fits as many as before (D561).
+    - **Without actions** (the phone's card) the rings are marks and nothing moves. The Today
+      block's lines don't show the count. Adding, renaming and re-parenting subtasks stay in Todoist.
+    - The glyph is `format_list_bulleted`, standing in until the set has one for subtasks.
