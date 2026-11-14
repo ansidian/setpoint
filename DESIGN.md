@@ -1587,7 +1587,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 - **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, ⌘J Light or Night (#342), Esc closes the
   topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to the next unread email, #309) ⇧I ⇧U ⌘Enter
   Tab ⇧Tab (the views, #338);
-  Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Tab ⇧Tab, Enter, Esc; News (after 2.0) `3`,
+  Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, `L` (the day's mail, #374), Tab ⇧Tab, Enter, Esc; News (after 2.0) `3`,
   `J` `K` Enter `O` `N` Tab ⇧Tab Esc; Jobs Tab ⇧Tab. Key hints read "Esc",
   "⌘K", "⇧I". They work with an HTML email clicked into, too, but not in a field of its own (#294).
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed
@@ -4863,15 +4863,17 @@ was decided; the audit itself was retired by D480.
       block's lines don't show the count. Adding a subtask, and editing one (its title, date and
       reminders) are in Setpoint since #375; re-parenting stays in Todoist.
     - The glyph is `subtask` (Andy's, 2026-11-13: a branch from one dot to another, drawn on 16 and scaled into the set's 960 grid), which replaced the stand-in `format_list_bulleted`.
-374. **USPS Informed Delivery in the agenda rail** (Andy, 2026-11-13; darma SV-274, D564, D565). USPS's
+374. **USPS Informed Delivery in the agenda rail** (Andy, 2026-11-13; darma SV-274, D564, D565, D572, D573). USPS's
     daily digest email is read for the day's mailpieces, kept 30 days, and shown with the day
     selected in the calendar. Desktop only: the phone stays as it is (D275).
     - **The digest email** (USPS's sender, authenticated, "Your Daily Digest for …") is out of the
       Inbox, its groups and counts, All and Mark all as read; it's never triaged or notified. Search
       still finds it, and it stays in the provider.
-    - **What's kept:** each mailpiece's picture, in the digest's order, and how many it said were
-      coming. A mailer's campaign is a piece, shown by the picture USPS put in its scan's place,
-      usually the mailer's artwork; its ride-along ad is never kept (D565). Packages are never shown.
+    - **What's kept:** each mailpiece's scan, in the digest's order, and how many it said were
+      coming, less its mailers' campaigns. A campaign is the mailer's own artwork (a Postal Store
+      gift ad, say), not a piece that comes in the mail, so it's neither kept nor counted, and nor is
+      its ride-along ad (Andy, 2026-11-13, D572, reversing D565's campaign half). A digest of
+      campaigns alone is "No mail today". Packages are never shown.
     - **The section** sits at the bottom of the rail, over its footer, behind a hairline: the `mail`
       glyph and **"USPS Informed Delivery"** in `ink2`, and at the right "4 pieces" in `ink3`, or "3
       pieces · 1 without a picture" when USPS had no image of one. A day with no digest (a Sunday, a
@@ -4883,6 +4885,10 @@ was decided; the audit itself was retired by D480.
       8" and the day ("Sat, Oct 3", `ink3`) with ×. ← → (its chevrons, the arrow keys or a swipe)
       step through the day's pieces and stop at the first and last; Esc, a click outside or × close
       it. It has no download and no link to the email.
+    - **`L`** (letters) opens the viewer at the selected day's first scan, as a thumbnail does, and
+      the header ends in its key hint whenever there's a scan to open (Andy, 2026-11-13, D573). It
+      does nothing on a day without one, or with a field, the editor or another dialog in front; the
+      compact tier, which has no rail, has none. `U` is mail's next unread, and `I` sits by ⇧I.
 375. **A subtask added and edited in Setpoint** (Andy, 2026-11-13; darma SV-273, D566–D570). The
     checklist (#373) adds subtasks, and each one opens in the task editor and has a right-click menu.
     - **The add row** (D566): the checklist's last row, in the card and the agenda rail, is **"Add
