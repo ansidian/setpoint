@@ -57,6 +57,7 @@ interface DayPaneProps {
   onComplete: (task: ItemOut) => void;
   // SV-272: a subtask's check, and a task's subtasks in a new order.
   onCompleteSubtask: (subtask: SubtaskOut) => void;
+  onSettleSubtask: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
   onReorderSubtasks: (task: ItemOut, ids: number[]) => Promise<unknown>;
   // Turns every hidden calendar back on.
   onShowAll: () => void;
@@ -64,7 +65,7 @@ interface DayPaneProps {
 
 const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>;
 
-export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onCompleteSubtask, onReorderSubtasks, onShowAll}: DayPaneProps) {
+export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onCompleteSubtask, onSettleSubtask, onReorderSubtasks, onShowAll}: DayPaneProps) {
   const arrived = useArrival(!loading, date);
   // SV-272: the tasks whose checklists are open under their rows, by key.
   const [open, setOpen] = useState(new Set<string>());
@@ -151,7 +152,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
               {task.project && <span className="ink3 project">{task.project}</span>}
             </a>
             {task.subtasks.length > 0 && open.has(task.key) && (
-              <div className="ag-subtasks"><Subtasks task={task} ring={ring(task.project)} onComplete={task.read_only ? undefined : onCompleteSubtask} onReorder={task.read_only ? undefined : onReorderSubtasks} /></div>
+              <div className="ag-subtasks"><Subtasks task={task} ring={ring(task.project)} onComplete={task.read_only ? undefined : onCompleteSubtask} onSettle={onSettleSubtask} onReorder={task.read_only ? undefined : onReorderSubtasks} /></div>
             )}
             </Fragment>
           );

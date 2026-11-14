@@ -805,11 +805,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     else drop([{item: ask.item, scope: ask.scope}]);
   };
 
+  const settleSubtask = (subtask: SubtaskOut, how: 'retry' | 'move-back') =>
+    void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id).catch(toastFailure(how === 'retry' ? `Couldn't try ${subtask.title} again` : `Couldn't undo ${subtask.title}`));
   const reorder = (task: ItemOut, ids: number[]) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`));
 
   const actions: DetailActions = {
     complete: task => complete(task),
     completeSubtask: subtask => completeSubtask(subtask),
+    settleSubtask: (subtask, how) => settleSubtask(subtask, how),
     reorderSubtasks: (task, ids) => reorder(task, ids),
     clone: item => create([copyOf(item, 0, zone)], `Couldn't clone ${item.title}`, () => `Cloned ${item.title}`),
     copy: item => copy([item]),
@@ -1124,7 +1127,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         ) : compact && !dayPane ? null : (
           <DayPane date={selectedDay} today={today} loading={!dayMonth || !calendars} items={paneItems}
             failed={dayFailed ? <LoadFailed what="this day" loads={[dayMonthLoad, calendarsLoad]} /> : null} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
-            selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null, false, true)} onNew={newItem} onComplete={task => complete(task)} onCompleteSubtask={subtask => completeSubtask(subtask)} onReorderSubtasks={reorder}
+            selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null, false, true)} onNew={newItem} onComplete={task => complete(task)} onCompleteSubtask={subtask => completeSubtask(subtask)} onSettleSubtask={settleSubtask} onReorderSubtasks={reorder}
             onShowAll={() => showHidden(calendars ?? [])} />
         )}
       </div>

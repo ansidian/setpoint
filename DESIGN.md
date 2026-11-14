@@ -4846,6 +4846,9 @@ was decided; the audit itself was retired by D480.
       and Undo: "Completed ‹title›", "Reopened ‹title›" (D559). Checking them all never completes
       the task, which is completed on its own; completing the task completes them in Todoist, as
       Todoist does (D558).
+    - **A check Todoist refuses** stays in place, as every failed change does: the row's ring gives
+      way to `error` in `alert`, Todoist's words as its tip, and the row ends in Try again
+      (`refresh`) and Undo (`undo`), which is Move back.
     - **Reordering:** the column the subtasks are set in by holds each one's handle
       (`drag_indicator`), shown under the pointer or with focus. Dragging it reorders them live, as
       Settings' lists do (#14), and ↑ ↓ on it move the subtask a place. The new order shows at once

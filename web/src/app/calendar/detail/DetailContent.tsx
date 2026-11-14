@@ -37,6 +37,8 @@ export interface DetailActions {
   complete: (task: ItemOut) => void;
   // SV-272: checks or reopens one of a task's subtasks; the task itself stays as it is (D558).
   completeSubtask?: (subtask: SubtaskOut) => void;
+  // SV-272: a subtask's failed check, tried again or undone.
+  settleSubtask?: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
   // SV-272: a task's subtasks in a new order, every one's id.
   reorderSubtasks?: (task: ItemOut, ids: number[]) => Promise<unknown>;
   clone?: (item: ItemOut) => void;
@@ -151,7 +153,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {item.subtasks.length > 0 && (
           <div className="fd-subtasks">
             <Fact icon="format_list_bulleted"><span><span className="v">Subtasks</span> <span className="ink3 num">{subtaskCount(item)}</span></span></Fact>
-            <Subtasks task={item} ring={ring(item.project)} onComplete={item.read_only ? undefined : actions?.completeSubtask} onReorder={item.read_only ? undefined : actions?.reorderSubtasks} />
+            <Subtasks task={item} ring={ring(item.project)} onComplete={item.read_only ? undefined : actions?.completeSubtask} onSettle={actions?.settleSubtask} onReorder={item.read_only ? undefined : actions?.reorderSubtasks} />
           </div>
         )}
         {repeat && <Fact icon="repeat"><span>{repeat}</span></Fact>}

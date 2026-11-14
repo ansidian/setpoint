@@ -214,6 +214,8 @@
 .subtask .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .subtask.done .title { color: var(--ink3); text-decoration: line-through; }
 .subtask.pending, .subtask.dragging { opacity: .5; }
+.subtask.failed .fd-mark .icon { color: var(--alert); }
+.subtask .acts { display: inline-flex; flex: none; margin: -4px 0; }
 .subtasks.reordering > [data-order] { transition: transform var(--dur-medium) var(--ease), opacity var(--dur-fast) var(--ease); }
 /* A timed task's title over its start (D502), its ring on the title's line, as a search result's. */
 .ag-task.timed { align-items: flex-start; }
