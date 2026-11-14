@@ -137,12 +137,13 @@ function transition(store: Store, commandId: number, event: CommandEvent, then: 
 
 /**
  * Effects that show only once the provider confirms: a deleted item goes, and so does a task created
- * with no date (SV-74), which isn't on the calendar, as a sync leaves undated tasks out.
+ * with no date (SV-74), which isn't on the calendar, as a sync leaves undated tasks out; a subtask
+ * with no date stays, in its task's checklist (SV-273).
  */
 function applyOnConfirm(store: Store, row: CommandRow) {
   if (row.kind === 'item_delete') deleteItemInMirror(store, row.payload as unknown as ItemDeletion);
   if (row.kind === 'item_create') {
-    store.db.delete(t.items).where(and(eq(t.items.id, row.targetId), eq(t.items.kind, 'task'), isNull(t.items.dueDate))).run();
+    store.db.delete(t.items).where(and(eq(t.items.id, row.targetId), eq(t.items.kind, 'task'), isNull(t.items.dueDate), isNull(t.items.parentProviderId))).run();
   }
 }
 

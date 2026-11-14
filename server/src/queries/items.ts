@@ -28,22 +28,32 @@ function readOnlyCalendars(store: Store): Set<number> {
 
 /**
  * SV-272: each Todoist task's subtasks by the task's Todoist id, in Todoist's order. A repeating
- * subtask's done occurrences are rows of their own and aren't listed.
+ * subtask's done occurrences are rows of their own and aren't listed. SV-273: each task's id by its
+ * Todoist id too, so a subtask names its task (D569).
  */
-function subtasksByParent(rows: ItemRow[], commands: Map<number, CommandOut>): Map<string, SubtaskOut[]> {
-  const found = new Map<string, SubtaskOut[]>();
-  const children = rows.filter(row => row.parentProviderId !== null && row.recurringItemId === null && !row.cancelled).sort(bySiblingOrder);
+interface SubtaskIndex {
+  byParent: Map<string, SubtaskOut[]>;
+  taskIds: Map<string, number>;
+}
+
+function subtasksByParent(rows: ItemRow[], commands: Map<number, CommandOut>): SubtaskIndex {
+  const taskIds = new Map(rows.filter(row => row.kind === 'task' && row.recurringItemId === null && !row.cancelled).map(row => [row.providerId, row.id]));
+  const byParent = new Map<string, SubtaskOut[]>();
+  const children = rows.filter(row => row.parentProviderId !== null && row.recurringItemId === null && !row.cancelled && taskIds.has(row.parentProviderId)).sort(bySiblingOrder);
   for (const row of children) {
-    const list = found.get(row.parentProviderId!) ?? [];
-    list.push({id: row.id, title: row.title, done: row.doneAt !== null, command: commands.get(row.id) ?? null});
-    found.set(row.parentProviderId!, list);
+    const list = byParent.get(row.parentProviderId!) ?? [];
+    list.push({
+      id: row.id, title: row.title, done: row.doneAt !== null, command: commands.get(row.id) ?? null,
+      parent_id: taskIds.get(row.parentProviderId!)!, due_date: row.dueDate, due_at: row.dueAt, reminders: row.reminders ?? [],
+    });
+    byParent.set(row.parentProviderId!, list);
   }
-  return found;
+  return {byParent, taskIds};
 }
 
 const todoistTasks = (store: Store) => store.db.select().from(t.items).where(eq(t.items.kind, 'task')).all();
 
-function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, reopenable: Set<number>, subtasks: Map<string, SubtaskOut[]>, occurrence?: {start: string; end: string}, leave: Map<string, TimeToLeaveOut> = new Map()): ItemOut {
+function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, reopenable: Set<number>, subtasks: SubtaskIndex, occurrence?: {start: string; end: string}, leave: Map<string, TimeToLeaveOut> = new Map()): ItemOut {
   const start = occurrence?.start ?? row.startsAt;
   return {
     key: occurrence ? `${row.id}@${occurrence.start}` : String(row.id),
@@ -60,7 +70,8 @@ function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, 
     link: row.kind === 'event' ? eventLink({place: row.place, address: row.address, source_url: row.sourceUrl}) : null,
     transparency: row.kind === 'event' ? row.transparency : null,
     description: row.description,
-    subtasks: (row.kind === 'task' && row.recurringItemId === null && subtasks.get(row.providerId)) || [],
+    subtasks: (row.kind === 'task' && row.recurringItemId === null && subtasks.byParent.get(row.providerId)) || [],
+    parent_id: (row.parentProviderId !== null && subtasks.taskIds.get(row.parentProviderId)) || null,
   };
 }
 

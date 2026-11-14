@@ -2,7 +2,7 @@
 // through months, which items a day cell fits before "+N", the chips' times, past and dimmed items,
 // the agenda's lines and the now-line, the mini-month, and where the "+N" popover hangs. Local
 // days are `YYYY-MM-DD` in the owner's zone; weeks start on Sunday (SV-29).
-import type {CalendarOut, ItemOut, WeatherCondition, WeatherDayOut} from '@setpoint/shared';
+import type {CalendarOut, ItemOut, SubtaskOut, WeatherCondition, WeatherDayOut} from '@setpoint/shared';
 import {layout, monthPaging} from '../tokens.ts';
 import {addDays, clockTime, daysBetween, localDate, startsIn, timeLeft} from './format.ts';
 import {placeLink, placeName} from './place.ts';
@@ -273,6 +273,17 @@ export function timeRange(item: ItemOut, timeZone: string): string {
   const [startTime, startHalf] = start.split(' ');
   const [, endHalf] = end.split(' ');
   return startHalf === endHalf && localDate(item.starts_at, timeZone) === localDate(item.ends_at, timeZone) ? `${startTime} – ${end}` : `${start} – ${end}`;
+}
+
+/**
+ * SV-273 (D567): a dated subtask's date after its title: its weekday within the coming week, "Fri";
+ * its month and day further off or past, "Nov 24"; its time after either, "Fri 3:00 PM". Null undated.
+ */
+export function subtaskDue(subtask: Pick<SubtaskOut, 'due_date' | 'due_at'>, today: string, timeZone: string): string | null {
+  if (!subtask.due_date) return null;
+  const ahead = daysBetween(today, subtask.due_date);
+  const day = new Date(`${subtask.due_date}T12:00:00Z`).toLocaleDateString('en-US', ahead >= 0 && ahead < 7 ? {weekday: 'short', timeZone: 'UTC'} : {month: 'short', day: 'numeric', timeZone: 'UTC'});
+  return subtask.due_at ? `${day} ${clockTime(subtask.due_at, timeZone)}` : day;
 }
 
 // ---------- The right pane ----------

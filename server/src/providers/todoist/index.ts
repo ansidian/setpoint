@@ -99,14 +99,19 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
   switch (command.kind) {
     case 'item_create': {
       if (!target) return;
-      const create = (command.payload.input as {create_project?: boolean} | undefined)?.create_project && target.project && !namedProject(store, target.project);
-      const project = create ? await newProject(store, todoist, target.project!, requestId('project')) : projectId(store, target.project);
+      // SV-273: a subtask goes under its task, in the task's project, at the end of its subtasks.
+      const parent = target.parentProviderId;
+      const create = parent === null && (command.payload.input as {create_project?: boolean} | undefined)?.create_project && target.project && !namedProject(store, target.project);
+      const project = parent !== null ? undefined : create ? await newProject(store, todoist, target.project!, requestId('project')) : projectId(store, target.project);
       const task = await todoist.createTask({
-        content: target.title, ...(project ? {project_id: project} : {}), ...dueOf(store, target), ...(target.labels?.length ? {labels: target.labels} : {}),
+        content: target.title, ...(parent !== null ? {parent_id: parent} : {}), ...(project ? {project_id: project} : {}), ...dueOf(store, target), ...(target.labels?.length ? {labels: target.labels} : {}),
         ...(target.description ? {description: target.description} : {}),
       }, requestId());
       claimProviderId(store, target.id, task.id);
       takeDue(store, target.id, task);
+      if (parent !== null && (task.order_key || task.child_order !== undefined)) {
+        store.db.update(t.items).set({...(task.order_key ? {orderKey: task.order_key} : {}), ...(task.child_order !== undefined ? {childOrder: task.child_order} : {})}).where(eq(t.items.id, target.id)).run();
+      }
       return;
     }
     case 'item_update': {

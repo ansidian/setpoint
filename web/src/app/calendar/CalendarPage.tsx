@@ -20,8 +20,8 @@ import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, Item
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
-import {ApiFailure, useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, reorderSubtasks, retryChange, untilSettled, updateItem} from '../../api/items.ts';
+import {ApiFailure, getJson, useResource} from '../../api/client.ts';
+import {CALENDARS_PATH, completeItem, createItems, createSubtask, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, reorderSubtasks, retryChange, untilSettled, updateItem} from '../../api/items.ts';
 import {addMonths, dayTitle, FIRST_WEEK, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, monthTopRow, timeRange, weekIndex} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {addDays, localDate, monthName} from '../../logic/format.ts';
@@ -260,7 +260,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
 
   // Items as they show: changes on their way where they're going, deletes on their way gone.
   const present = useCallback((list: ItemOut[]) => list.flatMap(item => {
-    const shown = asRetried(sendingNow.get(item.key) ?? item, retried);
+    let shown = asRetried(sendingNow.get(item.key) ?? item, retried);
+    // SV-273: a subtask deleted from its checklist leaves it the same way.
+    const kept = shown.subtasks.filter(subtask => ![...heldDeletes.keys()].some(entry => entry.id === subtask.id)
+      && !deleting.some(entry => entry.id === subtask.id && (!entry.sent || (subtask.command?.kind === 'item_delete' && subtask.command.state === 'pending'))));
+    if (kept.length !== shown.subtasks.length) shown = {...shown, subtasks: kept};
     const waiting = shown.command?.kind === 'item_delete' && shown.command.state === 'pending';
     // Deleted here, it folds away first.
     if ([...heldDeletes.keys()].some(entry => deletes(entry, shown))) return removing.has(shown.key) ? [shown] : [];
@@ -541,7 +545,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
    * left open beside it (#324).
    */
   const escape = (): boolean => {
-    if (detailTarget) selectDay(selectedDay);
+    // SV-273: a subtask opened from its task's card leaves the card open beside the editor; Esc closes
+    // the editor first. Any other card goes first, as a draft stays until its own Esc (choice 14).
+    if (editor?.item && editor.item.parent_id !== null && editor.item.parent_id === detailTarget?.item.id) closeEditor();
+    else if (detailTarget) selectDay(selectedDay);
     else if (popover) setPopover(null);
     else if (selection.length) setSelection([]);
     else if (editor) closeEditor();
@@ -808,13 +815,29 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const settleSubtask = (subtask: SubtaskOut, how: 'retry' | 'move-back') =>
     void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id).catch(toastFailure(how === 'retry' ? `Couldn't try ${subtask.title} again` : `Couldn't undo ${subtask.title}`));
   const reorder = (task: ItemOut, ids: number[]) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`));
+  // SV-273 (D566): a subtask added from the checklist says nothing; its row is the answer, as a create's is.
+  const addSubtask = (task: ItemOut, title: string) =>
+    createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure(`Couldn't add ${title}`));
+  // SV-273 (D567): a subtask from its checklist row in the editor, read as the item it is (an undated one is in no range).
+  const openSubtask = (subtask: Pick<SubtaskOut, 'id' | 'title'>) =>
+    void getJson<ItemOut>(itemPath(subtask.id)).then(item => openEditor({kind: 'task', date: item.due_date ?? selectedDay, item}, false, addressOf(route), true), toastFailure(`Couldn't open ${subtask.title}`));
+  // SV-273 (D569): Clone keeps the parent; the new subtask goes at the end of the same checklist.
+  const cloneSubtask = (subtask: Pick<SubtaskOut, 'id' | 'title' | 'parent_id'>) =>
+    void getJson<ItemOut>(itemPath(subtask.id))
+      .then(item => createSubtask({...copyOf(item, 0, zone), parent_id: subtask.parent_id}))
+      .then(command => said(`Cloned ${subtask.title}`, () => sendDeletes([{id: command.target_id, scope: 'this', occurrence_start: null, sent: false}], [subtask.title])),
+        toastFailure(`Couldn't clone ${subtask.title}`));
 
   const actions: DetailActions = {
     complete: task => complete(task),
     completeSubtask: subtask => completeSubtask(subtask),
     settleSubtask: (subtask, how) => settleSubtask(subtask, how),
     reorderSubtasks: (task, ids) => reorder(task, ids),
-    clone: item => create([copyOf(item, 0, zone)], `Couldn't clone ${item.title}`, () => `Cloned ${item.title}`),
+    addSubtask: (task, title) => addSubtask(task, title),
+    openSubtask: subtask => openSubtask(subtask),
+    subtaskMenu: (event, subtask) => checklistMenu(event, subtask),
+    // SV-273 (D569): a subtask's clone goes at the end of the same checklist.
+    clone: item => (item.parent_id !== null ? cloneSubtask({...item, parent_id: item.parent_id}) : create([copyOf(item, 0, zone)], `Couldn't clone ${item.title}`, () => `Cloned ${item.title}`)),
     copy: item => copy([item]),
     colour: recolour,
     remove: item => remove([item]),
@@ -829,6 +852,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         {id: 'retry', label: 'Try again', icon: 'refresh', run: () => void retry(item)},
         {id: 'move-back', label: 'Move back', icon: 'undo', run: () => void moveBack(item.command!.id).catch(toastFailure('Couldn\'t move it back'))},
       ];
+    }
+    // SV-273 (D569): a dated subtask's chip or agenda row has its checklist row's menu.
+    if (item.parent_id !== null && !item.read_only) {
+      return subtaskMenu({...item, parent_id: item.parent_id}, () => complete(item), () => openEditor({kind: item.kind, date, item}, false, addressOf({page: 'calendar', date, item: null, at: null})), () => remove([item]));
     }
     const fixed = item.read_only || item.command !== null;
     // The event's link (SV-77's in its place, else SV-179's own URL), as the card's Open.
@@ -852,6 +879,31 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         }} />} satisfies MenuAction] : []),
       {id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', hint: 'Del', danger: true, disabled: fixed, run: () => remove([item])},
     ];
+  };
+
+  /**
+   * SV-273 (D569): a subtask's menu, the same wherever it's drawn: Complete or Reopen, Edit, Clone (into
+   * the same checklist) and Delete; no Copy, whose paste would make a task of its own, and no Move up or
+   * down, which its handle has. A refused one's Try again and Move back come first, as an item's do.
+   */
+  const subtaskMenu = (subtask: Pick<SubtaskOut, 'id' | 'title' | 'done' | 'command' | 'parent_id'>, completeIt: () => void, edit: () => void, deleteIt: () => void): MenuAction[] => {
+    const fixed = subtask.command !== null;
+    return [
+      {id: 'complete', label: subtask.done ? 'Reopen' : 'Complete', icon: subtask.done ? 'undo' : 'task_alt', disabled: fixed, run: completeIt},
+      {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', disabled: fixed, run: edit},
+      {id: 'clone', group: 'copy', label: 'Clone', icon: 'control_point_duplicate', run: () => cloneSubtask(subtask)},
+      {id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', hint: 'Del', danger: true, disabled: fixed, run: deleteIt},
+    ];
+  };
+
+  /** A checklist row's right-click: its subtask's menu, or a refused one's Try again and Move back. */
+  const checklistMenu = (event: ReactMouseEvent<HTMLElement>, subtask: SubtaskOut) => {
+    const actions: MenuAction[] = subtask.command?.state === 'failed' ? [
+      ...(subtask.command.can_retry ? [{id: 'retry', label: 'Try again', icon: 'refresh', run: () => settleSubtask(subtask, 'retry')} satisfies MenuAction] : []),
+      ...(subtask.command.can_move_back ? [{id: 'move-back', label: 'Move back', icon: 'undo', run: () => settleSubtask(subtask, 'move-back')} satisfies MenuAction] : []),
+    ] : subtaskMenu(subtask, () => completeSubtask(subtask), () => openSubtask(subtask),
+      () => drop([{item: {id: subtask.id, key: String(subtask.id), occurrence_start: null, title: subtask.title}, scope: 'this'}]));
+    openContextMenu(event, event.currentTarget, actions);
   };
 
   /** A selection's: Copy, Colour (when every one is an event that can take it), Delete, Clear selection. */
@@ -1005,7 +1057,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     : ask?.kind === 'resize' ? `${ask.item.title} · ${timeRange(movedItem(ask.item, ask.changes), zone)}` : undefined;
   const weekItems = useMemo(() => (mode === 'week' ? visibleItems(drawn, allCalendars) : EMPTY_ITEMS), [mode, drawn, allCalendars]);
   const detailProps = {target: detailTarget, exit: handedKey && handedKey === selectedKey ? 'edit' as const : 'close' as const, timeZone: zone, actions,
-    onClose: () => selectDay(selectedDay), onEdit: (target: DetailTarget) => editItem(target.item, true)};
+    onClose: () => selectDay(selectedDay), onEdit: (target: DetailTarget) => editItem(target.item, true),
+    // SV-273: a subtask opened from the card keeps it; in the compact tier the editor lies over the
+    // grid's right side, so the card glides clear of it while it's open, and back once it closes.
+    room: compact && editor ? layout.rightPane : 0};
 
   // Overlays anchored to items, drawn in whichever grid shows: the recurring prompt and the failed card.
   const overlays = (
@@ -1113,7 +1168,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             }}
             onSave={(item, changes, scope) => {
               closeEditor();
-              send(item, changes, scope, `Couldn't change ${item.title}`, null);
+              // SV-273 (D568): a subtask whose date came off leaves the grid, so the change says so, with Undo.
+              send(item, changes, scope, `Couldn't change ${item.title}`, changes.due_date === null ? `Took the date off ${item.title}` : null);
             }}
             onDelete={item => {
               closeEditor();
@@ -1128,7 +1184,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           <DayPane date={selectedDay} today={today} loading={!dayMonth || !calendars} items={paneItems}
             failed={dayFailed ? <LoadFailed what="this day" loads={[dayMonthLoad, calendarsLoad]} /> : null} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
             selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null, false, true)} onNew={newItem} onComplete={task => complete(task)} onCompleteSubtask={subtask => completeSubtask(subtask)} onSettleSubtask={settleSubtask} onReorderSubtasks={reorder}
-            onShowAll={() => showHidden(calendars ?? [])} />
+            onAddSubtask={addSubtask} onOpenSubtask={openSubtask} onSubtaskMenu={checklistMenu} onShowAll={() => showHidden(calendars ?? [])} />
         )}
       </div>
     </>

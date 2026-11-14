@@ -15,7 +15,7 @@ import type {CalendarOut, ItemOut, SourceOut, SubtaskOut, WeatherDayOut} from '@
 import {Fragment, useState} from 'react';
 import {MailStrip} from './MailStrip.tsx';
 import {subtaskCount, Subtasks} from './Subtasks.tsx';
-import type {CSSProperties, ReactNode} from 'react';
+import type {CSSProperties, MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import {useResource} from '../../api/client.ts';
 import {SOURCES_PATH} from '../../api/settings.ts';
 import {clockTime} from '../../logic/format.ts';
@@ -60,13 +60,17 @@ interface DayPaneProps {
   onCompleteSubtask: (subtask: SubtaskOut) => void;
   onSettleSubtask: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
   onReorderSubtasks: (task: ItemOut, ids: number[]) => Promise<unknown>;
+  // SV-273: a new subtask at the end of an open checklist (D566), one in the editor (D567), and one's menu (D569).
+  onAddSubtask: (task: ItemOut, title: string) => Promise<unknown>;
+  onOpenSubtask: (subtask: SubtaskOut) => void;
+  onSubtaskMenu: (event: ReactMouseEvent<HTMLElement>, subtask: SubtaskOut) => void;
   // Turns every hidden calendar back on.
   onShowAll: () => void;
 }
 
 const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>;
 
-export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onCompleteSubtask, onSettleSubtask, onReorderSubtasks, onShowAll}: DayPaneProps) {
+export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onCompleteSubtask, onSettleSubtask, onReorderSubtasks, onAddSubtask, onOpenSubtask, onSubtaskMenu, onShowAll}: DayPaneProps) {
   const arrived = useArrival(!loading, date);
   // SV-272: the tasks whose checklists are open under their rows, by key.
   const [open, setOpen] = useState(new Set<string>());
@@ -153,7 +157,9 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
               {task.project && <span className="ink3 project">{task.project}</span>}
             </a>
             {task.subtasks.length > 0 && open.has(task.key) && (
-              <div className="ag-subtasks"><Subtasks task={task} ring={ring(task.project)} onComplete={task.read_only ? undefined : onCompleteSubtask} onSettle={onSettleSubtask} onReorder={task.read_only ? undefined : onReorderSubtasks} /></div>
+              <div className="ag-subtasks"><Subtasks task={task} ring={ring(task.project)} timeZone={timeZone} onComplete={task.read_only ? undefined : onCompleteSubtask} onSettle={onSettleSubtask}
+                onReorder={task.read_only ? undefined : onReorderSubtasks} onAdd={task.read_only || (task.recurring && task.done) || task.parent_id !== null || task.command?.kind === 'item_create' ? undefined : onAddSubtask}
+                onOpen={task.read_only ? undefined : onOpenSubtask} onMenu={onSubtaskMenu} /></div>
             )}
             </Fragment>
           );

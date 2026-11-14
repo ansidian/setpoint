@@ -14,7 +14,7 @@
 import type {CalendarOut, EventColour, ItemOut, Settings, SubtaskOut} from '@setpoint/shared';
 import {EVENT_COLOURS} from '@setpoint/shared';
 import {useMemo, useState} from 'react';
-import type {CSSProperties, ReactNode} from 'react';
+import type {CSSProperties, MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import {describeTaskRepeat} from '../../../logic/compose.ts';
 import {useResource} from '../../../api/client.ts';
 import {SETTINGS_PATH} from '../../../api/items.ts';
@@ -41,6 +41,10 @@ export interface DetailActions {
   settleSubtask?: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
   // SV-272: a task's subtasks in a new order, every one's id.
   reorderSubtasks?: (task: ItemOut, ids: number[]) => Promise<unknown>;
+  // SV-273: a new subtask at the end of the checklist (D566), one in the editor (D567), and one's menu (D569).
+  addSubtask?: (task: ItemOut, title: string) => Promise<unknown>;
+  openSubtask?: (subtask: SubtaskOut) => void;
+  subtaskMenu?: (event: ReactMouseEvent<HTMLElement>, subtask: SubtaskOut) => void;
   clone?: (item: ItemOut) => void;
   copy?: (item: ItemOut) => void;
   colour?: (item: ItemOut, colour: EventColour | null) => void;
@@ -83,7 +87,8 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const fixed = item.read_only || !actions;
   const act = (run: (one: ItemOut) => void) => () => !fixed && run(item);
   // Without actions (the phone) every one is drawn, unavailable; a read-only item leaves them out (D447).
-  const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !item.read_only && (!actions || !!actions[action]);
+  // SV-273 (D569): a subtask has no Copy, whose paste would make a task of its own.
+  const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !item.read_only && !(action === 'copy' && item.parent_id !== null) && (!actions || !!actions[action]);
   const complete = item.kind === 'task';
   const acts = !item.read_only || (complete && !actions) || !!actions?.open;
   const leave = leaveBy(item, timeZone, now);
@@ -104,6 +109,10 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const ring = useRingColour();
   const pending = item.command?.state === 'pending';
   const justDone = useJustDone(item.kind === 'task' ? [item] : []);
+  // SV-273: subtasks are added to a task Todoist has, of its own (the checklist is one level), and
+  // not to a repeating task's done occurrence, a row of its own.
+  const addSubtask = item.kind === 'task' && !item.read_only && item.id > 0 && item.parent_id === null && !(item.recurring && item.done)
+    && item.command?.kind !== 'item_create' ? actions?.addSubtask : undefined;
   const markClass = `fd-mark${pending ? ' pending' : ''}${justDone.has(item.key) ? ' just-done' : ''}`;
   // SV-242 (D503): with actions, a task's ring completes it, and its done check reopens it, as the
   // Today block's lines and the day pane's rows do (#175). Without them (the phone) it's a mark.
@@ -150,10 +159,12 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}
         {attendees && <Fact icon="group"><span>{attendees}</span></Fact>}
         {description.length > 0 && <Fact icon="notes" className="description"><DescriptionFold key={item.key} blocks={description} /></Fact>}
-        {item.subtasks.length > 0 && (
+        {/* SV-273 (D566): a task with none shows the add row alone where the header would be. */}
+        {(item.subtasks.length > 0 || addSubtask) && (
           <div className="fd-subtasks">
-            <Fact icon="format_list_bulleted"><span><span className="v">Subtasks</span> <span className="ink3 num">{subtaskCount(item)}</span></span></Fact>
-            <Subtasks task={item} ring={ring(item.project)} onComplete={item.read_only ? undefined : actions?.completeSubtask} onSettle={actions?.settleSubtask} onReorder={item.read_only ? undefined : actions?.reorderSubtasks} />
+            {item.subtasks.length > 0 && <Fact icon="format_list_bulleted"><span><span className="v">Subtasks</span> <span className="ink3 num">{subtaskCount(item)}</span></span></Fact>}
+            <Subtasks task={item} ring={ring(item.project)} timeZone={timeZone} onComplete={item.read_only ? undefined : actions?.completeSubtask} onSettle={actions?.settleSubtask}
+              onReorder={item.read_only ? undefined : actions?.reorderSubtasks} onAdd={addSubtask} onOpen={item.read_only ? undefined : actions?.openSubtask} onMenu={actions?.subtaskMenu} />
           </div>
         )}
         {repeat && <Fact icon="repeat"><span>{repeat}</span></Fact>}

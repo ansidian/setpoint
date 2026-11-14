@@ -56,6 +56,8 @@ export async function fakeTodoist() {
   let activityIds = 5000;
   const requestIds: string[] = [];
   const refusals: Record<string, unknown>[] = [];
+  // SV-273: the next task creates Todoist refuses, by title.
+  const refusedCreates = new Set<string>();
   let clock = () => new Date();
 
   const authorized = (request: FakeRequest) => tokens.has((request.headers.authorization ?? '').replace(/^Bearer /, ''));
@@ -203,9 +205,15 @@ export async function fakeTodoist() {
       record(request);
       const body = request.body as Record<string, unknown>;
       if (!body.content) return todoistError(400, 'Required argument is missing', 'ARGUMENT_MISSING');
+      if (refusedCreates.delete(String(body.content))) return todoistError(403, 'Insufficient permissions', 'FORBIDDEN');
+      // A subtask goes in its task's project, after its last sibling (SV-273), as Todoist puts it.
+      const parent = typeof body.parent_id === 'string' ? tasks.get(body.parent_id) : undefined;
+      if (body.parent_id !== undefined && !parent) return todoistError(404, 'Parent task not found', 'NOT_FOUND');
+      const siblings = parent ? [...tasks.values()].filter(task => task.parent_id === parent.id && !task.is_deleted) : [];
       const task = save({
-        id: String((ids += 1)), content: String(body.content), project_id: (body.project_id as string) ?? 'inbox', due: dueFrom(body, null), checked: false, is_deleted: false,
+        id: String((ids += 1)), content: String(body.content), project_id: parent?.project_id ?? (body.project_id as string) ?? 'inbox', due: dueFrom(body, null), checked: false, is_deleted: false,
         labels: Array.isArray(body.labels) ? body.labels as string[] : [], description: typeof body.description === 'string' ? body.description : '',
+        ...(parent ? {parent_id: parent.id, child_order: Math.max(-1, ...siblings.map(sibling => sibling.child_order ?? -1)) + 1, order_key: `z${siblings.length}`} : {}),
       });
       return {status: 200, body: show(task)};
     }),
@@ -277,6 +285,10 @@ export async function fakeTodoist() {
       return found ? show(found) : undefined;
     },
     tasks: () => [...tasks.values()].map(show),
+    /** Todoist refuses the next task created with this title (403). */
+    refuseCreate(content: string) {
+      refusedCreates.add(content);
+    },
     /** Todoist refuses the next Sync command with this, in its `sync_status`. */
     refuseCommand(error: Record<string, unknown>) {
       refusals.push(error);

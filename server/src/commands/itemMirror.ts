@@ -18,6 +18,8 @@ export type ItemSnapshot = ItemRow;
 const RRULE_DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
 export const localProviderId = () => `local-${randomBytes(9).toString('base64url')}`;
+/** A row the provider doesn't have yet, still on the id it was made with. */
+export const isLocalProviderId = (providerId: string) => providerId.startsWith('local-');
 
 export function whenOf(row: Pick<ItemRow, 'allDay' | 'startsAt' | 'endsAt' | 'startDate' | 'endDate' | 'dueDate' | 'dueAt'>): ItemWhen {
   return {all_day: row.allDay, starts_at: row.startsAt, ends_at: row.endsAt, start_date: row.startDate, end_date: row.endDate, due_date: row.dueDate, due_at: row.dueAt};

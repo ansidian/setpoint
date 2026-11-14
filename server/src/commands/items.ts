@@ -11,11 +11,11 @@ import {conflict, invalid, notFound} from '../errors.ts';
 import {getSettings} from '../settings.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
-import {createCommand} from './index.ts';
+import {activeCommand, createCommand} from './index.ts';
 import type {CommandRow} from './index.ts';
 import {repeatAfter} from '../providers/todoist/due.ts';
 import {todoistCalendar} from '../providers/todoist/sync.ts';
-import {changeItemInMirror, localProviderId, reopenableOccurrences, whenOf} from './itemMirror.ts';
+import {changeItemInMirror, isLocalProviderId, localProviderId, reopenableOccurrences, whenOf} from './itemMirror.ts';
 import type {ItemRow} from './itemMirror.ts';
 
 function calendar(store: Store, calendarId: number) {
@@ -54,6 +54,30 @@ function taskProjectByDefault(store: Store, defaultProject: string | null): stri
   return (named ?? store.db.select().from(t.todoistProjects).where(eq(t.todoistProjects.inbox, true)).get())?.name ?? null;
 }
 
+/**
+ * SV-273 (D566): the task a new subtask goes under, and where: after its last subtask, by an order key
+ * when its subtasks all have one, and by place as well. A task Todoist doesn't have yet takes none, as
+ * a subtask's own subtasks are added in Todoist (Setpoint's checklist is one level).
+ */
+function subtaskPlace(store: Store, parentId: number, calendarId: number) {
+  const parent = item(store, parentId);
+  if (parent.kind !== 'task' || parent.calendarId !== calendarId || parent.recurringItemId !== null) throw invalid('A subtask goes under a Todoist task.');
+  if (parent.parentProviderId !== null) throw invalid('A subtask\'s own subtasks are added in Todoist.');
+  if (isLocalProviderId(parent.providerId)) throw invalid('This task isn\'t in Todoist yet; add its subtasks once it is.');
+  const siblings = store.db.select().from(t.items)
+    .where(and(eq(t.items.calendarId, parent.calendarId), eq(t.items.parentProviderId, parent.providerId), isNull(t.items.recurringItemId), eq(t.items.cancelled, false))).all().sort(bySiblingOrder);
+  // Todoist puts each at the end as it arrives, so they go one after another, in the order added (D566).
+  if (siblings.some(sibling => {
+    const active = activeCommand(store, 'item', sibling.id);
+    return active?.kind === 'item_create' && active.state === 'pending';
+  })) {
+    throw conflict('command_pending', 'The subtask before it is still on its way to Todoist.');
+  }
+  const last = siblings.at(-1);
+  const orderKey = siblings.every(sibling => sibling.orderKey !== null) ? orderKeyBetween(last?.orderKey ?? null, null) : null;
+  return {parent, parentProviderId: parent.providerId, childOrder: Math.max(-1, ...siblings.map(sibling => sibling.childOrder ?? -1)) + 1, orderKey};
+}
+
 export function createItem(store: Store, input: ItemCreateInput): CommandRow {
   const target = calendar(store, input.calendar_id);
   refuseReadOnlyCalendar(target);
@@ -62,6 +86,7 @@ export function createItem(store: Store, input: ItemCreateInput): CommandRow {
   if (input.kind === 'event' && (input.labels.length || input.repeat)) throw invalid('Labels and a Todoist repeat are a task\'s; an event repeats by its rule.');
   // SV-74: Todoist would drop a repeat sent without the day it starts on.
   if (input.kind === 'task' && input.repeat && !input.due_date) throw invalid('A repeat needs a due date.');
+  const place = input.parent_id === undefined ? null : subtaskPlace(store, input.parent_id, input.calendar_id);
   const settings = getSettings(store);
   return createCommand(store, {
     target: 'item', kind: 'item_create', sourceId: calendarSourceId(store, input.calendar_id), payload: {input},
@@ -71,12 +96,21 @@ export function createItem(store: Store, input: ItemCreateInput): CommandRow {
         startsAt: input.starts_at, endsAt: input.ends_at, startDate: input.start_date, endDate: input.end_date, dueDate: input.due_date, dueAt: input.due_at,
         timeZone: input.time_zone ?? (input.recurrence ? store.timeZone : null), recurrence: input.recurrence, place: input.place, address: input.address,
         attendees: input.attendees, reminders: input.reminders ?? (input.kind === 'event' && settings.reminders.event_minutes_before !== null ? [settings.reminders.event_minutes_before] : []), leaveReminder: input.kind === 'event' && input.leave_reminder,
-        project: input.kind === 'task' ? input.project ?? taskProjectByDefault(store, settings.todoist.default_project) : input.project, colour: input.colour,
+        // A subtask is in its task's project, as Todoist puts it.
+        project: place ? place.parent.project : input.kind === 'task' ? input.project ?? taskProjectByDefault(store, settings.todoist.default_project) : input.project, colour: input.colour,
         labels: input.labels, dueString: input.repeat, dueRecurring: input.repeat !== null, description: input.description,
+        ...(place ? {parentProviderId: place.parentProviderId, childOrder: place.childOrder, orderKey: place.orderKey} : {}),
       }).returning({id: t.items.id}).get().id;
-      return {targetId: id, previous: {created: [id]}, touched: {items: [id], calendars: [input.calendar_id]}};
+      return {targetId: id, previous: {created: [id]}, touched: {items: place ? [id, place.parent.id] : [id], calendars: [input.calendar_id]}};
     },
   });
+}
+
+/** SV-273: a subtask's task, whose checklist redraws when the subtask changes. */
+function parentOf(store: Store, row: ItemRow): number[] {
+  if (row.parentProviderId === null) return [];
+  const parent = store.db.select({id: t.items.id}).from(t.items).where(and(eq(t.items.calendarId, row.calendarId), eq(t.items.providerId, row.parentProviderId))).get();
+  return parent ? [parent.id] : [];
 }
 
 /** A change, with its recurring scope when it's an occurrence of a recurring event. */
@@ -86,9 +120,14 @@ export function updateItem(store: Store, itemId: number, input: ItemUpdateInput)
   refuseReadOnlyCalendar(calendar(store, row.calendarId));
   if (row.kind === 'task' && row.recurringItemId !== null) throw invalid('A completed occurrence can\'t be changed.');
   if (row.kind === 'event' && ((input.changes.labels?.length ?? 0) > 0 || input.changes.repeat)) throw invalid('Labels and a Todoist repeat are a task\'s; an event repeats by its rule.');
-  // SV-74: a date is taken off only in Todoist (Setpoint would need Todoist's "no date"), so an existing task keeps one.
-  if (row.kind === 'task' && input.changes.due_date === null) throw invalid('A task\'s date is taken off in Todoist.');
+  // SV-74: an undated task isn't mirrored, so taking a task's date off would drop it with no Undo; a
+  // subtask stays in its task's checklist, so its date comes off here, its time, repeat and reminders
+  // with it (SV-273, D568).
+  if (row.kind === 'task' && input.changes.due_date === null && row.parentProviderId === null) throw invalid('A task\'s date is taken off in Todoist.');
+  // SV-273: Todoist takes a subtask moved to another project out from under its task, and Setpoint would lose it.
+  if (row.parentProviderId !== null && input.changes.project !== undefined && input.changes.project !== row.project) throw invalid('A subtask stays in its task\'s project.');
   const changes = {...input.changes};
+  if (row.kind === 'task' && changes.due_date === null) Object.assign(changes, {due_at: null, repeat: null, reminders: []});
   if (row.kind === 'task' && (changes.due_date !== undefined || changes.due_at !== undefined || changes.repeat !== undefined)) {
     // A new date goes to Todoist with the repeat in one due string, or Todoist would drop the repeat (D16).
     const repeat = repeatAfter(row, changes.repeat);
@@ -116,7 +155,7 @@ export function updateItem(store: Store, itemId: number, input: ItemUpdateInput)
     payload: {item_id: row.id, changes, scope: input.scope, occurrence_start: input.occurrence_start, ...(moving ? {from_calendar_id: row.calendarId} : {})},
     prepare: () => {
       const result = changeItemInMirror(store, row, changes, input.scope, input.occurrence_start, store.timeZone);
-      return {targetId: result.targetId, previous: result.previous, previousWhen: result.previousWhen, touched: {items: result.touched, calendars: [row.calendarId]}};
+      return {targetId: result.targetId, previous: result.previous, previousWhen: result.previousWhen, touched: {items: [...result.touched, ...parentOf(store, row)], calendars: [row.calendarId]}};
     },
   });
 }
@@ -131,7 +170,7 @@ export function deleteItem(store: Store, itemId: number, input: ItemScopeInput):
   return createCommand(store, {
     target: 'item', kind: 'item_delete', sourceId: calendarSourceId(store, row.calendarId),
     payload: {item_id: row.id, scope: input.scope, occurrence_start: input.occurrence_start},
-    prepare: () => ({targetId: row.id, previousWhen: whenOf(row), touched: {items: [row.id], calendars: [row.calendarId]}}),
+    prepare: () => ({targetId: row.id, previousWhen: whenOf(row), touched: {items: [row.id, ...parentOf(store, row)], calendars: [row.calendarId]}}),
   });
 }
 
@@ -178,13 +217,12 @@ export function completeItem(store: Store, itemId: number, done: boolean, occurr
   }
   if ((row.doneAt !== null) === done) throw conflict('unchanged', done ? 'That task is already done.' : 'That task is already open.');
   // SV-272: a subtask's check redraws its parent's checklist; the parent itself stays as it is (D558).
-  const parent = row.parentProviderId === null ? undefined
-    : store.db.select({id: t.items.id}).from(t.items).where(and(eq(t.items.calendarId, row.calendarId), eq(t.items.providerId, row.parentProviderId))).get();
+  const parent = parentOf(store, row);
   return createCommand(store, {
     target: 'item', kind: done ? 'item_complete' : 'item_reopen', sourceId: calendarSourceId(store, row.calendarId), payload: {item_id: row.id, done},
     prepare: () => {
       store.db.update(t.items).set({doneAt: done ? isoNow(store) : null}).where(eq(t.items.id, row.id)).run();
-      return {targetId: row.id, previous: {items: [row]}, touched: {items: parent ? [row.id, parent.id] : [row.id], calendars: [row.calendarId]}};
+      return {targetId: row.id, previous: {items: [row]}, touched: {items: [row.id, ...parent], calendars: [row.calendarId]}};
     },
   });
 }

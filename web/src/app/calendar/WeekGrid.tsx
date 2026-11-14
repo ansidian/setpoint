@@ -129,7 +129,7 @@ export function WeekGrid(props: WeekGridProps) {
         ...press, key: 'drag:new', id: -1, kind: 'event', title: 'New event', calendar_id: -1, colour: newColour, all_day: slot.start === null,
         starts_at: slot.start === null ? null : instantAt(date, slot.start, timeZone), ends_at: slot.end === null ? null : instantAt(date, slot.end, timeZone),
         start_date: slot.start === null ? date : null, end_date: slot.start === null ? addDays(date, slot.days) : null, due_date: null, due_at: null, recurring: false,
-        read_only: false, command: null, occurrence_start: null, done: false, subtasks: [],
+        read_only: false, command: null, occurrence_start: null, done: false, subtasks: [], parent_id: null,
       } as unknown as ItemOut;
       ghosts.set(fresh.key, 'ghost');
       return {list: [...items, fresh], lifted: keys, ghosts};

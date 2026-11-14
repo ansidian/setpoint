@@ -133,6 +133,17 @@ export const createItems = (inputs: ItemCreateInput[]) => change(async () => {
   return commands;
 });
 
+// SV-273 (D566): subtasks added in a row go one after another, so they land in the order typed.
+let subtasksAdded: Promise<unknown> = Promise.resolve();
+
+/** SV-273: a new subtask (`parent_id`) at the end of its task's checklist: added there, or cloned (D569). */
+export function createSubtask(input: Partial<ItemCreateInput> & Pick<ItemCreateInput, 'kind' | 'calendar_id' | 'title'> & {parent_id: number}): Promise<CommandOut> {
+  // The server takes the next once Todoist has the one before (`command_pending` meanwhile).
+  const sent = subtasksAdded.catch(() => undefined).then(() => change(() => afterPending(() => sendJson<CommandOut>('POST', '/items', input))));
+  subtasksAdded = sent;
+  return sent;
+}
+
 /**
  * SV-208: an email's proposal created from its card, which waits there, at .5, until the provider
  * settles it, a failure staying in the card with the provider's words.

@@ -216,6 +216,18 @@
 .subtask.pending, .subtask.dragging { opacity: .5; }
 .subtask.failed .fd-mark .icon { color: var(--alert); }
 .subtask .acts { display: inline-flex; flex: none; margin: -4px 0; }
+/* SV-273: a title that opens the editor reads as text; a dated one's date and bell after it (D567). */
+button.subtask, .subtask button.title { border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.subtask button.title { padding: 0; }
+button.subtask { padding: 2px 0; width: 100%; }
+.subtask button.title:hover { color: var(--ink); }
+.subtask .due { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; font-size: 12px; white-space: nowrap; vertical-align: 1px; }
+/* The last row, "Add subtask" (D566): `ink3` with its add glyph in the ring column, a field in place once clicked. */
+.subtask.add { color: var(--ink3); }
+.subtask.add .fd-mark .icon { color: var(--ink3); }
+button.subtask.add:hover { color: var(--ink2); }
+.subtask.add input.title { padding: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); line-height: 19px; }
+.subtask.add input.title::placeholder { color: var(--ink3); }
 .subtasks.reordering > [data-order] { transition: transform var(--dur-medium) var(--ease), opacity var(--dur-fast) var(--ease); }
 /* A timed task's title over its start (D502), its ring on the title's line, as a search result's. */
 .ag-task.timed { align-items: flex-start; }
@@ -407,7 +419,8 @@
 /* The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact, #140): beside the 400 px pane the
    grid would be 184 to 643 px, its chips cut to "7 A…", so it takes the width, and the right pane
    lies over its right side, with an overlay's shadow, while it holds the editor or search; the day's
-   own pane isn't drawn. The floating detail floats over it, as it would over the grid. */
+   own pane isn't drawn. The floating detail floats over it, as it would over the grid; beside the
+   editor it glides clear of it (SV-273, motion.ts). */
 @media (min-width: 640px) and (max-width: 1099px) {
   .cal-content { flex-direction: column; }
   .cal-content > .rpane { position: absolute; top: 0; right: 0; bottom: 0; z-index: 4; background: var(--page); border-left: 1px solid var(--edgeOn); box-shadow: var(--shadow-pop); }

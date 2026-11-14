@@ -20,7 +20,7 @@ import type {CSSProperties, MouseEvent, ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
-import {CALENDARS_PATH, completeItem, deleteItem, itemsPath, moveBack, reorderSubtasks, retryChange} from '../api/items.ts';
+import {CALENDARS_PATH, completeItem, createSubtask, deleteItem, itemsPath, moveBack, reorderSubtasks, retryChange} from '../api/items.ts';
 import type {Entry, FoldRules} from '../logic/fold.ts';
 import {localDate} from '../logic/format.ts';
 import type {Route} from '../logic/route.ts';
@@ -185,6 +185,8 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     settleSubtask: (subtask, how) => void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id)
       .catch(toastFailure(how === 'retry' ? `Couldn't try ${subtask.title} again` : `Couldn't undo ${subtask.title}`)),
     reorderSubtasks: (task, ids) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`)),
+    // SV-273 (D566): added here as on Calendar; editing one and its menu are Calendar's, through Open.
+    addSubtask: (task, title) => createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure(`Couldn't add ${title}`)),
     open: one => navigate(itemRoute(one)),
     // A repeating event asks which of its events go; Calendar asks that.
     ...(item.kind === 'event' && item.recurring ? {} : {remove}),

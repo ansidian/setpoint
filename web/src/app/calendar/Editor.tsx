@@ -234,7 +234,8 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
   const days = item.kind === 'event' && !timed && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
   const description = readDescription(formatOf(item.kind), item.description);
   return {
-    id: nextDraft++, kind: item.kind, text: item.title, title: item.title, plain: [], date, undated: false, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
+    // SV-273: a subtask can have no date; it opens with none, and a day picked gives it one.
+    id: nextDraft++, kind: item.kind, text: item.title, title: item.title, plain: [], date, undated: item.kind === 'task' && !item.due_date, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
     calendarId: item.calendar_id, reminders: item.reminders, lineReminders: [], leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
     description: description.blocks, descriptionLossy: description.lossy, fromEmail: [], manual: [], base: NO_BASE,
   };
@@ -409,7 +410,8 @@ const sameList = (a: number[], b: number[]) => a.length === b.length && a.every(
 function changesOf(draft: Draft, original: Draft, timeZone: string): ItemChanges {
   const changes: ItemChanges = {};
   if (draft.title.trim() !== original.title) changes.title = draft.title.trim();
-  if (draft.date !== original.date || draft.start !== original.start || draft.end !== original.end || draft.days !== original.days) {
+  const undating = draft.kind === 'task' && draft.undated && !original.undated;
+  if (!undating && (draft.undated !== original.undated || draft.date !== original.date || draft.start !== original.start || draft.end !== original.end || draft.days !== original.days)) {
     if (draft.kind === 'task') {
       changes.due_date = draft.date;
       changes.due_at = draft.start === null ? null : instantAt(draft.date, draft.start, timeZone);
@@ -432,6 +434,12 @@ function changesOf(draft: Draft, original: Draft, timeZone: string): ItemChanges
   if (draft.kind === 'task' && draft.labels.join('\n') !== original.labels.join('\n')) changes.labels = draft.labels;
   // SV-264 (D547): sent only when it reads differently, so one left alone stays as its provider has it.
   if (!sameDescription(draft.description, original.description)) changes.description = writeDescription(formatOf(draft.kind), draft.description);
+  // SV-273 (D568): a subtask's date taken off, its time, repeat and reminders going with it.
+  if (undating) {
+    Object.assign(changes, {due_date: null, due_at: null, repeat: null});
+    if (original.reminders?.length) changes.reminders = [];
+    else delete changes.reminders;
+  }
   return changes;
 }
 
@@ -445,7 +453,7 @@ export function draftPreview(draft: Draft & {reminders: number[]}, timeZone: str
   return {
     ...input, ...(draft.kind === 'task' && !input.project ? {project: defaultProject} : {}),
     key: `draft:${draft.id}`, id: -draft.id, recurring: false, occurrence_start: null, done: false, done_at: null, command: null,
-    read_only: false, due_string: null, time_to_leave: null, reminders: draft.reminders, time_zone: input.time_zone, subtasks: [],
+    read_only: false, due_string: null, time_to_leave: null, reminders: draft.reminders, time_zone: input.time_zone, subtasks: [], parent_id: null,
     can_reopen: false, link: null, transparency: input.kind === 'event' ? 'opaque' : null,
   } as ItemOut;
 }
@@ -553,7 +561,7 @@ interface EditorProps {
   onSave: (item: ItemOut, changes: ItemChanges, scope: RecurringScope) => void;
   onDelete: (item: ItemOut) => void;
   onClose: () => void;
-  // Esc inside the editor: the page closes what's on top (a floating detail first), else the editor.
+  // Esc inside the editor: the page closes what's on top (the editor before a floating detail beside it, SV-273), else the editor.
   onEscape?: () => void;
   // Whether the draft holds anything (choice 14: E or New doesn't replace it then).
   onDirty?: (dirty: boolean) => void;
@@ -1105,8 +1113,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               today={today} read={text => parseDay(text, today)} onValue={date => change({date, undated: false}, ['date'])}
               range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change({...spanTo(from, to, draft.start, draft.end), undated: false}, ['date'])} : undefined}
               // SV-74: a new task can go to Todoist with no date, its time going with it; a day picked brings one back.
-              onClear={kind === 'task' && !editing ? () => {
-                change({undated: true, start: null}, ['date', 'time']);
+              // SV-273 (D568): an edited subtask's too, which stays in its task's checklist; a task's date stays on.
+              onClear={kind === 'task' && (!editing || editing.parent_id !== null) ? () => {
+                change({undated: true, start: null, ...(editing ? {reminders: [], repeat: null} : {})}, ['date', 'time']);
                 form.current?.focus();
               } : undefined} />
             {draft.undated ? null : draft.start !== null ? (
@@ -1242,13 +1251,15 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           ) : (
             <>
               <Icon name="work" size={17} className={`g-proj ${echo.project ?? ''}`} style={projectTodoist ? {'--c': TODOIST_COLOURS[projectTodoist]} as CSSProperties : undefined} />
+              {/* SV-273: a subtask is in its task's project; moved to another, Todoist would take it out from under its task. */}
+              {editing?.parent_id != null ? <span className="ink2 sub-project" data-tip="A subtask is in its task's project">{draft.project}</span> : (
               <ProjectField value={draft.project ?? ''} isNew={draft.newProject} projects={projects ?? []} noNew={!!editing}
                 placeholder={settings?.todoist.default_project ?? projects?.find(one => one.inbox)?.name ?? 'Inbox'}
                 line={lineOpen ? {cur: lineCur} : null}
                 onText={text => change({project: text || null, newProject: false, pickedProject: null}, ['project'])}
                 onPick={(name, isNew) => (lineOpen
                   ? completeLine(lineMark!, name, {project: name, newProject: isNew, pickedProject: name})
-                  : change({project: name, newProject: isNew, pickedProject: null}, ['project']))} />
+                  : change({project: name, newProject: isNew, pickedProject: null}, ['project']))} />)}
               {projectProblem && !lineOpen && (
                 <>
                   <span />

@@ -2,7 +2,7 @@
 //
 //   GET    /api/items?from=2026-10-01&to=2026-11-01   ItemsOut (occurrences expanded; `to` exclusive)
 //   GET    /api/items/:id                              ItemOut (the item itself, not an occurrence)
-//   POST   /api/items                  ItemCreateInput       CommandOut
+//   POST   /api/items                  ItemCreateInput       CommandOut (SV-273: `parent_id` makes a subtask)
 //   PATCH  /api/items/:id              ItemUpdateInput       CommandOut
 //   POST   /api/items/:id/delete       ItemScopeInput        CommandOut
 //   POST   /api/items/:id/complete     ItemCompleteInput     CommandOut
@@ -80,6 +80,8 @@ export interface ItemOut extends ItemWhen {
   // SV-272 (D558): a Todoist task's subtasks, in Todoist's order, for its checklist. Each completes
   // and reopens by its own id (POST /api/items/:id/complete); none of it completes the task.
   subtasks: SubtaskOut[];
+  // SV-273 (D569): a subtask's task, by its id here; null for a task of its own.
+  parent_id: number | null;
 }
 
 export interface SubtaskOut {
@@ -87,6 +89,11 @@ export interface SubtaskOut {
   title: string;
   done: boolean;
   command: CommandOut | null;
+  // SV-273: its task's id, and its own due and reminders, for the date after its title (D567).
+  parent_id: number;
+  due_date: string | null;
+  due_at: string | null;
+  reminders: number[];
 }
 
 /** Time to Leave for one occurrence (DESIGN.md › Right pane). */
@@ -184,6 +191,8 @@ export const itemCreateInput = z.strictObject({
   // A task's project that Todoist doesn't have yet is made only when this says so: the user picked "New
   // project" (SV-24, D50); otherwise an unknown name goes to the default project.
   create_project: z.boolean().optional(),
+  // SV-273 (D566): a subtask of this task, added at the end of its checklist. It goes in the task's project.
+  parent_id: id.optional(),
   colour: editable.colour.default(null),
   labels: editable.labels.default([]),
   repeat: editable.repeat.default(null),

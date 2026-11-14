@@ -245,3 +245,32 @@ test('the day\'s pane comes over the grid from its header button, lit while open
     await setpoint.stop();
   }
 });
+
+test('SV-273: in the compact tier a subtask opened from the card makes the card glide clear of the editor; Esc closes the editor first, the card going back, then the card', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page({width: 1000, height: HEIGHT});
+    await page.goto(`${setpoint.base}/calendar/2026-10-07`);
+    const task = page.locator('.cell[data-date="2026-10-07"] .tk', {hasText: 'CS 101 lab report'});
+    await task.click();
+    const card = page.locator('.fd .card.float');
+    await card.getByRole('button', {name: 'Edit Proofread'}).waitFor();
+    const before = (await rested(() => card.boundingBox()))!;
+    await card.getByRole('button', {name: 'Edit Proofread'}).click();
+    const editor = page.locator('.rpane.editor');
+    await editor.waitFor();
+    // Not covered: the card ends left of the editor.
+    const [beside, pane] = await rested(async () => [(await card.boundingBox())!, (await editor.boundingBox())!]);
+    assert.ok(beside.x + beside.width <= pane.x, `the card ends at ${beside.x + beside.width}, the editor starts at ${pane.x}`);
+    await page.keyboard.press('Escape');
+    await editor.waitFor({state: 'detached'});
+    const back = (await rested(() => card.boundingBox()))!;
+    assert.deepEqual([back.x, back.y], [before.x, before.y], 'back where it was');
+    await page.keyboard.press('Escape');
+    await card.waitFor({state: 'detached'});
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+

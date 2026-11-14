@@ -658,10 +658,82 @@ test('SV-272 (D558–D562): a task\'s subtasks: its chip\'s count, the card\'s c
     const moved = await until('the subtasks reordered', report, task => quiet(task) && task.subtasks[1]!.title === 'Proofread', 10_000);
     assert.deepEqual(checklist(moved), ['● Plot the timing data', '○ Proofread', '○ Write the analysis', '○ Submit on the portal']);
     await setpoint.idle();
-    assert.deepEqual(await under.locator('.subtask .title').allTextContents(), ['Plot the timing data', 'Proofread', 'Write the analysis', 'Submit on the portal']);
+    assert.deepEqual(await under.locator('.subtask:not(.add) .title').allTextContents(), ['Plot the timing data', 'Proofread', 'Write the analysis', 'Submit on the portal']);
     // The count closes it again.
     await row.getByRole('button', {name: '1 of 4 subtasks done'}).click();
     await under.waitFor({state: 'detached'});
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-273 (D566–D569): subtasks added from the card land in Todoist in the order typed; one opens in the editor, takes a date and shows it, its menu is the same on its day and in the checklist, and its date comes off with a toast and Undo', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const report = async () => (await items(setpoint, '2026-10-07')).find(item => item.title === 'CS 101 lab report')!;
+    const quiet = (task: Awaited<ReturnType<typeof report>>) => !task.command && task.subtasks.every(subtask => !subtask.command);
+    const card = page.locator('.fd');
+    const menu = page.locator('.ctx-menu');
+
+    // D566: the add row, a field in place; Enter adds and keeps it for the next; Esc puts the row back, the card staying.
+    await chip(page, '2026-10-07', 'CS 101 lab report').click();
+    await card.getByRole('button', {name: 'Add subtask'}).click();
+    const field = card.getByRole('textbox', {name: 'New subtask'});
+    await field.fill('Print the cover page');
+    await field.press('Enter');
+    await field.fill('Email the TA');
+    await field.press('Enter');
+    await field.press('Escape');
+    await card.getByRole('button', {name: 'Add subtask'}).waitFor();
+    const added = await until('both added', report, task => task.subtasks.length === 6 && quiet(task), 10_000);
+    assert.deepEqual(added.subtasks.slice(-2).map(subtask => subtask.title), ['Print the cover page', 'Email the TA']);
+    await card.locator('.fd-subtasks .fact', {hasText: 'Subtasks 1/6'}).waitFor();
+
+    // D567: its title opens it in the editor, the card staying; a date saved shows after its title and puts it on its day.
+    await card.getByRole('button', {name: 'Edit Print the cover page'}).click();
+    const due = page.getByLabel('Due date', {exact: true});
+    assert.deepEqual([await due.inputValue(), await due.getAttribute('placeholder')], ['', 'No date']);
+    await due.fill('Oct 9');
+    await due.press('Enter');
+    await page.getByRole('button', {name: 'Save'}).click();
+    await until('dated', report, task => quiet(task) && task.subtasks[4]!.due_date === '2026-10-09', 10_000);
+    await card.locator('.subtask', {hasText: 'Print the cover page'}).locator('.due', {hasText: 'Fri'}).waitFor();
+    await chip(page, '2026-10-09', 'Print the cover page').waitFor();
+
+    // D569: one menu, on its chip and on its checklist row.
+    const offered = async (target: Locator) => {
+      await target.click({button: 'right'});
+      await menu.waitFor();
+      const list = await menu.locator('.menu-i').allTextContents();
+      await page.keyboard.press('Escape');
+      await menu.waitFor({state: 'detached'});
+      return list;
+    };
+    // Its agenda row's (a right-click on a chip at the grid's edge scrolls its day in, which closes a menu).
+    await chip(page, '2026-10-09', 'Print the cover page').click();
+    assert.deepEqual(await offered(page.locator('.rpane .ag-task', {hasText: 'Print the cover page'})), ['Complete', 'EditE', 'Clone', 'DeleteDel']);
+    await chip(page, '2026-10-07', 'CS 101 lab report').click();
+    const row = card.locator('.subtask', {hasText: 'Email the TA'});
+    assert.deepEqual(await offered(row), ['Complete', 'EditE', 'Clone', 'DeleteDel']);
+    // Clone keeps it in the same checklist, at the end.
+    await row.click({button: 'right'});
+    await menu.getByText('Clone').click();
+    const cloned = await until('cloned', report, task => task.subtasks.length === 7 && quiet(task), 10_000);
+    assert.deepEqual(cloned.subtasks.map(subtask => subtask.title).slice(-2), ['Email the TA', 'Email the TA']);
+
+    // D568: its date comes off in the editor; it leaves its day, stays in the checklist, and Undo puts it back.
+    await card.getByRole('button', {name: 'Edit Print the cover page'}).click();
+    await page.getByRole('button', {name: 'Remove due date'}).click();
+    const toast = await holdToast(page);
+    await page.getByRole('button', {name: 'Save'}).click();
+    await page.locator('.toast', {hasText: 'Took the date off Print the cover page'}).waitFor();
+    await until('undated', report, task => quiet(task) && task.subtasks[4]!.due_date === null, 10_000);
+    await chip(page, '2026-10-09', 'Print the cover page').waitFor({state: 'detached'});
+    await toast.getByRole('button', {name: 'Undo'}).click();
+    await until('dated again', report, task => quiet(task) && task.subtasks[4]!.due_date === '2026-10-09', AFTER_UNDO);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

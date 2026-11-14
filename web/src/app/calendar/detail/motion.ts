@@ -6,9 +6,9 @@
 // card's elements, and React renders what it publishes (the phase, the content layers, the side).
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import type {Rect} from '../../../logic/calendar.ts';
-import {contentSlideFrom, glidePosition, glideSegment, glideVelocity} from '../../../logic/glide.ts';
+import {contentSlideFrom, glideDuration, glidePosition, glideSegment, glideVelocity} from '../../../logic/glide.ts';
 import type {GlideSegment} from '../../../logic/glide.ts';
-import {besidePopover, besideRow, clampInto, placeBeside} from '../../../logic/placement.ts';
+import {besidePopover, besideRow, clampInto, EDGE_MARGIN, placeBeside} from '../../../logic/placement.ts';
 import type {Placement, Point, Side, Size} from '../../../logic/placement.ts';
 import {glide, layout, motion} from '../../../tokens.ts';
 import {CAL_ITEMS, findItem, heightOf, pointIn, rectIn} from '../geometry.ts';
@@ -136,7 +136,9 @@ export class DetailMotion {
     const element = this.anchorOf(target);
     if (!section || !scroller || !element) return null;
     this.scrollTop = scroller.scrollTop;
-    this.bounds = rectIn(scroller, section);
+    const grid = rectIn(scroller, section);
+    // SV-273: clear of the compact tier's editor as far as the card fits; a narrower grid keeps it inside.
+    this.bounds = {...grid, width: Math.max(Math.min(grid.width, this.size.width + 2 * EDGE_MARGIN), grid.width - this.room)};
     // The open "+N" popover counts as one thing not to cover, its own chips with it.
     const popover = section.querySelector('.daypop');
     const others = [...section.querySelectorAll(CAL_ITEMS), ...(popover ? [popover] : [])].filter(other => other !== element).map(other => rectIn(other, section));
@@ -452,6 +454,68 @@ export class DetailMotion {
     if (this.onPane && this.anchored && !this.drag && this.snapshot.phase === 'rest') this.onResize();
   }
 
+  // ---------- Room for the editor (SV-273) ----------
+
+  // Px at the grid's right edge kept clear, and where the card was before it moved to make room.
+  private room = 0;
+  private beforeRoom: {pos: Point; anchored: boolean} | null = null;
+
+  /**
+   * The compact tier's editor lies over the grid's right side: the card glides clear of it while it's
+   * open, and back to where it was once it closes, unless it was dragged meanwhile.
+   */
+  makeRoom(room: number) {
+    if (room === this.room) return;
+    const making = room > 0 && this.room === 0;
+    this.room = room;
+    const target = this.target;
+    if (!target || this.snapshot.phase !== 'rest' || !this.card) {
+      if (!making) this.beforeRoom = null;
+      return;
+    }
+    const where = this.geometry(target);
+    if (!where) return;
+    this.size = {width: this.card.offsetWidth, height: this.card.offsetHeight};
+    let to: Point;
+    if (making) {
+      this.beforeRoom = {pos: {...this.pos}, anchored: this.anchored};
+      to = clampInto(this.pos, this.size, where.bounds);
+      // Its own place meanwhile, not its item's, so landing doesn't put it back beside the item.
+      this.anchored = false;
+    } else {
+      // Back beside its item if it was there (the grid may have scrolled meanwhile), else where it was left.
+      this.anchored = this.beforeRoom?.anchored ?? this.anchored;
+      to = this.anchored ? this.place(where) : this.beforeRoom?.pos ?? this.pos;
+      this.beforeRoom = null;
+    }
+    if (Math.abs(to.left - this.pos.left) < 0.5 && Math.abs(to.top - this.pos.top) < 0.5) return;
+    this.slideTo(to);
+  }
+
+  private roomAnimation: Animation | null = null;
+
+  /**
+   * Out of the editor's way and back: the browser runs the move (a transform animation), so the
+   * editor drawing itself meanwhile doesn't stall it, on the standard curve with no overshoot; the
+   * card stays at rest throughout. A move under way is taken on from where it has got to.
+   */
+  private slideTo(to: Point) {
+    const outer = this.outer;
+    if (!outer) return;
+    const shown = new DOMMatrixReadOnly(getComputedStyle(outer).transform);
+    const from = this.roomAnimation ? {left: shown.m41, top: shown.m42} : {...this.pos};
+    this.roomAnimation?.cancel();
+    this.pos = to;
+    this.apply();
+    const at = (point: Point) => `translate(${point.left}px, ${point.top}px)`;
+    const animation = outer.animate([{transform: at(from)}, {transform: at(to)}],
+      {duration: glideDuration(Math.hypot(to.left - from.left, to.top - from.top)), easing: motion.ease});
+    this.roomAnimation = animation;
+    animation.onfinish = () => {
+      if (this.roomAnimation === animation) this.roomAnimation = null;
+    };
+  }
+
   // ---------- Drag, from the grip ----------
 
   pointerDown(event: PointerEvent, grip: Element) {
@@ -504,5 +568,6 @@ export class DetailMotion {
   dispose() {
     this.stopGlide();
     this.exitAnimation?.cancel();
+    this.roomAnimation?.cancel();
   }
 }

@@ -27,7 +27,7 @@ function item(fields: Partial<ItemOut>): ItemOut {
     key: '6', id: 6, calendar_id: 2, kind: 'event', title: 'Study group', time_zone: SEED_TIME_ZONE, recurring: false, recurrence: null, occurrence_start: null,
     place: null, address: null, attendees: ['Sam Lee'], reminders: [], leave_reminder: false, project: null, done: false, done_at: null, can_reopen: false, command: null,
     all_day: false, starts_at: '2026-10-10T01:30:00.000Z', ends_at: '2026-10-10T03:30:00.000Z', start_date: null, end_date: null, due_date: null, due_at: null,
-    read_only: false, due_string: null, time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', description: null, subtasks: [], ...fields,
+    read_only: false, due_string: null, time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', description: null, subtasks: [], parent_id: null, ...fields,
   };
 }
 

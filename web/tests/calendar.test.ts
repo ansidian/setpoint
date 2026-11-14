@@ -6,7 +6,7 @@ import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   addMonths, agenda, calendarLabel, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, withSlot, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
-  itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, playsDone, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex, weekOutOfView,
+  itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, playsDone, rangePick, rowsInView, subtaskDue, tasksHeading, timeRange, weatherOf, weekday, weekIndex, weekOutOfView,
 } from '../src/logic/calendar.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -19,7 +19,7 @@ function item(fields: Partial<ItemOut>): ItemOut {
   return {
     key: String(id), id, calendar_id: 1, kind: 'event', title: 'Item', time_zone: zone, recurring: false, recurrence: null, occurrence_start: null,
     place: null, address: null, attendees: [], reminders: [], leave_reminder: false, project: null, done: false, done_at: null, can_reopen: false, command: null,
-    all_day: false, starts_at: null, ends_at: null, start_date: null, end_date: null, due_date: null, due_at: null, read_only: false, due_string: null, time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', description: null, subtasks: [], ...fields,
+    all_day: false, starts_at: null, ends_at: null, start_date: null, end_date: null, due_date: null, due_at: null, read_only: false, due_string: null, time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', description: null, subtasks: [], parent_id: null, ...fields,
   };
 }
 // Pacific daylight time in October: 7 AM is 14:00Z.
@@ -399,4 +399,20 @@ describe('SV-191: a calendar\'s name in a list', () => {
     ['one without an account (Todoist\'s) carries none', cal('Todoist', null), [cal('Todoist', null), cal('Todoist', 1)], {name: 'Todoist', account: null}],
     ['an account not loaded yet shows none', cal('Work', 9), [cal('Work', 9), cal('Work', 1)], {name: 'Work', account: null}],
   ])('%s', (_, calendar, all, label) => expect(calendarLabel(calendar, all, accounts)).toEqual(label));
+});
+
+describe('SV-273 (D567): a dated subtask\'s date in its checklist row', () => {
+  test.each([
+    // Its weekday within the coming week, today's included; its month and day further off or past.
+    ['2026-10-07', null, 'Wed'],
+    ['2026-10-09', null, 'Fri'],
+    ['2026-10-13', null, 'Tue'],
+    ['2026-10-14', null, 'Oct 14'],
+    ['2026-10-06', null, 'Oct 6'],
+    ['2026-10-09', '2026-10-09T22:00:00.000Z', 'Fri 3:00 PM'],
+    ['2026-11-24', '2026-11-24T17:30:00.000Z', 'Nov 24 9:30 AM'],
+    [null, null, null],
+  ])('%s %s → %s', (due_date, due_at, shown) => {
+    expect(subtaskDue({due_date, due_at}, '2026-10-07', zone)).toBe(shown);
+  });
 });

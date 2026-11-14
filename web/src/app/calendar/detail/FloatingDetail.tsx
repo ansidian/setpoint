@@ -25,9 +25,11 @@ export interface FloatingDetailProps {
   actions?: DetailActions;
   onClose: () => void;
   onEdit: (target: DetailTarget) => void;
+  // SV-273: px at the grid's right edge the card keeps clear of, for the compact tier's editor over it.
+  room?: number;
 }
 
-export function FloatingDetail({target, exit, section, scroller, timeZone, actions, onClose, onEdit}: FloatingDetailProps) {
+export function FloatingDetail({target, exit, section, scroller, timeZone, actions, onClose, onEdit, room = 0}: FloatingDetailProps) {
   const [engine] = useState(() => new DetailMotion());
   const {phase, layers, side, lifted} = useSyncExternalStore(engine.subscribe, engine.getSnapshot);
 
@@ -38,6 +40,10 @@ export function FloatingDetail({target, exit, section, scroller, timeZone, actio
   useLayoutEffect(() => {
     engine.setTarget(target, exit);
   }, [engine, target, exit]);
+
+  useLayoutEffect(() => {
+    engine.makeRoom(room);
+  }, [engine, room]);
 
   // SV-264: the card growing at rest (a description opened with More) is placed again, so it stays inside the grid.
   const [grown] = useState(() => new ResizeObserver(() => engine.onResize()));
