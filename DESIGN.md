@@ -4860,7 +4860,8 @@ was decided; the audit itself was retired by D480.
     - **On the grid:** its chip ends in the glyph and count at the right in `ink3`, the title cut
       before it with an ellipsis; the chip is no taller, so a day fits as many as before (D561).
     - **Without actions** (the phone's card) the rings are marks and nothing moves. The Today
-      block's lines don't show the count. Adding, renaming and re-parenting subtasks stay in Todoist.
+      block's lines don't show the count. Adding a subtask, and editing one (its title, date and
+      reminders) are in Setpoint since #375; re-parenting stays in Todoist.
     - The glyph is `format_list_bulleted`, standing in until the set has one for subtasks.
 374. **USPS Informed Delivery in the agenda rail** (Andy, 2026-11-13; darma SV-274, D564, D565). USPS's
     daily digest email is read for the day's mailpieces, kept 30 days, and shown with the day
@@ -4882,3 +4883,38 @@ was decided; the audit itself was retired by D480.
       8" and the day ("Sat, Oct 3", `ink3`) with ×. ← → (its chevrons, the arrow keys or a swipe)
       step through the day's pieces and stop at the first and last; Esc, a click outside or × close
       it. It has no download and no link to the email.
+375. **A subtask added and edited in Setpoint** (Andy, 2026-11-13; darma SV-273, D566–D570). The
+    checklist (#373) adds subtasks, and each one opens in the task editor and has a right-click menu.
+    - **The add row** (D566): the checklist's last row, in the card and the agenda rail, is **"Add
+      subtask"** in `ink3` with the `add` glyph in the ring column. Clicked, it's a text field in
+      place, with no Save button. Enter adds what's typed at the end, at .5 until Todoist confirms;
+      the field clears and keeps focus for the next. Esc, or leaving it empty, puts the row back
+      (the card stays open); leaving it with text adds that first. Adding says nothing, the row
+      being the answer. Several in a row go to Todoist one after another, so they land in the order
+      typed: the server takes the next once Todoist has the one before.
+    - **A task with none:** the card shows the add row alone, where the header would be; the header
+      and count come with the first. The rail has no count to open it by, so the first is added
+      from the card. A subtask's own card has no add row (the checklist is one level), and neither
+      does a task Todoist doesn't have yet. Home's Today card adds too; opening one and its menu are
+      Calendar's.
+    - **A refused add** stays as its row, as a refused check does: `error` with Todoist's words as
+      its tip, Try again and Undo, which takes it away.
+    - **Opening one** (D567): its title opens it in the ordinary task editor (title, date, time,
+      reminders, repeat, delete), the card staying open; its project is its task's, shown and not
+      changed (Todoist would take one moved elsewhere out from under its task). Esc closes the editor
+      first, then the card; any other card still goes before the editor, so a draft survives (D570).
+      In the compact tier, where the editor lies over the grid, the card glides clear of it while
+      it's open (the standard curve, no overshoot, 8 px from its edge, as far as it fits) and back
+      beside its item once it closes.
+    - **A dated one's date** follows its title in the checklist in `ink3`: its weekday within the
+      coming week ("Fri", "Fri 3:00 PM"), its month and day further off or past ("Nov 24"), with the
+      bell (`notifications`) when it has reminders.
+    - **Taking its date off** (D568): a subtask's Due date has the × a new task's has (#244); the
+      field reads "No date", and its time, repeat and reminders go with it. Saved, it leaves the
+      grid and agenda and stays in its checklist, saying **"Took the date off ‹title›"** with Undo,
+      which puts them back. A task's own date still can't come off here (#244).
+    - **Its menu** (D569), the same on its chip or agenda row and on its checklist row: Complete or
+      Reopen, Edit `E`, Clone, Delete `Del`; a refused one, Try again and Move back. Clone keeps its
+      task: the copy goes at the end of the same checklist, saying "Cloned ‹title›" with Undo, from
+      the menu or its card's Clone. There's no Copy, in the menu or its card (a paste would make a
+      task of its own), and no Move up or down (its handle has them).
