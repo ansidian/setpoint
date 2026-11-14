@@ -288,6 +288,13 @@
       "when": 1794633115337,
       "tag": "0040_mailpieces",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1794638925897,
+      "tag": "0041_sender_auth_parent_dmarc",
+      "breakpoints": true
     }
   ]
 }

@@ -2,12 +2,14 @@
 // invented digest's source (src/dev/digest.ts), ads left out; the mirror keeping it out of triage,
 // the Inbox, All and Mark all as read; the worker keeping each day's scans 30 days, fetching the
 // source through a stand-in for the adapter; and the routes the agenda rail reads.
+import {readFileSync} from 'node:fs';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {markAllRead} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
-import {DEV_DIGESTS, devDigestSource, devDigestSubject} from '../src/dev/digest.ts';
+import {DEV_DIGEST_AUTH, DEV_DIGESTS, devDigestSource, devDigestSubject} from '../src/dev/digest.ts';
 import {DIGEST_SENDER, digestDay, isDigest, pieceSources, statedPieces} from '../src/domain/mailpieces.ts';
+import {evaluateGmailSenderAuthentication} from '../src/domain/senderAuthentication.ts';
 import type {SenderAuthentication} from '../src/domain/senderAuthentication.ts';
 import {firstKeptDay, MailpiecesWorker, pruneMailpieces, queueMailpieces} from '../src/mailpieces/worker.ts';
 import {readDigest} from '../src/providers/mime.ts';
@@ -17,11 +19,9 @@ import {mailpiecesKey, upsertMessages} from '../src/sync/mailMirror.ts';
 import type {FetchedMessage} from '../src/sync/mailMirror.ts';
 import {client, liveEvents, signedIn, world} from './helpers.ts';
 
-const PASS: SenderAuthentication = {
-  version: 1, status: 'pass', provider: 'gmail', source: 'gmail_authentication_results', headerFromDomain: 'email.informeddelivery.usps.com',
-  dkim: [{result: 'pass', domain: 'email.informeddelivery.usps.com', aligned: true}], spf: null, dmarc: {result: 'pass', domain: 'email.informeddelivery.usps.com', aligned: true},
-  evaluatedAt: '2026-10-07T16:00:00.000Z',
-};
+// Gmail's verdict on a real digest's headers, through the evaluator: its DMARC result names usps.com,
+// the parent of the From domain, which an invented exact-match verdict had hidden.
+const PASS = evaluateGmailSenderAuthentication(DEV_DIGEST_AUTH, DIGEST_SENDER, new Date('2026-10-07T16:00:00.000Z'));
 
 const digestEmail = (day: string, overrides: Partial<FetchedMessage> = {}): FetchedMessage => ({
   providerId: `digest-${day}`, threadId: `digest-${day}`, rfc822Id: null, fromName: 'USPS Informed Delivery', fromAddress: DIGEST_SENDER,
@@ -244,5 +244,33 @@ describe('GET /api/mail/mailpieces', () => {
     const w = world({seed: true});
     await signedIn(w);
     expect((await client(w).send('GET', '/api/mail/mailpieces?day=2026-10-07')).status).toBe(401);
+  });
+});
+
+// 0041 puts right the verdicts stored before the evaluator took a parent DMARC domain: a subdomain
+// sender's DMARC pass, stored as a fail, passes, and a real digest among them leaves the Inbox.
+describe('migration 0041', () => {
+  const sql = readFileSync(new URL('../drizzle/0041_sender_auth_parent_dmarc.sql', import.meta.url), 'utf8');
+  const stale = (dmarc: {result: string; domain: string}) => ({
+    version: 1, status: 'fail', provider: 'gmail', source: 'gmail_authentication_results', headerFromDomain: dmarc.domain,
+    dkim: [], spf: null, dmarc: {...dmarc, aligned: false}, evaluatedAt: '2026-10-07T16:00:00.000Z',
+  }) as SenderAuthentication;
+
+  test('passes a stored parent-domain DMARC pass, and only that', () => {
+    const w = world({seed: true});
+    const account = w.store.db.select().from(t.accounts).where(eq(t.accounts.label, 'Personal')).get()!.id;
+    const rows = [
+      [DIGEST_SENDER, 'Your Daily Digest for Thu, 11/12 is ready to view', {result: 'pass', domain: 'usps.com'}],
+      ['alerts@info6.citi.com', 'Your statement', {result: 'pass', domain: 'citi.com'}],
+      ['notice@evilusps.com', 'Your Daily Digest for Thu, 11/12 is ready to view', {result: 'pass', domain: 'usps.com'}],
+      ['notice@email.example.com', 'Hello', {result: 'fail', domain: 'example.com'}],
+    ] as const;
+    const ids = rows.map(([from, subject, dmarc], index) => upsertMessages(w.store, account, [digestEmail(`2026-10-0${index + 1}`, {
+      providerId: `stale-${index}`, fromAddress: from, subject, senderAuth: stale(dmarc),
+    })]).inserted[0]!);
+    for (const statement of sql.split('--> statement-breakpoint')) w.store.sqlite.exec(statement);
+    const after = ids.map(id => w.store.db.select().from(t.messages).where(eq(t.messages.id, id)).get()!);
+    expect(after.map(row => [row.senderAuthenticated, row.senderAuth?.status, row.senderAuth?.dmarc?.aligned, row.uspsDigest]))
+      .toEqual([[true, 'pass', true, true], [true, 'pass', true, false], [false, 'fail', false, false], [false, 'fail', false, false]]);
   });
 });

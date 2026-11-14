@@ -119,7 +119,10 @@ export function evaluateGmailSenderAuthentication(
   const spf = spfResult ? { result: spfResult.result, domain: spfDomain, aligned: spfDomain === claimedDomain } : null;
   const dmarcResult = results.find((entry) => entry.method === "dmarc");
   const headerFromDomain = dmarcResult ? strictSigningDomain(dmarcResult.properties["header.from"]) : claimedDomain;
-  const dmarc = dmarcResult ? { result: dmarcResult.result, domain: headerFromDomain, aligned: headerFromDomain === claimedDomain } : null;
+  // Gmail names the DMARC record's domain in header.from: the From domain, or for a subdomain sender
+  // the parent its policy sits on (email.informeddelivery.usps.com → usps.com). Either way the
+  // result is Gmail's evaluation of this From header, so a parent on a label boundary aligns.
+  const dmarc = dmarcResult ? { result: dmarcResult.result, domain: headerFromDomain, aligned: dmarcCovers(headerFromDomain, claimedDomain) } : null;
   // Exact DKIM d= alignment authenticates the Author Domain (RFC 9989 §4.4.1).
   // This is sender authority, not an invented DMARC evaluation. An explicit
   // DMARC result of any kind always controls; SPF alone is never this fallback.
@@ -183,6 +186,11 @@ function parseGmailAuthenticationResults(input: string): GmailAuthenticationResu
 function strictSigningDomain(value: string | undefined): string | null {
   return value && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(value)
     ? value.toLowerCase() : null;
+}
+
+/** Whether Gmail's DMARC domain is the From domain or a parent of it (never a bare suffix: it has a dot). */
+function dmarcCovers(dmarcDomain: string | null, fromDomain: string | null): boolean {
+  return !!dmarcDomain && !!fromDomain && (fromDomain === dmarcDomain || fromDomain.endsWith(`.${dmarcDomain}`));
 }
 
 function dkimIdentity(value: string | undefined): { value: string; domain: string } | null {

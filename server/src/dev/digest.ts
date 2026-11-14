@@ -9,6 +9,7 @@ import {SEED_TIME_ZONE} from '@setpoint/shared';
 import type {OpenDatabase} from '../db/open.ts';
 import * as t from '../db/schema.ts';
 import {DIGEST_SENDER} from '../domain/mailpieces.ts';
+import {evaluateGmailSenderAuthentication, senderAuthenticated} from '../domain/senderAuthentication.ts';
 import {searchBody} from '../domain/searchBody.ts';
 import {zonedInstant} from '../domain/time.ts';
 
@@ -166,6 +167,12 @@ export const devDigestScans = (digest: DevDigestOptions) => [
   ...Array.from({length: digest.scans}, (_, n) => devScan((digest.seed ?? 1) + n)),
 ];
 
+/** A real digest's From and Gmail's Authentication-Results for it, DMARC on the parent domain. */
+export const DEV_DIGEST_AUTH = [
+  {name: 'From', value: `USPS Informed Delivery <${DIGEST_SENDER}>`},
+  {name: 'Authentication-Results', value: `mx.google.com; dkim=pass header.i=@email.informeddelivery.usps.com header.s=k1; spf=pass smtp.mailfrom=bounce@email.informeddelivery.usps.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=usps.com`},
+];
+
 /**
  * Writes the seed's digests to the record under an account, as the mailpieces worker keeps them from
  * each one's source: the email (out of the Inbox), its day and its scans. A digest already there is
@@ -177,10 +184,13 @@ export function insertDevDigests(db: Pick<OpenDatabase['db'], 'insert' | 'select
     const receivedAt = zonedInstant(digest.day, '07:30', SEED_TIME_ZONE);
     const pieces = digest.scans + (digest.campaigns ?? 0) + (digest.withoutImage ?? 0);
     const body = `You have ${pieces} mailpiece(s) and 1 inbound package(s) arriving soon.`;
+    // Gmail's verdict in a real digest's shape, DMARC on the parent domain, through the evaluator the
+    // mirror uses, so the seed can't call a digest authenticated that the real path wouldn't (SV-274).
+    const senderAuth = evaluateGmailSenderAuthentication(DEV_DIGEST_AUTH, DIGEST_SENDER, new Date(receivedAt));
     const message = db.insert(t.messages).values({
       accountId, providerId: digest.providerId, threadId: `${digest.providerId}-thread`,
       fromName: 'USPS Informed Delivery', fromAddress: DIGEST_SENDER, organisation: 'USPS', subject: devDigestSubject(digest.day),
-      snippet: body, bodyText: body, searchBody: searchBody(body), receivedAt, unread: false, senderAuthenticated: true,
+      snippet: body, bodyText: body, searchBody: searchBody(body), receivedAt, unread: false, senderAuth, senderAuthenticated: senderAuthenticated(senderAuth),
       lane: 'fyi', kind: 'deliveries', triageSource: 'rule', triagedAt: receivedAt, uspsDigest: true,
     }).returning({id: t.messages.id}).get();
     const row = db.insert(t.mailDigests).values({messageId: message.id, day: digest.day, pieces, storedAt: receivedAt}).returning({id: t.mailDigests.id}).get();

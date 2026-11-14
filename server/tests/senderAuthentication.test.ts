@@ -258,3 +258,30 @@ describe("the record's sender_authenticated", () => {
     expect(senderAuthenticated(null)).toBeNull();
   });
 });
+
+// Gmail names the DMARC record's domain in header.from, the parent for a subdomain sender, as on
+// every real USPS Informed Delivery digest (SV-274): those passed DMARC and were stored as failing.
+describe("a Gmail DMARC result on the From domain's parent", () => {
+  const evaluate = (from: string, dmarc: string) => evaluateGmailSenderAuthentication([
+    { name: "From", value: from },
+    { name: "Authentication-Results", value: `mx.google.com; dkim=pass header.i=@email.informeddelivery.usps.com header.s=k1; spf=pass smtp.mailfrom=bounce@email.informeddelivery.usps.com; ${dmarc}` },
+  ], from, now);
+
+  it("passes a subdomain sender whose parent's DMARC Gmail passed", () => {
+    expect(evaluate("USPS Informed Delivery <USPSInformeddelivery@email.informeddelivery.usps.com>", "dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=usps.com")).toMatchObject({
+      status: "pass", headerFromDomain: "usps.com", dmarc: { result: "pass", domain: "usps.com", aligned: true },
+    });
+  });
+
+  it.each([
+    ["a lookalike that only ends in the same letters", "notice@evilusps.com", "dmarc=pass header.from=usps.com"],
+    ["a DMARC domain under the From domain, not over it", "notice@usps.com", "dmarc=pass header.from=email.usps.com"],
+    ["an unrelated domain", "notice@email.informeddelivery.usps.com", "dmarc=pass header.from=attacker.example"],
+  ])("fails %s", (_, from, dmarc) => {
+    expect(evaluate(from, dmarc)).toMatchObject({ status: "fail", dmarc: { aligned: false } });
+  });
+
+  it("still fails the parent's DMARC fail", () => {
+    expect(evaluate("notice@email.informeddelivery.usps.com", "dmarc=fail header.from=usps.com")).toMatchObject({ status: "fail", dmarc: { aligned: true } });
+  });
+});
