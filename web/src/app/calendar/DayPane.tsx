@@ -10,9 +10,10 @@
 // failing lines at the top (board 19b). A day whose items are only hidden says so, "4 hidden · Show
 // all", rather than "No events" (SV-56). The editor (Editor.tsx) takes the pane's place. Until the
 // day's items and the calendars have come, its line and agenda are a skeleton, never "Nothing
-// planned" (#227).
+// planned" (#227). SV-274 adds the day's USPS mail over the footer (MailStrip.tsx).
 import type {CalendarOut, ItemOut, SourceOut, SubtaskOut, WeatherDayOut} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
+import {MailStrip} from './MailStrip.tsx';
 import {subtaskCount, Subtasks} from './Subtasks.tsx';
 import type {CSSProperties, ReactNode} from 'react';
 import {useResource} from '../../api/client.ts';
@@ -168,6 +169,9 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
           ))}
         </>}
       </div>
+
+      {/* SV-274: the day's USPS mail, over the footer. */}
+      <MailStrip date={date} />
 
       <div className="rp-foot">
         <Icon name="keyboard" size={16} />

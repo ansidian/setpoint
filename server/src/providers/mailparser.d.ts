@@ -29,5 +29,5 @@ declare module 'mailparser' {
     attachments?: ParsedMailAttachment[];
   }
 
-  export function simpleParser(source: Buffer | string, options?: {skipHtmlToText?: boolean; skipTextToHtml?: boolean}): Promise<ParsedMail>;
+  export function simpleParser(source: Buffer | string, options?: {skipHtmlToText?: boolean; skipTextToHtml?: boolean; keepCidLinks?: boolean}): Promise<ParsedMail>;
 }

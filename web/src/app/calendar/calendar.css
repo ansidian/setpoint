@@ -493,3 +493,26 @@
 .imp-progress.failing { color: var(--caution); }
 .imp-foot .btn.quiet { margin-left: auto; }
 .imp-foot .btn.quiet .kbd { margin-left: 4px; }
+
+/* SV-274 (D564): the day's USPS mail over the rail's footer, one row of same-size thumbnails, never
+   wrapping, and its viewer over a scrim. */
+.rp-mail { flex: none; border-top: 1px solid var(--hair); padding: 12px 16px 14px 20px; }
+.rp-mail-head { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }
+.rp-mail-head > .icon { color: var(--ink3); }
+.rp-mail-none { font-size: 12.5px; }
+.rp-mail-row { display: flex; flex-wrap: nowrap; overflow: hidden; min-height: 56px; }
+.rp-mail-tile { flex: none; border-radius: 8px; overflow: hidden; background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edge); display: grid; place-items: center; transition: box-shadow var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease); }
+.rp-mail-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rp-mail-tile:hover { box-shadow: inset 0 0 0 1px var(--edgeOn); filter: brightness(1.06); }
+.rp-mail-tile:focus-visible { box-shadow: inset 0 0 0 2px var(--edgeFocus); }
+.rp-mail-tile.more { font-size: 13px; color: var(--ink2); }
+.rp-mail-tile.more:hover { color: var(--ink); }
+
+.mail-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; animation: scrim-in var(--dur-slow) var(--ease); }
+.mail-viewer { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(900px, calc(100% - 64px)); max-height: calc(100% - 64px); display: flex; flex-direction: column;
+  background: var(--modal); border-radius: var(--r-modal); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-modal); z-index: 31; outline: none; overflow: hidden; animation: mail-in var(--dur-slow) var(--ease); }
+@keyframes mail-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } }
+.mail-viewer-head { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--hair); font-size: 13px; }
+.mail-viewer-body { display: flex; align-items: center; gap: 8px; padding: 16px 8px; min-height: 0; flex: 1 1 auto; touch-action: pan-y; }
+.mail-scan { flex: 1 1 auto; min-width: 0; max-height: calc(100vh - 200px); object-fit: contain; border-radius: 6px; user-select: none; }
+.mail-step { flex: none; }

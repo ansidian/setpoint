@@ -31,6 +31,7 @@ import {storeClock} from './store.ts';
 import type {Store} from './store.ts';
 import {SyncEngine} from './sync/engine.ts';
 import {Adapters} from './sync/registry.ts';
+import {MailpiecesWorker} from './mailpieces/worker.ts';
 import {SearchTermsWorker} from './search/terms.ts';
 import {HistoryExtractor} from './triage/history.ts';
 // Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
@@ -82,7 +83,9 @@ const news = new NewsWorker({store, imagesDir: newsImages, ...(config.production
 // N3: what News reads is sorted, grouped, written and ranked on the same engine, with the keys in
 // Settings › AI (D90); a dev run asks the loopback fake, if anything.
 const newsSort = new NewsSortWorker({store, endpoints: aiEndpoints});
-const engine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader]});
+// SV-274: each USPS digest's scans, read from its source through the engine's adapters.
+const mailpiecesWorker = new MailpiecesWorker({store, fetchSource: (sourceId, message): Promise<Buffer | null> => engine.emailSource(sourceId, message)});
+const engine: SyncEngine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader, mailpiecesWorker]});
 const connectors = {gmail: google ? gmailConnector(store, google, pubsub !== null) : null, icloud: icloudConnector(store, icloud)};
 const reminders = new ReminderScheduler({store, notifier});
 // A written rule's delayed trash (SV-237): a pass every minute.

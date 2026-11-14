@@ -10,7 +10,7 @@
 // Timestamps are ISO 8601 UTC strings ("2026-10-07T16:12:00.000Z"); dates are local
 // `YYYY-MM-DD` in the owner's zone. JSON columns hold values checked by `@setpoint/shared`.
 import {sql} from 'drizzle-orm';
-import {check, index, integer, real, sqliteTable, text, uniqueIndex, type AnySQLiteColumn} from 'drizzle-orm/sqlite-core';
+import {blob, check, index, integer, real, sqliteTable, text, uniqueIndex, type AnySQLiteColumn} from 'drizzle-orm/sqlite-core';
 import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
@@ -135,6 +135,12 @@ export const messages = sqliteTable('messages', {
   // When the one-time extraction pass over backfilled history read it (D20): set once, so no email is
   // charged for twice.
   extractedAt: text('extracted_at'),
+
+  // ---- SV-274 · USPS mail: the Informed Delivery digest ----
+  // The daily digest from USPS Informed Delivery (src/domain/mailpieces.ts): its scans go to the
+  // agenda rail (`mail_digests`), so the email itself is out of the Inbox and its counts, never
+  // triaged and never notified. All and search still find it.
+  uspsDigest: integer('usps_digest', {mode: 'boolean'}).notNull().default(false),
 }, table => [
   uniqueIndex('messages_account_provider').on(table.accountId, table.providerId),
   index('messages_rfc822').on(table.accountId, table.rfc822Id),
@@ -481,8 +487,9 @@ export const syncCursors = sqliteTable('sync_cursors', {
 // fetch, run by src/news/worker.ts); N3 `news_sort` (sorting what's Unsorted, and the hourly re-score,
 // run by src/news/sortWorker.ts); Jobs's `jobs_read` (J2, a wiring point: Jobs reading what triage
 // sorted in the accounts it reads, run by src/jobs/reader.ts; removing Jobs may leave the value);
-// SV-136's `search_terms` (one email's search terms, run by src/search/terms.ts).
-export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort', 'jobs_read', 'search_terms'] as const;
+// SV-136's `search_terms` (one email's search terms, run by src/search/terms.ts); SV-274's
+// `mailpieces` (one USPS digest's scans, read from its source by src/mailpieces/worker.ts).
+export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort', 'jobs_read', 'search_terms', 'mailpieces'] as const;
 export const JOB_STATES = ['queued', 'running', 'done', 'failed'] as const;
 
 /**
@@ -1149,3 +1156,29 @@ export const newsSorting = sqliteTable('news_sorting', {
   firstRunDoneAt: text('first_run_done_at'),
   lastRankedAt: text('last_ranked_at'),
 }, table => [check('news_sorting_singleton', sql`${table.id} = 1`)]);
+
+/**
+ * SV-274: a USPS Informed Delivery digest's day, kept 30 days (src/mailpieces/worker.ts prunes it):
+ * the day the digest is for, and how many mailpieces it said were coming, which may be more than
+ * it had scans for. The email may go (trashed, deleted) while its day stays.
+ */
+export const mailDigests = sqliteTable('mail_digests', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  messageId: integer('message_id').references(() => messages.id, {onDelete: 'set null'}),
+  // Local `YYYY-MM-DD`.
+  day: text('day').notNull(),
+  pieces: integer('pieces').notNull(),
+  storedAt: text('stored_at').notNull(),
+}, table => [
+  uniqueIndex('mail_digests_message').on(table.messageId),
+  index('mail_digests_day').on(table.day),
+]);
+
+/** One mailpiece's picture in a digest, in the digest's order; ads (ride-alongs) are never kept. */
+export const mailScans = sqliteTable('mail_scans', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  digestId: integer('digest_id').notNull().references(() => mailDigests.id, {onDelete: 'cascade'}),
+  position: integer('position').notNull(),
+  mimeType: text('mime_type').notNull(),
+  bytes: blob('bytes', {mode: 'buffer'}).notNull(),
+}, table => [uniqueIndex('mail_scans_order').on(table.digestId, table.position)]);

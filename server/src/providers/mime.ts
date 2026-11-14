@@ -7,6 +7,8 @@ import {simpleParser} from 'mailparser';
 import type {ParsedMail, ParsedMailAttachment} from 'mailparser';
 import {evaluateGmailSenderAuthentication, evaluateICloudSenderAuthentication} from '../domain/senderAuthentication.ts';
 import type {AuthenticationHeader, MailProvider} from '../domain/senderAuthentication.ts';
+import {bareCid, KEPT_TYPES, pieceSources, statedPieces} from '../domain/mailpieces.ts';
+import type {ReadDigest, Scan} from '../domain/mailpieces.ts';
 import type {AttachmentBytes} from '../sync/adapter.ts';
 import type {FetchedAttachment, FetchedMessage, ProviderState} from '../sync/mailMirror.ts';
 
@@ -189,4 +191,28 @@ export async function fetchedMessage(provider: MailProvider, source: Buffer, met
     trashed: meta.trashed,
     archived: meta.archived,
   };
+}
+
+/**
+ * The mailpieces in a USPS digest's source (SV-274, src/domain/mailpieces.ts): how many it says are
+ * coming, and the pictures its HTML shows for them, in order, ads left out.
+ */
+export async function readDigest(source: Buffer): Promise<ReadDigest> {
+  // Its HTML as sent: mailparser would otherwise turn each `cid:` link into the image's data URI.
+  const parsed = await simpleParser(source, {skipHtmlToText: true, skipTextToHtml: true, keepCidLinks: true});
+  const html = typeof parsed.html === 'string' ? parsed.html : '';
+  const parts = parsed.attachments ?? [];
+  const byCid = new Map<string, ParsedMailAttachment>();
+  for (const part of parts) {
+    if (part.cid) byCid.set(bareCid(part.cid), part);
+    if (part.filename && !byCid.has(part.filename.toLowerCase())) byCid.set(part.filename.toLowerCase(), part);
+  }
+  const scans: Scan[] = [];
+  for (const cid of pieceSources(html)) {
+    const part = byCid.get(bareCid(cid));
+    const mimeType = (part?.contentType ?? '').toLowerCase();
+    if (!part?.content?.length || !KEPT_TYPES.has(mimeType)) continue;
+    scans.push({mimeType: mimeType === 'image/jpg' ? 'image/jpeg' : mimeType, content: part.content});
+  }
+  return {pieces: statedPieces(`${parsed.text ?? ''}\n${html.replace(/<[^>]+>/g, ' ')}`), scans};
 }

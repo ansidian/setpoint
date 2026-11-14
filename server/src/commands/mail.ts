@@ -114,7 +114,9 @@ export function ruleActions(store: Store, messageId: number, ruleId: number, act
  */
 export function markAllRead(store: Store, accountId?: number): CommandRow[] {
   return transaction(store, () => {
-    const candidates = store.db.select().from(t.messages).where(accountId ? eq(t.messages.accountId, accountId) : undefined).all();
+    // USPS's digest isn't in the Inbox (SV-274), so Mark all as read leaves it as it is.
+    const shown = eq(t.messages.uspsDigest, false);
+    const candidates = store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all();
     const busy = new Set(store.db.select({id: t.commands.targetId}).from(t.commands)
       .where(and(eq(t.commands.target, 'message'), inArray(t.commands.state, ['pending', 'failed']))).all().map(row => row.id));
     const byAccount = new Map<number, MessageRow[]>();

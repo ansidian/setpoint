@@ -6,7 +6,7 @@ import path from 'node:path';
 import {serveStatic} from '@hono/node-server/serve-static';
 import {
   accountOrderInput, accountUpdateInput, allInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
-  confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
+  confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, mailpiecesInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
   askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput,
 } from '@setpoint/shared';
@@ -60,6 +60,7 @@ import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts
 import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarShown, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
 import {allMail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
+import {mailpieces, mailScan} from '../queries/mailpieces.ts';
 import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
 import {searchCalendar} from '../search/calendar.ts';
 import {SearchReader} from '../search/reading.ts';
@@ -556,6 +557,16 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     c.header('X-Content-Type-Options', 'nosniff');
     c.header('Referrer-Policy', 'no-referrer');
     return c.html(page.html);
+  });
+  // SV-274: a day's USPS mail for the agenda rail, and a scan's picture (a scan never changes).
+  app.get('/api/mail/mailpieces', c => c.json(mailpieces(store, parse(mailpiecesInput, c.req.query()).day)));
+  app.get('/api/mail/mailpieces/scans/:id', c => {
+    const scan = mailScan(store, id(c.req.param('id')));
+    c.header('Content-Type', scan.mimeType);
+    c.header('Cache-Control', 'private, max-age=86400, immutable');
+    c.header('Content-Security-Policy', "default-src 'none'; sandbox");
+    c.header('X-Content-Type-Options', 'nosniff');
+    return c.body(new Uint8Array(scan.bytes));
   });
   // An attachment's bytes, through its account's adapter, for the reader's preview.
   const fetchAttachment = async (messageId: string, attachmentId: string) => {

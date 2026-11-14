@@ -8,7 +8,7 @@ import type {CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {monthTopRow} from '../../src/logic/calendar.ts';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, holdToast, pauseClock, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -502,6 +502,58 @@ test('a calendar search lights its matches, every occurrence of a series, and le
     await until('Dentist unmatched', () => dentist.getAttribute('class'), classes => !!classes?.split(' ').includes('unmatched'));
     await page.keyboard.press('Escape');
     await until('nothing unmatched', () => page.locator('.cal-grid .unmatched').count(), count => count === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row with "+N", its viewer stepping and stopping at the ends; none on a Sunday, "No mail today" on a Monday', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    // Sat, Oct 3: eight pieces, more than the rail fits.
+    await page.goto(`${setpoint.base}/calendar/2026-10-03`);
+    const section = page.getByRole('region', {name: 'USPS Informed Delivery'});
+    await section.getByText('8 pieces').waitFor();
+    const more = section.getByRole('button', {name: /more mailpieces$/});
+    await more.waitFor();
+    const tiles = section.getByRole('button', {name: /^Mailpiece \d of 8$/});
+    const shown = await tiles.count();
+    assert.equal(await more.getAttribute('aria-label'), `${8 - shown} more mailpieces`, 'the thumbnails and "+N" hold all eight');
+    // One row that fits: the "+N" tile ends inside the rail, level with the first.
+    const [row, first, last] = await rested(() => Promise.all([section.locator('.rp-mail-row').boundingBox(), tiles.first().boundingBox(), more.boundingBox()]));
+    assert.ok(last!.x + last!.width <= row!.x + row!.width + 0.5, 'the row fits the rail');
+    assert.equal(last!.y, first!.y, 'never a second row');
+
+    // "+N" opens the viewer at the first piece it holds; the arrows stop at the last.
+    await more.click();
+    const viewer = page.getByRole('dialog', {name: 'USPS Informed Delivery, Sat, Oct 3'});
+    await viewer.getByText(`${shown + 1} of 8`).waitFor();
+    for (let at = shown + 1; at < 8; at += 1) await page.keyboard.press('ArrowRight');
+    await viewer.getByText('8 of 8').waitFor();
+    assert.equal(await viewer.getByRole('button', {name: 'Next mailpiece'}).isDisabled(), true);
+    await page.keyboard.press('ArrowRight');
+    await viewer.getByText('8 of 8').waitFor();
+    await viewer.getByRole('button', {name: 'Previous mailpiece'}).click();
+    await viewer.getByText('7 of 8').waitFor();
+    await page.keyboard.press('Escape');
+    await viewer.waitFor({state: 'detached'});
+
+    // A thumbnail opens at itself; a click outside closes.
+    await tiles.first().click();
+    await viewer.getByText('1 of 8').waitFor();
+    assert.equal(await viewer.getByRole('button', {name: 'Previous mailpiece'}).isDisabled(), true);
+    await page.mouse.click(10, 10);
+    await viewer.waitFor({state: 'detached'});
+
+    // Mon, Oct 5: the digest said nothing is coming. Sun, Oct 4: no digest, no section.
+    await page.goto(`${setpoint.base}/calendar/2026-10-05`);
+    await page.getByRole('region', {name: 'USPS Informed Delivery'}).getByText('No mail today').waitFor();
+    await page.goto(`${setpoint.base}/calendar/2026-10-04`);
+    await page.locator('.ag-ghost', {hasText: 'New event'}).waitFor();
+    await setpoint.idle();
+    assert.equal(await page.getByRole('region', {name: 'USPS Informed Delivery'}).count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

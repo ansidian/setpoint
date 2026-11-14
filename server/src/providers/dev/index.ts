@@ -8,6 +8,7 @@
 import type {PlaceOut, PlaceSuggestionOut} from '@setpoint/shared';
 import type {SourceAdapter, AdapterContext, CommandRow} from '../../sync/adapter.ts';
 import {devAttachment} from '../../dev/attachments.ts';
+import {DEV_DIGESTS, devDigestSource} from '../../dev/digest.ts';
 import {ProviderError} from '../../sync/errors.ts';
 import {and, eq} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';
@@ -54,6 +55,12 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
         .innerJoin(t.messages, eq(t.messages.id, t.attachments.messageId))
         .where(and(eq(t.messages.providerId, message.providerId), eq(t.attachments.providerId, attachmentId))).get();
       return row ? devAttachment(row.filename, row.mimeType) : null;
+    },
+    // SV-274: a seed digest's source, invented (src/dev/digest.ts); other seed mail has none.
+    async source(context, message) {
+      assertDev(context);
+      const digest = DEV_DIGESTS.find(one => one.providerId === message.providerId);
+      return digest ? devDigestSource(digest) : null;
     },
     async execute(context, command) {
       assertDev(context);

@@ -205,3 +205,20 @@ export interface IndexingOut {
   indexing: {progress: number} | null;
   accounts: {account_id: number; progress: number; done: boolean}[];
 }
+
+/** SV-274: GET /api/mail/mailpieces?day=YYYY-MM-DD, the agenda rail's USPS mail for a day. */
+export const mailpiecesInput = z.strictObject({day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)});
+export interface MailScanOut {
+  id: number;
+  // GET it for the picture (a JPEG or PNG), kept as long as its day.
+  url: string;
+}
+export interface MailpiecesOut {
+  day: string;
+  // Null on a day with no digest (a Sunday, a holiday, a day before the 30 kept): no section.
+  digest: {
+    // What USPS said is coming; 0 is "No mail today". It can be more than `scans`, the pictures.
+    pieces: number;
+    scans: MailScanOut[];
+  } | null;
+}

@@ -9,12 +9,17 @@
 import {and, eq, gte, inArray} from 'drizzle-orm';
 import {activeCommands} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
+import {isDigest} from '../domain/mailpieces.ts';
 import {searchBody} from '../domain/searchBody.ts';
 import {senderAuthenticated} from '../domain/senderAuthentication.ts';
 import type {SenderAuthentication} from '../domain/senderAuthentication.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {triageIntake} from '../triage/intake.ts';
+import {enqueueJob} from './jobs.ts';
+
+/** SV-274: the job that reads a USPS digest's scans from its source. */
+export const mailpiecesKey = (messageId: number) => `mailpieces:${messageId}`;
 
 type MessageRow = typeof t.messages.$inferSelect;
 
@@ -90,6 +95,8 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
     const busy = messagesWithActiveCommands(store);
     const inserted: number[] = [];
     const updated: number[] = [];
+    // SV-274: new digests, inserted but kept from triage.
+    const digests: number[] = [];
     for (const message of fetched) {
       let row = find(store, accountId, message.providerId);
       if (!row && options.matchByRfc822Id && message.rfc822Id) {
@@ -100,19 +107,26 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
         fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText, searchBody: searchBody(message.bodyText), bodyHtml: message.bodyHtml,
         receivedAt: message.receivedAt, senderAuth: message.senderAuth, senderAuthenticated: senderAuthenticated(message.senderAuth),
       };
+      // SV-274: USPS's daily digest goes to the agenda rail, not the Inbox: sorted as it arrives
+      // (never triaged, so never notified), and its scans read from its source by a job.
+      const digest = isDigest({...fields, senderAuthenticated: fields.senderAuthenticated});
       if (!row) {
         const created = store.db.insert(t.messages).values({
           accountId, ...fields, ...stateColumns(message, null, now), lane: null, backfill: options.backfill ?? false,
+          ...(digest ? {uspsDigest: true, lane: 'fyi', kind: 'deliveries', triageSource: 'rule', triagedAt: now} as const : {}),
         }).returning({id: t.messages.id}).get();
         for (const file of message.attachments) store.db.insert(t.attachments).values({messageId: created.id, ...file}).run();
-        inserted.push(created.id);
+        if (digest) {
+          digests.push(created.id);
+          enqueueJob(store, {kind: 'mailpieces', key: mailpiecesKey(created.id), messageId: created.id});
+        } else inserted.push(created.id);
         continue;
       }
       const state = busy.has(row.id) ? {} : stateColumns(message, row, now);
       // A fetch that lacks an identity or a verdict never erases a stored one (v1's COALESCE).
       const kept = {rfc822Id: message.rfc822Id ?? row.rfc822Id, senderAuth: message.senderAuth ?? row.senderAuth,
         senderAuthenticated: message.senderAuth ? fields.senderAuthenticated : row.senderAuthenticated};
-      store.db.update(t.messages).set({...fields, ...kept, ...state}).where(eq(t.messages.id, row.id)).run();
+      store.db.update(t.messages).set({...fields, ...kept, ...state, ...(digest ? {uspsDigest: true} : {})}).where(eq(t.messages.id, row.id)).run();
       const known = store.db.select().from(t.attachments).where(eq(t.attachments.messageId, row.id)).all();
       const same = known.length === message.attachments.length
         && known.every((file, index) => file.providerId === message.attachments[index]!.providerId && file.filename === message.attachments[index]!.filename);
@@ -124,8 +138,8 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
     }
     // B3: new mail is queued for triage; backfilled history is sorted now by the rules-only pass.
     triageIntake(store, inserted, options.backfill ?? false);
-    noteLive(store, {type: 'mail', messages: [...inserted, ...updated], accounts: [accountId], commands: []});
-    return {inserted, updated};
+    noteLive(store, {type: 'mail', messages: [...inserted, ...digests, ...updated], accounts: [accountId], commands: []});
+    return {inserted: [...inserted, ...digests], updated};
   });
 }
 

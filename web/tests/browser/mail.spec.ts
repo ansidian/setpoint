@@ -67,7 +67,8 @@ test('SV-218: with nothing open the Inbox\'s pane says how the day is going; a D
     const tiles = () => pane.locator('.md-tile').evaluateAll(all => all.map(tile => [tile.querySelector('dd')!.textContent, tile.querySelector('dt')!.textContent, tile.classList.contains('lit')]));
     await until('the day', () => pane.locator('.md-need').textContent(), text => text === '3 need you, 1 overdue');
     assert.deepEqual(await tiles(), [['0', 'Done today', false], ['8', 'Sorted to FYI', true], ['3', 'Sorted to Noise', true]]);
-    assert.equal(await pane.locator('.pane-foot .md-kept').textContent(), '34 emails, 192 KB, since Mar 2026.');
+    // The seed's 34 and its 7 USPS digests (SV-274): out of the Inbox, still kept.
+    assert.equal(await pane.locator('.pane-foot .md-kept').textContent(), '41 emails, 192 KB, since Mar 2026.');
     // Done from elsewhere (the phone) reaches the pane through the live stream.
     await setpoint.api('POST', `/mail/messages/${await idOf(setpoint, 'Your recovery email was changed')}/done`, {done: true});
     await until('one fewer needs the user', () => pane.locator('.md-need').textContent(), text => text === '2 need you, 1 overdue');

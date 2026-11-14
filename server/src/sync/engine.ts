@@ -132,6 +132,15 @@ export class SyncEngine {
     return this.timed(adapter.attachment(this.context(source), message, attachmentId));
   }
 
+  /** SV-274: an email's source from its source's adapter, as `attachment` fetches one. */
+  async emailSource(sourceId: number, message: {providerId: string}): Promise<Buffer | null> {
+    const source = this.store.db.select().from(t.sources).where(eq(t.sources.id, sourceId)).get();
+    const adapter = source ? this.adapters.adapterFor(source) : null;
+    if (!source || !adapter?.source) throw new ProviderError('permanent', 'Nothing serves this account\'s mail in this Setpoint.');
+    if (source.needsReconnectAt) throw new ProviderError('auth', 'This account needs signing in again.');
+    return this.timed(adapter.source(this.context(source), message));
+  }
+
   private schedule() {
     pruneJobs(this.store);
     for (const worker of this.workers.values()) worker.schedule?.();

@@ -253,6 +253,12 @@ export class GmailAdapter implements SourceAdapter {
     return attachmentFromSource(Buffer.from(found.raw, 'base64url'), attachmentId);
   }
 
+  /** SV-274: the message's source (format=raw) again. */
+  async source(context: AdapterContext, message: {providerId: string}): Promise<Buffer | null> {
+    const found = await this.api(context).raw(message.providerId);
+    return found?.raw ? Buffer.from(found.raw, 'base64url') : null;
+  }
+
   async execute(context: AdapterContext, command: CommandRow): Promise<void> {
     const api = this.api(context);
     if (command.kind === 'mark_all_read') {

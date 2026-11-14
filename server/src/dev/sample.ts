@@ -16,6 +16,7 @@ import {DEFAULT_SCHEDULES} from '../domain/sources.ts';
 import {addDays, zonedInstant} from '../domain/time.ts';
 import * as t from '../db/schema.ts';
 import {seedNews} from './news.ts';
+import {insertDevDigests} from './digest.ts';
 // Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
 import {seedJobs} from '../jobs/index.ts';
 import {loadNewsSnapshot} from './newsSnapshot.ts';
@@ -439,6 +440,9 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         tx.insert(t.attachments).values({messageId: row.id, providerId: `${providerId}-att-${index + 1}`, ...attachment}).run();
       });
     });
+
+    // SV-274: USPS's digests, out of the Inbox, with the days and scans the rail shows.
+    insertDevDigests(tx, accountIds.get('Personal')!);
 
     const calendarIds = new Map<string, number>();
     CALENDARS.forEach((calendar, position) => {

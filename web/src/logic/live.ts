@@ -25,7 +25,8 @@ export function offlineRefuses(event: Pick<KeyboardEvent, 'key' | 'shiftKey' | '
   return ['h', 'e', 'p', 'c', 'd', 'Delete', 'Backspace'].includes(key);
 }
 
-const MAIL_LISTS = ['/mail/inbox', '/mail/counts', '/mail/all', '/mail/triage', '/mail/day'];
+// The agenda rail's USPS mail (SV-274) rides on `mail` too: a digest's scans come as an email does.
+const MAIL_LISTS = ['/mail/inbox', '/mail/counts', '/mail/all', '/mail/triage', '/mail/day', '/mail/mailpieces'];
 
 export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): string[] {
   const under = (prefix: string) => (path: string) => path === prefix || path.startsWith(`${prefix}?`) || path.startsWith(`${prefix}/`);

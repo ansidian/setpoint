@@ -343,6 +343,17 @@ export class ICloudAdapter implements SourceAdapter {
     });
   }
 
+  /** SV-274: the message's source (UID FETCH BODY[]) again. */
+  async source(context: AdapterContext, message: {providerId: string}): Promise<Buffer | null> {
+    return this.withMailbox(context, INBOX, async client => {
+      const uid = uidOf(message.providerId, String(client.mailbox && client.mailbox.uidValidity));
+      if (uid === null) return null;
+      let source: Buffer | undefined;
+      for await (const fetched of client.fetch(String(uid), {uid: true, source: true}, {uid: true})) source = fetched.source;
+      return source ?? null;
+    });
+  }
+
   async execute(context: AdapterContext, command: CommandRow): Promise<void> {
     const {store} = context;
     const rows = command.kind === 'mark_all_read'

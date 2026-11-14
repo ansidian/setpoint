@@ -55,6 +55,7 @@ describe('the mail day (SV-218)', () => {
     const attention = (subject: string) => w.store.db.select().from(t.messages).where(eq(t.messages.subject, subject)).get()!.id;
     setDone(w.store, attention('Your recovery email was changed'), true);
     trashMessage(w.store, attention('Final exam schedule · CS 101'), true);
-    expect(mailDayOf(w.store)).toMatchObject({done: 1, need_you: 1, total: 33});
+    // 33 of the seed's mail, and its 7 USPS digests (SV-274), out of the Inbox but kept.
+    expect(mailDayOf(w.store)).toMatchObject({done: 1, need_you: 1, total: 40});
   });
 });

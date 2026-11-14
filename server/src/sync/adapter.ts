@@ -61,6 +61,11 @@ export interface SourceAdapter {
    * the provider no longer has the email or the part.
    */
   attachment?(context: AdapterContext, message: {providerId: string}, attachmentId: string): Promise<AttachmentBytes | null>;
+  /**
+   * A mail adapter's email, its RFC 822 source fetched again: a USPS digest's scans (SV-274), which
+   * the record doesn't keep. Null when the provider no longer has the email.
+   */
+  source?(context: AdapterContext, message: {providerId: string}): Promise<Buffer | null>;
 }
 
 /** Which adapter serves a source: by provider for real ones, the dev provider for dev ones. */

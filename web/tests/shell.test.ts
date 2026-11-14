@@ -255,9 +255,9 @@ test.each([
 });
 
 describe('live events refresh only what they name', () => {
-  const mounted = ['/mail/inbox', '/mail/counts', '/mail/messages/5', '/mail/messages/7', '/accounts', '/items?from=2026-10-07&to=2026-10-09', '/mail/inboxes', '/calendars', '/todoist/projects'];
+  const mounted = ['/mail/inbox', '/mail/counts', '/mail/messages/5', '/mail/messages/7', '/accounts', '/items?from=2026-10-07&to=2026-10-09', '/mail/inboxes', '/calendars', '/todoist/projects', '/mail/mailpieces?day=2026-10-07'];
   test.each([
-    ['mail: the lists, the counts and the emails named', {type: 'mail', messages: [5], accounts: [4], commands: []}, ['/mail/inbox', '/mail/counts', '/mail/messages/5']],
+    ['mail: the lists, the counts, the emails named and the rail\'s USPS mail (SV-274)', {type: 'mail', messages: [5], accounts: [4], commands: []}, ['/mail/inbox', '/mail/counts', '/mail/messages/5', '/mail/mailpieces?day=2026-10-07']],
     ['items: the item ranges', {type: 'items', items: [2], calendars: [], commands: []}, ['/items?from=2026-10-07&to=2026-10-09']],
     ['items naming a calendar: the calendars and Todoist\'s projects too (SV-25)', {type: 'items', items: [], calendars: [4], commands: []}, ['/items?from=2026-10-07&to=2026-10-09', '/calendars', '/todoist/projects']],
     ['health: the accounts', {type: 'health', sources: [1]}, ['/accounts']],

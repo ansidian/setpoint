@@ -36,7 +36,9 @@ function commandsByMessage(store: Store): Map<number, CommandOut> {
 function candidates(store: Store, accountId?: number): Candidate[] {
   const commands = commandsByMessage(store);
   const attachments = new Map(store.db.select({id: t.attachments.messageId, n: count()}).from(t.attachments).groupBy(t.attachments.messageId).all().map(row => [row.id, row.n]));
-  return store.db.select().from(t.messages).where(accountId ? eq(t.messages.accountId, accountId) : undefined).all().map(row => {
+  // SV-274: USPS's digest is out of the Inbox and its counts; its scans are the agenda rail's.
+  const shown = eq(t.messages.uspsDigest, false);
+  return store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all().map(row => {
     const command = commands.get(row.id) ?? null;
     return {...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0};
   });
@@ -110,10 +112,12 @@ export function inbox(store: Store, accountId?: number): InboxOut {
   };
 }
 
-/** All: every email, Noise included, newest first, by local day; trashed mail left out. */
+/** All: every email, Noise included, newest first, by local day; trashed mail and USPS's digest left out. */
 export function allMail(store: Store, input: {account_id?: number; before?: string; limit: number}): AllOut {
   const commands = commandsByMessage(store);
-  let where = input.account_id ? eq(t.messages.accountId, input.account_id) : undefined;
+  // SV-274: USPS's digest is the agenda rail's, out of All as it's out of the Inbox; search finds it.
+  const shown = eq(t.messages.uspsDigest, false);
+  let where = input.account_id ? and(shown, eq(t.messages.accountId, input.account_id)) : shown;
   if (input.before) {
     const [at, id] = input.before.split('|') as [string, string];
     where = and(where, or(lt(t.messages.receivedAt, at), and(eq(t.messages.receivedAt, at), lt(t.messages.id, Number(id)))));

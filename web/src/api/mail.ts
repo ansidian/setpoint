@@ -283,3 +283,6 @@ export function markAllRead(): Promise<MarkAllReadOut> {
   updateAllRows(row => (markAllReads(row) ? {...row, unread: false} : row));
   return change(() => sendJson<MarkAllReadOut>('POST', '/mail/mark-all-read', {}));
 }
+
+/** SV-274: a day's USPS mail for the agenda rail (src/logic/mailpieces.ts). */
+export const mailpiecesPath = (day: string) => `/mail/mailpieces?day=${day}`;
