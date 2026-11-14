@@ -2,7 +2,8 @@
 // No section on a day with no digest; "No mail today" when the digest says nothing is coming; else
 // one row of thumbnails, as many as fit, the last "+3" when there are more (logic/mailpieces.ts). A
 // thumbnail opens the viewer at that scan: the scan large, "2 of 5" and the day, ← → (buttons, keys
-// or a swipe) stopping at the ends, Esc, a click outside or × closing it. Desktop only (D275).
+// or a swipe) stopping at the ends, Esc, a click outside or × closing it. `L` opens it at the first
+// scan (D573). Desktop only (D275).
 import type {MailpiecesOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {PointerEvent as ReactPointerEvent} from 'react';
@@ -12,6 +13,7 @@ import {dayTitle} from '../../logic/calendar.ts';
 import {MAIL_GAP, MAIL_TILE, mailLine, mailStrip, stepScan} from '../../logic/mailpieces.ts';
 import {useFocusReturn} from '../../ui/focusReturn.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {isTyping, plainKey} from '../../ui/keys.ts';
 
 /** A swipe this far (px) across the scan steps to the next or previous one. */
 const SWIPE_PX = 40;
@@ -36,6 +38,19 @@ export function MailStrip({date}: {date: string}) {
     return () => observer.disconnect();
   }, [showsRow]);
 
+  // `L` opens the selected day's mail at its first scan (D573), as a thumbnail does; on a day with
+  // nothing to show, or with a field, the editor or another dialog in front, it does nothing.
+  useEffect(() => {
+    if (!showsRow || open !== null) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (!plainKey(event, 'l') || isTyping(event) || event.defaultPrevented || document.querySelector('[aria-modal="true"]')) return;
+      event.preventDefault();
+      setOpen({date, at: 0});
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showsRow, open, date]);
+
   if (!digest) return null;
   const scans = digest.scans;
   const {shown, more} = mailStrip(width, scans.length);
@@ -45,6 +60,7 @@ export function MailStrip({date}: {date: string}) {
         <Icon name="mail" size={16} />
         <span className="grow">USPS Informed Delivery</span>
         {digest.pieces > 0 && <span className="ink3 num">{mailLine(digest.pieces, scans.length)}</span>}
+        {showsRow && <span className="kbd" aria-hidden="true">L</span>}
       </div>
       {!showsRow
         ? <div className="rp-mail-none ink3">{digest.pieces === 0 ? 'No mail today' : 'No pictures today'}</div>

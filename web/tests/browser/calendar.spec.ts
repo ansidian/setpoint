@@ -508,7 +508,7 @@ test('a calendar search lights its matches, every occurrence of a series, and le
   }
 });
 
-test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row with "+N", its viewer stepping and stopping at the ends; none on a Sunday, "No mail today" on a Monday', async () => {
+test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row with "+N", its viewer stepping and stopping at the ends, L opening it; none on a Sunday, "No mail today" on a Monday', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -547,9 +547,21 @@ test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row wi
     await page.mouse.click(10, 10);
     await viewer.waitFor({state: 'detached'});
 
-    // Mon, Oct 5: the digest said nothing is coming. Sun, Oct 4: no digest, no section.
+    // L opens the day's mail at its first scan (D573); its hint is in the header.
+    await section.locator('.rp-mail-head .kbd', {hasText: 'L'}).waitFor();
+    await page.keyboard.press('l');
+    await viewer.getByText('1 of 8').waitFor();
+    await page.keyboard.press('Escape');
+    await viewer.waitFor({state: 'detached'});
+
+    // Mon, Oct 5: the digest said nothing is coming, so L opens nothing. Sun, Oct 4: no digest, no section.
     await page.goto(`${setpoint.base}/calendar/2026-10-05`);
-    await page.getByRole('region', {name: 'USPS Informed Delivery'}).getByText('No mail today').waitFor();
+    const none = page.getByRole('region', {name: 'USPS Informed Delivery'});
+    await none.getByText('No mail today').waitFor();
+    assert.equal(await none.locator('.kbd').count(), 0, 'no hint with nothing to open');
+    await page.keyboard.press('l');
+    await setpoint.idle();
+    assert.equal(await page.getByRole('dialog', {name: /^USPS Informed Delivery/}).count(), 0);
     await page.goto(`${setpoint.base}/calendar/2026-10-04`);
     await page.locator('.ag-ghost', {hasText: 'New event'}).waitFor();
     await setpoint.idle();
