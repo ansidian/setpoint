@@ -151,7 +151,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
                       return next;
                     });
                   }}>
-                  <Icon name="format_list_bulleted" size={14} />{subtaskCount(task)}<Icon name={open.has(task.key) ? 'expand_less' : 'expand_more'} size={14} />
+                  <Icon name="subtask" size={14} />{subtaskCount(task)}<Icon name={open.has(task.key) ? 'expand_less' : 'expand_more'} size={14} />
                 </button>
               )}
               {task.project && <span className="ink3 project">{task.project}</span>}

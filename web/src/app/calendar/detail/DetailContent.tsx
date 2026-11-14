@@ -162,7 +162,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {/* SV-273 (D566): a task with none shows the add row alone where the header would be. */}
         {(item.subtasks.length > 0 || addSubtask) && (
           <div className="fd-subtasks">
-            {item.subtasks.length > 0 && <Fact icon="format_list_bulleted"><span><span className="v">Subtasks</span> <span className="ink3 num">{subtaskCount(item)}</span></span></Fact>}
+            {item.subtasks.length > 0 && <Fact icon="subtask"><span><span className="v">Subtasks</span> <span className="ink3 num">{subtaskCount(item)}</span></span></Fact>}
             <Subtasks task={item} ring={ring(item.project)} timeZone={timeZone} onComplete={item.read_only ? undefined : actions?.completeSubtask} onSettle={actions?.settleSubtask}
               onReorder={item.read_only ? undefined : actions?.reorderSubtasks} onAdd={addSubtask} onOpen={item.read_only ? undefined : actions?.openSubtask} onMenu={actions?.subtaskMenu} />
           </div>

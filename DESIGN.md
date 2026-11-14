@@ -4862,7 +4862,7 @@ was decided; the audit itself was retired by D480.
     - **Without actions** (the phone's card) the rings are marks and nothing moves. The Today
       block's lines don't show the count. Adding a subtask, and editing one (its title, date and
       reminders) are in Setpoint since #375; re-parenting stays in Todoist.
-    - The glyph is `format_list_bulleted`, standing in until the set has one for subtasks.
+    - The glyph is `subtask` (Andy's, 2026-11-13: a branch from one dot to another, drawn on 16 and scaled into the set's 960 grid), which replaced the stand-in `format_list_bulleted`.
 374. **USPS Informed Delivery in the agenda rail** (Andy, 2026-11-13; darma SV-274, D564, D565). USPS's
     daily digest email is read for the day's mailpieces, kept 30 days, and shown with the day
     selected in the calendar. Desktop only: the phone stays as it is (D275).

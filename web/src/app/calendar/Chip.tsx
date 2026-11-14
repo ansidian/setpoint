@@ -78,7 +78,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
         {failed ? <Icon name="error" size={14} /> : item.done ? <TaskGlyph done size={12} /> : <span className="ring" style={ring(item.project)} />}
         {shownTime && <span className="t">{shownTime}</span>}
         {counted ? <span className="title">{item.title}</span> : item.title}
-        {counted && <span className="count num"><Icon name="format_list_bulleted" size={12} />{subtaskCount(item)}</span>}
+        {counted && <span className="count num"><Icon name="subtask" size={12} />{subtaskCount(item)}</span>}
         {pending && <Spinner />}
       </div>
     );
