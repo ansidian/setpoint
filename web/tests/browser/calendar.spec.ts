@@ -170,7 +170,7 @@ test('a calendar toggled off leaves the grid and the agenda, and comes back on; 
     await page.locator('.calrow', {hasText: 'Personal'}).click();
     await page.locator('.calrow', {hasText: 'Todoist'}).click();
     await until('back on', () => chips(page, '2026-10-09'), list => list.join() === '7 AMGym,6:30 PMStudy group,7 PMDinner with Sam');
-    await until('Todoist\'s tasks back on Wed Oct 7', () => chips(page, '2026-10-07'), list => list.join() === '7 AMGym,2:30 PMDentist,CS 101 lab report,Pay rent');
+    await until('Todoist\'s tasks back on Wed Oct 7', () => chips(page, '2026-10-07'), list => list.join() === '7 AMGym,2:30 PMDentist,CS 101 lab report1/4,Pay rent');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -275,7 +275,7 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
 
     // Show all turns every calendar back on, and Undo in the toast turns them off again.
     await empty.getByRole('button', {name: 'Show all'}).click();
-    await until('Wed Oct 7 shows all four again', () => chips(page, '2026-10-07'), list => list.join() === '7 AMGym,2:30 PMDentist,CS 101 lab report,Pay rent');
+    await until('Wed Oct 7 shows all four again', () => chips(page, '2026-10-07'), list => list.join() === '7 AMGym,2:30 PMDentist,CS 101 lab report1/4,Pay rent');
     assert.equal(await hiddenMark.count(), 0);
     const toast = page.locator('.toast');
     await until('the toast', () => toast.textContent(), line => line?.startsWith('Showed 5 calendars') ?? false);

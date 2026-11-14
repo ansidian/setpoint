@@ -3,9 +3,10 @@
 // Todoist. SV-20 adds a Google calendar's colour, SV-25 a Todoist project's.
 import type {Colour, TodoistColour, ItemCreateInput, ItemUpdateInput, ItemScopeInput} from '@setpoint/shared';
 import {whenProblem} from '@setpoint/shared';
-import {and, asc, eq} from 'drizzle-orm';
+import {and, asc, eq, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {calendarWritable} from '../domain/calendarAccess.ts';
+import {bySiblingOrder, orderKeyBetween, singleMove} from '../domain/orderKey.ts';
 import {conflict, invalid, notFound} from '../errors.ts';
 import {getSettings} from '../settings.ts';
 import {isoNow} from '../store.ts';
@@ -176,11 +177,48 @@ export function completeItem(store: Store, itemId: number, done: boolean, occurr
     });
   }
   if ((row.doneAt !== null) === done) throw conflict('unchanged', done ? 'That task is already done.' : 'That task is already open.');
+  // SV-272: a subtask's check redraws its parent's checklist; the parent itself stays as it is (D558).
+  const parent = row.parentProviderId === null ? undefined
+    : store.db.select({id: t.items.id}).from(t.items).where(and(eq(t.items.calendarId, row.calendarId), eq(t.items.providerId, row.parentProviderId))).get();
   return createCommand(store, {
     target: 'item', kind: done ? 'item_complete' : 'item_reopen', sourceId: calendarSourceId(store, row.calendarId), payload: {item_id: row.id, done},
     prepare: () => {
       store.db.update(t.items).set({doneAt: done ? isoNow(store) : null}).where(eq(t.items.id, row.id)).run();
-      return {targetId: row.id, previous: {items: [row]}, touched: {items: [row.id], calendars: [row.calendarId]}};
+      return {targetId: row.id, previous: {items: [row]}, touched: {items: parent ? [row.id, parent.id] : [row.id], calendars: [row.calendarId]}};
+    },
+  });
+}
+
+/**
+ * SV-272: a task's subtasks in a new order, every one named once. They show in it at once. Todoist
+ * orders siblings by their order keys, so the one subtask that moved gets a new key between its new
+ * neighbours' and only it is sent; subtasks Todoist gave no keys are each sent their place instead.
+ * The change is the task's (an `item_update`), and Move back puts the subtasks back as they were.
+ */
+export function reorderSubtasks(store: Store, itemId: number, ids: number[]): CommandRow {
+  const row = item(store, itemId);
+  if (row.kind !== 'task' || row.recurringItemId !== null) throw invalid('Only a task has subtasks.');
+  const subtasks = store.db.select().from(t.items)
+    .where(and(eq(t.items.calendarId, row.calendarId), eq(t.items.parentProviderId, row.providerId), isNull(t.items.recurringItemId), eq(t.items.cancelled, false))).all();
+  const known = new Set(subtasks.map(subtask => subtask.id));
+  if (ids.length !== known.size || new Set(ids).size !== ids.length || ids.some(id => !known.has(id))) throw invalid('Name each of the task\'s subtasks once.');
+  const now = [...subtasks].sort(bySiblingOrder).map(subtask => subtask.id);
+  if (now.every((id, at) => id === ids[at])) throw conflict('unchanged', 'The subtasks are already in that order.');
+  const keys = new Map(subtasks.map(subtask => [subtask.id, subtask.orderKey]));
+  let moved: {id: number; order_key: string} | null = null;
+  if (subtasks.every(subtask => subtask.orderKey !== null)) {
+    const id = singleMove(now, ids);
+    if (id === null) throw invalid('Move one subtask at a time.');
+    const at = ids.indexOf(id);
+    const key = orderKeyBetween(at > 0 ? keys.get(ids[at - 1]!)! : null, at < ids.length - 1 ? keys.get(ids[at + 1]!)! : null);
+    if (key === null) throw invalid('Todoist\'s order of these subtasks can\'t be read; reorder them in Todoist.');
+    moved = {id, order_key: key};
+  }
+  return createCommand(store, {
+    target: 'item', kind: 'item_update', sourceId: calendarSourceId(store, row.calendarId), payload: {item_id: row.id, subtask_ids: ids, ...(moved ? {moved} : {})},
+    prepare: () => {
+      ids.forEach((id, at) => store.db.update(t.items).set({childOrder: at, ...(moved?.id === id ? {orderKey: moved.order_key} : {})}).where(eq(t.items.id, id)).run());
+      return {targetId: row.id, previous: {items: subtasks}, touched: {items: [row.id, ...ids], calendars: [row.calendarId]}};
     },
   });
 }

@@ -53,7 +53,7 @@ interface Drag {
  * the page while they're dragged (moving the dragged row's element would end the drag) and show the
  * new order by sliding; `type` names the drag's data.
  */
-export function useLiveOrder<T extends {id: number}>(list: T[], type: string, save: (ids: number[]) => void) {
+export function useLiveOrder<T extends {id: number}>(list: T[], type: string, save: (ids: number[]) => void, className = 'set-group') {
   const [drag, setDrag] = useState<Drag | null>(null);
   const group = useRef<HTMLDivElement>(null);
   const dropped = useRef(false);
@@ -62,7 +62,7 @@ export function useLiveOrder<T extends {id: number}>(list: T[], type: string, sa
 
   const groupProps = {
     ref: group,
-    className: drag ? 'set-group reordering' : 'set-group',
+    className: drag ? `${className} reordering` : className,
     // Taking the drag on entering a row too, so a row sliding under a still pointer still takes the drop.
     onDragEnter: (event: DragEvent) => {
       if (drag && event.dataTransfer.types.includes(type)) event.preventDefault();

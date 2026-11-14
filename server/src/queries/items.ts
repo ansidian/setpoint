@@ -1,12 +1,13 @@
 // The calendar's read queries (SV-2 decision D4): items in a range with recurring events expanded,
 // one item, the calendars and the weather. Events and Todoist tasks are one item model.
-import type {CalendarOut, CommandOut, ItemOut, ItemsOut, RecentPlaceOut, TimeToLeaveOut, TodoistLabelOut, TodoistProjectOut, WeatherDayOut} from '@setpoint/shared';
+import type {CalendarOut, CommandOut, ItemOut, ItemsOut, RecentPlaceOut, SubtaskOut, TimeToLeaveOut, TodoistLabelOut, TodoistProjectOut, WeatherDayOut} from '@setpoint/shared';
 import {eventLink, isTodoistColour} from '@setpoint/shared';
 import {and, asc, eq, gte, isNotNull, lt} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
 import {reopenableOccurrences} from '../commands/itemMirror.ts';
 import * as t from '../db/schema.ts';
 import {calendarWritable} from '../domain/calendarAccess.ts';
+import {bySiblingOrder} from '../domain/orderKey.ts';
 import {occurrenceDates, parseRule} from '../domain/recurrence.ts';
 import {localDay, localTime, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
@@ -25,7 +26,24 @@ function readOnlyCalendars(store: Store): Set<number> {
   return new Set(rows.filter(row => !calendarWritable(row.accessRole)).map(row => row.id));
 }
 
-function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, reopenable: Set<number>, occurrence?: {start: string; end: string}, leave: Map<string, TimeToLeaveOut> = new Map()): ItemOut {
+/**
+ * SV-272: each Todoist task's subtasks by the task's Todoist id, in Todoist's order. A repeating
+ * subtask's done occurrences are rows of their own and aren't listed.
+ */
+function subtasksByParent(rows: ItemRow[], commands: Map<number, CommandOut>): Map<string, SubtaskOut[]> {
+  const found = new Map<string, SubtaskOut[]>();
+  const children = rows.filter(row => row.parentProviderId !== null && row.recurringItemId === null && !row.cancelled).sort(bySiblingOrder);
+  for (const row of children) {
+    const list = found.get(row.parentProviderId!) ?? [];
+    list.push({id: row.id, title: row.title, done: row.doneAt !== null, command: commands.get(row.id) ?? null});
+    found.set(row.parentProviderId!, list);
+  }
+  return found;
+}
+
+const todoistTasks = (store: Store) => store.db.select().from(t.items).where(eq(t.items.kind, 'task')).all();
+
+function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, reopenable: Set<number>, subtasks: Map<string, SubtaskOut[]>, occurrence?: {start: string; end: string}, leave: Map<string, TimeToLeaveOut> = new Map()): ItemOut {
   const start = occurrence?.start ?? row.startsAt;
   return {
     key: occurrence ? `${row.id}@${occurrence.start}` : String(row.id),
@@ -42,6 +60,7 @@ function present(row: ItemRow, command: CommandOut | null, locked: Set<number>, 
     link: row.kind === 'event' ? eventLink({place: row.place, address: row.address, source_url: row.sourceUrl}) : null,
     transparency: row.kind === 'event' ? row.transparency : null,
     description: row.description,
+    subtasks: (row.kind === 'task' && row.recurringItemId === null && subtasks.get(row.providerId)) || [],
   };
 }
 
@@ -87,6 +106,7 @@ export function itemsInRange(store: Store, from: string, to: string): ItemsOut {
   const locked = readOnlyCalendars(store);
   const reopenable = reopenableOccurrences(store);
   const rows = store.db.select().from(t.items).all();
+  const subtasks = subtasksByParent(rows, commands);
   const replaced = new Map<number, Set<string>>();
   for (const row of rows) {
     if (row.recurringItemId !== null) replaced.set(row.recurringItemId, (replaced.get(row.recurringItemId) ?? new Set()).add(row.originalStart!));
@@ -97,18 +117,20 @@ export function itemsInRange(store: Store, from: string, to: string): ItemsOut {
     if (row.cancelled) continue;
     const command = commands.get(row.id) ?? null;
     if (row.kind === 'task') {
+      // SV-272: a subtask with no date is only in its parent's checklist.
+      if (row.dueDate === null) continue;
       // A repeating task done on this day is its completed occurrence's row, not the task's.
       const doneHere = row.recurringItemId === null && replaced.get(row.id)?.has(row.dueDate!);
-      if (row.dueDate! >= from && row.dueDate! < to && !doneHere) items.push(present(row, command, locked, reopenable));
+      if (row.dueDate >= from && row.dueDate < to && !doneHere) items.push(present(row, command, locked, reopenable, subtasks));
     } else if (row.expanded && row.recurringItemId === null) {
       // Google expands this series: its occurrences are rows.
       continue;
     } else if (row.allDay) {
-      if (row.startDate! < to && row.endDate! > from) items.push(present(row, command, locked, reopenable));
+      if (row.startDate! < to && row.endDate! > from) items.push(present(row, command, locked, reopenable, subtasks));
     } else if (row.recurrence && row.recurringItemId === null) {
-      for (const occurrence of occurrences(row, from, to, fromAt, toAt, replaced.get(row.id) ?? new Set(), store.timeZone)) items.push(present(row, command, locked, reopenable, occurrence, leave));
+      for (const occurrence of occurrences(row, from, to, fromAt, toAt, replaced.get(row.id) ?? new Set(), store.timeZone)) items.push(present(row, command, locked, reopenable, subtasks, occurrence, leave));
     } else if (row.startsAt! < toAt && row.endsAt! > fromAt) {
-      items.push(present(row, command, locked, reopenable, undefined, leave));
+      items.push(present(row, command, locked, reopenable, subtasks, undefined, leave));
     }
   }
   const when = (item: ItemOut) => item.starts_at ?? zonedInstant(item.start_date ?? item.due_date!, '00:00', store.timeZone);
@@ -123,13 +145,15 @@ export function itemPresenter(store: Store): (row: ItemRow, occurrence?: {start:
   const locked = readOnlyCalendars(store);
   const leave = leaveTimes(store);
   const reopenable = reopenableOccurrences(store);
-  return (row, occurrence) => present(row, commands.get(row.id) ?? null, locked, reopenable, occurrence, leave);
+  const subtasks = subtasksByParent(todoistTasks(store), commands);
+  return (row, occurrence) => present(row, commands.get(row.id) ?? null, locked, reopenable, subtasks, occurrence, leave);
 }
 
 export function itemDetail(store: Store, itemId: number): ItemOut {
   const row = store.db.select().from(t.items).where(eq(t.items.id, itemId)).get();
   if (!row || row.cancelled) throw notFound('No such item.');
-  return present(row, itemCommands(store).get(row.id) ?? null, readOnlyCalendars(store), reopenableOccurrences(store));
+  const commands = itemCommands(store);
+  return present(row, commands.get(row.id) ?? null, readOnlyCalendars(store), reopenableOccurrences(store), subtasksByParent(todoistTasks(store), commands));
 }
 
 export function calendarList(store: Store): CalendarOut[] {

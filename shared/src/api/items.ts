@@ -6,6 +6,7 @@
 //   PATCH  /api/items/:id              ItemUpdateInput       CommandOut
 //   POST   /api/items/:id/delete       ItemScopeInput        CommandOut
 //   POST   /api/items/:id/complete     ItemCompleteInput     CommandOut
+//   PUT    /api/items/:id/subtasks/order SubtaskOrderInput   CommandOut (SV-272: a task's subtasks, every one, in their new order)
 //   GET    /api/calendars                                     CalendarOut[]
 //   PATCH  /api/calendars/:id          CalendarUpdateInput   CalendarOut (a colour change is a command: `command` says how it went)
 //   GET    /api/weather?from=&to=                             WeatherDayOut[]
@@ -76,6 +77,16 @@ export interface ItemOut extends ItemWhen {
   // SV-264: the description as its provider wrote it (D547): HTML on an event (Google's), Markdown on
   // a task (Todoist's); null for none. Never drawn as raw HTML: web/src/logic/description reads it.
   description: string | null;
+  // SV-272 (D558): a Todoist task's subtasks, in Todoist's order, for its checklist. Each completes
+  // and reopens by its own id (POST /api/items/:id/complete); none of it completes the task.
+  subtasks: SubtaskOut[];
+}
+
+export interface SubtaskOut {
+  id: number;
+  title: string;
+  done: boolean;
+  command: CommandOut | null;
 }
 
 /** Time to Leave for one occurrence (DESIGN.md › Right pane). */
@@ -203,6 +214,7 @@ export type ItemScopeInput = z.infer<typeof itemScopeInput>;
 
 /** Complete or reopen a task; a recurring task names its occurrence by its due date. */
 export const itemCompleteInput = z.strictObject({done: z.boolean(), occurrence_date: localDate.nullable().default(null)});
+export const subtaskOrderInput = z.strictObject({subtask_ids: z.array(id).min(1).max(500)});
 
 /** Each Google calendar, and Todoist as one more toggle (DESIGN.md › Sidebar on Calendar). */
 export interface CalendarOut {

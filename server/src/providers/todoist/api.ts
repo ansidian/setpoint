@@ -21,6 +21,8 @@ export interface TodoistTask {
   is_deleted?: boolean;
   completed_at?: string | null;
   child_order?: number;
+  parent_id?: string | null;
+  order_key?: string | null;
   // F6b: label names.
   labels?: string[];
   // SV-264: Markdown; an empty string when the task has none.

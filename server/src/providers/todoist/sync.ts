@@ -41,12 +41,13 @@ export function todoistCalendar(store: Store) {
 /** A task's columns from Todoist; its reminders are Setpoint's own, which Todoist never holds (SV-109). */
 function taskColumns(task: TodoistTask, projects: Map<string, string>, timeZone: string): Partial<ItemRow> | null {
   const due = task.due ? readDue(task.due, timeZone) : null;
-  // Undated tasks aren't on the calendar (v1's choice too).
-  if (!due) return null;
+  // Undated tasks aren't on the calendar (v1's choice too), except subtasks.
+  if (!due && !task.parent_id) return null;
   return {
     kind: 'task', title: task.content, allDay: true, startsAt: null, endsAt: null, startDate: null, endDate: null,
-    dueDate: due.dueDate, dueAt: due.dueAt, dueString: task.due?.string ?? null, dueRecurring: Boolean(task.due?.is_recurring),
+    dueDate: due?.dueDate ?? null, dueAt: due?.dueAt ?? null, dueString: task.due?.string ?? null, dueRecurring: Boolean(task.due?.is_recurring),
     project: (task.project_id && projects.get(task.project_id)) || null, recurrence: null, labels: task.labels ?? [], description: task.description || null,
+    parentProviderId: task.parent_id ?? null, childOrder: task.parent_id ? task.child_order ?? null : null, orderKey: task.parent_id ? task.order_key ?? null : null,
   };
 }
 
@@ -182,13 +183,13 @@ export async function syncCompleted(store: Store, api: TodoistApi, since: string
     for (const task of completed) {
       const row = byId.get(task.id);
       const due = task.due ? readDue(task.due, store.timeZone) : null;
-      if (!row || !due) continue;
+      if (!row || (!due && !row.parentProviderId)) continue;
       if (held.has(row.id)) {
         skipped = true;
         continue;
       }
       const doneAt = task.completed_at ? new Date(task.completed_at).toISOString() : until;
-      if (task.due?.is_recurring || row.dueRecurring) {
+      if (due && (task.due?.is_recurring || row.dueRecurring)) {
         // The occurrence it completed, unless Setpoint already holds it.
         const exists = store.db.select({id: t.items.id}).from(t.items).where(and(eq(t.items.recurringItemId, row.id), eq(t.items.originalStart, due.dueDate))).get();
         if (exists) continue;

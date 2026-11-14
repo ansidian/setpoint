@@ -119,6 +119,10 @@
 .tk { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 4px; border-radius: 6px; color: var(--ink); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
 .tk .ring { --ring-base: var(--ring, var(--ink2)); width: 12px; height: 12px; vertical-align: -2px; margin: 0 6px 0 0; }
 .tk .task-glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
+/* SV-272: a task with subtasks is a row, its count at the right in `ink3` and its title cut before it. */
+.tk.counted { display: flex; align-items: center; }
+.tk.counted .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tk.counted .count { display: inline-flex; align-items: center; gap: 2px; flex: none; margin-left: 6px; color: var(--ink3); font-size: 11px; }
 .task-glyph.done { color: var(--good); }
 .tk.done { color: var(--ink3); text-decoration: line-through; text-decoration-color: var(--ink3); }
 /* Under the pointer `sub`, so a hovered task doesn't look selected (`sub2`). */
@@ -194,6 +198,23 @@
 @keyframes strike-in { from { background-size: 0% 1px; } }
 .ag-task .spin { margin-right: 6px; }
 .ag-task .project { font-size: 12px; }
+/* SV-272: a task's subtasks, done of all, before its project: a button that opens its checklist
+   under the row. */
+.ag-task .count { font-size: 12px; display: inline-flex; align-items: center; gap: 3px; flex: none; color: var(--ink3); padding: 2px 4px; margin: -2px -4px; border-radius: 6px; }
+.ag-task .count:hover, .ag-task .count[aria-expanded="true"] { color: var(--ink); background: var(--sub2); }
+.ag-subtasks { padding: 0 20px 8px; }
+/* The checklist (Subtasks.tsx), in the floating detail and the day pane: a handle column, the ring,
+   the title. The handle shows under the pointer or with focus; a dragged row is at .5 and the
+   others slide to make room, as Settings' lists do (#14). */
+.subtasks { display: flex; flex-direction: column; }
+.subtask { display: flex; align-items: flex-start; gap: 6px; padding: 2px 0; color: var(--ink2); }
+.subtask .handle { width: 17px; height: 19px; flex: none; display: grid; place-items: center; padding: 0; color: var(--ink3); opacity: 0; cursor: grab; transition: opacity var(--dur-fast) var(--ease); }
+.subtask:hover .handle, .subtask .handle:focus-visible { opacity: 1; }
+.subtask .fd-mark { height: 19px; }
+.subtask .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.subtask.done .title { color: var(--ink3); text-decoration: line-through; }
+.subtask.pending, .subtask.dragging { opacity: .5; }
+.subtasks.reordering > [data-order] { transition: transform var(--dur-medium) var(--ease), opacity var(--dur-fast) var(--ease); }
 /* A timed task's title over its start (D502), its ring on the title's line, as a search result's. */
 .ag-task.timed { align-items: flex-start; }
 .ag-task.timed .check { padding-top: 2px; }

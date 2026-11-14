@@ -1,0 +1,131 @@
+// SV-272 (D558): a task's subtasks. In the floating detail they're a checklist under "Subtasks 1/4",
+// a column in from the header: each ring completes or reopens its subtask alone, never the task; the
+// handle in that column moves it a place with ↑ ↓ (dragging is Settings' live order, order.ts), the
+// rows showing the new order at once. Without actions (the phone) the rings are marks and nothing
+// moves. On the grid the task's chip ends in the count, on its one line.
+import type {CalendarOut, ItemOut, SubtaskOut} from '@setpoint/shared';
+import {SEED_TIME_ZONE} from '@setpoint/shared';
+import {expect, test, vi} from 'vitest';
+import {page, userEvent} from 'vitest/browser';
+import {render} from 'vitest-browser-react';
+import '../../src/app/calendar/calendar.css';
+import '../../src/app/calendar/detail/detail.css';
+import {Chip} from '../../src/app/calendar/Chip.tsx';
+import {DetailContent} from '../../src/app/calendar/detail/DetailContent.tsx';
+import type {DetailActions} from '../../src/app/calendar/detail/DetailContent.tsx';
+
+const TODOIST: CalendarOut = {id: 4, provider: 'todoist', account_id: null, name: 'Todoist', colour: null, position: 4, visible: true, listed: true, writable: true, command: null};
+const sub = (id: number, title: string, done = false): SubtaskOut => ({id, title, done, command: null});
+const CHECKLIST = [sub(21, 'Plot the timing data', true), sub(22, 'Write the analysis'), sub(23, 'Proofread'), sub(24, 'Submit on the portal')];
+
+function task(fields: Partial<ItemOut> = {}): ItemOut {
+  return {
+    key: '7', id: 7, calendar_id: 4, kind: 'task', title: 'CS 101 lab report', time_zone: null, recurring: false, recurrence: null, occurrence_start: null,
+    place: null, address: null, attendees: [], reminders: [], leave_reminder: false, project: 'School', done: false, done_at: null, can_reopen: false, command: null,
+    all_day: true, starts_at: null, ends_at: null, start_date: null, end_date: null, due_date: '2026-10-07', due_at: null,
+    read_only: false, due_string: null, time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: null, description: null, subtasks: CHECKLIST, ...fields,
+  };
+}
+
+/** The card's actions as spies; a reorder never settles, so the order it sent stays shown. */
+function actions() {
+  return {
+    complete: vi.fn<DetailActions['complete']>(),
+    completeSubtask: vi.fn<NonNullable<DetailActions['completeSubtask']>>(),
+    reorderSubtasks: vi.fn<NonNullable<DetailActions['reorderSubtasks']>>(() => new Promise(() => {})),
+  };
+}
+
+async function card(item: ItemOut, offered?: DetailActions) {
+  return render(
+    <div className="fd" role="dialog" aria-label={item.title} style={{position: 'relative', width: 340}}>
+      <div className="card float"><div className="fd-body"><div className="fd-layer in">
+        <DetailContent target={{item, date: '2026-10-07', calendar: TODOIST}} timeZone={SEED_TIME_ZONE} actions={offered} onClose={() => {}} onEdit={() => {}} />
+      </div></div></div>
+    </div>,
+  );
+}
+
+const titles = () => [...document.querySelectorAll('.subtask .title')].map(title => title.textContent);
+
+test('the card lists them under "Subtasks 1/4", in order, the done one struck through, a column in from the header', async () => {
+  await card(task(), actions());
+  await expect.element(page.getByText('Subtasks')).toBeVisible();
+  expect(document.querySelector('.fd-subtasks .fact')!.textContent).toBe('Subtasks 1/4');
+  expect(titles()).toEqual(['Plot the timing data', 'Write the analysis', 'Proofread', 'Submit on the portal']);
+  expect([...document.querySelectorAll('.subtask')].map(row => row.classList.contains('done'))).toEqual([true, false, false, false]);
+  // Each ring sits to the right of the header's glyph, its handle in the glyph's column.
+  const glyph = document.querySelector('.fd-subtasks .fact .icon')!.getBoundingClientRect();
+  const handle = document.querySelector('.subtask .handle')!.getBoundingClientRect();
+  const ring = document.querySelector('.subtask .fd-mark')!.getBoundingClientRect();
+  expect(Math.abs(handle.left - glyph.left)).toBeLessThanOrEqual(1);
+  expect(ring.left).toBeGreaterThanOrEqual(glyph.right);
+});
+
+test('a subtask\'s ring completes it, its done check reopens it, and neither completes the task', async () => {
+  const offered = actions();
+  await card(task(), offered);
+  await page.getByRole('button', {name: 'Complete Proofread'}).click();
+  expect(offered.completeSubtask).toHaveBeenLastCalledWith(CHECKLIST[2]);
+  await page.getByRole('button', {name: 'Reopen Plot the timing data'}).click();
+  expect(offered.completeSubtask).toHaveBeenLastCalledWith(CHECKLIST[0]);
+  expect(offered.complete).not.toHaveBeenCalled();
+});
+
+test('a subtask waiting for Todoist is at .5 and its ring does nothing', async () => {
+  const offered = actions();
+  const pending = {id: 9, target: 'item', target_id: 23, kind: 'item_complete', state: 'pending', provider: 'todoist', provider_message: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} as const;
+  await card(task({subtasks: CHECKLIST.map(one => (one.id === 23 ? {...one, command: pending} : one))}), offered);
+  const ring = page.getByRole('button', {name: 'Complete Proofread'});
+  await expect.element(ring).toHaveAttribute('data-tip', 'Waiting for Todoist');
+  await ring.click({force: true});
+  expect(offered.completeSubtask).not.toHaveBeenCalled();
+  expect(getComputedStyle(document.querySelectorAll('.subtask')[2]!).opacity).toBe('0.5');
+});
+
+test('↓ on a handle moves the subtask a place: every id in the new order, shown at once; ↑ on the first does nothing', async () => {
+  const offered = actions();
+  await card(task(), offered);
+  (document.querySelector('[aria-label="Move Plot the timing data"]') as HTMLElement).focus();
+  await userEvent.keyboard('{ArrowUp}');
+  expect(offered.reorderSubtasks).not.toHaveBeenCalled();
+  (document.querySelector('[aria-label="Move Write the analysis"]') as HTMLElement).focus();
+  await userEvent.keyboard('{ArrowDown}');
+  expect(offered.reorderSubtasks).toHaveBeenCalledWith(expect.objectContaining({id: 7}), [21, 23, 22, 24]);
+  expect(titles()).toEqual(['Plot the timing data', 'Proofread', 'Write the analysis', 'Submit on the portal']);
+});
+
+test('without actions the rings are marks and nothing moves; a task waiting on a change keeps its subtasks where they are', async () => {
+  const plain = await card(task());
+  expect(titles()).toHaveLength(4);
+  expect(document.querySelector('.subtask button')).toBeNull();
+  expect(document.querySelector('.subtask[draggable="true"]')).toBeNull();
+  await plain.unmount();
+  const waiting = {id: 9, target: 'item', target_id: 7, kind: 'item_update', state: 'pending', provider: 'todoist', provider_message: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} as const;
+  await card(task({command: waiting}), actions());
+  expect(document.querySelector('.subtask button.handle')).toBeNull();
+  await expect.element(page.getByRole('button', {name: 'Complete Proofread'})).toBeVisible();
+});
+
+test('a task with no subtasks has no checklist', async () => {
+  await card(task({subtasks: []}), actions());
+  await expect.element(page.getByText('School')).toBeVisible();
+  expect(document.querySelector('.fd-subtasks')).toBeNull();
+});
+
+test('on the grid the task\'s chip ends in the count, on its one line, as tall as a task without one', async () => {
+  const chip = (item: ItemOut) => <Chip item={item} calendar={TODOIST} selected={false} now={Date.parse('2026-10-07T16:00:00.000Z')} timeZone={SEED_TIME_ZONE} onSelect={() => {}} />;
+  await render(<div style={{width: 120, display: 'flex', flexDirection: 'column', gap: 3}}>{chip(task())}{chip(task({key: '8', id: 8, title: 'Pay rent', subtasks: []}))}</div>);
+  const [counted, plain] = [...document.querySelectorAll('.tk')].map(one => one.getBoundingClientRect()) as [DOMRect, DOMRect];
+  const count = document.querySelector('.tk .count')!;
+  expect(count.textContent).toBe('1/4');
+  expect(counted.height).toBe(plain.height);
+  const box = count.getBoundingClientRect();
+  expect(box.top).toBeGreaterThanOrEqual(counted.top);
+  expect(box.bottom).toBeLessThanOrEqual(counted.bottom);
+  expect(box.right).toBeLessThanOrEqual(counted.right);
+  // The title gives way to it, cut with an ellipsis, never under it.
+  const title = document.querySelector('.tk .title')!;
+  expect(title.getBoundingClientRect().right).toBeLessThanOrEqual(box.left);
+  expect(title.scrollWidth).toBeGreaterThan(title.clientWidth);
+});

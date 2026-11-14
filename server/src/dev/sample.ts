@@ -303,7 +303,8 @@ const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'holidays' | 'todoist';
 
 type SampleItem = {calendar: (typeof CALENDARS)[number]['key']; title: string} & (
   | {kind: 'event'; date: string; start: string; end: string; recurrence?: string; place?: string; address?: string; attendees?: string[]; reminders?: number[]; leave?: true; url?: string; free?: true; uid?: string; description?: string}
-  | {kind: 'task'; due: string; project: string; done?: [string, string]; description?: string}
+  // SV-272: a subtask names its parent by title and has no date of its own.
+  | {kind: 'task'; due?: string; project: string; done?: [string, string]; description?: string; parent?: string}
   | {kind: 'day'; date: string}
 );
 
@@ -344,6 +345,11 @@ export const SAMPLE_ITEMS: SampleItem[] = [
   {calendar: 'todoist', kind: 'task', title: 'Return library books', due: '2026-10-05', project: 'Inbox', done: ['2026-10-05', '17:30']},
   // SV-191: an all-day event on the read-only holiday calendar, after October's busy weeks.
   {calendar: 'holidays', kind: 'day', title: 'Veterans Day', date: '2026-11-11'},
+  // SV-272: a task's checklist, one of it done; last, so the items before keep their ids.
+  {calendar: 'todoist', kind: 'task', title: 'Plot the timing data', project: 'School', parent: 'CS 101 lab report', done: ['2026-10-06', '20:15']},
+  {calendar: 'todoist', kind: 'task', title: 'Write the analysis', project: 'School', parent: 'CS 101 lab report'},
+  {calendar: 'todoist', kind: 'task', title: 'Proofread', project: 'School', parent: 'CS 101 lab report'},
+  {calendar: 'todoist', kind: 'task', title: 'Submit on the portal', project: 'School', parent: 'CS 101 lab report'},
 ];
 
 /** Forecasts only where the brief draws them: sun on the 7th, clouds on the 8th, rain on the 13th. */
@@ -458,7 +464,10 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         tx.insert(t.items).values({...common, kind: 'event', allDay: true, startDate: item.date, endDate: addDays(item.date, 1)}).run();
       } else {
         tx.insert(t.items).values({
-          ...common, kind: 'task', allDay: true, dueDate: item.due, project: item.project, doneAt: item.done ? iso(item.done) : null, description: item.description ?? null,
+          ...common, kind: 'task', allDay: true, dueDate: item.due ?? null, project: item.project, doneAt: item.done ? iso(item.done) : null, description: item.description ?? null,
+          parentProviderId: item.parent ? `seed-item-${SAMPLE_ITEMS.findIndex(one => one.title === item.parent) + 1}` : null, childOrder: item.parent ? at : null,
+          // Order keys as Todoist gives them, in the list's order (two base-62 digits after the head).
+          orderKey: item.parent ? `b${String(at).padStart(2, '0')}` : null,
         }).run();
       }
     });

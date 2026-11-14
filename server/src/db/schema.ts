@@ -258,6 +258,10 @@ export const items = sqliteTable('items', {
   // SV-264: the description as its provider wrote it, never rewritten on the way in (D547): a Google
   // event's HTML, a Todoist task's Markdown. Sent back only when the user changed it.
   description: text('description'),
+  parentProviderId: text('parent_provider_id'),
+  childOrder: integer('child_order'),
+  // Todoist's order key: siblings sort by it as text (server/src/domain/orderKey.ts).
+  orderKey: text('order_key'),
 }, table => [
   index('items_ical_uid').on(table.calendarId, table.icalUid),
   uniqueIndex('items_calendar_provider').on(table.calendarId, table.providerId),

@@ -445,7 +445,8 @@ export function draftPreview(draft: Draft & {reminders: number[]}, timeZone: str
   return {
     ...input, ...(draft.kind === 'task' && !input.project ? {project: defaultProject} : {}),
     key: `draft:${draft.id}`, id: -draft.id, recurring: false, occurrence_start: null, done: false, done_at: null, command: null,
-    read_only: false, due_string: null, time_to_leave: null, reminders: draft.reminders, time_zone: input.time_zone,
+    read_only: false, due_string: null, time_to_leave: null, reminders: draft.reminders, time_zone: input.time_zone, subtasks: [],
+    can_reopen: false, link: null, transparency: input.kind === 'event' ? 'opaque' : null,
   } as ItemOut;
 }
 

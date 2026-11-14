@@ -1,16 +1,17 @@
 // The Todoist adapter against a fake Todoist on 127.0.0.1: the mirror (with v1's Z-suffix bug
 // fixed), changes through the command layer, a completed repeating task kept on its day (the
 // tombstone) whether completed here or in Todoist's app, revoked tokens, and OAuth at v1's path.
-import {itemCreateInput, itemScopeInput, itemUpdateInput} from '@setpoint/shared';
+import {calendarSearchInput, itemCreateInput, itemScopeInput, itemUpdateInput} from '@setpoint/shared';
 import {and, eq, isNull} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {moveBackCommand, retryCommand} from '../src/commands/index.ts';
-import {completeItem, createItem, deleteItem, setProjectColour, updateItem} from '../src/commands/items.ts';
+import {completeItem, createItem, deleteItem, reorderSubtasks, setProjectColour, updateItem} from '../src/commands/items.ts';
 import * as t from '../src/db/schema.ts';
 import {readDue, repeatAfter, repeatOf, writeDue} from '../src/providers/todoist/due.ts';
 import {todoistAdapter} from '../src/providers/todoist/index.ts';
 import {itemsInRange, todoistLabels, todoistProjects} from '../src/queries/items.ts';
 import {sourceList} from '../src/queries/sources.ts';
+import {searchCalendar} from '../src/search/calendar.ts';
 import {updateSettings} from '../src/settings.ts';
 import {readSourceCredentials, writeSourceCredentials} from '../src/secrets/store.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
@@ -923,5 +924,142 @@ describe('connecting Todoist', () => {
     const w = world();
     const c = await signedIn(w);
     expect((await c.send('POST', '/api/todoist/connect')).body.error.code).toBe('todoist_not_configured');
+  });
+});
+
+describe('SV-272: a task\'s subtasks', () => {
+  /** Pay rent with three subtasks, the middle one dated; `keys` gives them Todoist's order keys. */
+  async function checklistWorld({keys = true} = {}) {
+    const world = await todoistWorld();
+    const {todoist} = world;
+    const sub = (id: string, content: string, place: number, key: string, due: {date: string; string: string; is_recurring: boolean} | null = null) =>
+      todoist.put({id, content, project_id: 'p-home', parent_id: 't-rent', child_order: place, order_key: keys ? key : null, due});
+    // Out of their order in Todoist's answer, as a sync may send them.
+    sub('t-stamp', 'Buy a stamp', 2, 'a2');
+    sub('t-cheque', 'Write the cheque', 0, 'a0');
+    sub('t-envelope', 'Find an envelope', 1, 'a1', {date: '2026-10-08', string: 'Oct 8', is_recurring: false});
+    await world.run();
+    const rent = () => world.day('2026-10-07').find(item => item.title === 'Pay rent')!;
+    const checklist = () => rent().subtasks.map(subtask => `${subtask.done ? '●' : '○'} ${subtask.title}`);
+    return {...world, rent, checklist};
+  }
+
+  test('are mirrored with their task, in Todoist\'s order; one with no date is only in the checklist, one with a date is on its day too', async () => {
+    const {tasks, checklist, day, w} = await checklistWorld();
+    expect(checklist()).toEqual(['○ Write the cheque', '○ Find an envelope', '○ Buy a stamp']);
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '○ Water plants']);
+    expect(tasks('2026-10-08')).toEqual(['○ Find an envelope']);
+    expect(day('2026-10-08')[0]!.subtasks).toEqual([]);
+    // An undated task that is nobody's subtask still isn't mirrored.
+    expect(w.store.db.select().from(t.items).where(eq(t.items.title, 'Learn piano')).get()).toBeUndefined();
+  });
+
+  test('without order keys they sort by child_order', async () => {
+    const {checklist} = await checklistWorld({keys: false});
+    expect(checklist()).toEqual(['○ Write the cheque', '○ Find an envelope', '○ Buy a stamp']);
+  });
+
+  test('an undated one isn\'t found by Calendar search', async () => {
+    const {w} = await checklistWorld();
+    const hits = searchCalendar(w.store, calendarSearchInput.parse({text: 'stamp'}));
+    expect(hits.results.map(result => result.item.title)).toEqual([]);
+  });
+
+  test('checking one closes it in Todoist and leaves its task open, even when it\'s the last; its check reopens it', async () => {
+    const {w, todoist, run, task, command, rent, checklist} = await checklistWorld();
+    for (const id of ['t-cheque', 't-envelope', 't-stamp']) {
+      const done = completeItem(w.store, task(id).id, true);
+      expect((command(done.id).payload.touched as {items: number[]}).items).toEqual([task(id).id, task('t-rent').id]);
+      await run();
+      expect(command(done.id).state).toBe('confirmed');
+    }
+    expect(todoist.task('t-stamp')).toMatchObject({checked: true});
+    expect(checklist()).toEqual(['● Write the cheque', '● Find an envelope', '● Buy a stamp']);
+    expect(rent().done).toBe(false);
+    expect(todoist.task('t-rent')).toMatchObject({checked: false});
+    completeItem(w.store, task('t-stamp').id, false);
+    await run();
+    expect(checklist()).toEqual(['● Write the cheque', '● Find an envelope', '○ Buy a stamp']);
+    expect(todoist.task('t-stamp')).toMatchObject({checked: false});
+  });
+
+  test('one checked in Todoist\'s app is done here, with no date to go by', async () => {
+    const {w, todoist, run, checklist} = await checklistWorld();
+    todoist.completeInTodoist('t-stamp');
+    w.advance(5 * 60_000);
+    await run();
+    expect(checklist()).toEqual(['○ Write the cheque', '○ Find an envelope', '● Buy a stamp']);
+  });
+
+  test('one deleted in Todoist, or moved out from under its task with no date, leaves the checklist', async () => {
+    const {w, todoist, run, checklist} = await checklistWorld();
+    todoist.put({...todoist.task('t-stamp')!, is_deleted: true});
+    todoist.put({...todoist.task('t-cheque')!, parent_id: null});
+    w.advance(5 * 60_000);
+    await run();
+    expect(checklist()).toEqual(['○ Find an envelope']);
+    expect(w.store.db.select().from(t.items).where(eq(t.items.providerId, 't-cheque')).get()).toBeUndefined();
+  });
+
+  test('reordering sends Todoist one new order key, for the subtask that moved, between its new neighbours\'', async () => {
+    const {w, todoist, run, task, command, checklist} = await checklistWorld();
+    const ids = (...providerIds: string[]) => providerIds.map(id => task(id).id);
+    const moved = reorderSubtasks(w.store, task('t-rent').id, ids('t-cheque', 't-stamp', 't-envelope'));
+    expect(checklist()).toEqual(['○ Write the cheque', '○ Buy a stamp', '○ Find an envelope']);
+    await run();
+    expect(command(moved.id)).toMatchObject({state: 'confirmed', kind: 'item_update', targetId: task('t-rent').id});
+    const sent = todoist.requests.filter(request => request.path === '/api/v1/sync' && request.body.commands).map(request => JSON.parse(request.body.commands as string)[0]);
+    expect(sent.map(one => [one.type, one.args])).toEqual([['item_update', {id: 't-stamp', order_key: 'a0V'}]]);
+    expect(todoist.task('t-stamp')).toMatchObject({order_key: 'a0V'});
+    // Todoist's own answer on the next poll keeps the order.
+    w.advance(5 * 60_000);
+    await run();
+    expect(checklist()).toEqual(['○ Write the cheque', '○ Buy a stamp', '○ Find an envelope']);
+  });
+
+  test('reordering subtasks Todoist gave no keys sends each one its place', async () => {
+    const {w, todoist, run, task, command, checklist} = await checklistWorld({keys: false});
+    const moved = reorderSubtasks(w.store, task('t-rent').id, ['t-stamp', 't-envelope', 't-cheque'].map(id => task(id).id));
+    await run();
+    expect(command(moved.id).state).toBe('confirmed');
+    const sent = todoist.requests.filter(request => request.path === '/api/v1/sync' && request.body.commands).map(request => JSON.parse(request.body.commands as string)[0]);
+    expect(sent.map(one => [one.type, one.args])).toEqual([['item_reorder', {items: [{id: 't-stamp', child_order: 0}, {id: 't-envelope', child_order: 1}, {id: 't-cheque', child_order: 2}]}]]);
+    w.advance(5 * 60_000);
+    await run();
+    expect(checklist()).toEqual(['○ Buy a stamp', '○ Find an envelope', '○ Write the cheque']);
+  });
+
+  test('a reorder Todoist refuses stays in place until Move back puts the subtasks back', async () => {
+    const {w, todoist, run, task, command, checklist, rent} = await checklistWorld();
+    todoist.refuseCommand({error: 'Invalid argument value', error_code: 20, error_tag: 'INVALID_ARGUMENT_VALUE', http_code: 400, error_extra: {}});
+    const moved = reorderSubtasks(w.store, task('t-rent').id, ['t-envelope', 't-cheque', 't-stamp'].map(id => task(id).id));
+    await run();
+    expect(command(moved.id)).toMatchObject({state: 'failed', providerMessage: 'Invalid argument value (400 Bad Request)'});
+    expect(rent().command).toMatchObject({state: 'failed', can_move_back: true});
+    expect(checklist()).toEqual(['○ Find an envelope', '○ Write the cheque', '○ Buy a stamp']);
+    moveBackCommand(w.store, moved.id);
+    expect(checklist()).toEqual(['○ Write the cheque', '○ Find an envelope', '○ Buy a stamp']);
+    expect(task('t-envelope').orderKey).toBe('a1');
+  });
+
+  test('a reorder names each subtask once, moves one at a time, and changes something', async () => {
+    const {w, task} = await checklistWorld();
+    const rent = task('t-rent').id;
+    const [cheque, envelope, stamp] = ['t-cheque', 't-envelope', 't-stamp'].map(id => task(id).id) as [number, number, number];
+    expect(() => reorderSubtasks(w.store, rent, [cheque, envelope])).toThrow('Name each of the task\'s subtasks once.');
+    expect(() => reorderSubtasks(w.store, rent, [cheque, envelope, envelope])).toThrow('Name each of the task\'s subtasks once.');
+    expect(() => reorderSubtasks(w.store, rent, [cheque, envelope, task('t-plants').id])).toThrow('Name each of the task\'s subtasks once.');
+    expect(() => reorderSubtasks(w.store, rent, [cheque, envelope, stamp])).toThrow('The subtasks are already in that order.');
+  });
+
+  test('PUT /api/items/:id/subtasks/order answers with the task\'s command', async () => {
+    const {w, task} = await checklistWorld();
+    const c = await signedIn(w);
+    const order = ['t-stamp', 't-cheque', 't-envelope'].map(id => task(id).id);
+    const answer = await c.send('PUT', `/api/items/${task('t-rent').id}/subtasks/order`, {body: {subtask_ids: order}});
+    expect(answer.status).toBe(200);
+    expect(answer.body).toMatchObject({target: 'item', target_id: task('t-rent').id, kind: 'item_update', state: 'pending'});
+    const read = await c.send('GET', `/api/items/${task('t-rent').id}`);
+    expect((read.body as {subtasks: {id: number}[]}).subtasks.map(subtask => subtask.id)).toEqual(order);
   });
 });

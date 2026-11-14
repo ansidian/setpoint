@@ -11,8 +11,9 @@
 // all", rather than "No events" (SV-56). The editor (Editor.tsx) takes the pane's place. Until the
 // day's items and the calendars have come, its line and agenda are a skeleton, never "Nothing
 // planned" (#227).
-import type {CalendarOut, ItemOut, SourceOut, WeatherDayOut} from '@setpoint/shared';
-import {useState} from 'react';
+import type {CalendarOut, ItemOut, SourceOut, SubtaskOut, WeatherDayOut} from '@setpoint/shared';
+import {Fragment, useState} from 'react';
+import {subtaskCount, Subtasks} from './Subtasks.tsx';
 import type {CSSProperties, ReactNode} from 'react';
 import {useResource} from '../../api/client.ts';
 import {SOURCES_PATH} from '../../api/settings.ts';
@@ -54,14 +55,19 @@ interface DayPaneProps {
   onSelectItem: (item: ItemOut) => void;
   onNew: (kind: 'event' | 'task') => void;
   onComplete: (task: ItemOut) => void;
+  // SV-272: a subtask's check, and a task's subtasks in a new order.
+  onCompleteSubtask: (subtask: SubtaskOut) => void;
+  onReorderSubtasks: (task: ItemOut, ids: number[]) => Promise<unknown>;
   // Turns every hidden calendar back on.
   onShowAll: () => void;
 }
 
 const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>;
 
-export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onShowAll}: DayPaneProps) {
+export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onCompleteSubtask, onReorderSubtasks, onShowAll}: DayPaneProps) {
   const arrived = useArrival(!loading, date);
+  // SV-272: the tasks whose checklists are open under their rows, by key.
+  const [open, setOpen] = useState(new Set<string>());
   const ring = useRingColour();
   // A calendar just toggled fades its rows out or in, as its chips do (polish audit calpanes-11).
   const fade = useCalendarFade();
@@ -108,7 +114,8 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
         {day.tasks.map(task => {
           const time = taskTime(task, timeZone);
           return (
-            <a key={task.key} className={['ag-item ag-task', time && 'timed', task.done && 'done', justDone.has(task.key) && 'just-done', selected.has(task.key) && 'sel', task.command?.state === 'pending' && 'pending', fade(task.calendar_id)].filter(Boolean).join(' ')} href="#" data-key={task.key}
+            <Fragment key={task.key}>
+            <a className={['ag-item ag-task', time && 'timed', task.done && 'done', justDone.has(task.key) && 'just-done', selected.has(task.key) && 'sel', task.command?.state === 'pending' && 'pending', fade(task.calendar_id)].filter(Boolean).join(' ')} href="#" data-key={task.key}
               onClick={event => {
                 event.preventDefault();
                 onSelectItem(task);
@@ -126,8 +133,27 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
                 : <span className="grow title"><span>{task.title}</span></span>}
               {/* Waiting, the spinner comes before the project, which stays (polish audit calpanes-08). */}
               {task.command?.state === 'pending' && <Spinner />}
+              {task.subtasks.length > 0 && (
+                <button className="num count" type="button" aria-expanded={open.has(task.key)}
+                  aria-label={`${task.subtasks.filter(subtask => subtask.done).length} of ${task.subtasks.length} subtasks done`} data-tip={open.has(task.key) ? 'Hide subtasks' : 'Show subtasks'}
+                  onClick={event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setOpen(keys => {
+                      const next = new Set(keys);
+                      if (!next.delete(task.key)) next.add(task.key);
+                      return next;
+                    });
+                  }}>
+                  <Icon name="format_list_bulleted" size={14} />{subtaskCount(task)}<Icon name={open.has(task.key) ? 'expand_less' : 'expand_more'} size={14} />
+                </button>
+              )}
               {task.project && <span className="ink3 project">{task.project}</span>}
             </a>
+            {task.subtasks.length > 0 && open.has(task.key) && (
+              <div className="ag-subtasks"><Subtasks task={task} ring={ring(task.project)} onComplete={task.read_only ? undefined : onCompleteSubtask} onReorder={task.read_only ? undefined : onReorderSubtasks} /></div>
+            )}
+            </Fragment>
           );
         })}
         {/* An empty day is room to plan (polish audit calpanes-09): New event C and New task D as dashed ghost rows. */}

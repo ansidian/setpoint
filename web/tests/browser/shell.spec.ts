@@ -351,7 +351,8 @@ test('SV-241: a timed task shows its time and takes its place by it, among the T
     await page.goto(`${setpoint.base}/calendar/2026-10-07`);
     const tasks = page.locator('.rpane .ag-task');
     await until('the day\'s tasks', () => tasks.allTextContents(), texts => texts.length === 2);
-    assert.deepEqual(await tasks.allTextContents(), ['Pay rent8:00 AMHome', 'CS 101 lab reportSchool']);
+    // SV-272: the lab report's subtasks, done of all, before its project.
+    assert.deepEqual(await tasks.allTextContents(), ['Pay rent8:00 AMHome', 'CS 101 lab report1/4School']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

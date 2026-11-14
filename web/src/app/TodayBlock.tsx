@@ -20,7 +20,7 @@ import type {CSSProperties, MouseEvent, ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
-import {CALENDARS_PATH, completeItem, deleteItem, itemsPath} from '../api/items.ts';
+import {CALENDARS_PATH, completeItem, deleteItem, itemsPath, reorderSubtasks} from '../api/items.ts';
 import type {Entry, FoldRules} from '../logic/fold.ts';
 import {localDate} from '../logic/format.ts';
 import type {Route} from '../logic/route.ts';
@@ -175,6 +175,14 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
 
   const actionsFor = (item: ItemOut): DetailActions => ({
     complete,
+    // SV-272: a subtask's check says so with Undo, as its task's does.
+    completeSubtask: subtask => void completeItem(subtask.id, !subtask.done)
+      .then(done => showToast(`${subtask.done ? 'Reopened' : 'Completed'} ${subtask.title}`, {
+        label: 'Undo',
+        run: () => void completeItem(done.target_id, subtask.done).catch(toastFailure(`Couldn't ${subtask.done ? 'complete' : 'reopen'} ${subtask.title}`)),
+      }))
+      .catch(toastFailure(`Couldn't ${subtask.done ? 'reopen' : 'complete'} ${subtask.title}`)),
+    reorderSubtasks: (task, ids) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`)),
     open: one => navigate(itemRoute(one)),
     // A repeating event asks which of its events go; Calendar asks that.
     ...(item.kind === 'event' && item.recurring ? {} : {remove}),

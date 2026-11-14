@@ -16,12 +16,12 @@
 // SV-18 (DESIGN.md › Week view): Month | Week, M and W, and the week view (WeekGrid), whose arrows
 // page a week; a range dragged there opens the editor on it, and a move or resize is sent as a drop
 // is, the recurring scope asked first. The view rides in the address (?view=week).
-import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, ItemChanges, ItemCreateInput, ItemOut, ItemsOut, RecurringScope, WeatherDayOut} from '@setpoint/shared';
+import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, ItemChanges, ItemCreateInput, ItemOut, ItemsOut, RecurringScope, SubtaskOut, WeatherDayOut} from '@setpoint/shared';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {ApiFailure, useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, untilSettled, updateItem} from '../../api/items.ts';
+import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, reorderSubtasks, retryChange, untilSettled, updateItem} from '../../api/items.ts';
 import {addMonths, dayTitle, FIRST_WEEK, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, monthTopRow, timeRange, weekIndex} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {addDays, localDate, monthName} from '../../logic/format.ts';
@@ -805,8 +805,12 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     else drop([{item: ask.item, scope: ask.scope}]);
   };
 
+  const reorder = (task: ItemOut, ids: number[]) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`));
+
   const actions: DetailActions = {
     complete: task => complete(task),
+    completeSubtask: subtask => completeSubtask(subtask),
+    reorderSubtasks: (task, ids) => reorder(task, ids),
     clone: item => create([copyOf(item, 0, zone)], `Couldn't clone ${item.title}`, () => `Cloned ${item.title}`),
     copy: item => copy([item]),
     colour: recolour,
@@ -920,6 +924,16 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         next.delete(task.key);
         return next;
       }));
+  };
+
+  // SV-272: a subtask's check says so with Undo, as its task's does; a repeating one's Undo reopens
+  // the done occurrence the completion made (D510).
+  const completeSubtask = (subtask: SubtaskOut, undoing = false) => {
+    void completeItem(subtask.id, !subtask.done)
+      .then(command => {
+        if (!undoing) said(`${subtask.done ? 'Reopened' : 'Completed'} ${subtask.title}`, () => completeSubtask({...subtask, id: command.target_id, done: !subtask.done}, true));
+      })
+      .catch(toastFailure(`Couldn't ${subtask.done ? 'reopen' : 'complete'} ${subtask.title}`));
   };
 
   useEffect(() => {
@@ -1110,7 +1124,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         ) : compact && !dayPane ? null : (
           <DayPane date={selectedDay} today={today} loading={!dayMonth || !calendars} items={paneItems}
             failed={dayFailed ? <LoadFailed what="this day" loads={[dayMonthLoad, calendarsLoad]} /> : null} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
-            selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null, false, true)} onNew={newItem} onComplete={task => complete(task)}
+            selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null, false, true)} onNew={newItem} onComplete={task => complete(task)} onCompleteSubtask={subtask => completeSubtask(subtask)} onReorderSubtasks={reorder}
             onShowAll={() => showHidden(calendars ?? [])} />
         )}
       </div>

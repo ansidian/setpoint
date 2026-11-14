@@ -15,6 +15,7 @@ import {chipTime, isPast} from '../../logic/calendar.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {useLanding} from './landing.ts';
+import {subtaskCount} from './Subtasks.tsx';
 import {useCalendarFade, useSearchDim} from './view.ts';
 
 /**
@@ -70,11 +71,14 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   const ghost = ghostly(look) ? ` ghost${look === 'faded' ? ' faded' : ''}` : look ? ` ${look}` : '';
   const plain = !ghostly(look);
   if (item.kind === 'task') {
+    // SV-272: a task with subtasks ends in their count, done of all; its title gives way to it.
+    const counted = item.subtasks.length > 0;
     return (
-      <div className={`tk${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
+      <div className={`tk${counted ? ' counted' : ''}${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
         {failed ? <Icon name="error" size={14} /> : item.done ? <TaskGlyph done size={12} /> : <span className="ring" style={ring(item.project)} />}
         {shownTime && <span className="t">{shownTime}</span>}
-        {item.title}
+        {counted ? <span className="title">{item.title}</span> : item.title}
+        {counted && <span className="count num"><Icon name="format_list_bulleted" size={12} />{subtaskCount(item)}</span>}
         {pending && <Spinner />}
       </div>
     );

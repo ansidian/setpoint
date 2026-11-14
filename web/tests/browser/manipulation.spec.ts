@@ -617,6 +617,57 @@ test('S1 (SV-25, D55): a task\'s card completes it and reopens it; ⌘Z undoes a
   }
 });
 
+test('SV-272 (D558–D562): a task\'s subtasks: its chip\'s count, the card\'s checklist checking one with its toast and Undo while the task stays open, and the agenda\'s count opening the checklist, where ↓ on a handle reorders them', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const report = async () => (await items(setpoint, '2026-10-07')).find(item => item.title === 'CS 101 lab report')!;
+    const quiet = (task: Awaited<ReturnType<typeof report>>) => !task.command && task.subtasks.every(subtask => !subtask.command);
+    const checklist = (task: Awaited<ReturnType<typeof report>>) => task.subtasks.map(subtask => `${subtask.done ? '●' : '○'} ${subtask.title}`);
+    const card = page.locator('.fd');
+
+    // The seed's checklist, one of it done; its subtasks have no date, so the day doesn't list them.
+    assert.deepEqual(checklist(await report()), ['● Plot the timing data', '○ Write the analysis', '○ Proofread', '○ Submit on the portal']);
+    assert.deepEqual((await items(setpoint, '2026-10-07')).filter(item => item.kind === 'task').map(item => item.title), ['CS 101 lab report', 'Pay rent']);
+    assert.equal(await chip(page, '2026-10-07', 'CS 101 lab report').locator('.count').textContent(), '1/4');
+
+    // In the card: a subtask's ring completes it alone, with the task's toast and Undo.
+    await chip(page, '2026-10-07', 'CS 101 lab report').click();
+    await card.locator('.fd-subtasks .fact', {hasText: 'Subtasks 1/4'}).waitFor();
+    await card.getByRole('button', {name: 'Complete Proofread'}).click();
+    const done = await until('Proofread done', report, task => quiet(task) && task.subtasks[2]!.done);
+    assert.equal(done.done, false);
+    await card.locator('.fd-subtasks .fact', {hasText: 'Subtasks 2/4'}).waitFor();
+    await card.locator('.card-h').getByRole('button', {name: 'Complete'}).waitFor();
+    const toast = await holdToast(page);
+    await page.locator('.toast', {hasText: 'Completed Proofread'}).waitFor();
+    await toast.getByRole('button', {name: 'Undo'}).click();
+    // The Undo waits for the Complete to reach Todoist: two trips through the dev provider (600 ms each).
+    await until('Proofread open again', report, task => quiet(task) && !task.subtasks[2]!.done, 10_000);
+    await card.getByRole('button', {name: 'Close'}).click();
+    await card.waitFor({state: 'detached'});
+
+    // In the agenda: the count opens the same checklist under the task's row, and ↓ on a handle
+    // moves that subtask a place.
+    const row = page.locator('.ag-task', {hasText: 'CS 101 lab report'});
+    await row.getByRole('button', {name: '1 of 4 subtasks done'}).click();
+    const under = page.locator('.ag-subtasks');
+    await under.getByRole('button', {name: 'Move Write the analysis'}).focus();
+    await page.keyboard.press('ArrowDown');
+    const moved = await until('the subtasks reordered', report, task => quiet(task) && task.subtasks[1]!.title === 'Proofread', 10_000);
+    assert.deepEqual(checklist(moved), ['● Plot the timing data', '○ Proofread', '○ Write the analysis', '○ Submit on the portal']);
+    await setpoint.idle();
+    assert.deepEqual(await under.locator('.subtask .title').allTextContents(), ['Plot the timing data', 'Proofread', 'Write the analysis', 'Submit on the portal']);
+    // The count closes it again.
+    await row.getByRole('button', {name: '1 of 4 subtasks done'}).click();
+    await under.waitFor({state: 'detached'});
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 // A drag held at the grid's edge scrolling it on is edgeScroll's, a table in manipulate.test.ts; the
 // scroll it makes is by eye (D416).
 test('F6b: an item drags out of the "+3" popover onto another day', async () => {

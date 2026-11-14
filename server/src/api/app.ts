@@ -6,7 +6,7 @@ import path from 'node:path';
 import {serveStatic} from '@hono/node-server/serve-static';
 import {
   accountOrderInput, accountUpdateInput, allInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
-  confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput,
+  confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
   askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput,
 } from '@setpoint/shared';
@@ -41,7 +41,7 @@ import {createSession, endSession, findSession, hasRecentPassword, markPasswordG
 import type {Session} from '../auth/sessions.ts';
 import {commandPresenter, activeCommands, getCommand, moveBackCommand, retryCommand} from '../commands/index.ts';
 import type {CommandRow} from '../commands/index.ts';
-import {completeItem, createItem, deleteItem, setCalendarColour, setProjectColour, updateItem} from '../commands/items.ts';
+import {completeItem, createItem, deleteItem, reorderSubtasks, setCalendarColour, setProjectColour, updateItem} from '../commands/items.ts';
 import {importEvent, readImport} from '../calendar/icsImport.ts';
 import {ICS_MAX_BYTES} from '../domain/icsImport.ts';
 import {markAllRead, openMessage, setDone, setPinned, setRead, trashMessage} from '../commands/mail.ts';
@@ -713,6 +713,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     const input = parse(itemCompleteInput, await body(c));
     return c.json(presentCommand(completeItem(store, id(c.req.param('id')), input.done, input.occurrence_date)));
   });
+  app.put('/api/items/:id/subtasks/order', async c => c.json(presentCommand(reorderSubtasks(store, id(c.req.param('id')), parse(subtaskOrderInput, await body(c)).subtask_ids))));
   // SV-181: an .ics file's events, read for review (its bytes as the body), then imported one at a time.
   app.post(ICS_READ_PATH, async c => c.json(readImport(store, new Uint8Array(await c.req.arrayBuffer()))));
   app.post('/api/calendar/import', async c => c.json(presentCommand(importEvent(store, parse(icsImportInput, await body(c)))), 201));

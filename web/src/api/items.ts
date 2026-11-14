@@ -151,6 +151,10 @@ export const deleteItem = (id: number, input: {scope?: RecurringScope; occurrenc
 export const completeItem = (id: number, done: boolean, occurrenceDate: string | null = null) =>
   change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/complete`, {done, occurrence_date: occurrenceDate})));
 
+/** SV-272: a task's subtasks in a new order, every one named. */
+export const reorderSubtasks = (id: number, subtaskIds: number[]) =>
+  change(() => afterPending(() => sendJson<CommandOut>('PUT', `/items/${id}/subtasks/order`, {subtask_ids: subtaskIds})));
+
 /** The failed card's Try again and Move back. */
 export const retryChange = (commandId: number) => change(() => sendJson<CommandOut>('POST', `/commands/${commandId}/retry`));
 export const moveBack = (commandId: number) => change(() => sendJson<CommandOut>('POST', `/commands/${commandId}/move-back`));

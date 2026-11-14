@@ -19,7 +19,7 @@ export function searchCalendar(store: Store, input: z.output<typeof calendarSear
   for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);
   // Hidden calendars are left out, as the grid leaves them out.
   const shown = new Map(calendars.filter(calendar => calendar.visible).map(calendar => [calendar.id, calendar.name]));
-  const hits = searchItems(store.db.select().from(t.items).all(), shown, chips, parsed.text, clock);
+  const hits = searchItems(store.db.select().from(t.items).all().filter(row => row.kind !== 'task' || row.dueDate !== null), shown, chips, parsed.text, clock);
   const present = itemPresenter(store);
   const page = hits.slice(input.offset, input.offset + input.limit);
   const next = input.offset + input.limit;

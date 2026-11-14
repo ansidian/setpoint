@@ -428,7 +428,7 @@ describe('SV-23: calendar results', () => {
     key: '1', id: 1, calendar_id: 1, kind: 'event', title: 'Item', time_zone: zone, recurring: false, recurrence: null, occurrence_start: null,
     place: null, address: null, attendees: [], reminders: [], leave_reminder: false, project: null, done: false, done_at: null, can_reopen: false, command: null,
     all_day: false, starts_at: null, ends_at: null, start_date: null, end_date: null, due_date: null, due_at: null, read_only: false, due_string: null,
-    time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', description: null, ...fields,
+    time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', description: null, subtasks: [], ...fields,
   });
   test.each<[string, ItemOut, string | null, string]>([
     ['an event: its time and place', item({starts_at: '2026-10-10T02:00:00.000Z', ends_at: '2026-10-10T04:00:00.000Z', place: 'Blue Door'}), null, '7:00 – 9:00 PM · Blue Door'],

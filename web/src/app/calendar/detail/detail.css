@@ -47,6 +47,9 @@
 /* SV-76: a fact's words shrink to the card and a long link or address breaks anywhere, rather than
    running out under the card's clip. */
 .fd .fact > span { min-width: 0; overflow-wrap: anywhere; }
+/* SV-272 (D558): a task's subtasks under their header, "Subtasks 1/4": the checklist (calendar.css),
+   its handles in the facts' glyph column. */
+.fd-subtasks { display: flex; flex-direction: column; gap: 4px; }
 /* SV-109: the presets in one line, then each other reminder at its moment, its offset quiet beside it. */
 .fd .fd-reminders { display: flex; flex-direction: column; }
 .fd .fd-reminders .fd-offset { margin-left: 6px; }

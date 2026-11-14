@@ -111,6 +111,19 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
     }
     case 'item_update': {
       if (!target) return;
+      // SV-272: a task's subtasks reordered. The one that moved is sent its new order key; subtasks
+      // without keys are each sent their place, by the Sync command Todoist is retiring for the keys.
+      if (Array.isArray(command.payload.subtask_ids)) {
+        const moved = command.payload.moved as {id: number; order_key: string} | undefined;
+        if (moved) {
+          const row = itemRow(store, moved.id);
+          if (row) await todoist.command('item_update', {id: row.providerId, order_key: moved.order_key}, requestId());
+          return;
+        }
+        const places = (command.payload.subtask_ids as number[]).map((id, at) => ({id: itemRow(store, id)?.providerId, child_order: at})).filter(place => place.id);
+        if (places.length) await todoist.command('item_reorder', {items: places}, requestId());
+        return;
+      }
       const changes = (command.payload.changes ?? {}) as Record<string, unknown>;
       const body: Record<string, unknown> = {};
       if (changes.title !== undefined) body.content = target.title;

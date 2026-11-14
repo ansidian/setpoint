@@ -123,7 +123,14 @@ export async function fakeTodoist() {
       const task = tasks.get(String(args.id));
       const refused = refusals.shift();
       if (refused) status[uuid] = refused;
-      else if (type !== 'item_update_date_complete' || args.is_forward !== 0) status[uuid] = {error: 'Unknown command', error_code: 0, error_tag: 'UNKNOWN_COMMAND', http_code: 400, error_extra: {}};
+      // SV-272: a task's new order key, and the older command that sets each sibling's place.
+      else if (type === 'item_update' && typeof args.order_key === 'string' && task && !task.is_deleted) {
+        save({...task, order_key: args.order_key});
+        status[uuid] = 'ok';
+      } else if (type === 'item_reorder') {
+        for (const place of args.items as {id: string; child_order: number}[]) save({...tasks.get(place.id)!, child_order: place.child_order});
+        status[uuid] = 'ok';
+      } else if (type !== 'item_update_date_complete' || args.is_forward !== 0) status[uuid] = {error: 'Unknown command', error_code: 0, error_tag: 'UNKNOWN_COMMAND', http_code: 400, error_extra: {}};
       else if (!task || task.is_deleted) status[uuid] = {error: 'Item not found', error_code: 22, error_tag: 'ITEM_NOT_FOUND', http_code: 404, error_extra: {}};
       else {
         logDueChange(task, save({...task, due: args.due as TodoistTask['due']}));

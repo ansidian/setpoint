@@ -11,7 +11,7 @@
 // can only read, or one of Google's own kinds) says so on its calendar's line, `lock` and "Read-only ·
 // ‹calendar›" with the reason as its tip, and leaves out what it can't do, the row going with nothing
 // left (D447, amending #306).
-import type {CalendarOut, EventColour, ItemOut, Settings} from '@setpoint/shared';
+import type {CalendarOut, EventColour, ItemOut, Settings, SubtaskOut} from '@setpoint/shared';
 import {EVENT_COLOURS} from '@setpoint/shared';
 import {useMemo, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
@@ -28,12 +28,17 @@ import {colourVar} from '../../accounts.ts';
 import {useNow} from '../../clock.ts';
 import {useRingColour} from '../Chip.tsx';
 import {DescriptionFold} from '../DescriptionText.tsx';
+import {subtaskCount, Subtasks} from '../Subtasks.tsx';
 import {useJustDone} from '../done.ts';
 import type {DetailTarget} from './motion.ts';
 
 /** The card's icon actions, carried out by the Calendar page, or the ones another page offers. */
 export interface DetailActions {
   complete: (task: ItemOut) => void;
+  // SV-272: checks or reopens one of a task's subtasks; the task itself stays as it is (D558).
+  completeSubtask?: (subtask: SubtaskOut) => void;
+  // SV-272: a task's subtasks in a new order, every one's id.
+  reorderSubtasks?: (task: ItemOut, ids: number[]) => Promise<unknown>;
   clone?: (item: ItemOut) => void;
   copy?: (item: ItemOut) => void;
   colour?: (item: ItemOut, colour: EventColour | null) => void;
@@ -143,6 +148,12 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}
         {attendees && <Fact icon="group"><span>{attendees}</span></Fact>}
         {description.length > 0 && <Fact icon="notes" className="description"><DescriptionFold key={item.key} blocks={description} /></Fact>}
+        {item.subtasks.length > 0 && (
+          <div className="fd-subtasks">
+            <Fact icon="format_list_bulleted"><span><span className="v">Subtasks</span> <span className="ink3 num">{subtaskCount(item)}</span></span></Fact>
+            <Subtasks task={item} ring={ring(item.project)} onComplete={item.read_only ? undefined : actions?.completeSubtask} onReorder={item.read_only ? undefined : actions?.reorderSubtasks} />
+          </div>
+        )}
         {repeat && <Fact icon="repeat"><span>{repeat}</span></Fact>}
         {item.kind === 'task' && item.project && (
           <div className="fact project"><span className="fact-dot"><span className="dot" style={ring(item.project)} /></span><span>{item.project}</span></div>
