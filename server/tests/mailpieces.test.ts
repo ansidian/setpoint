@@ -8,7 +8,7 @@ import {describe, expect, test} from 'vitest';
 import {markAllRead} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {DEV_DIGEST_AUTH, DEV_DIGESTS, devDigestSource, devDigestSubject} from '../src/dev/digest.ts';
-import {DIGEST_SENDER, digestDay, isDigest, pieceSources, statedPieces} from '../src/domain/mailpieces.ts';
+import {campaignCount, DIGEST_SENDER, digestDay, isDigest, pieceSources, statedPieces} from '../src/domain/mailpieces.ts';
 import {evaluateGmailSenderAuthentication} from '../src/domain/senderAuthentication.ts';
 import type {SenderAuthentication} from '../src/domain/senderAuthentication.ts';
 import {firstKeptDay, MailpiecesWorker, pruneMailpieces, queueMailpieces} from '../src/mailpieces/worker.ts';
@@ -60,7 +60,7 @@ describe('the digest\'s rules', () => {
     expect(statedPieces(text)).toBe(expected);
   });
 
-  test('the mailpieces\' images in order, each once: scans and campaigns, never ride-along ads, logos or pixels', () => {
+  test('the mailpieces\' scans in order, each once: never a mailer\'s campaign (D572), ride-along ads, logos or pixels', () => {
     const html = [
       '<img id="email-tracking-href-id" height="0" width="0" src="https://informeddelivery.example/pixel">',
       '<img src="https://www.usps.example/logo.png" alt="USPS Logo">',
@@ -72,20 +72,19 @@ describe('the digest\'s rules', () => {
       '<img id="mailpiece-image-src-id" src="cid:100-038.jpg">',
       '<img id="mailpiece-image-src-id" src="https://informeddelivery.example/remote.jpg">',
     ].join('\n');
-    expect(pieceSources(html)).toEqual(['mailer-1.jpg', '100-038.jpg', '101-038.jpg']);
+    expect(pieceSources(html)).toEqual(['100-038.jpg', '101-038.jpg']);
+    expect(campaignCount(html)).toBe(1);
   });
 });
 
 describe('reading a digest\'s source', () => {
-  test('a campaign\'s picture and the scans, in order, the ride-along ad left out', async () => {
+  test('the scans alone, in order: a mailer\'s campaign is neither kept nor counted, nor its ride-along ad (D572)', async () => {
     const digest = await readDigest(devDigestSource({day: '2026-10-03', scans: 3, campaigns: 1, seed: 5}));
-    expect(digest.pieces).toBe(4);
-    expect(digest.scans).toHaveLength(4);
+    expect(digest.pieces).toBe(3);
+    expect(digest.scans).toHaveLength(3);
     expect(digest.scans.every(scan => scan.mimeType === 'image/png' && scan.content.subarray(1, 4).toString() === 'PNG')).toBe(true);
-    // The campaign's picture first, then the scans; the ad (a checkerboard) is none of them.
-    const ad = await readDigest(devDigestSource({day: '2026-10-03', scans: 0, campaigns: 1, seed: 5}));
-    expect(ad.scans).toHaveLength(1);
-    expect(digest.scans[0]!.content.equals(ad.scans[0]!.content)).toBe(true);
+    // A digest of campaigns alone says 1 mailpiece and is no mail.
+    expect(await readDigest(devDigestSource({day: '2026-10-03', scans: 0, campaigns: 1, seed: 5}))).toEqual({pieces: 0, scans: []});
   });
 
   test('a piece USPS has no picture of counts, without a scan; "0 mailpiece(s)" is no mail', async () => {
@@ -158,8 +157,9 @@ describe('the worker', () => {
     w.events.length = 0;
     await runDue();
     const digest = digestOf(id)!;
-    expect(digest).toMatchObject({day: '2026-10-08', pieces: 3});
-    expect(scansOf(digest.id).map(scan => scan.position)).toEqual([0, 1, 2]);
+    // Two scans; the source's campaign is neither kept nor counted (D572).
+    expect(digest).toMatchObject({day: '2026-10-08', pieces: 2});
+    expect(scansOf(digest.id).map(scan => scan.position)).toEqual([0, 1]);
     expect(jobOf(id).state).toBe('done');
     expect(liveEvents(w)).toContainEqual(expect.objectContaining({type: 'mail', messages: [id]}));
     // Queued again (a resync), it reads nothing twice.
@@ -219,8 +219,8 @@ describe('GET /api/mail/mailpieces', () => {
     const saturday = DEV_DIGESTS.find(digest => digest.day === '2026-10-03')!;
     const got = await c.send('GET', '/api/mail/mailpieces?day=2026-10-03');
     expect(got.status).toBe(200);
-    expect(got.body.digest.pieces).toBe(saturday.scans + saturday.campaigns!);
-    expect(got.body.digest.scans).toHaveLength(8);
+    expect(got.body.digest.pieces).toBe(saturday.scans);
+    expect(got.body.digest.scans).toHaveLength(saturday.scans);
     expect((await c.send('GET', '/api/mail/mailpieces?day=2026-10-04')).body).toEqual({day: '2026-10-04', digest: null});
     expect((await c.send('GET', '/api/mail/mailpieces?day=2026-10-05')).body).toEqual({day: '2026-10-05', digest: {pieces: 0, scans: []}});
     expect((await c.send('GET', '/api/mail/mailpieces?day=Oct-3')).status).toBe(400);
@@ -272,5 +272,19 @@ describe('migration 0041', () => {
     const after = ids.map(id => w.store.db.select().from(t.messages).where(eq(t.messages.id, id)).get()!);
     expect(after.map(row => [row.senderAuthenticated, row.senderAuth?.status, row.senderAuth?.dmarc?.aligned, row.uspsDigest]))
       .toEqual([[true, 'pass', true, true], [true, 'pass', true, false], [false, 'fail', false, false], [false, 'fail', false, false]]);
+  });
+});
+
+// 0042 drops the days kept before D572 so the worker reads them again without campaigns.
+describe('migration 0042', () => {
+  test('the kept days go, with their scans, and every digest is queued to be read again', async () => {
+    const w = world({seed: true});
+    expect(w.store.db.select().from(t.mailDigests).all().length).toBeGreaterThan(0);
+    const sql = readFileSync(new URL('../drizzle/0042_mailpieces_without_campaigns.sql', import.meta.url), 'utf8');
+    for (const statement of sql.split('--> statement-breakpoint')) w.store.sqlite.exec(statement);
+    expect([w.store.db.select().from(t.mailDigests).all(), w.store.db.select().from(t.mailScans).all()]).toEqual([[], []]);
+    const digests = w.store.db.select({id: t.messages.id, receivedAt: t.messages.receivedAt}).from(t.messages).where(eq(t.messages.uspsDigest, true)).all();
+    const since = w.store.now().getTime() - 31 * 86_400_000;
+    expect(queueMailpieces(w.store)).toBe(digests.filter(digest => Date.parse(digest.receivedAt) >= since).length);
   });
 });

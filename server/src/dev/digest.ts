@@ -152,20 +152,17 @@ export function devDigestSource({day, scans, campaigns = 0, withoutImage = 0, se
  * day with a piece USPS has no picture of. The dev provider serves each one's source by its id.
  */
 export const DEV_DIGESTS: readonly (DevDigestOptions & {providerId: string})[] = [
-  {day: '2026-10-07', scans: 3, campaigns: 1, seed: 71},
+  {day: '2026-10-07', scans: 4, campaigns: 1, seed: 71},
   {day: '2026-10-06', scans: 2, seed: 61},
   {day: '2026-10-05', scans: 0, seed: 51},
-  {day: '2026-10-03', scans: 7, campaigns: 1, seed: 31},
+  {day: '2026-10-03', scans: 8, campaigns: 1, seed: 31},
   {day: '2026-10-02', scans: 1, seed: 21},
   {day: '2026-10-01', scans: 2, withoutImage: 1, seed: 11},
   {day: '2026-09-30', scans: 4, seed: 1},
 ].map(digest => ({...digest, providerId: `seed-digest-${digest.day}`}));
 
-/** The scans a seed digest's source holds, in its order: the campaigns' pictures, then the scans. */
-export const devDigestScans = (digest: DevDigestOptions) => [
-  ...Array.from({length: digest.campaigns ?? 0}, (_, n) => devMailerArt((digest.seed ?? 1) + n)),
-  ...Array.from({length: digest.scans}, (_, n) => devScan((digest.seed ?? 1) + n)),
-];
+/** The scans kept from a seed digest's source, in its order; its campaigns' pictures aren't (D572). */
+export const devDigestScans = (digest: DevDigestOptions) => Array.from({length: digest.scans}, (_, n) => devScan((digest.seed ?? 1) + n));
 
 /** A real digest's From and Gmail's Authentication-Results for it, DMARC on the parent domain. */
 export const DEV_DIGEST_AUTH = [
@@ -182,7 +179,9 @@ export function insertDevDigests(db: Pick<OpenDatabase['db'], 'insert' | 'select
   for (const digest of DEV_DIGESTS) {
     if (db.select({id: t.messages.id}).from(t.messages).where(eq(t.messages.providerId, digest.providerId)).get()) continue;
     const receivedAt = zonedInstant(digest.day, '07:30', SEED_TIME_ZONE);
+    // What the digest says, campaigns counted; what's kept leaves them out (D572).
     const pieces = digest.scans + (digest.campaigns ?? 0) + (digest.withoutImage ?? 0);
+    const kept = digest.scans + (digest.withoutImage ?? 0);
     const body = `You have ${pieces} mailpiece(s) and 1 inbound package(s) arriving soon.`;
     // Gmail's verdict in a real digest's shape, DMARC on the parent domain, through the evaluator the
     // mirror uses, so the seed can't call a digest authenticated that the real path wouldn't (SV-274).
@@ -193,7 +192,7 @@ export function insertDevDigests(db: Pick<OpenDatabase['db'], 'insert' | 'select
       snippet: body, bodyText: body, searchBody: searchBody(body), receivedAt, unread: false, senderAuth, senderAuthenticated: senderAuthenticated(senderAuth),
       lane: 'fyi', kind: 'deliveries', triageSource: 'rule', triagedAt: receivedAt, uspsDigest: true,
     }).returning({id: t.messages.id}).get();
-    const row = db.insert(t.mailDigests).values({messageId: message.id, day: digest.day, pieces, storedAt: receivedAt}).returning({id: t.mailDigests.id}).get();
+    const row = db.insert(t.mailDigests).values({messageId: message.id, day: digest.day, pieces: kept, storedAt: receivedAt}).returning({id: t.mailDigests.id}).get();
     devDigestScans(digest).forEach((bytes, position) => db.insert(t.mailScans).values({digestId: row.id, position, mimeType: 'image/png', bytes}).run());
   }
 }

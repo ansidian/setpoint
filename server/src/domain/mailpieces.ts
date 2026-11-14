@@ -1,11 +1,11 @@
 // USPS Informed Delivery's daily digest (SV-274, D564): which email is one, the day it's for, and the
 // mailpieces' pictures in it. The digest's HTML shows each mailpiece arriving as an image whose
 // source is one of the email's inline parts ("cid:1037161434-038.jpg"):
-// - a scan, `id="mailpiece-image-src-id"`;
-// - a mailer's campaign, `id="campaign-representative-image-src-id"`: the mailer's own picture of a
-//   real mailpiece (or its scan), counted in the digest's "You have 6 mailpiece(s)".
-// A campaign also carries a ride-along, `id="campaign-ridealong-image-src-id"`: an ad, never a
-// mailpiece, so it's never kept. Packages, the USPS logo, share buttons and tracking pixels aren't
+// - a scan, `id="mailpiece-image-src-id"`, the one kind kept.
+// - a mailer's campaign, `id="campaign-representative-image-src-id"`: the mailer's own artwork, which
+//   the digest counts in "You have 6 mailpiece(s)". It isn't a piece that comes in the mail (Andy,
+//   D572), so it's neither kept nor counted, and neither is its ride-along ad,
+//   `id="campaign-ridealong-image-src-id"`. Packages, the USPS logo, share buttons and tracking pixels aren't
 // mailpieces either. A digest can say more pieces are coming than it has pictures for ("one or more
 // mailpieces for which we do not currently have an image"); one saying 0 is "No mail today".
 export const DIGEST_SENDER = 'uspsinformeddelivery@email.informeddelivery.usps.com';
@@ -41,20 +41,27 @@ export function statedPieces(text: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
-const PIECE_IDS = new Set(['mailpiece-image-src-id', 'campaign-representative-image-src-id']);
+const SCAN_ID = 'mailpiece-image-src-id';
+const CAMPAIGN_ID = 'campaign-representative-image-src-id';
 export const KEPT_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']);
 
-/** The `cid:` sources of the mailpieces' images in the digest's HTML, in order, each once. */
-export function pieceSources(html: string): string[] {
+/** The `cid:` sources of the images with this id in the digest's HTML, in order, each once. */
+function sourcesOf(html: string, wanted: string): string[] {
   const sources: string[] = [];
   for (const tag of html.match(/<img\b[^>]*>/gi) ?? []) {
     const id = /\bid\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1]?.trim();
     const src = /\bsrc\s*=\s*["']cid:([^"']+)["']/i.exec(tag)?.[1]?.trim();
-    if (!id || !src || !PIECE_IDS.has(id) || sources.includes(src)) continue;
+    if (id !== wanted || !src || sources.includes(src)) continue;
     sources.push(src);
   }
   return sources;
 }
+
+/** The `cid:` sources of the mailpieces' scans in the digest's HTML, in order, each once. */
+export const pieceSources = (html: string) => sourcesOf(html, SCAN_ID);
+
+/** How many mailers' campaigns the digest shows, which its stated count includes (D572). */
+export const campaignCount = (html: string) => sourcesOf(html, CAMPAIGN_ID).length;
 
 export interface Scan {
   mimeType: string;
