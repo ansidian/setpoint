@@ -4886,7 +4886,9 @@ was decided; the audit itself was retired by D480.
       step through the day's pieces and stop at the first and last; Esc, a click outside or × close
       it. It has no download and no link to the email.
     - **`L`** (letters) opens the viewer at the selected day's first scan, as a thumbnail does, and
-      the header ends in its key hint whenever there's a scan to open (Andy, 2026-11-13, D573). It
+      the header ends in its key hint whenever there's a scan to open (Andy, 2026-11-13, D573).
+      Pressed again in the viewer it steps on, from the last back to the first, where ← → stop
+      (D574), to look through a day quickly. It
       does nothing on a day without one, or with a field, the editor or another dialog in front; the
       compact tier, which has no rail, has none. `U` is mail's next unread, and `I` sits by ⇧I.
 375. **A subtask added and edited in Setpoint** (Andy, 2026-11-13; darma SV-273, D566–D570). The

@@ -508,7 +508,7 @@ test('a calendar search lights its matches, every occurrence of a series, and le
   }
 });
 
-test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row with "+N", its viewer stepping and stopping at the ends, L opening it; none on a Sunday, "No mail today" on a Monday', async () => {
+test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row with "+N", its viewer stepping and stopping at the ends, L opening it and looping through it; none on a Sunday, "No mail today" on a Monday', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -549,6 +549,13 @@ test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row wi
 
     // L opens the day's mail at its first scan (D573); its hint is in the header.
     await section.locator('.rp-mail-head .kbd', {hasText: 'L'}).waitFor();
+    await page.keyboard.press('l');
+    await viewer.getByText('1 of 8').waitFor();
+    // L again steps on, and from the last loops to the first (D574).
+    await page.keyboard.press('l');
+    await viewer.getByText('2 of 8').waitFor();
+    for (let at = 2; at < 8; at += 1) await page.keyboard.press('l');
+    await viewer.getByText('8 of 8').waitFor();
     await page.keyboard.press('l');
     await viewer.getByText('1 of 8').waitFor();
     await page.keyboard.press('Escape');

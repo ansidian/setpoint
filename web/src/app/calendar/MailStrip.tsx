@@ -3,7 +3,7 @@
 // one row of thumbnails, as many as fit, the last "+3" when there are more (logic/mailpieces.ts). A
 // thumbnail opens the viewer at that scan: the scan large, "2 of 5" and the day, ← → (buttons, keys
 // or a swipe) stopping at the ends, Esc, a click outside or × closing it. `L` opens it at the first
-// scan (D573). Desktop only (D275).
+// scan (D573), and again steps on, looping (D574). Desktop only (D275).
 import type {MailpiecesOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {PointerEvent as ReactPointerEvent} from 'react';
@@ -98,6 +98,8 @@ function MailViewer({date, urls, start, onClose}: {date: string; urls: string[];
       if (event.key === 'Escape') onClose();
       else if (event.key === 'ArrowLeft') step(-1);
       else if (event.key === 'ArrowRight') step(1);
+      // L again steps on, from the last back to the first, where the arrows stop (D574).
+      else if (plainKey(event, 'l')) setAt(current => (current + 1) % urls.length);
       else return;
       event.preventDefault();
       event.stopPropagation();
