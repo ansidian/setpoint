@@ -4862,3 +4862,23 @@ was decided; the audit itself was retired by D480.
     - **Without actions** (the phone's card) the rings are marks and nothing moves. The Today
       block's lines don't show the count. Adding, renaming and re-parenting subtasks stay in Todoist.
     - The glyph is `format_list_bulleted`, standing in until the set has one for subtasks.
+374. **USPS Informed Delivery in the agenda rail** (Andy, 2026-11-13; darma SV-274, D564, D565). USPS's
+    daily digest email is read for the day's mailpieces, kept 30 days, and shown with the day
+    selected in the calendar. Desktop only: the phone stays as it is (D275).
+    - **The digest email** (USPS's sender, authenticated, "Your Daily Digest for …") is out of the
+      Inbox, its groups and counts, All and Mark all as read; it's never triaged or notified. Search
+      still finds it, and it stays in the provider.
+    - **What's kept:** each mailpiece's picture, in the digest's order, and how many it said were
+      coming. A mailer's campaign is a piece, shown by the picture USPS put in its scan's place,
+      usually the mailer's artwork; its ride-along ad is never kept (D565). Packages are never shown.
+    - **The section** sits at the bottom of the rail, over its footer, behind a hairline: the `mail`
+      glyph and **"USPS Informed Delivery"** in `ink2`, and at the right "4 pieces" in `ink3`, or "3
+      pieces · 1 without a picture" when USPS had no image of one. A day with no digest (a Sunday, a
+      holiday, before the 30 days) has no section; a digest saying 0 reads **"No mail today"**.
+    - **The row:** one row of 56 px thumbnails, 6 px apart, radius 8, as many as fit the rail and
+      never wrapping. With more pieces than fit, the last tile is **"+4"**, which opens the viewer at
+      the first piece it holds.
+    - **The viewer** opens over a scrim at the thumbnail chosen: the picture large, and above it "2 of
+      8" and the day ("Sat, Oct 3", `ink3`) with ×. ← → (its chevrons, the arrow keys or a swipe)
+      step through the day's pieces and stop at the first and last; Esc, a click outside or × close
+      it. It has no download and no link to the email.
