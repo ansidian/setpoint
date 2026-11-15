@@ -190,7 +190,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, Reply and an email the user answered (its row's mark, "You replied") `reply`,
   Reply all `reply_all`, Forward `forward`, Drafts `draft` (an email's row says "Draft" in `alert`
-  instead),
+  instead), an attachment of an unknown type `unknown_document`,
   a Settings page its nav's glyph wherever it's named.
 - **Tones**: `caution` and `alert` are close in hue, so a state's shape says how serious it is
   before its words do. **Caution**, something Setpoint depends on struggling (a source failing or

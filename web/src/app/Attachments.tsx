@@ -24,7 +24,7 @@ const CSV_ROWS = 500;
 
 /** Each type's glyph on its tile. The tile's colour is the stylesheet's, by `data-type`. */
 export const TYPE_GLYPHS: Record<AttachmentType, IconName> = {
-  pdf: 'picture_as_pdf', image: 'image', sheet: 'table_chart', doc: 'description', archive: 'folder_zip', calendar: 'calendar_month', other: 'draft',
+  pdf: 'picture_as_pdf', image: 'image', sheet: 'table_chart', doc: 'description', archive: 'folder_zip', calendar: 'calendar_month', other: 'unknown_document',
 };
 
 export function Attachments({messageId, files}: {messageId: number; files: AttachmentOut[]}) {
