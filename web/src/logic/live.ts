@@ -32,8 +32,10 @@ export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): str
   const under = (prefix: string) => (path: string) => path === prefix || path.startsWith(`${prefix}?`) || path.startsWith(`${prefix}/`);
   switch (event.type) {
     case 'mail': {
-      const named = new Set(event.messages.map(id => `/mail/messages/${id}`));
-      return mounted.filter(path => MAIL_LISTS.some(prefix => under(prefix)(path)) || named.has(path));
+      // A draft's change (started, saved, sent, failed, discarded) names it and its email: Drafts and
+      // the draft refresh with the lists, whose rows carry the draft mark.
+      const named = new Set([...event.messages.map(id => `/mail/messages/${id}`), ...(event.drafts ?? []).map(id => `/mail/drafts/${id}`)]);
+      return mounted.filter(path => MAIL_LISTS.some(prefix => under(prefix)(path)) || named.has(path) || (path === '/mail/drafts' && !!event.drafts?.length));
     }
     case 'items':
       return mounted.filter(path => under('/items')(path) || (event.calendars.length > 0 && (under('/calendars')(path) || under('/todoist/projects')(path))));

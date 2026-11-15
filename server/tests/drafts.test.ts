@@ -111,6 +111,16 @@ describe('Saving', () => {
     });
   });
 
+  test('a reply\'s quote is the full original until the user trims it, and null puts it back', async () => {
+    const {api} = await setup();
+    const reply = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: THEO}})).body;
+    expect(reply.quote).toBeNull();
+    await api.send('PATCH', `/api/mail/drafts/${reply.id}`, {body: {quote: body('Only this line')}});
+    expect((await api.send('GET', `/api/mail/drafts/${reply.id}`)).body.quote).toEqual(body('Only this line'));
+    await api.send('PATCH', `/api/mail/drafts/${reply.id}`, {body: {quote: null}});
+    expect((await api.send('GET', `/api/mail/drafts/${reply.id}`)).body.quote).toBeNull();
+  });
+
   test.each([
     [{from: {account_id: BUSINESS, address: 'user@example.com'}}, 'From is not one of that account\'s addresses.'],
     [{to: [{name: null, address: 'not an address'}]}, 'to.0.address: Not an email address.'],

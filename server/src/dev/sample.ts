@@ -61,6 +61,9 @@ interface SampleEmail {
   done?: {at: [string, string]; opened: boolean};
   code?: string;
   attachments?: {filename: string; mimeType: string; sizeBytes: number}[];
+  // Who it was sent to, as its headers say. Left out, it went to the account's own address alone.
+  to?: [name: string, address: string][];
+  cc?: [name: string, address: string][];
 }
 
 const NORTHWIND_INTERVIEW = `Hi there,
@@ -281,7 +284,8 @@ export const SAMPLE_EMAILS: SampleEmail[] = [
     unread: true, lane: 'fyi', kind: 'deliveries', type: 'shipping'},
   {account: 'Personal', at: ['2026-10-05', '12:40'], from: ['Sam Lee', 'sam.lee@example.com'],
     subject: 'Dinner Friday?', summary: 'Blue Door at 7?', body: 'Hey! Dinner Friday? Blue Door at 7? I can book a table.\n\nSam',
-    unread: false, lane: 'fyi', kind: 'people'},
+    unread: false, lane: 'fyi', kind: 'people',
+    to: [['User', 'user@example.com'], ['June Park', 'june.park@example.org']], cc: [['Ravi Menon', 'ravi.menon@example.org']]},
   {account: 'Personal', at: ['2026-10-05', '10:05'], from: ['Office of the Registrar', 'registrar@contosou.example'], organisation: 'Contoso University',
     subject: 'Final exam schedule · CS 101', summary: 'Fall 2026 finals, rooms and times', body: FINAL_EXAMS,
     // Read, not Done: it stays in Attention (board 01).
@@ -482,6 +486,9 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         openedBeforeDone: email.done ? email.done.opened : null,
         code: email.code ?? null,
         codeExpiresAt: email.code ? new Date(Date.parse(receivedAt) + CODE_EXPIRY_MINUTES * MINUTE).toISOString() : null,
+        toRecipients: (email.to ?? [['User', ACCOUNTS.find(account => account.label === email.account)!.address]]).map(([name, address]) => ({name, address})),
+        ccRecipients: (email.cc ?? []).map(([name, address]) => ({name, address})),
+        replyTo: [], referenceIds: [], inReplyTo: null,
       }).returning({id: t.messages.id}).get();
       email.attachments?.forEach((attachment, index) => {
         tx.insert(t.attachments).values({messageId: row.id, providerId: `${providerId}-att-${index + 1}`, ...attachment}).run();

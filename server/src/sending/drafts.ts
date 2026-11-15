@@ -1,5 +1,5 @@
 // Drafts, kept in Setpoint only (DESIGN.md's exception to "providers are the truth"): started
-// filled by the rules in src/domain/draftFill.ts, saved as the user types (only the fields sent
+// filled by the rules in shared/src/draftFill.ts, saved as the user types (only the fields sent
 // change, and the last write wins), listed for the Drafts row, and discarded. A draft Send holds or
 // is sending is frozen: a late save must not change what goes out.
 //
@@ -9,7 +9,7 @@ import type {DraftCreateInput, DraftOut, DraftRowOut, DraftSavedOut, DraftsOut, 
 import {plainText} from '@setpoint/shared/richText';
 import {and, asc, desc, eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
-import {fillAnswer, newMessageAccount} from '../domain/draftFill.ts';
+import {fillAnswer, newMessageAccount} from '@setpoint/shared/draftFill';
 import {conflict, invalid, notFound} from '../errors.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -75,7 +75,7 @@ export function getDraftRow(store: Store, draftId: number): DraftRow {
 export function presentDraft(row: DraftRow): DraftOut {
   return {
     id: row.id, kind: row.kind, message_id: row.messageId, from: {account_id: row.accountId, address: row.fromAddress},
-    to: row.toRecipients, cc: row.ccRecipients, bcc: row.bccRecipients, subject: row.subject, body: row.body,
+    to: row.toRecipients, cc: row.ccRecipients, bcc: row.bccRecipients, subject: row.subject, body: row.body, quote: row.quote,
     created_at: row.createdAt, updated_at: row.updatedAt,
     send: row.sendState ? {state: row.sendState, send_at: row.sendState === 'held' ? row.sendAt : null, error: row.sendError} : null,
   };
@@ -140,6 +140,7 @@ export function updateDraft(store: Store, draftId: number, input: DraftUpdateInp
     if (input.bcc) changes.bccRecipients = input.bcc as Recipient[];
     if (input.subject !== undefined) changes.subject = input.subject;
     if (input.body) changes.body = input.body;
+    if (input.quote !== undefined) changes.quote = input.quote;
     const updated = store.db.update(t.drafts).set(changes).where(eq(t.drafts.id, draftId)).returning().get()!;
     noteDraft(store, updated);
     return {id: updated.id, updated_at: updated.updatedAt};

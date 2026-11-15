@@ -136,3 +136,5 @@ format_underlined
 format_list_numbered
 format_list_bulleted
 reply
+reply_all
+forward

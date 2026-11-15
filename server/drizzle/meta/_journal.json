@@ -330,6 +330,13 @@
       "when": 1794774813667,
       "tag": "0046_drafts_and_sending",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1794777343338,
+      "tag": "0047_draft_quote",
+      "breakpoints": true
     }
   ]
 }

@@ -249,6 +249,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
             )}
             {/* The reply mark on an email the user answered. The phone's list has none. */}
             {row.replied_at && !phone && <RepliedMark at={row.replied_at} now={now} timeZone={timeZone} />}
+            {row.draft && !phone && <span className="drafted">Draft</span>}
             {slot && afterSubject(row)}
             {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
             <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>

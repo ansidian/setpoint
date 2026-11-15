@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./compose/reference.json": "./compose/reference.json",
-    "./richText": "./src/richText.ts"
+    "./richText": "./src/richText.ts",
+    "./draftFill": "./src/draftFill.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --incremental --tsBuildInfoFile ../node_modules/.cache/tsc/shared.tsbuildinfo"

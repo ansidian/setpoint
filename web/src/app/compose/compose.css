@@ -1,0 +1,56 @@
+/* The composer, in the reading pane under its email: the email keeps the pane's top and scrolls,
+   the composer takes up to 70% of the height under it and scrolls as one past that (fields, body
+   and quote), its format row held at its foot. It slides up 12 px over a pane's 180 ms as it opens (DESIGN.md › Motion). */
+@keyframes cmp-in { from { opacity: 0; transform: translateY(12px); } }
+.pane > .composer { flex: 0 1 auto; max-height: 70%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; border-top: 1px solid var(--hair); background: var(--page); animation: cmp-in var(--dur-medium) var(--ease); }
+.pane > .rd-scroll:has(+ .composer) { flex-basis: 30%; }
+
+.composer .cmp-row { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--hair); flex: none; }
+.composer .cmp-head { min-height: 44px; padding-right: 12px; }
+.composer .cmp-label { width: 34px; flex: none; color: var(--ink3); }
+.composer .cmp-popout-slot:empty { display: none; }
+.composer .cmp-copies { color: var(--ink3); }
+
+/* From: the account's dot and label, then the address it sends as. */
+.composer .cmp-from > .btn { margin-left: -10px; gap: 6px; color: var(--ink); }
+.composer .cmp-from > .btn .icon { color: var(--ink3); }
+.composer .cmp-from-menu { position: absolute; top: calc(100% + 4px); left: -10px; z-index: 6; min-width: 280px; transform-origin: top left; }
+.composer .cmp-from-menu .menu-i.alias { padding-left: 27px; }
+
+/* Recipients: chips with a name or an address, then what's being typed. */
+.composer .cmp-recipients { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px 0; cursor: text; }
+.composer .cmp-chip { height: 24px; display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; max-width: 100%; }
+.composer .cmp-chip-x { width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 999px; color: var(--ink3); }
+.composer .cmp-chip-x:hover { background: var(--sub3); color: var(--ink); }
+.composer .cmp-typing { min-width: 120px; }
+.composer .cmp-typing > input { width: 100%; height: 26px; outline: none; color: var(--ink); }
+.composer .cmp-typing > input.invalid { color: var(--alert); }
+.composer .cmp-people { position: absolute; top: calc(100% + 4px); left: 0; z-index: 6; min-width: 300px; max-width: 420px; transform-origin: top left; }
+.composer .cmp-people .menu-i { gap: 8px; }
+
+.composer .cmp-subject { height: 36px; outline: none; color: var(--ink); font-weight: 500; }
+.composer .cmp-subject::placeholder { color: var(--ink3); font-weight: 400; opacity: 1; }
+
+/* A failed send in the provider's words, with Try again; a save that didn't land. */
+.composer .cmp-failed { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px 0 20px; color: var(--alert); border-bottom: 1px solid var(--hair); flex: none; }
+.composer .cmp-failed > span { color: var(--ink); }
+
+/* The body: the description field's, borderless here, its row of formats at the foot. */
+.composer .desc-field { display: flex; flex-direction: column; flex: 1 0 auto; }
+.composer .desc-edit { flex: 1 0 auto; min-height: 120px; padding: 12px 20px; outline: none; white-space: pre-wrap; cursor: text; line-height: 20px; }
+.composer .desc-edit[data-empty]::before { content: attr(data-placeholder); color: var(--ink3); position: absolute; pointer-events: none; }
+.composer .desc-bar { display: flex; align-items: center; gap: 2px; min-height: 48px; padding: 0 12px 0 14px; border-top: 1px solid var(--hair); flex: none; position: sticky; bottom: 0; z-index: 2; background: var(--page); margin-top: auto; }
+.composer .desc-bar .ibtn[aria-pressed="true"] { background: var(--sub3); color: var(--ink); }
+.composer .desc-bar.linking { gap: 8px; padding-left: 20px; color: var(--ink3); }
+.composer .desc-bar.linking input { min-width: 0; height: 26px; outline: none; color: var(--ink); }
+.composer .desc-bar.linking input::placeholder { color: var(--ink3); opacity: 1; }
+.composer .cmp-bar-slot:empty { display: none; }
+.composer .cmp-send { margin-left: 6px; }
+.composer .cmp-send .kbd { margin-left: 2px; background: color-mix(in srgb, var(--onInk) 16%, transparent); color: color-mix(in srgb, var(--onInk) 70%, transparent); }
+
+/* The reply's quote, folded behind "…"; opened, it can be trimmed. */
+.composer .cmp-quote { padding: 0 20px 12px; flex: none; }
+.composer .cmp-fold { height: 18px; width: 30px; display: inline-grid; place-items: center; border-radius: 999px; background: var(--sub2); color: var(--ink2); }
+.composer .cmp-fold:hover, .composer .cmp-fold[aria-expanded="true"] { background: var(--sub3); color: var(--ink); }
+.composer .cmp-quote-line { margin-top: 10px; color: var(--ink3); }
+.composer .cmp-quote-text { margin-top: 6px; padding-left: 10px; box-shadow: inset 2px 0 0 var(--sub3); color: var(--ink2); outline: none; white-space: pre-wrap; }

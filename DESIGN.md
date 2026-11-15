@@ -20,7 +20,8 @@ copy. They are small and global on purpose. How a page behaves lives in its test
 
 - **Mail and time, then News and Jobs.** A feature that is about glancing belongs to mantel.
 - **Providers are the truth.** Read state, events and tasks are Gmail's, iCloud's, Google
-  Calendar's and Todoist's; Setpoint mirrors them and sends commands.
+  Calendar's and Todoist's; Setpoint mirrors them and sends commands. A draft is the one exception:
+  it lives in Setpoint until it is sent, and the provider only ever gets the sent email.
 - **The AI sorts and pre-fills; it never adds to a list the user trusts.**
 - **Fail visibly.** Unsorted mail stays in view; a failed change stays in place with the provider's
   words; a stale source says "as of".
@@ -93,8 +94,8 @@ account names). The UI says "Done", never "handled".
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
   it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count,
   Attention's band and dots, and health warnings, nothing else. **`alert`** says danger and now: protected
-  mail, failed changes, destructive actions, offline, the now-line and today's disc. **`ink`** is the
-  primary action (New, sign-in, OK: solid ink pills). The identity swatches show only as dots, chip
+  mail, failed changes, destructive actions, offline, the now-line, today's disc and a row's "Draft".
+  **`ink`** is the primary action (New, sign-in, OK: solid ink pills). The identity swatches show only as dots, chip
   tints and bars, never as control fills, and the AI has no hue of its own.
 - **Accounts** (`--a-*`): Business `warm`, Personal `cool`, Work `comf`, Jobs `violet`, iCloud `ink2`.
   **Calendars** (`--c-*`): Personal `cool`, Classes `cyan`, Jobs `violet`. Both pick from nine of
@@ -188,6 +189,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   header button (Settings', the editor's) and a Settings row's "…". One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, Reply and an email the user answered (its row's mark, "You replied") `reply`,
+  Reply all `reply_all`, Forward `forward`, Drafts `draft` (an email's row says "Draft" in `alert`
+  instead),
   a Settings page its nav's glyph wherever it's named.
 - **Tones**: `caution` and `alert` are close in hue, so a state's shape says how serious it is
   before its words do. **Caution**, something Setpoint depends on struggling (a source failing or
@@ -224,12 +227,15 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   by copying its verification code. Moving the cursor, scrolling and opening a Noise line never mark
   anything read.
 - **Keyboard first:** every common action has a key; the keyboard cursor is a `sub2` fill, and
-  moving the pointer onto a row makes it the cursor. Esc closes the topmost thing. Key hints read
+  moving the pointer onto a row makes it the cursor. On an email, R replies and A replies to all;
+  in the composer ⌘Enter sends and ⌘⇧B shows Cc and Bcc. Esc closes the topmost thing (the
+  composer keeps its draft). Key hints read
   "Esc", "⌘K", "⇧I".
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed
   in place with the provider's message otherwise. Nothing quietly reverts.
 - **Undo** comes as a 6-second toast at the bottom centre, its time draining as a hairline; a swipe
-  takes it away sooner.
+  takes it away sooner. Send joins it: the server holds a sent email 6 seconds, and the toast reads
+  "Sending" with Undo, which opens the composer again as it was.
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
 - **Right-click** opens an item's actions at the pointer; selected text, links and fields keep the
   browser's menu.

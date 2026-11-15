@@ -8,7 +8,7 @@ import {
   accountOrderInput, accountUpdateInput, allInput, sentInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, mailpiecesInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
-  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftUpdateInput,
+  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftUpdateInput, peopleInput,
 } from '@setpoint/shared';
 import type {
   ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
@@ -47,6 +47,7 @@ import {ICS_MAX_BYTES} from '../domain/icsImport.ts';
 import {markAllRead, openMessage, setDone, setPinned, setRead, trashMessage} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
 import {conflict, forbidden, invalid, parse, SetpointError, unauthorized} from '../errors.ts';
+import {suggestPeople} from '../sending/people.ts';
 import {createDraft, discardDraft, fromOptions, getDraftRow, listDrafts, presentDraft, updateDraft} from '../sending/drafts.ts';
 import {holdSend, undoSend} from '../sending/send.ts';
 import type {FeedEvent} from '../live/feed.ts';
@@ -622,6 +623,10 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   app.get('/api/mail/from', c => c.json(fromOptions(store)));
   app.get('/api/mail/drafts', c => c.json(listDrafts(store)));
+  app.get('/api/mail/people', c => {
+    const {q, limit} = parse(peopleInput, c.req.query());
+    return c.json(suggestPeople(store, q, limit));
+  });
   app.post('/api/mail/drafts', async c => c.json(createDraft(store, parse(draftCreateInput, await body(c))), 201));
   app.get('/api/mail/drafts/:id', c => c.json(presentDraft(getDraftRow(store, id(c.req.param('id'))))));
   app.patch('/api/mail/drafts/:id', async c => c.json(updateDraft(store, id(c.req.param('id')), parse(draftUpdateInput, await body(c)))));

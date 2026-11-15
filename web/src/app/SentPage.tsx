@@ -6,7 +6,8 @@
 // an account with none reads quieter, and a click on it still opens it, to an empty view. The Inbox
 // has no account filter: here the account is the address the user chose to write from.
 //
-// The reader opens a sent email as any other. Its tools are Trash and Open in Gmail. A received email
+// The reader opens a sent email as any other. Its tools are Trash, Open in Gmail, Reply R and Reply
+// all A. A received email
 // of its conversation opens in the Inbox. J and K move the
 // cursor (with an email open, they open the next and previous one), Enter opens, E Trash (with Undo in
 // the toast, and ⌘Z), O Open in Gmail, Esc closes the reader, then the search.
@@ -37,6 +38,7 @@ import {emailActions} from './emailActions.ts';
 import {SentEmptyView} from './EmptyView.tsx';
 import {beats} from './fold.ts';
 import {askCard, Reader} from './Reader.tsx';
+import {answerKey, closeComposer, openComposer} from './compose/composer.ts';
 import type {ReaderActions, Travel} from './Reader.tsx';
 import {navigate} from './router.ts';
 import {SearchField, SearchResults} from './search/Search.tsx';
@@ -272,8 +274,13 @@ export function SentPage({route}: {route: SentRoute}) {
       } else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
-      else if (plainKey(event, 'Escape')) {
-        if (open !== null) run(close);
+      // R and A answer the open email, or the one under the cursor, which opens with its composer.
+      else if ((plainKey(event, 'r') || plainKey(event, 'a')) && target !== null) {
+        const kind = plainKey(event, 'r') ? 'reply' : 'reply_all';
+        run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : 'a');
+      } else if (plainKey(event, 'Escape')) {
+        if (open !== null && openComposer()?.messageId === open) run(closeComposer);
+        else if (open !== null) run(close);
         else if (searching) run(() => search.clear());
         else if (cursor !== null) run(() => setCursor(null));
       }
@@ -282,7 +289,13 @@ export function SentPage({route}: {route: SentRoute}) {
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  /** A right-click on a row opens its actions: Open, Trash, Open in Gmail and the make actions. */
+  /** Reply or Reply all on an email: it opens (if it isn't) with the composer under it. */
+  function answerOn(id: number, key: string | null | undefined, kind: 'reply' | 'reply_all') {
+    if (id !== open) openEmail(id, key ?? undefined);
+    answerKey(id, kind);
+  }
+
+  /** A right-click on a row opens its actions: Open, Trash, Open in Gmail, Reply and the make actions. */
   function onContextMenu(event: ReactMouseEvent) {
     const element = (event.target as Element).closest<HTMLElement>('.list [data-key][data-id]');
     const id = element ? Number(element.dataset.id) : NaN;
@@ -302,6 +315,7 @@ export function SentPage({route}: {route: SentRoute}) {
       // Add to calendar, Add as task and Ask open the email with their card.
       propose: card => withCard(card),
       ask: () => withCard('ask'),
+      reply: () => answerOn(id, key, 'reply'),
     }, 'menu', undefined, true);
     if (!openContextMenu(event, element, offered)) return;
     if (key && stops.some(stop => stop.key === key)) setCursor(key);

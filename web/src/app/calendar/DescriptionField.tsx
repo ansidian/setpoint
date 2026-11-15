@@ -4,8 +4,11 @@
 // of formats and nothing else. A paste goes in already read that way. An event has underline, a
 // task doesn't (Markdown has none). Its links open on ⌘-click (Ctrl on Windows), as a typed field
 // can't open them on a plain one. A Gmail link to an email Setpoint has opens in the reader.
+//
+// The mail composer uses it too (kind `mail`, formatted as an event's, with underline), under its
+// own label, its format row always shown with a place at its end for the composer's own buttons.
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
-import type {ClipboardEvent, KeyboardEvent, MouseEvent, ReactNode} from 'react';
+import type {ClipboardEvent, KeyboardEvent, MouseEvent, ReactNode, RefObject} from 'react';
 import {fitting, isEmpty, readHtml, safeHref, writeHtml} from '../../logic/description.ts';
 import type {Block, List, Run} from '../../logic/description.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -36,7 +39,7 @@ function runNodes(runs: Run[]): Node[] {
 }
 
 /** The description as the field's own nodes: a line a <div>, as the browser makes them while typing. */
-function mount(field: HTMLElement, blocks: Block[]) {
+export function mountBlocks(field: HTMLElement, blocks: Block[]) {
   const element = (tag: string, children: Node[]) => {
     const made = document.createElement(tag);
     made.append(...children);
@@ -115,23 +118,36 @@ export function linkTarget(typed: string): string | null {
 export interface DescriptionFieldProps {
   // What it opens with. After that the field holds its own text and says what it reads as.
   blocks: Block[];
-  kind: 'event' | 'task';
+  kind: 'event' | 'task' | 'mail';
   // Under the field once it's changed, when its source held formatting the list can't.
   note: string | null;
   // A proposal's "from the email" mark, at the field's top end until it's changed.
   mark?: ReactNode;
   onChange: (blocks: Block[]) => void;
+  // The field's name and its empty line. An item's are Description and "Add description".
+  label?: string;
+  placeholder?: string;
+  // The format row: under the field while it's focused (an item's), or always there, with `barEnd`
+  // after the formats (the composer's).
+  bar?: 'focus' | 'always';
+  barEnd?: ReactNode;
+  // Under the field, above the format row (the composer's folded quote).
+  after?: ReactNode;
+  // The editable element, for a caller that focuses it.
+  fieldRef?: RefObject<HTMLDivElement | null>;
 }
 
-export function DescriptionField({blocks, kind, note, mark: source = null, onChange}: DescriptionFieldProps) {
-  const field = useRef<HTMLDivElement>(null);
+export function DescriptionField({blocks, kind, note, mark: source = null, onChange, label = 'Description', placeholder = 'Add description', bar = 'focus', barEnd = null, after = null, fieldRef}: DescriptionFieldProps) {
+  const own = useRef<HTMLDivElement>(null);
+  const field = fieldRef ?? own;
   const address = useRef<HTMLInputElement>(null);
   const [empty, setEmpty] = useState(() => isEmpty(blocks));
   const [focused, setFocused] = useState(false);
   const [on, setOn] = useState<Format[]>([]);
   // The link being set: the selection it's for, kept while the address is typed.
   const [linking, setLinking] = useState<{range: Range | null; url: string} | null>(null);
-  const formats = FORMATS.filter(format => kind === 'event' || format.command !== 'underline');
+  const formats = FORMATS.filter(format => kind !== 'task' || format.command !== 'underline');
+  const fits = kind === 'task' ? 'task' : 'event';
   // A press outside that takes the focus (the proposal card's Create, just under the field) keeps
   // the bar until it ends: folded at once, the bar would move what was pressed from under the
   // pointer before the press lands on it.
@@ -168,7 +184,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
   };
 
   useLayoutEffect(() => {
-    if (field.current) mount(field.current, blocks);
+    if (field.current) mountBlocks(field.current, blocks);
     // Mounted once: from then on the field's text is the user's.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -291,7 +307,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
       run('insertText', event.clipboardData.getData('text/plain'));
       return;
     }
-    run('insertHTML', writeHtml(fitting(kind, readHtml(html).blocks)));
+    run('insertHTML', writeHtml(fitting(fits, readHtml(html).blocks)));
   };
 
   return (
@@ -300,11 +316,12 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
       onBlur={event => {
         if (!event.currentTarget.contains(event.relatedTarget)) unfocus();
       }}>
-      <div ref={field} className="desc desc-edit" contentEditable role="textbox" aria-multiline="true" aria-label="Description" data-placeholder="Add description" data-empty={empty || undefined}
+      <div ref={field} className="desc desc-edit" contentEditable role="textbox" aria-multiline="true" aria-label={label} data-placeholder={placeholder} data-empty={empty || undefined}
         suppressContentEditableWarning spellCheck onInput={read} onKeyDown={onKeyDown} onPaste={onPaste} onDrop={event => event.preventDefault()}
         onMouseOver={hoverLink} onClick={openLink} />
       {source}
-      {(focused || linking) && (linking ? (
+      {after}
+      {(focused || linking || bar === 'always') && (linking ? (
         <div className="desc-bar linking">
           <Icon name="link" size={16} />
           <input ref={address} className="grow" aria-label="Link address" placeholder="Paste or type a link" value={linking.url} onChange={event => setLinking({...linking, url: event.target.value})}
@@ -316,6 +333,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
               endLink(event.key === 'Enter');
             }} />
           <button type="button" className="btn quiet sm" disabled={linking.url.trim() !== '' && !linkTarget(linking.url)} onClick={() => endLink(true)}>{linking.url.trim() ? 'Link' : 'Remove'}</button>
+          {barEnd}
         </div>
       ) : (
         <div className="desc-bar" role="toolbar" aria-label="Formatting">
@@ -324,6 +342,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
               onMouseDown={event => event.preventDefault()} onClick={() => run(format.command)}><Icon name={format.icon} size={17} /></button>
           ))}
           <button type="button" className="ibtn sm" aria-label="Link" data-tip="Link" onMouseDown={event => event.preventDefault()} onClick={startLink}><Icon name="link" size={17} /></button>
+          {barEnd}
         </div>
       ))}
       {note && <div className="desc-note ink3">{note}</div>}

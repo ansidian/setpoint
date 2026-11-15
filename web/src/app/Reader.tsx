@@ -1,5 +1,5 @@
 // The reading pane: 680 px beside the list, there only while an email is open. It holds the tools
-// (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Reply's reserved place, previous, next,
+// (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Reply R and Reply all A, previous, next,
 // More), the head (the protected line, subject, sender, organisation and platform, account, time),
 // security mail's facts card, the actions, then the body: plain text, or HTML in a sandboxed frame
 // with the images-hidden bar, and the attachments. Add to calendar and Add as task open the proposal
@@ -9,19 +9,25 @@
 // (InboxPage) does. Its head has mail's slot under the sender's line and above the actions
 // (slots.tsx), which another module may fill.
 //
+// On the desktop, Reply R and Reply all A (only when the email has others to reply to) sit after
+// Open in Gmail, and open the composer under the email (compose/Composer.tsx). An email with a draft
+// opens its composer again when it's shown.
+//
 // On the phone (board 21) it covers the page: Back and Pin at the top, the email
 // full width, and Done (on Attention mail), Trash, Mark unread (then Mark read) and Open in Gmail at the bottom.
 //
 // EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
 // body, with no tools, actions, slot or commands of its own.
-import type {AccountOut, ItemKind, MessageOut, MessageRowOut, ProposalOut, RuleOut} from '@setpoint/shared';
+import type {AccountOut, DraftsOut, FromOut, ItemKind, MessageOut, MessageRowOut, ProposalOut, RuleOut} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {useResource} from '../api/client.ts';
+import {DRAFTS_PATH, FROM_PATH} from '../api/drafts.ts';
 import {markRead, markUnread, messagePath, trustDomain} from '../api/mail.ts';
 import {proposeFromMessage} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
+import {hasOthers} from '../logic/composer.ts';
 import {dayOf, fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
 import {factRows, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
@@ -30,6 +36,8 @@ import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
 import {CodeCard} from './Code.tsx';
+import {ComposerSlot} from './compose/Composer.tsx';
+import {showEmail, startComposer, useOpenComposer} from './compose/composer.ts';
 import {Conversation} from './Conversation.tsx';
 import {copyText, openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
@@ -109,6 +117,14 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const provider = listed ? accounts.get(listed.account_id)?.provider : undefined;
   const gmail = message ? message.open_url !== null : provider === undefined ? null : provider === 'gmail';
   const phone = usePhone();
+  // The composer, and the drafts that open it again: the desktop's only.
+  const composer = useOpenComposer();
+  const {data: drafts} = useResource<DraftsOut>(phone ? null : DRAFTS_PATH);
+  const {data: from} = useResource<FromOut>(phone ? null : FROM_PATH);
+  useEffect(() => {
+    if (!phone) showEmail(id, drafts?.drafts);
+  }, [id, drafts, phone]);
+  const replyAll = message ? hasOthers(message, from) : false;
   // Mark unread on the phone keeps the email open and offers Mark read. The subject shows the unread
   // dot meanwhile. Each tap pops the swapped icon in (`toggles` keys it), but the first draw doesn't.
   const [unreadFor, setUnreadFor] = useState<number | null>(null);
@@ -125,7 +141,10 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
   // the email stays unread. It draws from the email's row too, as the tools do, so it's there at
   // once. It is the same list as the row's right-click menu and More (emailActions.ts).
-  const handlers = {...actions, propose: cards.propose, ask: cards.ask};
+  const handlers = {...actions, propose: cards.propose, ask: cards.ask, ...(phone ? {} : {
+    reply: () => startComposer({kind: 'reply', message_id: id}),
+    ...(replyAll ? {replyAll: () => startComposer({kind: 'reply_all', message_id: id})} : {}),
+  })};
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
   const offered = listed ? emailActions(listed, gmail, handlers, 'palette', rules, sentMail) : [];
   useCommands(() => (listed ? {
@@ -160,7 +179,12 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
             <Icon name="open_in_new" />Open in Gmail<span className="kbd">O</span>
           </button>
         )}
-        <span className="reply-slot" />
+        {!phone && (
+          <>
+            <button className="tool" type="button" data-hint="r" onClick={() => startComposer({kind: 'reply', message_id: id})}><Icon name="reply" />Reply<span className="kbd">R</span></button>
+            {replyAll && <button className="tool" type="button" data-hint="a" onClick={() => startComposer({kind: 'reply_all', message_id: id})}><Icon name="reply_all" />Reply all<span className="kbd">A</span></button>}
+          </>
+        )}
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous email" disabled={!canStep.previous} onClick={() => actions.step(-1)}><Icon name="keyboard_arrow_up" /></button>
         <button className="ibtn" type="button" aria-label="Next email" disabled={!canStep.next} onClick={() => actions.step(1)}><Icon name="keyboard_arrow_down" /></button>
@@ -175,6 +199,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         {/* The head from the email's row at once. Only the body waits for the email. */}
         <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} />
       </Swap>
+      {!phone && <ComposerSlot open={composer} messageId={id} message={message} accounts={accounts} timeZone={timeZone} />}
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
           email and its account are known, so none moves in or along when the email arrives. Until
           then the bar stays empty. Done leads, the phone's main job on Attention mail. */}

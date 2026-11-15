@@ -32,6 +32,7 @@ import {toInbox} from './toInbox.ts';
 import {fillMailSlots} from './slots.tsx';
 import {showToast} from './toast.ts';
 import {ToastPill} from './ToastPill.tsx';
+import {SendWatch} from './compose/Composer.tsx';
 
 // Jobs fills mail's slots: the reader's JD chip and Applied before, before Setpoint first draws.
 fillMailSlots(jobsMailSlots);
@@ -123,6 +124,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
           <Palette />
           <ContextMenu />
           <Tip />
+          <SendWatch />
         </>
       )}
     </div>

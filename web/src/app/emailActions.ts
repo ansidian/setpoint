@@ -1,10 +1,11 @@
 // An email's actions, one list for ⌘K's This email (board 20), the reader's More (its proposals on
 // Security and Noise mail) and the right-click menu on its row, so they can't drift. ⌘K's order:
-// Done H (Attention mail not yet Done), Trash E, Pin or Unpin P, Open in Gmail O (Gmail's mail),
+// Done H (Attention mail not yet Done), Trash E, Pin or Unpin P, Open in Gmail O (Gmail's mail), Reply R
+// and Reply all A (on the desktop; Reply all only in ⌘K, when the email has others to reply to),
 // Add to calendar, Add as task, Ask about this email, Add to rule, Mark unread ⇧U. The menu leads
 // with Open ↵ and offers Mark read on an unread row in Mark unread's place. It ends with its Copy
 // items: the sender's address and a code row's code, whose copy reads the email. Sent mail has Open,
-// Trash, Open in Gmail and the make actions only: no Done, Pin, rules or read state.
+// Trash, Open in Gmail, Reply and the make actions only: no Done, Pin, rules or read state.
 import type {ItemKind, MessageRowOut, RuleOut} from '@setpoint/shared';
 import {setRuleMatch} from '../api/settings.ts';
 import {readerActions} from '../logic/reader.ts';
@@ -28,7 +29,16 @@ export interface EmailHandlers {
   open?: () => void;
   markRead?: () => void;
   codeCopied?: () => void;
+  // The composer's, on the desktop only: Reply, and Reply all when the email has others.
+  reply?: () => void;
+  replyAll?: () => void;
 }
+
+/** Reply R and Reply all A, where the composer is. */
+const replies = (on: EmailHandlers): MenuAction[] => [
+  ...(on.reply ? [{id: 'reply', group: 'act', label: 'Reply', icon: 'reply', hint: 'R', run: on.reply} satisfies MenuAction] : []),
+  ...(on.replyAll ? [{id: 'reply-all', group: 'act', label: 'Reply all', icon: 'reply_all', hint: 'A', run: on.replyAll} satisfies MenuAction] : []),
+];
 
 /**
  * `gmail`: whether its account is Gmail's (false hides Open in Gmail, as null does until it's known).
@@ -43,6 +53,7 @@ export function emailActions(row: MessageRowOut, gmail: boolean | null, on: Emai
       ...(menu && on.open ? [{id: 'open', group: 'open', label: 'Open', icon: 'mail', hint: '↵', run: on.open} satisfies MenuAction] : []),
       {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: menu, run: on.trash},
       ...(gmail ? [{id: 'gmail', group: 'act', label: 'Open in Gmail', icon: 'open_in_new', hint: 'O', run: on.openInGmail} satisfies MenuAction] : []),
+      ...replies(on),
       {id: 'event', group: 'make', label: 'Add to calendar', icon: 'event', run: () => on.propose('event')},
       {id: 'task', group: 'make', label: 'Add as task', icon: 'task_alt', run: () => on.propose('task')},
       {id: 'ask', group: 'make', label: 'Ask about this email', icon: 'auto_awesome', keywords: 'alfred', run: on.ask},
@@ -55,6 +66,7 @@ export function emailActions(row: MessageRowOut, gmail: boolean | null, on: Emai
     {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: menu, run: on.trash},
     {id: 'pin', group: 'act', label: row.pinned ? 'Unpin' : 'Pin', icon: row.pinned ? 'keep_off' : 'keep', hint: 'P', run: on.pin},
     ...(gmail ? [{id: 'gmail', group: 'act', label: 'Open in Gmail', icon: 'open_in_new', hint: 'O', run: on.openInGmail} satisfies MenuAction] : []),
+    ...replies(on),
     {id: 'event', group: 'make', label: 'Add to calendar', icon: 'event', run: () => on.propose('event')},
     {id: 'task', group: 'make', label: 'Add as task', icon: 'task_alt', run: () => on.propose('task')},
     {id: 'ask', group: 'make', label: 'Ask about this email', icon: 'auto_awesome', keywords: 'alfred', run: on.ask},

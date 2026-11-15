@@ -79,6 +79,8 @@ export const draftUpdateInput = z.strictObject({
   bcc: recipients.optional(),
   subject: z.string().max(998).optional(),
   body: draftBodySchema.optional(),
+  // A reply's quote, trimmed by the user. Null puts the original back in full.
+  quote: draftBodySchema.nullable().optional(),
 });
 export type DraftUpdateInput = z.infer<typeof draftUpdateInput>;
 
@@ -107,6 +109,9 @@ export interface DraftOut {
   bcc: Recipient[];
   subject: string;
   body: Block[];
+  // A reply's quote as the user trimmed it, or null for the original in full (the server quotes it
+  // at send time).
+  quote: Block[] | null;
   created_at: string;
   updated_at: string;
   send: DraftSendOut | null;
@@ -156,4 +161,15 @@ export interface FromAccountOut {
 export interface FromOut {
   accounts: FromAccountOut[];
   default_account_id: number | null;
+}
+
+/** Recipient suggestions: what the user typed so far, and how many to offer. */
+export const peopleInput = z.strictObject({
+  q: z.string().max(200).optional().default(''),
+  limit: z.coerce.number().int().min(1).max(20).optional().default(8),
+});
+
+/** People to suggest as recipients, best first (src/domain/people.ts on the server). */
+export interface PeopleOut {
+  people: Recipient[];
 }

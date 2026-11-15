@@ -5,8 +5,9 @@
 // one never moves it.
 // The keyboard cursor is a `sub2` fill that J and K move and the pointer takes. With an email open,
 // J and K open the next and previous one instead. Enter opens, H Done, E Trash (each with Undo in
-// the toast, and ⌘Z), P Pin, O Open in Gmail, ⇧I Mark all as read, ⇧U Mark unread, U to the next
-// unread email. Esc closes the reader. Done or Trash on the open email opens the next one.
+// the toast, and ⌘Z), P Pin, O Open in Gmail, R Reply and A Reply all (the composer, desktop only),
+// ⇧I Mark all as read, ⇧U Mark unread, U to the next unread email. Esc closes the composer, then the
+// reader. Done or Trash on the open email opens the next one.
 //
 // ⌘ or Ctrl-click and ⇧-click select several emails. The reading pane shows the selection
 // (SelectionPane), and H, E, P, ⇧U, a selected row's right-click and ⌘K act on all of it. Each
@@ -62,6 +63,7 @@ import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
 import {askCard, Reader} from './Reader.tsx';
+import {answerKey, closeComposer, openComposer} from './compose/composer.ts';
 import {openContextMenu} from './ContextMenu.tsx';
 import {emailActions, selectionActions} from './emailActions.ts';
 import type {SelectionHandlers} from './emailActions.ts';
@@ -321,6 +323,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
     select(adding ? toggled(now, id, open) : ranged(now, stops, id, open));
     setCursor(key);
     if (open !== null) go({open: null});
+  }
+
+  /** Reply or Reply all on an email: it opens (if it isn't) with the composer under it. */
+  function answerOn(id: number, key: string | null | undefined, kind: 'reply' | 'reply_all') {
+    if (id !== open) openEmail(id, key ?? undefined);
+    answerKey(id, kind);
   }
 
   /** ⌘Enter, or Ask Alfred: the Answer card above the results, asked what the field holds. */
@@ -619,7 +627,11 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'p')) run(actions.pin, 'p');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
-      else if (plainKey(event, 'i', {shift: true}) && view !== 'attention') run(actions.markAllRead, 'shift+i');
+      // R and A answer the open email, or the one under the cursor, which opens with its composer.
+      else if ((plainKey(event, 'r') || plainKey(event, 'a')) && !phone && !onSelection && target !== null) {
+        const kind = plainKey(event, 'r') ? 'reply' : 'reply_all';
+        run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : 'a');
+      } else if (plainKey(event, 'i', {shift: true}) && view !== 'attention') run(actions.markAllRead, 'shift+i');
       else if (plainKey(event, 'u', {shift: true})) run(actions.markUnread);
       // U goes to the next unread email. 1, the Inbox's key elsewhere, goes back to All from a
       // search, another view or on the phone.
@@ -627,6 +639,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, '1') && (searching || phone || view !== 'all')) run(() => navigate(toInbox()));
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
+        else if (open !== null && openComposer()?.messageId === open) run(closeComposer);
         else if (open !== null) run(close);
         else if (pane.shown) run(pane.close);
         else if (alfred.open) run(() => {
@@ -693,6 +706,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       markRead: () => on.markRead([id]),
       markUnread: () => on.markUnread([id]),
       codeCopied: () => on.read([id]),
+      // Reply: Reply all needs the email's recipients, so it's the reader's, ⌘K's and A's.
+      ...(phone ? {} : {reply: () => answerOn(id, key, 'reply')}),
     }, 'menu', rules);
     if (!openContextMenu(event, element, offered)) return;
     if (key && stops.some(stop => stop.key === key)) setCursor(key);

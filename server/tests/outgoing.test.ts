@@ -136,6 +136,19 @@ describe('composeBody', () => {
     expect(body.html).toContain('<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex"><div>a &lt; b<br>c</div></blockquote>');
   });
 
+  test('a quote the user trimmed is sent as they left it, under the same line', () => {
+    const trimmed: Block[] = [{type: 'paragraph', runs: [{text: 'Are we on for ', marks: [], href: null}, {text: 'Thursday', marks: ['bold'], href: null}, {text: '?', marks: [], href: null}]}];
+    const body = composeBody(blocks, {kind: 'reply', email: original, quote: trimmed}, ZONE);
+    expect(body.text).toBe('Yes, see you there <https://maps.example/x>\n- Bring the notes\n\nOn Nov 12, 2026, Sam Ortiz wrote:\n> Are we on for Thursday?');
+    expect(body.html).toContain('padding-left:1ex"><div dir="ltr">Are we on for <b>Thursday</b>?</div></blockquote>');
+    expect(body.html).not.toContain('cdn.example');
+  });
+
+  test('a quote the user emptied leaves the reply without one', () => {
+    const body = composeBody(blocks, {kind: 'reply', email: original, quote: []}, ZONE);
+    expect(body).toEqual(composeBody(blocks, null, ZONE));
+  });
+
   test('a forward carries the email in full under its header lines', () => {
     const body = composeBody([], {kind: 'forward', email: original}, ZONE);
     expect(body.text).toBe([

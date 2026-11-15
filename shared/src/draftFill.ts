@@ -1,5 +1,6 @@
 // How a draft starts: who a reply goes to, its subject and the address it is written from. Pure, so
-// the web and the iPhone app get the same draft from the server.
+// the web and the iPhone app get the same draft from the server, and the web knows from the same
+// rule whether an email has anyone for Reply all.
 //
 // - Reply goes to Reply-To when the sender set one, else to the sender. A reply to mail the user
 //   sent goes back to its own recipients, as Gmail's does.
@@ -10,7 +11,8 @@
 //   else that account's own address. A new message starts from the account asked for, else the
 //   one the user last sent from, else the first account.
 // Recipients a header never named are null (unknown): they add no one.
-import type {DraftKind, Recipient} from '@setpoint/shared';
+import type {DraftKind} from './api/drafts.ts';
+import type {Recipient} from './message.ts';
 
 export interface AnsweredEmail {
   fromName: string;

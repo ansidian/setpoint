@@ -141,7 +141,7 @@ export class SendWorker implements JobWorker {
     const original = answered && draft.kind !== 'new' ? {kind: draft.kind === 'forward' ? 'forward' as const : 'reply' as const, email: {
       fromName: answered.fromName, fromAddress: answered.fromAddress, subject: answered.subject, receivedAt: answered.receivedAt,
       to: answered.toRecipients, cc: answered.ccRecipients, bodyText: answered.bodyText, bodyHtml: answered.bodyHtml,
-    }} : null;
+    }, quote: draft.quote} : null;
     const body = composeBody(draft.body, original, store.timeZone);
     const reply = original?.kind === 'reply' ? replyHeaders(answered!) : {inReplyTo: null, references: []};
     const attachments = original?.kind === 'forward' ? await this.forwarded(answered!) : [];

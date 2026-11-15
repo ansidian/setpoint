@@ -1,0 +1,83 @@
+// The composer's pure rules as tables: when an email has anyone for Reply all (the server's own fill
+// rule), what a typed or pasted recipient is, a chip's words, and the reply's quote and its line.
+import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
+import {SEED_TIME_ZONE} from '@setpoint/shared';
+import {describe, expect, test} from 'vitest';
+import {chipLabel, hasOthers, quoteOf, readRecipient, readRecipients, replyLine, withRecipients} from '../src/logic/composer.ts';
+
+const FROM: FromOut = {
+  accounts: [
+    {account_id: 1, addresses: [{address: 'user@example.com', name: 'User', primary: true}, {address: 'alias@example.com', name: null, primary: false}]},
+    {account_id: 2, addresses: [{address: 'user@work.example.org', name: null, primary: true}]},
+  ],
+  default_account_id: 1,
+};
+const SAM: Recipient = {name: 'Sam Lee', address: 'sam@example.org'};
+const JUNE: Recipient = {name: 'June Park', address: 'june@example.org'};
+const ME: Recipient = {name: 'User', address: 'user@example.com'};
+const WORK: Recipient = {name: null, address: 'user@work.example.org'};
+
+type Email = Pick<MessageOut, 'account_id' | 'from_name' | 'from_address' | 'subject'> & Partial<Pick<MessageOut, 'to' | 'cc' | 'reply_to'>>;
+const email = (fields: Partial<Email>): Email => ({account_id: 1, from_name: 'Sam Lee', from_address: SAM.address, subject: 'Dinner', ...fields});
+
+describe('Reply all', () => {
+  test.each<[string, Email, boolean]>([
+    ['to the user alone', email({to: [ME], cc: []}), false],
+    ['another in To', email({to: [ME, JUNE], cc: []}), true],
+    ['another in Cc', email({to: [ME], cc: [JUNE]}), true],
+    ['only the user\'s other addresses, an alias and another account\'s, are no one', email({to: [ME, {name: null, address: 'Alias@Example.com'}], cc: [WORK]}), false],
+    ['the sender named again in Cc is no one more', email({to: [ME], cc: [SAM]}), false],
+    ['recipients not known yet count as none', email({}), false],
+    ['mail the user sent to two people answers both with Reply', email({from_name: 'User', from_address: ME.address, to: [SAM, JUNE], cc: []}), false],
+    ['mail the user sent with a Cc', email({from_name: 'User', from_address: ME.address, to: [SAM], cc: [JUNE]}), true],
+  ])('%s', (_name, message, expected) => {
+    expect(hasOthers(message, FROM)).toBe(expected);
+  });
+
+  test('not before From has loaded', () => {
+    expect(hasOthers(email({to: [ME, JUNE]}), undefined)).toBe(false);
+  });
+});
+
+describe('a typed recipient', () => {
+  test.each<[string, string, Recipient | null]>([
+    ['an address, lowered', ' Sam@Example.org ', {name: null, address: 'sam@example.org'}],
+    ['a trailing comma', 'sam@example.org,', {name: null, address: 'sam@example.org'}],
+    ['a name and an address', 'Sam Lee <sam@example.org>', SAM],
+    ['a quoted name', '"Lee, Sam" <sam@example.org>', {name: 'Lee, Sam', address: 'sam@example.org'}],
+    ['an empty name', '<sam@example.org>', {name: null, address: 'sam@example.org'}],
+    ['no domain', 'sam@example', null],
+    ['words', 'Sam Lee', null],
+    ['nothing', '  ', null],
+  ])('%s', (_name, typed, expected) => {
+    expect(readRecipient(typed)).toEqual(expected);
+  });
+
+  test('several pasted at once: each address a recipient, the rest left as typed', () => {
+    expect(readRecipients('Sam Lee <sam@example.org>, "Park, June" <june@example.org>; not one\nravi@example.org')).toEqual({
+      recipients: [SAM, {name: 'Park, June', address: 'june@example.org'}, {name: null, address: 'ravi@example.org'}], rest: 'not one',
+    });
+  });
+
+  test('a chip reads the name, else the address; a field takes each address once', () => {
+    expect([SAM, {name: ' ', address: 'x@example.org'}].map(chipLabel)).toEqual(['Sam Lee', 'x@example.org']);
+    expect(withRecipients([SAM], [{name: null, address: SAM.address}, JUNE, JUNE])).toEqual([SAM, JUNE]);
+  });
+});
+
+describe('the quote', () => {
+  test('its line names the day in the owner\'s zone and the sender, else the address', () => {
+    expect(replyLine({from_name: 'Sam Lee', from_address: SAM.address, received_at: '2026-10-05T19:40:00Z'}, SEED_TIME_ZONE)).toBe('On Oct 5, 2026, Sam Lee wrote:');
+    expect(replyLine({from_name: '', from_address: SAM.address, received_at: '2026-10-06T06:30:00Z'}, SEED_TIME_ZONE)).toBe('On Oct 5, 2026, sam@example.org wrote:');
+  });
+
+  test('an HTML email is read as rich text, nothing of its page kept; plain text keeps its paragraphs and lines', () => {
+    expect(quoteOf({body_html: '<style>p{}</style><p>Blue Door at <b>7</b>?</p><script>x()</script>', body_text: ''})).toEqual([
+      {type: 'paragraph', runs: [{text: 'Blue Door at ', marks: [], href: null}, {text: '7', marks: ['bold'], href: null}, {text: '?', marks: [], href: null}]},
+    ]);
+    expect(quoteOf({body_html: null, body_text: 'Hey!\nDinner?\n\nSam'})).toEqual([
+      {type: 'paragraph', runs: [{text: 'Hey!\nDinner?', marks: [], href: null}]},
+      {type: 'paragraph', runs: [{text: 'Sam', marks: [], href: null}]},
+    ]);
+  });
+});

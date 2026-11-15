@@ -233,6 +233,9 @@ export const drafts = sqliteTable('drafts', {
   subject: text('subject').notNull(),
   // Rich-text blocks (shared/src/richText.ts), the user's own text without the quote.
   body: text('body', {mode: 'json'}).$type<Block[]>().notNull(),
+  // A reply's quote as the user trimmed it, as rich-text blocks. Null sends the original in full,
+  // quoted from the email itself at send time.
+  quote: text('quote', {mode: 'json'}).$type<Block[]>(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   sendState: text('send_state', {enum: SEND_STATES}),

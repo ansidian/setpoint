@@ -1,8 +1,8 @@
 // How a draft starts: a reply's recipients, its subject and its From, as tables.
 import type {Recipient} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {draftSubject, fillAnswer, newMessageAccount, replyFrom} from '../src/domain/draftFill.ts';
-import type {AnsweredEmail} from '../src/domain/draftFill.ts';
+import {draftSubject, fillAnswer, newMessageAccount, replyFrom} from '@setpoint/shared/draftFill';
+import type {AnsweredEmail} from '@setpoint/shared/draftFill';
 
 const sam: Recipient = {name: 'Sam Ortiz', address: 'sam.ortiz@example.org'};
 const june: Recipient = {name: 'June Park', address: 'june.park@example.org'};

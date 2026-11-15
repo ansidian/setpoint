@@ -1,6 +1,7 @@
 // A draft's body as the email's HTML and plain text: the user's rich text (shared/src/richText.ts),
 // then, for a reply, the original quoted under a line such as "On Nov 12, 2026, Sam Ortiz wrote:",
-// or, for a forward, the forwarded email in full under its own header lines. The original's HTML
+// as the user trimmed it when they did, or, for a forward, the forwarded email in full under its own
+// header lines. The original's HTML
 // goes through the reader's own cleaning (src/domain/emailHtml.ts) first, so nothing in it runs.
 import type {Recipient} from '@setpoint/shared';
 import {plainText, tidy, writeHtml} from '@setpoint/shared/richText';
@@ -91,19 +92,23 @@ function forwardLines(email: QuotedEmail, timeZone: string): string[] {
 
 /**
  * The email's body: the user's text, and the original quoted (a reply) or carried in full (a
- * forward). With no original (a new message, or one whose email is gone), the user's text alone.
+ * forward). A reply's `quote`, when the user trimmed it, takes the original's place, and an emptied
+ * one leaves no quote. With no original (a new message, or one whose email is gone), the user's
+ * text alone.
  */
-export function composeBody(blocks: Block[], original: {kind: 'reply' | 'forward'; email: QuotedEmail} | null, timeZone: string): EmailBody {
+export function composeBody(blocks: Block[], original: {kind: 'reply' | 'forward'; email: QuotedEmail; quote?: Block[] | null} | null, timeZone: string): EmailBody {
   const ownHtml = `<div dir="ltr">${writeHtml(blocks)}</div>`;
   const ownText = userText(blocks);
-  if (!original) return {html: ownHtml, text: ownText};
+  const trimmed = original?.kind === 'reply' && original.quote ? tidy(original.quote) : null;
+  if (!original || trimmed?.length === 0) return {html: ownHtml, text: ownText};
   const {email} = original;
   if (original.kind === 'reply') {
     const line = replyLine(email, timeZone);
+    const quoted = trimmed ? `<div dir="ltr">${writeHtml(trimmed)}</div>` : originalHtml(email);
     return {
       html: `${ownHtml}<br><div class="gmail_quote"><div dir="ltr" class="gmail_attr">${escapeHtml(line)}<br></div>`
-        + `<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">${originalHtml(email)}</blockquote></div>`,
-      text: `${ownText}\n\n${line}\n${quoteText(email.bodyText)}`,
+        + `<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">${quoted}</blockquote></div>`,
+      text: `${ownText}\n\n${line}\n${quoteText(trimmed ? userText(trimmed) : email.bodyText)}`,
     };
   }
   const lines = forwardLines(email, timeZone);
