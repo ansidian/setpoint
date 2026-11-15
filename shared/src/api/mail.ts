@@ -50,6 +50,9 @@ export interface MessageRowOut {
   attachment_count: number;
   // The change waiting for its provider, or failed in place.
   command: CommandOut | null;
+  // Mail the user sent to others, which never came in: only on such mail, which only the web asks
+  // for (Sent, and search with `sent`). Mail to yourself is received mail and has no such key.
+  sent_only?: true;
 }
 
 /** One Inbox group, in INBOX_GROUPS' order. Empty groups are left out. */

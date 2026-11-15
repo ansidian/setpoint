@@ -18,6 +18,7 @@ import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_CHIP_KINDS, SEARCH_READS} from 
 import type {CalendarMatchField, ItemKind, MatchField, SearchChipKind} from '../enums.ts';
 import {id, localDate} from './common.ts';
 import type {ItemOut} from './items.ts';
+import type {Recipient} from '../message.ts';
 import type {MessageRowOut} from './mail.ts';
 
 // A day or range in the owner's zone, end exclusive: "Mar 2026" is 2026-03-01 to 2026-04-01.
@@ -100,6 +101,9 @@ export interface HighlightOut {
 }
 
 export interface SearchResultOut extends MessageRowOut {
+  // On sent-only mail (`sent_only`): who it went to, null while Setpoint hasn't read its headers.
+  to?: Recipient[] | null;
+  cc?: Recipient[] | null;
   // Chips first (org, type, date, account, kind), then the text: sender, subject, body.
   reasons: MatchReasonOut[];
   // The body around the first highlighted word, with "…" where it's cut. It's the body's start

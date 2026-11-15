@@ -276,6 +276,14 @@ describe('the tools on their own', () => {
     expect(searchMail(w.store, searchInput.parse({text: query}), {log: false}).total).toBe(fieldTotal);
   });
 
+  test('search_mail finds mail the user sent too, saying who it went to', () => {
+    const w = world({seed: true});
+    const context = {store: w.store, seen: new Set<number>(), read: [], searched: [], questions: ['Hi'], proposals: []};
+    const out = JSON.parse(runTool(context, 'search_mail', {query: 'hike'}).output);
+    const email = out.results.map((result: {email: string}) => result.email).find((text: string) => text.includes('Subject: Re: Saturday hike'));
+    expect(email).toContain('To: Sam Ortiz <');
+  });
+
   test('a failed tool tells the model why, without throwing', () => {
     const w = world({seed: true});
     const context = {store: w.store, seen: new Set<number>(), read: [], searched: [], questions: ['Hi'], proposals: []};

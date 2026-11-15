@@ -277,8 +277,11 @@ function typedWords(text: string): Map<string, string> {
 
 type Row = ReturnType<typeof messageRows> extends Map<number, infer V> ? V : never;
 
-/** A result: its row, why it matched, the body excerpt and the runs to highlight. */
-export function presentResult(store: Store, {row, out}: Row, matches: SearchMatches): SearchResultOut {
+/**
+ * A result: its row, why it matched, the body excerpt and the runs to highlight. Sent-only mail says
+ * who it went to, and in Sent's search (`sent: 'only'`) mail to yourself does too.
+ */
+export function presentResult(store: Store, {row, out}: Row, matches: SearchMatches, sent?: SearchSent): SearchResultOut {
   const today = localDay(isoNow(store), store.timeZone);
   const reasons: MatchReasonOut[] = [];
   const orgPhrases: string[] = [];
@@ -335,7 +338,8 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
   for (const [field, value] of [['from_name', row.fromName], ['organisation', row.organisation], ['subject', row.subject], ['excerpt', excerpt]] as const) {
     for (const run of runsIn(value)) highlights.push({field, ...run});
   }
-  return {...out, reasons, excerpt, highlights};
+  const recipients = out.sent_only || (sent === 'only' && row.sent) ? {to: row.toRecipients, cc: row.ccRecipients} : {};
+  return {...out, ...recipients, reasons, excerpt, highlights};
 }
 
 export interface SearchOptions extends MatchOptions {
@@ -349,7 +353,7 @@ export function answerSearch(store: Store, input: SearchRequest, matches: Search
   const rows = messageRows(store, pageIds);
   const results = pageIds.flatMap(id => {
     const row = rows.get(id);
-    return row ? [presentResult(store, row, matches)] : [];
+    return row ? [presentResult(store, row, matches, input.sent)] : [];
   });
   const searchId = log ? logSearch(store, input, matches, pageIds, log.reading) : input.search_id ?? 0;
   const next = input.offset + input.limit;

@@ -1,5 +1,5 @@
 // Alfred's tools, run for the model (the same queries and commands the UI uses).
-// search_mail is the search field's own query (unlogged). get_email is the reader's record.
+// search_mail is the search field's own query (unlogged), sent mail included. get_email is the reader's record.
 // list_items is the calendar's range read (an event's place and address as one location, the line
 // Google keeps). propose_item builds the same proposal as Add to calendar / Add as task. None of
 // them changes anything.
@@ -64,7 +64,8 @@ function searchTool(context: ToolContext, input: Record<string, unknown>): ToolO
   const query = text(input.query);
   if (!query) return fail('query is required: the words to search for.');
   const offset = Math.max(0, integer(input.offset) ?? 0);
-  const out = searchMail(context.store, searchInput.parse({text: query, offset, limit: SEARCH_PAGE}), {log: false, matching: 'broad'});
+  // Mail the user sent is searched too, so an earlier reply can be found.
+  const out = searchMail(context.store, searchInput.parse({text: query, offset, limit: SEARCH_PAGE, sent: 'include'}), {log: false, matching: 'broad'});
   const searched = [...out.chips.map(chipWords), out.text].filter(Boolean).join(' · ');
   if (searched && !context.searched.includes(searched)) context.searched.push(searched);
   const accounts = accountLabels(context.store);
@@ -80,6 +81,7 @@ function searchTool(context: ToolContext, input: Record<string, unknown>): ToolO
       matched: result.reasons.map(reason => reason.label),
       email: fenced(result.id, [
         `From: ${result.from_name} <${result.from_address}>${result.organisation ? ` (${result.organisation})` : ''}`,
+        ...(result.sent_only ? [`To: ${result.to ? result.to.map(one => (one.name ? `${one.name} <${one.address}>` : one.address)).join(', ') : 'unknown'}`] : []),
         `Subject: ${result.subject}`,
         result.excerpt,
       ].join('\n')),

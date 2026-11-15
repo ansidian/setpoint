@@ -142,6 +142,23 @@ describe('mail the user sent to others', () => {
     expect(search({sent: 'only', account_id: account + 100})).toEqual([]);
     expect(search({sent: 'only', account_id: account})).toEqual([sent]);
   });
+
+  test('marks itself sent-only, and its search result says who it went to; mail to yourself does only in Sent\'s search', async () => {
+    const {w, deliver} = await setup();
+    const sent = deliver(sentOnly(w));
+    const unknown = deliver(sentOnly(w, {subject: 'Lantern report, unread headers', recipients: undefined}));
+    const self = deliver(sentOnly(w, {subject: 'Lantern report to self', received: true, archived: false, recipients: {...RECIPIENTS, to: [{name: null, address: 'user.jobs@example.com'}]}}));
+    const results = (input: Partial<SearchInput>) => new Map(searchMail(w.store, searchInput.parse({text: 'lantern report', ...input}), {log: false}).results.map(result => [result.id, result]));
+    const pick = (result: {sent_only?: true; to?: unknown; cc?: unknown} | undefined) => ({sent_only: result?.sent_only, has: 'to' in (result ?? {}), to: result?.to, cc: result?.cc});
+
+    const inbox = results({sent: 'include'});
+    expect(pick(inbox.get(sent))).toEqual({sent_only: true, has: true, to: RECIPIENTS.to, cc: []});
+    expect(pick(inbox.get(unknown))).toEqual({sent_only: true, has: true, to: null, cc: null});
+    expect(pick(inbox.get(self))).toEqual({sent_only: undefined, has: false, to: undefined, cc: undefined});
+    expect(pick(results({sent: 'only'}).get(self))).toEqual({sent_only: undefined, has: true, to: [{name: null, address: 'user.jobs@example.com'}], cc: []});
+    // The rows every list draws carry it too, and the reader's email.
+    expect(allMail(w.store, {limit: 200}).days.flatMap(day => day.rows).some(row => 'sent_only' in row)).toBe(false);
+  });
 });
 
 describe('the Sent list', () => {
