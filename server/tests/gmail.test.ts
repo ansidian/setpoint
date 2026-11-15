@@ -583,7 +583,7 @@ describe('Gmail push: Pub/Sub pull', () => {
 });
 
 describe('Gmail history records', () => {
-  test('what arrived in the inbox and what changed', () => {
+  test('what arrived in the inbox or in SENT, and what changed', () => {
     const message = (id: string, labelIds?: string[]) => ({message: {id, ...(labelIds ? {labelIds} : {})}});
     expect(historyChanges([
       {messagesAdded: [message('new', ['INBOX', 'UNREAD']), message('sent', ['SENT'])]},
@@ -592,7 +592,7 @@ describe('Gmail history records', () => {
       {labelsRemoved: [message('read', ['UNREAD']), {...message('archived'), labelIds: ['INBOX']}]},
       {labelsAdded: [{...message('trashed'), labelIds: ['TRASH']}]},
       {messagesDeleted: [message('gone')]},
-    ])).toEqual({arrived: new Set(['new', 'back']), changed: new Set(['back', 'read', 'archived', 'trashed', 'gone'])});
+    ])).toEqual({arrived: new Set(['new', 'sent', 'back']), changed: new Set(['back', 'read', 'archived', 'trashed', 'gone'])});
   });
 
   test.each([

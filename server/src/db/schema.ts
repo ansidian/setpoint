@@ -118,6 +118,14 @@ export const messages = sqliteTable('messages', {
   archivedAt: text('archived_at'),
   // Arrived through the 365-day backfill rather than as new mail, for triage to treat as history.
   backfill: integer('backfill', {mode: 'boolean'}).notNull().default(false),
+  // The user sent it: it is in Gmail's SENT label or iCloud's sent mailbox. Mail to yourself is
+  // both sent and received, one row.
+  sent: integer('sent', {mode: 'boolean'}).notNull().default(false),
+  // It came to the user: it reached the inbox. False only for mail the user sent to others (sent
+  // only), which never goes through triage, Jobs, counts, notifications, the Inbox or All, and
+  // which search returns only when asked. Set when the row is made; a sent-only row whose inbox
+  // copy arrives later becomes received then, and is triaged as new mail.
+  received: integer('received', {mode: 'boolean'}).notNull().default(true),
   // iCloud: where Trash keeps it ("uidvalidity:uid" in the Trash mailbox), for Undo.
   trashRef: text('trash_ref'),
 
@@ -154,6 +162,8 @@ export const messages = sqliteTable('messages', {
   index('messages_rfc822').on(table.accountId, table.rfc822Id),
   index('messages_received').on(table.receivedAt),
   index('messages_thread').on(table.accountId, table.threadId),
+  // The Sent list, newest first.
+  index('messages_sent').on(table.sent, table.receivedAt),
   check('messages_lane', sql`${table.lane} is null or ${table.lane} in (${quoted(LANES)})`),
   check('messages_kind', sql`${table.kind} is null or ${table.kind} in (${quoted(KINDS)})`),
   check('messages_type', sql`${table.type} is null or ${table.type} in (${quoted(MESSAGE_TYPES)})`),

@@ -133,9 +133,9 @@ export class GmailApi {
     await this.request(`messages/${encodeURIComponent(id)}/untrash`, {what: 'Gmail messages.untrash', method: 'POST'});
   }
 
-  /** users.watch on the inbox, publishing to the Pub/Sub topic. */
+  /** users.watch on the inbox and sent mail, publishing to the Pub/Sub topic. */
   async watch(topicName: string): Promise<{historyId: string; expiration: string}> {
-    const response = await this.request('watch', {what: 'Gmail users.watch', method: 'POST', body: {topicName, labelIds: ['INBOX'], labelFilterBehavior: 'INCLUDE'}});
+    const response = await this.request('watch', {what: 'Gmail users.watch', method: 'POST', body: {topicName, labelIds: ['INBOX', 'SENT'], labelFilterBehavior: 'INCLUDE'}});
     return await response.json() as {historyId: string; expiration: string};
   }
 }

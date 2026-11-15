@@ -132,11 +132,15 @@ function windowWhere(window: ReadWindow): SQL | undefined {
   const every = window.accounts.filter(account => account.reads === 'every').map(account => account.account_id);
   const career = window.accounts.filter(account => account.reads === 'career').map(account => account.account_id);
   return and(
+    received,
     or(every.length ? inArray(t.messages.accountId, every) : sql`0`, career.length ? and(inArray(t.messages.accountId, career), careerMail) : sql`0`),
     window.from ? gte(t.messages.receivedAt, window.from) : undefined,
     window.before ? lt(t.messages.receivedAt, window.before) : undefined,
   );
 }
+
+// Mail that came to the user. Jobs never reads what the user sent, and it holds nothing back.
+const received = eq(t.messages.received, true);
 
 const unread = sql`not exists (select 1 from ${jobsEmailsRead} where ${jobsEmailsRead.messageId} = ${t.messages.id})`;
 
@@ -146,7 +150,7 @@ function heldBehind(store: MailReader, window: ReadWindow, now: string): {receiv
   if (!accounts.length) return undefined;
   const since = new Date(Date.parse(now) - HOLD_BEHIND_UNSORTED_MS).toISOString();
   return store.db.select({receivedAt: t.messages.receivedAt, id: t.messages.id}).from(t.messages).where(and(
-    inArray(t.messages.accountId, accounts), isNull(t.messages.lane), gte(t.messages.receivedAt, since),
+    inArray(t.messages.accountId, accounts), received, isNull(t.messages.lane), gte(t.messages.receivedAt, since),
     window.from ? gte(t.messages.receivedAt, window.from) : undefined, window.before ? lt(t.messages.receivedAt, window.before) : undefined,
   )).orderBy(asc(t.messages.receivedAt), asc(t.messages.id)).limit(1).get();
 }
@@ -181,7 +185,7 @@ export function historyLeft(store: MailReader, window: ReadWindow): {sorted: num
   const accounts = window.accounts.map(account => account.account_id);
   if (!accounts.length) return {sorted: 0, unsorted: 0};
   const unsorted = store.db.select({n: count()}).from(t.messages).where(and(
-    inArray(t.messages.accountId, accounts), isNull(t.messages.lane), unread,
+    inArray(t.messages.accountId, accounts), received, isNull(t.messages.lane), unread,
     window.from ? gte(t.messages.receivedAt, window.from) : undefined, window.before ? lt(t.messages.receivedAt, window.before) : undefined,
   )).get()?.n ?? 0;
   return {sorted: emailsWaiting(store, window), unsorted};

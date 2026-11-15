@@ -25,6 +25,9 @@ export function deleteCursor(store: Store, sourceId: number, scope = '') {
 
 export const BACKFILL_DAYS = 365;
 export const BACKFILL_SCOPE = 'backfill';
+// The sent mail's own backfill, over the same 365 days: kept apart, so the Inbox's Indexing line and
+// the header pass read only the received mail's.
+export const SENT_BACKFILL_SCOPE = 'sent-backfill';
 
 /**
  * Where a source's backfill stands, persisted after every step so a restart resumes rather than
@@ -43,22 +46,22 @@ export interface BackfillState<C = unknown> {
   finishedAt: string | null;
 }
 
-export function readBackfill<C>(store: Store, sourceId: number): BackfillState<C> | null {
-  const raw = readCursor(store, sourceId, BACKFILL_SCOPE);
+export function readBackfill<C>(store: Store, sourceId: number, scope = BACKFILL_SCOPE): BackfillState<C> | null {
+  const raw = readCursor(store, sourceId, scope);
   return raw ? JSON.parse(raw) as BackfillState<C> : null;
 }
 
-export function writeBackfill<C>(store: Store, sourceId: number, state: BackfillState<C>) {
-  writeCursor(store, sourceId, JSON.stringify(state), BACKFILL_SCOPE);
+export function writeBackfill<C>(store: Store, sourceId: number, state: BackfillState<C>, scope = BACKFILL_SCOPE) {
+  writeCursor(store, sourceId, JSON.stringify(state), scope);
 }
 
-export function startBackfill<C>(store: Store, sourceId: number, total: number, cursor: C | null): BackfillState<C> {
+export function startBackfill<C>(store: Store, sourceId: number, total: number, cursor: C | null, scope = BACKFILL_SCOPE): BackfillState<C> {
   const now = store.now();
   const state: BackfillState<C> = {
     since: new Date(now.getTime() - BACKFILL_DAYS * 24 * 60 * 60_000).toISOString(), total, fetched: 0, done: false, cursor,
     startedAt: now.toISOString(), finishedAt: null,
   };
-  writeBackfill(store, sourceId, state);
+  writeBackfill(store, sourceId, state, scope);
   return state;
 }
 

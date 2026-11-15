@@ -39,10 +39,10 @@ export function recordTriageFailure(store: Store, reason: string): boolean {
   });
 }
 
-/** Mail waiting in the Unsorted group: not sorted yet, and still in the Inbox. */
+/** Mail waiting in the Unsorted group: received, not sorted yet, and still in the Inbox. */
 export function unsortedCount(store: Store): number {
   return store.db.select({n: count()}).from(t.messages).where(and(
-    isNull(t.messages.lane), isNull(t.messages.doneAt), isNull(t.messages.trashedAt), isNull(t.messages.archivedAt),
+    eq(t.messages.received, true), isNull(t.messages.lane), isNull(t.messages.doneAt), isNull(t.messages.trashedAt), isNull(t.messages.archivedAt),
   )).get()?.n ?? 0;
 }
 

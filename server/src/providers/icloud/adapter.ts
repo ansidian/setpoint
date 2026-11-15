@@ -10,13 +10,20 @@
 //   (moved to Archive or Deleted Messages in Apple Mail) unless Setpoint trashed it.
 // - takes the next step of the backfill, then of the header pass (src/sync/headers.ts): To, Cc,
 //   Reply-To and the reply headers for mail held from before they were kept, by BODY.PEEK[HEADER].
+//
+// Then it selects the mailbox flagged \Sent ("Sent Messages") and does the same for mail the user
+// sent: what was filed since its own stored UID, its own 365-day backfill, and presence (a sent
+// email gone from the mailbox is trashed). A sent copy's id is "sent:uidValidity:uid", so it never
+// collides with an INBOX id, which stays "uidValidity:uid". Mail to yourself has two copies with
+// one Message-ID: the row is the inbox copy's, marked sent. A sent copy seen first is a sent-only
+// row until the inbox copy arrives and takes it over, for triage.
 import {createHash} from 'node:crypto';
-import {eq, inArray} from 'drizzle-orm';
+import {and, eq, inArray} from 'drizzle-orm';
 import {ImapFlow} from 'imapflow';
 import type {FetchMessageObject} from 'imapflow';
 import * as t from '../../db/schema.ts';
 import type {AdapterContext, AttachmentBytes, CommandRow, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
-import {readBackfill, readCursor, startBackfill, writeBackfill, writeCursor} from '../../sync/cursors.ts';
+import {BACKFILL_SCOPE, readBackfill, readCursor, SENT_BACKFILL_SCOPE, startBackfill, writeBackfill, writeCursor} from '../../sync/cursors.ts';
 import {ProviderError} from '../../sync/errors.ts';
 import {enqueueJob} from '../../sync/jobs.ts';
 import {applyProviderStates, knownProviderIds, upsertMessages} from '../../sync/mailMirror.ts';
@@ -57,6 +64,11 @@ interface Cursor {
 
 const providerId = (uidValidity: string | bigint, uid: number) => `${uidValidity}:${uid}`;
 const uidOf = (id: string, uidValidity: string) => (id.startsWith(`${uidValidity}:`) ? Number(id.slice(uidValidity.length + 1)) : null);
+// A copy in the sent mailbox: its INBOX-form id behind a prefix.
+const SENT_PREFIX = 'sent:';
+const isSentCopy = (id: string) => id.startsWith(SENT_PREFIX);
+// The sent mailbox's own cursor beside the engine's (INBOX's).
+const SENT_CURSOR_SCOPE = 'sent';
 
 /**
  * An IMAP refusal as a ProviderError. A refused login is needs-reconnect (the app password was
@@ -273,6 +285,12 @@ export class ICloudAdapter implements SourceAdapter {
   }
 
   private async poll(context: AdapterContext, raw: string | null): Promise<SyncResult> {
+    const {result, sent} = await this.pollInbox(context, raw);
+    if (sent) await this.withMailbox(context, sent, client => this.pollSent(context, client, sent));
+    return result;
+  }
+
+  private async pollInbox(context: AdapterContext, raw: string | null): Promise<{result: SyncResult; sent: string | null}> {
     const {store} = context;
     const accountId = this.accountId(context);
     return this.withMailbox(context, INBOX, async client => {
@@ -306,8 +324,9 @@ export class ICloudAdapter implements SourceAdapter {
           present.set(providerId(uidValidity, message.uid), {unread: !message.flags?.has(SEEN), trashed: false, archived: false});
         }
       }
+      // Sent-only rows were never in INBOX: their presence is the sent mailbox's.
       const recorded = store.db.select({providerId: t.messages.providerId, trashRef: t.messages.trashRef, unread: t.messages.unread})
-        .from(t.messages).where(eq(t.messages.accountId, accountId)).all();
+        .from(t.messages).where(and(eq(t.messages.accountId, accountId), eq(t.messages.received, true))).all();
       const states = new Map(present);
       for (const row of recorded) {
         if (present.has(row.providerId)) continue;
@@ -316,45 +335,85 @@ export class ICloudAdapter implements SourceAdapter {
       }
       applyProviderStates(store, accountId, states);
 
-      await this.backfillStep(context, client, uidValidity);
+      await this.backfillStep(context, client, uidValidity, INBOX_COPIES);
       await headerPassStep(store, {id: context.source.id, accountId}, this.headerChunk, rows => readHeaders(client, rows, uidValidity));
-      return {cursor: JSON.stringify(cursor)};
+      return {result: {cursor: JSON.stringify(cursor)}, sent: await sentMailbox(client)};
     });
   }
 
-  private async backfillStep(context: AdapterContext, client: ImapFlow, uidValidity: string) {
+  /** The sent mailbox, selected: new sent mail, presence, and a step of its backfill. */
+  private async pollSent(context: AdapterContext, client: ImapFlow, path: string) {
     const {store} = context;
-    const state = readBackfill<{uidValidity: string; pending: number[]}>(store, context.source.id);
+    const accountId = this.accountId(context);
+    const mailbox = await client.mailboxOpen(path);
+    if (!mailbox) throw new ProviderError('transient', `iCloud didn't open ${path}.`);
+    const uidValidity = String(mailbox.uidValidity);
+    const raw = readCursor(store, context.source.id, SENT_CURSOR_SCOPE);
+    let cursor = raw ? JSON.parse(raw) as Cursor : null;
+    if (!cursor || cursor.uidValidity !== uidValidity || !readBackfill(store, context.source.id, SENT_BACKFILL_SCOPE)) {
+      const since = new Date(store.now().getTime() - 365 * DAY_MS);
+      const pending = (await search(client, {since})).filter(uid => uid < mailbox.uidNext).sort((a, b) => b - a);
+      startBackfill(store, context.source.id, pending.length, {uidValidity, pending}, SENT_BACKFILL_SCOPE);
+      cursor = {uidValidity, lastUid: mailbox.uidNext - 1};
+    }
+
+    const arrived = (await search(client, {uid: `${cursor.lastUid + 1}:*`})).filter(uid => uid > cursor!.lastUid);
+    if (arrived.length) {
+      upsertMessages(store, accountId, await fetchSources(client, arrived, uidValidity, store.now(), SENT_COPIES), {matchByRfc822Id: true, sentCopy: true});
+      cursor = {uidValidity, lastUid: Math.max(cursor.lastUid, ...arrived)};
+    }
+
+    // Presence: a sent-only row of this UIDVALIDITY gone from the mailbox was deleted (or moved) in
+    // Apple Mail, so it leaves Sent as trashed mail does. One back again is untrashed.
+    const present = new Set(mailbox.exists > 0 ? await search(client, {all: true}) : []);
+    const prefix = `${SENT_PREFIX}${uidValidity}:`;
+    const states = new Map<string, ProviderState>();
+    for (const row of store.db.select({providerId: t.messages.providerId}).from(t.messages)
+      .where(and(eq(t.messages.accountId, accountId), eq(t.messages.received, false))).all()) {
+      if (!row.providerId.startsWith(prefix)) continue;
+      states.set(row.providerId, {unread: false, trashed: !present.has(Number(row.providerId.slice(prefix.length))), archived: false});
+    }
+    applyProviderStates(store, accountId, states);
+
+    await this.backfillStep(context, client, uidValidity, SENT_COPIES);
+    writeCursor(store, context.source.id, JSON.stringify(cursor), SENT_CURSOR_SCOPE);
+  }
+
+  private async backfillStep(context: AdapterContext, client: ImapFlow, uidValidity: string, copies: Copies) {
+    const {store} = context;
+    const state = readBackfill<{uidValidity: string; pending: number[]}>(store, context.source.id, copies.scope);
     if (!state || state.done || !state.cursor || state.cursor.uidValidity !== uidValidity) return;
     const chunk = state.cursor.pending.slice(0, this.backfillChunk);
     const rest = state.cursor.pending.slice(this.backfillChunk);
     const accountId = this.accountId(context);
-    const known = knownProviderIds(store, accountId, chunk.map(uid => providerId(uidValidity, uid)));
-    const wanted = chunk.filter(uid => !known.has(providerId(uidValidity, uid)));
-    if (wanted.length) upsertMessages(store, accountId, await fetchSources(client, wanted, uidValidity, store.now()), {backfill: true, matchByRfc822Id: true});
+    const id = (uid: number) => copies.prefix + providerId(uidValidity, uid);
+    const known = knownProviderIds(store, accountId, chunk.map(id));
+    const wanted = chunk.filter(uid => !known.has(id(uid)));
+    if (wanted.length) {
+      upsertMessages(store, accountId, await fetchSources(client, wanted, uidValidity, store.now(), copies), {backfill: true, matchByRfc822Id: true, sentCopy: copies.sent});
+    }
     const done = rest.length === 0;
     const fetched = state.fetched + chunk.length;
     writeBackfill(store, context.source.id, {
       ...state, fetched, done, cursor: {uidValidity, pending: rest}, finishedAt: done ? store.now().toISOString() : null,
-    });
-    if (!done) enqueueJob(store, {kind: 'sync', key: `backfill:${context.source.id}:${fetched}`, sourceId: context.source.id});
+    }, copies.scope);
+    if (!done) enqueueJob(store, {kind: 'sync', key: `${copies.key}:${context.source.id}:${fetched}`, sourceId: context.source.id});
   }
 
   /** An attachment: the message's source (UID FETCH BODY[]) again, and the part the sync's parse named. */
   async attachment(context: AdapterContext, message: {providerId: string}, attachmentId: string): Promise<AttachmentBytes | null> {
-    return this.withMailbox(context, INBOX, async client => {
-      const uid = uidOf(message.providerId, String(client.mailbox && client.mailbox.uidValidity));
-      if (uid === null) return null;
-      let source: Buffer | undefined;
-      for await (const fetched of client.fetch(String(uid), {uid: true, source: true}, {uid: true})) source = fetched.source;
-      return source ? attachmentFromSource(source, attachmentId) : null;
-    });
+    const source = await this.source(context, message);
+    return source ? attachmentFromSource(source, attachmentId) : null;
   }
 
-  /** The message's source (UID FETCH BODY[]) again. */
+  /** The message's source (UID FETCH BODY[]) again, from INBOX or, for a sent copy, the sent mailbox. */
   async source(context: AdapterContext, message: {providerId: string}): Promise<Buffer | null> {
-    return this.withMailbox(context, INBOX, async client => {
-      const uid = uidOf(message.providerId, String(client.mailbox && client.mailbox.uidValidity));
+    const sent = isSentCopy(message.providerId);
+    const mailbox = sent ? await this.withMailbox(context, INBOX, client => sentMailbox(client)) : INBOX;
+    if (!mailbox) return null;
+    const id = sent ? message.providerId.slice(SENT_PREFIX.length) : message.providerId;
+    return this.withMailbox(context, mailbox, async client => {
+      const uid = uidOf(id, String(client.mailbox && client.mailbox.uidValidity));
       if (uid === null) return null;
       let source: Buffer | undefined;
       for await (const fetched of client.fetch(String(uid), {uid: true, source: true}, {uid: true})) source = fetched.source;
@@ -429,6 +488,14 @@ async function search(client: ImapFlow, query: Parameters<ImapFlow['search']>[0]
   return Array.isArray(result) ? result : [];
 }
 
+/** The mailbox iCloud flags as \Sent ("Sent Messages"), or null when the account has none. */
+async function sentMailbox(client: ImapFlow): Promise<string | null> {
+  const folders = await client.list();
+  return folders.find(folder => folder.specialUse === '\\Sent')?.path
+    ?? folders.find(folder => /^(sent messages|sent)$/i.test(folder.path))?.path
+    ?? null;
+}
+
 /** The mailbox iCloud flags as \Trash ("Deleted Messages"), not always "Trash". */
 async function trashMailbox(client: ImapFlow): Promise<string> {
   const folders = await client.list();
@@ -460,8 +527,18 @@ async function readHeaders(client: ImapFlow, rows: HeaderRow[], uidValidity: str
   return found;
 }
 
-/** Whole messages by UID, parsed for the record. */
-async function fetchSources(client: ImapFlow, uids: number[], uidValidity: string, now: Date): Promise<FetchedMessage[]> {
+/** Which mailbox's copies a fetch reads: INBOX's, or the sent mailbox's, with their ids, backfill and job keys. */
+interface Copies {
+  prefix: string;
+  sent: boolean;
+  scope: string;
+  key: string;
+}
+const INBOX_COPIES: Copies = {prefix: '', sent: false, scope: BACKFILL_SCOPE, key: 'backfill'};
+const SENT_COPIES: Copies = {prefix: SENT_PREFIX, sent: true, scope: SENT_BACKFILL_SCOPE, key: 'sent'};
+
+/** Whole messages by UID, parsed for the record. A sent copy is sent and, as far as it knows, not received. */
+async function fetchSources(client: ImapFlow, uids: number[], uidValidity: string, now: Date, copies: Copies = INBOX_COPIES): Promise<FetchedMessage[]> {
   const fetched: FetchMessageObject[] = [];
   for await (const message of client.fetch(uids.join(','), {uid: true, flags: true, internalDate: true, source: true}, {uid: true})) fetched.push(message);
   const out: FetchedMessage[] = [];
@@ -469,8 +546,8 @@ async function fetchSources(client: ImapFlow, uids: number[], uidValidity: strin
     if (!message.source) continue;
     const internal = message.internalDate ? new Date(message.internalDate) : null;
     out.push(await fetchedMessage('icloud', message.source, {
-      providerId: providerId(uidValidity, message.uid), receivedAt: internal && Number.isFinite(internal.getTime()) ? internal.toISOString() : null,
-      unread: !message.flags?.has(SEEN), trashed: false, archived: false,
+      providerId: copies.prefix + providerId(uidValidity, message.uid), receivedAt: internal && Number.isFinite(internal.getTime()) ? internal.toISOString() : null,
+      unread: !message.flags?.has(SEEN), trashed: false, archived: false, ...(copies.sent ? {sent: true, received: false} : {}),
     }, now));
   }
   return out;

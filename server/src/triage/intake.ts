@@ -45,7 +45,7 @@ export function applyOutcome(store: Store, messageId: number, outcome: Outcome):
       summary: settled.summary, keyDate: settled.keyDate, securityFacts: settled.securityFacts, protected: settled.protected,
       code: settled.code, codeExpiresAt: settled.codeExpiresAt,
       triageSource: outcome.source, triageRuleId: outcome.ruleId, triagedAt: isoNow(store),
-    }).where(and(eq(t.messages.id, messageId), isNull(t.messages.lane))).returning().get();
+    }).where(and(eq(t.messages.id, messageId), isNull(t.messages.lane), eq(t.messages.received, true))).returning().get();
     if (!updated) return false;
     // A protected email never has a code row. History and a code that expired before triage sorted
     // it (its row was never in the Inbox to be seen) are left as they were.
@@ -71,7 +71,7 @@ export function sortHistory(store: Store, messageIds: number[]) {
   const context = {rules: loadRules(store), codeExpiryMinutes: getSettings(store).mail.code_expiry_minutes};
   transaction(store, () => {
     for (let at = 0; at < messageIds.length; at += 500) {
-      const rows = store.db.select().from(t.messages).where(and(inArray(t.messages.id, messageIds.slice(at, at + 500)), isNull(t.messages.lane))).all();
+      const rows = store.db.select().from(t.messages).where(and(inArray(t.messages.id, messageIds.slice(at, at + 500)), isNull(t.messages.lane), eq(t.messages.received, true))).all();
       for (const row of rows) applyOutcome(store, row.id, triageHistory(context, triageEmailOf(store, row)));
     }
   });
@@ -85,10 +85,11 @@ export function triageIntake(store: Store, messageIds: number[], backfill: boole
 
 /**
  * Unsorted mail, triaged again: history by the rules-only pass, new mail queued (a job already
- * queued or running for it stays as it is). Returns how many were queued or sorted.
+ * queued or running for it stays as it is). Returns how many were queued or sorted. Mail the user
+ * sent to others has no lane and never gets one.
  */
 export function resortUnsorted(store: Store): {queued: number; sorted: number} {
-  const rows = store.db.select({id: t.messages.id, backfill: t.messages.backfill}).from(t.messages).where(isNull(t.messages.lane)).all();
+  const rows = store.db.select({id: t.messages.id, backfill: t.messages.backfill}).from(t.messages).where(and(isNull(t.messages.lane), eq(t.messages.received, true))).all();
   const history = rows.filter(row => row.backfill).map(row => row.id);
   const fresh = rows.filter(row => !row.backfill).map(row => row.id);
   sortHistory(store, history);

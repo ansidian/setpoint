@@ -195,6 +195,9 @@ export interface SourceMeta extends ProviderState {
   // When the provider received it (Gmail's internalDate, IMAP's INTERNALDATE). Gmail's follows a
   // Date header earlier than its arrival, so a Gmail email takes its top Received header first.
   receivedAt?: string | null;
+  // Sent by the user, and whether it came to them (src/sync/mailMirror.ts › FetchedMessage).
+  sent?: boolean;
+  received?: boolean;
 }
 
 /** A parsed email as the mirror takes it, with the receiving provider's authentication verdict. */
@@ -221,6 +224,8 @@ export async function fetchedMessage(provider: MailProvider, source: Buffer, met
     unread: meta.unread,
     trashed: meta.trashed,
     archived: meta.archived,
+    ...(meta.sent === undefined ? {} : {sent: meta.sent}),
+    ...(meta.received === undefined ? {} : {received: meta.received}),
   };
 }
 

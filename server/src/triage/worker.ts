@@ -199,7 +199,7 @@ export class TriageWorker implements JobWorker {
   private async notifyMail(messageId: number) {
     if (!this.notifier) return;
     const row = this.store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
-    if (!row || row.lane === null || row.lane === 'noise') return;
+    if (!row || !row.received || row.lane === null || row.lane === 'noise') return;
     if (!row.unread || row.doneAt || row.trashedAt || row.archivedAt) return;
     if (this.store.now().getTime() - Date.parse(row.receivedAt) > MAIL_NOTIFY_WITHIN_MS) return;
     await this.notifier.notify({

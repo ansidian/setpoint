@@ -4,6 +4,7 @@
 //   GET  /api/mail/counts                      MailCountsOut (the sidebar and the tab title)
 //   GET  /api/mail/day                         MailDayOut (the Inbox's empty pane)
 //   GET  /api/mail/all?account_id=&before=&limit=   AllOut
+//   GET  /api/mail/sent?account_id=&before=&limit=  SentOut (not in the iPhone app's contract)
 //   GET  /api/mail/messages/:id                MessageOut, without marking it read
 //   POST /api/mail/messages/:id/open           MessageOut; marks it read (a command) if unread
 //   POST /api/mail/messages/:id/read           {unread}            CommandOut (Mark read / unread)
@@ -117,6 +118,24 @@ export interface AllDayOut {
 export interface AllOut {
   days: AllDayOut[];
   next_before: string | null;
+}
+
+/** Sent: the mail the user sent, mail to yourself included, newest first, by local day, paged as All is. */
+export const sentInput = allInput;
+/** A sent email's row: as any list's, with who it went to (null while Setpoint hasn't read its headers). */
+export interface SentRowOut extends MessageRowOut {
+  to: Recipient[] | null;
+  cc: Recipient[] | null;
+}
+export interface SentDayOut {
+  date: string;
+  rows: SentRowOut[];
+}
+export interface SentOut {
+  days: SentDayOut[];
+  next_before: string | null;
+  // The accounts with any sent mail, in the sidebar's order, whichever account the list is for.
+  accounts: number[];
 }
 
 export interface AttachmentOut {

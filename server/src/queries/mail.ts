@@ -1,8 +1,9 @@
 // Mail's read queries over the message record: the Inbox's groups and counts,
 // All by day, and one email. Every view is a query. Nothing is copied per view. The rules for what
 // the Inbox shows and counts are src/domain/inbox.ts.
-import type {AllOut, CommandOut, GmailLinkOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AllOut, CommandOut, GmailLinkOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, SentOut, SentRowOut, TrustedDomainOut} from '@setpoint/shared';
 import {and, count, desc, eq, inArray, isNull, lt, or, sql} from 'drizzle-orm';
+import type {SQL} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
 import {inboxCounts, inboxGroups, mailDay, nextInboxChange} from '../domain/inbox.ts';
@@ -36,8 +37,9 @@ function commandsByMessage(store: Store): Map<number, CommandOut> {
 function candidates(store: Store, accountId?: number): Candidate[] {
   const commands = commandsByMessage(store);
   const attachments = new Map(store.db.select({id: t.attachments.messageId, n: count()}).from(t.attachments).groupBy(t.attachments.messageId).all().map(row => [row.id, row.n]));
-  // USPS's digest is out of the Inbox and its counts. Its scans are the agenda rail's.
-  const shown = eq(t.messages.uspsDigest, false);
+  // USPS's digest is out of the Inbox and its counts. Its scans are the agenda rail's. Mail the user
+  // sent to others never came in.
+  const shown = and(eq(t.messages.uspsDigest, false), eq(t.messages.received, true));
   return store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all().map(row => {
     const command = commands.get(row.id) ?? null;
     return {...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0};
@@ -83,7 +85,7 @@ export function mailCounts(store: Store): MailCountsOut {
 export function mailDayOf(store: Store): MailDayOut {
   const now = isoNow(store);
   const day = mailDay(candidates(store), now, zonedInstant(localDay(now, store.timeZone), '00:00', store.timeZone));
-  const kept = isNull(t.messages.trashedAt);
+  const kept = and(isNull(t.messages.trashedAt), eq(t.messages.received, true));
   const stored = store.db.select({
     total: count(),
     bytes: sql<number>`coalesce(sum(length(cast(${t.messages.bodyText} as blob)) + coalesce(length(cast(${t.messages.bodyHtml} as blob)), 0)), 0)`,
@@ -112,11 +114,11 @@ export function inbox(store: Store, accountId?: number): InboxOut {
   };
 }
 
-/** All: every email, Noise included, newest first, by local day. Trashed mail and USPS's digest are left out. */
-export function allMail(store: Store, input: {account_id?: number; before?: string; limit: number}): AllOut {
+type PageInput = {account_id?: number; before?: string; limit: number};
+
+/** A page of emails newest first, by local day, as All and Sent list them. Trashed mail is left out. */
+function pageByDay<R>(store: Store, shown: SQL | undefined, input: PageInput, present: (row: MessageRow, out: MessageRowOut) => R): {days: {date: string; rows: R[]}[]; next_before: string | null} {
   const commands = commandsByMessage(store);
-  // USPS's digest is the agenda rail's, out of All as it's out of the Inbox. Search finds it.
-  const shown = eq(t.messages.uspsDigest, false);
   let where = input.account_id ? and(shown, eq(t.messages.accountId, input.account_id)) : shown;
   if (input.before) {
     const [at, id] = input.before.split('|') as [string, string];
@@ -128,15 +130,34 @@ export function allMail(store: Store, input: {account_id?: number; before?: stri
   const attachments = new Map(page.length
     ? store.db.select({id: t.attachments.messageId, n: count()}).from(t.attachments).where(inArray(t.attachments.messageId, page.map(row => row.id))).groupBy(t.attachments.messageId).all().map(row => [row.id, row.n])
     : []);
-  const days: AllOut['days'] = [];
+  const days: {date: string; rows: R[]}[] = [];
   for (const row of page) {
     const date = localDay(row.receivedAt, store.timeZone);
     if (days.at(-1)?.date !== date) days.push({date, rows: []});
     const command = commands.get(row.id) ?? null;
-    days.at(-1)!.rows.push(presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0}));
+    days.at(-1)!.rows.push(present(row, presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0})));
   }
   const last = page.at(-1);
   return {days, next_before: rows.length > input.limit && last ? `${last.receivedAt}|${last.id}` : null};
+}
+
+/**
+ * All: every email that came to the user, Noise included, newest first, by local day. Trashed mail,
+ * USPS's digest and mail the user sent to others are left out.
+ */
+export function allMail(store: Store, input: PageInput): AllOut {
+  // USPS's digest is the agenda rail's, out of All as it's out of the Inbox. Search finds it.
+  return pageByDay(store, and(eq(t.messages.uspsDigest, false), eq(t.messages.received, true)), input, (_, out) => out);
+}
+
+/**
+ * Sent: every email the user sent, mail to yourself included, newest first, by local day, with who
+ * each went to, and the accounts that have any sent mail. Trashed mail is left out.
+ */
+export function sentMail(store: Store, input: PageInput): SentOut {
+  const page = pageByDay(store, eq(t.messages.sent, true), input, (row, out): SentRowOut => ({...out, to: row.toRecipients, cc: row.ccRecipients}));
+  const withSent = new Set(store.db.selectDistinct({id: t.messages.accountId}).from(t.messages).where(and(eq(t.messages.sent, true), isNull(t.messages.trashedAt))).all().map(row => row.id));
+  return {...page, accounts: accountIdsOf(store).filter(id => withSent.has(id))};
 }
 
 /** Rows for the given emails (search's page), as every list shows them. Missing ids are left out. */

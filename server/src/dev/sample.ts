@@ -162,6 +162,37 @@ You're receiving this because of your job alert for software engineer.`;
  * Northwind Engineering digests cleared unopened, which raise a real pattern prompt) lives in its
  * fixture (src/dev/fixtures/mailBoards.ts), so no other board shows a prompt.
  */
+interface SampleSent {
+  account: AccountLabel;
+  at: [string, string];
+  to: [name: string, address: string][];
+  cc?: [name: string, address: string][];
+  subject: string;
+  body: string;
+}
+
+/**
+ * Mail the user sent to others, from Personal, Work and iCloud. Jobs has none. It is kept out of
+ * the Inbox, All, triage and the counts, and search finds it only when asked. Inserted after every
+ * other email, so their ids stay as they were.
+ */
+export const SAMPLE_SENT: SampleSent[] = [
+  {account: 'Personal', at: ['2026-10-06', '19:42'], to: [['Sam Ortiz', 'sam.ortiz@example.org']], subject: 'Re: Saturday hike',
+    body: 'Count me in for Saturday. I can drive if we leave by 8.\n\nSee you then'},
+  {account: 'Personal', at: ['2026-10-04', '10:15'], to: [['Lena Fischer', 'lena.fischer@example.com']], cc: [['Sam Ortiz', 'sam.ortiz@example.org']], subject: 'Book club dates',
+    body: 'Here are the dates that work for me: the 18th or the 25th. Either is fine.'},
+  {account: 'Personal', at: ['2026-09-21', '08:30'], to: [['Contoso Coffee', 'help@contosocoffee.example']], subject: 'Order 4417 arrived damaged',
+    body: 'Hi, my order 4417 arrived with a cracked grinder lid. Could you send a replacement?'},
+  {account: 'Work', at: ['2026-10-07', '09:05'], to: [['Priya Raman', 'priya.raman@northwind.example']], subject: 'Re: Software Engineer I interview',
+    body: 'Thanks, Priya. Thursday at 2:00 PM works for me.'},
+  {account: 'Work', at: ['2026-10-02', '16:48'], to: [['Ravi Menon', 'ravi.menon@work.example.org'], ['June Park', 'june.park@work.example.org']], subject: 'Lab notes for Friday',
+    body: 'Notes from today\'s run are in the shared folder. The timing data is in sheet 2.'},
+  {account: 'iCloud', at: ['2026-10-05', '21:10'], to: [['Mom', 'mom@example.net']], subject: 'Thanksgiving flights',
+    body: 'I found flights on the 25th, back on the 29th. I will book them this week.'},
+  {account: 'iCloud', at: ['2026-08-30', '13:22'], to: [['Tailspin Toys Support', 'support@tailspintoys.example']], subject: 'Warranty claim',
+    body: 'The drone I bought in June stopped charging. The receipt is attached.'},
+];
+
 export const SAMPLE_EMAILS: SampleEmail[] = [
   // Today, Wed Oct 7 (board 05's clock times).
   {account: 'Personal', at: ['2026-10-07', '09:08'], from: ['Contoso Insurance', 'security@contosoinsurance.example'], organisation: 'Contoso Insurance',
@@ -442,6 +473,18 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
 
     // USPS's digests, out of the Inbox, with the days and scans the rail shows.
     insertDevDigests(tx, accountIds.get('Personal')!);
+
+    // Sent mail, after every received email.
+    SAMPLE_SENT.forEach((email, at) => {
+      const providerId = `seed-sent-${String(at + 1).padStart(3, '0')}`;
+      const account = ACCOUNTS.find(one => one.label === email.account)!;
+      const recipients = (list: [string, string][] = []) => list.map(([name, address]) => ({name, address}));
+      tx.insert(t.messages).values({
+        accountId: accountIds.get(email.account)!, providerId, threadId: `${providerId}-thread`, fromName: 'User', fromAddress: account.address,
+        subject: email.subject, snippet: snippetOf(email.body), bodyText: email.body, searchBody: searchBody(email.body), receivedAt: iso(email.at),
+        unread: false, lane: null, sent: true, received: false, toRecipients: recipients(email.to), ccRecipients: recipients(email.cc), replyTo: [], referenceIds: [], inReplyTo: null,
+      }).run();
+    });
 
     const calendarIds = new Map<string, number>();
     CALENDARS.forEach((calendar, position) => {

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {serveStatic} from '@hono/node-server/serve-static';
 import {
-  accountOrderInput, accountUpdateInput, allInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
+  accountOrderInput, accountUpdateInput, allInput, sentInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, mailpiecesInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
   askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput,
@@ -58,7 +58,7 @@ import {BIND_COOKIE, beginTodoistOAuth, completeTodoistOAuth, TODOIST_CALLBACK_P
 import type {TodoistOAuthOptions} from '../providers/todoist/oauth.ts';
 import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts';
 import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarShown, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
-import {allMail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, trustedDomains} from '../queries/mail.ts';
+import {allMail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, sentMail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
 import {mailpieces, mailScan} from '../queries/mailpieces.ts';
 import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
@@ -538,6 +538,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.get('/api/mail/counts', c => c.json(mailCounts(store)));
   app.get('/api/mail/day', c => c.json(mailDayOf(store)));
   app.get('/api/mail/all', c => c.json(allMail(store, parse(allInput, c.req.query()))));
+  app.get('/api/mail/sent', c => c.json(sentMail(store, parse(sentInput, c.req.query()))));
   app.get('/api/mail/messages/:id', c => c.json(messageDetail(store, id(c.req.param('id')))));
   app.get('/api/mail/gmail-link', c => {
     const input = parse(gmailLinkInput, c.req.query());

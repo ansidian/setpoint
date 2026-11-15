@@ -8,13 +8,14 @@
 // back. They narrow the list and keep its order. A "!word" alone still forms a chip here, a Not
 // chip, because it says exactly what it leaves out. Or it stays text and leaves out the mail with
 // it.
-// Search covers All's mail: archived mail is in, trashed mail is out.
+// Search covers All's mail: archived mail is in, trashed mail is out. Mail the user sent to others
+// is in only when the caller asks (`sent`).
 //
 // Each search from the field is logged with its chips and the ids it returned, and opening a result
 // records its position (src/search/log.ts), so ranking can be measured against real searches.
 // Alfred runs the broad search through its tool, unlogged. Its words each widen the search on their
 // own, so its answers stay what they were (matching: 'broad').
-import type {MatchReasonOut, HighlightOut, MessageType, SearchChip, SearchOut, SearchReadingOut, SearchResultOut, searchInput} from '@setpoint/shared';
+import type {MatchReasonOut, HighlightOut, MessageType, SearchChip, SearchOut, SearchReadingOut, SearchResultOut, SearchSent, searchInput} from '@setpoint/shared';
 import {asc} from 'drizzle-orm';
 import type {z} from 'zod';
 import * as t from '../db/schema.ts';
@@ -56,8 +57,10 @@ interface Filter {
 }
 
 /** The chips' filter, with the mail that has an excluded word ("!proseware") left out. */
-function chipFilter(store: Store, chips: SearchChip[], accountId: number | undefined, organisations: string[], excluded: string[], readingTypes: boolean): Filter {
-  const filter: Filter = {sql: ['m.trashed_at IS NULL'], args: [], empty: false};
+function chipFilter(store: Store, chips: SearchChip[], accountId: number | undefined, organisations: string[], excluded: string[], readingTypes: boolean, sent: SearchSent | undefined): Filter {
+  // Mail the user sent to others is indexed, and found only when the caller asks.
+  const sentSql = sent === 'only' ? 'm.sent = 1' : sent === 'include' ? null : 'm.received = 1';
+  const filter: Filter = {sql: ['m.trashed_at IS NULL', ...(sentSql ? [sentSql] : [])], args: [], empty: false};
   const placeholders = (values: unknown[]) => values.map(() => '?').join(', ');
   const any = (column: string, values: (string | number)[]) => {
     if (!values.length) {
@@ -243,7 +246,7 @@ function broadSearch({store, filter, none}: Parsed, text: string): SearchMatches
 }
 
 /** Every email a search matches, in its order. */
-export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'>, options: MatchOptions = {}): SearchMatches {
+export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'> & {sent?: SearchSent}, options: MatchOptions = {}): SearchMatches {
   const {matching = 'ranked', chipsFromWords = 'none', readingTypes = false, rankText} = options;
   const broad = matching === 'broad';
   const vocabulary = chipVocabulary(store);
@@ -251,7 +254,7 @@ export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'c
   const chips: SearchChip[] = [];
   for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);
   const {text, excluded} = withoutExcluded(parsed.text);
-  const filter = chipFilter(store, chips, input.account_id, vocabulary.organisations, excluded, readingTypes);
+  const filter = chipFilter(store, chips, input.account_id, vocabulary.organisations, excluded, readingTypes, input.sent);
   const hasWords = textTerms(rankText ?? text).length > 0;
   // Chips leave the order to the words, a reading's as much as a date. Only Alfred's take it over,
   // and leaving out alone doesn't. Words with only Not chips still order by the best field.

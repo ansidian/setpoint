@@ -9,17 +9,18 @@
 // - sweep (every 5 minutes behind push): the same, then compares the last 30 days of inbox and
 //   unread with the record and repairs what a missed push left.
 // - backfill: 365 days of inbox, a few pages per job, resumable from its page token, with progress.
+//   SENT has its own over the same days, beside it: mail the user sent, from any client.
 // - the header pass (src/sync/headers.ts), once the backfill is done: To, Cc, Reply-To and the
 //   reply headers for mail held from before they were kept, by format=metadata.
 import {inArray} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';
 import type {Store} from '../../store.ts';
 import type {AdapterContext, AttachmentBytes, CommandRow, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
-import {BACKFILL_DAYS, readBackfill, readCursor, startBackfill, writeBackfill, writeCursor} from '../../sync/cursors.ts';
+import {BACKFILL_DAYS, BACKFILL_SCOPE, readBackfill, readCursor, SENT_BACKFILL_SCOPE, startBackfill, writeBackfill, writeCursor} from '../../sync/cursors.ts';
 import type {BackfillState} from '../../sync/cursors.ts';
 import {ProviderError} from '../../sync/errors.ts';
 import {enqueueJob} from '../../sync/jobs.ts';
-import {applyProviderStates, knownProviderIds, recordedSince, removeMessages, upsertMessages} from '../../sync/mailMirror.ts';
+import {applyProviderStates, knownProviderIds, markSent, recordedSince, removeMessages, sentOnlyIds, upsertMessages} from '../../sync/mailMirror.ts';
 import type {FetchedMessage, ProviderState} from '../../sync/mailMirror.ts';
 import {headerPassStep} from '../../sync/headers.ts';
 import type {HeaderRow} from '../../sync/headers.ts';
@@ -29,7 +30,7 @@ import {GmailApi, HistoryGone} from './api.ts';
 import type {GmailMessage} from './api.ts';
 import {GoogleTokens} from '../google/auth.ts';
 import type {GoogleClient} from '../google/auth.ts';
-import {historyChanges, stateFromLabels} from './history.ts';
+import {historyChanges, originFromLabels, stateFromLabels} from './history.ts';
 
 export interface GmailAdapterOptions {
   client: GoogleClient;
@@ -76,6 +77,13 @@ async function mapLimit<T, R>(items: T[], limit: number, work: (item: T) => Prom
 }
 
 const afterQuery = (since: number) => `after:${Math.floor(since / 1000)}`;
+
+/** The two backfills: the inbox's, and SENT's beside it. Each step's next job is keyed by its own prefix. */
+const BACKFILLS = [
+  {scope: BACKFILL_SCOPE, label: 'INBOX', key: 'backfill'},
+  {scope: SENT_BACKFILL_SCOPE, label: 'SENT', key: 'sent'},
+] as const;
+type Backfill = (typeof BACKFILLS)[number];
 
 export class GmailAdapter implements SourceAdapter {
   private readonly options: Required<Omit<GmailAdapterOptions, 'topic'>> & {topic: string | null};
@@ -146,8 +154,10 @@ export class GmailAdapter implements SourceAdapter {
         resynced = true;
       }
     }
+    // The sent backfill, on the first run and on an account synced before sent mail was kept.
+    if (!readBackfill(context.store, context.source.id, SENT_BACKFILL_SCOPE)) startBackfill(context.store, context.source.id, 0, null, SENT_BACKFILL_SCOPE);
     if (sweep && !resynced) await this.reconcile(api, context, this.options.sweepDays);
-    await this.backfillStep(api, context);
+    for (const backfill of BACKFILLS) await this.backfillStep(api, context, backfill);
     await headerPassStep(context.store, {id: context.source.id, accountId: this.accountId(context)}, this.options.headerChunk, rows => this.readHeaders(api, rows));
     return {cursor: next};
   }
@@ -175,7 +185,7 @@ export class GmailAdapter implements SourceAdapter {
   /** History is gone: start over from now, backfill again and compare all 365 days. */
   private async resync(api: GmailApi, context: AdapterContext): Promise<string> {
     const historyId = (await api.profile()).historyId;
-    startBackfill(context.store, context.source.id, 0, null);
+    for (const {scope} of BACKFILLS) startBackfill(context.store, context.source.id, 0, null, scope);
     await this.reconcile(api, context, BACKFILL_DAYS);
     return historyId;
   }
@@ -191,57 +201,73 @@ export class GmailAdapter implements SourceAdapter {
     upsertMessages(context.store, this.accountId(context), fetched.filter((message): message is FetchedMessage => message !== null), {backfill});
   }
 
-  /** Re-reads known messages' labels and applies them. One Gmail no longer has is removed. */
+  /**
+   * Re-reads known messages' labels and applies them. One Gmail no longer has is removed. A sent-only
+   * one now in the inbox is fetched whole, so the mirror takes it as received mail, for triage.
+   */
   private async reread(api: GmailApi, context: AdapterContext, ids: string[]) {
     if (!ids.length) return;
     const labels = await mapLimit(ids, this.options.concurrency, id => api.labels(id));
     const states = new Map<string, ProviderState>();
     const gone: string[] = [];
+    const inInbox: string[] = [];
     ids.forEach((id, at) => {
       const message = labels[at];
       if (message) states.set(id, stateFromLabels(message.labelIds));
       else gone.push(id);
+      if (message && originFromLabels(message.labelIds).received) inInbox.push(id);
     });
     const accountId = this.accountId(context);
     applyProviderStates(context.store, accountId, states);
     removeMessages(context.store, accountId, gone);
+    await this.fetchNew(api, context, [...sentOnlyIds(context.store, accountId, inInbox)], false);
   }
 
   /**
-   * The reconciliation: the inbox and its unread mail over a window, compared with the record.
-   * Messages that differ are re-read (bounded per sweep). Inbox mail the record lacks is fetched,
-   * unless the backfill hasn't reached it yet.
+   * The reconciliation: the inbox and its unread mail, and SENT, over a window, compared with the
+   * record. Messages that differ are re-read (bounded per sweep): received mail by the inbox, mail
+   * sent to others only by SENT (trashed or deleted in Gmail). Inbox or sent mail the record lacks
+   * is fetched, unless its backfill hasn't reached it yet.
    */
   private async reconcile(api: GmailApi, context: AdapterContext, days: number) {
     const since = context.store.now().getTime() - days * DAY_MS;
     const q = afterQuery(since);
     const inbox = await api.listAll({labelIds: ['INBOX'], q});
     const unread = await api.listAll({labelIds: ['INBOX', 'UNREAD'], q});
+    const sent = await api.listAll({labelIds: ['SENT'], q});
     const inInbox = new Set(inbox.ids);
     const isUnread = new Set(unread.ids);
+    const inSent = new Set(sent.ids);
     const accountId = this.accountId(context);
     const rows = recordedSince(context.store, accountId, new Date(since).toISOString());
     const differ = rows.filter(row => {
+      // Sent only: gone from SENT (trashed or deleted in Gmail), or now in the inbox.
+      if (!row.received) return (sent.complete && !row.trashedAt && !inSent.has(row.providerId)) || inInbox.has(row.providerId);
       const shownInInbox = !row.trashedAt && !row.archivedAt;
       if (inbox.complete && shownInInbox !== inInbox.has(row.providerId)) return true;
       return unread.complete && inInbox.has(row.providerId) && row.unread !== isUnread.has(row.providerId);
     }).map(row => row.providerId);
     await this.reread(api, context, differ.slice(0, MAX_SWEEP_REREADS));
-    const backfill = readBackfill(context.store, context.source.id);
-    if (backfill && !backfill.done) return;
     const known = new Set(rows.map(row => row.providerId));
-    await this.fetchNew(api, context, inbox.ids.filter(id => !known.has(id)).slice(0, MAX_SWEEP_REREADS), false);
+    markSent(context.store, accountId, sent.ids.filter(id => known.has(id)));
+    const missing = [inbox, sent].flatMap((listed, at) => {
+      const backfill = readBackfill(context.store, context.source.id, BACKFILLS[at]!.scope);
+      return backfill && !backfill.done ? [] : listed.ids.filter(id => !known.has(id));
+    });
+    await this.fetchNew(api, context, [...new Set(missing)].slice(0, MAX_SWEEP_REREADS), false);
   }
 
-  /** A few pages of the backfill, newest first. Queues the next step if there's more. */
-  private async backfillStep(api: GmailApi, context: AdapterContext) {
-    let state = readBackfill<string>(context.store, context.source.id);
+  /** A few pages of a backfill, newest first. Queues the next step if there's more. */
+  private async backfillStep(api: GmailApi, context: AdapterContext, backfill: Backfill) {
+    let state = readBackfill<string>(context.store, context.source.id, backfill.scope);
     if (!state || state.done) return;
     const q = afterQuery(Date.parse(state.since));
     for (let page = 0; page < this.options.backfillPagesPerStep && !state.done; page += 1) {
-      const result = await api.list({labelIds: ['INBOX'], q, pageToken: state.cursor, maxResults: this.options.pageSize});
+      const result = await api.list({labelIds: [backfill.label], q, pageToken: state.cursor, maxResults: this.options.pageSize});
       const ids = result.messages.map(message => message.id);
       const known = knownProviderIds(context.store, this.accountId(context), ids);
+      // Mail to yourself the record held from the inbox before sent mail was kept: sent too.
+      if (backfill.label === 'SENT') markSent(context.store, this.accountId(context), ids.filter(id => known.has(id)));
       await this.fetchNew(api, context, ids.filter(id => !known.has(id)), true);
       const seen: number = state.fetched + ids.length;
       const done = !result.nextPageToken;
@@ -251,10 +277,10 @@ export class GmailAdapter implements SourceAdapter {
         total: done ? seen : Math.max(state.total, result.resultSizeEstimate, seen + ids.length),
       };
       state = next;
-      writeBackfill(context.store, context.source.id, state);
+      writeBackfill(context.store, context.source.id, state, backfill.scope);
     }
     // Keyed by position: the job running this step still holds its own key.
-    if (!state.done) enqueueJob(context.store, {kind: 'sync', key: `backfill:${context.source.id}:${state.fetched}`, sourceId: context.source.id});
+    if (!state.done) enqueueJob(context.store, {kind: 'sync', key: `${backfill.key}:${context.source.id}:${state.fetched}`, sourceId: context.source.id});
   }
 
   /** The header pass's rows by format=metadata, those Gmail still has. */
@@ -320,6 +346,6 @@ async function toFetched(message: GmailMessage, now: Date): Promise<FetchedMessa
   return fetchedMessage('gmail', Buffer.from(message.raw!, 'base64url'), {
     providerId: message.id, threadId: message.threadId ?? null,
     receivedAt: Number.isFinite(internal) && internal > 0 ? new Date(internal).toISOString() : null,
-    ...stateFromLabels(message.labelIds),
+    ...stateFromLabels(message.labelIds), ...originFromLabels(message.labelIds),
   }, now);
 }

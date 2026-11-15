@@ -46,8 +46,8 @@ const BATCH = 500;
 
 const passStarted = (store: Store) => store.db.select().from(t.scheduleMarks).where(eq(t.scheduleMarks.name, PASS_MARK)).get() !== undefined;
 
-// Settled and not in the trash: the mail that terms are for.
-const readable = and(isNotNull(t.messages.lane), isNull(t.messages.trashedAt), or(eq(t.messages.backfill, false), isNotNull(t.messages.extractedAt)));
+// Received, settled and not in the trash: the mail that terms are for. Sent mail gets none.
+const readable = and(eq(t.messages.received, true), isNotNull(t.messages.lane), isNull(t.messages.trashedAt), or(eq(t.messages.backfill, false), isNotNull(t.messages.extractedAt)));
 const isNew = isNull(t.messages.searchTermsVersion);
 const isBehind = and(isNotNull(t.messages.searchTermsVersion), ne(t.messages.searchTermsVersion, SEARCH_TERMS_PROMPT_VERSION));
 

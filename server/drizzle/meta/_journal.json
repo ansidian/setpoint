@@ -309,6 +309,13 @@
       "when": 1794766989307,
       "tag": "0043_message_recipients",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1794768096327,
+      "tag": "0044_sent_mail",
+      "breakpoints": true
     }
   ]
 }

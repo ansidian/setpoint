@@ -60,11 +60,18 @@ export const MAX_SEARCH_CHIPS = 10;
  * from (`SearchSuggestionOut.typed`, then what's typed after it). A chip removed puts the word it
  * stood for back in `text`, so it's a word again.
  */
+/** Sent mail in a search: with received mail (the Inbox's search), or alone (Sent's). Left out by default. */
+export const SEARCH_SENT = ['include', 'only'] as const;
+export type SearchSent = (typeof SEARCH_SENT)[number];
+
 export const searchInput = z.strictObject({
   text: z.string().max(500),
   chips: z.array(searchChipSchema).max(MAX_SEARCH_CHIPS).default([]),
   // The sidebar's account, when search runs inside one (as an account chip would).
   account_id: id.optional(),
+  // Mail the user sent to others, only when asked: the iPhone app never asks, so its answers stay as
+  // they were. Mail to yourself is received mail, and is found either way.
+  sent: z.enum(SEARCH_SENT).optional(),
   limit: z.int().min(1).max(200).default(50),
   // Paging.
   offset: z.int().min(0).default(0),

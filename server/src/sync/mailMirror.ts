@@ -3,10 +3,14 @@
 // organisation, …), Done, pins and when the user opened it, and the mirror never touches those. New
 // mail arrives Unsorted (lane null) with a triage job. Backfilled history is sorted at once.
 //
+// Sent mail is mirrored too, as a fact on the row (`sent`). Mail the user sent to others only
+// (`received` false) is never triaged and never in the Inbox's state: it isn't unread or archived.
+// Mail to yourself is one row, sent and received, and goes through triage as any received mail.
+//
 // A message whose own change is still waiting for its provider (or failed, held in place) keeps
 // the state the command layer gave it. A sync that read the provider just before the change
 // landed mustn't put it back (DESIGN.md › Interaction rules: nothing quietly reverts).
-import {and, eq, gte, inArray} from 'drizzle-orm';
+import {and, asc, desc, eq, gte, inArray} from 'drizzle-orm';
 import {activeCommands} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
 import {isDigest} from '../domain/mailpieces.ts';
@@ -69,6 +73,10 @@ export interface FetchedMessage extends ProviderState {
   attachments: FetchedAttachment[];
   // Absent where a caller builds one by hand without its headers: the row keeps what it has.
   recipients?: MessageHeaders;
+  // The user sent it (Gmail's SENT label, iCloud's sent mailbox). False when absent.
+  sent?: boolean;
+  // It came to the user (in the inbox, or not sent by them). True when absent.
+  received?: boolean;
 }
 
 /** Messages whose read or trash state belongs to a command right now. */
@@ -81,12 +89,15 @@ export function messagesWithActiveCommands(store: Store): Set<number> {
   return busy;
 }
 
-/** The record's columns for a provider state, given what the row holds now. */
-function stateColumns(state: ProviderState, row: Pick<MessageRow, 'trashedAt' | 'archivedAt'> | null, now: string) {
+/**
+ * The record's columns for a provider state, given what the row holds now. A sent-only row was
+ * never in the inbox: it is never unread and never archived, only trashed or not.
+ */
+function stateColumns(state: ProviderState, row: Pick<MessageRow, 'trashedAt' | 'archivedAt'> | null, now: string, received: boolean) {
   return {
-    unread: state.unread,
+    unread: received && state.unread,
     trashedAt: state.trashed ? row?.trashedAt ?? now : null,
-    archivedAt: state.archived && !state.trashed ? row?.archivedAt ?? now : null,
+    archivedAt: received && state.archived && !state.trashed ? row?.archivedAt ?? now : null,
   };
 }
 
@@ -100,11 +111,21 @@ export interface UpsertOptions {
   // IMAP: a message that moved (Trash and back, a new UIDVALIDITY) gets a new UID but keeps its
   // Message-ID, so a row with the same Message-ID is the same email under its new id.
   matchByRfc822Id?: boolean;
+  // IMAP: these are copies from the sent mailbox. One whose Message-ID a received row holds (mail
+  // to yourself, its inbox copy) marks that row sent and changes nothing else on it.
+  sentCopy?: boolean;
+}
+
+/** The account's row with this Message-ID: a received one first, as that is the one the Inbox shows. */
+function byRfc822Id(store: Store, accountId: number, rfc822Id: string): MessageRow | undefined {
+  return store.db.select().from(t.messages).where(and(eq(t.messages.accountId, accountId), eq(t.messages.rfc822Id, rfc822Id)))
+    .orderBy(desc(t.messages.received), asc(t.messages.id)).get();
 }
 
 /**
  * Writes fetched emails to the record: new ones inserted Unsorted, known ones refreshed with the
  * provider's fields and state. Returns the ids it inserted and updated, and notes one `mail` event.
+ * Only received mail is handed to triage: a sent-only row is inserted and left alone.
  */
 export function upsertMessages(store: Store, accountId: number, fetched: FetchedMessage[], options: UpsertOptions = {}): {inserted: number[]; updated: number[]} {
   if (!fetched.length) return {inserted: [], updated: []};
@@ -113,12 +134,20 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
     const busy = messagesWithActiveCommands(store);
     const inserted: number[] = [];
     const updated: number[] = [];
-    // New digests, inserted but kept from triage.
-    const digests: number[] = [];
+    // New digests and sent-only mail, inserted but kept from triage.
+    const untriaged: number[] = [];
     for (const message of fetched) {
+      const sent = message.sent ?? false;
+      const received = message.received ?? true;
       let row = find(store, accountId, message.providerId);
       if (!row && options.matchByRfc822Id && message.rfc822Id) {
-        row = store.db.select().from(t.messages).where(and(eq(t.messages.accountId, accountId), eq(t.messages.rfc822Id, message.rfc822Id))).get();
+        row = byRfc822Id(store, accountId, message.rfc822Id);
+        // The sent copy of mail to yourself: its inbox copy's row is the email, now known as sent too.
+        if (row && options.sentCopy && row.received) {
+          if (!row.sent) store.db.update(t.messages).set({sent: true}).where(eq(t.messages.id, row.id)).run();
+          updated.push(row.id);
+          continue;
+        }
       }
       const fields = {
         providerId: message.providerId, threadId: message.threadId, rfc822Id: message.rfc822Id, fromName: message.fromName,
@@ -128,24 +157,30 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
       };
       // USPS's daily digest goes to the agenda rail, not the Inbox. It's sorted as it arrives
       // (never triaged, so never notified), and a job reads its scans from its source.
-      const digest = isDigest({...fields, senderAuthenticated: fields.senderAuthenticated});
+      const digest = received && isDigest({...fields, senderAuthenticated: fields.senderAuthenticated});
       if (!row) {
         const created = store.db.insert(t.messages).values({
-          accountId, ...fields, ...stateColumns(message, null, now), lane: null, backfill: options.backfill ?? false,
+          accountId, ...fields, ...stateColumns(message, null, now, received), lane: null, backfill: options.backfill ?? false, sent, received,
           ...(digest ? {uspsDigest: true, lane: 'fyi', kind: 'deliveries', triageSource: 'rule', triagedAt: now} as const : {}),
         }).returning({id: t.messages.id}).get();
         for (const file of message.attachments) store.db.insert(t.attachments).values({messageId: created.id, ...file}).run();
-        if (digest) {
-          digests.push(created.id);
-          enqueueJob(store, {kind: 'mailpieces', key: mailpiecesKey(created.id), messageId: created.id});
-        } else inserted.push(created.id);
+        if (digest) enqueueJob(store, {kind: 'mailpieces', key: mailpiecesKey(created.id), messageId: created.id});
+        if (digest || !received) untriaged.push(created.id);
+        else inserted.push(created.id);
         continue;
       }
-      const state = busy.has(row.id) ? {} : stateColumns(message, row, now);
+      // A sent-only row whose inbox copy just came (mail to yourself): received from now on, and new
+      // to triage, which never saw it.
+      const arriving = !row.received && received;
+      const nowReceived = row.received || received;
+      const state = busy.has(row.id) ? {} : stateColumns(message, row, now, nowReceived);
       // A fetch that lacks an identity or a verdict never erases a stored one.
       const kept = {rfc822Id: message.rfc822Id ?? row.rfc822Id, senderAuth: message.senderAuth ?? row.senderAuth,
         senderAuthenticated: message.senderAuth ? fields.senderAuthenticated : row.senderAuthenticated};
-      store.db.update(t.messages).set({...fields, ...kept, ...state, ...(digest ? {uspsDigest: true} : {})}).where(eq(t.messages.id, row.id)).run();
+      store.db.update(t.messages).set({
+        ...fields, ...kept, ...state, ...(digest ? {uspsDigest: true} : {}), sent: row.sent || sent, received: nowReceived,
+        ...(arriving ? {backfill: options.backfill ?? false} : {}),
+      }).where(eq(t.messages.id, row.id)).run();
       const known = store.db.select().from(t.attachments).where(eq(t.attachments.messageId, row.id)).all();
       const same = known.length === message.attachments.length
         && known.every((file, index) => file.providerId === message.attachments[index]!.providerId && file.filename === message.attachments[index]!.filename);
@@ -153,12 +188,13 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
         store.db.delete(t.attachments).where(eq(t.attachments.messageId, row.id)).run();
         for (const file of message.attachments) store.db.insert(t.attachments).values({messageId: row.id, ...file}).run();
       }
-      updated.push(row.id);
+      if (arriving) inserted.push(row.id);
+      else updated.push(row.id);
     }
     // New mail is queued for triage. Backfilled history is sorted now by the rules-only pass.
     triageIntake(store, inserted, options.backfill ?? false);
-    noteLive(store, {type: 'mail', messages: [...inserted, ...digests, ...updated], accounts: [accountId], commands: []});
-    return {inserted: [...inserted, ...digests], updated};
+    noteLive(store, {type: 'mail', messages: [...inserted, ...untriaged, ...updated], accounts: [accountId], commands: []});
+    return {inserted: [...inserted, ...untriaged], updated};
   });
 }
 
@@ -178,7 +214,7 @@ export function applyProviderStates(store: Store, accountId: number, states: Map
         .where(and(eq(t.messages.accountId, accountId), inArray(t.messages.providerId, ids.slice(at, at + 500)))).all();
       for (const row of rows) {
         if (busy.has(row.id)) continue;
-        const next = stateColumns(states.get(row.providerId)!, row, now);
+        const next = stateColumns(states.get(row.providerId)!, row, now, row.received);
         if (next.unread === row.unread && next.trashedAt === row.trashedAt && next.archivedAt === row.archivedAt) continue;
         store.db.update(t.messages).set(next).where(eq(t.messages.id, row.id)).run();
         changed.push(row.id);
@@ -204,6 +240,31 @@ export function removeMessages(store: Store, accountId: number, providerIds: str
     noteLive(store, {type: 'mail', messages: ids, accounts: [accountId], commands: []});
     return ids;
   });
+}
+
+/** Known emails the provider lists as sent: marked sent where they weren't (mail to yourself held from before). */
+export function markSent(store: Store, accountId: number, providerIds: string[]): number[] {
+  if (!providerIds.length) return [];
+  return transaction(store, () => {
+    const changed: number[] = [];
+    for (let at = 0; at < providerIds.length; at += 500) {
+      changed.push(...store.db.update(t.messages).set({sent: true})
+        .where(and(eq(t.messages.accountId, accountId), inArray(t.messages.providerId, providerIds.slice(at, at + 500)), eq(t.messages.sent, false)))
+        .returning({id: t.messages.id}).all().map(row => row.id));
+    }
+    if (changed.length) noteLive(store, {type: 'mail', messages: changed, accounts: [accountId], commands: []});
+    return changed;
+  });
+}
+
+/** Which of these provider ids are sent-only rows. */
+export function sentOnlyIds(store: Store, accountId: number, providerIds: string[]): Set<string> {
+  const found = new Set<string>();
+  for (let at = 0; at < providerIds.length; at += 500) {
+    for (const row of store.db.select({providerId: t.messages.providerId}).from(t.messages)
+      .where(and(eq(t.messages.accountId, accountId), inArray(t.messages.providerId, providerIds.slice(at, at + 500)), eq(t.messages.received, false))).all()) found.add(row.providerId);
+  }
+  return found;
 }
 
 /** Which of these provider ids the record already holds. */

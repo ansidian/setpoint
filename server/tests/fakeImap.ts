@@ -1,8 +1,9 @@
 // A small in-process IMAP server on 127.0.0.1 standing in for iCloud Mail: plain TCP (the adapter
-// uses TLS against imap.mail.me.com), LOGIN with an app password, INBOX and "Deleted Messages"
-// (special-use \Trash), and the commands Setpoint's IMAP client sends: CAPABILITY, LOGIN,
-// NAMESPACE, LIST/LSUB, SELECT/EXAMINE, UID SEARCH (ALL, SINCE, UID, HEADER), UID FETCH (UID,
-// FLAGS, INTERNALDATE, BODY[]), UID STORE ±FLAGS, UID MOVE with COPYUID, NOOP and LOGOUT. It answers
+// uses TLS against imap.mail.me.com), LOGIN with an app password, INBOX, "Deleted Messages"
+// (special-use \Trash) and "Sent Messages" (\Sent), and the commands Setpoint's IMAP client
+// sends: CAPABILITY, LOGIN, NAMESPACE, LIST/LSUB, SELECT/EXAMINE, UID SEARCH (ALL, SINCE, UID,
+// HEADER), UID FETCH (UID, FLAGS, INTERNALDATE, BODY[]), UID STORE ±FLAGS, UID MOVE with COPYUID,
+// NOOP and LOGOUT. It answers
 // as an IMAP server does, including NO [AUTHENTICATIONFAILED] for a revoked app password, and lets
 // tests inject a NO, a dropped connection or a hang. Hand-written rather than a library: the
 // maintained IMAP test servers are gone, and this keeps exactly the surface Setpoint relies on.
@@ -335,12 +336,13 @@ export async function fakeImap() {
         ['INBOX', {name: 'INBOX', specialUse: null, uidValidity: 1700000001, uidNext: 1, messages: []}],
         ['Deleted Messages', {name: 'Deleted Messages', specialUse: '\\Trash', uidValidity: 1700000002, uidNext: 1, messages: []}],
         ['Archive', {name: 'Archive', specialUse: '\\Archive', uidValidity: 1700000003, uidNext: 1, messages: []}],
+        ['Sent Messages', {name: 'Sent Messages', specialUse: '\\Sent', uidValidity: 1700000004, uidNext: 1, messages: []}],
       ])});
     },
     folder: (name: string, folder = 'INBOX') => user(name).folders.get(folder)!,
-    /** New mail lands in the INBOX with the next UID. */
-    deliver(name: string, raw: Buffer, date: string, flags: string[] = []): number {
-      const inbox = fake.folder(name);
+    /** New mail lands in the INBOX (or another mailbox: sent mail in "Sent Messages") with the next UID. */
+    deliver(name: string, raw: Buffer, date: string, flags: string[] = [], folder = 'INBOX'): number {
+      const inbox = fake.folder(name, folder);
       const uid = inbox.uidNext++;
       inbox.messages.push({uid, flags: new Set(flags), internalDate: new Date(date), raw});
       return uid;
@@ -352,9 +354,9 @@ export async function fakeImap() {
       if (seen) message.flags.add('\\Seen');
       else message.flags.delete('\\Seen');
     },
-    /** Moved elsewhere in Apple Mail (Archive, or Deleted Messages). */
-    move(name: string, uid: number, to: string) {
-      const from = fake.folder(name);
+    /** Moved elsewhere in Apple Mail (Archive, or Deleted Messages), from INBOX or another mailbox. */
+    move(name: string, uid: number, to: string, folder = 'INBOX') {
+      const from = fake.folder(name, folder);
       const message = from.messages.find(item => item.uid === uid)!;
       from.messages.splice(from.messages.indexOf(message), 1);
       const destination = fake.folder(name, to);

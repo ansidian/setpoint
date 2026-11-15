@@ -37,10 +37,13 @@ export const extractKey = (messageId: number) => `extract:${messageId}`;
 const started = (store: Store) => store.db.select().from(t.scheduleMarks).where(eq(t.scheduleMarks.name, HISTORY_MARK)).get() !== undefined;
 const hasKey = (store: Store) => Object.values(aiKeys(store)).some(Boolean);
 
+// Backfilled mail that came to the user: sent mail is never read by the pass.
+const history = and(eq(t.messages.backfill, true), eq(t.messages.received, true));
+
 /** How far the pass has got: backfilled emails read, of all backfilled emails. */
 export function historyProgress(store: Store): HistoryExtractionOut {
-  const total = store.db.select({n: count()}).from(t.messages).where(eq(t.messages.backfill, true)).get()?.n ?? 0;
-  const done = store.db.select({n: count()}).from(t.messages).where(and(eq(t.messages.backfill, true), isNotNull(t.messages.extractedAt))).get()?.n ?? 0;
+  const total = store.db.select({n: count()}).from(t.messages).where(history).get()?.n ?? 0;
+  const done = store.db.select({n: count()}).from(t.messages).where(and(history, isNotNull(t.messages.extractedAt))).get()?.n ?? 0;
   const state = !started(store) ? 'not_started' : done >= total ? 'done' : hasKey(store) ? 'running' : 'waiting_for_key';
   return {state, done, total};
 }
@@ -55,7 +58,7 @@ export function backfillsComplete(store: Store): boolean {
 export function queueHistoryExtraction(store: Store): number {
   if (!hasKey(store)) return 0;
   const ids = store.db.select({id: t.messages.id}).from(t.messages)
-    .where(and(eq(t.messages.backfill, true), isNull(t.messages.extractedAt), isNotNull(t.messages.lane))).all().map(row => row.id);
+    .where(and(history, isNull(t.messages.extractedAt), isNotNull(t.messages.lane))).all().map(row => row.id);
   return transaction(store, () => ids.filter(id => enqueueJob(store, {kind: 'extract', key: extractKey(id), messageId: id})).length);
 }
 

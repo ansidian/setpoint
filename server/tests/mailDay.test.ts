@@ -45,9 +45,10 @@ describe('the mail day', () => {
     });
   });
 
-  test('the size is every kept email\'s text and HTML plus its attachments; Done and Trash move the numbers', () => {
+  test('the size is every kept received email\'s text and HTML plus its attachments; Done and Trash move the numbers', () => {
     const w = world({seed: true});
-    const rows = w.store.db.select().from(t.messages).all();
+    // The seed's sent mail is left out, as the user sent it rather than kept it.
+    const rows = w.store.db.select().from(t.messages).where(eq(t.messages.received, true)).all();
     const text = rows.reduce((sum, row) => sum + Buffer.byteLength(row.bodyText) + Buffer.byteLength(row.bodyHtml ?? ''), 0);
     const attached = w.store.db.select().from(t.attachments).all().reduce((sum, row) => sum + row.sizeBytes, 0);
     expect(mailDayOf(w.store).bytes).toBe(text + attached);
