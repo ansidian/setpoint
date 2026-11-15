@@ -11,7 +11,7 @@
 // place for buttons of its own.
 import type {AccountOut, DraftOut, DraftsOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
-import type {ClipboardEvent, KeyboardEvent, ReactNode, RefObject} from 'react';
+import type {ClipboardEvent, CSSProperties, KeyboardEvent, ReactNode, RefObject} from 'react';
 import {ApiFailure, useResource} from '../../api/client.ts';
 import {draftPath, DRAFTS_PATH, FROM_PATH, suggestPeople} from '../../api/drafts.ts';
 import {chipLabel, quoteOf, readRecipient, readRecipients, replyLine, withRecipients} from '../../logic/composer.ts';
@@ -19,6 +19,8 @@ import type {Block} from '../../logic/description.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
 import {DescriptionField, mountBlocks} from '../calendar/DescriptionField.tsx';
+import {PaneEdge} from '../Reader.tsx';
+import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
 import {closeComposer, discard, queueSave, send, useSaveError, watchSends} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
@@ -429,4 +431,15 @@ export function SendWatch() {
   const {data} = useResource<DraftsOut>(DRAFTS_PATH);
   useEffect(() => watchSends(data?.drafts), [data]);
   return null;
+}
+
+/** A new message's pane on a mail page: the composer by itself, at the reading pane's width. */
+export function NewMessagePane({open, accounts, timeZone}: {open: OpenComposer; accounts: Map<number, AccountOut>; timeZone: string}) {
+  const width = useReadingPaneWidth();
+  return (
+    <section className="pane writing" aria-label="New message" style={{'--readingPane': `${width}px`} as CSSProperties}>
+      <PaneEdge width={width} />
+      <Composer key={open.key} open={open} message={undefined} accounts={accounts} timeZone={timeZone} />
+    </section>
+  );
 }

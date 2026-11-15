@@ -27,6 +27,7 @@ const KEYS: PaneKey[] = [
   {keys: ['E'], does: 'Trash'},
   {keys: ['P'], does: 'Pin'},
   {keys: ['R'], does: 'Reply'},
+  {keys: ['C'], does: 'New message'},
 ];
 
 export function InboxDay({settle}: {settle: boolean}) {

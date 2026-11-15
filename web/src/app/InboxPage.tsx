@@ -6,7 +6,7 @@
 // The keyboard cursor is a `sub2` fill that J and K move and the pointer takes. With an email open,
 // J and K open the next and previous one instead. Enter opens, H Done, E Trash (each with Undo in
 // the toast, and ⌘Z), P Pin, O Open in Gmail, R Reply and A Reply all (the composer, desktop only),
-// ⇧I Mark all as read, ⇧U Mark unread, U to the next unread email. Esc closes the composer, then the
+// C a new message, ⇧I Mark all as read, ⇧U Mark unread, U to the next unread email. Esc closes the composer, then the
 // reader. Done or Trash on the open email opens the next one.
 //
 // ⌘ or Ctrl-click and ⇧-click select several emails. The reading pane shows the selection
@@ -63,7 +63,8 @@ import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
 import {askCard, Reader} from './Reader.tsx';
-import {answerKey, closeComposer, openComposer} from './compose/composer.ts';
+import {answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
+import {NewMessagePane} from './compose/Composer.tsx';
 import {openContextMenu} from './ContextMenu.tsx';
 import {emailActions, selectionActions} from './emailActions.ts';
 import type {SelectionHandlers} from './emailActions.ts';
@@ -586,8 +587,11 @@ export function InboxPage({route}: {route: InboxRoute}) {
   };
 
   // The pane beside the list: the open email, else the selection, else empty.
-  const showsSelection = open === null && selected.length > 0 && !compact;
-  const pane = useEmptyPane(open !== null || showsSelection, PANE_PATHS);
+  // A new message has the pane to itself while no email is open.
+  const composer = useOpenComposer();
+  const writing = !phone && open === null && composer?.messageId === null ? composer : null;
+  const showsSelection = open === null && selected.length > 0 && !compact && !writing;
+  const pane = useEmptyPane(open !== null || showsSelection || writing !== null, PANE_PATHS);
 
   // Attached again with each render as it's drawn, before any key can come: a passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
@@ -623,6 +627,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         else if (cursorStop?.kind === 'mentions') run(search.toggleMentions);
         else if (cursorStop?.kind === 'leftOut') run(search.toggleLeftOut);
       } else if (plainKey(event, 'h')) run(actions.done, 'h');
+      else if (plainKey(event, 'c') && !phone) run(() => newMessage());
       else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'p')) run(actions.pin, 'p');
@@ -640,6 +645,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
         else if (open !== null && openComposer()?.messageId === open) run(closeComposer);
+        else if (writing) run(closeComposer);
         else if (open !== null) run(close);
         else if (pane.shown) run(pane.close);
         else if (alfred.open) run(() => {
@@ -773,6 +779,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}
         {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}
+        {writing && <NewMessagePane open={writing} accounts={accounts} timeZone={zone} />}
         {showsSelection && (
           <SelectionPane rows={selectedRows} on={forSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
         )}

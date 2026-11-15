@@ -157,6 +157,9 @@ test.each([
   ['Calendar', {page: 'calendar', title: 'October 2026'}, 'October 2026 · Calendar'],
   ['News', {page: 'news', headline: null}, 'News'],
   ['a story open', {page: 'news', headline: 'Brush fire near the 210 grows to 400 acres'}, 'Brush fire near the 210 grows to 400 acres'],
+  ['Drafts', {page: 'drafts', subject: null}, 'Drafts'],
+  ['a draft open', {page: 'drafts', subject: 'Re: Dinner Friday?'}, 'Re: Dinner Friday?'],
+  ['a draft with no subject yet', {page: 'drafts', subject: ''}, 'Drafts'],
 ] as const)('tab title: %s', (_name, page, expected) => {
   expect(tabTitle(page)).toBe(expected);
 });
@@ -213,6 +216,10 @@ describe('routes', () => {
     ['/sent', '?account=2', {page: 'sent', open: null, account: 2}],
     ['/sent/12', '?account=2', {page: 'sent', open: 12, account: 2}],
     ['/sent/nope', '?account=nope', {page: 'sent', open: null}],
+    // Drafts: the open draft in the address.
+    ['/drafts', '', {page: 'drafts', open: null}],
+    ['/drafts/4', '', {page: 'drafts', open: 4}],
+    ['/drafts/nope', '', {page: 'drafts', open: null}],
     ['/somewhere', '', {page: 'inbox', open: null}],
   ] as const)('%s%s', (path, search, expected) => {
     const route = parseRoute(path, search);
@@ -261,10 +268,12 @@ test.each([
 });
 
 describe('live events refresh only what they name', () => {
-  const mounted = ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/messages/7', '/accounts', '/items?from=2026-10-07&to=2026-10-09', '/mail/inboxes', '/calendars', '/todoist/projects', '/mail/mailpieces?day=2026-10-07'];
+  const mounted = ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/messages/7', '/accounts', '/items?from=2026-10-07&to=2026-10-09', '/mail/inboxes', '/calendars', '/todoist/projects', '/mail/mailpieces?day=2026-10-07', '/mail/drafts', '/mail/drafts/3', '/mail/drafts/9'];
   test.each([
     ['mail: the lists, Sent included, the counts, the emails named and the rail\'s USPS mail', {type: 'mail', messages: [5], accounts: [4], commands: []},
       ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/mailpieces?day=2026-10-07']],
+    ['a draft\'s change: Drafts and the draft too, with the lists whose rows say "Draft"', {type: 'mail', messages: [5], accounts: [4], commands: [], drafts: [3]},
+      ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/mailpieces?day=2026-10-07', '/mail/drafts', '/mail/drafts/3']],
     ['items: the item ranges', {type: 'items', items: [2], calendars: [], commands: []}, ['/items?from=2026-10-07&to=2026-10-09']],
     ['items naming a calendar: the calendars and Todoist\'s projects too', {type: 'items', items: [], calendars: [4], commands: []}, ['/items?from=2026-10-07&to=2026-10-09', '/calendars', '/todoist/projects']],
     ['health: the accounts', {type: 'health', sources: [1]}, ['/accounts']],

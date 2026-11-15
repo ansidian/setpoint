@@ -1,7 +1,9 @@
 // The composer's journeys, at the design target on a fresh seed each, the server's clock held at the
 // seed's moment so a held send stays held: Reply all from the keyboard, sent behind the "Sending"
 // toast and brought back by Undo as it was; a send the provider refused, back on its email with the
-// provider's words and Try again; and a draft that outlives a reload, its row saying "Draft". The
+// provider's words and Try again; a draft that outlives a reload, its row saying "Draft"; a new
+// message from C, kept in Drafts, its sidebar row and its page; From's alias and Sent's account; and
+// a composer left with nothing written, which leaves no draft. The
 // fields, chips, the fold and the saving are components/composer.test.tsx's, a send that reaches the
 // dev provider the server's (sendDev.test.ts).
 import type {AllOut, DraftOut, DraftsOut} from '@setpoint/shared';
@@ -121,6 +123,113 @@ test('a draft outlives a reload: its row says "Draft", its composer opens again 
     await page.keyboard.press('r');
     await body(page).filter({hasText: 'Count me in.'}).waitFor();
     assert.equal(new URL(page.url()).pathname, `/inbox/${id}`);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('C writes a new message by itself from the account last sent from; closed, it waits in Drafts, whose row and count show, and opens alone there', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    // No draft, no Drafts row.
+    assert.equal(await page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), 0);
+    await page.keyboard.press('c');
+    await page.locator('.pane.writing .composer').waitFor();
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'To');
+    // The seed's last sent mail went from Work.
+    assert.equal(await composer(page).locator('.cmp-from > button').textContent(), 'Workuser@work.example.org');
+    await page.keyboard.type('sam.ortiz@example.org,');
+    await composer(page).getByRole('textbox', {name: 'Subject'}).fill('Hike on Saturday');
+    await body(page).click();
+    await page.keyboard.type('Still on for 9?');
+    await page.keyboard.press('Escape');
+    await until('Esc closes it', () => composer(page).count(), count => count === 0);
+    await until('kept, saved', () => drafts(setpoint), found => found.length === 1 && found[0]!.kind === 'new' && found[0]!.snippet === 'Still on for 9?');
+
+    const row = page.locator('.sb .nav.sub', {hasText: 'Drafts'});
+    await row.locator('.cnt', {hasText: '1'}).waitFor();
+    await row.click();
+    await until('Drafts opens', async () => new URL(page.url()).pathname, path => path === '/drafts');
+    const draftRow = page.locator('.drafts-list .row', {hasText: 'Hike on Saturday'});
+    assert.equal(await draftRow.locator('.from').textContent(), 'To sam.ortiz@example.org');
+    await draftRow.click();
+    await page.locator('.pane.writing .composer').waitFor();
+    await body(page).filter({hasText: 'Still on for 9?'}).waitFor();
+    assert.match(new URL(page.url()).pathname, /^\/drafts\/\d+$/);
+    assert.equal(await page.locator('.pane .rd-subj').count(), 0);
+    await page.keyboard.press('Escape');
+    await until('Esc empties the pane', async () => new URL(page.url()).pathname, path => path === '/drafts');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Drafts lists the newest first: a reply opens under its email, a refused one says "Couldn\'t send"; From offers Business\'s alias, and C on Sent starts from its account', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const dinner = await idOf(setpoint, 'Dinner Friday?');
+    const reply = await setpoint.api<DraftOut>('POST', '/mail/drafts', {kind: 'reply', message_id: dinner});
+    await setpoint.api('PATCH', `/mail/drafts/${reply.id}`, {body: [{type: 'paragraph', runs: [{text: 'Blue Door works.', marks: [], href: null}]}]});
+    const refused = await setpoint.api<DraftOut>('POST', '/mail/drafts', {kind: 'new'});
+    await setpoint.api('PATCH', `/mail/drafts/${refused.id}`, {to: [{name: null, address: 'nobody@refused.example'}], subject: 'Hello'});
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      database.prepare('UPDATE drafts SET send_state = \'failed\', send_error = ? WHERE id = ?').run('550 Recipient address rejected', refused.id);
+    } finally {
+      database.close();
+    }
+
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/drafts`);
+    await page.locator('.drafts-list .row').nth(1).waitFor();
+    assert.deepEqual(await page.locator('.drafts-list .row .subj b').allTextContents(), ['Hello', 'Re: Dinner Friday?']);
+    await page.locator('.drafts-list .row', {hasText: 'Hello'}).locator('.drafted', {hasText: 'Couldn\'t send'}).waitFor();
+    await page.locator('.drafts-list .row', {hasText: 'Re: Dinner Friday?'}).click();
+    await page.locator('.pane .rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
+    await body(page).filter({hasText: 'Blue Door works.'}).waitFor();
+
+    // From: each account with its addresses, Business's alias under it.
+    await composer(page).locator('.cmp-from > button').click();
+    assert.deepEqual(await composer(page).locator('.cmp-from-menu .menu-i').allTextContents(), [
+      'Businessuser@studio.example.com', 'hello@studio.example.com', 'Personaluser@example.com', 'Workuser@work.example.org', 'Jobsuser.jobs@example.com', 'iClouduser@example.net',
+    ]);
+    await composer(page).locator('.cmp-from-menu .menu-i', {hasText: 'hello@studio.example.com'}).click();
+    await until('From is the alias', async () => (await setpoint.api<DraftOut>('GET', `/mail/drafts/${reply.id}`)).from, from => from.address === 'hello@studio.example.com');
+
+    // C on Sent, iCloud selected.
+    await page.goto(`${setpoint.base}/sent?account=5`);
+    await page.locator('.list .row').first().waitFor();
+    await page.keyboard.press('c');
+    await page.locator('.pane.writing .composer').waitFor();
+    assert.equal(await composer(page).locator('.cmp-from > button').textContent(), 'iClouduser@example.net');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a composer left with nothing written leaves nothing in Drafts: C, then an email opened; R, then Esc', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const id = await idOf(setpoint, 'Dinner Friday?');
+    const page = await openEmail(setpoint, id);
+    await page.keyboard.press('c');
+    await page.locator('.pane.writing .composer').waitFor();
+    await until('the new message is a draft', () => drafts(setpoint), found => found.length === 1);
+    await page.locator(`.list .row[data-id="${id}"]`).click();
+    await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
+    await until('the untouched message is gone', () => drafts(setpoint), found => found.length === 0);
+    await page.keyboard.press('r');
+    await body(page).waitFor();
+    await page.keyboard.press('Escape');
+    await until('the untouched reply is gone too', () => drafts(setpoint), found => found.length === 0);
+    assert.equal(await page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

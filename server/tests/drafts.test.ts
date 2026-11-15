@@ -87,13 +87,14 @@ describe('Starting a draft', () => {
 });
 
 describe('From', () => {
-  test('each account with its own address and the name it last sent with; a new message\'s account', async () => {
+  test('each account with its own address and the name it last sent with, then its aliases; a new message\'s account', async () => {
     const {api} = await setup();
     const from = (await api.send('GET', '/api/mail/from')).body;
     expect(from.default_account_id).toBe(WORK);
     expect(from.accounts.map((account: {account_id: number}) => account.account_id)).toEqual([1, 2, 3, 4, 5]);
     expect(from.accounts[1]).toEqual({account_id: PERSONAL, addresses: [{address: 'user@example.com', name: 'User', primary: true}]});
-    expect(from.accounts[0].addresses).toEqual([{address: 'user@studio.example.com', name: null, primary: true}]);
+    // Business's "Send mail as" list in the seed: its own address, then an alias.
+    expect(from.accounts[0].addresses).toEqual([{address: 'user@studio.example.com', name: 'User', primary: true}, {address: 'hello@studio.example.com', name: 'Studio', primary: false}]);
   });
 });
 

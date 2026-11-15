@@ -14,13 +14,17 @@
 // draft is gone once the provider took it. If the provider refused it, the draft comes back with
 // its words and Try again: on its email, in the toast (Open), and in Drafts.
 //
-// Discard has no key: the draft goes at once, and the toast's Undo starts it again as it was.
+// Discard has no key: the draft goes at once, and the toast's Undo starts it again as it was. A
+// draft nothing was written in goes quietly when its composer closes.
+//
+// A new message (C) has no email to stay with: it opens in the pane by itself, and showing an email
+// closes it into Drafts. On Drafts, the open draft is the page's own (its address names it).
 import type {DraftCreateInput, DraftKind, DraftOut, DraftRowOut, DraftUpdateInput, FromOut, MessageOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {ApiFailure, getCached, getJson} from '../../api/client.ts';
-import {discardDraft, FROM_PATH, loadDraft, saveDraft, sendDraft, startDraft, undoSend} from '../../api/drafts.ts';
+import {discardDraft, draftPath, FROM_PATH, loadDraft, saveDraft, sendDraft, startDraft, undoSend} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
-import {hasOthers} from '../../logic/composer.ts';
+import {hasOthers, unwritten} from '../../logic/composer.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
 
@@ -105,8 +109,24 @@ if (typeof window !== 'undefined') {
 
 // ---- Opening and closing ----
 
+/**
+ * The composer gives up its draft (closed, or another opening): saved now, or, when nothing was
+ * written in it, discarded quietly, so an R or C let go of leaves nothing in Drafts.
+ */
+function letGo(draftId: number) {
+  const draft = getCached<DraftOut>(draftPath(draftId));
+  const now = draft ? {...draft, ...queued.get(draftId)} as DraftOut : null;
+  if (now && !now.send && unwritten(now)) {
+    forgetSaves(draftId);
+    discarded.add(draftId);
+    void discardDraft(draftId, now.message_id).catch(() => {}).finally(() => discarded.delete(draftId));
+    return;
+  }
+  void flushSave(draftId).catch(() => {});
+}
+
 function show(draft: Pick<DraftOut, 'id' | 'message_id' | 'kind' | 'to' | 'cc' | 'bcc'>, {caret = true} = {}) {
-  if (open && open.draftId !== draft.id) void flushSave(open.draftId).catch(() => {});
+  if (open && open.draftId !== draft.id) letGo(open.draftId);
   const someone = draft.to.length + draft.cc.length + draft.bcc.length > 0;
   open = {draftId: draft.id, messageId: draft.message_id, kind: draft.kind, focus: caret ? (someone ? 'body' : 'to') : null, key: ++opened};
   closedOn = null;
@@ -146,7 +166,7 @@ export function answerKey(id: number, kind: 'reply' | 'reply_all') {
 /** Esc, or the composer's close: it closes, the draft kept. */
 export function closeComposer() {
   if (!open) return;
-  void flushSave(open.draftId).catch(() => {});
+  letGo(open.draftId);
   closedOn = open.messageId;
   open = null;
   notify();
@@ -161,6 +181,8 @@ const openable = (row: DraftRowOut) => row.send_state !== 'held' && row.send_sta
  */
 export function showEmail(messageId: number, drafts: DraftRowOut[] | undefined) {
   if (closedOn !== null && closedOn !== messageId) closedOn = null;
+  // A new message gives the pane to the email, kept in Drafts.
+  if (open && open.messageId === null) closeComposer();
   if (!drafts || closedOn === messageId || open?.messageId === messageId) return;
   const draft = drafts.filter(row => row.message_id === messageId && openable(row)).sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
   if (!draft) return;
@@ -171,10 +193,32 @@ export function showEmail(messageId: number, drafts: DraftRowOut[] | undefined) 
   }, () => {});
 }
 
+/** C: a new message, from the account asked for (Sent's selected one), else the one last sent from. */
+export function newMessage(accountId?: number) {
+  const route = currentRoute();
+  // The pane is the message's: an email open there gives way.
+  if ((route.page === 'inbox' || route.page === 'sent') && route.open !== null) navigate({...route, open: null});
+  if (route.page === 'drafts' && route.open !== null) navigate({page: 'drafts', open: null});
+  startComposer({kind: 'new', ...(accountId ? {account_id: accountId} : {})});
+}
+
+/** Drafts' row: its draft opens in Drafts' pane, the caret in it. */
+export function openDraft(draftId: number) {
+  if (open?.draftId === draftId) return;
+  void loadDraft(draftId).then(draft => show(draft), toastFailure('Couldn\'t open the draft'));
+}
+
 /** Opens the draft, showing its email first when the page shows another (Undo, a failure's Open). */
 function reopen(draft: DraftOut) {
   const route = currentRoute();
-  if (draft.message_id !== null) {
+  if (route.page === 'drafts') {
+    if (route.open !== draft.id) navigate({page: 'drafts', open: draft.id});
+  } else if (draft.message_id === null) {
+    // A new message opens in the pane of the mail page it's on, else in Drafts.
+    if (route.page === 'inbox' || route.page === 'sent') {
+      if (route.open !== null) navigate({...route, open: null});
+    } else navigate({page: 'drafts', open: draft.id});
+  } else {
     const shown = (route.page === 'inbox' || route.page === 'sent') && route.open === draft.message_id;
     if (!shown) navigate(route.page === 'sent' ? {...route, open: draft.message_id} : route.page === 'inbox' ? {...route, open: draft.message_id} : {page: 'inbox', open: draft.message_id});
   }

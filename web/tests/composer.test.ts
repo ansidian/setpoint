@@ -3,7 +3,7 @@
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {chipLabel, hasOthers, quoteOf, readRecipient, readRecipients, replyLine, withRecipients} from '../src/logic/composer.ts';
+import {chipLabel, hasOthers, quoteOf, readRecipient, readRecipients, replyLine, unwritten, withRecipients} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
   accounts: [
@@ -79,5 +79,24 @@ describe('the quote', () => {
       {type: 'paragraph', runs: [{text: 'Hey!\nDinner?', marks: [], href: null}]},
       {type: 'paragraph', runs: [{text: 'Sam', marks: [], href: null}]},
     ]);
+  });
+});
+
+describe('a draft nothing was written in, which closing leaves out of Drafts', () => {
+  const words = [{type: 'paragraph' as const, runs: [{text: 'Hi', marks: [], href: null}]}];
+  const blank = {kind: 'new' as const, to: [] as Recipient[], cc: [] as Recipient[], bcc: [] as Recipient[], subject: '', body: [], quote: null};
+  test.each<[string, Parameters<typeof unwritten>[0], boolean]>([
+    ['a new message with nothing', blank, true],
+    ['a new message with only a blank line', {...blank, body: [{type: 'paragraph', runs: []}]}, true],
+    ['a new message with someone to send to', {...blank, to: [SAM]}, false],
+    ['a new message with a subject', {...blank, subject: 'Lunch'}, false],
+    ['a new message with words', {...blank, body: words}, false],
+    ['a reply with its server-filled recipients and subject and no words', {...blank, kind: 'reply', to: [SAM], subject: 'Re: Dinner'}, true],
+    ['a reply with words', {...blank, kind: 'reply_all', to: [SAM], body: words}, false],
+    ['a reply whose quote was trimmed', {...blank, kind: 'reply', to: [SAM], quote: []}, false],
+    ['a forward with no one yet', {...blank, kind: 'forward', subject: 'Fwd: Dinner'}, true],
+    ['a forward with someone to send to', {...blank, kind: 'forward', to: [JUNE], subject: 'Fwd: Dinner'}, false],
+  ])('%s', (_name, draft, expected) => {
+    expect(unwritten(draft)).toBe(expected);
   });
 });

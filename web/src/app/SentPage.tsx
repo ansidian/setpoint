@@ -7,7 +7,7 @@
 // has no account filter: here the account is the address the user chose to write from.
 //
 // The reader opens a sent email as any other. Its tools are Trash, Open in Gmail, Reply R and Reply
-// all A. A received email
+// all A, and C writes a new message from the selected account. A received email
 // of its conversation opens in the Inbox. J and K move the
 // cursor (with an email open, they open the next and previous one), Enter opens, E Trash (with Undo in
 // the toast, and ⌘Z), O Open in Gmail, Esc closes the reader, then the search.
@@ -38,7 +38,8 @@ import {emailActions} from './emailActions.ts';
 import {SentEmptyView} from './EmptyView.tsx';
 import {beats} from './fold.ts';
 import {askCard, Reader} from './Reader.tsx';
-import {answerKey, closeComposer, openComposer} from './compose/composer.ts';
+import {answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
+import {NewMessagePane} from './compose/Composer.tsx';
 import type {ReaderActions, Travel} from './Reader.tsx';
 import {navigate} from './router.ts';
 import {SearchField, SearchResults} from './search/Search.tsx';
@@ -173,6 +174,9 @@ export function SentPage({route}: {route: SentRoute}) {
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;
   // What E acts on: the open email, else the row under the cursor.
   const target = open ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
+  // A new message has the pane to itself while no email is open.
+  const composer = useOpenComposer();
+  const writing = open === null && composer?.messageId === null ? composer : null;
   const rowOf = (id: number): MessageRowOut | undefined => {
     const row = sentRows.get(id);
     return row ? asSent(row) : search.listed.find(result => result.id === id);
@@ -278,8 +282,10 @@ export function SentPage({route}: {route: SentRoute}) {
       else if ((plainKey(event, 'r') || plainKey(event, 'a')) && target !== null) {
         const kind = plainKey(event, 'r') ? 'reply' : 'reply_all';
         run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : 'a');
-      } else if (plainKey(event, 'Escape')) {
+      } else if (plainKey(event, 'c')) run(() => newMessage(account ?? undefined));
+      else if (plainKey(event, 'Escape')) {
         if (open !== null && openComposer()?.messageId === open) run(closeComposer);
+        else if (writing) run(closeComposer);
         else if (open !== null) run(close);
         else if (searching) run(() => search.clear());
         else if (cursor !== null) run(() => setCursor(null));
@@ -357,6 +363,7 @@ export function SentPage({route}: {route: SentRoute}) {
             loading={!ready ? (failed ? <LoadFailed what="Sent" loads={[firstLoad]} /> : <AllSkeleton />) : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={(id, key) => openEmail(id, key)} onToggleNoise={nothing} onNearEnd={loadMore} onUnpin={nothing} />
         )}
+        {writing && <NewMessagePane open={writing} accounts={accounts} timeZone={zone} />}
         {open !== null && (
           <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={openFromReader}
             sent canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />

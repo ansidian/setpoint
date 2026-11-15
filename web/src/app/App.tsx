@@ -33,6 +33,7 @@ import {fillMailSlots} from './slots.tsx';
 import {showToast} from './toast.ts';
 import {ToastPill} from './ToastPill.tsx';
 import {SendWatch} from './compose/Composer.tsx';
+import {DraftsPage} from './compose/DraftsPage.tsx';
 
 // Jobs fills mail's slots: the reader's JD chip and Applied before, before Setpoint first draws.
 fillMailSlots(jobsMailSlots);
@@ -58,7 +59,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
   }, [settingsLink]);
 
   // Below 640 px News, Jobs and Sent aren't in the navigation: their addresses open the Inbox.
-  const phoneNews = phone && (route.page === 'news' || route.page === 'jobs' || route.page === 'sent');
+  const phoneNews = phone && (route.page === 'news' || route.page === 'jobs' || route.page === 'sent' || route.page === 'drafts');
   useEffect(() => {
     if (phoneNews) navigate(toInbox(), {replace: true});
   }, [phoneNews]);
@@ -111,6 +112,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
       <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
         {route.page === 'inbox' ? <InboxPage route={route} />
           : route.page === 'sent' ? (phone ? null : <SentPage route={route} />)
+          : route.page === 'drafts' ? (phone ? null : <DraftsPage route={route} />)
           : route.page === 'calendar' ? (phone ? <Agenda route={route} /> : <CalendarPage route={route} />)
             : route.page === 'news' ? (phone ? null : <NewsPage route={route} />)
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)

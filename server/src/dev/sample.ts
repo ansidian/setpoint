@@ -437,6 +437,11 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
       const row = tx.insert(t.accounts).values({...account, position, createdAt}).returning({id: t.accounts.id}).get();
       accountIds.set(account.label, row.id);
     });
+    // Business's "Send mail as" list, as Gmail's settings give it: its own address and one alias.
+    tx.insert(t.sendAs).values([
+      {accountId: accountIds.get('Business')!, address: 'user@studio.example.com', name: 'User', primary: true, position: 0},
+      {accountId: accountIds.get('Business')!, address: 'hello@studio.example.com', name: 'Studio', primary: false, position: 1},
+    ]).run();
 
     // Every source is a dev source, served by the in-process dev provider. Each last checked a
     // minute before SEED_NOW, so all are healthy then.

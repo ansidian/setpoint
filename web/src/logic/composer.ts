@@ -1,9 +1,9 @@
 // The composer's pure rules: whether an email has anyone for Reply all (the server's own fill rule,
 // shared/src/draftFill.ts), what a typed recipient is, a chip's words, and the reply's quote as the
 // composer shows it under its fold.
-import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
+import type {DraftOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {fillAnswer} from '@setpoint/shared/draftFill';
-import {readHtml} from '@setpoint/shared/richText';
+import {isEmpty, readHtml} from '@setpoint/shared/richText';
 import type {Block} from '@setpoint/shared/richText';
 import {paragraphs} from './body.ts';
 
@@ -76,4 +76,16 @@ export function replyLine(message: Pick<MessageOut, 'from_name' | 'from_address'
 export function quoteOf(message: Pick<MessageOut, 'body_html' | 'body_text'>): Block[] {
   if (message.body_html) return readHtml(message.body_html).blocks;
   return paragraphs(message.body_text).map(lines => ({type: 'paragraph' as const, runs: [{text: lines.join('\n'), marks: [], href: null}]}));
+}
+
+/**
+ * Whether nothing was written in a draft, so closing it leaves nothing behind: no words in the body
+ * and the quote untouched; for a forward no one to send to either, and for a new message no subject
+ * too. A reply's recipients and subject are the server's, so its body decides.
+ */
+export function unwritten(draft: Pick<DraftOut, 'kind' | 'to' | 'cc' | 'bcc' | 'subject' | 'body' | 'quote'>): boolean {
+  if (!isEmpty(draft.body) || draft.quote !== null) return false;
+  if (draft.kind === 'reply' || draft.kind === 'reply_all') return true;
+  if (draft.to.length + draft.cc.length + draft.bcc.length > 0) return false;
+  return draft.kind === 'forward' || !draft.subject.trim();
 }
