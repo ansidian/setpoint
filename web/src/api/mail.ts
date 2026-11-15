@@ -21,6 +21,10 @@ export const ALL_PAGE = 100;
 export const allPath = (before: string | null = null) =>
   `/mail/all?limit=${ALL_PAGE}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
 
+/** A page of Sent, for one account or every one: `before` is the previous page's `next_before`. */
+export const sentPath = (account: number | null, before: string | null = null) =>
+  `/mail/sent?limit=${ALL_PAGE}${account ? `&account_id=${account}` : ''}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
+
 // Triage's pattern prompts (logic/inbox.ts › PatternPrompt is the part of its shape the web reads).
 // Where triage isn't there the route answers 404, and the Inbox shows no prompt.
 export const PROMPTS_PATH = '/mail/prompts';
@@ -103,7 +107,7 @@ function updateMessage(id: number, change: Partial<MessageOut>): number {
 
 // Where a change to an email shows at once. A load asked while the change is on its way can be
 // answered from before the server has the change, so these hold their answers until it's in.
-const MAIL_LOADS = ['/mail/inbox', '/mail/all', COUNTS_PATH, DAY_PATH];
+const MAIL_LOADS = ['/mail/inbox', '/mail/all', '/mail/sent', COUNTS_PATH, DAY_PATH];
 
 /** Sends a change with the lists and counts held; the release loads them again. */
 async function change<T>(send: () => Promise<T>): Promise<T> {

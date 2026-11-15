@@ -8,7 +8,9 @@ import {motion} from '../tokens.ts';
 import {isTyping} from './keys.ts';
 import {segThumb} from './seg.ts';
 
-export type Segment<T> = {value: T; label: ReactNode; tip?: string};
+// `quiet`: drawn quieter, and passed over by Tab and Shift-Tab, though a click still turns it on
+// (Sent's accounts with no sent mail).
+export type Segment<T> = {value: T; label: ReactNode; tip?: string; quiet?: boolean};
 
 /** How its buttons say which one is on: pressed toggles (the default), radios, or tabs. */
 export type SegmentRole = 'pressed' | 'radio' | 'tab';
@@ -29,10 +31,18 @@ export function tabStep(event: KeyboardEvent): 1 | -1 | null {
   return event.shiftKey ? -1 : 1;
 }
 
-/** The segment `delta` from `value`, wrapping from the last to the first and back. */
-export function stepSegment<T>(values: readonly T[], value: T, delta: 1 | -1): T {
+/**
+ * The segment `delta` from `value`, wrapping from the last to the first and back. `skipped` ones are
+ * passed over, from wherever `value` sits, a skipped one included.
+ */
+export function stepSegment<T>(values: readonly T[], value: T, delta: 1 | -1, skipped: ReadonlySet<T> = new Set()): T {
   const at = values.indexOf(value);
-  return values[((at === -1 ? 0 : at + delta) + values.length) % values.length]!;
+  if (at === -1) return values.find(one => !skipped.has(one)) ?? values[0]!;
+  for (let step = 1; step <= values.length; step += 1) {
+    const next = values[(((at + step * delta) % values.length) + values.length) % values.length]!;
+    if (!skipped.has(next)) return next;
+  }
+  return value;
 }
 
 export function Segmented<T extends string | number>({segments, value, onChange, onTab, label, role = 'pressed', className, style}: {
@@ -59,7 +69,7 @@ export function Segmented<T extends string | number>({segments, value, onChange,
       const {segments: now, value: at, onTab: step} = latest.current;
       if (delta === null || !step) return;
       event.preventDefault();
-      step(stepSegment(now.map(segment => segment.value), at, delta));
+      step(stepSegment(now.map(segment => segment.value), at, delta, new Set(now.filter(segment => segment.quiet).map(segment => segment.value))));
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -72,7 +82,7 @@ export function Segmented<T extends string | number>({segments, value, onChange,
         const on = segment.value === value;
         const state = role === 'radio' ? {role: 'radio', 'aria-checked': on} : role === 'tab' ? {role: 'tab', 'aria-selected': on} : {'aria-pressed': on};
         return (
-          <button key={segment.value} type="button" className={on ? 'on' : undefined} data-tip={segment.tip} {...state} onClick={() => onChange(segment.value)}>
+          <button key={segment.value} type="button" className={[on && 'on', segment.quiet && 'quiet'].filter(Boolean).join(' ') || undefined} data-tip={segment.tip} {...state} onClick={() => onChange(segment.value)}>
             {segment.label}
           </button>
         );

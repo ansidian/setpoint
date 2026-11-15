@@ -1,14 +1,16 @@
 // The tab's title: "(13) Inbox" while mail is unread, the subject when an email is open,
 // "October 2026 · Calendar" on Calendar ("Oct 4 – 10, 2026 · Calendar" in the week view), and
-// "News" or the open story's headline. Settings, a modal over the page, leaves the page's title as
+// "News" or the open story's headline, and "Sent" or the open sent email's subject. Settings, a modal over the page, leaves the page's title as
 // it is.
-export type TitlePage = {page: 'inbox'; unread: number; subject: string | null} | {page: 'calendar'; title: string} | {page: 'news'; headline: string | null} | {page: 'sign-in'};
+export type TitlePage = {page: 'inbox'; unread: number; subject: string | null} | {page: 'sent'; subject: string | null} | {page: 'calendar'; title: string} | {page: 'news'; headline: string | null} | {page: 'sign-in'};
 
 export function tabTitle(page: TitlePage): string {
   switch (page.page) {
     case 'inbox':
       if (page.subject) return page.subject;
       return page.unread > 0 ? `(${page.unread}) Inbox` : 'Inbox';
+    case 'sent':
+      return page.subject ?? 'Sent';
     case 'calendar':
       return `${page.title} · Calendar`;
     case 'news':

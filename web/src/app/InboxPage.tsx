@@ -14,7 +14,8 @@
 // selection and opens the email. Esc ends it first.
 //
 // Search: while the header's field holds a search, its results replace the list and the header
-// reads "Search". The reading pane, J, K and Enter work the same, and each open is logged with its
+// reads "Search". On the desktop it finds sent mail too, whose row reads "To Sam Ortiz" and whose
+// email has Sent's tools (no Pin or Mark unread). The reading pane, J, K and Enter work the same, and each open is logged with its
 // position. ⌘Enter asks Alfred, whose Answer card sits above the results. Esc closes the reader,
 // then the card, then the search.
 //
@@ -34,6 +35,7 @@ import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources}
 import {
   allPath, answerPrompt, changeEach, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
 } from '../api/mail.ts';
+import type {SearchScope} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {attentionRows, dayStops, heldUnread, nextUnread, sameHold, unreadNotDone, viewList} from '../logic/all.ts';
 import {leftOutSection, readerMarks, resultSections} from '../logic/search.ts';
@@ -82,6 +84,10 @@ import {dismissToast, showToast, toastFailure} from './toast.ts';
 import {EmptyView} from './EmptyView.tsx';
 
 type InboxRoute = Extract<Route, {page: 'inbox'}>;
+
+// The desktop's search takes sent mail in. The phone's answers stay as the iPhone app's are.
+const WITH_SENT: SearchScope = {sent: 'include'};
+const NO_SCOPE: SearchScope = {};
 
 const VIEW_LABELS: Record<InboxView, string> = {all: 'All', unread: 'Unread', attention: 'Attention', fyi: 'FYI', noise: 'Noise'};
 
@@ -157,7 +163,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // Undo, or a refused Trash, lets one back.
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
   const untrashing = (id: number) => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
-  const search = useSearch(phone);
+  const search = useSearch(phone, phone ? NO_SCOPE : WITH_SENT);
   const alfred = useAlfred();
   const searching = search.active || alfred.open;
   // A search's first answer on its way: the list stays, dimmed, then gives way to the results'
@@ -425,7 +431,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
     },
     // Pin, or Unpin when every one is pinned already.
     pin: (ids: number[]) => {
-      const rows = ids.flatMap(id => rowOf(id) ?? []);
+      // Sent mail has no Pin.
+      const rows = ids.flatMap(id => rowOf(id) ?? []).filter(row => !row.sent_only);
       const pinning = rows.some(row => !row.pinned);
       const changing = rows.filter(row => row.pinned !== pinning).map(row => row.id);
       // Out of the shelf's sight, a pin says where it went, with Undo.
@@ -460,9 +467,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
     },
     // ⇧U or ⌘K: the emails unread again. An open one's reader closes, so it stays unread.
     markUnread: (ids: number[]) => {
-      if (open !== null && ids.includes(open)) close();
-      void changeEach(ids, id => markUnread(id)).then(outcomes => {
-        const refused = refusals(ids, outcomes);
+      // Sent mail has no read state to change.
+      const unread = ids.filter(id => !rowOf(id)?.sent_only);
+      if (!unread.length) return;
+      if (open !== null && unread.includes(open)) close();
+      void changeEach(unread, id => markUnread(id)).then(outcomes => {
+        const refused = refusals(unread, outcomes);
         if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it unread', n => `Couldn't mark ${n} unread`))(refused[0]!.error);
       });
     },

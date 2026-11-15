@@ -126,7 +126,7 @@ test('board 38c: Jobs off: the header alone and "Jobs is off" and Turn on, no si
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     await setpoint.idle();
-    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Calendar', 'News', 'Settings⌘,']);
+    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Sent', 'Calendar', 'News', 'Settings⌘,']);
 
     await page.keyboard.press('4');
     const empty = page.locator('.jb-empty');
@@ -158,7 +158,7 @@ test('board 38c: Jobs off: the header alone and "Jobs is off" and Turn on, no si
     await item.waitFor();
     assert.equal(await toggle.getAttribute('aria-checked'), 'true');
     await until('the server on', () => setpoint.api<JobsSettingsOut>('GET', '/jobs/settings'), value => value.enabled);
-    assert.deepEqual(await page.locator('aside.sb .nav .grow').allTextContents(), ['Inbox', 'Calendar', 'News', 'Jobs', 'Settings']);
+    assert.deepEqual(await page.locator('aside.sb .nav .grow').allTextContents(), ['Inbox', 'Sent', 'Calendar', 'News', 'Jobs', 'Settings']);
     assert.equal((await setpoint.api<JobsNavOut>('GET', '/jobs/nav')).enabled, true);
     await page.keyboard.press('Escape');
     await page.locator('.jb-scroll .jb-tr').first().waitFor();

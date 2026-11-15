@@ -9,6 +9,7 @@
 // logic/all.ts, and the actions are the page's. A trashed row folds out and Undo folds it back in
 // (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles quiet with a Done
 // tag. Each row has mail's slot after its subject (slots.tsx), which another module may fill.
+// Sent draws its days here too, each row naming who it went to (`from`), with no slot.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, UIEvent} from 'react';
@@ -54,12 +55,13 @@ const RULES: FoldRules<Part> = {
   },
 };
 const NONE: ReadonlySet<number> = new Set();
+const NO_ROWS: MessageRowOut[] = [];
 
 // A row's run, for staggering rows that fold together: its lane, its Noise, or its band.
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
 export function AllList({attention, days, shelf, lanes = true, fill = false, empty = null, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
-  onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onCodeCopied}: {
+  label = 'Inbox', from, slot = true, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onCodeCopied}: {
   // Attention's rows, every Attention email not yet Done.
   attention: MessageRowOut[];
   days: DayView[];
@@ -87,6 +89,11 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   dimmed?: boolean;
   // The pattern prompt under Attention.
   prompt?: PatternPrompt | null;
+  // The list's name, for a screen reader.
+  label?: string;
+  // What a row shows in the sender's place (Sent's "To Sam Ortiz"), and whether mail's slot shows.
+  from?: (row: MessageRowOut) => ReactNode;
+  slot?: boolean;
   onPoint: (key: string) => void;
   // A click on a row, with its modifiers: ⌘ or Ctrl and ⇧ select, a plain one opens.
   onOpen: (id: number, key: string, event: MouseEvent) => void;
@@ -147,14 +154,14 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   const shown = useFold(entries, RULES, FOLD_HOLD_MS);
   // Every row the list holds, for the slot after the subject, asked about all at once.
   const slotRows = useMemo(() => entries.flatMap(entry => (entry.item.kind === 'row' ? [entry.item.row] : [])), [entries]);
-  const afterSubject = useRowSlot(slotRows);
+  const afterSubject = useRowSlot(slot ? slotRows : NO_ROWS);
   const ticked = useTicked(days);
   // A row Trash took beats first. Rows folding together start one after another.
   const delays = foldDelays(shown, runOf);
   // Under a health bar the first band keeps its top line (boards 17, 19a).
   const bars = useHealthBars();
   return (
-    <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label="Inbox" onScroll={onScroll}>
+    <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label={label} onScroll={onScroll}>
       {bars}
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key), item.kind === 'row' && item.shelf);
@@ -221,7 +228,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
           <div key={key} ref={ref} className={classes} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
-            <span className="from">{line.from}</span>
+            {from ? from(row) : <span className="from">{line.from}</span>}
             {/* A live code has Copy and its countdown wherever it is. Once it's expired, the code is inside the subject. */}
             {row.code && !codeExpired(row, now) ? <CodeLine code={row.code} onCopied={() => onCodeCopied?.(row.id)} /> : (
               <span className="subj">
@@ -238,7 +245,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
                 <Icon name="auto_delete" size={14} />{trashLeft(row.trash_due_at, now)}
               </span>
             )}
-            {afterSubject(row)}
+            {slot && afterSubject(row)}
             {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
             <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
             <span className="age" data-tip={fullTimestamp(row.received_at, timeZone)}>{item.aged ? age(row.received_at, now, timeZone) : clockTime(row.received_at, timeZone)}</span>

@@ -20,6 +20,7 @@ import {FOLD_HOLD_MS, foldDelays, foldRef, leaveCopy, useFold} from '../fold.ts'
 import {usePhone} from '../Phone.tsx';
 import type {Search} from './mailSearch.ts';
 import type {SearchFieldState} from './state.ts';
+import {SentFrom} from '../SentFrom.tsx';
 import './search.css';
 
 const CHIP_KEYS: Record<SearchChip['kind'] | CalendarSearchChip['kind'], string> = {organisation: 'Org', type: 'Type', date: 'Date', account: 'Account', kind: 'Kind', calendar: 'Calendar'};
@@ -210,7 +211,8 @@ export interface ResultsProps {
   onPoint: (key: string) => void;
   // A click on a result, with its modifiers: ⌘ or Ctrl and ⇧ select, a plain one opens.
   onOpen: (id: number, key: string, event: MouseEvent) => void;
-  onAsk: () => void;
+  // Ask Alfred, leading the results. Sent's search has none.
+  onAsk?: () => void;
 }
 
 const resultKey = (id: number) => `all:${id}`;
@@ -259,7 +261,7 @@ export function SearchResults(props: ResultsProps) {
     <section className={search.pending ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
       {card}
       {/* Ask Alfred leads the results, where the Answer card stands once asked (board 06). */}
-      {out && !card && (
+      {out && !card && props.onAsk && (
         <button className="ask" type="button" onClick={props.onAsk}>
           <Icon name="auto_awesome" size={16} alfred />
           <span className="grow ell">Ask Alfred <span className="ink3">· {parts.join(' · ')}</span></span>
@@ -361,7 +363,8 @@ function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, o
       onClick={leaving ? undefined : event => onOpen(result.id, key, event)}>
       <span className="ud" />
       <div className="l1">
-        <span className="from"><Marked parts={resultSender(result)} /></span>
+        {/* Sent mail names who it went to, where received mail names its sender. */}
+        {'to' in result ? <SentFrom to={result.to} cc={result.cc} /> : <span className="from"><Marked parts={resultSender(result)} /></span>}
         {result.via && <span className="via">via {result.via}</span>}
         {result.pinned && <span className="pin"><Icon name="keep" size={16} /></span>}
         {result.protected && <span className="tag alert"><Icon name="shield" size={14} />Protected</span>}

@@ -1,10 +1,12 @@
 // The sidebar holds the mark and Setpoint, then Inbox with the red unread badge (its only count) and
-// no account rows under it. Then come Calendar, News with no count ever, and Jobs while it's on
+// Sent under it, a smaller, indented row with no count and no account rows: Sent's accounts are in
+// its own header. Then come Calendar, News with no count ever, and Jobs while it's on
 // (jobs/, a wiring point). Then the page's section: Today on mail pages and News, the mini-month and
 // Calendars on Calendar. Settings is pinned to the bottom.
 //
 // Folded it's a 56 px rail: the mark, then Inbox, Calendar, News, Jobs and Settings as icons, each
-// named in its tooltip, with the unread badge on Inbox. The page's section gives way to the next-up
+// named in its tooltip, with the unread badge on Inbox. Inbox is mail's one icon there, lit on Sent
+// too, and Sent shows again when the sidebar opens or peeks. The page's section gives way to the next-up
 // slot (TodayBlock's). ⌘K still toggles calendars. It is always the rail from 640 to 1099 px (the
 // compact tier). From 1100 it starts as the rail below 1600 px, and `` ` `` or a click on its edge
 // opens and folds it, kept by this browser (sidebarRail.ts). The pointer resting on the rail brings
@@ -136,7 +138,7 @@ export function Sidebar({route}: {route: Route}) {
           <Mark />
           {!rail && <span className="sb-name">Setpoint</span>}
         </div>
-        <Link className={route.page === 'inbox' ? 'nav on' : 'nav'} tip={named('Inbox')} to={toInbox()}
+        <Link className={route.page === 'inbox' || (rail && route.page === 'sent') ? 'nav on' : 'nav'} tip={named('Inbox')} to={toInbox()}
           onContextMenu={event => counts && counts.unread > 0 && openContextMenu(event, event.currentTarget, [
             {id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: markAllReadNow()},
           ])}>
@@ -144,6 +146,12 @@ export function Sidebar({route}: {route: Route}) {
           <span className="grow">Inbox</span>
           {counts && <UnreadBadge value={counts.unread} tip="Unread" />}
         </Link>
+        {!rail && (
+          <Link className={route.page === 'sent' ? 'nav sub on' : 'nav sub'} to={{page: 'sent', open: null}}>
+            <Icon name="send" size={16} />
+            <span className="grow">Sent</span>
+          </Link>
+        )}
         <Link className={route.page === 'calendar' ? 'nav on' : 'nav'} tip={named('Calendar')} to={{page: 'calendar', date: null, item: null, at: null}}>
           <Icon name="calendar_month" />
           <span className="grow">Calendar</span>

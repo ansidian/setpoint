@@ -24,6 +24,7 @@ import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
 import {fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
 import {factRows, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
+import {recipientLine, recipientText} from '../logic/sent.ts';
 import {phraseRuns, segments} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
@@ -64,7 +65,7 @@ export interface ReaderActions {
   codeCopied: () => void;
 }
 
-export function Reader({id, travel = null, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen, back = 'Inbox'}: {
+export function Reader({id, travel = null, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen, back = 'Inbox', sent = false}: {
   id: number;
   // How the user stepped to it, for its swap, or null for a click.
   travel?: Travel | null;
@@ -80,6 +81,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   onOpen: (id: number) => void;
   // Where the phone's Back goes: the Inbox, or the search results the email was opened from.
   back?: 'Inbox' | 'Search';
+  // Opened from Sent: its tools are Trash and Open in Gmail, as sent-only mail's are anywhere.
+  sent?: boolean;
 }) {
   const width = useReadingPaneWidth();
   const messageLoad = {path: messagePath(id), ...useResource<MessageOut>(messagePath(id))};
@@ -92,9 +95,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // Done only on Attention mail not yet Done.
   const listed = message ?? (row?.id === id ? row : undefined);
   const moreItems = listed && readerActions(listed).proposals === 'more';
-  const doneable = listed ? readerActions(listed).done : false;
+  // Sent mail, mail to yourself opened from Sent included, has no Done.
+  const sentMail = sent || listed?.sent_only === true;
+  const doneable = listed && !sentMail ? readerActions(listed).done : false;
   // Attention mail already Done says so in its place.
-  const isDone = listed ? listed.lane === 'attention' && listed.done : false;
+  const isDone = listed && !sentMail ? listed.lane === 'attention' && listed.done : false;
   // The tools draw from the email's row until the email itself is in, so they're right at once:
   // Unpin on pinned mail, and Open in Gmail on Gmail's mail only (an email has its Gmail link exactly
   // when its account is Gmail's). Its place is held while that's unknown.
@@ -120,7 +125,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // once. It is the same list as the row's right-click menu and More (emailActions.ts).
   const handlers = {...actions, propose: cards.propose, ask: cards.ask};
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
-  const offered = listed ? emailActions(listed, gmail, handlers, 'palette', rules) : [];
+  const offered = listed ? emailActions(listed, gmail, handlers, 'palette', rules, sentMail) : [];
   useCommands(() => (listed ? {
     context: {label: listed.subject, colour: accounts.get(listed.account_id)?.colour ?? 'ink3'},
     commands: offered.map(action => ({...action, section: 'email' as const})),
@@ -143,9 +148,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         {doneable && <button className="tool done" type="button" data-hint="h" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
         {isDone && <span className="rd-done"><Icon name="check" />Done</span>}
         <button className="tool trash" type="button" data-hint="e" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
-        <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} onClick={actions.pin}>
-          <Icon name={pinned ? 'keep-fill' : 'keep'} />{pinned ? 'Unpin' : 'Pin'}<span className="kbd">P</span>
-        </button>
+        {!sentMail && (
+          <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} onClick={actions.pin}>
+            <Icon name={pinned ? 'keep-fill' : 'keep'} />{pinned ? 'Unpin' : 'Pin'}<span className="kbd">P</span>
+          </button>
+        )}
         {gmail !== false && (
           <button className="tool" type="button" data-hint="o" onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}>
             <Icon name="open_in_new" />Open in Gmail<span className="kbd">O</span>
@@ -415,6 +422,8 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
   const who = listed.organisation ?? listed.from_name;
   const line = senderLine(message ?? listed);
   const summary = readerSummary(listed);
+  // Mail the user sent to others names who it went to, once the email is in.
+  const sentTo = listed.sent_only && message ? recipientLine(message.to ?? null, message.cc ?? null) : null;
   return (
     <div className="rd-head">
       {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected, always stays in Attention</div>}
@@ -429,7 +438,9 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           <div className="ell selectable">
             <span className="name" data-tip={listed.from_address} data-tip-quick>{listed.from_name}</span>{line && <> <span className={line.tone}><span className="rd-sep">· </span>{line.text}</span></>}
           </div>
-          <div className="to"><span data-tip={account?.address} data-tip-quick>to you</span></div>
+          <div className="to">{listed.sent_only
+            ? sentTo && <span data-tip={sentTo.tip ?? undefined} data-tip-quick>{recipientText(sentTo).replace(/^To /, 'to ')}</span>
+            : <span data-tip={account?.address} data-tip-quick>to you</span>}</div>
         </div>
         {/* The account and time, and under them a waiting trash in words, as the row shows it: reading
             doesn't spare it, pinning does. A code's own trash names its expiry

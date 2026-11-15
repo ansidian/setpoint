@@ -3,7 +3,8 @@
 // Done H (Attention mail not yet Done), Trash E, Pin or Unpin P, Open in Gmail O (Gmail's mail),
 // Add to calendar, Add as task, Ask about this email, Add to rule, Mark unread ⇧U. The menu leads
 // with Open ↵ and offers Mark read on an unread row in Mark unread's place. It ends with its Copy
-// items: the sender's address and a code row's code, whose copy reads the email.
+// items: the sender's address and a code row's code, whose copy reads the email. Sent mail has Open,
+// Trash, Open in Gmail and the make actions only: no Done, Pin, rules or read state.
 import type {ItemKind, MessageRowOut, RuleOut} from '@setpoint/shared';
 import {setRuleMatch} from '../api/settings.ts';
 import {readerActions} from '../logic/reader.ts';
@@ -32,9 +33,21 @@ export interface EmailHandlers {
 /**
  * `gmail`: whether its account is Gmail's (false hides Open in Gmail, as null does until it's known).
  * `rules`: Settings › Mail's, for Add to rule (none offered to join until they're in).
+ * `sent`: the email is shown as sent mail (in Sent, or sent-only mail anywhere).
  */
-export function emailActions(row: MessageRowOut, gmail: boolean | null, on: EmailHandlers, where: 'menu' | 'palette', rules: RuleOut[] | undefined): MenuAction[] {
+export function emailActions(row: MessageRowOut, gmail: boolean | null, on: EmailHandlers, where: 'menu' | 'palette', rules: RuleOut[] | undefined,
+  sent = row.sent_only === true): MenuAction[] {
   const menu = where === 'menu';
+  if (sent) {
+    return [
+      ...(menu && on.open ? [{id: 'open', group: 'open', label: 'Open', icon: 'mail', hint: '↵', run: on.open} satisfies MenuAction] : []),
+      {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: menu, run: on.trash},
+      ...(gmail ? [{id: 'gmail', group: 'act', label: 'Open in Gmail', icon: 'open_in_new', hint: 'O', run: on.openInGmail} satisfies MenuAction] : []),
+      {id: 'event', group: 'make', label: 'Add to calendar', icon: 'event', run: () => on.propose('event')},
+      {id: 'task', group: 'make', label: 'Add as task', icon: 'task_alt', run: () => on.propose('task')},
+      {id: 'ask', group: 'make', label: 'Ask about this email', icon: 'auto_awesome', keywords: 'alfred', run: on.ask},
+    ];
+  }
   const unread = menu && row.unread && on.markRead;
   return [
     ...(menu && on.open ? [{id: 'open', group: 'open', label: 'Open', icon: 'mail', hint: '↵', run: on.open} satisfies MenuAction] : []),

@@ -1,5 +1,8 @@
 // An empty Inbox view: a line-drawn spot illustration of its own, drawn in once on arrival,
 // over a headline, one quiet line and Show All. No mark and no glow: they're the empty pane's.
+// Sent's account with no sent mail has one too, shared by every account, its touch of colour the
+// account's.
+import type {CSSProperties} from 'react';
 import {timeZone} from '../api/auth.ts';
 import {EMPTY_HEADLINES, quietLine} from '../logic/emptyView.ts';
 import type {EmptyInboxView} from '../logic/emptyView.ts';
@@ -43,23 +46,53 @@ const DRAWINGS: Record<EmptyInboxView, Stroke[]> = {
   ],
 };
 
+// Sent's: a paper plane folded and resting on the ground, its crease in the account's colour.
+const SENT_DRAWING: Stroke[] = [
+  {d: 'M22 106 H138'},
+  {d: 'M26 64 L132 30 L72 80 Z', solid: true},
+  {d: 'M72 80 L132 30 L96 104 Z', solid: true},
+  {d: 'M72 80 L80 98 L96 104', accent: true},
+];
+
+function Art({strokes}: {strokes: Stroke[]}) {
+  return (
+    <svg className="ve-art" viewBox="0 0 160 120" aria-hidden="true">
+      {strokes.map((stroke, at) => (
+        <path key={at} d={stroke.d} pathLength={1} className={[stroke.accent && 'accent', stroke.solid && 'solid'].filter(Boolean).join(' ') || undefined}
+          style={{animationDelay: `${Math.round((at / strokes.length) * 120)}ms`}} />
+      ))}
+    </svg>
+  );
+}
+
 /** `newest`: when the last email the quiet line tells of came (quietLine). */
 export function EmptyView({view, newest, onAll}: {view: EmptyInboxView; newest: string | null; onAll: () => void}) {
   const now = useNow();
   const quiet = quietLine(view, newest, now, timeZone());
-  const strokes = DRAWINGS[view];
   return (
     <div className="view-empty">
       <div className={`ve-block ${view}`}>
-        <svg className="ve-art" viewBox="0 0 160 120" aria-hidden="true">
-          {strokes.map((stroke, at) => (
-            <path key={at} d={stroke.d} pathLength={1} className={[stroke.accent && 'accent', stroke.solid && 'solid'].filter(Boolean).join(' ') || undefined}
-              style={{animationDelay: `${Math.round((at / strokes.length) * 120)}ms`}} />
-          ))}
-        </svg>
+        <Art strokes={DRAWINGS[view]} />
         <p className="ve-head">{EMPTY_HEADLINES[view]}</p>
         {quiet && <p className="ve-quiet num">{quiet}</p>}
         <button className="btn ghost sm" type="button" onClick={onAll}>Show All</button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Sent with nothing in it: "Nothing sent from Work" over the account's address, with Show All. With
+ * no account (All), "Nothing sent yet" alone.
+ */
+export function SentEmptyView({account, style, onAll}: {account: {label: string; address: string} | null; style?: CSSProperties; onAll: () => void}) {
+  return (
+    <div className="view-empty">
+      <div className="ve-block sent" style={style}>
+        <Art strokes={SENT_DRAWING} />
+        <p className="ve-head">{account ? `Nothing sent from ${account.label}` : 'Nothing sent yet'}</p>
+        {account && <p className="ve-quiet">{account.address}</p>}
+        {account && <button className="btn ghost sm" type="button" onClick={onAll}>Show All</button>}
       </div>
     </div>
   );

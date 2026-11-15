@@ -2,7 +2,7 @@
 // because a search, an answer and a proposal belong to the screen that asked for them. Create is
 // the one change here. It is a command: pending until its provider confirms it, failed with the
 // provider's words.
-import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, ItemKind, ProposalOut, SearchChip, SearchOut, SearchRead, SearchSuggestOut} from '@setpoint/shared';
+import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, ItemKind, ProposalOut, SearchChip, SearchOut, SearchRead, SearchSent, SearchSuggestOut} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
 
 export const SETTINGS_PATH = '/settings';
@@ -16,10 +16,18 @@ export interface SearchQuery {
   typed?: string;
   // A later page of the same search.
   page?: {search_id: number; offset: number};
+  // Where it's searched from: the Inbox's with sent mail too, Sent's with sent mail only, in an account.
+  scope?: SearchScope;
 }
 
-export const searchMail = ({text, chips, read, typed, page}: SearchQuery) =>
-  sendJson<SearchOut>('POST', '/search', {text, chips, ...(read ? {read} : {}), ...(typed === undefined ? {} : {typed}), ...(page ?? {})});
+/** What a search covers besides its words: sent mail, and one account. The phone asks for neither. */
+export interface SearchScope {
+  sent?: SearchSent;
+  account_id?: number;
+}
+
+export const searchMail = ({text, chips, read, typed, page, scope}: SearchQuery) =>
+  sendJson<SearchOut>('POST', '/search', {text, chips, ...(read ? {read} : {}), ...(typed === undefined ? {} : {typed}), ...(page ?? {}), ...scope});
 
 /**
  * A suggestion for the field's exact text. Without `model` it is the grammar's date alone. With

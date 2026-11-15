@@ -63,7 +63,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     // The shell: Jobs under News, its count the Needs you count.
-    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
+    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Sent', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     const item = page.locator('aside.sb .nav.jobs');
     // The full sidebar names it in its own words, so it has no tip. The rail's has.
     assert.equal(await item.getAttribute('data-tip'), null);

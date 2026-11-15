@@ -128,7 +128,7 @@ Mono for codes, ntfy topics and identifiers. Bundled, never loaded from the netw
 | Setpoint's name | 14 / 600 / −.01em |
 | Email body (plain text) | 14, line height 1.55, max 600 px |
 | Rows, nav, menus, buttons, facts | 13 (unread sender and subject 500) |
-| Segmented control, reader tools, small buttons, summaries in Attention | 12.5 |
+| Segmented control, reader tools, small buttons, summaries in Attention, the sidebar's rows under Inbox | 12.5 |
 | Ages, counts, account labels, calendar chips | 12 (chips 500) |
 | Group headers, section labels, weekday names | 11.5 / uppercase / .08em |
 | Keyboard hints | 11 / 500 |
@@ -182,7 +182,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
 - **Icons:** Material Symbols Rounded, weight 300, FILL 0 (the `-fill` files are FILL 1 uses), as SVG
   masks from `glyphs/icons.json`. One size per role: 18 in the sidebar, rows, the reader's and
   the story pane's tools and 30 px icon buttons; 17 beside a label in a button (Add, More options,
-  the reader's actions) and in facts; 16 in small buttons, menus and inline links; 14 in chips and
+  the reader's actions) and in facts; 16 in small buttons, menus, inline links and the sidebar's rows
+  under Inbox; 14 in chips and
   tags. A card's or popover's ×, and Add, in a 26 px icon button are 16; × is 18 only in a 30 px
   header button (Settings', the editor's) and a Settings row's "…". One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
@@ -231,6 +232,11 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
 - **Right-click** opens an item's actions at the pointer; selected text, links and fields keep the
   browser's menu.
+- **Mail in the sidebar:** Inbox is mail's row, with the unread count. Sent and Drafts sit under it as
+  smaller, indented rows at 400. Sent has no count, and Drafts shows only while a draft waits, with
+  its count. In the rail Inbox is mail's one icon. Sent's header filters by account (All, then each
+  account with its colour), though the Inbox has none: the Inbox is mail that came in, whichever
+  address it came to, and in Sent the account is the address the user chose to write from.
 
 ## Copy
 

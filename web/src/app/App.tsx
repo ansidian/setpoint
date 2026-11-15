@@ -4,8 +4,8 @@
 // ⌘, Settings, ⌘J Light or Night, `4` Jobs (jobs/, a wiring point; when it's off, its page says so),
 // and `` ` `` to open or fold the sidebar from 1100 px (sidebarRail.ts). Settings is a modal over
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
-// phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings, ⌘K, News
-// and Jobs stay on the desktop (their addresses open the Inbox).
+// phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings, ⌘K, News,
+// Jobs and Sent stay on the desktop (their addresses open the Inbox).
 import {useEffect} from 'react';
 import {useDown, useOfflineSince} from '../api/live.ts';
 import {connectFailed, connectNote} from '../logic/settings.ts';
@@ -13,6 +13,7 @@ import {isTyping, plainKey} from '../ui/keys.ts';
 import {CalendarPage} from './calendar/CalendarPage.tsx';
 import {Agenda} from './calendar/Agenda.tsx';
 import {InboxPage} from './InboxPage.tsx';
+import {SentPage} from './SentPage.tsx';
 import {goToJobs, jobsMailSlots, JobsPage} from './jobs/index.ts';
 import {NewsPage} from './news/NewsPage.tsx';
 import {ContextMenu} from './ContextMenu.tsx';
@@ -55,8 +56,8 @@ export function App({arrive = false}: {arrive?: boolean}) {
     navigate(toInbox(), {replace: true});
   }, [settingsLink]);
 
-  // Below 640 px News and Jobs aren't in the navigation: their addresses open the Inbox.
-  const phoneNews = phone && (route.page === 'news' || route.page === 'jobs');
+  // Below 640 px News, Jobs and Sent aren't in the navigation: their addresses open the Inbox.
+  const phoneNews = phone && (route.page === 'news' || route.page === 'jobs' || route.page === 'sent');
   useEffect(() => {
     if (phoneNews) navigate(toInbox(), {replace: true});
   }, [phoneNews]);
@@ -108,6 +109,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
       {!phone && <Sidebar route={route} />}
       <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
         {route.page === 'inbox' ? <InboxPage route={route} />
+          : route.page === 'sent' ? (phone ? null : <SentPage route={route} />)
           : route.page === 'calendar' ? (phone ? <Agenda route={route} /> : <CalendarPage route={route} />)
             : route.page === 'news' ? (phone ? null : <NewsPage route={route} />)
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)

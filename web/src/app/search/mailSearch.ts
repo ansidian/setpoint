@@ -9,11 +9,13 @@
 // (`read: 'kept'`), and those filter until they're taken off. A chip's × puts its word back, and a
 // suggestion the user turned down doesn't return for those words.
 //
-// The phone's field is `plain`: its words stay words and no suggestion is asked.
+// The phone's field is `plain`: its words stay words and no suggestion is asked. Sent's is plain
+// too. `scope` says what else every page of a search covers: the desktop Inbox's takes sent mail in,
+// Sent's takes sent mail only, in its account.
 import type {SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut} from '@setpoint/shared';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {searchChipRemoved, searchMail, searchOpened, searchSuggestion, searchSuggestionLog} from '../../api/search.ts';
-import type {SearchQuery} from '../../api/search.ts';
+import type {SearchQuery, SearchScope} from '../../api/search.ts';
 import {alfredQuestion, asksForSuggestion, foldFor, isSearching, sameSuggestion, standsForWords, suggestionKey, toggledFold, typedAfter, wordsBack} from '../../logic/search.ts';
 import type {LeftOut, MentionsFold} from '../../logic/search.ts';
 import {TYPING_MS} from './state.ts';
@@ -63,7 +65,12 @@ interface LeftRows extends LeftOut<SearchResultOut> {
 const atField = (at: FieldAt | null, chips: SearchChip[], text: string) => at !== null && at.chips === chips && at.text.trim() === text.trim();
 
 /** Mail's search under the header. A `plain` one (the phone's) leaves the words as typed, never chips. */
-export function useSearch(plain = false): Search {
+export function useSearch(plain = false, scope: SearchScope = {}): Search {
+  // The latest render's, for every request.
+  const scoped = useRef(scope);
+  useLayoutEffect(() => {
+    scoped.current = scope;
+  });
   const [chips, setChips] = useState<SearchChip[]>([]);
   const [text, setTextState] = useState('');
   const [out, setOut] = useState<SearchOut | null>(null);
@@ -100,7 +107,7 @@ export function useSearch(plain = false): Search {
   const keptUndated = useRef('');
 
   function answer(id: number, query: SearchQuery, at: FieldAt): Promise<SearchOut | null> {
-    return searchMail(query).then(found => {
+    return searchMail({...query, scope: scoped.current}).then(found => {
       if (id !== latest.current) return null;
       paging.current = null;
       listedBy.current = id;
@@ -219,7 +226,7 @@ export function useSearch(plain = false): Search {
     if (!out?.reading || leftPaging.current === offset) return;
     leftPaging.current = offset;
     const merge = (change: (now: LeftRows) => LeftRows) => setLeft(now => (now?.answering === answering ? change(now) : now));
-    searchMail({text: out.text, chips: out.chips, read: 'left_out', typed: out.reading.typed, page: {search_id: out.search_id, offset}}).then(page => {
+    searchMail({text: out.text, chips: out.chips, read: 'left_out', typed: out.reading.typed, page: {search_id: out.search_id, offset}, scope: scoped.current}).then(page => {
       leftPaging.current = null;
       merge(now => ({...now, rows: [...now.rows, ...page.results], next: page.next_offset}));
     }, () => {
@@ -300,7 +307,7 @@ export function useSearch(plain = false): Search {
       if (!out || out.next_offset === null || paging.current === out.next_offset || listedBy.current !== id) return;
       paging.current = out.next_offset;
       const kept = out.reading ? {read: 'kept' as const, typed: out.reading.typed} : {};
-      searchMail({text: out.text, chips: out.chips, ...kept, page: {search_id: out.search_id, offset: out.next_offset}}).then(page => {
+      searchMail({text: out.text, chips: out.chips, ...kept, page: {search_id: out.search_id, offset: out.next_offset}, scope: scoped.current}).then(page => {
         if (id !== latest.current) return;
         setOut(page);
         setResults(now => [...now, ...page.results]);
