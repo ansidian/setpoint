@@ -123,6 +123,19 @@ describe('iCloud: sending', () => {
     expect(sentRows(w)).toMatchObject([{id: row!.id, providerId: `sent:${imap.folder(ADDRESS, SENT).uidValidity}:${uid}`, trashedAt: null}]);
   });
 
+  test.each([true, false])('Setpoint failing to record a send iCloud accepted still settles it (append %s): the draft goes and nothing can send it again', async appendSent => {
+    const {w, smtp, api, imap, poll, sendDraft} = await setup({appendSent});
+    if (!appendSent) smtp.onAccept(message => imap.deliver(ADDRESS, message.data, w.store.now().toISOString(), ['\\Seen'], SENT));
+    w.store.sqlite.exec('CREATE TRIGGER refuse_sent BEFORE INSERT ON messages WHEN NEW.sent = 1 BEGIN SELECT RAISE(ABORT, \'disk I/O error\'); END');
+    const draftId = await sendDraft({kind: 'new'}, {to: [{name: null, address: 'sam.ortiz@example.org'}], subject: 'Hello'});
+    expect(smtp.accepted).toHaveLength(1);
+    expect((await api.send('GET', `/api/mail/drafts/${draftId}`)).status).toBe(404);
+    expect((await api.send('POST', `/api/mail/drafts/${draftId}/send`)).status).toBe(404);
+    w.store.sqlite.exec('DROP TRIGGER refuse_sent');
+    await poll();
+    expect(sentRows(w)).toMatchObject([{subject: 'Hello', received: false}]);
+  });
+
   test('mail to yourself: the inbox copy takes over the sent row, one row sent and received', async () => {
     const {w, imap, smtp, poll, sendDraft} = await setup();
     await sendDraft({kind: 'new'}, {to: [{name: null, address: ADDRESS}], subject: 'Note to self', body: paragraph('Milk.')});

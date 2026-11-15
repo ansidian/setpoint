@@ -66,21 +66,10 @@ export class SendWorker implements JobWorker {
       return row;
     });
     const sourceId = mailSourceId(store, sending.accountId);
+    let accepted: {sent: SentMail; mail: OutgoingMail | null};
     try {
       if (sourceId === null) throw new ProviderError('permanent', 'Setpoint has no connection to send this account\'s mail through.');
-      if (sending.attemptedAt) {
-        const found = await this.options.findSent(sourceId, {rfc822Id: sending.rfc822Id!, since: sending.attemptedAt});
-        if (found.sent) {
-          await this.sent(job, sending, found.sent, null);
-          // No bytes to make the Sent row from: the sync brings it, now.
-          return wakeSync(store, sourceId);
-        }
-        if (!found.certain) throw new Unsure();
-      }
-      const mail = await this.build(sending);
-      store.db.update(t.drafts).set({attemptedAt: isoNow(store)}).where(eq(t.drafts.id, sending.id)).run();
-      const result = await this.options.send(sourceId, mail);
-      await this.sent(job, sending, result, mail);
+      accepted = await this.attempt(sending, sourceId);
     } catch (caught) {
       const unsure = caught instanceof Unsure;
       const error = unsure ? null : asProviderError(caught);
@@ -94,7 +83,36 @@ export class SendWorker implements JobWorker {
         if (row) noteDraft(store, row);
         finishJob(store, job.id);
       });
+      return;
     }
+    // The provider has it. Whatever goes wrong from here is Setpoint's bookkeeping, never a failed
+    // send: the draft goes all the same, and the sync brings the Sent row.
+    try {
+      await this.sent(job, sending, accepted.sent, accepted.mail);
+      if (!accepted.mail) wakeSync(store, sourceId!);
+    } catch (error) {
+      console.error(`Send ${sending.id}: sent, but not recorded`, error);
+      transaction(store, () => {
+        store.db.delete(t.drafts).where(eq(t.drafts.id, sending.id)).run();
+        noteDraft(store, sending);
+        finishJob(store, job.id);
+        wakeSync(store, sourceId!);
+      });
+    }
+  }
+
+  /** The provider's answer: the email it took (sent now, or found from an earlier attempt), or a throw. */
+  private async attempt(sending: DraftRow, sourceId: number): Promise<{sent: SentMail; mail: OutgoingMail | null}> {
+    const {store} = this.options;
+    if (sending.attemptedAt) {
+      const found = await this.options.findSent(sourceId, {rfc822Id: sending.rfc822Id!, since: sending.attemptedAt});
+      // No bytes to make the Sent row from: the sync brings it.
+      if (found.sent) return {sent: found.sent, mail: null};
+      if (!found.certain) throw new Unsure();
+    }
+    const mail = await this.build(sending);
+    store.db.update(t.drafts).set({attemptedAt: isoNow(store)}).where(eq(t.drafts.id, sending.id)).run();
+    return {sent: await this.options.send(sourceId, mail), mail};
   }
 
   /** The provider has it: the Sent row now, from the bytes sent, and the draft goes. */

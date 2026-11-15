@@ -194,6 +194,44 @@ describe('Gmail: sending', () => {
     expect(sentRows(w)).toMatchObject([{providerId: google.sent[0]!.id, received: false}]);
   });
 
+  test('Setpoint failing to record a send Gmail accepted still settles it: the draft goes, nothing can send it again, and the sync brings the row', async () => {
+    const {w, google, api, drain, sync} = await setup();
+    const {row: sam} = await samWrites(google, w, sync);
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: sam.id}})).body;
+    await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
+    // The database refuses the Sent row.
+    w.store.sqlite.exec('CREATE TRIGGER refuse_sent BEFORE INSERT ON messages WHEN NEW.sent = 1 BEGIN SELECT RAISE(ABORT, \'disk I/O error\'); END');
+    w.advance(SEND_HOLD_MS);
+    await drain();
+    expect(google.sent).toHaveLength(1);
+    expect((await api.send('GET', `/api/mail/drafts/${draft.id}`)).status).toBe(404);
+    expect((await api.send('POST', `/api/mail/drafts/${draft.id}/send`)).status).toBe(404);
+    // The sync woken then met the same fault, and comes back after its retry's wait.
+    w.store.sqlite.exec('DROP TRIGGER refuse_sent');
+    w.advance(MINUTE);
+    await sync();
+    expect(sentRows(w)).toMatchObject([{providerId: google.sent[0]!.id, received: false}]);
+    expect(google.count(/messages\/send/)).toBe(1);
+  });
+
+  test('a crash after Gmail accepted, before Setpoint recorded it: once the lease runs out the send is found, not sent again', async () => {
+    const {w, google, api, drain, sync} = await setup();
+    const {row: sam} = await samWrites(google, w, sync);
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: sam.id}})).body;
+    await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
+    // What a crash leaves: Gmail has the email, the draft says sending with its attempt marked, and
+    // the job is still running under the dead process's lease.
+    const row = w.store.db.select().from(t.drafts).where(eq(t.drafts.id, draft.id)).get()!;
+    google.deliver(ADDRESS, {raw: rawEmail({from: ADDRESS, to: 'sam.ortiz@example.org', subject: 'Re: Thursday', date: w.store.now().toISOString(), text: 'Yes.', messageId: row.rfc822Id!}), date: w.store.now().toISOString(), labels: ['SENT']});
+    w.store.db.update(t.drafts).set({sendState: 'sending', sendAt: null, attemptedAt: w.store.now().toISOString()}).where(eq(t.drafts.id, draft.id)).run();
+    w.store.db.update(t.jobs).set({state: 'running', attempts: 1, leaseUntil: new Date(w.store.now().getTime() + 10 * MINUTE).toISOString()}).where(eq(t.jobs.draftId, draft.id)).run();
+    w.advance(10 * MINUTE);
+    await drain();
+    expect(google.count(/messages\/send/)).toBe(0);
+    expect((await api.send('GET', `/api/mail/drafts/${draft.id}`)).status).toBe(404);
+    expect(sentRows(w)).toMatchObject([{subject: 'Re: Thursday', received: false}]);
+  });
+
   test('a forward carries the email in full with its attachments, as a new conversation', async () => {
     const {w, google, api, drain, sync} = await setup();
     const {row: sam} = await samWrites(google, w, sync, {attachments: [{filename: 'Itinerary.pdf', contentType: 'application/pdf', content: '%PDF-1.4 itinerary'}]});
