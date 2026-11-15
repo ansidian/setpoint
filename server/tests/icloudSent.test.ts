@@ -113,6 +113,36 @@ describe('iCloud: sent mail', () => {
     expect(bySubject(w, 'Sent from the Mac').trashedAt).not.toBeNull();
   });
 
+  test('Trash on a sent-only email moves it from the sent mailbox to Deleted Messages, and Undo puts it back there', async () => {
+    const {w, imap, api, drain, poll, connect} = await setup();
+    await connect();
+    await drain();
+    send(imap, 'Sent and regretted', ago(MINUTE));
+    await poll();
+    const row = bySubject(w, 'Sent and regretted');
+    expect(row).toMatchObject({sent: true, received: false});
+
+    await api.send('POST', `/api/mail/messages/${row.id}/trash`);
+    await drain();
+    expect(w.store.db.select().from(t.commands).where(eq(t.commands.targetId, row.id)).get()).toMatchObject({kind: 'trash', state: 'confirmed'});
+    expect(imap.folder(ADDRESS, SENT).messages).toHaveLength(0);
+    expect(imap.folder(ADDRESS, 'Deleted Messages').messages).toHaveLength(1);
+    await poll();
+    expect(bySubject(w, 'Sent and regretted').trashedAt).not.toBeNull();
+
+    await api.send('POST', `/api/mail/messages/${row.id}/untrash`);
+    await drain();
+    expect(w.store.db.select().from(t.commands).where(and(eq(t.commands.targetId, row.id), eq(t.commands.kind, 'untrash'))).get()).toMatchObject({state: 'confirmed'});
+    expect(imap.folder(ADDRESS, 'Deleted Messages').messages).toHaveLength(0);
+    expect(imap.folder(ADDRESS, 'INBOX').messages).toHaveLength(0);
+    expect(imap.folder(ADDRESS, SENT).messages).toHaveLength(1);
+    await poll();
+    await poll();
+    expect(rows(w, 'Sent and regretted')).toHaveLength(1);
+    expect(bySubject(w, 'Sent and regretted')).toMatchObject({id: row.id, sent: true, received: false, trashedAt: null, archivedAt: null, trashRef: null});
+    expect(bySubject(w, 'Sent and regretted').providerId).toMatch(/^sent:/);
+  });
+
   test('mail to yourself is one row, in the Inbox and sent, whichever copy the poll sees first', async () => {
     const {w, imap, drain, poll, connect} = await setup();
     await connect();

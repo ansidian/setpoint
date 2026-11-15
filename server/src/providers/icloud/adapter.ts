@@ -16,7 +16,8 @@
 // email gone from the mailbox is trashed). A sent copy's id is "sent:uidValidity:uid", so it never
 // collides with an INBOX id, which stays "uidValidity:uid". Mail to yourself has two copies with
 // one Message-ID: the row is the inbox copy's, marked sent. A sent copy seen first is a sent-only
-// row until the inbox copy arrives and takes it over, for triage.
+// row until the inbox copy arrives and takes it over, for triage. Trash and Undo on a sent-only row
+// move its copy between the sent mailbox and Deleted Messages.
 import {createHash} from 'node:crypto';
 import {and, eq, inArray} from 'drizzle-orm';
 import {ImapFlow} from 'imapflow';
@@ -429,9 +430,13 @@ export class ICloudAdapter implements SourceAdapter {
     if (!rows.length) throw new ProviderError('permanent', 'That email is no longer in Setpoint.');
 
     if (command.kind === 'untrash') return this.untrash(context, rows[0]!);
-    await this.withMailbox(context, INBOX, async client => {
+    // A sent-only email's copy is in the sent mailbox, under its id without the prefix.
+    const sent = rows.every(row => isSentCopy(row.providerId));
+    const mailbox = sent ? await this.withMailbox(context, INBOX, client => sentMailbox(client)) : INBOX;
+    if (!mailbox) throw new ProviderError('permanent', 'iCloud no longer has a sent mailbox.');
+    await this.withMailbox(context, mailbox, async client => {
       const uidValidity = String(client.mailbox && client.mailbox.uidValidity);
-      const uids = rows.map(row => uidOf(row.providerId, uidValidity)).filter((uid): uid is number => uid !== null);
+      const uids = rows.map(row => uidOf(sent ? row.providerId.slice(SENT_PREFIX.length) : row.providerId, uidValidity)).filter((uid): uid is number => uid !== null);
       if (!uids.length) throw new ProviderError('permanent', 'That email has moved in iCloud since Setpoint last looked; it will catch up at the next check.');
       const range = uids.join(',');
       switch (command.kind) {
@@ -458,20 +463,25 @@ export class ICloudAdapter implements SourceAdapter {
     });
   }
 
-  /** Undo: back from Trash to INBOX, found by the UID Trash gave it, or else by its Message-ID. */
+  /**
+   * Undo: back from Trash to INBOX, found by the UID Trash gave it, or else by its Message-ID. A
+   * sent-only email goes back to the sent mailbox, its id keeping the sent prefix.
+   */
   private async untrash(context: AdapterContext, row: typeof t.messages.$inferSelect) {
     const {store} = context;
-    const pool = await this.withMailbox(context, INBOX, client => trashMailbox(client));
+    const sent = isSentCopy(row.providerId);
+    const [pool, home] = await this.withMailbox(context, INBOX, async client => [await trashMailbox(client), sent ? await sentMailbox(client) : INBOX] as const);
+    if (!home) throw new ProviderError('permanent', 'iCloud no longer has a sent mailbox.');
     await this.withMailbox(context, pool, async client => {
       const trashValidity = String(client.mailbox && client.mailbox.uidValidity);
       let uid = row.trashRef ? uidOf(row.trashRef, trashValidity) : null;
       if (uid === null && row.rfc822Id) uid = (await search(client, {header: {'message-id': row.rfc822Id}})).at(-1) ?? null;
       if (uid === null) throw new ProviderError('permanent', 'iCloud no longer has it in Deleted Messages.');
-      const moved = await client.messageMove(String(uid), INBOX, {uid: true});
-      if (!moved) throw new ProviderError('permanent', 'iCloud couldn\'t move it back to the inbox.');
-      const inboxUid = moved.uidMap?.get(uid);
-      // Its new INBOX UID. Without UIDPLUS the next poll finds it by Message-ID.
-      store.db.update(t.messages).set({trashRef: null, ...(inboxUid && moved.uidValidity ? {providerId: providerId(moved.uidValidity, inboxUid)} : {})})
+      const moved = await client.messageMove(String(uid), home, {uid: true});
+      if (!moved) throw new ProviderError('permanent', sent ? 'iCloud couldn\'t move it back to Sent.' : 'iCloud couldn\'t move it back to the inbox.');
+      const homeUid = moved.uidMap?.get(uid);
+      // Its new UID there. Without UIDPLUS the next poll finds it by Message-ID.
+      store.db.update(t.messages).set({trashRef: null, ...(homeUid && moved.uidValidity ? {providerId: (sent ? SENT_PREFIX : '') + providerId(moved.uidValidity, homeUid)} : {})})
         .where(eq(t.messages.id, row.id)).run();
     });
   }
