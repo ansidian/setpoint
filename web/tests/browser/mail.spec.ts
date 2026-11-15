@@ -66,8 +66,8 @@ test('with nothing open the Inbox\'s pane says how the day is going; a Done else
     const tiles = () => pane.locator('.md-tile').evaluateAll(all => all.map(tile => [tile.querySelector('dd')!.textContent, tile.querySelector('dt')!.textContent, tile.classList.contains('lit')]));
     await until('the day', () => pane.locator('.md-need').textContent(), text => text === '3 need you, 1 overdue');
     assert.deepEqual(await tiles(), [['0', 'Done today', false], ['8', 'Sorted to FYI', true], ['3', 'Sorted to Noise', true]]);
-    // The seed's 34 and its 7 USPS digests: out of the Inbox, still kept.
-    assert.equal(await pane.locator('.pane-foot .md-kept').textContent(), '41 emails, 192 KB, since Mar 2026.');
+    // The seed's 34, Theo's four and its 7 USPS digests: out of the Inbox, still kept.
+    assert.equal(await pane.locator('.pane-foot .md-kept').textContent(), '45 emails, 193 KB, since Mar 2026.');
     // Done from elsewhere (the phone) reaches the pane through the live stream.
     await setpoint.api('POST', `/mail/messages/${await idOf(setpoint, 'Your recovery email was changed')}/done`, {done: true});
     await until('one fewer needs the user', () => pane.locator('.md-need').textContent(), text => text === '2 need you, 1 overdue');
@@ -1470,6 +1470,37 @@ test('⇧U marks the open email unread and closes the reader; ⌘K names the key
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('mark unread');
     assert.match(await page.locator('.palette [role="option"]', {hasText: 'Mark unread'}).first().textContent() ?? '', /⇧U/);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('an answered email: its row has the reply mark, the reader says "You replied Oct 4", which opens the reply, and a line of its conversation opens that email', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const theo = all.days.flatMap(day => day.rows).filter(row => row.from_name === 'Theo Walsh');
+    const [latest] = theo;
+    const first = theo.at(-1)!;
+    const {reply_id: reply} = await setpoint.api<MessageOut>('GET', `/mail/messages/${latest!.id}`);
+    const page = await load(setpoint, `/inbox/${latest!.id}`);
+    const line = page.locator('.rd-replied');
+    await until('the reader has the reply line', () => line.textContent(), text => text === 'You replied Oct 4');
+    assert.equal(await page.locator(`.list .row[data-id="${latest!.id}"] .replied`).getAttribute('aria-label'), 'You replied Oct 4');
+    assert.equal(await page.locator('.rd-conv-h').textContent(), 'In this conversation');
+
+    await line.click();
+    await page.locator('.mailtext', {hasText: '4 PM works.'}).waitFor();
+    assert.equal(new URL(page.url()).pathname, `/inbox/${reply}`);
+    // The reply answers nothing itself, and lists the rest as earlier.
+    assert.equal(await page.locator('.rd-replied').count(), 0);
+    await page.locator('.rd-conv-h', {hasText: 'Earlier in this conversation'}).waitFor();
+
+    await page.locator('.rd-conv-line.more').click();
+    await page.locator('.rd-conv-line', {hasText: 'Hey! A few of us'}).click();
+    await page.locator('.mailtext', {hasText: 'Lake Wenatchee'}).waitFor();
+    assert.equal(new URL(page.url()).pathname, `/inbox/${first.id}`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -193,6 +193,23 @@ export const SAMPLE_SENT: SampleSent[] = [
     body: 'The drone I bought in June stopped charging. The receipt is attached.'},
 ];
 
+/**
+ * A four-round conversation on Personal: four emails from Theo and the user's four replies, one
+ * thread with its reply headers, so the reader's "You replied" line and its conversation list have
+ * something to show. Theo's emails are read FYI, so they sit in All, not the Inbox. Inserted after
+ * the sent mail, so every other id stays as it was.
+ */
+export const SAMPLE_THREAD: {at: [string, string]; sent: boolean; body: string}[] = [
+  {at: ['2026-09-27', '18:20'], sent: false, body: 'Hey! A few of us are renting the cabin at Lake Wenatchee the weekend of Nov 13. Want in? It sleeps eight.\n\nTheo'},
+  {at: ['2026-09-27', '21:05'], sent: true, body: 'I\'m in. What\'s the cost per person, roughly?'},
+  {at: ['2026-09-29', '09:40'], sent: false, body: 'About $140 each for two nights, split eight ways. I\'ll put the deposit down Friday if you\'re sure.'},
+  {at: ['2026-09-29', '12:15'], sent: true, body: 'Sure. I\'ll send you my share tonight. Should I bring anything?'},
+  {at: ['2026-10-01', '17:30'], sent: false, body: 'Got it, thanks. Could you bring the board games and a cooler? Someone else has the grill.'},
+  {at: ['2026-10-01', '19:02'], sent: true, body: 'Games and a cooler, done. I can also drive two people up on Friday.'},
+  {at: ['2026-10-03', '20:45'], sent: false, body: 'Perfect, Ana and Kofi need a ride. Leaving around 4 PM Friday work for you?'},
+  {at: ['2026-10-04', '08:30'], sent: true, body: '4 PM works. I\'ll pick Ana up first, then Kofi.'},
+];
+
 export const SAMPLE_EMAILS: SampleEmail[] = [
   // Today, Wed Oct 7 (board 05's clock times).
   {account: 'Personal', at: ['2026-10-07', '09:08'], from: ['Contoso Insurance', 'security@contosoinsurance.example'], organisation: 'Contoso Insurance',
@@ -484,6 +501,26 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         subject: email.subject, snippet: snippetOf(email.body), bodyText: email.body, searchBody: searchBody(email.body), receivedAt: iso(email.at),
         unread: false, lane: null, sent: true, received: false, toRecipients: recipients(email.to), ccRecipients: recipients(email.cc), replyTo: [], referenceIds: [], inReplyTo: null,
       }).run();
+    });
+
+    // The conversation with Theo, after the sent mail.
+    const theo = {name: 'Theo Walsh', address: 'theo.walsh@example.org'};
+    const personal = ACCOUNTS.find(one => one.label === 'Personal')!;
+    const user = {name: 'User', address: personal.address};
+    const messageIds: string[] = [];
+    SAMPLE_THREAD.forEach((email, at) => {
+      const providerId = `seed-thread-${String(at + 1).padStart(3, '0')}`;
+      const rfc822Id = `<cabin-${at + 1}@${email.sent ? 'mail.example.com' : 'example.org'}>`;
+      const from = email.sent ? user : theo;
+      const receivedAt = iso(email.at);
+      tx.insert(t.messages).values({
+        accountId: accountIds.get('Personal')!, providerId, threadId: 'seed-thread-cabin', rfc822Id, fromName: from.name, fromAddress: from.address,
+        subject: at === 0 ? 'Cabin weekend in November' : 'Re: Cabin weekend in November', snippet: snippetOf(email.body), bodyText: email.body,
+        searchBody: searchBody(email.body), receivedAt, unread: false, sent: email.sent, received: !email.sent,
+        ...(email.sent ? {lane: null} : {lane: 'fyi', kind: 'people', triagedAt: receivedAt, archivedAt: receivedAt} as const),
+        toRecipients: [email.sent ? theo : user], ccRecipients: [], replyTo: [], referenceIds: [...messageIds], inReplyTo: messageIds.at(-1) ?? null,
+      }).run();
+      messageIds.push(rfc822Id);
     });
 
     const calendarIds = new Map<string, number>();

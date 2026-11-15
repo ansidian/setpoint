@@ -21,6 +21,7 @@ import type {Recipient} from '@setpoint/shared';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {triageIntake} from '../triage/intake.ts';
+import {gatherReplies, joinedThread, threadMates} from './thread.ts';
 import {enqueueJob} from './jobs.ts';
 
 /** The job that reads a USPS digest's scans from its source. */
@@ -114,6 +115,8 @@ export interface UpsertOptions {
   // IMAP: these are copies from the sent mailbox. One whose Message-ID a received row holds (mail
   // to yourself, its inbox copy) marks that row sent and changes nothing else on it.
   sentCopy?: boolean;
+  // IMAP: the provider has no thread id, so a thread rests on References and In-Reply-To (src/sync/thread.ts).
+  threadsByHeaders?: boolean;
 }
 
 /** The account's row with this Message-ID: a received one first, as that is the one the Inbox shows. */
@@ -149,8 +152,9 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
           continue;
         }
       }
+      const threadId = options.threadsByHeaders ? (row?.threadId ?? joinedThread(store, accountId, message)) : message.threadId;
       const fields = {
-        providerId: message.providerId, threadId: message.threadId, rfc822Id: message.rfc822Id, fromName: message.fromName,
+        providerId: message.providerId, threadId, rfc822Id: message.rfc822Id, fromName: message.fromName,
         fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText, searchBody: searchBody(message.bodyText), bodyHtml: message.bodyHtml,
         receivedAt: message.receivedAt, senderAuth: message.senderAuth, senderAuthenticated: senderAuthenticated(message.senderAuth),
         ...(message.recipients ? headerColumns(message.recipients) : {}),
@@ -164,6 +168,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
           ...(digest ? {uspsDigest: true, lane: 'fyi', kind: 'deliveries', triageSource: 'rule', triagedAt: now} as const : {}),
         }).returning({id: t.messages.id}).get();
         for (const file of message.attachments) store.db.insert(t.attachments).values({messageId: created.id, ...file}).run();
+        if (options.threadsByHeaders) gatherReplies(store, accountId, message, threadId);
         if (digest) enqueueJob(store, {kind: 'mailpieces', key: mailpiecesKey(created.id), messageId: created.id});
         if (digest || !received) untriaged.push(created.id);
         else inserted.push(created.id);
@@ -193,7 +198,9 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
     }
     // New mail is queued for triage. Backfilled history is sorted now by the rules-only pass.
     triageIntake(store, inserted, options.backfill ?? false);
-    noteLive(store, {type: 'mail', messages: [...inserted, ...untriaged, ...updated], accounts: [accountId], commands: []});
+    // Sent mail changes the emails it answers ("You replied"), so its thread's other emails are named too.
+    const changed = [...inserted, ...untriaged, ...updated];
+    noteLive(store, {type: 'mail', messages: [...new Set([...changed, ...threadMates(store, accountId, fetched.some(message => message.sent) ? changed : [])])], accounts: [accountId], commands: []});
     return {inserted: [...inserted, ...untriaged], updated};
   });
 }

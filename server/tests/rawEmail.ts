@@ -13,6 +13,8 @@ export interface RawEmailInput {
   html?: string;
   messageId?: string;
   references?: string;
+  // In-Reply-To alone, for a client that sends no References. With `references`, it is their last.
+  inReplyTo?: string;
   // Header lines the receiver added above the sender's (Authentication-Results, Received…).
   received?: [string, string][];
   attachments?: {filename: string; contentType: string; content: string; inline?: boolean}[];
@@ -32,6 +34,7 @@ export function rawEmail(input: RawEmailInput): Buffer {
     `Date: ${new Date(input.date).toUTCString().replace('GMT', '+0000')}`,
     `Message-ID: ${messageId}`,
     ...(input.references ? [`References: ${input.references}`, `In-Reply-To: ${input.references.split(/\s+/).at(-1)}`] : []),
+    ...(!input.references && input.inReplyTo ? [`In-Reply-To: ${input.inReplyTo}`] : []),
     'MIME-Version: 1.0',
   ];
   const text = input.text ?? '';

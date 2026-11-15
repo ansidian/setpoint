@@ -187,7 +187,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   tags. A card's or popover's ×, and Add, in a 26 px icon button are 16; × is 18 only in a 30 px
   header button (Settings', the editor's) and a Settings row's "…". One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
-  `mark_email_read`, a Settings page its nav's glyph wherever it's named.
+  `mark_email_read`, Reply and an email the user answered (its row's mark, "You replied") `reply`,
+  a Settings page its nav's glyph wherever it's named.
 - **Tones**: `caution` and `alert` are close in hue, so a state's shape says how serious it is
   before its words do. **Caution**, something Setpoint depends on struggling (a source failing or
   retrying, triage down, News's AI down, a feed failing, ntfy failing, a search that couldn't

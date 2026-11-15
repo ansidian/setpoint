@@ -16,7 +16,7 @@ import type {MouseEvent, ReactNode, UIEvent} from 'react';
 import {allRowLine, dayHeading, listKey, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
-import {age, clockTime, codeGroups, fullTimestamp, localDate, trashLeft} from '../logic/format.ts';
+import {age, clockTime, codeGroups, dayOf, fullTimestamp, localDate, trashLeft} from '../logic/format.ts';
 import {codeExpired, GROUP_GLYPHS, GROUP_LABELS, groupKey, promptText, rowKey, showsPending} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
 import {Icon} from '../ui/Icon.tsx';
@@ -28,6 +28,7 @@ import {beats, FOLD_HOLD_MS, foldDelays, foldRef, useFold} from './fold.ts';
 import {useRowSlot} from './slots.tsx';
 import type {Beat} from './fold.ts';
 import {Count} from './Count.tsx';
+import {usePhone} from './Phone.tsx';
 import {TriageNote, useHealthBars} from './states/States.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
 
@@ -160,6 +161,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   const delays = foldDelays(shown, runOf);
   // Under a health bar the first band keeps its top line (boards 17, 19a).
   const bars = useHealthBars();
+  const phone = usePhone();
   return (
     <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label={label} onScroll={onScroll}>
       {bars}
@@ -245,6 +247,8 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
                 <Icon name="auto_delete" size={14} />{trashLeft(row.trash_due_at, now)}
               </span>
             )}
+            {/* The reply mark on an email the user answered. The phone's list has none. */}
+            {row.replied_at && !phone && <RepliedMark at={row.replied_at} now={now} timeZone={timeZone} />}
             {slot && afterSubject(row)}
             {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
             <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
@@ -258,6 +262,12 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
       {more && <AllSkeleton more />}
     </section>
   );
+}
+
+/** A row's reply mark: the `reply` glyph, with when the user replied in its tip. */
+export function RepliedMark({at, now, timeZone}: {at: string; now: number; timeZone: string}) {
+  const words = `You replied ${dayOf(at, now, timeZone)}`;
+  return <span className="replied" role="img" aria-label={words} data-tip={words}><Icon name="reply" size={16} /></span>;
 }
 
 /** The unread gutter: its dot, or while a row beats, Done's check or Trash's bin in its place. */

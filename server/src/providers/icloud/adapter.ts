@@ -313,7 +313,7 @@ export class ICloudAdapter implements SourceAdapter {
       // New mail since the last UID seen ("n:*" always names the last message, so filter).
       const arrived = (await search(client, {uid: `${cursor.lastUid + 1}:*`})).filter(uid => uid > cursor!.lastUid);
       if (arrived.length) {
-        upsertMessages(store, accountId, await fetchSources(client, arrived, uidValidity, store.now()), {matchByRfc822Id: true});
+        upsertMessages(store, accountId, await fetchSources(client, arrived, uidValidity, store.now()), {matchByRfc822Id: true, threadsByHeaders: true});
         cursor = {uidValidity, lastUid: Math.max(cursor.lastUid, ...arrived)};
       }
 
@@ -360,7 +360,7 @@ export class ICloudAdapter implements SourceAdapter {
 
     const arrived = (await search(client, {uid: `${cursor.lastUid + 1}:*`})).filter(uid => uid > cursor!.lastUid);
     if (arrived.length) {
-      upsertMessages(store, accountId, await fetchSources(client, arrived, uidValidity, store.now(), SENT_COPIES), {matchByRfc822Id: true, sentCopy: true});
+      upsertMessages(store, accountId, await fetchSources(client, arrived, uidValidity, store.now(), SENT_COPIES), {matchByRfc822Id: true, sentCopy: true, threadsByHeaders: true});
       cursor = {uidValidity, lastUid: Math.max(cursor.lastUid, ...arrived)};
     }
 
@@ -391,7 +391,7 @@ export class ICloudAdapter implements SourceAdapter {
     const known = knownProviderIds(store, accountId, chunk.map(id));
     const wanted = chunk.filter(uid => !known.has(id(uid)));
     if (wanted.length) {
-      upsertMessages(store, accountId, await fetchSources(client, wanted, uidValidity, store.now(), copies), {backfill: true, matchByRfc822Id: true, sentCopy: copies.sent});
+      upsertMessages(store, accountId, await fetchSources(client, wanted, uidValidity, store.now(), copies), {backfill: true, matchByRfc822Id: true, sentCopy: copies.sent, threadsByHeaders: true});
     }
     const done = rest.length === 0;
     const fetched = state.fetched + chunk.length;

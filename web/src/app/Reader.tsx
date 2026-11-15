@@ -22,7 +22,7 @@ import {markRead, markUnread, messagePath, trustDomain} from '../api/mail.ts';
 import {proposeFromMessage} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
-import {fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
+import {dayOf, fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
 import {factRows, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
 import {phraseRuns, segments} from '../logic/search.ts';
@@ -30,6 +30,7 @@ import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
 import {CodeCard} from './Code.tsx';
+import {Conversation} from './Conversation.tsx';
 import {copyText, openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
 import {emailActions} from './emailActions.ts';
@@ -370,7 +371,7 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
       {panel?.kind === 'ask' && alfred.open && (
         <AnswerCard alfred={{...alfred, close: cards.close}} scoped openId={id} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
       )}
-      <Email listed={listed} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={marks} cards={cards} unread={unread} onCodeCopied={onCodeCopied} />
+      <Email listed={listed} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={marks} cards={cards} unread={unread} onCodeCopied={onCodeCopied} onOpen={onOpen} />
     </>
   );
 }
@@ -381,7 +382,7 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
  * card when it has one), or why it couldn't load. With no `cards`, it's the email alone: no slot
  * and no actions.
  */
-function Email({listed, message, load, accounts, now, timeZone, marks, cards, unread = false, onCodeCopied}: {
+function Email({listed, message, load, accounts, now, timeZone, marks, cards, unread = false, onCodeCopied, onOpen}: {
   listed: MessageRowOut | undefined;
   message: MessageOut | undefined;
   load: Load;
@@ -392,21 +393,28 @@ function Email({listed, message, load, accounts, now, timeZone, marks, cards, un
   cards?: Cards;
   unread?: boolean;
   onCodeCopied?: () => void;
+  // Opens another email of its conversation. Without it, as on another page's pane, there is no
+  // "You replied" line and no conversation list.
+  onOpen?: (id: number) => void;
 }) {
   const failed = useLoadFailed([load]);
   const arrived = useArrival(message !== undefined);
+  // The phone's reader is frozen as it was: no line, no list.
+  const phone = usePhone();
+  const conversation = cards && onOpen && !phone ? onOpen : undefined;
   return (
     <>
-      {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} cards={cards} unread={unread} onCodeCopied={onCodeCopied} /> : <HeadSkeleton />}
+      {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} cards={cards} unread={unread} onCodeCopied={onCodeCopied} onOpen={conversation} /> : <HeadSkeleton />}
       {message ? <Body message={message} marks={marks} arrived={arrived} /> : (
         <div className="rd-body">{failed ? <LoadFailed what="this email" loads={[load]} /> : <BodySkeleton attachment={(listed?.attachment_count ?? 0) > 0} />}</div>
       )}
+      {message && conversation && <Conversation key={message.id} message={message} now={now} timeZone={timeZone} onOpen={conversation} />}
     </>
   );
 }
 
 /** The head: from the row while the email loads, then from the email (its domain, its security facts). */
-function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCopied}: {
+function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCopied, onOpen}: {
   listed: MessageRowOut;
   message: MessageOut | undefined;
   accounts: Map<number, AccountOut>;
@@ -416,8 +424,13 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
   // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
   unread: boolean;
   onCodeCopied: (() => void) | undefined;
+  // Opens the reply from the "You replied" line, which shows only with it.
+  onOpen: ((id: number) => void) | undefined;
 }) {
   const account = accounts.get(listed.account_id);
+  // The line draws from the row at once. A click opens the reply once the email names it.
+  const replied = message ? message.replied_at : listed.replied_at;
+  const replyId = message?.reply_id;
   const colour = colourVar(account?.colour);
   const who = listed.organisation ?? listed.from_name;
   const line = senderLine(message ?? listed);
@@ -457,6 +470,12 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           )}
         </div>
       </div>
+      {replied && onOpen && (
+        <button className="rd-replied" type="button" disabled={replyId === undefined} data-tip={fullTimestamp(replied, timeZone)} data-tip-quick
+          onClick={() => replyId !== undefined && onOpen(replyId)}>
+          <Icon name="reply" size={16} />You replied {dayOf(replied, now, timeZone)}
+        </button>
+      )}
       {/* A verification code lifted out of the body, with Copy and its countdown, from the row at once. */}
       {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}
       {message?.security && (

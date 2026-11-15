@@ -16,6 +16,7 @@ import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {keepTextUnselected} from '../../ui/keys.ts';
 import {dotStyle} from '../accounts.ts';
+import {RepliedMark} from '../AllList.tsx';
 import {FOLD_HOLD_MS, foldDelays, foldRef, leaveCopy, useFold} from '../fold.ts';
 import {usePhone} from '../Phone.tsx';
 import type {Search} from './mailSearch.ts';
@@ -357,6 +358,7 @@ function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, o
   const key = resultKey(result.id);
   const reasons = shownReasons(result);
   const leaving = fold === 'out';
+  const phone = usePhone();
   const classes = ['arow', 'result', result.unread && 'unread', result.done && 'done', result.protected && 'protected', cursor === key && 'cur', openId === result.id && 'open', selected?.has(result.id) && 'sel', leaving && 'leaving'].filter(Boolean).join(' ');
   return (
     <div ref={foldRef(fold, delay)} className={classes} data-key={leaving ? undefined : key} data-id={leaving ? undefined : result.id} aria-hidden={leaving || undefined} onMouseMove={leaving ? undefined : () => onPoint(key)} onMouseDown={keepTextUnselected}
@@ -366,6 +368,7 @@ function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, o
         {/* Sent mail names who it went to, where received mail names its sender. */}
         {'to' in result ? <SentFrom to={result.to} cc={result.cc} /> : <span className="from"><Marked parts={resultSender(result)} /></span>}
         {result.via && <span className="via">via {result.via}</span>}
+        {result.replied_at && !phone && <RepliedMark at={result.replied_at} now={now} timeZone={timeZone} />}
         {result.pinned && <span className="pin"><Icon name="keep" size={16} /></span>}
         {result.protected && <span className="tag alert"><Icon name="shield" size={14} />Protected</span>}
         {result.done && <span className="tag"><Icon name="check" size={14} />Done</span>}

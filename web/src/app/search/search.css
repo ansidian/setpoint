@@ -66,6 +66,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
    and its progress along its foot (states.css › .progress). */
 .search-list .bar .spin { margin-left: 0; vertical-align: 0; color: inherit; }
 .arow.result .l1 .pin { color: var(--ink3); display: grid; }
+.arow.result .l1 .replied { color: var(--ink3); display: grid; }
 /* A Done result stays, quieter, with its tag. */
 .arow.result.done .from, .arow.result.done .l2, .arow.result.done .l3 { color: var(--ink3); }
 .arow .why { grid-column: 2 / 4; font-size: 12px; color: var(--ink3); display: flex; align-items: center; gap: 6px; padding-top: 2px; white-space: nowrap; overflow: hidden; }

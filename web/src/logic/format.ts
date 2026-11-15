@@ -102,6 +102,12 @@ export function readerTime(at: string, now: number, timeZone: string): string {
   return `${date}, ${time}`;
 }
 
+/** The day of a reply, for "You replied Oct 4": always a date, with its year when not this year's. */
+export function dayOf(at: string, now: number, timeZone: string): string {
+  const day = localDate(at, timeZone);
+  return day.slice(0, 4) === localDate(now, timeZone).slice(0, 4) ? onDay(day, {month: 'short', day: 'numeric'}) : onDay(day, {month: 'short', day: 'numeric', year: 'numeric'});
+}
+
 /** How long until something starts, for the Today block: "now", "in 45m", "in 5h". */
 export function startsIn(at: string, now: number): string {
   const minutes = Math.round((Date.parse(at) - now) / MINUTE);

@@ -1,6 +1,6 @@
 // The reader's rules: who it's from, which actions it offers, the security facts card, whether
-// remote images load, and the attachments' labels and previews.
-import type {AttachmentOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
+// remote images load, the attachments' labels and previews, and the conversation list.
+import type {AttachmentOut, ConversationEmailOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
 import {clockTime, daysBetween, localDate} from './format.ts';
 
 /**
@@ -212,4 +212,31 @@ export function paneWidths(stored: string | null, screen: string): Record<string
   if (typeof value === 'number') return {[screen]: paneWidth(value)};
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
   return Object.fromEntries(Object.entries(value).filter(([, width]) => typeof width === 'number').map(([key, width]) => [key, paneWidth(width as number)]));
+}
+
+/** Earlier emails shown before the rest fold behind one line, and never fewer than two folded. */
+export const CONVERSATION_SHOWN = 4;
+
+export interface ConversationView {
+  heading: 'Earlier in this conversation' | 'Later in this conversation' | 'In this conversation';
+  // Hidden behind the fold line: the oldest.
+  folded: number;
+  earlier: ConversationEmailOut[];
+  // This email's place marked between, when it has emails on both sides.
+  marked: boolean;
+  later: ConversationEmailOut[];
+}
+
+/** The reader's conversation list for an email, or null when it is alone in its thread. */
+export function conversationLines(message: Pick<MessageOut, 'id' | 'received_at' | 'conversation'>, unfolded: boolean): ConversationView | null {
+  const others = message.conversation ?? [];
+  if (!others.length) return null;
+  const before = (email: ConversationEmailOut) => email.received_at < message.received_at || (email.received_at === message.received_at && email.id < message.id);
+  const earlier = others.filter(before);
+  const later = others.filter(email => !before(email));
+  const fold = !unfolded && earlier.length > CONVERSATION_SHOWN + 1 ? earlier.length - CONVERSATION_SHOWN : 0;
+  return {
+    heading: !later.length ? 'Earlier in this conversation' : !earlier.length ? 'Later in this conversation' : 'In this conversation',
+    folded: fold, earlier: earlier.slice(fold), marked: earlier.length > 0 && later.length > 0, later,
+  };
 }
