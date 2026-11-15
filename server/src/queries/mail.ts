@@ -176,6 +176,9 @@ export function messageDetail(store: Store, messageId: number): MessageOut {
     attachments: attachments.map(file => ({id: file.id, filename: file.filename, mime_type: file.mimeType, size_bytes: file.sizeBytes, previewable: PREVIEWABLE.test(file.mimeType)})),
     remote_content: {domain, trust_domain: trustDomainOf(domain), sender_authenticated: row.senderAuthenticated, trusted, ...remoteContent({trusted, senderAuthenticated: row.senderAuthenticated, lane: row.lane})},
     open_url: account.provider === 'gmail' ? gmailUrl(account.address, row.providerId) : null,
+    ...(row.toRecipients === null ? {} : {
+      to: row.toRecipients, cc: row.ccRecipients ?? [], reply_to: row.replyTo ?? [], references: row.referenceIds ?? [], in_reply_to: row.inReplyTo,
+    }),
   };
 }
 

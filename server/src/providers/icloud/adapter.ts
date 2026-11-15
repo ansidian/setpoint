@@ -8,7 +8,8 @@
 //   Message-ID.
 // - reads every INBOX message's flags. Read elsewhere shows here. A message gone from INBOX left it
 //   (moved to Archive or Deleted Messages in Apple Mail) unless Setpoint trashed it.
-// - takes the next step of the backfill.
+// - takes the next step of the backfill, then of the header pass (src/sync/headers.ts): To, Cc,
+//   Reply-To and the reply headers for mail held from before they were kept, by BODY.PEEK[HEADER].
 import {createHash} from 'node:crypto';
 import {eq, inArray} from 'drizzle-orm';
 import {ImapFlow} from 'imapflow';
@@ -19,8 +20,10 @@ import {readBackfill, readCursor, startBackfill, writeBackfill, writeCursor} fro
 import {ProviderError} from '../../sync/errors.ts';
 import {enqueueJob} from '../../sync/jobs.ts';
 import {applyProviderStates, knownProviderIds, upsertMessages} from '../../sync/mailMirror.ts';
-import type {FetchedMessage, ProviderState} from '../../sync/mailMirror.ts';
-import {attachmentFromSource, fetchedMessage} from '../mime.ts';
+import type {FetchedMessage, MessageHeaders, ProviderState} from '../../sync/mailMirror.ts';
+import {headerPassStep} from '../../sync/headers.ts';
+import type {HeaderRow} from '../../sync/headers.ts';
+import {attachmentFromSource, fetchedMessage, parseHeaderBlock} from '../mime.ts';
 
 export interface ImapEndpoint {
   host: string;
@@ -39,6 +42,8 @@ export interface ICloudAdapterOptions {
   connectTimeoutMs?: number;
   // Backfill: messages fetched per step.
   backfillChunk?: number;
+  // The header pass: rows per step.
+  headerChunk?: number;
 }
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -182,11 +187,13 @@ class ImapPool {
 export class ICloudAdapter implements SourceAdapter {
   private readonly pool: ImapPool;
   private readonly backfillChunk: number;
+  private readonly headerChunk: number;
   private readonly locks = new Map<number, Promise<unknown>>();
 
   constructor(options: ICloudAdapterOptions = {}) {
     this.pool = new ImapPool({endpoint: options.endpoint ?? ICLOUD_IMAP, idleMs: options.idleMs ?? 10 * 60_000, connectTimeoutMs: options.connectTimeoutMs ?? 15_000});
     this.backfillChunk = options.backfillChunk ?? 50;
+    this.headerChunk = options.headerChunk ?? 200;
   }
 
   /** Connect iCloud: logs in once with the app password, outside the pool. Throws the refusal. */
@@ -310,6 +317,7 @@ export class ICloudAdapter implements SourceAdapter {
       applyProviderStates(store, accountId, states);
 
       await this.backfillStep(context, client, uidValidity);
+      await headerPassStep(store, {id: context.source.id, accountId}, this.headerChunk, rows => readHeaders(client, rows, uidValidity));
       return {cursor: JSON.stringify(cursor)};
     });
   }
@@ -427,6 +435,29 @@ async function trashMailbox(client: ImapFlow): Promise<string> {
   return folders.find(folder => folder.specialUse === '\\Trash')?.path
     ?? folders.find(folder => /^(deleted messages|trash)$/i.test(folder.path))?.path
     ?? 'Deleted Messages';
+}
+
+/**
+ * The header pass's rows by UID FETCH BODY.PEEK[HEADER] (leaving \Seen alone), those still in INBOX
+ * under this UIDVALIDITY. A row from an older UIDVALIDITY, or moved out of INBOX, is left out.
+ */
+async function readHeaders(client: ImapFlow, rows: HeaderRow[], uidValidity: string): Promise<Map<number, MessageHeaders>> {
+  const byUid = new Map<number, number>();
+  for (const row of rows) {
+    const uid = uidOf(row.providerId, uidValidity);
+    if (uid !== null) byUid.set(uid, row.id);
+  }
+  const found = new Map<number, MessageHeaders>();
+  if (!byUid.size) return found;
+  const blocks: {uid: number; headers: Buffer}[] = [];
+  for await (const message of client.fetch([...byUid.keys()].join(','), {uid: true, headers: true}, {uid: true})) {
+    if (message.headers) blocks.push({uid: message.uid, headers: message.headers});
+  }
+  for (const block of blocks) {
+    const id = byUid.get(block.uid);
+    if (id !== undefined) found.set(id, await parseHeaderBlock(block.headers));
+  }
+  return found;
 }
 
 /** Whole messages by UID, parsed for the record. */

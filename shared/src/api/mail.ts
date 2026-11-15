@@ -16,7 +16,7 @@
 //   GET  /api/mail/gmail-link?account=&id=     GmailLinkOut (a description's Gmail link)
 import {z} from 'zod';
 import type {InboxGroup, Kind, Lane, MessageType} from '../enums.ts';
-import type {SecurityFacts} from '../message.ts';
+import type {Recipient, SecurityFacts} from '../message.ts';
 import type {CommandOut} from './common.ts';
 
 /** One email in a list: the Inbox, All, the pinned shelf or search results. */
@@ -166,6 +166,15 @@ export interface MessageOut extends MessageRowOut {
   remote_content: RemoteContentOut;
   // Open in Gmail (`O`), or null for iCloud.
   open_url: string | null;
+  // Who it was sent to and what it answers, from its headers. All five are left out while Setpoint
+  // hasn't read them (mail from before they were kept, until the header pass reaches it). Empty
+  // lists and a null In-Reply-To mean the email had none. Not in the iPhone app's contract yet.
+  to?: Recipient[];
+  cc?: Recipient[];
+  reply_to?: Recipient[];
+  // The References header's Message-IDs in order, oldest first, and In-Reply-To's.
+  references?: string[];
+  in_reply_to?: string | null;
 }
 
 export const readInput = z.strictObject({unread: z.boolean()});

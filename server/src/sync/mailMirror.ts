@@ -13,6 +13,7 @@ import {isDigest} from '../domain/mailpieces.ts';
 import {searchBody} from '../domain/searchBody.ts';
 import {senderAuthenticated} from '../domain/senderAuthentication.ts';
 import type {SenderAuthentication} from '../domain/senderAuthentication.ts';
+import type {Recipient} from '@setpoint/shared';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {triageIntake} from '../triage/intake.ts';
@@ -37,6 +38,21 @@ export interface FetchedAttachment {
   sizeBytes: number;
 }
 
+/** Who an email went to and what it answers, from its headers. Empty lists when a header is absent. */
+export interface MessageHeaders {
+  to: Recipient[];
+  cc: Recipient[];
+  replyTo: Recipient[];
+  // The References header's ids in order, and In-Reply-To's.
+  references: string[];
+  inReplyTo: string | null;
+}
+
+/** The record's columns for them. */
+export const headerColumns = (headers: MessageHeaders) => ({
+  toRecipients: headers.to, ccRecipients: headers.cc, replyTo: headers.replyTo, referenceIds: headers.references, inReplyTo: headers.inReplyTo,
+});
+
 /** One email as its provider has it, parsed. */
 export interface FetchedMessage extends ProviderState {
   providerId: string;
@@ -51,6 +67,8 @@ export interface FetchedMessage extends ProviderState {
   receivedAt: string;
   senderAuth: SenderAuthentication | null;
   attachments: FetchedAttachment[];
+  // Absent where a caller builds one by hand without its headers: the row keeps what it has.
+  recipients?: MessageHeaders;
 }
 
 /** Messages whose read or trash state belongs to a command right now. */
@@ -106,6 +124,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
         providerId: message.providerId, threadId: message.threadId, rfc822Id: message.rfc822Id, fromName: message.fromName,
         fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText, searchBody: searchBody(message.bodyText), bodyHtml: message.bodyHtml,
         receivedAt: message.receivedAt, senderAuth: message.senderAuth, senderAuthenticated: senderAuthenticated(message.senderAuth),
+        ...(message.recipients ? headerColumns(message.recipients) : {}),
       };
       // USPS's daily digest goes to the agenda rail, not the Inbox. It's sorted as it arrives
       // (never triaged, so never notified), and a job reads its scans from its source.

@@ -14,7 +14,7 @@ import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
   NEWS_ADAPTERS, NEWS_SECTIONS, RULE_TRASH, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
-  type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
+  type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
 import type {ArticleNotes, NoiseReason} from '../domain/newsSorting.ts';
 import type {SenderAuthentication} from '../domain/senderAuthentication.ts';
@@ -104,6 +104,15 @@ export const messages = sqliteTable('messages', {
   // The Message-ID header. An IMAP message keeps it when it moves (Trash and back, a new
   // UIDVALIDITY), so the mirror matches it to its row instead of adding a copy.
   rfc822Id: text('rfc822_id'),
+  // Who it was sent to and what it answers, read from its headers: To, Cc and Reply-To as
+  // addresses (lowercased) with their display names, References in order and In-Reply-To. Null
+  // until read (mail from before they were kept, filled by the header pass in src/sync/headers.ts);
+  // an empty list once read means the header had none.
+  toRecipients: text('to_recipients', {mode: 'json'}).$type<Recipient[]>(),
+  ccRecipients: text('cc_recipients', {mode: 'json'}).$type<Recipient[]>(),
+  replyTo: text('reply_to', {mode: 'json'}).$type<Recipient[]>(),
+  referenceIds: text('reference_ids', {mode: 'json'}).$type<string[]>(),
+  inReplyTo: text('in_reply_to'),
   // It left the provider's inbox without Setpoint (archived in Gmail, moved out of iCloud's INBOX).
   // Until it's back, it is out of the Inbox but still in All and search.
   archivedAt: text('archived_at'),

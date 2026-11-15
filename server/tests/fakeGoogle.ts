@@ -64,6 +64,17 @@ export interface Delivery {
 }
 
 // `clock` is the test's, for the times Google stamps (a watch's expiry, a push's publish time).
+/** format=metadata's headers: the asked-for lines of the source's header block, unfolded, in order. */
+function metadataHeaders(raw: Buffer, names: string[]): {name: string; value: string}[] {
+  const wanted = new Set(names.map(name => name.toLowerCase()));
+  const block = raw.toString('utf8').split(/\r?\n\r?\n/)[0]!.replace(/\r?\n[ \t]+/g, ' ');
+  return block.split(/\r?\n/).flatMap(line => {
+    const at = line.indexOf(':');
+    const name = line.slice(0, at);
+    return at > 0 && wanted.has(name.toLowerCase()) ? [{name, value: line.slice(at + 1).trim()}] : [];
+  });
+}
+
 export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicKey?: string; clock?: () => Date} = {}) {
   const mailboxes = new Map<string, Mailbox>();
   const codes = new Map<string, string>();
@@ -173,6 +184,7 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
         return json(response, 200, {
           id: item.id, threadId: item.threadId, labelIds: [...item.labels], historyId: String(box.historyId), internalDate: String(item.internalDate),
           ...(format === 'raw' ? {raw: item.raw.toString('base64url'), sizeEstimate: item.raw.length} : {}),
+          ...(format === 'metadata' ? {payload: {headers: metadataHeaders(item.raw, query.getAll('metadataHeaders'))}} : {}),
         });
       }
       if (action === 'modify') box.change(item, (body.addLabelIds ?? []) as string[], (body.removeLabelIds ?? []) as string[]);

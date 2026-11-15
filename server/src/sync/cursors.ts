@@ -68,3 +68,32 @@ export function backfillProgress(state: Pick<BackfillState, 'done' | 'total' | '
   if (state.total <= 0) return 0;
   return Math.min(0.99, state.fetched / state.total);
 }
+
+// ---- The header pass: recipients and reply headers for mail held from before they were kept ----
+
+export const HEADERS_SCOPE = 'headers';
+
+/**
+ * Where a source's header pass stands (src/sync/headers.ts), persisted after every step. `afterId`
+ * is the last message id it looked at; it goes up by id, so a row the provider no longer has is
+ * passed over once and never asked for again. `total` is how many rows lacked the headers when it
+ * started, `read` how many it filled and `skipped` how many the provider no longer had.
+ */
+export interface HeaderBackfillState {
+  total: number;
+  read: number;
+  skipped: number;
+  afterId: number;
+  done: boolean;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+export function readHeaderBackfill(store: Store, sourceId: number): HeaderBackfillState | null {
+  const raw = readCursor(store, sourceId, HEADERS_SCOPE);
+  return raw ? JSON.parse(raw) as HeaderBackfillState : null;
+}
+
+export function writeHeaderBackfill(store: Store, sourceId: number, state: HeaderBackfillState) {
+  writeCursor(store, sourceId, JSON.stringify(state), HEADERS_SCOPE);
+}

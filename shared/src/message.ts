@@ -14,3 +14,9 @@ export const securityFactsSchema = z.strictObject({
   unfamiliar: z.boolean().optional(),
 });
 export type SecurityFacts = z.infer<typeof securityFactsSchema>;
+
+/** One address from an email's To, Cc or Reply-To: lowercased, with its display name when it had one. */
+export interface Recipient {
+  name: string | null;
+  address: string;
+}

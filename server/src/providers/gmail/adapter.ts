@@ -9,6 +9,8 @@
 // - sweep (every 5 minutes behind push): the same, then compares the last 30 days of inbox and
 //   unread with the record and repairs what a missed push left.
 // - backfill: 365 days of inbox, a few pages per job, resumable from its page token, with progress.
+// - the header pass (src/sync/headers.ts), once the backfill is done: To, Cc, Reply-To and the
+//   reply headers for mail held from before they were kept, by format=metadata.
 import {inArray} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';
 import type {Store} from '../../store.ts';
@@ -19,7 +21,10 @@ import {ProviderError} from '../../sync/errors.ts';
 import {enqueueJob} from '../../sync/jobs.ts';
 import {applyProviderStates, knownProviderIds, recordedSince, removeMessages, upsertMessages} from '../../sync/mailMirror.ts';
 import type {FetchedMessage, ProviderState} from '../../sync/mailMirror.ts';
-import {attachmentFromSource, fetchedMessage} from '../mime.ts';
+import {headerPassStep} from '../../sync/headers.ts';
+import type {HeaderRow} from '../../sync/headers.ts';
+import type {MessageHeaders} from '../../sync/mailMirror.ts';
+import {attachmentFromSource, fetchedMessage, parseHeaderBlock} from '../mime.ts';
 import {GmailApi, HistoryGone} from './api.ts';
 import type {GmailMessage} from './api.ts';
 import {GoogleTokens} from '../google/auth.ts';
@@ -35,6 +40,8 @@ export interface GmailAdapterOptions {
   backfillPagesPerStep?: number;
   // Messages fetched at once.
   concurrency?: number;
+  // The header pass: rows per job.
+  headerChunk?: number;
   // The sweep's window.
   sweepDays?: number;
 }
@@ -48,6 +55,9 @@ const MAX_SWEEP_REREADS = 500;
 // Gmail's batchModify takes up to 1,000 ids.
 const BATCH_MODIFY_MAX = 1000;
 const DAY_MS = 24 * 60 * 60_000;
+
+// The headers the header pass asks Gmail for.
+const HEADER_NAMES = ['To', 'Cc', 'Reply-To', 'References', 'In-Reply-To'] as const;
 
 class HistoryTooLong extends Error {}
 
@@ -74,7 +84,7 @@ export class GmailAdapter implements SourceAdapter {
   private readonly locks = new Map<number, Promise<unknown>>();
 
   constructor(options: GmailAdapterOptions) {
-    this.options = {pageSize: 100, backfillPagesPerStep: 5, concurrency: 10, sweepDays: 30, ...options};
+    this.options = {pageSize: 100, backfillPagesPerStep: 5, concurrency: 10, sweepDays: 30, headerChunk: 100, ...options};
     this.tokens = new GoogleTokens(options.client);
   }
 
@@ -138,6 +148,7 @@ export class GmailAdapter implements SourceAdapter {
     }
     if (sweep && !resynced) await this.reconcile(api, context, this.options.sweepDays);
     await this.backfillStep(api, context);
+    await headerPassStep(context.store, {id: context.source.id, accountId: this.accountId(context)}, this.options.headerChunk, rows => this.readHeaders(api, rows));
     return {cursor: next};
   }
 
@@ -244,6 +255,18 @@ export class GmailAdapter implements SourceAdapter {
     }
     // Keyed by position: the job running this step still holds its own key.
     if (!state.done) enqueueJob(context.store, {kind: 'sync', key: `backfill:${context.source.id}:${state.fetched}`, sourceId: context.source.id});
+  }
+
+  /** The header pass's rows by format=metadata, those Gmail still has. */
+  private async readHeaders(api: GmailApi, rows: HeaderRow[]): Promise<Map<number, MessageHeaders>> {
+    const found = new Map<number, MessageHeaders>();
+    await mapLimit(rows, this.options.concurrency, async row => {
+      const message = await api.metadata(row.providerId, HEADER_NAMES);
+      if (!message) return;
+      const lines = (message.payload?.headers ?? []).map(header => `${header.name}: ${header.value}`).join('\r\n');
+      found.set(row.id, await parseHeaderBlock(lines));
+    });
+    return found;
   }
 
   /** An attachment: the message's source (format=raw) again, and the part the sync's parse named. */

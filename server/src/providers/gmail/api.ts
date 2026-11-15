@@ -16,6 +16,8 @@ export interface GmailMessage {
   historyId?: string;
   // format=raw: the RFC 822 source, base64url.
   raw?: string;
+  // format=metadata: the headers asked for, as Gmail has them.
+  payload?: {headers?: {name: string; value: string}[]};
 }
 
 export interface GmailHistoryEvent {
@@ -88,6 +90,12 @@ export class GmailApi {
   /** A message with its source, or null when Gmail no longer has it. */
   async raw(id: string): Promise<GmailMessage | null> {
     const response = await this.request(`messages/${encodeURIComponent(id)}`, {what: 'Gmail messages.get', query: {format: 'raw'}, accept: [404]});
+    return response.status === 404 ? null : await response.json() as GmailMessage;
+  }
+
+  /** Some of a message's headers (format=metadata), or null when Gmail no longer has it. */
+  async metadata(id: string, headers: readonly string[]): Promise<GmailMessage | null> {
+    const response = await this.request(`messages/${encodeURIComponent(id)}`, {what: 'Gmail messages.get', query: {format: 'metadata', metadataHeaders: [...headers]}, accept: [404]});
     return response.status === 404 ? null : await response.json() as GmailMessage;
   }
 

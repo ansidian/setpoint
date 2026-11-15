@@ -4,20 +4,21 @@
 import {convert} from 'html-to-text';
 import type {HtmlToTextOptions} from 'html-to-text';
 import {simpleParser} from 'mailparser';
-import type {ParsedMail, ParsedMailAttachment} from 'mailparser';
+import type {ParsedMail, ParsedMailAddress, ParsedMailAddressEntry, ParsedMailAttachment} from 'mailparser';
+import type {Recipient} from '@setpoint/shared';
 import {evaluateGmailSenderAuthentication, evaluateICloudSenderAuthentication} from '../domain/senderAuthentication.ts';
 import type {AuthenticationHeader, MailProvider} from '../domain/senderAuthentication.ts';
 import {bareCid, campaignCount, KEPT_TYPES, pieceSources, statedPieces} from '../domain/mailpieces.ts';
 import type {ReadDigest, Scan} from '../domain/mailpieces.ts';
 import type {AttachmentBytes} from '../sync/adapter.ts';
-import type {FetchedAttachment, FetchedMessage, ProviderState} from '../sync/mailMirror.ts';
+import type {FetchedAttachment, FetchedMessage, MessageHeaders, ProviderState} from '../sync/mailMirror.ts';
 
 // What the record and its index keep of a body. The reader shows the HTML.
 export const BODY_TEXT_MAX_CHARS = 20_000;
 export const BODY_HTML_MAX_CHARS = 2_000_000;
 const SNIPPET_CHARS = 140;
 
-export interface ParsedEmail {
+export interface ParsedEmail extends MessageHeaders {
   fromName: string;
   fromAddress: string;
   subject: string;
@@ -104,6 +105,34 @@ function topReceived(headers: AuthenticationHeader[]): string | null {
   return Number.isFinite(at) ? new Date(at).toISOString() : null;
 }
 
+/** An address header's mailboxes in order, groups opened, each address lowercased. */
+function recipients(field: ParsedMailAddress | ParsedMailAddress[] | undefined): Recipient[] {
+  const entries = (Array.isArray(field) ? field : field ? [field] : []).flatMap(item => item.value ?? []);
+  const open = (entry: ParsedMailAddressEntry): ParsedMailAddressEntry[] => entry.group ? entry.group.flatMap(open) : [entry];
+  return entries.flatMap(open).flatMap(entry => {
+    const address = (entry.address ?? '').trim().toLowerCase();
+    return address ? [{name: entry.name?.trim() || null, address}] : [];
+  });
+}
+
+/** Who a parsed email went to and what it answers. */
+function messageHeaders(parsed: ParsedMail): MessageHeaders {
+  const references = Array.isArray(parsed.references) ? parsed.references : parsed.references ? [parsed.references] : [];
+  return {
+    to: recipients(parsed.to), cc: recipients(parsed.cc), replyTo: recipients(parsed.replyTo),
+    references, inReplyTo: parsed.inReplyTo?.trim() || null,
+  };
+}
+
+/**
+ * The same fields from a header block alone: IMAP's BODY[HEADER], or Gmail's format=metadata
+ * headers written back as lines, so the header pass reads them as arrival does.
+ */
+export async function parseHeaderBlock(block: Buffer | string): Promise<MessageHeaders> {
+  // The bytes as the provider sent them, with the blank line that ends a header block.
+  return messageHeaders(await parsedSource(Buffer.concat([Buffer.isBuffer(block) ? block : Buffer.from(block), Buffer.from('\r\n\r\n')])));
+}
+
 /** An attachment's id in the record: its MIME part, or its place among the parts when it has none. */
 const attachmentId = (attachment: ParsedMailAttachment, index: number) => attachment.partId ?? `part-${index + 1}`;
 
@@ -134,7 +163,7 @@ export async function parseEmail(source: Buffer): Promise<ParsedEmail> {
   // mailparser leaves an HTML-only email's text empty (skipHtmlToText), so Setpoint makes it.
   const parsedText = (parsed.text ?? '').trim();
   const {text, snippet} = storedText(parsedText || !html ? parsedText : htmlText(html));
-  const references = Array.isArray(parsed.references) ? parsed.references : parsed.references ? [parsed.references] : [];
+  const headerFields = messageHeaders(parsed);
   const attachments = (parsed.attachments ?? []).flatMap((attachment, index) => isInline(attachment) ? [] : [{
     providerId: attachmentId(attachment, index),
     filename: attachment.filename || 'Attachment',
@@ -151,10 +180,11 @@ export async function parseEmail(source: Buffer): Promise<ParsedEmail> {
     snippet,
     date: parsed.date && Number.isFinite(parsed.date.getTime()) ? parsed.date.toISOString() : null,
     rfc822Id: parsed.messageId ?? null,
-    threadRoot: references[0] ?? parsed.inReplyTo ?? null,
+    threadRoot: headerFields.references[0] ?? parsed.inReplyTo ?? null,
     received: topReceived(headers),
     headers,
     attachments,
+    ...headerFields,
   };
 }
 
@@ -187,6 +217,7 @@ export async function fetchedMessage(provider: MailProvider, source: Buffer, met
     receivedAt: (provider === 'gmail' ? email.received : null) ?? meta.receivedAt ?? email.date ?? now.toISOString(),
     senderAuth,
     attachments: email.attachments,
+    recipients: {to: email.to, cc: email.cc, replyTo: email.replyTo, references: email.references, inReplyTo: email.inReplyTo},
     unread: meta.unread,
     trashed: meta.trashed,
     archived: meta.archived,

@@ -2,7 +2,14 @@
 declare module 'mailparser' {
   export interface ParsedMailAddress {
     text?: string;
-    value?: Array<{name?: string; address?: string}>;
+    value?: ParsedMailAddressEntry[];
+  }
+
+  // A group ("Team: a@example.com, b@example.com;") holds its members in `group`.
+  export interface ParsedMailAddressEntry {
+    name?: string;
+    address?: string;
+    group?: ParsedMailAddressEntry[];
   }
 
   export interface ParsedMailAttachment {
@@ -22,6 +29,9 @@ declare module 'mailparser' {
     text?: string;
     subject?: string;
     from?: ParsedMailAddress;
+    to?: ParsedMailAddress | ParsedMailAddress[];
+    cc?: ParsedMailAddress | ParsedMailAddress[];
+    replyTo?: ParsedMailAddress | ParsedMailAddress[];
     date?: Date;
     messageId?: string;
     inReplyTo?: string;

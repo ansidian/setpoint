@@ -5,6 +5,8 @@ import {randomBytes} from 'node:crypto';
 export interface RawEmailInput {
   from: string;
   to?: string;
+  cc?: string;
+  replyTo?: string;
   subject: string;
   date: string;
   text?: string;
@@ -24,6 +26,8 @@ export function rawEmail(input: RawEmailInput): Buffer {
     ...(input.received ?? []).map(([name, value]) => `${name}: ${value}`),
     `From: ${input.from}`,
     `To: ${input.to ?? 'user@example.net'}`,
+    ...(input.cc ? [`Cc: ${input.cc}`] : []),
+    ...(input.replyTo ? [`Reply-To: ${input.replyTo}`] : []),
     `Subject: ${input.subject}`,
     `Date: ${new Date(input.date).toUTCString().replace('GMT', '+0000')}`,
     `Message-ID: ${messageId}`,

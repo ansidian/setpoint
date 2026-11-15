@@ -142,6 +142,11 @@ export async function fakeImap() {
       if (items.includes('INTERNALDATE')) fields.push(`INTERNALDATE "${imapDate(message.internalDate)}"`);
       if (items.includes('RFC822.SIZE')) fields.push(`RFC822.SIZE ${message.raw.length}`);
       const body = items.some(item => /^BODY(\.PEEK)?\[\]$/.test(item));
+      if (items.some(item => /^BODY(\.PEEK)?\[HEADER\]$/.test(item))) {
+        const text = message.raw.toString('utf8');
+        const header = Buffer.from(`${text.slice(0, text.search(/\r\n\r\n/))}\r\n\r\n`);
+        return [Buffer.from(`* ${seq} FETCH (${fields.join(' ')} BODY[HEADER] {${header.length}}\r\n`), header, Buffer.from(')\r\n')];
+      }
       if (!body) return [Buffer.from(`* ${seq} FETCH (${fields.join(' ')})\r\n`)];
       return [Buffer.from(`* ${seq} FETCH (${fields.join(' ')} BODY[] {${message.raw.length}}\r\n`), message.raw, Buffer.from(')\r\n')];
     };

@@ -302,6 +302,13 @@
       "when": 1794639830257,
       "tag": "0042_mailpieces_without_campaigns",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1794766989307,
+      "tag": "0043_message_recipients",
+      "breakpoints": true
     }
   ]
 }
