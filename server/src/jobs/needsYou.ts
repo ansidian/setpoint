@@ -1,8 +1,8 @@
-// Answering Needs you (J4 adds From history's Dismiss all; J6 adds the rest, boards 34a–34c): pick a
+// Answering Needs you (boards 34a–34c), and From history's Dismiss all: pick a
 // candidate or None of these, Assign to…, Track this and Not about a job, each kept for its toast's
-// Undo (./undo.ts), From history's alike (D364).
+// Undo (./undo.ts), From history's alike.
 //
-// - Dismiss all (D324, decision 70) clears From history: the same as ignoring each item, so those
+// - Dismiss all clears From history: the same as ignoring each item, so those
 //   emails make nothing. Each item is resolved as `dismissed` and kept, with its email's read
 //   untouched (outcome `needs_you`, no application), so it's never offered again; a JD to confirm's
 //   application keeps its candidates (its detail can still offer them) and nothing is saved.
@@ -48,7 +48,7 @@ export function undoDismissFromHistory(store: Store, ids: number[]): number[] {
   });
 }
 
-// ---- Answering an item (J6; boards 34a–34c; decisions 54, 69; D364) ----
+// ---- Answering an item (boards 34a–34c) ----
 
 /** An item still waiting, or a 404 (a 409 once it's answered). */
 function openItem(store: Store, id: number) {
@@ -119,7 +119,7 @@ function claimItemEmail(store: Store, applicationId: number, item: typeof j.jobs
 }
 
 /**
- * POST /api/jobs/needs-you/:id/track: Track this (decision 69, D323). The application is made from the
+ * POST /api/jobs/needs-you/:id/track: Track this. The application is made from the
  * email: Applied on its date, "First seen in this email", In process (Offer for an offer), with its
  * JD looked up at once.
  */

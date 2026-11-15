@@ -1,10 +1,10 @@
-// The Inbox, days first (SV-199, D449; DESIGN.md › The list): Attention, the Pinned shelf, then every
+// The Inbox, days first: Attention, the Pinned shelf, then every
 // email by day, Noise included, newest first, under day headings ("TODAY Wed, Oct 7",
 // "YESTERDAY Tue, Oct 6", "MON Oct 5"). Days are the owner's, midnight to midnight Pacific, never the
 // browser's. Unread mail stays in its day, drawn unread, so reading never moves a row. Each day groups
-// its rows by lane, with the kind once where an FYI run starts, and folds its Noise to one line (#48,
-// D58). An email in Attention or on the Pinned shelf leaves its day meanwhile (D105).
-// The views (SV-221, D471) show part of it: Unread the unread mail in the same shape, Attention its
+// its rows by lane, with the kind once where an FYI run starts, and folds its Noise to one line.
+// An email in Attention or on the Pinned shelf leaves its day meanwhile.
+// The views show part of it: Unread the unread mail in the same shape, Attention its
 // rows alone, FYI and Noise their mail by day; only All has the shelf, so elsewhere a pinned email
 // sits where it belongs.
 import {INBOX_GROUPS} from '@setpoint/shared';
@@ -23,13 +23,13 @@ export interface Day {
 
 const newest = (a: MessageRowOut, b: MessageRowOut) => b.received_at.localeCompare(a.received_at) || b.id - a.id;
 
-/** An email the list draws unread: unread and not Done, as the counts have it (#241). */
+/** An email the list draws unread: unread and not Done, as the counts have it. */
 export const unreadNotDone = (row: Pick<MessageRowOut, 'unread' | 'done'>) => row.unread && !row.done;
 
 /**
  * Rows by local day in `timeZone`, newest day first and newest first within it. Pages of All are
  * joined here, so a day split between two pages shows once. A pinned email leaves its day for the
- * Pinned shelf until it's unpinned (D105), unless there's no shelf (`shelf` false), and one Attention
+ * Pinned shelf until it's unpinned, unless there's no shelf (`shelf` false), and one Attention
  * shows (`above`) leaves it too.
  */
 export function groupByDay(rows: MessageRowOut[], timeZone: string, above: ReadonlySet<number> = new Set(), shelf = true): Day[] {
@@ -47,8 +47,8 @@ export function groupByDay(rows: MessageRowOut[], timeZone: string, above: Reado
 
 /**
  * Attention's emails, newest first, from the Inbox's groups (with Undo's held rows): every Attention
- * email not yet Done, unread or read (D449). A pinned email is on the Pinned shelf, and only there
- * (D105), unless there's no shelf (`shelf` false).
+ * email not yet Done, unread or read. A pinned email is on the Pinned shelf, and only there,
+ * unless there's no shelf (`shelf` false).
  */
 export function attentionRows(groups: InboxGroupOut[], shelf = true): MessageRowOut[] {
   const rows = new Map(groups.filter(group => group.group !== 'pinned').flatMap(group => group.rows).filter(row => !shelf || !row.pinned).map(row => [row.id, row]));
@@ -78,7 +78,7 @@ const kindOrder = (row: MessageRowOut) => INBOX_GROUPS.indexOf(row.kind ?? 'othe
 /**
  * A day as the list draws it: Attention, Unsorted and FYI in the groups' order, FYI's rows
  * by kind in that order and newest first within one, then the day's Noise, folded unless `noiseOpen`.
- * Unread and Noise have its rows in full instead, as the last lane (`noiseRows`, SV-221).
+ * Unread and Noise have its rows in full instead, as the last lane (`noiseRows`).
  */
 export function dayView(day: Day, noiseOpen: boolean, noiseRows = false): DayView {
   const lanes = LANES.flatMap(([lane, label]): LaneView[] => {
@@ -107,7 +107,7 @@ export interface ViewList {
 }
 
 /**
- * What `view` shows (SV-221, D471), from the Inbox's `groups` (with Undo's held rows), All's pages
+ * What `view` shows, from the Inbox's `groups` (with Undo's held rows), All's pages
  * (`rows`) and Unread's rows for this visit (`unread`, heldUnread's):
  * - **All** as it always was: Attention, the Pinned shelf, then the days.
  * - **Unread** the same shape with only its rows: their Attention, then each day's, Noise in full.
@@ -139,7 +139,7 @@ export function viewList(view: InboxView, from: {groups: InboxGroupOut[]; rows: 
 }
 
 /**
- * Unread's rows for this visit to it (SV-221): each email unread and not Done in the Inbox (`inbox`),
+ * Unread's rows for this visit to it: each email unread and not Done in the Inbox (`inbox`),
  * and each one it held before as it is now (`latest`, All's pages and the Inbox's), so one read here
  * stays, drawn read, until the user leaves the view. One Done or in Trash (`gone`) leaves; one read
  * that no list has any more stays read as it was held. A row the hold already has is kept as it is, so
@@ -186,7 +186,7 @@ export const dayStops = (views: DayView[], shelf: MessageRowOut[] = [], attentio
 ];
 
 /**
- * U (D449): the next unread email's stop after the cursor, in the list's order, from the top again
+ * U: the next unread email's stop after the cursor, in the list's order, from the top again
  * past the last one; from the top with no cursor. A folded Noise's emails have no stop, so U passes
  * them. Null when no unread email has one.
  */
@@ -223,7 +223,7 @@ export function kindGroup(row: Pick<MessageRowOut, 'lane' | 'kind'>): InboxGroup
 export const kindLabel = (row: Pick<MessageRowOut, 'lane' | 'kind'>): string => GROUP_LABELS[kindGroup(row)];
 
 /**
- * A row's text in All, as the Inbox's (Decided while building #35, #74): the summary, when triage
+ * A row's text in All, as the Inbox's: the summary, when triage
  * wrote one, takes the subject's place and the subject moves to the row's tooltip; then " · " and
  * the platform in `ink3`. A code row shows its subject with the code in Geist Mono, two groups of
  * three. A security email's lead is its decisive fact ("New sign-in · MacBook Pro · Los Angeles"); a

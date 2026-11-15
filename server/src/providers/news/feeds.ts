@@ -1,7 +1,6 @@
-// News's feeds (N2): RSS and Atom with a conditional GET (the ETag and Last-Modified are the cursor;
+// News's feeds: RSS and Atom with a conditional GET (the ETag and Last-Modified are the cursor;
 // a 304 is a healthy check with nothing new), and Google News search, read the same way but only to
 // find stories: its articles are discovery, shown with their headline and Google's link, never read.
-// Adapted from v1's server/news/news-poller.ts (harvest notes on SV-45).
 import {parseFeed, NotAFeed} from '../../domain/newsFeeds.ts';
 import type {FeedItem} from '../../domain/newsFeeds.ts';
 import {canonicalUrl, inWindow, outletOf, publishedInstant} from '../../domain/newsIngest.ts';
@@ -97,8 +96,8 @@ export function googleHeadline(headline: string, outlet: string | null): string 
 }
 
 /**
- * Google News search for the area (`config.query`): it finds stories but is never read (BRIEF.md ›
- * Sources). Each article is discovery, named for the outlet Google found it at, linked to Google.
+ * Google News search for the area (`config.query`): it finds stories but is never read.
+ * Each article is discovery, named for the outlet Google found it at, linked to Google.
  */
 export function googleNewsAdapter(options: NewsHttpOptions = {}): NewsAdapter {
   return {

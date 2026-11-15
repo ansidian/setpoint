@@ -1,4 +1,4 @@
-// The Gmail adapter against a fake Google on 127.0.0.1 (BUILD-PLAN.md › B2 › Done when): Connect
+// The Gmail adapter against a fake Google on 127.0.0.1: Connect
 // Gmail, a resumable 365-day backfill with progress, new mail by Pub/Sub pull, read elsewhere, opening
 // in Setpoint, Mark all as read in one batchModify, trash with undo, history too old (full resync),
 // 429, timeouts, an expired access token and a revoked one; with the counts following the rules.
@@ -126,7 +126,7 @@ describe('Gmail: a mailbox through backfill, new mail, read state, Mark all as r
     expect((await api.send('GET', '/api/mail/indexing')).body.indexing).toBeNull();
     const backfilled = w.store.db.select().from(t.messages).all();
     expect(backfilled.map(message => message.subject).sort()).toEqual(['Old 1', 'Old 2', 'Old 3', 'Old 4', 'Old 5', 'Old 6', 'Old 7']);
-    // B3: history is sorted at once by the rules-only pass, never left Unsorted.
+    // History is sorted at once by the rules-only pass, never left Unsorted.
     expect(backfilled.every(message => message.lane !== null && message.triageSource !== null && message.backfill && message.senderAuthenticated === true)).toBe(true);
     expect((await api.send('GET', '/api/mail/counts')).body).toMatchObject({unread: 3, accounts: [{account_id: account.id, unread: 3}]});
 
@@ -152,7 +152,7 @@ describe('Gmail: a mailbox through backfill, new mail, read state, Mark all as r
     expect((await api.send('GET', '/api/mail/counts')).body.unread).toBe(3);
 
     // Opening an unread email in Setpoint: the unread count drops at once, and Gmail hears of it.
-    // Triage put it in Attention (B3): the pill counts it, read or not, until Done.
+    // Triage put it in Attention: the pill counts it, read or not, until Done.
     w.store.db.update(t.messages).set({lane: 'attention'}).where(eq(t.messages.id, fresh.id)).run();
     expect((await api.send('GET', '/api/mail/counts')).body).toMatchObject({attention: 1, unread: 3});
     const opened = await api.send('POST', `/api/mail/messages/${fresh.id}/open`);
@@ -165,7 +165,7 @@ describe('Gmail: a mailbox through backfill, new mail, read state, Mark all as r
     await api.send('POST', `/api/mail/messages/${fresh.id}/done`, {body: {done: true}});
     expect((await api.send('GET', '/api/mail/counts')).body).toMatchObject({attention: 0, unread: 2});
 
-    // Mark all as read: one command and one batchModify for the account, read at once (D84).
+    // Mark all as read: one command and one batchModify for the account, read at once.
     deliver(google, 'Arriving today', ago(3 * MINUTE));
     deliver(google, 'Statement ready', ago(2 * MINUTE));
     google.publish(ADDRESS);
@@ -351,7 +351,7 @@ describe('Gmail: recovery and Google\'s errors', () => {
     expect(google.labels(ADDRESS, welcome.providerId)).toEqual(['TRASH', 'UNREAD']);
   });
 
-  test('a written rule\'s Mark read and Trash reach Gmail as the user\'s own do, and a refusal fails in place (SV-236)', async () => {
+  test('a written rule\'s Mark read and Trash reach Gmail as the user\'s own do, and a refusal fails in place', async () => {
     const env = await connected();
     const {w, google, api} = env;
     const welcome = bySubject(w, 'Welcome');
@@ -469,7 +469,7 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     expect(gone.status).toBe(404);
   });
 
-  test('SV-182: an invite\'s .ics is read for review from Gmail\'s bytes, nothing uploaded; one that isn\'t a calendar is refused in the parser\'s words', async () => {
+  test('an invite\'s .ics is read for review from Gmail\'s bytes, nothing uploaded; one that isn\'t a calendar is refused in the parser\'s words', async () => {
     const env = await setup({pageSize: 50});
     const {w, google, api} = env;
     google.deliver(ADDRESS, {raw: rawEmail({
@@ -494,7 +494,7 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     google.deleteForever(ADDRESS, message.providerId);
     expect((await api.send('POST', `/api/mail/messages/${message.id}/attachments/${invite!.id}/ics`)).status).toBe(404);
   });
-  test('SV-263: Add to calendar takes its title, time, end and place from the email\'s invite, over the text; a file it can\'t use, or one Gmail no longer has, leaves the text\'s proposal', async () => {
+  test('Add to calendar takes its title, time, end and place from the email\'s invite, over the text; a file it can\'t use, or one Gmail no longer has, leaves the text\'s proposal', async () => {
     const env = await setup({pageSize: 50});
     const {w, google, api} = env;
     const twoEvents = INTERVIEW_INVITE.flatMap(line => line === 'END:VCALENDAR'
@@ -588,7 +588,7 @@ describe('Gmail history records', () => {
     expect(historyChanges([
       {messagesAdded: [message('new', ['INBOX', 'UNREAD']), message('sent', ['SENT'])]},
       {labelsAdded: [{...message('back'), labelIds: ['INBOX']}, {...message('starred'), labelIds: ['STARRED']}]},
-      // v1: an event without its own labelIds carries the message's.
+      // An event without its own labelIds carries the message's.
       {labelsRemoved: [message('read', ['UNREAD']), {...message('archived'), labelIds: ['INBOX']}]},
       {labelsAdded: [{...message('trashed'), labelIds: ['TRASH']}]},
       {messagesDeleted: [message('gone')]},

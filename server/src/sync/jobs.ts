@@ -1,5 +1,5 @@
 // Durable jobs: a source's sync, sweep or push renewal, a command for its provider, an email's
-// triage (B3) or a News source's fetch (N1), the last two run by JobWorkers the engine is given.
+// triage or a News source's fetch, the last two run by JobWorkers the engine is given.
 // Each is claimed with a lease, so one a crash left running is taken up again after it; `key` keeps
 // one queued or running job per purpose. Failures follow the one retry policy (src/domain/retry.ts).
 import {and, asc, eq, inArray, lt, lte, or} from 'drizzle-orm';
@@ -24,7 +24,7 @@ export function enqueueJob(store: Store, job: {kind: JobKind; key: string; sourc
 }
 
 /**
- * A source's sync, now: queued, or, while one is running, run again once it's done (SV-251). The
+ * A source's sync, now: queued, or, while one is running, run again once it's done. The
  * running one may have read the provider before the change that woke it, which would otherwise
  * wait for the next scheduled check.
  */

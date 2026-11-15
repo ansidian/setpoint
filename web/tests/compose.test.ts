@@ -1,6 +1,5 @@
-// The editor's title parsing as tables (DESIGN.md › Editor; board 13), with v1's
-// `parseCalendarTitle.test.ts` cases carried over through the harvest gate (darma SV-15). Today is
-// the seed's Wed, Oct 7, 2026.
+// The editor's title parsing as tables (board 13). Today is the seed's
+// Wed, Oct 7, 2026.
 import {REMINDER_LIMIT_MINUTES} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {REMINDER_LINE_LIMITS, bareToken, clockLabel, completeToken, lineWithTitle, describeRule, describeTaskRepeat, draftStarted, editedWhen, endChoices, extraDays, parseClock, parseDay, parseDays, parseEnd, parseTitle, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices, typedSpan} from '../src/logic/compose.ts';
@@ -24,7 +23,7 @@ describe('board 13', () => {
   });
 });
 
-describe('titles that hold no phrase stay as typed (v1: ordinary typing)', () => {
+describe('titles that hold no phrase stay as typed', () => {
   test.each([
     'Dentist', 'Gym 7', 'Dinner at 7', 'Call Sam', 'Wedding planning', 'Contoso University visit', 'Room 2026', 'Mayday drill', '@', '@x',
   ])('%s', text => {
@@ -62,11 +61,11 @@ describe('times', () => {
     ['11-1pm', h(11), h(13)], ['9am-5', h(9), h(17)], ['10:30-11:15am', h(10, 30), h(11, 15)], ['9:00-10:30', h(9), h(10, 30)], ['13-15', h(13), h(15)],
     // Past midnight: the next day's.
     ['11pm-1am', h(23), h(25)],
-    // An end at the start is No end (SV-78), not the next day's (SV-108, D286).
+    // An end at the start is No end, not the next day's.
     ['2pm to 2pm', h(14), h(14)], ['at 2pm to 2pm', h(14), h(14)], ['2-2pm', h(14), h(14)], ['2pm-2', h(14), h(14)], ['14:00–14:00', h(14), h(14)],
-    // "no end" by a time, either side of it (SV-108).
+    // "no end" by a time, either side of it.
     ['2pm no end', h(14), h(14)], ['no end 2pm', h(14), h(14)], ['no end at 2pm', h(14), h(14)], ['noon No End', h(12), h(12)],
-    // Minutes with no colon, with am/pm (SV-116): the last two digits the minutes.
+    // Minutes with no colon, with am/pm: the last two digits the minutes.
     ['345am', h(3, 45), null], ['745 PM', h(19, 45), null], ['0745a', h(7, 45), null],
     ['1230pm', h(12, 30), null], ['1245a', 45, null], ['at 1015am', h(10, 15), null], ['2 am', h(2), null],
     // In a range, am/pm at either end will do.
@@ -78,7 +77,7 @@ describe('times', () => {
     expect(parsed.title).toBe('Meet');
   });
   test.each(['Meet 7-9', 'Meet 13pm', 'Meet 7:75pm', 'Meet at 7'])('%s holds no time', text => expect(parse(text).start).toBeNull());
-  // SV-116: digits with no am/pm, a lone a or p after a space, and impossible clocks stay words.
+  // Digits with no am/pm, a lone a or p after a space, and impossible clocks stay words.
   test.each(['Room 1245', 'Flight 345', 'Read pages 101-105', 'Meet 930-1030', 'Meet 345 p', 'Take pills 2 a day', 'Meet 7 p', 'Meet 1345pm',
     'Meet 775pm', 'Meet 045am', 'Meet 12345am', 'Meet 345amazing'])('%s stays words', text => {
     expect(parse(text)).toMatchObject({title: text, start: null, end: null});
@@ -86,12 +85,12 @@ describe('times', () => {
   });
   test('a room number with a or p reads as a time, as "Seat 12a" does (kept as words by a click)', () =>
     expect(parse('Room 210a')).toMatchObject({title: 'Room', start: h(2, 10)}));
-  test('a bare time keeps no date (the editor gives it the selected day, as v1 did)', () => expect(parse('Standup 9am')).toMatchObject({date: null, start: h(9)}));
+  test('a bare time keeps no date (the editor gives it the selected day)', () => expect(parse('Standup 9am')).toMatchObject({date: null, start: h(9)}));
   test.each([
     ['Call Sam 2pm no end', 'Call Sam', ['when:2pm no end']],
     ['Call Sam no end 2pm fri', 'Call Sam', ['when:no end 2pm fri']],
     ['event at 2pm to 2pm', 'event', ['when:at 2pm to 2pm']],
-  ])('SV-108: %s is No end, lit with its time', (text, title, marks) => {
+  ])('%s is No end, lit with its time', (text, title, marks) => {
     expect(parse(text)).toMatchObject({title, start: h(14), end: h(14)});
     expect(marked(text)).toEqual(marks);
   });
@@ -99,27 +98,27 @@ describe('times', () => {
     // Only the phrase itself, and only by a time: otherwise it's the title's.
     ['Call Sam no end', null, null], ['Fix the no end bug', null, null], ['Call no ending 2pm', h(14), null], ['Call 2pm noend', h(14), null],
     ['Call 2pm, no end', h(14), null],
-  ])('SV-108: %s reads no No end', (text, start, end) => expect([parse(text).start, parse(text).end]).toEqual([start, end]));
+  ])('%s reads no No end', (text, start, end) => expect([parse(text).start, parse(text).end]).toEqual([start, end]));
 });
 
-describe('places (v1: @ starts a place, up to the next phrase)', () => {
+describe('places (@ starts a place, up to the next phrase)', () => {
   test.each([
     ['Dinner @Blue Door', 'Dinner', 'Blue Door', ['place:@Blue Door']],
     ['Dinner @Blue Door fri 7pm', 'Dinner', 'Blue Door', ['place:@Blue Door', 'when:fri 7pm']],
     ['Dinner @Blue Door at 7pm', 'Dinner', 'Blue Door', ['place:@Blue Door', 'when:at 7pm']],
     ['Dinner @Blue Door cal Personal', 'Dinner', 'Blue Door', ['place:@Blue Door', 'calendar:cal Personal']],
     ['@Smile Dental Dentist', '', 'Smile Dental Dentist', ['place:@Smile Dental Dentist']],
-    // A comma ends a typed place and goes with it (SV-27).
+    // A comma ends a typed place and goes with it.
     ['Dinner @Blue Door, bring wine', 'Dinner bring wine', 'Blue Door', ['place:@Blue Door,']],
     ['Dinner @Blue Door , bring wine fri 7pm', 'Dinner bring wine', 'Blue Door', ['place:@Blue Door ,', 'when:fri 7pm']],
-    // v1: plain "at" doesn't start a place.
+    // Plain "at" doesn't start a place.
     ['Lunch at Blue Door', 'Lunch at Blue Door', null, []],
   ])('%s', (text, title, place, marks) => {
     expect(parse(text)).toMatchObject({title, place});
     expect(marked(text)).toEqual(marks);
   });
   test('a second @ stays in the title', () => expect(parse('A @One @Two')).toMatchObject({place: 'One', title: 'A @Two'}));
-  // SV-27: once a suggestion is picked for "mcd", what's typed after it is the title's again.
+  // Once a suggestion is picked for "mcd", what's typed after it is the title's again.
   test.each([
     ['Lunch @mcd bring wine', 'mcd', 'Lunch bring wine', 'mcd', ['place:@mcd']],
     ['Lunch @mcd bring wine fri', 'mcd', 'Lunch bring wine', 'mcd', ['place:@mcd', 'when:fri']],
@@ -130,7 +129,7 @@ describe('places (v1: @ starts a place, up to the next phrase)', () => {
     ['Standup @www.example.com/call fri', null, 'Standup', 'www.example.com/call', ['place:@www.example.com/call', 'when:fri']],
     // The picked text changed: the place runs on as before.
     ['Lunch @mcdo bring wine', 'mcd', 'Lunch', 'mcdo bring wine', ['place:@mcdo bring wine']],
-    // SV-29: a picked name keeps its own comma.
+    // A picked name keeps its own comma.
     ['Lunch @Blue Door, Sunset bring wine', 'Blue Door, Sunset', 'Lunch bring wine', 'Blue Door, Sunset', ['place:@Blue Door, Sunset']],
   ])('%s, picked for %j', (text, picked, title, place, marks) => {
     const parsed = parseTitle(text, TODAY, CALENDARS, picked);
@@ -139,7 +138,7 @@ describe('places (v1: @ starts a place, up to the next phrase)', () => {
   });
 });
 
-describe('a task\'s #project (SV-25)', () => {
+describe('a task\'s #project', () => {
   const PROJECTS = ['Inbox', 'School', 'Home', 'Home Repairs'];
   test.each<[string, string | null, string, string | null, string[]]>([
     // The longest project name it starts with, any case; the rest is the title's.
@@ -166,7 +165,7 @@ describe('a task\'s #project (SV-25)', () => {
   });
 });
 
-describe('an event\'s #calendar (SV-25 D57)', () => {
+describe('an event\'s #calendar', () => {
   // In the list's order; two accounts can each have a Personal.
   const NAMES = ['Personal', 'School', 'Work', 'Work Shifts', 'Personal'];
   test.each<[string, string | null, string, string | null, string[]]>([
@@ -193,7 +192,7 @@ describe('an event\'s #calendar (SV-25 D57)', () => {
   });
 });
 
-describe('calendars (v1\'s "cal", now only by a calendar\'s name)', () => {
+describe('calendars ("cal", only by a calendar\'s name)', () => {
   test.each([
     ['Lecture cal classes', 'Lecture', 'Classes'],
     ['Interview cal Jobs fri 2pm', 'Interview', 'Jobs'],
@@ -202,7 +201,7 @@ describe('calendars (v1\'s "cal", now only by a calendar\'s name)', () => {
   ])('%s', (text, title, calendar) => expect(parse(text)).toMatchObject({title, calendar}));
 });
 
-describe('repeats (v1\'s recurrence clauses)', () => {
+describe('repeats (recurrence clauses)', () => {
   test.each([
     ['Gym every mon wed fri 7am', 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR', '2026-10-07', h(7)],
     ['Gym every mon, wed and fri', 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR', '2026-10-07', null],
@@ -238,7 +237,7 @@ describe('the date and time fields', () => {
   ])('date %s', (text, date) => expect(parseDay(text, TODAY)).toBe(date));
   test.each([
     ['7:00 PM', null, h(19)], ['7pm', null, h(19)], ['19:00', null, h(19)], ['7', h(19), h(19)], ['7:30', h(8), h(7, 30)], ['9', null, null], ['later', null, null],
-    // SV-25: shorthand, in the fields only ("Room 2026" in the line stays a title).
+    // Shorthand, in the fields only ("Room 2026" in the line stays a title).
     ['3p', null, h(15)], ['330p', null, h(15, 30)], ['930a', null, h(9, 30)], ['930 am', null, h(9, 30)], ['1230p', null, h(12, 30)], ['2130', null, h(21, 30)],
     ['930', h(19), h(21, 30)], ['0930', null, h(9, 30)], ['2460', null, null], ['1360p', null, null], ['3m', null, null],
   ])('time %s (from %s)', (text, from, minutes) => expect(parseClock(text, from)).toBe(minutes));
@@ -246,11 +245,11 @@ describe('the date and time fields', () => {
     ['9:00 PM', h(19), h(20), h(21)], ['9', h(19), h(20), h(21)], ['1:00 AM', h(23), h(24), h(25)], ['7:00 PM', h(19), h(20), h(43)], ['later', h(19), h(20), null],
   ])('end %s (start %i)', (text, start, end, minutes) => expect(parseEnd(text, start, end)).toBe(minutes));
   test.each([[h(19), '7:00 PM'], [0, '12:00 AM'], [h(12, 5), '12:05 PM'], [h(25), '1:00 AM']])('%i is %s', (minutes, label) => expect(clockLabel(minutes)).toBe(label));
-  test('SV-25: the Start list is the day in 15-minute steps', () => {
+  test('the Start list is the day in 15-minute steps', () => {
     const list = timeChoices();
     expect([list.length, list[0], list[1], list.at(-1)]).toEqual([96, {minutes: 0, label: '12:00 AM'}, {minutes: 15, label: '12:15 AM'}, {minutes: h(23, 45), label: '11:45 PM'}]);
   });
-  test('SV-25: the End list starts after the start, with lengths', () => {
+  test('the End list starts after the start, with lengths', () => {
     const list = timeChoices(h(9));
     expect(list.slice(0, 6).map(choice => choice.label)).toEqual([
       '9:15 AM (15 min)', '9:30 AM (30 min)', '9:45 AM (45 min)', '10:00 AM (1 hr)', '10:15 AM (1.25 hrs)', '10:30 AM (1.5 hrs)',
@@ -281,7 +280,7 @@ describe('the repeat field', () => {
   });
 });
 
-describe('F6b: a task\'s repeat, in Todoist\'s words', () => {
+describe('a task\'s repeat, in Todoist\'s words', () => {
   test.each([
     ['Wed, Oct 7', TODAY, null, ['Does not repeat', 'Every day', 'Every Wednesday', 'Every weekday', 'Every month', 'Every year']],
     ['Sun, Oct 11 keeps the task\'s own', '2026-10-11', 'every other fri', ['Does not repeat', 'Every day', 'Every Sunday', 'Every weekday', 'Every month', 'Every year', 'Every other Friday']],
@@ -291,7 +290,7 @@ describe('F6b: a task\'s repeat, in Todoist\'s words', () => {
   });
 });
 
-describe('SV-29: a task\'s repeat names its days as words', () => {
+describe('a task\'s repeat names its days as words', () => {
   test.each([
     [null, 'Does not repeat'],
     ['every sat', 'Every Saturday'],
@@ -306,7 +305,7 @@ describe('SV-29: a task\'s repeat names its days as words', () => {
   ])('%s', (repeat, label) => expect(describeTaskRepeat(repeat)).toBe(label));
 });
 
-describe('SV-25: a repeat typed for a task, in Todoist\'s words', () => {
+describe('a repeat typed for a task, in Todoist\'s words', () => {
   test.each([
     ['Water plants every mon', 'every mon'],
     ['Gym every mon, wed and fri', 'every mon, wed, fri'],
@@ -343,7 +342,7 @@ describe('whether a new draft has started (choice 14: E or New doesn\'t replace 
   ])('%s: %s', (_, drafts, started) => expect(draftStarted(drafts)).toBe(started));
 });
 
-describe('SV-29: a suggestion picked for the line completes its text, then a space', () => {
+describe('a suggestion picked for the line completes its text, then a space', () => {
   const at = (text: string, token: string) => {
     const start = text.indexOf(token);
     return [start, start + token.length] as const;
@@ -360,7 +359,7 @@ describe('SV-29: a suggestion picked for the line completes its text, then a spa
   });
 });
 
-describe('SV-71: a "#" or "@" just typed at the line\'s end opens its menu before anything is typed', () => {
+describe('a "#" or "@" just typed at the line\'s end opens its menu before anything is typed', () => {
   test.each<[string, string, '#' | '@', {start: number; query: string} | null]>([
     ['a lone # alone', '#', '#', {start: 0, query: ''}],
     ['a lone # after words', 'Pay bills #', '#', {start: 10, query: ''}],
@@ -377,7 +376,7 @@ describe('SV-71: a "#" or "@" just typed at the line\'s end opens its menu befor
   });
 });
 
-describe('SV-29: an event\'s days, from its first to its last', () => {
+describe('an event\'s days, from its first to its last', () => {
   const h = (hours: number) => hours * 60;
   test.each([
     ['all day, one day', null, null, 1, 0],
@@ -398,7 +397,7 @@ describe('SV-29: an event\'s days, from its first to its last', () => {
     ['a last day before the first is the first', '2026-10-23', '2026-10-20', null, null, {date: '2026-10-23', end: null, days: 1}],
   ])('%s', (_, from, to, start, end, span) => expect(spanTo(from, to, start, end)).toEqual(span));
 
-  test('the End list on the first day is No end, then the 24 hours after the start, with lengths (SV-78)', () => {
+  test('the End list on the first day is No end, then the 24 hours after the start, with lengths', () => {
     expect(endChoices(h(9), h(10))).toEqual([{minutes: h(9), label: 'No end'}, ...timeChoices(h(9))]);
   });
   test('on a later last day, it\'s No end, then that day\'s times, without lengths', () => {
@@ -412,7 +411,7 @@ describe('SV-29: an event\'s days, from its first to its last', () => {
     ['on the first day, before the start is the next', '8a', h(9), h(10), h(32)],
     ['on a later day, that day\'s time', '8a', h(9), h(48 + 10), h(48 + 8)],
     ['unreadable', 'soon', h(9), h(48 + 10), null],
-    ['"no end" is the start (SV-78)', 'no end', h(9), h(10), h(9)],
+    ['"no end" is the start', 'no end', h(9), h(10), h(9)],
     ['"none" too', ' None ', h(9), h(48 + 10), h(9)],
   ])('end %s', (_, text, start, end, minutes) => expect(readEnd(text, start, end)).toBe(minutes));
 
@@ -427,7 +426,7 @@ describe('SV-29: an event\'s days, from its first to its last', () => {
   ])('%s: %s', (_, text, days) => expect(parseDays(text, TODAY)).toEqual(days));
 });
 
-describe('a Title typed by hand rewrites the line\'s title words (UX #8)', () => {
+describe('a Title typed by hand rewrites the line\'s title words', () => {
   const rewrite = (text: string, title: string) => lineWithTitle(text, parse(text).marks, title);
   test.each([
     ['Coffee fri', 'Coffee with Ana', 'Coffee with Ana fri'],
@@ -445,7 +444,7 @@ describe('a Title typed by hand rewrites the line\'s title words (UX #8)', () =>
   });
 });
 
-describe('SV-90: an edited title reads only what the edit typed', () => {
+describe('an edited title reads only what the edit typed', () => {
   test.each<[string, string, {start: number; end: number}]>([
     ['Work', 'Work', {start: 4, end: 4}],
     // Typed beside a word, not into it.
@@ -461,7 +460,7 @@ describe('SV-90: an edited title reads only what the edit typed', () => {
   ])('%s → %s', (before, after, span) => expect(typedSpan(before, after)).toEqual(span));
 
   const edit = (before: string, text: string, day = '2026-10-14') => parseTitle(text, TODAY, CALENDARS, null, {kind: 'calendar', names: CALENDARS, picked: null}, {before, day});
-  test('Work at 3:45a (the issue\'s example): the time, and the title as it was', () => {
+  test('Work at 3:45a: the time, and the title as it was', () => {
     expect(edit('Work', 'Work at 3:45a')).toMatchObject({title: 'Work', start: h(3, 45), end: null, date: null});
   });
   test.each([
@@ -494,7 +493,7 @@ describe('SV-90: an edited title reads only what the edit typed', () => {
   });
 });
 
-describe('SV-90: an edited item\'s when', () => {
+describe('an edited item\'s when', () => {
   const timed = {date: '2026-10-14', start: h(3), end: h(8), days: 1};
   const none = {date: null, start: null, end: null};
   test.each<[string, Parameters<typeof editedWhen>[0], Parameters<typeof editedWhen>[1], 'event' | 'task', ReturnType<typeof editedWhen>]>([
@@ -512,7 +511,7 @@ describe('SV-90: an edited item\'s when', () => {
   ])('%s', (_name, item, read, kind, when) => expect(editedWhen(item, read, kind)).toEqual(when));
 });
 
-describe('SV-111: a length after "for" (D291, D292), events only', () => {
+describe('a length after "for", events only', () => {
   const task = (text: string) => parseTitle(text, TODAY, CALENDARS, null, {kind: 'project', names: ['Inbox', 'School', 'Home'], picked: null});
   test.each<[string, string, number | null, number | null, number | null, string]>([
     ['minutes', 'Run fri 7am for 15 min', h(7), h(7, 15), 15, 'fri 7am for 15 min'],
@@ -544,7 +543,7 @@ describe('SV-111: a length after "for" (D291, D292), events only', () => {
   });
 });
 
-describe('SV-111: a span of days (D292), events only', () => {
+describe('a span of days, events only', () => {
   const task = (text: string) => parseTitle(text, TODAY, CALENDARS, null, {kind: 'project', names: ['Inbox', 'School', 'Home'], picked: null});
   test.each<[string, string, string, number, string]>([
     ['a dash', 'Trip oct 23–25', '2026-10-23', 3, 'oct 23–25'],
@@ -600,7 +599,7 @@ describe('SV-111: a span of days (D292), events only', () => {
   });
 });
 
-describe('SV-111: an edited event\'s when, from a span or a length', () => {
+describe('an edited event\'s when, from a span or a length', () => {
   const timed = {date: '2026-10-14', start: h(3), end: h(8), days: 1};
   const none = {date: null, start: null, end: null};
   test.each<[string, Parameters<typeof editedWhen>[0], Parameters<typeof editedWhen>[1], 'event' | 'task', ReturnType<typeof editedWhen>]>([
@@ -611,7 +610,7 @@ describe('SV-111: an edited event\'s when, from a span or a length', () => {
   ])('%s', (_name, item, read, kind, when) => expect(editedWhen(item, read, kind)).toEqual(when));
 });
 
-describe('SV-112: reminder phrases (D293), with D291\'s units', () => {
+describe('reminder phrases, in minutes, hours, days and weeks', () => {
   const PROJECTS = ['Inbox', 'School', 'Home'];
   // A new event's moment, when the line reads no day or time: today at 9:00 AM.
   const base = {day: TODAY, time: h(9)};
@@ -649,7 +648,7 @@ describe('SV-112: reminder phrases (D293), with D291\'s units', () => {
     ['a time alone on the item\'s day, read later', 'Dinner remind me 6pm fri 7pm', 'Dinner', [{date: '2026-10-09', time: h(18)}], '2026-10-09', h(19)],
     ['on a day with "at"', 'Dinner oct 20 7pm remind on oct 19 at 8:30pm', 'Dinner', [{date: '2026-10-19', time: h(20, 30)}], '2026-10-20', h(19)],
     ['noon', 'Call mom remind fri noon', 'Call mom', [{date: '2026-10-09', time: h(12)}], null, null],
-    ['minutes with no colon (SV-116)', 'Call mom remind fri 745p', 'Call mom', [{date: '2026-10-09', time: h(19, 45)}], null, null],
+    ['minutes with no colon', 'Call mom remind fri 745p', 'Call mom', [{date: '2026-10-09', time: h(19, 45)}], null, null],
   ])('a moment, %s: %s', (_, text, title, reminders, date, start) => {
     expect(read(text)).toMatchObject({title, reminders, date, start});
   });
@@ -728,8 +727,8 @@ describe('SV-112: reminder phrases (D293), with D291\'s units', () => {
   });
 });
 
-describe('SV-113: relative days (D294)', () => {
-  // The issue's Mon, Oct 26, 2026; a Saturday that is a month's last day; a Sunday; month ends.
+describe('relative days', () => {
+  // Mon, Oct 26, 2026; a Saturday that is a month's last day; a Sunday; month ends.
   const MON = '2026-10-26';
   const SAT = '2026-10-31';
   const SUN = '2026-11-01';
@@ -779,7 +778,7 @@ describe('SV-113: relative days (D294)', () => {
   });
 });
 
-describe('SV-113: when a repeat ends (D294), only after one', () => {
+describe('when a repeat ends, only after one', () => {
   const MON = '2026-10-26';
   const on = (text: string, today = MON) => parseTitle(text, today, CALENDARS);
   const task = (text: string, today = MON) => parseTitle(text, today, CALENDARS, null, {kind: 'project', names: ['Inbox', 'School', 'Home'], picked: null});
@@ -801,7 +800,7 @@ describe('SV-113: when a repeat ends (D294), only after one', () => {
     ['Rent monthly for 3 months', '2026-10-26', 'RRULE:FREQ=MONTHLY;UNTIL=20270125', 'monthly for 3 months'],
     ['Gym every fri 7am for 2 weeks', '2026-10-30', 'RRULE:FREQ=WEEKLY;BYDAY=FR;UNTIL=20261112', 'every fri 7am for 2 weeks'],
     ['Rent monthly nov 30 for 3 months', '2026-11-30', 'RRULE:FREQ=MONTHLY;UNTIL=20270227', 'monthly nov 30 for 3 months'],
-    // And years (Andy, 2026-11-05: "every tuesday for 2 years" stayed words).
+    // And years (2026-11-05: "every tuesday for 2 years" stayed words).
     ['Class every tuesday for 2 years', '2026-10-27', 'RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20281026', 'every tuesday for 2 years'],
     ['Checkup yearly for 1 year', '2026-10-26', 'RRULE:FREQ=YEARLY;UNTIL=20271025', 'yearly for 1 year'],
   ])('%s', (text, date, recurrence, when) => {
@@ -851,9 +850,9 @@ describe('SV-113: when a repeat ends (D294), only after one', () => {
   });
 });
 
-describe('SV-208: a length in whole days with a time is that time each day over them', () => {
-  // Andy, 2026-11-05: "Gym 7am for 3 weeks" is 7 AM every day for three weeks, as a span of days with
-  // a time repeats each day (SV-111); hours still make one long event ("for 48h").
+describe('a length in whole days with a time is that time each day over them', () => {
+  // "Gym 7am for 3 weeks" is 7 AM every day for three weeks, as a span of days with
+  // a time repeats each day; hours still make one long event ("for 48h").
   const MON = '2026-10-26';
   const on = (text: string) => parseTitle(text, MON, CALENDARS);
   test.each<[string, string, number, number | null, string | null, string]>([
@@ -873,7 +872,7 @@ describe('SV-208: a length in whole days with a time is that time each day over 
   });
 });
 
-describe('SV-113: a length in days with no time is all day over them (D298)', () => {
+describe('a length in days with no time is all day over them', () => {
   const MON = '2026-10-26';
   const on = (text: string) => parseTitle(text, MON, CALENDARS);
   test.each<[string, string | null, number, string]>([
@@ -888,7 +887,7 @@ describe('SV-113: a length in days with no time is all day over them (D298)', ()
     expect(on(text).marks.map(mark => text.slice(mark.start, mark.end))).toEqual([when]);
   });
   test.each<[string, number | null, number | null, number]>([
-    // Hours, part days and a time typed keep SV-111's timed length.
+    // Hours, part days and a time typed keep a timed length.
     ['Trip fri for 1.5 days', null, null, 2160],
     ['Trip fri for 1 day 3h', null, null, 1620],
     ['Trip fri 9am for 48h', h(9), h(9) + 2880, 2880],

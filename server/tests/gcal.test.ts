@@ -22,7 +22,7 @@ const CLASSES = 'classes@group.calendar.google.com';
 import {fakeNtfy} from './fakeNtfy.ts';
 import {liveEvents, world} from './helpers.ts';
 
-// SV-264: a description as Google Calendar's own editor writes one (read from a real event, 2026-11-10): lines joined by
+// A description as Google Calendar's own editor writes one (read from a real event, 2026-11-10): lines joined by
 // <br> with no paragraphs, lists straight after a line, and an empty tag left behind.
 const GOOGLE_DESCRIPTION = '<b>Bring</b> the signed form<br><i>Room 204</i><br><u>Arrive early</u><br><ol><li><i>Check in</i></li><li>Badge</li></ol><ul><li>Laptop</li></ul><br><a href="https://example.com/visit">https://example.com/visit</a><i></i>';
 
@@ -105,7 +105,7 @@ describe('the mirror', () => {
     expect(reads.map(request => [request.query.get('syncToken') !== null, request.query.get('timeMin') !== null])).toEqual([[true, false], [false, true]]);
   });
 
-  test('SV-179: an event\'s own URL (source.url) is kept and is its link, unless its location has one; a change here keeps it in Google', async () => {
+  test('an event\'s own URL (source.url) is kept and is its link, unless its location has one; a change here keeps it in Google', async () => {
     const {w, google, run, day, command} = await calendarWorld();
     google.put(PERSONAL, {id: 'talk', summary: 'Keynote', location: 'Hall B', source: {url: 'https://conf.example.org/talks/keynote', title: 'Fall conference'},
       start: {dateTime: zoned('2026-10-08', '09:00')}, end: {dateTime: zoned('2026-10-08', '10:00')}});
@@ -126,7 +126,7 @@ describe('the mirror', () => {
     expect(day('2026-10-08').find(item => item.title === 'Opening keynote')!.link).toBe('https://conf.example.org/talks/keynote');
   });
 
-  test('SV-180: an event\'s free/busy (transparency) is kept, busy when Google leaves it out; a change here keeps it in Google', async () => {
+  test('an event\'s free/busy (transparency) is kept, busy when Google leaves it out; a change here keeps it in Google', async () => {
     const {w, google, run, day, command} = await calendarWorld();
     google.put(PERSONAL, {id: 'track-a', summary: 'Workshop A', transparency: 'transparent',
       start: {dateTime: zoned('2026-10-08', '09:00')}, end: {dateTime: zoned('2026-10-08', '10:00')}});
@@ -149,12 +149,12 @@ describe('the mirror', () => {
     expect(day('2026-10-08').find(item => item.title === 'Workshop A: tooling')!.transparency).toBe('opaque');
   });
 
-  test('SV-264: an event\'s description is kept as Google wrote it, none is null, and a row from before it was read gets its own on the daily full read', async () => {
+  test('an event\'s description is kept as Google wrote it, none is null, and a row from before it was read gets its own on the daily full read', async () => {
     const {w, google, run, item, day} = await calendarWorld();
     google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, description: GOOGLE_DESCRIPTION});
     await run();
     expect(day('2026-10-09').map(entry => [entry.title, entry.description])).toEqual([['Gym', null], ['Dinner with Sam', GOOGLE_DESCRIPTION]]);
-    // As a row synced before SV-264 holds it: nothing changes in Google, so only a full read names the event again.
+    // As a row synced before descriptions were kept holds it: nothing changes in Google, so only a full read names the event again.
     w.store.db.update(t.items).set({description: null}).where(eq(t.items.id, item('dinner').id)).run();
     w.advance(16 * 60_000);
     await run();
@@ -172,7 +172,7 @@ describe('the mirror', () => {
     expect(google.requests.some(request => request.query.get('pageToken') === '50')).toBe(true);
   });
 
-  test('SV-9: a calendar on two accounts\' lists (Personal shared in, Holidays) syncs under each account, with its own items', async () => {
+  test('a calendar on two accounts\' lists (Personal shared in, Holidays) syncs under each account, with its own items', async () => {
     const {w, google, run, account, source} = await calendarWorld();
     google.addCalendar({id: 'work@example.net', summary: 'Work', backgroundColor: '#9a9cff', primary: true}, ['refresh-work']);
     google.put('work@example.net', {id: 'standup', summary: 'Standup', start: {dateTime: zoned('2026-10-09', '09:00')}, end: {dateTime: zoned('2026-10-09', '09:15')}});
@@ -227,7 +227,7 @@ describe('changes through the command layer', () => {
     expect(titles('2026-10-08')).toEqual(['Coffee with Priya 10:00 AM']);
   });
 
-  test('SV-109 (D287): Google is written only the before-reminders; a sync keeps the after-ones and brings Google\'s before-ones', async () => {
+  test('Google is written only the before-reminders; a sync keeps the after-ones and brings Google\'s before-ones', async () => {
     const {w, google, run, item, day, command} = await calendarWorld();
     await run();
     const changed = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {reminders: [-120, 30]}}));
@@ -297,7 +297,7 @@ describe('changes through the command layer', () => {
     }));
     await run();
     expect(command(moved.id).state).toBe('confirmed');
-    // v1 moved the series' start to the edited occurrence; v2 shifts it by the change (Aug 31 + 1 day).
+    // The series' start shifts by the change (Aug 31 + 1 day), not to the edited occurrence.
     expect(google.event(PERSONAL, 'gym')).toMatchObject({start: {dateTime: zoned('2026-09-01', '07:00'), timeZone: 'America/Los_Angeles'}, recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO,TH,FR']});
     w.advance(25 * 3600_000);
     await run();
@@ -333,7 +333,7 @@ describe('changes through the command layer', () => {
     expect(titles('2026-10-10')).toEqual(['Dinner with Sam 7:00 PM']);
   });
 
-  test('SV-117: all day to timed and back clears the other kind of time at Google, which a patch would otherwise merge in and refuse', async () => {
+  test('all day to timed and back clears the other kind of time at Google, which a patch would otherwise merge in and refuse', async () => {
     const {w, google, run, command, day} = await calendarWorld();
     google.put(PERSONAL, {id: 'exilecon', summary: 'ExileCon 2026', start: {date: '2026-10-09'}, end: {date: '2026-10-11'}});
     await run();
@@ -401,7 +401,7 @@ describe('changes through the command layer', () => {
     expect(() => updateItem(w.store, item('birthday1').id, itemUpdateInput.parse({changes: {title: 'x'}}))).toThrow(/be changed here/);
   });
 
-  test('F6: an event\'s own colour reads from Google\'s colorId and is written back only when it changes', async () => {
+  test('an event\'s own colour reads from Google\'s colorId and is written back only when it changes', async () => {
     const {w, google, run, item, calendar, command, day} = await calendarWorld();
     google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, colorId: '1'});
     await run();
@@ -439,7 +439,7 @@ describe('changes through the command layer', () => {
     expect(day('2026-10-08').find(entry => entry.title === 'Coffee')!.colour).toBe('sun');
   });
 
-  test('SV-264: a description is written to Google only when it changes, as given; null clears it; a new event carries its own', async () => {
+  test('a description is written to Google only when it changes, as given; null clears it; a new event carries its own', async () => {
     const {w, google, run, item, calendar, command, day} = await calendarWorld();
     google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, description: GOOGLE_DESCRIPTION});
     await run();
@@ -478,7 +478,7 @@ describe('changes through the command layer', () => {
     expect(day('2026-10-09').find(entry => entry.title === 'Dinner with Sam and Jo')!.description).toBeNull();
   });
 
-  test('SV-264: a series\' description goes with its occurrences: one changed alone is written on that occurrence, and the new series of This and following carries the series\' own', async () => {
+  test('a series\' description goes with its occurrences: one changed alone is written on that occurrence, and the new series of This and following carries the series\' own', async () => {
     const {w, google, run, item, command} = await calendarWorld();
     google.put(PERSONAL, {...google.event(PERSONAL, 'gym')!, description: 'Locker <b>114</b>'});
     await run();
@@ -496,7 +496,7 @@ describe('changes through the command layer', () => {
     expect(series).toEqual([expect.objectContaining({description: 'Locker <b>114</b>'})]);
   });
 
-  test('SV-264: a description change Google refuses is kept in place through a sync, as any held change is; Move back restores Google\'s', async () => {
+  test('a description change Google refuses is kept in place through a sync, as any held change is; Move back restores Google\'s', async () => {
     const {w, google, run, item, command} = await calendarWorld();
     google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, description: GOOGLE_DESCRIPTION});
     await run();
@@ -515,7 +515,7 @@ describe('changes through the command layer', () => {
     expect(item('dinner').description).toBe('Changed in Google');
   });
 
-  test('SV-31: an event\'s Time to Leave reads from its private property, is written with every change, and is off for a new event', async () => {
+  test('an event\'s Time to Leave reads from its private property, is written with every change, and is off for a new event', async () => {
     const {w, google, run, item, calendar, command} = await calendarWorld();
     google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, extendedProperties: {private: {setpointTimeToLeave: 'on'}}});
     await run();
@@ -548,7 +548,7 @@ describe('changes through the command layer', () => {
     expect([lunch.leaveReminder, google.event(PERSONAL, lunch.providerId)!.extendedProperties]).toEqual([true, {private: {setpointTimeToLeave: 'on'}}]);
   });
 
-  test('F6b: to another calendar: events.move with the etag, then the rest of the change there; the mirror follows', async () => {
+  test('a move to another calendar: events.move with the etag, then the rest of the change there; the mirror follows', async () => {
     const {w, google, run, item, calendar, command, day, titles} = await calendarWorld();
     google.addCalendar({id: CLASSES, summary: 'Classes', backgroundColor: '#9fe1e7'});
     await run();
@@ -569,7 +569,7 @@ describe('changes through the command layer', () => {
     expect(day('2026-10-09').find(entry => entry.title === 'Dinner with Sam and Jo')!.calendar_id).toBe(calendar(CLASSES).id);
   });
 
-  test('F6b: a move whose answer was lost: the retry finds the event already in the other calendar, and moves nothing twice', async () => {
+  test('a move whose answer was lost: the retry finds the event already in the other calendar, and moves nothing twice', async () => {
     const {w, google, run, item, calendar, command} = await calendarWorld();
     google.addCalendar({id: CLASSES, summary: 'Classes', backgroundColor: '#9fe1e7'});
     await run();
@@ -591,7 +591,7 @@ describe('changes through the command layer', () => {
     expect(w.store.db.select().from(t.items).where(eq(t.items.providerId, 'dinner')).get()).toMatchObject({calendarId: calendar(CLASSES).id, etag: google.event(CLASSES, 'dinner')!.etag});
   });
 
-  test('F6b: a move refused with 412 (changed elsewhere) or 409 fails in place in Google\'s words; Move back and Try again', async () => {
+  test('a move refused with 412 (changed elsewhere) or 409 fails in place in Google\'s words; Move back and Try again', async () => {
     const {w, google, run, item, calendar, command, day} = await calendarWorld();
     google.addCalendar({id: CLASSES, summary: 'Classes', backgroundColor: '#9fe1e7'});
     await run();
@@ -619,7 +619,7 @@ describe('changes through the command layer', () => {
     expect(google.event(CLASSES, 'dinner')).toMatchObject({summary: 'Dinner with Sam (moved inside)', status: 'confirmed'});
   });
 
-  test('F6b: a repeating event moves as a series: All events moves it whole, This and following starts a new one there, one occurrence is refused', async () => {
+  test('a repeating event moves as a series: All events moves it whole, This and following starts a new one there, one occurrence is refused', async () => {
     const {w, google, run, item, calendar, command, titles, day} = await calendarWorld();
     google.addCalendar({id: CLASSES, summary: 'Classes', backgroundColor: '#9fe1e7'});
     await run();
@@ -653,7 +653,7 @@ describe('changes through the command layer', () => {
   });
 });
 
-describe('SV-20: a calendar\'s colour, written to Google', () => {
+describe('a calendar\'s colour, written to Google', () => {
   const forbidden = {status: 403, body: {error: {code: 403, message: 'The caller does not have permission', errors: [{domain: 'global', reason: 'forbidden'}]}}};
 
   test('picked in Settings: shown at once, pending until Google confirms, written as RGB on the calendar list, and read back as the same swatch', async () => {
@@ -714,7 +714,7 @@ describe('SV-20: a calendar\'s colour, written to Google', () => {
     expect(google.calendar(PERSONAL)!.backgroundColor).toBe('#f5ab77');
   });
 
-  test('a consent without calendar-list write (v1\'s carried-over tokens) fails only the colour, in place, saying to reconnect; the account stays healthy and events still write', async () => {
+  test('a consent without calendar-list write (an older consent\'s tokens) fails only the colour, in place, saying to reconnect; the account stays healthy and events still write', async () => {
     const {w, google, run, calendar, command, item, source, gmail} = await calendarWorld();
     const ntfy = await fakeNtfy();
     updateSettings(w.store, {notifications: {ntfy_server: ntfy.url}});
@@ -755,7 +755,7 @@ describe('Google\'s errors', () => {
     w.advance(60 * 60_000);
     await run();
     expect(ntfy.published).toHaveLength(1);
-    // Reconnecting Gmail (B2's flow) reconnects Calendar: one consent, written to both.
+    // Reconnecting Gmail reconnects Calendar: one consent, written to both.
     connectPersonal(w.store, account.id);
     expect(health().state).not.toBe('needs_reconnect');
   });

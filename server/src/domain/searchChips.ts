@@ -1,10 +1,10 @@
 // The chip grammar: words that name an organisation, a type, a date or range, an account or a kind
 // become chips that filter exactly. `northwind rejection march` becomes Org Northwind · Type
 // Rejection · Date Mar 2026. Words that form no chip stay free text, and so does anything in
-// "quotes". A "!" before a word negates it (SV-31): `!confirmation` is a Not Type Confirmation chip,
+// "quotes". A "!" before a word negates it: `!confirmation` is a Not Type Confirmation chip,
 // and a "!word" that forms no chip stays in the text, where search leaves out the mail that has it.
 //
-// Mail's field no longer runs all of it: a word typed there stays a word (D392). What's left is a
+// Mail's field no longer runs all of it: a word typed there stays a word. What's left is a
 // "!word", any time; dates for a suggestion (src/search/reading.ts); and Alfred's searches, whole.
 // Calendar search keeps its own words on `parseChips` below.
 //
@@ -33,7 +33,7 @@ export interface ChipContext extends ChipVocabulary {
   timeZone: string;
   // What plain words form: every chip (Alfred's), only dates, the rest staying text for search to
   // rank (a suggestion), or nothing (the field). A word after "!" is the whole grammar's in each,
-  // since it says what it leaves out as exactly as it did (SV-31, SV-138).
+  // since it says what it leaves out as exactly as it did.
   fromWords?: 'all' | 'dates' | 'none';
 }
 
@@ -74,7 +74,7 @@ export const TYPE_WORDS: Record<string, MessageType> = {
   newsletter: 'newsletter', newsletters: 'newsletter',
   statement: 'statement', statements: 'statement',
 };
-/** The words that say an email is of a type, as a reading's type chip looks for them (D386). */
+/** The words that say an email is of a type, as a reading's type chip looks for them. */
 export const TYPE_CHIP_WORDS: Record<MessageType, string[]> = {
   confirmation: ['confirmation', 'confirmed'], rejection: ['rejection', 'rejected'], receipt: ['receipt'], shipping: ['shipping', 'shipped', 'shipment'], deadline: ['deadline'],
   reminder: ['reminder'], verification_code: ['verification', 'code'], alert: ['alert'], newsletter: ['newsletter'], statement: ['statement', 'bill'],
@@ -167,7 +167,7 @@ function pastDay(month: number, day: number, today: string): string | null {
   return null;
 }
 
-/** The Sunday a day's week starts on, as the calendar's weeks do (SV-29). */
+/** The Sunday a day's week starts on, as the calendar's weeks do. */
 const weekStart = (date: string) => addDays(date, -new Date(`${date}T00:00:00.000Z`).getUTCDay());
 
 /** A reference Date whose local wall clock is today at noon, for Chrono (which reads wall clocks). */

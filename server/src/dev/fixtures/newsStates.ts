@@ -1,4 +1,4 @@
-// N5's fixtures (SV decision D3): News's states the seed doesn't have, for boards 29a, 29b and 30b
+// News's states the seed doesn't have, for boards 29a, 29b and 30b
 // and the News and Settings browser checks. Registered in index.ts. Everything here is invented and
 // reaches no model or feed: the articles waiting to be sorted come from sources no adapter reads
 // outside production (`.example` addresses), sorting's next try is held far ahead, so nothing asks a

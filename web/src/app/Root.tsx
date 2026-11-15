@@ -1,9 +1,9 @@
-// The top: until GET /api/me answers, Setpoint's mark once the start takes a moment (Boot, #233);
+// The top: until GET /api/me answers, Setpoint's mark once the start takes a moment (Boot);
 // then the app with live updates while the user is signed in, or the sign-in card, which fade in
 // after the mark. A 401 later swaps the app for the card and keeps the address. Setpoint unreachable
 // at launch shows the mark and the offline pill, and asks again every few seconds, and as soon as
-// the network is back, until it answers (DESIGN.md › Health and states). Signing in, the card stays
-// over the app for the 180 ms it takes to scale away while the app fades in (states-14).
+// the network is back, until it answers. Signing in, the card stays
+// over the app for the 180 ms it takes to scale away while the app fades in.
 import {useEffect, useState} from 'react';
 import {checkSession, useAuth} from '../api/auth.ts';
 import {RECONNECT_MS, startLive, stopLive} from '../api/live.ts';

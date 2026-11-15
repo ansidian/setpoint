@@ -1,14 +1,12 @@
-// Credentials at rest: AES-256-GCM with a fresh v2 format and key (BUILD-PLAN.md › B1 › Secrets),
-// adapted from v1's credential encryption (server/platform/encryption.ts; harvest notes on SV-2).
+// Credentials at rest: AES-256-GCM with its own format and key.
 //
 //   sp2:<key id>:<iv>:<ciphertext>:<tag>       base64url parts; the key id is 8 hex characters
 //
-// Kept from v1: a 256-bit key given as 64 hex characters or base64; a fresh 96-bit IV per value;
+// A 256-bit key given as 64 hex characters or base64; a fresh 96-bit IV per value;
 // additional authenticated data binding each value to where it's stored (table, field, record), so
 // a ciphertext copied to another row or field won't decrypt; one error for anything that doesn't
-// decrypt, without saying why. New in v2: the key's id in each value, so a value written under
-// another key says so instead of failing as "tampered". v1's `gcm:` values aren't read here: B7's
-// export decrypts them with v1's own code and v2 re-encrypts them.
+// decrypt, without saying why; and the key's id in each value, so a value written under another key
+// says so instead of failing as "tampered". Only `sp2:` values are read.
 import {createCipheriv, createDecipheriv, createHash, randomBytes} from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';

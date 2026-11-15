@@ -1,4 +1,4 @@
-// B3's Done-when: the recorded fixture set triages to its expected lanes with the models faked at
+// The recorded fixture set triages to its expected lanes with the models faked at
 // the HTTP boundary, through the real worker, pipeline, rules and policy.
 import {describe, expect, test, vi} from 'vitest';
 import * as t from '../src/db/schema.ts';

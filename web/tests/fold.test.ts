@@ -42,7 +42,7 @@ describe('the list while it changes', () => {
       ['group:attention', 'attention:1', 'attention:2+', 'attention:3']],
     ['Undo while it still folds out', ['group:attention', 'attention:1', 'attention:2-', 'attention:3'], ['group:attention', 'attention:1', 'attention:2', 'attention:3'], [2],
       ['group:attention', 'attention:1', 'attention:2+', 'attention:3']],
-    // An entry back before its fold out ends opens again, rather than staying closed (SV-25).
+    // An entry back before its fold out ends opens again, rather than staying closed.
     ['a row back while it still folds out, by a refresh', ['group:attention', 'attention:1', 'attention:2-'], ['group:attention', 'attention:1', 'attention:2'], [],
       ['group:attention', 'attention:1', 'attention:2+']],
     ['a collapsed group\'s header back while it still folds out', ['group:attention', 'attention:1', 'group:noise-'], ['group:attention', 'attention:1', 'group:noise'], [],
@@ -61,7 +61,7 @@ describe('the list while it changes', () => {
       .toEqual(['group:career', 'career:4', 'career:5', 'group:pinned', 'pinned:4']);
   });
 
-  // inbox-14: a group opens and closes like a drawer, its rows folding, never shown before or not.
+  // A group opens and closes like a drawer, its rows folding, never shown before or not.
   const drawer = {
     folds: () => true,
     arrives: () => true,

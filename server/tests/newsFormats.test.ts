@@ -1,4 +1,4 @@
-// News's sources' formats (N2), each parsed from fixtures invented in its real shape (fixtures/news/):
+// News's sources' formats, each parsed from fixtures invented in its real shape (fixtures/news/):
 // RSS 2.0 with Media RSS, Atom, RSS 1.0, Google News search, article pages (readable text and
 // og:image, or none), a news page's listed posts, release notes' dated sections, NWS alerts, USGS
 // earthquakes, Cal Fire incidents, AirNow's reporting-area file and Algolia's Hacker News search.
@@ -62,7 +62,7 @@ describe('feeds', () => {
     expect(feed.items.map(item => item.published)).toEqual(['Wed, 22 Jan 2025 07:00:00 GMT -08:00', 'Fri, 09 Oct 2026 07:00:00 GMT -07:00']);
   });
 
-  test('the first inline image when there\'s nothing else, and only an absolute one (v1)', () => {
+  test('the first inline image when there\'s nothing else, and only an absolute one', () => {
     const atom = (content: string) => `<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>T</title><link href="${BASE}/a"/><content type="html">${content}</content></entry></feed>`;
     expect(parseFeed(atom('&lt;img src="https://cdn.example.com/hero.jpg"&gt;&lt;p&gt;Body&lt;/p&gt;'), BASE).items[0]!.imageUrl).toBe('https://cdn.example.com/hero.jpg');
     expect(parseFeed(atom('&lt;img src="/relative.jpg"&gt;'), BASE).items[0]!.imageUrl).toBeNull();
@@ -110,7 +110,7 @@ describe('article pages', () => {
     ]);
   });
 
-  test('a public broadcaster\'s article: its lists kept as items, its membership appeals left out (the polish audit\'s extra-10)', () => {
+  test('a public broadcaster\'s article: its lists kept as items, its membership appeals left out', () => {
     const page = extractArticle(newsFixture('public-media-article.html', BASE), `${BASE}/news/cooling-centers/`);
     expect(page.text!.split('\n\n')).toEqual([
       'The county opened cooling centers in every district on Monday as afternoon temperatures were forecast to pass 105 degrees through Thursday, officials said.',
@@ -150,7 +150,7 @@ describe('article pages', () => {
     expect(extractArticle(newsFixture('wall.html', BASE), `${BASE}/story/1`)).toEqual({text: null, imageUrl: `${BASE}/images/wall-og.jpg`});
   });
 
-  test('a video page whose only text is the station\'s other videos has no text, and keeps its image (SV-166)', () => {
+  test('a video page whose only text is the station\'s other videos has no text, and keeps its image', () => {
     expect(extractArticle(newsFixture('video-page.html', BASE), `${BASE}/video/insurance-delays/`)).toEqual({text: null, imageUrl: `${BASE}/images/insurance-video-og.jpg`});
   });
 
@@ -175,7 +175,7 @@ describe('article pages', () => {
     const body = 'The county board voted 4 to 1 on Tuesday to approve the housing project near the station, which will add 300 homes.\nConstruction is expected to start next spring and take two years, the developer said in a statement after the vote.';
     const html = `<html><head><script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@graph': [{'@type': 'NewsArticle', articleBody: body, image: {url: `${BASE}/ld.jpg`}}]})}</script></head><body><div id="app"></div></body></html>`;
     expect(extractArticle(html, `${BASE}/a`)).toEqual({text: body.replace('\n', '\n\n'), imageUrl: `${BASE}/ld.jpg`});
-    // One that's only the outlet's other headlines isn't the article either (SV-166).
+    // One that's only the outlet's other headlines isn't the article either.
     const headlines = ['Fabrikam Ridge homeowners face insurance delays after the brush fire', 'County prosecutors charge six Contoso residents accused of filing false permits', 'Northwind mayoral candidates make final campaign stops with days to go'].join('\n');
     expect(extractArticle(html.replace(JSON.stringify(body), JSON.stringify(headlines)), `${BASE}/a`).text).toBeNull();
   });

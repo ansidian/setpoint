@@ -1,34 +1,34 @@
-// Jobs's API (after News; BRIEF.md › Jobs; DESIGN.md › Jobs, boards 32–40; darma D303–D327). Outputs
-// are Zod schemas as well as types, so tests and the seed check the shapes the page draws from.
+// Jobs's API (after News; boards 32–40). Outputs are Zod schemas as well as types, so tests and the
+// seed check the shapes the page draws from.
 //
 //   GET  /api/jobs                       JobsPageOut (the two numbers, Needs you, From history, the rows)
 //   GET  /api/jobs/applications/:id      ApplicationOut (the detail: its JD, timeline, Applied before)
-//   POST /api/jobs/applications/:id/lookup  ApplicationOut, 202 (J3: Look it up)
-//   POST /api/jobs/applications/:id/lookup/stop  ApplicationOut (SV-170: stopped to paste the posting)
-//   GET  /api/jobs/settings              JobsSettingsOut (J4, drawn in J8: Settings › Jobs)
-//   PATCH /api/jobs/settings             jobsSettingsPatchInput → JobsSettingsOut (J4: turning Jobs on starts the history pass)
-//   POST /api/jobs/from-history/dismiss  JobsDismissedOut (J4: Dismiss all, the same as ignoring each item)
-//   POST /api/jobs/from-history/undo     jobsUndoDismissInput → JobsDismissedOut (J4: the toast's Undo)
-//   GET  /api/jobs/search?q=…            JobsSearchOut (J5: company or role first, then JD text)
-//   GET  /api/jobs/nav                   JobsNavOut (J5: the sidebar's and the rail's item, ⌘K's Go to and `4`)
-//   GET  /api/jobs/mail?messages=1,2,3   JobsMailOut (J7: what mail's slots draw for a page of rows, or the email open)
-//   GET  /api/jobs/ai                    JobsAiOut (J8: Settings › AI's Jobs group and its row in Usage this month)
-//   GET  /api/jobs/movement              JobsMovementOut (SV-220: the empty pane's recent movement)
-//   POST /api/jobs/check                 jobsCheckInput → JobsCheckOut (SV-173: the browser extension's, with its own token, not the session)
+//   POST /api/jobs/applications/:id/lookup  ApplicationOut, 202 (Look it up)
+//   POST /api/jobs/applications/:id/lookup/stop  ApplicationOut (stopped to paste the posting)
+//   GET  /api/jobs/settings              JobsSettingsOut (Settings › Jobs)
+//   PATCH /api/jobs/settings             jobsSettingsPatchInput → JobsSettingsOut (turning Jobs on starts the history pass)
+//   POST /api/jobs/from-history/dismiss  JobsDismissedOut (Dismiss all, the same as ignoring each item)
+//   POST /api/jobs/from-history/undo     jobsUndoDismissInput → JobsDismissedOut (the toast's Undo)
+//   GET  /api/jobs/search?q=…            JobsSearchOut (company or role first, then JD text)
+//   GET  /api/jobs/nav                   JobsNavOut (the sidebar's and the rail's item, ⌘K's Go to and `4`)
+//   GET  /api/jobs/mail?messages=1,2,3   JobsMailOut (what mail's slots draw for a page of rows, or the email open)
+//   GET  /api/jobs/ai                    JobsAiOut (Settings › AI's Jobs group and its row in Usage this month)
+//   GET  /api/jobs/movement              JobsMovementOut (the empty pane's recent movement)
+//   POST /api/jobs/check                 jobsCheckInput → JobsCheckOut (the browser extension's, with its own token, not the session)
 //
-// J6's answers and corrections each answer JobsChangeOut, whose `undo` the toast's Undo sends back:
+// The answers and corrections each answer JobsChangeOut, whose `undo` the toast's Undo sends back:
 //   POST   /api/jobs/applications/:id/jd/pick           jobsPickInput (a JD to confirm, Choose…, or after Not this posting)
 //   POST   /api/jobs/applications/:id/jd/none           None of these
 //   POST   /api/jobs/applications/:id/jd/paste          jobsPasteInput (Paste the posting)
 //   POST   /api/jobs/needs-you/:id/assign               jobsAssignInput (Assign to…, Another application…)
-//   POST   /api/jobs/needs-you/:id/track                Track this (decision 69)
+//   POST   /api/jobs/needs-you/:id/track                Track this
 //   POST   /api/jobs/needs-you/:id/not-a-job            Not about a job
 //   PATCH  /api/jobs/applications/:id                   jobsEditInput (the title in place, the company from More, the JD's location)
 //   POST   /api/jobs/applications/:id/status            jobsStatusInput (Set status; null is Let emails decide)
 //   POST   /api/jobs/applications/:id/merge             jobsMergeInput (Merge with…: the other comes into this one)
-//   POST   /api/jobs/applications/:id/pin               jobsPinInput (Pin or Unpin: the Pinned shelf, SV-243)
+//   POST   /api/jobs/applications/:id/pin               jobsPinInput (Pin or Unpin: the Pinned shelf)
 //   POST   /api/jobs/applications/:id/not-this-posting  the JD goes, its other candidates offered
-//   POST   /api/jobs/applications/:id/not-an-application  hidden, its emails blocked (decision 67)
+//   POST   /api/jobs/applications/:id/not-an-application  hidden, its emails blocked
 //   DELETE /api/jobs/applications/:id                   forgotten, so a later email can make it again
 //   POST   /api/jobs/events/:id/move                    jobsMoveInput (Move to…)
 //   POST   /api/jobs/events/:id/not-about-this          back into Needs you
@@ -36,7 +36,7 @@
 //
 // Every change goes out as a `jobs` live event (JobsLiveEvent). Ages are instants and dates are
 // local; the page words them ("Today", "2h", "no email in 48 days"). Jobs never counts anything in the
-// Inbox (D313).
+// Inbox.
 import {z} from 'zod';
 import {id, instant, localDate} from '../api/common.ts';
 import {
@@ -61,10 +61,10 @@ export const jdSummarySchema = z.strictObject({
   candidates: z.int().nonnegative(),
   // When a lookup last ended (`not_found`: "had nothing for it on Oct 1") or began (`looking`).
   looked_at: instant.nullable(),
-  // The saved posting's link, for a row's Open posting and Copy posting link (J6). On `not_found`,
-  // the posting the user picked that Jobs couldn't read (SV-132). Null otherwise.
+  // The saved posting's link, for a row's Open posting and Copy posting link. On `not_found`,
+  // the posting the user picked that Jobs couldn't read. Null otherwise.
   link: z.url().nullable(),
-  // `not_found` because the user stopped the lookup to paste the posting (SV-170): "Lookup stopped".
+  // `not_found` because the user stopped the lookup to paste the posting: "Lookup stopped".
   stopped: z.boolean(),
 });
 export type JdSummaryOut = z.infer<typeof jdSummarySchema>;
@@ -81,7 +81,7 @@ export const applicationLinkSchema = z.strictObject({
 });
 export type ApplicationLinkOut = z.infer<typeof applicationLinkSchema>;
 
-/** One row of the table (DESIGN.md › The table). */
+/** One row of the table. */
 export const applicationRowSchema = z.strictObject({
   id,
   company: z.string(),
@@ -100,14 +100,14 @@ export const applicationRowSchema = z.strictObject({
   // The latest step as the email states it ("Interview Tue Oct 13, 2:00 PM"), In process only.
   step: z.string().nullable(),
   step_at: instant.nullable(),
-  // Applied with no email for 30 days or more (decision 55), and how many: "no email in 48 days".
+  // Applied with no email for 30 days or more, and how many: "no email in 48 days".
   ghosted: z.boolean(),
   days_without_email: z.int().nonnegative(),
   reapplied_from: applicationLinkSchema.nullable(),
-  // Made by Track this, so Applied is its email's date (decision 69, D323).
+  // Made by Track this, so Applied is its email's date.
   first_seen_in_email: z.boolean(),
   jd: jdSummarySchema,
-  // On the Pinned shelf since then (SV-243, D504), newest first; null when it isn't pinned.
+  // On the Pinned shelf since then, newest first; null when it isn't pinned.
   pinned_at: instant.nullable(),
 });
 export type ApplicationRowOut = z.infer<typeof applicationRowSchema>;
@@ -120,14 +120,14 @@ export const jdCandidateSchema = z.strictObject({
   // Where it was seen ("Greenhouse", "LinkedIn").
   platform: z.string(),
   link: z.url(),
-  // Opened and came back as nothing Jobs can read, so a pick keeps its link and can't save a JD (SV-140).
+  // Opened and came back as nothing Jobs can read, so a pick keeps its link and can't save a JD.
   unreadable: z.boolean(),
 });
 export type JdCandidateOut = z.infer<typeof jdCandidateSchema>;
 
 /**
- * A Needs you item (DESIGN.md › Needs you). Its email's date, sender and subject are its own copy
- * (decision 63), so it stands after the email is purged; `message_id` is null once it's gone.
+ * A Needs you item. Its email's date, sender and subject are its own copy,
+ * so it stands after the email is purged; `message_id` is null once it's gone.
  * Line one is what it's about ("Lucerne Publishing · Junior Developer", or the email's subject) and
  * the sender or company; line two words its event and reason.
  */
@@ -174,7 +174,7 @@ export const jobCountsSchema = z.strictObject({
 export type JobCountsOut = z.infer<typeof jobCountsSchema>;
 
 /**
- * Jobs's reading of mail (J2; board 38b, drawn in J8): emails triage has sorted that Jobs hasn't read
+ * Jobs's reading of mail (board 38b): emails triage has sorted that Jobs hasn't read
  * yet, and whether the AI is down: "5 emails not read yet, Anthropic unreachable since 8:52 AM,
  * retrying". `waiting` is briefly above 0 as mail arrives; the line shows only while `down`.
  */
@@ -184,7 +184,7 @@ export const jobsReadingSchema = z.strictObject({
   // The first failure since the last success, and the provider's words; null while healthy.
   since: instant.nullable(),
   reason: z.string().nullable(),
-  // What the page words (J8): unreachable or rate limited, retried; the key refused or missing, waiting
+  // What the page words: unreachable or rate limited, retried; the key refused or missing, waiting
   // for Settings › AI. Null while healthy.
   cause: z.enum(JOB_READING_CAUSES).nullable(),
   // False when it waits for a key in Settings › AI rather than retrying.
@@ -193,11 +193,10 @@ export const jobsReadingSchema = z.strictObject({
 export type JobsReadingOut = z.infer<typeof jobsReadingSchema>;
 
 /**
- * The history pass (J4; decisions 57, 72; board 38a and Settings › Jobs, drawn in J8): "Reading history
- * · 140 of 330 emails" while it runs, "Read 330 emails once, when Jobs was turned on · finished Oct 1,
- * 8:14 PM" once it's done. `total` is fixed when it starts (mail arriving meanwhile is the live
- * reader's); `read` counts what it has read so far. `waiting` is a pass held while the AI is down or
- * has no key (the page's `reading` says why and since when).
+ * The history pass (board 38a and Settings › Jobs): "Reading history · 140 of 330 emails" while it
+ * runs, "Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM" once it's done.
+ * `total` is fixed when it starts (mail arriving meanwhile is the live reader's); `read` counts what
+ * it has read so far. `waiting` is a pass held while the AI is down or has no key (the page's `reading` says why and since when).
  */
 export const jobsHistorySchema = z.strictObject({
   state: z.enum(JOB_HISTORY_STATES),
@@ -210,7 +209,7 @@ export const jobsHistorySchema = z.strictObject({
 export type JobsHistoryOut = z.infer<typeof jobsHistorySchema>;
 
 /**
- * GET /api/jobs: the page's two numbers and nothing else (D314), Needs you (oldest first, as they
+ * GET /api/jobs: the page's two numbers and nothing else, Needs you (oldest first, as they
  * came) and From history (newest first), and every application, newest first by Applied.
  */
 export const jobsPageSchema = z.strictObject({
@@ -225,12 +224,12 @@ export const jobsPageSchema = z.strictObject({
 });
 export type JobsPageOut = z.infer<typeof jobsPageSchema>;
 
-/** A saved JD (decision 53): kept as it was, never overwritten. One pasted is saved before it's read, so its reading can be empty (SV-140). */
+/** A saved JD: kept as it was, never overwritten. One pasted is saved before it's read, so its reading can be empty. */
 export const postingSchema = z.strictObject({
   // The three-line what-they-want summary.
   summary: z.string(),
   location: z.string().nullable(),
-  // When the user set the location (SV-170), which no reading changes; null while it's the reading's.
+  // When the user set the location, which no reading changes; null while it's the reading's.
   location_set_at: instant.nullable(),
   workplace: z.enum(JOB_WORKPLACES).nullable(),
   // "3 days", after Hybrid.
@@ -241,7 +240,7 @@ export const postingSchema = z.strictObject({
   nice_to_haves: z.array(z.string()),
   // The posting's full text, cleaned to markdown.
   full_text: z.string(),
-  // Null for a posting pasted with no pick behind it (SV-140).
+  // Null for a posting pasted with no pick behind it.
   link: z.url().nullable(),
   source: z.enum(JD_SOURCES),
   // The platform it was found on ("Greenhouse"); null for a search or one pasted.
@@ -251,7 +250,7 @@ export const postingSchema = z.strictObject({
 export type PostingOut = z.infer<typeof postingSchema>;
 
 /**
- * A timeline event (D317), oldest first. Its date, kind, sender, subject and line are its own copy;
+ * A timeline event, oldest first. Its date, kind, sender, subject and line are its own copy;
  * `message_id` opens the email while it exists and is null once it's gone. A quiet event has no kind
  * on screen and never moved the status.
  */
@@ -264,7 +263,7 @@ export const jobEventSchema = z.strictObject({
   subject: z.string(),
   line: z.string().nullable(),
   message_id: id.nullable(),
-  // The email Track this made the application from (decision 69): its "First seen" tag.
+  // The email Track this made the application from: its "First seen" tag.
   first_seen: z.boolean(),
 });
 export type JobEventOut = z.infer<typeof jobEventSchema>;
@@ -272,13 +271,13 @@ export type JobEventOut = z.infer<typeof jobEventSchema>;
 /** A field the user set by hand, for the tooltip "Set by you on Sep 10". */
 export const handSetSchema = z.strictObject({field: z.enum(JOB_HAND_FIELDS), set_at: instant});
 
-/** GET /api/jobs/applications/:id: the detail (DESIGN.md › The application's detail). */
+/** GET /api/jobs/applications/:id: the detail. */
 export const applicationSchema = applicationRowSchema.extend({
   posting: postingSchema.nullable(),
   // The other candidates, for Not this posting and a JD to confirm.
   candidates: z.array(jdCandidateSchema),
   timeline: z.array(jobEventSchema),
-  // Earlier, closed applications at the company (Applied before at Northwind Talent, D306), newest first.
+  // Earlier, closed applications at the company (Applied before at Northwind Talent), newest first.
   applied_before: z.array(applicationLinkSchema),
   // The company's other applications (Also at Humongous Insurance), newest first.
   also_at: z.array(applicationLinkSchema),
@@ -287,7 +286,7 @@ export const applicationSchema = applicationRowSchema.extend({
 export type ApplicationOut = z.infer<typeof applicationSchema>;
 
 /**
- * J5's search (D316): company or role first (best first, then newest), then a match only in a JD's
+ * Jobs's search: company or role first (best first, then newest), then a match only in a JD's
  * text, newest first, with the line it matched quoted ("…our services run on Kubernetes across two
  * regions…").
  */
@@ -300,14 +299,14 @@ export const jobsSearchSchema = z.strictObject({
 export type JobsSearchOut = z.infer<typeof jobsSearchSchema>;
 
 /**
- * GET /api/jobs/nav: what the shell draws of Jobs on every page (J5): whether it's on (no item while
- * it's off, D310) and the Needs you count beside it (today's, not From history's; gone at zero, D313).
+ * GET /api/jobs/nav: what the shell draws of Jobs on every page: whether it's on (no item while
+ * it's off) and the Needs you count beside it (today's, not From history's; gone at zero).
  */
 export const jobsNavSchema = z.strictObject({enabled: z.boolean(), needs_you: z.int().nonnegative()});
 export type JobsNavOut = z.infer<typeof jobsNavSchema>;
 
 /**
- * J7's request (D306): the emails a page of mail's rows shows, or the one the reader has open, as
+ * The request: the emails a page of mail's rows shows, or the one the reader has open, as
  * their ids joined by commas. At most 500, so a long list asks in a few requests, never one per row.
  */
 export const JOBS_MAIL_MAX = 500;
@@ -330,7 +329,7 @@ export const jobsMailApplicationSchema = z.strictObject({
 export type JobsMailApplicationOut = z.infer<typeof jobsMailApplicationSchema>;
 
 /**
- * One email with something for mail's slots (DESIGN.md › Jobs › In mail; boards 37a–37c):
+ * One email with something for mail's slots (boards 37a–37c):
  * `application` is the one it belongs to (the reader's JD chip); `applied_before`, on a job board's
  * match email whose company matches applications (loosely, and by the companies corrections gave
  * them), is the most recent of them, how many there are, and the search that shows them all in Jobs
@@ -347,12 +346,12 @@ export const jobsMailMessageSchema = z.strictObject({
 });
 export type JobsMailMessageOut = z.infer<typeof jobsMailMessageSchema>;
 
-/** GET /api/jobs/mail: only the emails with something to show; none while Jobs is off (D313: mail's counts never change). */
+/** GET /api/jobs/mail: only the emails with something to show; none while Jobs is off, and mail's counts never change. */
 export const jobsMailSchema = z.strictObject({messages: z.array(jobsMailMessageSchema)});
 export type JobsMailOut = z.infer<typeof jobsMailSchema>;
 
 /**
- * The browser extension's question (SV-173): postings as the job board shows them, a company and a
+ * The browser extension's question: postings as the job board shows them, a company and a
  * title each: the one open in its job pane, or a page of its list's cards, in one request. At most 50.
  */
 export const JOBS_CHECK_MAX = 50;
@@ -372,13 +371,13 @@ export const jobsCheckPostingSchema = z.strictObject({
 export type JobsCheckPostingOut = z.infer<typeof jobsCheckPostingSchema>;
 
 /**
- * POST /api/jobs/check, with the extension's own bearer token (SV-173): each posting's answer, in the
+ * POST /api/jobs/check, with the extension's own bearer token: each posting's answer, in the
  * order asked. Nothing while Jobs is off, which `enabled` says.
  */
 export const jobsCheckSchema = z.strictObject({enabled: z.boolean(), postings: z.array(jobsCheckPostingSchema)});
 export type JobsCheckOut = z.infer<typeof jobsCheckSchema>;
 
-/** An account Jobs reads and how (decision 56); an account not listed is off. */
+/** An account Jobs reads and how; an account not listed is off. */
 export const jobsReadAccountSchema = z.strictObject({account_id: id, reads: z.enum(JOB_READ_MODES)});
 export type JobsReadAccount = z.infer<typeof jobsReadAccountSchema>;
 
@@ -414,10 +413,9 @@ export const jobsUsageSchema = z.strictObject({
 export type JobsUsageOut = z.infer<typeof jobsUsageSchema>;
 
 /**
- * Settings › AI's Jobs group (J8, board 39b, D315): its three models, fixed, shown by name (override
- * 26), why they can't run (no key) or null, and this month's usage (since local midnight on the 1st),
- * in total and in its three parts, for Usage this month's row (no cap, so no meter and no row of its
- * own, D515).
+ * Settings › AI's Jobs group (board 39b): its three models, fixed, shown by name, why they can't
+ * run (no key) or null, and this month's usage (since local midnight on the 1st), in total and in
+ * its three parts, for Usage this month's row (no cap, so no meter and no row of its own).
  */
 export const jobsAiSchema = z.strictObject({
   models: z.strictObject({emails: z.string(), finding: z.string(), reading: z.string()}),
@@ -435,7 +433,7 @@ export const jobsUndoDismissInput = z.strictObject({needs_you: z.array(id).min(1
 export type JobsUndoDismiss = z.infer<typeof jobsUndoDismissInput>;
 
 /**
- * What an answer or a correction did (J6): `undo` is its toast's Undo, and `application` the one it
+ * What an answer or a correction did: `undo` is its toast's Undo, and `application` the one it
  * made or kept (Track this opens the one it made; Merge with… keeps this one), or null.
  */
 export const jobsChangeSchema = z.strictObject({undo: id, application: id.nullable()});
@@ -459,19 +457,19 @@ export const jobsMoveInput = z.strictObject({application: id});
 /** Merge with…: the other application, which comes into this one with all its emails. */
 export const jobsMergeInput = z.strictObject({other: id});
 
-/** Pin or Unpin (SV-243): on the table's Pinned shelf, or back in its place. */
+/** Pin or Unpin: on the table's Pinned shelf, or back in its place. */
 export const jobsPinInput = z.strictObject({pinned: z.boolean()});
 
-/** The title in place, or the company from More (decision 58): set by hand, and kept. */
+/** The title in place, or the company from More: set by hand, and kept. */
 export const jobsEditInput = z.strictObject({
   company: z.string().trim().min(1).max(200).optional(),
   title: z.string().trim().min(1).max(300).optional(),
-  // The JD's location (SV-170); empty or null takes it away.
+  // The JD's location; empty or null takes it away.
   location: z.string().trim().max(200).nullable().optional(),
 }).refine(edit => edit.company !== undefined || edit.title !== undefined || edit.location !== undefined, 'The company, the title or the location.');
 export type JobsEdit = z.infer<typeof jobsEditInput>;
 
-/** Set status (D365): one of the five, set by hand (D322); null is Let emails decide. */
+/** Set status: one of the five, set by hand; null is Let emails decide. */
 export const jobsStatusInput = z.strictObject({status: jobStatusSchema.nullable()});
 export type JobsStatusSet = z.infer<typeof jobsStatusInput>;
 
@@ -479,7 +477,7 @@ export type JobsStatusSet = z.infer<typeof jobsStatusInput>;
  * The `jobs` live event: `applications` changed (a row lands or moves, settling from `sub2`) and
  * `needs_you` items came or went. One naming nothing means Jobs's own state changed (turned on or
  * off, the history pass, emails waiting for the AI): GET /api/jobs again. `history` is the history
- * pass's progress as it stands, on each event the pass sends (J4: "Reading history · 140 of 330").
+ * pass's progress as it stands, on each event the pass sends ("Reading history · 140 of 330").
  */
 export interface JobsLiveEvent {
   type: 'jobs';
@@ -489,7 +487,7 @@ export interface JobsLiveEvent {
 }
 
 /**
- * One application's latest status change (SV-220, D467, D470): an email that set a new status, turning
+ * One application's latest status change: an email that set a new status, turning
  * Ghosted (30 days after its last email, computed) or a status set by hand (the latest only, its `from`
  * the status its emails had set before it). `from` is null for a new application, which reads "Applied".
  */
@@ -504,8 +502,8 @@ export interface JobMoveOut {
 }
 
 /**
- * GET /api/jobs/movement: Jobs's pane with nothing open (SV-220, D467), newest first, one per application.
- * Not in the iPhone app's contract. No counts (D314): the quiet line names the accounts Jobs reads and the
+ * GET /api/jobs/movement: Jobs's pane with nothing open, newest first, one per application.
+ * Not in the iPhone app's contract. No counts: the quiet line names the accounts Jobs reads and the
  * month of the earliest email it has.
  */
 export interface JobsMovementOut {

@@ -1,4 +1,4 @@
-// The part of mailparser's API Setpoint uses (it ships no types; v1 declared it the same way).
+// The part of mailparser's API Setpoint uses (it ships no types).
 declare module 'mailparser' {
   export interface ParsedMailAddress {
     text?: string;

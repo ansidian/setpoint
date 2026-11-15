@@ -1,4 +1,4 @@
-// The browser extension's check (SV-173) through its one route, against the seed: each posting's role
+// The browser extension's check through its one route, against the seed: each posting's role
 // and the company's other applications, in the order asked, a page of cards in one request, nothing
 // while Jobs is off, and only the extension's own token reads it, which opens nothing else. The
 // matching itself is reading.test.ts's table.

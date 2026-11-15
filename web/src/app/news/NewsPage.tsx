@@ -1,32 +1,32 @@
-// The News page (DESIGN.md › News; boards 25–27): the header (News, All | Local | Tech | AI |
+// The News page (boards 25–27): the header (News, All | Local | Tech | AI |
 // General, Search news), the list and the story pane. All shows each section's block in a fixed
 // order, with Upcoming in Tech and the new-stories pill; a section its full list. The list's order
-// holds while the page is open (D87): rows on screen take their sources and summary from each new
+// holds while the page is open: rows on screen take their sources and summary from each new
 // answer, and everything else waits behind the pill, which `N` or a click takes, scrolling to the top
 // (logic/news.ts). A story is seen when its row has been fully on screen for about a second, or when
-// it's opened (useSeen below), but its dot stays for the visit (#95): a visit is the page's time on
+// it's opened (useSeen below), but its dot stays for the visit: a visit is the page's time on
 // screen, from opening News (from another page, a link or a reload) until leaving it, All and the
 // sections all one visit. An opened story loses its dot at once, and a fact during the visit brings it
 // back as updated.
 //
-// All has While you were away (#298), the recap of what left the page unseen, in the empty pane beside
-// it (SV-219, D466; NewsDay.tsx), never in the list: chosen from the visit's first answer and held for
+// All has While you were away, the recap of what left the page unseen, in the empty pane beside
+// it (NewsDay.tsx), never in the list: chosen from the visit's first answer and held for
 // it, its stories never seen by being on screen, only by opening, which opens them in the recap's
 // modal (RecapModal.tsx). The page tells the server when the user is on News, and the recap's stories
 // once the pane shows them (useHere below), so an hour away puts it away, and nothing else on the web
-// does (D451).
+// does.
 //
-// N5 adds the states (DESIGN.md › States; boards 29a, 29b): the Unsorted line while sorting is down,
+// The states (boards 29a, 29b): the Unsorted line while sorting is down,
 // with Show headlines listing what waits, and the first run's line, both above the list from
 // /news/status; a whole section's stale or failing line under its header; and a section with nothing
 // to show (logic/news.ts has the rule). Offline is the shell's, as on every page. Search news replaces
-// the list with the stories found, as mail's search replaces its list (#8): the header reads Search,
+// the list with the stories found, as mail's search replaces its list: the header reads Search,
 // the segmented control goes, and Esc clears it.
 //
 // Keys: `J` / `K` move the cursor (with a story open, they open the next and previous one), on into
 // a section's Also reported; Enter opens (an Also reported row, its article); `O` opens the original
-// article; `N` takes the new stories; Tab and Shift-Tab step All | Local | Tech | AI | General
-// (SV-207, D454); Esc goes from an article back to its story, then closes the pane, then clears a search. `1`, `2` and `3` are the shell's (App.tsx).
+// article; `N` takes the new stories; Tab and Shift-Tab step All | Local | Tech | AI | General;
+// Esc goes from an article back to its story, then closes the pane, then clears a search. `1`, `2` and `3` are the shell's (App.tsx).
 import type {
   AlsoReportedOut, ArticleOut, NewsPageOut, NewsSectionOut, NewsStatusOut, NewsUnsortedOut, RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
@@ -78,10 +78,10 @@ interface Listing {
   layout: Layout;
   rows: Map<number, StoryRowOut>;
   upcoming: UpcomingOut[];
-  // Each section's line, stale or failing (N5), by its shelf.
+  // Each section's line, stale or failing, by its shelf.
   health: ReadonlyMap<string, SectionHealthOut | null>;
   recap: RecapOut | null;
-  // A section's stories left unwritten under the write gate (D452); none in All.
+  // A section's stories left unwritten under the write gate; none in All.
   alsoReported: AlsoReportedOut[];
 }
 
@@ -144,7 +144,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   if (current !== hold) setHold(current);
   const held = current.held;
 
-  // The recap held for the visit, from All's first answer of it, across the sections (#298); undefined
+  // The recap held for the visit, from All's first answer of it, across the sections; undefined
   // until that answer, while the cache's is drawn.
   const [recapHold, setRecapHold] = useState<{stale: unknown; from: RecapOut | null | undefined; held: HeldRecap | null | undefined}>(() => ({stale: getCached(NEWS_PATH), from: undefined, held: undefined}));
   let recapNow = recapHold;
@@ -156,7 +156,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const absent = useMemo(() => (latest ? layout.flatMap(shelf => shelf.ids).filter(id => !latest.rows.has(id)) : []), [layout, latest]);
   const loose = useResources<StoryOut>([...new Set(absent)].map(storyPath));
   const known = current.known;
-  // Search news (N5): its results replace the list, as their own shelf.
+  // Search news: its results replace the list, as their own shelf.
   const search = useNewsSearch();
   const searching = search.active;
   const found = search.results;
@@ -167,7 +167,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
     return merged;
   }, [known, loose, found]);
   const shown: Layout = useMemo(() => (searching ? [{key: SEARCH_SHELF, ids: found.map(story => story.id), more: 0}] : layout), [searching, found, layout]);
-  // The visit's dots: each story's on arrival, kept once seen (#95).
+  // The visit's dots: each story's on arrival, kept once seen.
   const [visit, setVisit] = useState<{from: ReadonlyMap<number, StoryRowOut> | null; dots: VisitDots}>({from: null, dots: new Map()});
   let dots = visit.dots;
   if (visit.from !== rows) {
@@ -177,7 +177,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const pending = held && latest ? waiting(held.layout, latest.layout, latest.rows) : null;
   const pill = pending ? pillParts(pending) : null;
   const list = useRef<HTMLDivElement>(null);
-  // The rows N brought onto the list, settling in from `sub2` for a moment (#131).
+  // The rows N brought onto the list, settling in from `sub2` for a moment.
   const [arrived, setArrived] = useState<ReadonlySet<number>>(() => new Set());
   const takeNew = () => {
     if (!latest) return;
@@ -191,7 +191,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
     return () => window.clearTimeout(timer);
   }, [arrived]);
 
-  // Sorting's state above the list (N5): the Unsorted line, with Show headlines, and the first run's.
+  // Sorting's state above the list: the Unsorted line, with Show headlines, and the first run's.
   const {data: status} = useResource<NewsStatusOut>(STATUS_PATH);
   const firstRun = Boolean(status?.first_run);
 
@@ -210,9 +210,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const recapOpened = useMemo(() => (recapAt !== null && recapShown ? {at: recapAt, ids: recapShown.ids} : null), [recapAt, recapShown]);
   const recapOpen = useHold(recapOpened, motion.slow);
 
-  // A section's Also reported, as the latest answer has it (D452).
+  // A section's Also reported, as the latest answer has it.
   const also = useMemo(() => (searching || view === 'all' ? [] : latest?.alsoReported ?? []), [searching, view, latest]);
-  // The story rows J and K move through, and after them Also reported's, which open their article, never the pane (SV-207).
+  // The story rows J and K move through, and after them Also reported's, which open their article, never the pane.
   const storyKeys = useMemo(() => shown.flatMap(shelf => shelf.ids.filter(id => rows.has(id)).map(id => storyKey(shelf.key, id))), [shown, rows]);
   const keys = useMemo(() => [...storyKeys, ...also.map(one => storyKey(ALSO_SHELF, one.story_id))], [storyKeys, also]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -266,7 +266,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   function close() {
     go({story: null, article: null});
   }
-  /** A story row's right-click (DESIGN.md #248): Open, Open at its leading outlet, Copy link; the cursor moves there and nothing opens, so nothing is seen. */
+  /** A story row's right-click: Open, Open at its leading outlet, Copy link; the cursor moves there and nothing opens, so nothing is seen. */
   function onContextMenu(event: ReactMouseEvent) {
     const element = (event.target as Element).closest<HTMLElement>('[data-key][data-story]');
     const row = element ? rows.get(Number(element.dataset.story)) : undefined;
@@ -279,7 +279,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
     ]);
     if (opened) setCursor(key);
   }
-  /** A story by its id: at its row when the list shows it, else in the pane alone (Upcoming's, SV-50). */
+  /** A story by its id: at its row when the list shows it, else in the pane alone (Upcoming's). */
   function openStoryOf(id: number) {
     const key = storyKeys.find(one => keyStory(one) === id);
     if (key) openAt(key);
@@ -303,7 +303,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
     return isAlsoKey(key) ? also.find(one => one.story_id === keyStory(key!))?.url ?? null : null;
   }
   /**
-   * Tab and Shift-Tab (SV-207, D454; the segmented control steps, wrapping, #317): the next or previous
+   * Tab and Shift-Tab (the segmented control steps, wrapping): the next or previous
    * view. The open story stays open where that view lists it; otherwise the pane closes and the cursor
    * goes to the view's first story.
    */
@@ -316,7 +316,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
 
   useSeen(list, shown, rows);
   useListFade(list, view);
-  // The pane beside the list (SV-217): the open story, else empty, with the recap on All (SV-219).
+  // The pane beside the list: the open story, else empty, with the recap on All.
   const pane = useEmptyPane(open !== null, PANE_PATHS);
   // The user on News, with the recap's stories once the pane shows them: fixed, and put away an hour after they leave.
   useHere(recapNow.held !== undefined && recapOnScreen(drawn && pane.drawn, open !== null) ? recapShown?.ids ?? null : null);
@@ -358,7 +358,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
 
   const unsorted = status ? unsortedLine(status, now, zone) : null;
   const sorting = status ? firstRunLine(status) : null;
-  // How far the first run has come, for its line's foot (news-13).
+  // How far the first run has come, for its line's foot.
   const sorted = status?.first_run ? `${firstRunShare(status.first_run) * 100}%` : null;
   const [headlines, setHeadlines] = useState(false);
   const showHeadlines = headlines && unsorted !== null && !searching;
@@ -428,7 +428,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
             </div>
           ) : (
           <div className={listArrived ? 'list sk-arrive' : 'list'} ref={list}>
-            {/* Until its first answer, the list's skeleton in its rows' shapes (news-03, #231), or why it didn't come (#228). */}
+            {/* Until its first answer, the list's skeleton in its rows' shapes, or why it didn't come. */}
             {!latest && (listFailed ? <LoadFailed what="News" loads={[listLoad]} /> : <NewsSkeleton blocks={view === 'all'} />)}
             {showHeadlines && (
               <>
@@ -450,23 +450,23 @@ export function NewsPage({route}: {route: NewsRoute}) {
               const section = view === 'all' ? NEWS_SECTIONS.find(one => one === shelf.key) : undefined;
               const upcoming = view === 'all' ? (latest?.upcoming ?? []).filter(one => one.section === shelf.key) : latest?.upcoming ?? [];
               const header = index === 0 && firstShelf ? 'nw-sec first' : 'nw-sec';
-              // A section's own line and its empty line (N5).
+              // A section's own line and its empty line.
               const own = NEWS_SECTIONS.find(one => one === shelf.key) ?? null;
               const line = own ? sectionLine(own, latest?.health.get(own) ?? null, now, zone) : null;
               const empty = own && latest ? emptySectionLine(own, shelfRows.length + also.length, shelf.more, firstRun, now, zone) : null;
-              // A block whose stories all show in other blocks (#96) has nothing of its own to show, so it goes (D451).
+              // A block whose stories all show in other blocks has nothing of its own to show, so it goes.
               if (section && !shelfRows.length && !empty && !line && !upcoming.length) return null;
               return (
                 <Fragment key={shelf.key}>
                   {section && <div className={header}><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</div>}
                   {line && <div className={`nw-line ${line.state}`}><Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} /><span className="num ell" data-tip={line.text}>{line.text}</span></div>}
                   {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} />)}
-                  {/* Still sorting, its section's line turns as the first run's does (news-13); once sorted, a quiet section is a paper. */}
+                  {/* Still sorting, its section's line turns as the first run's does; once sorted, a quiet section is a paper. */}
                   {empty && <div className="nw-empty">{firstRun ? <span className="spin"><Icon name="progress_activity" size={16} /></span> : <Icon name="newspaper" size={16} />}{empty}</div>}
                   {shelfRows.map((row, at) => (
                     <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={at === 0} rowKey={storyKey(shelf.key, row.id)} section={null} {...rowProps} />
                   ))}
-                  {/* A section's list ends with Also reported, outside the held order (D452). */}
+                  {/* A section's list ends with Also reported, outside the held order. */}
                   {also.length > 0 && <AlsoReported stories={also} cursor={cursor} now={now} zone={zone} onPoint={rowProps.onPoint} />}
                 </Fragment>
               );
@@ -491,7 +491,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
 }
 
 /**
- * Also reported (D452): what Haiku rated under the write gate, so was never written, under a quiet
+ * Also reported: what Haiku rated under the write gate, so was never written, under a quiet
  * label after the section's stories. One line each, the headline, outlet and age, with no summary,
  * thumbnail or dot; a row opens the outlet's article, and nothing here is seen.
  */
@@ -537,7 +537,7 @@ const STATE_CLASS = {new: 'new', updated: 'upd', seen: 'seen'} as const;
 function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zone, onPoint, onOpen}: RowProps) {
   const meta = rowMeta(row, now, zone, section);
   const image = lead ? row.image?.large ?? row.image?.thumb : row.image?.thumb;
-  // A hazard source's story without a photo shows its hazard's glyph instead (#121).
+  // A hazard source's story without a photo shows its hazard's glyph instead.
   const hazard = hazardGlyph(row);
   const state = STATE_CLASS[row.state];
   const classes = [lead ? 'nw-lead' : 'nw-row', state, lead && !image && 'noimg', cursor === rowKey && 'cur', openKey === rowKey && 'open', arrived.has(row.id) && 'landed']
@@ -579,7 +579,7 @@ function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zo
 /**
  * Upcoming (Tech): "Apple event · Tue Oct 20 · 10 AM", its outlet, and Add to calendar, which opens
  * Calendar's editor on it. The row opens a popover with the story that announced it, which opens
- * that story, so it can be read before it's added (SV-50).
+ * that story, so it can be read before it's added.
  */
 function Upcoming({upcoming, story, now, zone, onStory}: {upcoming: UpcomingOut; story: StoryRowOut | undefined; now: number; zone: string; onStory: (id: number) => void}) {
   const when = upcomingWhen(upcoming, zone);
@@ -646,7 +646,7 @@ function UpcomingMeta({row, now, zone}: {row: StoryRowOut; now: number; zone: st
 }
 
 /**
- * The user on News (#298): said as the page comes on screen, every few minutes while it stays, and
+ * The user on News: said as the page comes on screen, every few minutes while it stays, and
  * whenever the recap's stories on screen change, with them, so the server fixes the recap and puts it
  * away once the user has been away an hour. A hidden tab says nothing.
  */
@@ -669,7 +669,7 @@ function useHere(recap: number[] | null) {
 }
 
 /**
- * Seen (D87): a story waiting to be seen (new or updated) whose row has been fully on screen in the
+ * Seen: a story waiting to be seen (new or updated) whose row has been fully on screen in the
  * list for about a second; flicking past doesn't count, nor does a hidden tab. What's due goes to the
  * server together.
  */

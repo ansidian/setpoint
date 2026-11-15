@@ -1,4 +1,4 @@
-// News sorting's state (N3; BRIEF.md › When things break; DESIGN.md › States): what waits Unsorted
+// News sorting's state: what waits Unsorted
 // and why, and the first run's progress. Like triage's health, it's about the last attempt: sorting is
 // down while its last model call failed (or there was no key to call with), since the spell began,
 // with the provider's words; a success brings it back. Articles keep arriving meanwhile and wait,
@@ -94,7 +94,7 @@ function notLinked(store: Store) {
   return notExists(store.db.select({id: t.newsStoryArticles.articleId}).from(t.newsStoryArticles).where(eq(t.newsStoryArticles.articleId, t.newsArticles.id)));
 }
 
-/** Show headlines: what waits Unsorted, newest first, never a metered paper's (D89). */
+/** Show headlines: what waits Unsorted, newest first, never a metered paper's. */
 export function unsortedArticles(store: Store, limit = 500): NewsUnsortedOut {
   const where = and(isNull(t.newsArticles.sortedAt), realSource(), eq(t.newsArticles.metered, false), notLinked(store));
   const total = store.db.select({n: count()}).from(t.newsArticles).innerJoin(t.newsSources, eq(t.newsSources.id, t.newsArticles.sourceId)).where(where).get()?.n ?? 0;

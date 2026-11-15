@@ -1,4 +1,4 @@
-// The Inbox's empty pane's numbers (SV-218, D465): how the mail day is going, as a table over the rule
+// The Inbox's empty pane's numbers: how the mail day is going, as a table over the rule
 // and over the seed through the API.
 import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -18,7 +18,7 @@ const email = (fields: Partial<DayCandidate>): DayCandidate => ({
   pinnedAt: null, doneAt: null, trashedAt: null, codeExpiresAt: null, archivedAt: null, triagedAt: null, triageSource: null, ...fields,
 });
 
-describe('the mail day (SV-218)', () => {
+describe('the mail day', () => {
   test.each([
     ['Done today counts; Done yesterday doesn\'t', [email({lane: 'attention', doneAt: '2026-10-07T08:00:00.000Z'}), email({lane: 'attention', doneAt: '2026-10-07T06:59:00.000Z'})],
       {done: 1, needYou: 0, overdue: 0}],
@@ -55,7 +55,7 @@ describe('the mail day (SV-218)', () => {
     const attention = (subject: string) => w.store.db.select().from(t.messages).where(eq(t.messages.subject, subject)).get()!.id;
     setDone(w.store, attention('Your recovery email was changed'), true);
     trashMessage(w.store, attention('Final exam schedule · CS 101'), true);
-    // 33 of the seed's mail, and its 7 USPS digests (SV-274), out of the Inbox but kept.
+    // 33 of the seed's mail, and its 7 USPS digests, out of the Inbox but kept.
     expect(mailDayOf(w.store)).toMatchObject({done: 1, need_you: 1, total: 40});
   });
 });

@@ -1,5 +1,5 @@
-// SV-23: calendar search's results in the right pane, in place of the day's agenda (DESIGN.md ›
-// Decided while building #24): the one-line hint before typing; then the results line, Upcoming and
+// Calendar search's results in the right pane, in place of the day's agenda: the
+// one-line hint before typing; then the results line, Upcoming and
 // Past, each row as the agenda draws it plus why it matched (`ink3`, matches highlighted); 50 at a
 // time with Show more; and the no-results line with each chip removable. The rules are
 // logic/search.ts's and the state is search/state.ts's; CalendarPage selects what's clicked.
@@ -76,7 +76,7 @@ function ResultRow({result, calendar, selected, today, timeZone, onSelect}: Resu
       <span className="grow">
         <span className="title"><Marked parts={segments(item.title, result.highlights)} /></span>
         <span className="ink3 num line ell" data-tip={line}>{line}</span>
-        {/* Only what the row doesn't already show (search-11). */}
+        {/* Only what the row doesn't already show. */}
         {reasons.length > 0 && (
           <span className="why">
             {reasons.map((reason, index) => (

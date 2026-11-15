@@ -1,4 +1,4 @@
-// Light, System and Night (F7): boards 22a and 22b (boards 01 and 11 in Light), then the
+// Light, System and Night: boards 22a and 22b (boards 01 and 11 in Light), then the
 // switch itself: System follows the browser and a
 // choice is kept per browser.
 import assert from 'node:assert/strict';

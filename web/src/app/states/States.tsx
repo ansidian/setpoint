@@ -1,4 +1,4 @@
-// Health and states on the page (DESIGN.md › Health and states; board 19a): the needs-reconnect bar
+// Health and states on the page (board 19a): the needs-reconnect bar
 // and the stale and failing lines at the top of the Inbox, and the offline pill over the page, with
 // everything under it dimmed and changes disabled (App.tsx dims; client.ts refuses changes). The
 // same pill says when Setpoint can't be reached at launch, under the mark (Root.tsx).
@@ -31,7 +31,7 @@ type Bar = {kind: 'reconnect'; text: string} | ({kind: 'line'} & SourceLine);
 
 /**
  * "Business needs sign-in · Reconnect", then "Personal, as of 9:14 PM · Check now" for each stale or
- * failing account, folding in as they come and out as they go (states-13); null while there are none.
+ * failing account, folding in as they come and out as they go; null while there are none.
  */
 export function useHealthBars() {
   const {list} = useAccounts();
@@ -53,7 +53,7 @@ export function useHealthBars() {
 }
 
 /**
- * The lines as they show while they change (states-13; logic/stateLines.ts): one that arrives folds
+ * The lines as they show while they change (logic/stateLines.ts): one that arrives folds
  * in, one that goes folds out, after 1.2 s of its last words if `holds` says it has any. The first
  * paint shows them as they are.
  */
@@ -97,7 +97,7 @@ function ReconnectBar({text, accounts, phase, onMoveOn}: {text: string; accounts
   );
 }
 
-/** The bar's Reconnect: Google's sign-in for the one Gmail account needing it, else Settings › Accounts (states-08). */
+/** The bar's Reconnect: Google's sign-in for the one Gmail account needing it, else Settings › Accounts. */
 export function reconnectFrom(accounts: AccountOut[]) {
   const target = reconnectTarget(accounts);
   if (target === 'settings') {
@@ -108,7 +108,7 @@ export function reconnectFrom(accounts: AccountOut[]) {
   authorizeGmail(target.gmail).then(({url}) => window.location.assign(url), toastFailure(`Couldn't reconnect ${label}`));
 }
 
-/** A stale or failing account's line, with its fix on it: Check now, "Checking…" until the check lands (states-08). */
+/** A stale or failing account's line, with its fix on it: Check now, "Checking…" until the check lands. */
 function HealthBar({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase; onMoveOn: (from: 'done' | 'out') => void}) {
   const ref = useLinePhase(phase, onMoveOn);
   const check = useCheckNow(line.source === null ? undefined : {id: line.source, health: line.health}, ACCOUNTS_PATH);
@@ -154,7 +154,7 @@ export function OfflinePill() {
   const since = useOfflineSince();
   // Changes are refused, not queued, from the moment the stream drops (asked as each key comes, so one
   // pressed with the drop is caught too): the keys that change something reach nothing, while reading
-  // goes on (J, K, Enter, the arrows; states-05). A field's typing, Settings and ⌘K keep their keys
+  // goes on (J, K, Enter, the arrows). A field's typing, Settings and ⌘K keep their keys
   // (their changes are refused, client.ts).
   useEffect(() => {
     const block = (event: KeyboardEvent) => {
@@ -169,7 +169,7 @@ export function OfflinePill() {
 }
 
 /**
- * Back online, the pill fades out over 120 ms where it was rather than vanishing (states-13); it came
+ * Back online, the pill fades out over 120 ms where it was rather than vanishing; it came
  * in from 8 px above over 180 ms (states.css).
  */
 const fadeWhenGone = (pill: HTMLDivElement | null) => {

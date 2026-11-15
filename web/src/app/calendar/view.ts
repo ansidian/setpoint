@@ -7,7 +7,7 @@ import type {Rect} from '../../logic/calendar.ts';
 
 /**
  * Scroll the grid: a month to the top, or a day into view if it isn't. Paging and Today glide there
- * (polish audit grids-04); a jump (Month from Week, a link) lands at once.
+ *; a jump (Month from Week, a link) lands at once.
  */
 export type ScrollRequest = {kind: 'month'; month: string; how: MonthMove; seq: number} | {kind: 'day'; date: string; seq: number};
 export type MonthMove = 'page' | 'today' | 'jump';
@@ -18,17 +18,17 @@ export interface CalendarView {
   // The selected day, for the mini-month.
   selected: string | null;
   scroll: ScrollRequest | null;
-  // The selected item's chip, relative to the month section, for F5's floating detail.
+  // The selected item's chip, relative to the month section, for the floating detail.
   anchor: {key: string; rect: Rect} | null;
   // The week view's week, its Sunday, and how it got there: paged (the hours keep their scroll) or
-  // shown afresh (a day from elsewhere, Today: the hours open as DESIGN.md › Week view says).
+  // shown afresh (a day from elsewhere, Today: the hours open where openingScroll says).
   week: string | null;
   weekJump: number;
   // The month the grid is gliding to, so paging again goes on from there (N N N), not from the month passing by.
   gliding: string | null;
-  // Calendars just toggled (polish audit calpanes-11): their items fading out before they're hidden, or in as they're shown.
+  // Calendars just toggled: their items fading out before they're hidden, or in as they're shown.
   fade: CalendarFade;
-  // While a calendar search shows all its results, the ids they're of (a recurring event's every occurrence shares one): the rest dim (polish audit search-10).
+  // While a calendar search shows all its results, the ids they're of (a recurring event's every occurrence shares one): the rest dim.
   matches: ReadonlySet<number> | null;
 }
 
@@ -52,13 +52,13 @@ const subscribe = (listener: () => void) => {
 
 export const useCalendarView = () => useSyncExternalStore(subscribe, () => view);
 
-/** How an item of a calendar just toggled draws: fading out before it's hidden, or in as it's shown (polish audit calpanes-11). */
+/** How an item of a calendar just toggled draws: fading out before it's hidden, or in as it's shown. */
 export function useCalendarFade(): (calendarId: number) => 'leaving' | 'entering' | null {
   const fade = useSyncExternalStore(subscribe, () => view.fade);
   return calendarId => (fade.leaving.has(calendarId) ? 'leaving' : fade.entering.has(calendarId) ? 'entering' : null);
 }
 
-/** Whether an item dims on the grid while a calendar search shows what matches (polish audit search-10). */
+/** Whether an item dims on the grid while a calendar search shows what matches. */
 export function useSearchDim(): (itemId: number) => boolean {
   const matches = useSyncExternalStore(subscribe, () => view.matches);
   return itemId => matches !== null && itemId > 0 && !matches.has(itemId);
@@ -98,7 +98,7 @@ export function stopGliding() {
 }
 
 /**
- * T always answers (polish audit grids-11): today's disc on the grid, in the week's heads and in the
+ * T always answers: today's disc on the grid, in the week's heads and in the
  * mini-month swells once, as Today lands, so it says "you are here" even with today already in view.
  */
 export function pulseToday() {

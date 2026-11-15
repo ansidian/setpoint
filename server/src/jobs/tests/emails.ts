@@ -1,4 +1,4 @@
-// A recorded set of invented emails for Jobs's reading (J2), over two weeks after it's turned on, in
+// A recorded set of invented emails for Jobs's reading, over two weeks after it's turned on, in
 // prod's shapes: each with what triage answers (its tool's fields) and what Haiku answers for Jobs
 // (null: Jobs never asks, as for Business mail that isn't Career). Companies are Microsoft's
 // fictional ones and every address an example domain. tests/reader.test.ts serves both answers from

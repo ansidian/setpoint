@@ -1,4 +1,4 @@
-// Board fixtures (SV decision D3): board states that contradict the brief's counts, layered on the
+// Board fixtures: board states that contradict the sample's counts, layered on the
 // dev seed for a board's baseline check rather than kept in it. Each names its board and adds rows
 // to a seeded database; nothing here runs unless asked.
 //
@@ -30,29 +30,29 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'code-expiring': {board: 'mail checks', apply: codeExpiring},
   // Not a board: the mail checks size the reader's frame to a newsletter that is mostly pictures.
   'newsletter-html': {board: 'mail checks', apply: newsletterHtml},
-  // Not a board: the mail checks show an email of three whole documents in one frame (SV-127).
+  // Not a board: the mail checks show an email of three whole documents in one frame.
   'stitched-html': {board: 'mail checks', apply: stitchedHtml},
-  // Not a board: the mail checks show an email whose page sizes itself to the window (SV-228).
+  // Not a board: the mail checks show an email whose page sizes itself to the window.
   'viewport-html': {board: 'mail checks', apply: viewportHtml},
-  // Not a board: the mail checks size the frame to an email held out of the page's flow (SV-228).
+  // Not a board: the mail checks size the frame to an email held out of the page's flow.
   'positioned-html': {board: 'mail checks', apply: positionedHtml},
-  // Not a board: the floating detail's place line with a link in it (SV-76, SV-77).
+  // Not a board: the floating detail's place line with a link in it.
   'link-places': {board: 'detail checks', apply: linkPlaces},
-  // Not a board: a free event during the CS 101 final's proposed evening (SV-180).
+  // Not a board: a free event during the CS 101 final's proposed evening.
   'free-review': {board: 'search checks', apply: freeReview},
   // Not a board: search's rows and Alfred's sources hold an age with its year.
   'last-year': {board: 'search checks', apply: lastYear},
   // Not a board: search's fold, with more above it than a page holds and more under it than one.
   'ledger-audit': {board: 'search checks', apply: ledgerAudit},
-  // F7 (states.ts): health states and Settings' contents.
+  // states.ts: health states and Settings' contents.
   'needs-reconnect': {board: '17, 19a', apply: needsReconnect},
   'stale-personal': {board: '17', apply: stalePersonal},
   'stale-icloud': {board: '19a', apply: staleIcloud},
   'failing-work': {board: 'states checks', apply: failingWork},
-  // SV-20: the calendar's own stale and failing lines.
+  // The calendar's own stale and failing lines.
   'stale-todoist': {board: '19b', apply: staleTodoist},
   'failing-weather': {board: 'calendar checks', apply: failingWeather},
-  // Not a board: Todoist not connected, for Accounts' row and Calendar's section (SV-255, D514).
+  // Not a board: Todoist not connected, for Accounts' row and Calendar's section.
   'todoist-off': {board: 'settings checks', apply: todoistOff},
   'checked': {board: '17', apply: checked},
   'triage-down': {board: '19a', apply: triageDown},
@@ -61,7 +61,7 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'ntfy': {board: '17, 18b', apply: ntfy},
   // Not a board: the phone agenda's empty weekend with its forecasts.
   'weekend-forecast': {board: 'phone checks', apply: weekendForecast},
-  // N5 (newsStates.ts): News's states and Settings › AI's cap.
+  // newsStates.ts: News's states and Settings › AI's cap.
   'news-ai-down': {board: '29a', apply: newsAiDown},
   'news-stale-ai': {board: '29a', apply: newsStaleAi},
   'news-quiet-tech': {board: '29a', apply: newsQuietTech},

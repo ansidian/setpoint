@@ -1,4 +1,4 @@
-// SV-274: the agenda rail's USPS mail for a day, and one scan's picture (src/mailpieces/worker.ts
+// The agenda rail's USPS mail for a day, and one scan's picture (src/mailpieces/worker.ts
 // keeps them). A day with two digests (one sent again) shows the latest.
 import type {MailpiecesOut} from '@setpoint/shared';
 import {asc, desc, eq} from 'drizzle-orm';

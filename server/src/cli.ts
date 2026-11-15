@@ -5,19 +5,19 @@
 //   npm run cli -- ha-token         a new bearer token for Home Assistant's GET /api/status/ha,
 //                                   replacing (revoking) any earlier one; shown once
 //   npm run cli -- ha-token --revoke   revoke Home Assistant's token
-//   npm run cli -- jobs-token       a new bearer token for the browser extension's POST /api/jobs/check
-//                                   (SV-173), replacing (revoking) any earlier one; shown once
+//   npm run cli -- jobs-token       a new bearer token for the browser extension's POST /api/jobs/check,
+//                                  replacing (revoking) any earlier one; shown once
 //   npm run cli -- jobs-token --revoke   revoke the extension's token
 //   npm run cli -- pair-link        a setpoint://pair link for the iPhone app, as Settings › Security's
 //                                   Add iPhone shows, for the server at SETPOINT_PUBLIC_URL (else
 //                                   localhost); works once, for five minutes, replacing any earlier one
 //   npm run cli -- triage-history   start or resume the one-time model pass over backfilled history
-//   npm run cli -- search-terms     how much mail has search terms (SV-136); --apply gives the go-ahead to read the rest
-//   npm run cli -- jobs-reread      what Jobs would read again now it reads HTML (SV-128); --apply does it
-//   npm run cli -- jobs-repair-facts   the JDs' salaries and locations that were cut (SV-129); --apply reads them again
-//   npm run cli -- jobs-repair-postings   the application pages saved as JDs (SV-130); --apply takes them away and looks each up again
+//   npm run cli -- search-terms     how much mail has search terms; --apply gives the go-ahead to read the rest
+//   npm run cli -- jobs-reread      what Jobs would read again now it reads HTML; --apply does it
+//   npm run cli -- jobs-repair-facts   the JDs' salaries and locations that were cut; --apply reads them again
+//   npm run cli -- jobs-repair-postings   the application pages saved as JDs; --apply takes them away and looks each up again
 //   npm run cli -- codes            which sorted emails' verification codes reading again would change,
-//                                   and the code emails still without one (SV-68)
+//                                   and the code emails still without one
 //   npm run cli -- codes --apply    write those changes
 //
 // It uses the same SETPOINT_DATA_DIR as the server (data/dev by default).

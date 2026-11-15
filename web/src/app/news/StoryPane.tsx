@@ -1,4 +1,4 @@
-// The story pane (DESIGN.md › The story pane; boards 25, 26a, 26b): where the reading pane sits, and
+// The story pane (boards 25, 26a, 26b): where the reading pane sits, and
 // as wide. A story shows Open at its leading outlet `O`, previous and next; its sections as tags
 // (and Updated when it changed since the user last looked); the headline and meta; its image with the
 // outlet's caption; "New since you looked" on an updated story; the summary; then its Sources, each
@@ -36,7 +36,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
   onOriginal: () => void;
   onArticle: (id: number) => void;
   onBack: () => void;
-  // Closes the pane: the compact tier's Back, where the pane covers the list (#140).
+  // Closes the pane: the compact tier's Back, where the pane covers the list.
   onClose: () => void;
 }) {
   const width = useReadingPaneWidth();
@@ -80,7 +80,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
   );
 }
 
-/** A story's head, image, New since you looked, summary and Sources: the story pane's, and the recap's modal's (SV-219). */
+/** A story's head, image, New since you looked, summary and Sources: the story pane's, and the recap's modal's. */
 export function StoryContent({storyId, row, lookedAt, now, timeZone, onArticle}: {
   storyId: number;
   row: StoryRowOut | undefined;
@@ -98,7 +98,7 @@ export function StoryContent({storyId, row, lookedAt, now, timeZone, onArticle}:
   const fresh = story && lookedAt ? factsSince(story.facts, lookedAt) : [];
   if (!shown) return <div className="st-body">{failed ? <LoadFailed what="this story" loads={[storyLoad]} /> : <StoryBodySkeleton />}</div>;
   return (
-    // The head from the story's row at once; its summary and sources wait for the story (news-05, #232).
+    // The head from the story's row at once; its summary and sources wait for the story.
     <div className="st-swap" key={storyId}>
       <div className="st-head">
         <div className="st-secs">
@@ -130,7 +130,7 @@ export function StoryContent({storyId, row, lookedAt, now, timeZone, onArticle}:
   );
 }
 
-/** An article opened from a story's Sources: the story pane's, and the recap's modal's (SV-219). */
+/** An article opened from a story's Sources: the story pane's, and the recap's modal's. */
 export function ArticleContent({storyId, articleId, now, timeZone, onArticle, onOriginal}: {
   storyId: number;
   articleId: number;
@@ -144,14 +144,14 @@ export function ArticleContent({storyId, articleId, now, timeZone, onArticle, on
   const articleLoad = {path: articlePath(articleId), ...useResource<ArticleOut>(articlePath(articleId))};
   const article = articleLoad.data?.id === articleId ? articleLoad.data : undefined;
   return article ? <Article key={article.id} article={article} story={story} now={now} timeZone={timeZone} onArticle={onArticle} onOriginal={onOriginal} /> : (
-    // Its head from the story's own line for it while the article loads (news-05, #232).
+    // Its head from the story's own line for it while the article loads.
     <ArticleLoading key={articleId} source={story?.sources.find(source => source.article_id === articleId)} load={articleLoad} now={now} timeZone={timeZone} />
   );
 }
 
 /**
  * New since you looked: the newest four facts, then "6 more" folding the rest away, so the story's
- * summary stays in view (the polish audit's news-12); a click opens the fold, the card growing over
+ * summary stays in view; a click opens the fold, the card growing over
  * 180 ms, and its chevron turns. Five facts or fewer all show.
  */
 function NewSince({facts, lookedAt, now, timeZone}: {facts: StoryOut['facts']; lookedAt: string; now: number; timeZone: string}) {

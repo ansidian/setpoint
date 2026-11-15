@@ -1,4 +1,4 @@
-// Removing Jobs (D303): drop.sql, applied to an ephemeral database holding mail and Jobs, drops every
+// Removing Jobs: drop.sql, applied to an ephemeral database holding mail and Jobs, drops every
 // jobs_ table and Jobs's migrations table, and leaves every other table and row exactly as it was.
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';

@@ -1,4 +1,4 @@
-// How triage learns (BRIEF.md › Triage and Read state and Done; decisions 27, 28): never from
+// How triage learns: never from
 // per-email labels, only from Done. Done from the row without opening says the email probably
 // didn't need attention; opened then Done says it did. When the same organisation and type are
 // cleared unopened enough times running, Attention offers one pattern prompt; Yes makes a learned
@@ -10,7 +10,7 @@ import {organisationKey} from './triageRules.ts';
 export const PROMPT_THRESHOLD = 4;
 
 /**
- * One verdict on an attention email: Done opened or unopened, or an imported v1 correction (out of
+ * One verdict on an attention email: Done opened or unopened, or a correction imported at cutover (out of
  * Attention counts as unopened, into it as opened).
  */
 export interface Verdict {

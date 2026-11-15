@@ -1,5 +1,5 @@
 {
-  "about": "What the line reads (DESIGN.md #260, darma SV-114, D295): one example of each kind of phrase and what it reads, shown from the web editor's ? and the iPhone's. Written by hand; web/tests/lineReference.test.ts runs each example through parseTitle (today the seed's Wed, Oct 7, 2026, its calendars and projects, reminders counting from today at 9:00 AM) and fails when a reads isn't what the editor's fields would say. kind is the item it's typed into, event or task; plain, when there, is the phrase in the example kept as words (clicked, ⌥⌫ or tapped).",
+  "about": "What the line reads: one example of each kind of phrase and what it reads, shown from the web editor's ? and the iPhone's. Written by hand; web/tests/lineReference.test.ts runs each example through parseTitle (today the seed's Wed, Oct 7, 2026, its calendars and projects, reminders counting from today at 9:00 AM) and fails when a reads isn't what the editor's fields would say. kind is the item it's typed into, event or task; plain, when there, is the phrase in the example kept as words (clicked, ⌥⌫ or tapped).",
   "sections": [
     {
       "title": "Days",

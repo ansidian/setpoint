@@ -1,5 +1,5 @@
-// The one retry policy for durable jobs: syncs, sweeps, push renewals and commands (BRIEF.md ›
-// Decided elsewhere). Providers' errors arrive classified (src/sync/errors.ts): what a retry can fix
+// The one retry policy for durable jobs: syncs, sweeps, push renewals and commands.
+// Providers' errors arrive classified (src/sync/errors.ts): what a retry can fix
 // is retried with backoff; what it can't fails at once.
 
 /**

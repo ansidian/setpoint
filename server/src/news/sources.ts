@@ -1,4 +1,4 @@
-// News's sources (BRIEF.md › News › Sources, D89, D91): the built-in list here holds only what isn't
+// News's sources: the built-in list here holds only what isn't
 // local (national outlets, first-party newsrooms, the tech press, the labs' pages, Hacker News, and
 // the hazard APIs, which read the home location in Settings › Calendar). The local list (the area's
 // stations, a crime wire, Google News search for the area) names the user's city, so it lives in the data
@@ -40,7 +40,7 @@ export interface NewsSourceSpec {
   summaryOnly?: boolean;
   metered?: boolean;
   intervalSeconds?: number;
-  // Its tile in Settings › News, kept in its config; none takes its adapter's (N5).
+  // Its tile in Settings › News, kept in its config; none takes its adapter's.
   icon?: NewsSourceIcon;
 }
 
@@ -52,10 +52,10 @@ const page = (key: string, name: string, url: string, outlet: string, reads: str
   ({key, name, section: 'ai', kind: 'page_read', adapter: 'page_read', url, reads, config: {outlet, ...config}});
 
 /**
- * The built-in list: free, chosen by hand and checked to have no paywall (D89), as the 2026-10-10
- * research (SV-43) fetched each one. Feed URLs are the ones each outlet publishes. The hazard APIs ask
+ * The built-in list: free, chosen by hand and checked to have no paywall, as the 2026-10-10
+ * research fetched each one. Feed URLs are the ones each outlet publishes. The hazard APIs ask
  * about the home location, so they name no place here. Several are filtered rather than taken whole
- * (tech press, the status page): the model's noise filter keeps only what BRIEF's sections cover.
+ * (tech press, the status page): the model's noise filter keeps only what News's sections cover.
  */
 export const DEFAULT_NEWS_SOURCES: NewsSourceSpec[] = [
   // Local: official data for hazards, by distance from the home location.
@@ -116,7 +116,7 @@ export const DEFAULT_NEWS_SOURCES: NewsSourceSpec[] = [
   feed('courthouse-news', 'Courthouse News', 'general', 'https://www.courthousenews.com/feed/', 'Courthouse News'),
 ];
 
-// ---- The local list, in the data directory (D91) ----
+// ---- The local list, in the data directory ----
 
 /** The local list's name in the data directory. */
 export const LOCAL_SOURCES_FILE = 'news-local-sources.json';
@@ -136,7 +136,7 @@ const localSourceSchema = z.strictObject({
   summary_only: z.boolean().default(false),
   metered: z.boolean().default(false),
   interval_minutes: z.int().min(1).max(24 * 60).optional(),
-  // N5: its tile in Settings › News; one not in NEWS_SOURCE_ICONS makes the list unreadable, as any bad field does.
+  // Its tile in Settings › News; one not in NEWS_SOURCE_ICONS makes the list unreadable, as any bad field does.
   icon: z.enum(NEWS_SOURCE_ICONS).optional(),
 });
 export const localSourcesSchema = z.strictObject({

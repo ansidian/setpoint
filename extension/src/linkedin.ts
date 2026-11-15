@@ -1,4 +1,4 @@
-// What Setpoint on job boards reads on LinkedIn's job pages (SV-174). LinkedIn's class names are
+// What Setpoint on job boards reads on LinkedIn's job pages. LinkedIn's class names are
 // generated and change, so it reads only what has stayed put (README.md › What it reads on LinkedIn):
 //
 // - The job pane: the job's id in the address (`currentJobId`, or /jobs/view/<id>/), the company's

@@ -1,4 +1,4 @@
-// SV-181: the .ics import review's rules as tables (D437): each row's line and marks, the
+// The .ics import review's rules as tables: each row's line and marks, the
 // list's lines and copy, what's sent for an event (from the review or the editor), and a run's counts.
 import type {IcsEventOut, IcsReadOut, ItemCreateInput} from '@setpoint/shared';
 import {ICS_DROP_REASONS, SEED_TIME_ZONE} from '@setpoint/shared';
@@ -78,7 +78,7 @@ describe('the list\'s lines', () => {
     expect(droppedLine({...none, ...counts})).toBe(line);
   });
 
-  test('a file with nothing to import says what it had (D436: one that only cancels)', () => {
+  test('a file with nothing to import says what it had (one that only cancels)', () => {
     expect([nothingLine({...none, cancelled: 1}), nothingLine(none)]).toEqual(['Nothing to import, the file has 1 event cancelled', 'Nothing to import, the file has no events']);
   });
 });
@@ -117,7 +117,7 @@ test('a run\'s counts: sent, refused and settled, of the events it takes', () =>
   expect(runCounts(['a', 'b', 'c', 'd'], rows)).toEqual({done: 1, failed: 1, settled: 2, total: 4});
 });
 
-describe('SV-182: where a read file lands', () => {
+describe('where a read file lands', () => {
   const keynote = event({});
   const mixer = event({ical_uid: 'mixer@example.com', starts_at: '2026-10-01T01:00:00.000Z', ends_at: '2026-10-01T03:00:00.000Z', past: true});
   const fair = event({ical_uid: 'fair@example.com', all_day: true, starts_at: null, ends_at: null, start_date: '2026-11-14', end_date: '2026-11-15'});
@@ -133,7 +133,7 @@ describe('SV-182: where a read file lands', () => {
   });
 });
 
-describe('SV-190: a drag over the grid, before the drop', () => {
+describe('a drag over the grid, before the drop', () => {
   const file = (type: string) => ({kind: 'file', type});
   test.each([
     ['an item\'s own drag, not files', ['text/plain'], [{kind: 'string', type: 'text/plain'}], null],

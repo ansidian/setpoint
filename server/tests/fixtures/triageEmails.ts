@@ -1,5 +1,5 @@
-// B3's recorded fixture set: anonymised emails (invented senders on example domains, shaped after
-// the kinds of mail v1 saw) with the answers the cheap and strong models gave, and the lane each
+// The recorded fixture set: anonymised emails (invented senders on example domains, shaped after
+// the kinds of mail real inboxes get) with the answers the cheap and strong models gave, and the lane each
 // must end in. It covers every kind, the protected class, codes, Noise, mail from people and the
 // unsure cases. tests/triageFixtures.test.ts runs them through the real pipeline with the models
 // faked at the HTTP boundary (tests/fakeModels.ts).
@@ -85,7 +85,7 @@ export const TRIAGE_FIXTURES: TriageFixture[] = [
     expect: {lane: 'fyi', kind: 'money', type: 'receipt', protected: false, source: 'cheap_model', tiers: ['cheap']},
   },
   {
-    name: 'rent past due goes straight to the strong model (v1\'s hard risk)', account: 'Personal', from: ['Parkside Apartments', 'office@parksideapts.example'],
+    name: 'rent past due goes straight to the strong model (a hard risk)', account: 'Personal', from: ['Parkside Apartments', 'office@parksideapts.example'],
     subject: 'Your October rent is past due', body: 'Our records show October rent of $2,060 for Unit 4B is past due. A late fee applies after Oct 10.',
     strong: sure({lane: 'attention', kind: 'money', organisation: 'Parkside Apartments', type: 'deadline', key_date: '2026-10-10', summary: '$2,060 · late fee after Oct 10'}, 0.95),
     expect: {lane: 'attention', kind: 'money', type: 'deadline', source: 'strong_model', tiers: ['strong']},

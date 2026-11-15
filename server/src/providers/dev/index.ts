@@ -1,4 +1,4 @@
-// The dev provider (SV-2 decision D4): an in-process stand-in for Gmail, iCloud, Google Calendar,
+// The dev provider: an in-process stand-in for Gmail, iCloud, Google Calendar,
 // Todoist and weather, serving only the seed's dev sources. The seed is its whole state, so a sync
 // finds nothing new, and a command is confirmed locally after a short delay, so `npm run dev` shows
 // pending, confirmed and (by rule) failed changes and their live events end to end.
@@ -56,7 +56,7 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
         .where(and(eq(t.messages.providerId, message.providerId), eq(t.attachments.providerId, attachmentId))).get();
       return row ? devAttachment(row.filename, row.mimeType) : null;
     },
-    // SV-274: a seed digest's source, invented (src/dev/digest.ts); other seed mail has none.
+    // A seed digest's source, invented (src/dev/digest.ts); other seed mail has none.
     async source(context, message) {
       assertDev(context);
       const digest = DEV_DIGESTS.find(one => one.providerId === message.providerId);
@@ -71,7 +71,7 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
       // A new item gets the provider's id, as Google's or Todoist's would.
       if (command.kind === 'item_create') {
         context.store.db.update(t.items).set({providerId: `dev-item-${command.targetId}`}).where(eq(t.items.id, command.targetId)).run();
-        // A project the user chose to make (SV-24) joins the list, as Todoist's would.
+        // A project the user chose to make joins the list, as Todoist's would.
         const input = command.payload.input as {create_project?: boolean; project?: string | null} | undefined;
         if (input?.create_project && input.project && !context.store.db.select().from(t.todoistProjects).where(eq(t.todoistProjects.name, input.project)).get()) {
           context.store.db.insert(t.todoistProjects).values({providerId: `dev-project-${command.targetId}`, name: input.project, position: 1000, inbox: false}).onConflictDoNothing().run();
@@ -89,12 +89,12 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
 const refusedImports = new Set<number>();
 
 export function boardRefusals(store: Store, command: CommandRow): string | null {
-  // SV-20's failed colour, for Settings › Calendar: Google refuses `sun` as a calendar's colour (one
-  // Settings offers, which `alert` no longer is, #163).
+  // A failed calendar colour, for Settings › Calendar: Google refuses `sun` as a calendar's colour (one
+  // Settings offers, which `alert` no longer is).
   if (command.kind === 'calendar_colour') return command.payload.colour === 'sun' ? 'The caller does not have permission (403 Forbidden)' : null;
-  // SV-25's failed colour, for Settings › Calendar's Todoist projects: Todoist refuses taupe as a project's colour.
+  // A failed project colour, for Settings › Calendar's Todoist projects: Todoist refuses taupe as a project's colour.
   if (command.kind === 'project_colour') return command.payload.colour === 'taupe' ? 'Insufficient permissions (403 Forbidden)' : null;
-  // SV-181's refused import, left in the review with Retry: Google refuses "Poster session" the first
+  // A refused .ics import, left in the review with Retry: Google refuses "Poster session" the first
   // time it's sent, and takes it on Retry.
   const imported = (command.payload.import as {event?: {title?: string}} | undefined)?.event;
   if (imported) {
@@ -102,7 +102,7 @@ export function boardRefusals(store: Store, command: CommandRow): string | null 
     refusedImports.add(command.id);
     return 'Invalid start time. (400 Bad Request)';
   }
-  // SV-74's refused task with no date, which says so in a toast: Todoist refuses "Renew passport".
+  // A refused task with no date, which says so in a toast: Todoist refuses "Renew passport".
   if (command.kind === 'item_create') return (command.payload.input as {title?: string} | undefined)?.title === 'Renew passport' ? 'Insufficient permissions (403 Forbidden)' : null;
   if (command.kind !== 'item_update') return null;
   const item = store.db.select().from(t.items).where(eq(t.items.id, command.targetId)).get();
@@ -114,7 +114,7 @@ export function boardRefusals(store: Store, command: CommandRow): string | null 
 }
 
 /**
- * Places for the seed's dev runs (F6; D4's stand-in, as for the calendar): invented places matched
+ * Places for the seed's dev runs (the dev provider's stand-in, as for the calendar): invented places matched
  * by name or address, so the editor's place suggestions (board 13) work without a Maps key and never
  * reach Google. Served only while the database holds the seed's dev sources and no key is set.
  */
@@ -126,7 +126,7 @@ export const DEV_PLACES: PlaceSuggestionOut[] = [
   {place_id: 'dev-student-union', name: 'University Student Union', address: ''},
 ];
 
-// Invented coordinates for the invented places (F7: Home in Settings › Calendar), around Los Angeles.
+// Invented coordinates for the invented places (for Home in Settings › Calendar), around Los Angeles.
 const DEV_LOCATIONS: Record<string, [number, number]> = {
   'dev-blue-door': [34.0901, -118.2768], 'dev-blue-door-bistro': [34.1478, -118.1445], 'dev-blue-door-coffee': [34.1425, -118.2551],
   'dev-smile-dental': [34.0736, -118.2400], 'dev-student-union': [34.0689, -118.4452],

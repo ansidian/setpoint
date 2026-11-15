@@ -1,5 +1,5 @@
-// Setpoint's mail state for Home Assistant, which mantel's mail chip shows (BRIEF.md › The mail chip
-// in mantel; DESIGN.md › mantel's mail chip). Read-only, and outside the owner's session:
+// Setpoint's mail state for Home Assistant, which mantel's mail chip shows. Read-only, and
+// outside the owner's session:
 //
 //   GET /api/status/ha     Authorization: Bearer <token>     HaStatusOut, or 401 (WWW-Authenticate: Bearer)
 //
@@ -8,7 +8,7 @@
 // takes it. Responses are `Cache-Control: no-store`.
 //
 // What the Home Assistant integration (`setpoint`, in the private ops workspace, in the finance
-// importer's pattern) reads from it, polling every 60 s (D93):
+// importer's pattern) reads from it, polling every 60 s:
 //
 // - `attention`: a sensor for the chip's tone-C half, "✉ 3 attention". Attention mail not Done,
 //   read or not: the same number as Setpoint's sidebar pill (one query feeds both).
@@ -16,7 +16,7 @@
 // - `attention_emails`: the popover's rows, at most three, newest first (dot from `account.colour`,
 //   `sender`, `subject`, age from `received_at`, a read one's sender in ink2 by `unread`); each row
 //   opens `url`. "Open Setpoint ›" opens `open_url`.
-// - `needs_reconnect`: one alert chip per entry, "<label> needs sign-in" (decision 42), opening
+// - `needs_reconnect`: one alert chip per entry, "<label> needs sign-in", opening
 //   `url` (Settings › Accounts). An account's sources share one sign-in, so Gmail and Calendar on
 //   one Google account are one entry.
 // - `all_clear`: true only when there's nothing to show at all. A source needing reconnect is never

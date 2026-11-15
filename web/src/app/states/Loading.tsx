@@ -1,8 +1,8 @@
-// Loading (DESIGN.md › Motion, Decided while building #225): while a page's data is on its way it
+// Loading (DESIGN.md › Motion): while a page's data is on its way it
 // says so, never "nothing". A skeleton stands where the rows will be, in their shapes
 // (Skeletons.tsx), appearing only after a short delay so a quick answer never flashes one, then
 // breathing quietly until the rows replace it with a short fade. A load that fails says so in place,
-// with Try again (#228). Setpoint starting shows its mark (#233).
+// with Try again. Setpoint starting shows its mark.
 import {useEffect, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {refresh} from '../../api/client.ts';
@@ -80,7 +80,7 @@ export function useLoadFailed(loads: Load[]): boolean {
 }
 
 /**
- * "Couldn’t load the Inbox, Something went wrong. · Try again", in place of what didn't load (#228):
+ * "Couldn’t load the Inbox, Something went wrong. · Try again", in place of what didn't load:
  * the failing health line's look, its glyph `warning` in `caution`; Try again loads each failed one
  * again. Nothing while they're loading or loaded, or while Setpoint is offline.
  */
@@ -103,7 +103,7 @@ export function LoadFailed({what, loads, className}: {what: string; loads: Load[
 }
 
 /**
- * Setpoint starting, before it knows whether this browser is signed in (#233): the mark at 36 px
+ * Setpoint starting, before it knows whether this browser is signed in: the mark at 36 px
  * where the sign-in card's top sits, fading in once the start has taken a moment, then breathing,
  * as a skeleton does. Unreachable (States.tsx) is the same screen with the pill.
  */

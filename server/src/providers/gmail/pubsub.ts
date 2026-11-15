@@ -1,5 +1,4 @@
-// Gmail's push trigger: Pub/Sub **pull** on v2's own subscription (BRIEF.md › Decided elsewhere),
-// harvested from v1's gmail-pull and gmailPubSubNotification (see SV-3). Gmail publishes
+// Gmail's push trigger: Pub/Sub **pull** on Setpoint's own subscription. Gmail publishes
 // {emailAddress, historyId} to the topic whenever a watched inbox changes; each notification
 // queues that account's sync (a durable job) and is acknowledged only after that. The
 // notification is only a trigger: the sync pages history from Setpoint's own cursor, and the
@@ -24,7 +23,7 @@ export interface ServiceAccountKey {
 export interface PubSubSettings {
   // projects/<project>/topics/<topic>: what users.watch publishes to.
   topic: string;
-  // projects/<project>/subscriptions/<subscription>: v2's own pull subscription on that topic.
+  // projects/<project>/subscriptions/<subscription>: Setpoint's own pull subscription on that topic.
   subscription: string;
   serviceAccount: ServiceAccountKey;
 }
@@ -44,8 +43,8 @@ export interface GmailNotification {
 }
 
 /**
- * Gmail's notification in a Pub/Sub message: base64 JSON with emailAddress and historyId (v1's
- * decode, lower-casing the address). Null for anything else: it can never be processed.
+ * Gmail's notification in a Pub/Sub message: base64 JSON with emailAddress and historyId, the
+ * address lower-cased. Null for anything else: it can never be processed.
  */
 export function decodeNotification(data: string | undefined): GmailNotification | null {
   if (!data) return null;
@@ -101,7 +100,7 @@ interface ReceivedMessage {
   message?: {data?: string; messageId?: string; publishTime?: string};
 }
 
-/** v1's backoff after a failed pull: 1 s, doubling to a minute. */
+/** The backoff after a failed pull: 1 s, doubling to a minute. */
 const RETRY_FIRST_MS = 1000;
 const RETRY_MAX_MS = 60_000;
 
@@ -178,7 +177,7 @@ export class GmailPushPuller {
         } catch (error) {
           if (signal.aborted) break;
           this.state = 'retrying';
-          // Provider errors can carry notification contents; log the gist only (v1).
+          // Provider errors can carry notification contents; log the gist only.
           this.lastError = error instanceof Error ? error.message : String(error);
           console.error(`Gmail push: pull failed, retrying in ${this.retryMs / 1000}s (the sweep keeps mail current meanwhile)`);
           await new Promise(resolve => {

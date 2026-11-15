@@ -1,4 +1,4 @@
-// Calendar boards whose state the seed doesn't hold (SV decision D3):
+// Calendar boards whose state the seed doesn't hold:
 // - board 13 drafts "Dinner with Sam fri 7-9pm @Blue Door" as a new event, so Dinner with Sam isn't
 //   on the calendar yet (`no-dinner`);
 // - board 19b shows a change that failed and one still waiting (`failed-change`): Dinner with Sam

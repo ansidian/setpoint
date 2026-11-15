@@ -1,12 +1,11 @@
-// Matching triage rules against an email (BRIEF.md › Triage: rules first). The match shape is v1's
-// `preflight-rules.json` (harvested, SV-4): sender keys are alternatives, every other key present
-// must match too, text matches ignore case, and `none_includes` vetoes a match. A field's
-// `_excludes` (subject, sender name, body) vetoes it when that field has one of its words. v2 adds
-// `organisation` and `type`, which match what the model extracted, so a rule using them (every
-// learned rule) applies only after the model has read the email.
+// Matching triage rules against an email (rules come first). In a match, sender keys are
+// alternatives, every other key present must match too, text matches ignore case, and
+// `none_includes` vetoes a match. A field's `_excludes` (subject, sender name, body) vetoes it when
+// that field has one of its words. `organisation` and `type` match what the model
+// extracted, so a rule using them (every learned rule) applies only after the model has read the email.
 //
 // Rules decide a lane; they never decide protection. src/domain/triagePolicy.ts applies the
-// protected class after every rule (decision 29).
+// protected class after every rule.
 import type {Kind, Lane, MessageType, RuleMatch, RuleTrash} from '@setpoint/shared';
 import {hasPositiveKey} from '@setpoint/shared';
 
@@ -27,7 +26,7 @@ export interface Extracted {
 /**
  * A rule as triage applies it: the user's written ones (by position), then learned ones, then the
  * shipped defaults (src/triage/defaultRules.json). A default with `lane: null` decides nothing; it
- * only routes the email to the model (v1's `route_model`).
+ * only routes the email to the model.
  */
 export interface Rule {
   id: number | null;
@@ -38,14 +37,14 @@ export interface Rule {
   kind: Kind | null;
   // A shipped default may also say the type ("shipping").
   type: MessageType | null;
-  // A written rule's actions (DESIGN.md #347); null for learned rules, the defaults and a written
+  // A written rule's actions; null for learned rules, the defaults and a written
   // rule without any.
   actions?: RuleActions | null;
 }
 
 /**
- * What a written rule does besides sorting: mark the email read, trash it (now, or after a delay,
- * SV-237), for mail that arrived at or after `since` (when the rule was saved, edited or turned on).
+ * What a written rule does besides sorting: mark the email read, trash it (now, or after a delay),
+ * for mail that arrived at or after `since` (when the rule was saved, edited or turned on).
  */
 export interface RuleActions {
   markRead: boolean;
@@ -53,11 +52,11 @@ export interface RuleActions {
   since: string;
 }
 
-// A delayed trash's wait after arrival (D489).
+// A delayed trash's wait after arrival.
 const TRASH_DELAY_MS: Partial<Record<RuleTrash, number>> = {'15m': 15 * 60_000, '1h': 3_600_000, '1d': 86_400_000, '1w': 7 * 86_400_000};
 
 /**
- * When a rule's delayed trash is due: the email's arrival plus the delay (D489). Null for Never and
+ * When a rule's delayed trash is due: the email's arrival plus the delay. Null for Never and
  * Now, which aren't delayed.
  */
 export function trashDueAt(receivedAt: string, trash: RuleTrash): string | null {
@@ -89,7 +88,7 @@ function partsOf(email: RuleEmail): Parts {
 const includesAny = (text: string, needles: readonly string[] = []) => needles.some(needle => text.includes(lower(needle)));
 
 // Patterns are case-insensitive with no `g` flag, so a compiled one keeps no state between tests
-// and can be shared (v1's cache). One that doesn't compile never matches.
+// and can be shared. One that doesn't compile never matches.
 const compiled = new Map<string, RegExp | null>();
 function regex(pattern: string): RegExp | null {
   if (!compiled.has(pattern)) {
@@ -108,7 +107,7 @@ const regexMatches = (text: string, pattern: string) => regex(pattern)?.test(tex
 /** A rule using `organisation` or `type` needs the model's reading first. */
 export const needsReading = (match: RuleMatch) => match.organisation !== undefined || match.type !== undefined;
 
-/** A match that names who sent it (v1's "scoped" rule). */
+/** A match that names who sent it (a "scoped" rule). */
 export const isScoped = (match: RuleMatch) => Boolean(match.from_addresses || match.from_domains || match.from_name_includes);
 
 export const organisationKey = (organisation: string) => organisation.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -144,7 +143,7 @@ export function firstMatch<T extends Rule>(rules: readonly T[], email: RuleEmail
 }
 
 /**
- * v1's hard-risk words, kept as they were: mail that may cost money, a deadline or an account. The
+ * The hard-risk words: mail that may cost money, a deadline or an account. The
  * strong model reads such mail even when a rule matched (see ruleDecides).
  */
 const HARD_RISK_PATTERNS = [
@@ -164,7 +163,7 @@ export function hasHardRisk(email: RuleEmail): boolean {
 /**
  * Whether a matched rule may decide the lane by itself. Hard-risk mail is the strong model's to
  * read unless the rule keeps it in Attention or names its sender (the user's explicit choice for that
- * sender, as v1's scoped hard-risk finalizers).
+ * sender).
  */
 export function ruleDecides(rule: Rule, hardRisk: boolean): boolean {
   if (rule.lane === null) return false;

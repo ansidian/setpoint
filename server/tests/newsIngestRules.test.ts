@@ -1,7 +1,6 @@
-// News ingest's pure rules as tables (N2): canonical URLs (v1's cases kept), plain text, the 48
-// hours and page dates, distances, the hosts a read may reach, what an article is read for, which
-// images are worth copying, how a refusal is retried, charsets, outlets and which NWS alerts are
-// hazards.
+// News ingest's pure rules as tables: canonical URLs, plain text, the 48 hours and page dates,
+// distances, the hosts a read may reach, what an article is read for, which images are worth
+// copying, how a refusal is retried, charsets, outlets and which NWS alerts are hazards.
 import {SEED_NOW} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {isHazardAlert, nwsPoint, nwsZones} from '../src/domain/newsApis.ts';
@@ -17,11 +16,11 @@ const ZONE = 'America/Los_Angeles';
 
 describe('canonical URLs', () => {
   test.each([
-    // v1's cases.
+    // The basics.
     ['tracking, the fragment, www and the trailing slash go', 'https://www.example.com/a/b/?utm_source=rss&utm_medium=feed#comments', 'https://example.com/a/b'],
     ['a meaningful parameter stays', 'https://example.com/watch?v=abc123&utm_campaign=x', 'https://example.com/watch?v=abc123'],
     ['something that isn\'t a URL is kept, trimmed', ' not a url ', 'not a url'],
-    // v2's.
+    // The other trackers, the order and the host.
     ['the other trackers go', 'https://example.com/story?fbclid=1&gclid=2&mc_cid=3&mc_eid=4&ref=hn&igshid=5&ocid=6&smid=7&_ga=8', 'https://example.com/story'],
     ['the rest are sorted', 'https://example.com/s?b=2&a=1', 'https://example.com/s?a=1&b=2'],
     ['the host is lower case, without a trailing dot', 'https://NEWS.Example.COM./Story', 'https://news.example.com/Story'],
@@ -42,10 +41,10 @@ describe('canonical URLs', () => {
 
 describe('plain text', () => {
   test.each([
-    // v1's.
+    // The basics.
     ['tags and entities go, whitespace collapses', '<p>Hello <b>world</b> &amp; friends</p>\n\n  more', Infinity, 'Hello world & friends more'],
     ['nothing is empty', null, Infinity, ''],
-    // v2's: blocks stay apart, every entity is read, scripts say nothing.
+    // Blocks stay apart, every entity is read, scripts say nothing.
     ['blocks stay apart', '<p>One.</p><p>Two.</p><ul><li>Three</li></ul>', Infinity, 'One. Two. Three'],
     ['every entity', 'It&rsquo;s 5&nbsp;&deg; &#8211; &#x2014; cooler', Infinity, 'It’s 5 ° – — cooler'],
     ['scripts and styles say nothing', '<style>p{}</style><script>alert(1)</script><p>Text</p>', Infinity, 'Text'],
@@ -55,7 +54,7 @@ describe('plain text', () => {
     expect(plainText(html, max)).toBe(expected);
   });
 
-  test('a word longer than the cut is cut where it must be (v1)', () => {
+  test('a word longer than the cut is cut where it must be', () => {
     expect(clip('x'.repeat(100), 30)).toBe(`${'x'.repeat(30)}…`);
   });
 });
@@ -147,7 +146,7 @@ describe('the hosts a read may reach', () => {
   });
 });
 
-describe('what a new article is read for (D89)', () => {
+describe('what a new article is read for', () => {
   test.each([
     ['an outlet\'s article: its page and its image', {discovery: false, metered: false, summaryOnly: false, hasText: false}, {page: true, image: true}],
     ['summary only: its feed\'s image, never its page', {discovery: false, metered: false, summaryOnly: true, hasText: false}, {page: false, image: true}],
@@ -185,7 +184,7 @@ describe('a refusal, by the one retry policy', () => {
     expect(kindOfNewsStatus(status, retryAfter)).toBe(kind);
   });
 
-  // v1's parseRetryAfterAt cases, against the one Retry-After reader every provider shares.
+  // The parseRetryAfterAt cases, against the one Retry-After reader every provider shares.
   test.each([
     ['delta seconds', '90', 90_000],
     ['an HTTP date', 'Wed, 07 Oct 2026 16:17:00 GMT', 5 * 60_000],

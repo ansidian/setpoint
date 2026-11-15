@@ -1,11 +1,10 @@
-// Setpoint's tables: what the dev seed needs (B0), shaped after BRIEF.md › Decided elsewhere so later
-// slices extend it rather than replace it, plus the platform (B1): the owner and sign-in, settings
-// and secrets, sources with their credentials and health, durable jobs and sync cursors, commands,
-// the notification log and the AI usage ledger. B2 adds the search index; B5 the providers' item
+// Setpoint's tables: the mail and calendar records, and the platform: the owner and sign-in,
+// settings and secrets, sources with their credentials and health, durable jobs and sync cursors,
+// commands, the notification log and the AI usage ledger. Then the search index; the providers' item
 // fields, watch channels, Todoist's projects and OAuth state, Time to Leave's routes and the
-// reminders' mark (in its own block at the end); B3 triage's rules, prompts, evidence and health (its
-// block after B5's); B4 the search log and Alfred's threads; B7 v1's import; N1 News's sources,
-// articles, stories and image copies (last).
+// reminders' mark (in its own block at the end); triage's rules, prompts, evidence and health; the
+// search log and Alfred's threads; what the cutover import left; and News's sources, articles,
+// stories and image copies (last).
 //
 // Timestamps are ISO 8601 UTC strings ("2026-10-07T16:12:00.000Z"); dates are local
 // `YYYY-MM-DD` in the owner's zone. JSON columns hold values checked by `@setpoint/shared`.
@@ -39,7 +38,7 @@ export const accounts = sqliteTable('accounts', {
 ]);
 
 /**
- * One row per email: the provider's fields plus what triage derives (BRIEF.md › Triage). Every
+ * One row per email: the provider's fields plus what triage derives. Every
  * view is a query over this table; nothing is copied per view.
  *
  * Search reads `messages_fts`, an FTS5 index over the sender, organisation, subject, summary, search
@@ -64,41 +63,41 @@ export const messages = sqliteTable('messages', {
   bodyText: text('body_text').notNull(),
   bodyHtml: text('body_html'),
   receivedAt: text('received_at').notNull(),
-  // The provider's read state, kept both ways (decision 7).
+  // The provider's read state, kept both ways.
   unread: integer('unread', {mode: 'boolean'}).notNull(),
   // Null until triage has sorted it: Unsorted.
   lane: text('lane', {enum: LANES}),
   kind: text('kind', {enum: KINDS}),
   type: text('type', {enum: MESSAGE_TYPES}),
-  // Pre-fills proposals and serves search; never shown on its own (decision 16).
+  // Pre-fills proposals and serves search; never shown on its own.
   keyDate: text('key_date'),
   securityFacts: text('security_facts', {mode: 'json'}).$type<SecurityFacts>(),
-  // Protected security mail always stays in Attention; no rule moves it (decision 29).
+  // Protected security mail always stays in Attention; no rule moves it.
   protected: integer('protected', {mode: 'boolean'}).notNull().default(false),
   pinnedAt: text('pinned_at'),
-  // Done takes it out of Attention; whether it was opened first teaches triage (decision 27).
+  // Done takes it out of Attention; whether it was opened first teaches triage.
   doneAt: text('done_at'),
   openedBeforeDone: integer('opened_before_done', {mode: 'boolean'}),
   // A verification code and when its row leaves the Inbox (15 minutes after arrival by default).
   code: text('code'),
   codeExpiresAt: text('code_expires_at'),
-  // When the user first opened it in Setpoint, so Done can record whether it was opened (decision 27).
+  // When the user first opened it in Setpoint, so Done can record whether it was opened.
   openedAt: text('opened_at'),
   // In the provider's trash: out of every view until Undo (untrash) or the provider purges it.
   trashedAt: text('trashed_at'),
-  // When a delayed trash is due, the earlier of a written rule's (arrival plus its delay, DESIGN.md
-  // #347) and the code's (its expiry, SV-252): the minute pass (src/triage/ruleTrash.ts) trashes it
+  // When a delayed trash is due, the earlier of a written rule's (arrival plus its delay) and
+  // the code's (its expiry): the minute pass (src/triage/ruleTrash.ts) trashes it
   // then. Pinning clears it, as does the pass once it sends the trash; unpinning brings back only
-  // the code's, while it hasn't expired (D511). The rule's is `triage_rule_id`, the rule that sorted it.
+  // the code's, while it hasn't expired. The rule's is `triage_rule_id`, the rule that sorted it.
   trashDueAt: text('trash_due_at'),
-  // Its code row is trashed at the code's expiry (SV-252): set once, when triage sorts new mail with
+  // Its code row is trashed at the code's expiry: set once, when triage sorts new mail with
   // a code, so codes from before it, history and codes read again later are never trashed.
   codeTrash: integer('code_trash', {mode: 'boolean'}).notNull().default(false),
-  // Whether the sender passed DMARC (B2 records it); null while unknown. Remote content loads for
-  // authenticated, non-Noise senders (decision 25).
+  // Whether the sender passed DMARC (mail sync records it); null while unknown. Remote content loads for
+  // authenticated, non-Noise senders.
   senderAuthenticated: integer('sender_authenticated', {mode: 'boolean'}),
 
-  // ---- B2 · Mail sync: provider facts the adapters record ----
+  // ---- Mail sync: provider facts the adapters record ----
   // The verdict behind `sender_authenticated` with its SPF / DKIM / DMARC evidence
   // (src/domain/senderAuthentication.ts); null while unknown.
   senderAuth: text('sender_auth', {mode: 'json'}).$type<SenderAuthentication>(),
@@ -113,10 +112,10 @@ export const messages = sqliteTable('messages', {
   // iCloud: where Trash keeps it ("uidvalidity:uid" in the Trash mailbox), for Undo.
   trashRef: text('trash_ref'),
 
-  // ---- SV-135 · Search: what the index holds in place of `body_text` ----
+  // ---- Search: what the index holds in place of `body_text` ----
   // `body_text` without its links and footers (src/domain/searchBody.ts), written with it.
   searchBody: text('search_body').notNull().default(''),
-  // Words for what the email is about, written after it arrives (SV-136, src/search/terms.ts). Null
+  // Words for what the email is about, written after it arrives (src/search/terms.ts). Null
   // until then, and for an email the model had none for.
   searchTerms: text('search_terms'),
   // The prompt version that last read it, whatever came back, so it's charged for once per version.
@@ -124,7 +123,7 @@ export const messages = sqliteTable('messages', {
   // user says so, as is mail read by an older prompt.
   searchTermsVersion: integer('search_terms_version'),
 
-  // ---- B3 · Triage: how the lane was decided, once per email ----
+  // ---- Triage: how the lane was decided, once per email ----
   // What decided it (a rule, a learned rule, a model, the unsure default, the history pass), the
   // rule if one did (Settings › Mail's "9 this month"), and when. Null while Unsorted. Values are
   // checked by the domain, not by a CHECK: adding one here would rebuild the table and its FTS
@@ -132,11 +131,11 @@ export const messages = sqliteTable('messages', {
   triageSource: text('triage_source', {enum: TRIAGE_SOURCES}),
   triageRuleId: integer('triage_rule_id').references((): AnySQLiteColumn => triageRules.id, {onDelete: 'set null'}),
   triagedAt: text('triaged_at'),
-  // When the one-time extraction pass over backfilled history read it (D20): set once, so no email is
+  // When the one-time extraction pass over backfilled history read it: set once, so no email is
   // charged for twice.
   extractedAt: text('extracted_at'),
 
-  // ---- SV-274 · USPS mail: the Informed Delivery digest ----
+  // ---- USPS mail: the Informed Delivery digest ----
   // The daily digest from USPS Informed Delivery (src/domain/mailpieces.ts): its scans go to the
   // agenda rail (`mail_digests`), so the email itself is out of the Inbox and its counts, never
   // triaged and never notified. All and search still find it.
@@ -151,9 +150,9 @@ export const messages = sqliteTable('messages', {
   check('messages_type', sql`${table.type} is null or ${table.type} in (${quoted(MESSAGE_TYPES)})`),
   check('messages_done', sql`(${table.doneAt} is null) = (${table.openedBeforeDone} is null)`),
   check('messages_code', sql`(${table.code} is null) = (${table.codeExpiresAt} is null)`),
-  // B3.
+  // The rule that sorted it.
   index('messages_triage_rule').on(table.triageRuleId),
-  // SV-237: the minute pass reads the due ones.
+  // The minute pass reads the due ones.
   index('messages_trash_due').on(table.trashDueAt),
 ]);
 
@@ -183,11 +182,11 @@ export const calendars = sqliteTable('calendars', {
   // Settings › Calendar's switch: off, the calendar leaves Calendar entirely (its sidebar, grid,
   // agenda, pickers and search), whatever its checkbox says.
   listed: integer('listed', {mode: 'boolean'}).notNull().default(true),
-  // SV-191: Google's accessRole for the calendar (calendarWritable reads it); null for Todoist and
+  // Google's accessRole for the calendar (calendarWritable reads it); null for Todoist and
   // for a Google calendar not listed since the column came.
   accessRole: text('access_role'),
 }, table => [
-  // Per account (SV-9): a calendar shared with two Google accounts is on both lists with one id.
+  // Per account: a calendar shared with two Google accounts is on both lists with one id.
   uniqueIndex('calendars_account_provider').on(table.accountId, table.provider, table.providerId),
   // SQLite counts nulls as distinct, so a calendar without an account (Todoist's) keeps its own rule.
   uniqueIndex('calendars_provider').on(table.provider, table.providerId).where(sql`${table.accountId} is null`),
@@ -196,10 +195,9 @@ export const calendars = sqliteTable('calendars', {
 ]);
 
 /**
- * Anything on the calendar: a Google event or a Todoist task, one model (BRIEF.md › Decided
- * elsewhere). A timed event has `starts_at`/`ends_at`; an all-day event `start_date`/`end_date`
+ * Anything on the calendar: a Google event or a Todoist task, one model. A timed event has `starts_at`/`ends_at`; an all-day event `start_date`/`end_date`
  * (end exclusive, as Google's); a task `due_date`, plus `due_at` when it has a time. A task created
- * here with no date (SV-74) has neither until Todoist confirms it, and then leaves (commands/index.ts).
+ * here with no date has neither until Todoist confirms it, and then leaves (commands/index.ts).
  */
 export const items = sqliteTable('items', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -223,7 +221,7 @@ export const items = sqliteTable('items', {
   attendees: text('attendees', {mode: 'json'}).$type<string[]>(),
   // Minutes before the start.
   reminders: text('reminders', {mode: 'json'}).$type<number[]>(),
-  // SV-31: Time to Leave for this event, added among its notifications. Kept on the Google event (a
+  // Time to Leave for this event, added among its notifications. Kept on the Google event (a
   // private extended property), so it syncs and a recurring event's exceptions keep it.
   leaveReminder: integer('leave_reminder', {mode: 'boolean'}).notNull().default(false),
   // A task's Todoist project.
@@ -235,7 +233,7 @@ export const items = sqliteTable('items', {
   recurringItemId: integer('recurring_item_id').references((): AnySQLiteColumn => items.id, {onDelete: 'cascade'}),
   originalStart: text('original_start'),
   cancelled: integer('cancelled', {mode: 'boolean'}).notNull().default(false),
-  // ---- B5: what the providers add ----
+  // ---- What the providers add ----
   // Google's etag for the event as last seen, sent as If-Match so a change made elsewhere since
   // isn't overwritten.
   etag: text('etag'),
@@ -249,19 +247,19 @@ export const items = sqliteTable('items', {
   // its due date): the tombstone that keeps it done on its day after Todoist moves the task on.
   dueString: text('due_string'),
   dueRecurring: integer('due_recurring', {mode: 'boolean'}).notNull().default(false),
-  // F6: an event's own colour (Google's colorId, as one of the swatches); null takes its calendar's.
+  // An event's own colour (Google's colorId, as one of the swatches); null takes its calendar's.
   colour: text('colour', {enum: COLOURS}),
-  // F6b: a task's Todoist labels, by name (Todoist's key for them).
+  // A task's Todoist labels, by name (Todoist's key for them).
   labels: text('labels', {mode: 'json'}).$type<string[]>(),
-  // SV-179: a Google event's own URL (its `source.url`, an .ics file's URL line), for Open (D439).
+  // A Google event's own URL (its `source.url`, an .ics file's URL line), for Open.
   sourceUrl: text('source_url'),
-  // SV-180: a Google event's free/busy (its `transparency`); a free one is left out of the editor's
-  // conflict preview (D440). Tasks keep Google's default, busy.
+  // A Google event's free/busy (its `transparency`); a free one is left out of the editor's
+  // conflict preview. Tasks keep Google's default, busy.
   transparency: text('transparency', {enum: TRANSPARENCIES}).notNull().default('opaque'),
-  // SV-181: a Google event's iCalUID, the key an .ics import (Google's events.import) writes by, so
-  // the review can say which of a file's events the chosen calendar already has (D436).
+  // A Google event's iCalUID, the key an .ics import (Google's events.import) writes by, so
+  // the review can say which of a file's events the chosen calendar already has.
   icalUid: text('ical_uid'),
-  // SV-264: the description as its provider wrote it, never rewritten on the way in (D547): a Google
+  // The description as its provider wrote it, never rewritten on the way in: a Google
   // event's HTML, a Todoist task's Markdown. Sent back only when the user changed it.
   description: text('description'),
   parentProviderId: text('parent_provider_id'),
@@ -291,18 +289,18 @@ export const weatherDays = sqliteTable('weather_days', {
   fetchedAt: text('fetched_at').notNull(),
 }, table => [check('weather_condition', sql`${table.condition} in (${quoted(WEATHER_CONDITIONS)})`)]);
 
-/** Settings › Mail's trusted remote-content domains (decision 25). */
+/** Settings › Mail's trusted remote-content domains. */
 export const trustedDomains = sqliteTable('trusted_domains', {
   domain: text('domain').primaryKey(),
   createdAt: text('created_at').notNull(),
 });
 
-// ---- The owner and sign-in (harvested from v1's server/auth; see SV-2) ----
+// ---- The owner and sign-in ----
 
 /**
  * The single owner, claimed once with a setup token. `security_generation` moves on every security
  * change (password, passkeys, recovery codes, mode), which ends every session and pending sign-in
- * made under the old one. The password budget is shared by every caller (v1's throttle).
+ * made under the old one. The password budget is shared by every caller.
  */
 export const owner = sqliteTable('owner', {
   id: integer('id').primaryKey(),
@@ -365,7 +363,7 @@ export const webauthnChallenges = sqliteTable('webauthn_challenges', {
   check('webauthn_binding', sql`(${table.purpose} = 'sign_in') = (${table.pendingHash} is not null)`),
 ]);
 
-/** A registered passkey. Its sign counter never goes back (v1). */
+/** A registered passkey. Its sign counter never goes back. */
 export const passkeys = sqliteTable('passkeys', {
   id: integer('id').primaryKey({autoIncrement: true}),
   credentialId: text('credential_id').notNull().unique(),
@@ -388,7 +386,7 @@ export const recoveryCodes = sqliteTable('recovery_codes', {
 });
 
 /**
- * Home Assistant's bearer token for GET /api/status/ha (B6): one at a time, issued and rotated by
+ * Home Assistant's bearer token for GET /api/status/ha: one at a time, issued and rotated by
  * the CLI (`ha-token`), and only its SHA-256 kept. Revoking deletes the row.
  */
 export const haToken = sqliteTable('ha_token', {
@@ -450,7 +448,7 @@ export const sources = sqliteTable('sources', {
   id: integer('id').primaryKey({autoIncrement: true}),
   provider: text('provider', {enum: SOURCE_PROVIDERS}).notNull(),
   accountId: integer('account_id').references(() => accounts.id, {onDelete: 'cascade'}),
-  // AES-256-GCM, src/secrets/crypto.ts's v2 format.
+  // AES-256-GCM, src/secrets/crypto.ts's `sp2:` format.
   credentials: text('credentials'),
   dev: integer('dev', {mode: 'boolean'}).notNull().default(false),
   syncMode: text('sync_mode', {enum: SYNC_MODES}).notNull(),
@@ -482,13 +480,13 @@ export const syncCursors = sqliteTable('sync_cursors', {
   updatedAt: text('updated_at').notNull(),
 }, table => [uniqueIndex('sync_cursors_scope').on(table.sourceId, table.scope)]);
 
-// B3 adds `triage` (one email's triage, retried by the same policy while its models are down) and
-// `extract` (one backfilled email through the history extraction pass); N1 `news` (one News source's
-// fetch, run by src/news/worker.ts); N3 `news_sort` (sorting what's Unsorted, and the hourly re-score,
-// run by src/news/sortWorker.ts); Jobs's `jobs_read` (J2, a wiring point: Jobs reading what triage
-// sorted in the accounts it reads, run by src/jobs/reader.ts; removing Jobs may leave the value);
-// SV-136's `search_terms` (one email's search terms, run by src/search/terms.ts); SV-274's
-// `mailpieces` (one USPS digest's scans, read from its source by src/mailpieces/worker.ts).
+// Besides syncs, sweeps, pushes and commands: `triage` (one email's triage, retried by the same
+// policy while its models are down); `extract` (one backfilled email through the history extraction
+// pass); `news` (one News source's fetch, run by src/news/worker.ts); `news_sort` (sorting what's
+// Unsorted, and the hourly re-score, run by src/news/sortWorker.ts); Jobs's `jobs_read` (a wiring
+// point: Jobs reading what triage sorted in the accounts it reads, run by src/jobs/reader.ts;
+// removing Jobs may leave the value); `search_terms` (one email's search terms, run by
+// src/search/terms.ts); `mailpieces` (one USPS digest's scans, read from its source by src/mailpieces/worker.ts).
 export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort', 'jobs_read', 'search_terms', 'mailpieces'] as const;
 export const JOB_STATES = ['queued', 'running', 'done', 'failed'] as const;
 
@@ -496,7 +494,7 @@ export const JOB_STATES = ['queued', 'running', 'done', 'failed'] as const;
  * Durable work: a source's sync, sweep or push renewal, or a command for its provider. A job is
  * claimed with a lease, so one left running by a crash is taken up again; failures follow the one
  * retry policy (src/domain/retry.ts). `key` keeps one queued or running job per purpose; `again`
- * asks a running sync for one more once it's done (a push that came while it ran, SV-251).
+ * asks a running sync for one more once it's done (a push that came while it ran).
  */
 export const jobs = sqliteTable('jobs', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -504,9 +502,9 @@ export const jobs = sqliteTable('jobs', {
   key: text('key').notNull(),
   sourceId: integer('source_id').references(() => sources.id, {onDelete: 'cascade'}),
   commandId: integer('command_id').references(() => commands.id, {onDelete: 'cascade'}),
-  // B3: the email a triage job sorts.
+  // The email a triage job sorts.
   messageId: integer('message_id').references(() => messages.id, {onDelete: 'cascade'}),
-  // N1: the News source a `news` job fetches.
+  // The News source a `news` job fetches.
   newsSourceId: integer('news_source_id').references((): AnySQLiteColumn => newsSources.id, {onDelete: 'cascade'}),
   state: text('state', {enum: JOB_STATES}).notNull().default('queued'),
   attempts: integer('attempts').notNull().default(0),
@@ -524,7 +522,7 @@ export const jobs = sqliteTable('jobs', {
 ]);
 
 /**
- * Every change to a provider (BRIEF.md › Decided elsewhere, after mantel's `control`). It's pending
+ * Every change to a provider (after mantel's `control`). It's pending
  * until the provider confirms; otherwise failed with the provider's own message, until Try again
  * (pending again) or Move back (reverted). The mirror shows the change from the start, and
  * `previous` holds what Move back restores. One active (pending or failed) command per target.
@@ -572,7 +570,7 @@ export const notifications = sqliteTable('notifications', {
   check('notifications_state', sql`${table.state} in ('sent', 'failed', 'skipped')`),
 ]);
 
-/** Each model call: what it was for, its tokens and cost (Settings › AI; B3 and B4 write it). */
+/** Each model call: what it was for, its tokens and cost (Settings › AI; triage, search and Alfred write it). */
 export const aiUsage = sqliteTable('ai_usage', {
   id: integer('id').primaryKey({autoIncrement: true}),
   at: text('at').notNull(),
@@ -591,13 +589,13 @@ export const aiUsage = sqliteTable('ai_usage', {
   check('ai_usage_purpose', sql`${table.purpose} in (${quoted(AI_PURPOSES)})`),
 ]);
 
-// ---- Calendar, Todoist and weather (B5) ----
+// ---- Calendar, Todoist and weather ----
 
 export const CHANNEL_STATES = ['pending', 'active', 'retired', 'unsupported'] as const;
 
 /**
  * A Google Calendar watch channel (push). Its token is kept as a SHA-256 hash; a notification must
- * name the channel, carry the token and match the resource Google gave it (v1's calendar-push).
+ * name the channel, carry the token and match the resource Google gave it.
  * `unsupported` remembers a calendar Google can't watch (holidays) until `expires_at`.
  */
 export const calendarChannels = sqliteTable('calendar_channels', {
@@ -618,7 +616,7 @@ export const calendarChannels = sqliteTable('calendar_channels', {
 
 /**
  * Todoist's projects, for a task's project name and the editor's picker, and their colours for the
- * task rings (SV-25). The id is Setpoint's own, so a colour change's command can name its project.
+ * task rings. The id is Setpoint's own, so a colour change's command can name its project.
  */
 export const todoistProjects = sqliteTable('todoist_projects', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -631,7 +629,7 @@ export const todoistProjects = sqliteTable('todoist_projects', {
   colour: text('colour'),
 }, table => [uniqueIndex('todoist_projects_provider').on(table.providerId)]);
 
-/** F6b: Todoist's personal labels, mirrored by sync, for a task's labels picker. */
+/** Todoist's personal labels, mirrored by sync, for a task's labels picker. */
 export const todoistLabels = sqliteTable('todoist_labels', {
   providerId: text('provider_id').primaryKey(),
   name: text('name').notNull(),
@@ -640,7 +638,7 @@ export const todoistLabels = sqliteTable('todoist_labels', {
 
 /**
  * Todoist's OAuth state between Connect and the callback: single use, ten minutes, and bound to
- * the browser that started it by a cookie whose hash is kept here (v1's todoist-oauth).
+ * the browser that started it by a cookie whose hash is kept here.
  */
 export const todoistOauthStates = sqliteTable('todoist_oauth_states', {
   hash: text('hash').primaryKey(),
@@ -650,8 +648,8 @@ export const todoistOauthStates = sqliteTable('todoist_oauth_states', {
 });
 
 /**
- * Time to Leave's route for one occurrence: from Home to the event's place, checked on v1's
- * cadence. `inputs` fingerprints Home, the destination and the start the route was asked for, so
+ * Time to Leave's route for one occurrence: from Home to the event's place, checked on its
+ * cadence (src/domain/timeToLeave.ts). `inputs` fingerprints Home, the destination and the start the route was asked for, so
  * an answer for an event that moved meanwhile is thrown away.
  */
 export const travelEstimates = sqliteTable('travel_estimates', {
@@ -672,14 +670,14 @@ export const scheduleMarks = sqliteTable('schedule_marks', {
   at: text('at').notNull(),
 });
 
-// ---- B3 · Triage: rules, pattern prompts' answers, imported evidence and triage's health ----
+// ---- Triage: rules, pattern prompts' answers, imported evidence and triage's health ----
 
 export const RULE_ORIGINS = ['written', 'learned'] as const;
 
 /**
- * Triage's rules (Settings › Mail): written ones (the user's, or v1's brought over at cutover) in
- * their order, and learned ones from a pattern prompt's Yes. `match` is v1's preflight-rules shape
- * (`@setpoint/shared` ruleMatchSchema). No rule moves protected mail (decision 29): triage applies
+ * Triage's rules (Settings › Mail): written ones (the user's, some brought over at cutover) in
+ * their order, and learned ones from a pattern prompt's Yes. `match` is `@setpoint/shared`'s
+ * ruleMatchSchema. No rule moves protected mail: triage applies
  * protection after every rule.
  */
 export const triageRules = sqliteTable('triage_rules', {
@@ -690,14 +688,14 @@ export const triageRules = sqliteTable('triage_rules', {
   kind: text('kind', {enum: KINDS}),
   position: integer('position').notNull(),
   enabled: integer('enabled', {mode: 'boolean'}).notNull().default(true),
-  // A written rule's actions (DESIGN.md #347): mark read, and trash now or after a delay
+  // A written rule's actions: mark read, and trash now or after a delay
   // (RULE_TRASH). Learned rules keep false and 'never'. They act on mail that arrived at or after
-  // `changed_at` (created, edited or turned on; D493). The email remembers its rule in
+  // `changed_at` (created, edited or turned on). The email remembers its rule in
   // messages.triage_rule_id.
   markRead: integer('mark_read', {mode: 'boolean'}).notNull().default(false),
   trash: text('trash', {enum: RULE_TRASH}).notNull().default('never'),
   changedAt: text('changed_at'),
-  // "v1:<rule name>" for a rule brought over from v1 at cutover (D412); null for every other rule.
+  // `v1:<rule name>` for a rule brought over at cutover; null for every other rule.
   importedFrom: text('imported_from').unique(),
   createdAt: text('created_at').notNull(),
 }, table => [
@@ -734,9 +732,9 @@ export const patternPrompts = sqliteTable('pattern_prompts', {
 ]);
 
 /**
- * Evidence for the learning loop from outside the message record: v1's lane corrections, brought
- * over once at cutover (D412). A correction out of Attention counts as a Done without opening; one
- * into Attention as one opened first. Lanes are v2's.
+ * Evidence for the learning loop from outside the message record: lane corrections, brought
+ * over once at cutover. A correction out of Attention counts as a Done without opening; one
+ * into Attention as one opened first. Lanes are Setpoint's.
  */
 export const triageEvidence = sqliteTable('triage_evidence', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -760,7 +758,7 @@ export const triageEvidence = sqliteTable('triage_evidence', {
 
 /**
  * Triage's heartbeat, one row: its last successful and failed model calls, for "Triage is down, as
- * of 9:09 AM" (DESIGN.md › Health and states). Down while the last call failed.
+ * of 9:09 AM". Down while the last call failed.
  */
 export const triageHealth = sqliteTable('triage_health', {
   id: integer('id').primaryKey(),
@@ -769,9 +767,9 @@ export const triageHealth = sqliteTable('triage_health', {
   lastError: text('last_error'),
 }, table => [check('triage_health_singleton', sql`${table.id} = 1`)]);
 
-// ---- B4 · Search and Alfred: the search log and Alfred's short threads ----
+// ---- Search and Alfred: the search log and Alfred's short threads ----
 
-/** Which reading a search used (SV-138), as the search log holds it: what the model said, and what became of it. */
+/** Which reading a search used, as the search log holds it: what the model said, and what became of it. */
 export interface SearchReadingLog {
   // 'model' asked it, 'cache' reused its last answer, 'kept' came with the request, null read nothing.
   source: 'model' | 'cache' | 'kept' | null;
@@ -787,8 +785,7 @@ export interface SearchReadingLog {
 }
 
 /**
- * Each search from the field (BRIEF.md › Search: logged so ranking can be measured against real
- * searches): what was typed, the chips in force, the free text left, and the ids it returned in
+ * Each search from the field (logged so ranking can be measured against real searches): what was typed, the chips in force, the free text left, and the ids it returned in
  * order, later pages appended. Alfred's own searches aren't logged.
  */
 export const searchLog = sqliteTable('search_log', {
@@ -803,7 +800,7 @@ export const searchLog = sqliteTable('search_log', {
   order: text('order', {enum: ['newest', 'match']}).notNull(),
   total: integer('total').notNull(),
   resultIds: text('result_ids', {mode: 'json'}).$type<number[]>().notNull(),
-  // SV-138: `source: 'kept'` for a search with a suggestion's chips; null for one without.
+  // `source: 'kept'` for a search with a suggestion's chips; null for one without.
   reading: text('reading', {mode: 'json'}).$type<SearchReadingLog>(),
 }, table => [
   index('search_log_at').on(table.at),
@@ -820,7 +817,7 @@ export const searchOpens = sqliteTable('search_opens', {
 }, table => [index('search_opens_search').on(table.searchId)]);
 
 /**
- * A suggestion offered for the field's text (D392), and whether it reached the screen and was accepted,
+ * A suggestion offered for the field's text, and whether it reached the screen and was accepted,
  * so acceptance can be judged. `reading` is what the model said, for one with a reading in it.
  */
 export const searchSuggestions = sqliteTable('search_suggestions', {
@@ -840,7 +837,7 @@ export const searchSuggestions = sqliteTable('search_suggestions', {
   searchId: integer('search_id').references(() => searchLog.id, {onDelete: 'set null'}),
 }, table => [index('search_suggestions_at').on(table.at)]);
 
-/** A chip taken off a search (SV-138): what a wrong reading looks like in the log. */
+/** A chip taken off a search: what a wrong reading looks like in the log. */
 export const searchChipRemovals = sqliteTable('search_chip_removals', {
   id: integer('id').primaryKey({autoIncrement: true}),
   searchId: integer('search_id').notNull().references(() => searchLog.id, {onDelete: 'cascade'}),
@@ -849,7 +846,7 @@ export const searchChipRemovals = sqliteTable('search_chip_removals', {
 }, table => [index('search_chip_removals_search').on(table.searchId)]);
 
 /**
- * One of Alfred's short threads (BRIEF.md › Alfred: the Answer card's follow-ups), held so a
+ * One of Alfred's short threads (the Answer card's follow-ups), held so a
  * follow-up continues it. `transcript` is the model provider's own message list, only ever appended
  * to, so a follow-up resends it unchanged. Scoped to one email for Ask about this email.
  */
@@ -883,11 +880,11 @@ export const alfredTurns = sqliteTable('alfred_turns', {
   proposals: text('proposals', {mode: 'json'}).$type<ProposalOut[]>().notNull(),
 }, table => [index('alfred_turns_conversation').on(table.conversationId)]);
 
-// ---- B7 · what v1's import left ----
+// ---- What the cutover import left ----
 
 /**
- * Pins from v1 that waited for their emails after the cutover. Nothing reads or writes it now, and
- * the table stays until a migration has another reason to drop it (D412).
+ * Pins brought over at cutover that waited for their emails after the cutover. Nothing reads or writes it now, and
+ * the table stays until a migration has another reason to drop it.
  */
 export const pendingPins = sqliteTable('pending_pins', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -901,7 +898,7 @@ export const pendingPins = sqliteTable('pending_pins', {
   check('pending_pins_key', sql`${table.providerId} is not null or ${table.messageId} is not null`),
 ]);
 
-// ---- B7 · Todoist's webhook ----
+// ---- Todoist's webhook ----
 
 /**
  * Todoist webhook deliveries already taken (X-Todoist-Delivery-Id), so a redelivery queues nothing;
@@ -912,19 +909,19 @@ export const todoistWebhookDeliveries = sqliteTable('todoist_webhook_deliveries'
   receivedAt: text('received_at').notNull(),
 });
 
-// ---- N1 · News: sources, articles, stories, their facts and seen state, and image copies ----
+// ---- News: sources, articles, stories, their facts and seen state, and image copies ----
 
-// Which N2 adapter reads a News source: shared's NEWS_ADAPTERS (Settings › News draws its icon from it).
+// Which adapter reads a News source: shared's NEWS_ADAPTERS (Settings › News draws its icon from it).
 export {NEWS_ADAPTERS};
 export type {NewsAdapterKey};
-/** Where a source came from: the built-in list in the repository, or the data directory's local list (D91). */
+/** Where a source came from: the built-in list in the repository, or the data directory's local list. */
 export const NEWS_SOURCE_ORIGINS = ['default', 'local'] as const;
 
 /**
  * A News source (Settings › News): one feed, official API, page read or discovery search, with its
  * own heartbeat and health, kept apart from `sources` (the accounts', calendar's and weather's): a
  * failing feed shows only in Settings › News, never in the health pill, Settings › Accounts or
- * mantel's status (DESIGN.md › News › States). Health is derived when read, as for `sources`.
+ * mantel's status. Health is derived when read, as for `sources`.
  *
  * `key` is stable across restarts, so the lists re-register without duplicates; a source dropped
  * from its list is retired (its articles stay). `dev` marks the seed's stand-ins, which no adapter
@@ -946,7 +943,7 @@ export const newsSources = sqliteTable('news_sources', {
   dev: integer('dev', {mode: 'boolean'}).notNull().default(false),
   // Its pages can't be read in-app (KTLA, OpenAI): its articles show their feed summary and the link.
   summaryOnly: integer('summary_only', {mode: 'boolean'}).notNull().default(false),
-  // A metered paper: counts toward and confirms stories, never shown or readable (D89).
+  // A metered paper: counts toward and confirms stories, never shown or readable.
   metered: integer('metered', {mode: 'boolean'}).notNull().default(false),
   intervalSeconds: integer('interval_seconds').notNull(),
   position: integer('position').notNull(),
@@ -970,7 +967,7 @@ export const newsSources = sqliteTable('news_sources', {
 
 /**
  * One outlet's article, as its source gave it: per source, by canonical URL. `extracted_text` is the
- * page's text (N2), dropped when its story leaves the page; `summary_only` when the page can't be
+ * page's text, dropped when its story leaves the page; `summary_only` when the page can't be
  * read in-app; `metered` counts but never shows; `discovery` was only found (Google News), with no
  * text. An article joins at most one story (`news_story_articles`); until then it's Unsorted.
  */
@@ -990,20 +987,20 @@ export const newsArticles = sqliteTable('news_articles', {
   metered: integer('metered', {mode: 'boolean'}).notNull().default(false),
   discovery: integer('discovery', {mode: 'boolean'}).notNull().default(false),
   publishedAt: text('published_at').notNull(),
-  // The outlet's image, before Setpoint copies it (N2); never served.
+  // The outlet's image, before Setpoint copies it; never served.
   imageUrl: text('image_url'),
   fetchedAt: text('fetched_at').notNull(),
-  // N3: where it happened, from official data (a fire's or a quake's point) or the model's reading,
+  // Where it happened, from official data (a fire's or a quake's point) or the model's reading,
   // for Local's closeness.
   lat: real('lat'),
   lng: real('lng'),
-  // N3: Claude Haiku 5.5's reading (its fact notes, sections, importance), once read.
+  // Claude Haiku 5.5's reading (its fact notes, sections, importance), once read.
   notes: text('notes', {mode: 'json'}).$type<ArticleNotes>(),
-  // N3: its text's opening words, to count identical wire copy as one outlet.
+  // Its text's opening words, to count identical wire copy as one outlet.
   wireKey: text('wire_key'),
-  // N3: why it was left out (D88), when it's noise; it never joins a story.
+  // Why it was left out, when it's noise; it never joins a story.
   noise: text('noise').$type<NoiseReason>(),
-  // N3: when sorting finished with it: grouped into a story, or found to be noise. Null is Unsorted.
+  // When sorting finished with it: grouped into a story, or found to be noise. Null is Unsorted.
   sortedAt: text('sorted_at'),
 }, table => [
   uniqueIndex('news_articles_canonical').on(table.sourceId, table.canonicalUrl),
@@ -1013,11 +1010,11 @@ export const newsArticles = sqliteTable('news_articles', {
 ]);
 
 /**
- * A story: the articles about one event (D86), with the model's headline, one line and summary.
- * `score` is N3's ranking, biggest first. `last_new_fact_at` moves only on a new fact: the dot comes
+ * A story: the articles about one event, with the model's headline, one line and summary.
+ * `score` is its ranking, biggest first. `last_new_fact_at` moves only on a new fact: the dot comes
  * back as updated, and the story leaves the page 48 h after it. Seen is per story (`seen_at`, the
  * last time the user saw it); `expired_unseen` records that it left the page before they did, which the
- * recap is built on (#298). The lead and image articles are N3's picks among its sources.
+ * recap is built on. The lead and image articles are sorting's picks among its sources.
  */
 export const newsStories = sqliteTable('news_stories', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -1033,19 +1030,19 @@ export const newsStories = sqliteTable('news_stories', {
   expiredAt: text('expired_at'),
   expiredUnseen: integer('expired_unseen', {mode: 'boolean'}).notNull().default(false),
   createdAt: text('created_at').notNull(),
-  // N3: the model's importance, 0–100 (the highest of its articles', then its writer's judgement, D421;
-  // the hourly ranking's before that), and its outlets with wire copy once; with recency, growth and
+  // The model's importance, 0–100 (the highest of its articles', then its writer's judgement; the
+  // hourly ranking's before that), and its outlets with wire copy once; with recency, growth and
   // closeness they make `score`. `ranked_at` is when it was last judged.
   importance: integer('importance').notNull().default(0),
   outlets: integer('outlets').notNull().default(0),
   rankedAt: text('ranked_at'),
-  // N3: the headline and summary are due to be written (a new story, or new facts), and when they were.
+  // The headline and summary are due to be written (a new story, or new facts), and when they were.
   needsWriting: integer('needs_writing', {mode: 'boolean'}).notNull().default(false),
   writtenAt: text('written_at'),
-  // SV-205: rated under the write gate and never written (D452), so it shows only under its section's
+  // Rated under the write gate and never written, so it shows only under its section's
   // Also reported, never in All, the recap or a section's own rows.
   belowGate: integer('below_gate', {mode: 'boolean'}).notNull().default(false),
-  // N3: made by the first run's fill of the last 48 hours: it never goes to the recap.
+  // Made by the first run's fill of the last 48 hours: it never goes to the recap.
   backfill: integer('backfill', {mode: 'boolean'}).notNull().default(false),
 }, table => [
   index('news_stories_live').on(table.expiredAt, table.score),
@@ -1087,9 +1084,8 @@ export const newsFacts = sqliteTable('news_facts', {
 export const NEWS_IMAGE_VARIANTS = ['large', 'thumb'] as const;
 
 /**
- * Setpoint's copies of an article's image, resized and served by Setpoint itself (DESIGN.md › The
- * list: Thumbnails): a large one for a block's lead, the pane and the article, and a thumbnail for
- * rows. The bytes are a file in the data directory's news-images/ (src/news/images.ts); `file` is its
+ * Setpoint's copies of an article's image, resized and served by Setpoint itself: a large
+ * one for a block's lead, the pane and the article, and a thumbnail for rows. The bytes are a file in the data directory's news-images/ (src/news/images.ts); `file` is its
  * name there. When a story leaves the page only its own thumbnail stays, for the archive's 90 days.
  */
 export const newsImages = sqliteTable('news_images', {
@@ -1109,7 +1105,7 @@ export const newsImages = sqliteTable('news_images', {
 ]);
 
 /**
- * Upcoming: a keynote found from invite headlines and confirmed (N3), shown at the top of its block
+ * Upcoming: a keynote found from invite headlines and confirmed, shown at the top of its block
  * until it starts ("Apple event · Tue Oct 20 · 10 AM"). `story_id` is the story that announced it.
  */
 export const newsEvents = sqliteTable('news_events', {
@@ -1126,7 +1122,7 @@ export const newsEvents = sqliteTable('news_events', {
 ]);
 
 /**
- * While you were away (#298), one row: when the last recap was put away (null before the first was,
+ * While you were away, one row: when the last recap was put away (null before the first was,
  * so the first holds what Missed held), when this one was first on screen and the stories it was fixed
  * with then, and when the user was last on News, for the hour away that puts it away
  * (src/domain/news.ts).
@@ -1140,7 +1136,7 @@ export const newsRecap = sqliteTable('news_recap', {
 }, table => [check('news_recap_singleton', sql`${table.id} = 1`)]);
 
 /**
- * N3: News's sorting, one row: its health as triage's is (down while its last model call failed, or
+ * News's sorting, one row: its health as triage's is (down while its last model call failed, or
  * there was no model to ask, with when this spell began and the provider's words), the first run's
  * span, and when the hourly re-score last ran (`last_ranked_at`).
  */
@@ -1158,7 +1154,7 @@ export const newsSorting = sqliteTable('news_sorting', {
 }, table => [check('news_sorting_singleton', sql`${table.id} = 1`)]);
 
 /**
- * SV-274: a USPS Informed Delivery digest's day, kept 30 days (src/mailpieces/worker.ts prunes it):
+ * A USPS Informed Delivery digest's day, kept 30 days (src/mailpieces/worker.ts prunes it):
  * the day the digest is for, and how many mailpieces it said were coming, which may be more than
  * it had scans for. The email may go (trashed, deleted) while its day stays.
  */

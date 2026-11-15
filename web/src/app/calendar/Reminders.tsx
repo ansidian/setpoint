@@ -1,4 +1,4 @@
-// The editor's Reminders row (DESIGN.md › Editor; darma SV-109, D287–D289): a chip for each, a
+// The editor's Reminders row: a chip for each, a
 // preset in its words ("10 min before") and any other as the moment it goes off with the offset
 // quiet beside it, and Add reminder's menu of presets with Custom… last. Custom… opens a date and a
 // time under the row, the moment picked kept as its offset from the item's moment so it moves with
@@ -25,9 +25,9 @@ export interface RemindersRowProps {
   menuRef: (menu: HTMLElement | null) => void;
   onMenu: (open: boolean) => void;
   onChange: (reminders: number[]) => void;
-  // Time to Leave's chip and its menu item, an event's (SV-31).
+  // Time to Leave's chip and its menu item, an event's.
   chips?: ReactNode;
-  // The glyph's class: the line's reminder tint when the line set some (SV-112).
+  // The glyph's class: the line's reminder tint when the line set some.
   glyph?: string;
   menuItems?: ReactNode;
 }

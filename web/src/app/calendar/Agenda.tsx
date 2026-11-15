@@ -1,4 +1,4 @@
-// Calendar on the phone (DESIGN.md › Phone; board 21): a read-only agenda of today and the next 7
+// Calendar on the phone (board 21): a read-only agenda of today and the next 7
 // days, empty days collapsed (logic/phone.ts). The routes are Calendar's: /calendar/item/3?at=…
 // opens that item's detail, read-only, over the agenda; /calendar/2026-10-07 brings that day into
 // view (or starts the agenda there when it's further out).
@@ -71,7 +71,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
       </header>
       <div className="content">
         <section className="ph-agenda" aria-label="Agenda">
-          {/* Until the days' items come, their skeleton (#227). */}
+          {/* Until the days' items come, their skeleton. */}
           {!items && <PhoneAgendaSkeleton />}
           {items && sections.map((section, index) => {
             const days = section.kind === 'day' ? section.date : daysOf(section.from, section.to).join(' ');
@@ -79,7 +79,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
             const wx = day && (section.kind === 'day' || section.from === section.to) ? weatherOf(day) : null;
             return (
               <div key={days} className="ph-day" data-days={days}>
-                {/* Today reads "Today" in `ink` 500 before its date (#138). */}
+                {/* Today reads "Today" in `ink` 500 before its date. */}
                 <div className={['pday', index === 0 && 'first', section.today && 'today'].filter(Boolean).join(' ')}>
                   {section.today ? <span><span className="pd-today">Today</span> · {dayTitle(section.kind === 'day' ? section.date : section.from)}</span> : section.title}
                   {section.kind === 'empty' && <span className="none">No events</span>}
@@ -88,7 +88,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
                 {section.kind === 'day' && section.lines.map(({item, when, past}, at) => {
                   const calendar = colours.get(item.calendar_id);
                   const to: CalendarRoute = {page: 'calendar', date: null, item: item.id, at: item.occurrence_start};
-                  // Events are their calendar's chip, as on the grids; tasks keep their ring (#138).
+                  // Events are their calendar's chip, as on the grids; tasks keep their ring.
                   const chip = item.kind === 'event';
                   return (
                     <Fragment key={item.key}>
@@ -129,7 +129,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
   );
 }
 
-/** Today's now-line, as the right pane's: the time in `alert` in the time column, a dot, then the line (#138). */
+/** Today's now-line, as the right pane's: the time in `alert` in the time column, a dot, then the line. */
 function NowLine({now, timeZone}: {now: number; timeZone: string}) {
   return (
     <div className="ph-now" aria-label={`Now, ${clockTime(now, timeZone)}`}>

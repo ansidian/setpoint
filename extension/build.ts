@@ -1,4 +1,4 @@
-// `npm run extension:build` (SV-174): Setpoint on LinkedIn's TypeScript bundled by esbuild into
+// `npm run extension:build`: Setpoint on LinkedIn's TypeScript bundled by esbuild into
 // extension/dist/, with its manifest and options page beside it. dist/ is the folder Chrome loads
 // unpacked (README.md › Building and loading it), and stays out of git.
 import fs from 'node:fs';

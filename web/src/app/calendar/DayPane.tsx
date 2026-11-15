@@ -1,16 +1,16 @@
-// The right pane (DESIGN.md › Right pane; boards 11 and 11b): the selected day, its forecast
+// The right pane (boards 11 and 11b): the selected day, its forecast
 // ("Sunny · 78° / 61°") or else what it holds ("6 events · 2 tasks"), its events (time, colour bar,
-// title, "7:00 – 8:00 AM · Personal", the place on its own line, #125, the recurring glyph, the next lifted with "in 5h" or "45m left" under way (calpanes-01), "Leave by 2:05 PM
-// · 18 min", in `caution` once it's time to go and gone once the event starts, SV-56), the now-line
-// in `alert` today, riding the event under way (#321), and its tasks with their projects, a timed one
-// over its start and in time order, the untimed last (D502); the footer's keys. F6 adds the line under an
+// title, "7:00 – 8:00 AM · Personal", the place on its own line, the recurring glyph, the next lifted with "in 5h" or "45m left" under way, "Leave by 2:05 PM
+// · 18 min", in `caution` once it's time to go and gone once the event starts), the now-line
+// in `alert` today, riding the event under way, and its tasks with their projects, a timed one
+// over its start and in time order, the untimed last; the footer's keys. The line under an
 // event that starts during another ("Overlaps Study group until 8:30 PM", board 12b), "Moving to Thu,
 // Oct 8" while a drop waits on its scope (board 15b), completing a task from its ring, and a change
-// waiting for its provider (a spinner, board 19b). SV-20 adds the calendar's sources' stale and
-// failing lines at the top (board 19b). A day whose items are only hidden says so, "4 hidden · Show
-// all", rather than "No events" (SV-56). The editor (Editor.tsx) takes the pane's place. Until the
+// waiting for its provider (a spinner, board 19b). The calendar's sources' stale and failing
+// lines show at the top (board 19b). A day whose items are only hidden says so, "4 hidden · Show
+// all", rather than "No events". The editor (Editor.tsx) takes the pane's place. Until the
 // day's items and the calendars have come, its line and agenda are a skeleton, never "Nothing
-// planned" (#227). SV-274 adds the day's USPS mail over the footer (MailStrip.tsx).
+// planned". The day's USPS mail sits over the footer (MailStrip.tsx).
 import type {CalendarOut, ItemOut, SourceOut, SubtaskOut, WeatherDayOut} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
 import {MailStrip} from './MailStrip.tsx';
@@ -39,7 +39,7 @@ import {useCalendarFade} from './view.ts';
 interface DayPaneProps {
   date: string;
   // The day's items or the calendars haven't come yet: its line and agenda are a skeleton, never
-  // "Nothing planned" (calpanes-03, #227); `failed` says why they didn't come instead.
+  // "Nothing planned"; `failed` says why they didn't come instead.
   loading: boolean;
   failed?: ReactNode;
   today: string;
@@ -56,11 +56,11 @@ interface DayPaneProps {
   onSelectItem: (item: ItemOut) => void;
   onNew: (kind: 'event' | 'task') => void;
   onComplete: (task: ItemOut) => void;
-  // SV-272: a subtask's check, and a task's subtasks in a new order.
+  // A subtask's check, and a task's subtasks in a new order.
   onCompleteSubtask: (subtask: SubtaskOut) => void;
   onSettleSubtask: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
   onReorderSubtasks: (task: ItemOut, ids: number[]) => Promise<unknown>;
-  // SV-273: a new subtask at the end of an open checklist (D566), one in the editor (D567), and one's menu (D569).
+  // A new subtask at the end of an open checklist, one in the editor, and one's menu.
   onAddSubtask: (task: ItemOut, title: string) => Promise<unknown>;
   onOpenSubtask: (subtask: SubtaskOut) => void;
   onSubtaskMenu: (event: ReactMouseEvent<HTMLElement>, subtask: SubtaskOut) => void;
@@ -72,18 +72,18 @@ const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="pro
 
 export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onCompleteSubtask, onSettleSubtask, onReorderSubtasks, onAddSubtask, onOpenSubtask, onSubtaskMenu, onShowAll}: DayPaneProps) {
   const arrived = useArrival(!loading, date);
-  // SV-272: the tasks whose checklists are open under their rows, by key.
+  // The tasks whose checklists are open under their rows, by key.
   const [open, setOpen] = useState(new Set<string>());
   const ring = useRingColour();
-  // A calendar just toggled fades its rows out or in, as its chips do (polish audit calpanes-11).
+  // A calendar just toggled fades its rows out or in, as its chips do.
   const fade = useCalendarFade();
   // A task ticked off here lands its done check and draws its strike, the one completion moment (done.ts).
   const title = dayTitle(date);
   const colours = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.colour]));
   const day = agenda(date, items, calendars, now, timeZone);
   const justDone = useJustDone(day.tasks);
-  // Another day picked: its heading fades in, its items slide in 6 px from the side it lies on (polish
-  // audit calpanes-06); the same day again, or an item changing, plays nothing.
+  // Another day picked: its heading fades in, its items slide in 6 px from the side it lies on; the same
+  // day again, or an item changing, plays nothing.
   const [shownDay, setShownDay] = useState<{date: string; dir: 'next' | 'prev' | undefined}>({date, dir: undefined});
   if (shownDay.date !== date) setShownDay({date, dir: date > shownDay.date ? 'next' : 'prev'});
   const wx = forecast ? weatherOf(forecast) : null;
@@ -137,7 +137,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
               {time
                 ? <span className="grow"><span className="title"><span>{task.title}</span></span><span className="ink3 num line">{time}</span></span>
                 : <span className="grow title"><span>{task.title}</span></span>}
-              {/* Waiting, the spinner comes before the project, which stays (polish audit calpanes-08). */}
+              {/* Waiting, the spinner comes before the project, which stays. */}
               {task.command?.state === 'pending' && <Spinner />}
               {task.subtasks.length > 0 && (
                 <button className="num count" type="button" aria-expanded={open.has(task.key)}
@@ -164,7 +164,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
             </Fragment>
           );
         })}
-        {/* An empty day is room to plan (polish audit calpanes-09): New event C and New task D as dashed ghost rows. */}
+        {/* An empty day is room to plan: New event C and New task D as dashed ghost rows. */}
         {!day.events.length && !day.tasks.length && (hidden > 0
           ? <div className="ag-empty"><Icon name="visibility_off" size={16} />{hidden} hidden · <button onClick={onShowAll}>Show all</button></div>
           : (
@@ -176,7 +176,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
         </>}
       </div>
 
-      {/* SV-274: the day's USPS mail, over the footer. */}
+      {/* The day's USPS mail, over the footer. */}
       <MailStrip date={date} />
 
       <div className="rp-foot">
@@ -189,9 +189,9 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
 }
 
 /**
- * SV-20: "Todoist, as of 8:40 AM" (board 19b), muted while stale, in `caution` with the reason while
- * failing, wrapping so the provider's words show in full (Decided while building #62), each with
- * Check now on it (states-08); folding in as they come and out as they go (states-13).
+ * "Todoist, as of 8:40 AM" (board 19b), muted while stale, in `caution` with the reason while
+ * failing, wrapping so the provider's words show in full, each with
+ * Check now on it; folding in as they come and out as they go.
  */
 export function HealthLines({now, timeZone}: {now: number; timeZone: string}) {
   const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);
@@ -230,8 +230,8 @@ function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZon
   const {item} = event;
   const leave = leaveLine(item, timeZone, now);
   const line = movingTo ? `${timeRange(item, timeZone)} · Moving to ${dayTitle(movingTo)}` : event.line;
-  // The next event is lifted out of the list, and one under way fills its bar as it goes (polish audit
-  // calpanes-01) and carries the now-line (#321).
+  // The next event is lifted out of the list, and one under way fills its bar as it goes and
+  // carries the now-line.
   const classes = ['ag-item', event.past && 'past', event.next && 'next', event.ongoing && 'ongoing', selected.has(item.key) && 'sel', item.command?.state === 'pending' && 'pending', fade].filter(Boolean).join(' ');
   return (
     <>
@@ -244,7 +244,7 @@ function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZon
         }}>
         <span className="when num">{event.when}</span>
         <span className="cbar" />
-        {/* Under way, the now-line rides the bar at the time gone and goes on across the row at 35% (#321).
+        {/* Under way, the now-line rides the bar at the time gone and goes on across the row at 35%.
             Drawn only: the row still reads its start time. */}
         {event.ongoing && <span className="nowride" aria-hidden="true"><span className="t num">{clockTime(now, timeZone)}</span><span className="dot" /><span className="rule" /></span>}
         <span className="grow">

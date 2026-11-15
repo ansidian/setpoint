@@ -1,6 +1,6 @@
 /* Setpoint's styles on the tokens in tokens.ts (published as CSS custom properties). Component
    values are design-export/styles/setpoint.css's, whose class names they keep (without `.sp`), so a
-   board's markup and the app's can be read side by side. DESIGN.md wins where they differ. */
+   board's markup and the app's can be read side by side. The app wins where they differ. */
 
 /* Geist and Geist Mono from the export's own build (geist 1.7.2, design-export/styles/fonts.css),
    the font the board baselines are drawn in; bundled, never loaded from the network. */
@@ -14,7 +14,7 @@ html, body, #root { height: 100%; margin: 0; }
 /* A tap shows as the press each control draws (DESIGN.md › Motion), not the browser's own box. */
 html { -webkit-tap-highlight-color: transparent; }
 :root { --zoom: 1; zoom: var(--zoom); }
-/* A MacBook at its default size reads a little larger, a wide screen larger still (SV-214). */
+/* A MacBook at its default size reads a little larger, a wide screen larger still. */
 @media (min-width: 1440px) { :root { --zoom: 1.075; } }
 @media (min-width: 2200px) { :root { --zoom: 1.25; } }
 body {
@@ -27,7 +27,7 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
-/* Controls show the arrow, as darma's do (DESIGN.md › Decided while building #151): a link that is a
+/* Controls show the arrow: a link that is a
    control (the nav, account rows, Today lines, agenda items) too, and rows never the text cursor. */
 a { text-decoration: none; color: inherit; cursor: default; }
 .row, .arow, .gh, .nfold { cursor: default; }
@@ -37,14 +37,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .app, button { user-select: none; -webkit-user-select: none; }
 .selectable, .rd-subj, .mailtext, .code { user-select: text; -webkit-user-select: text; }
 
-/* Thin scrollbars, their thumb the theme's (DESIGN.md › Tokens: darma's). */
+/* Thin scrollbars, their thumb the theme's (DESIGN.md › Tokens). */
 * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
 
 .num { font-variant-numeric: tabular-nums; }
 .mono { font-family: var(--mono); }
 .ink2 { color: var(--ink2); }
 .ink3 { color: var(--ink3); }
-/* A name's dim detail after it, a calendar's account in a menu (SV-191): the colour and this gap set it apart, no dot (SV-271). */
+/* A name's dim detail after it, a calendar's account in a menu: the colour and this gap set it apart, no dot. */
 .detail { margin-left: 6px; }
 .grow { flex: 1 1 auto; min-width: 0; }
 .ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -61,14 +61,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .nav > .icon { color: var(--ink3); }
 @media (hover: hover) { .nav:hover { background: var(--sub); } }
 /* The current page is a raised chip (`navOn` with an inset `navOnEdge` hairline), hover a flat `sub`
-   tint, so pointing never seems to move the selection (#166). */
+   tint, so pointing never seems to move the selection. */
 .nav.on { background: var(--navOn); box-shadow: inset 0 0 0 1px var(--navOnEdge); color: var(--ink); }
-/* The current page's icon is the accent, "you are here" (#163). */
+/* The current page's icon is the accent, "you are here". */
 .nav.on > .icon { color: var(--accent); }
 .nav .cnt { color: var(--ink3); font-weight: 400; font-size: 12px; }
 .apill, .ubadge { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--caution); color: var(--onInk); font-size: 11.5px; font-weight: 600; display: inline-grid; place-items: center; }
-/* The unread badge (SV-221, D471): `alert`, so unread mail can't be missed. It registers a rise
-   (shell-11): it swells to 1.22 at 40% over 260 ms (UnreadBadge.tsx plays it; never on a fall, the
+/* The unread badge: `alert`, so unread mail can't be missed. It registers a rise:
+   it swells to 1.22 at 40% over 260 ms (UnreadBadge.tsx plays it; never on a fall, the
    first paint or a page switch); from none it scales in from .6 over 180 ms, and at none it scales out
    over 120 ms before it goes. */
 .ubadge { background: var(--alert); }
@@ -76,7 +76,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ubadge.going { animation: badge-out var(--dur-fast) var(--ease) forwards; }
 @keyframes badge-in { from { transform: scale(.6); opacity: 0; } }
 @keyframes badge-out { to { transform: scale(.6); opacity: 0; } }
-/* A count rolls when it changes (Count.tsx, motion-07): for 180 ms the old number (::after) leaves 6 px
+/* A count rolls when it changes (Count.tsx): for 180 ms the old number (::after) leaves 6 px
    one way as the new comes in from 6 px the other, down for a fall and up for a rise, in one clipped
    cell. At rest it's the number alone. */
 .count { display: inline-grid; }
@@ -94,27 +94,27 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 @keyframes count-out-above { to { transform: translateY(-6px); opacity: 0; } }
 .dot { width: 8px; height: 8px; border-radius: 999px; flex: none; background: var(--c, var(--ink3)); }
 .dot.sm { width: 7px; height: 7px; }
-/* A Todoist project's dot, clamped to the theme's band as its tasks' rings are (#175). */
+/* A Todoist project's dot, clamped to the theme's band as its tasks' rings are. */
 .dot.todoist { background: oklch(from var(--c) clamp(var(--ringMin), l, var(--ringMax)) c h); }
 .sb-sec { margin-top: 18px; display: flex; flex-direction: column; gap: 2px; }
-/* The page's section (Today, or the mini-month and Calendars) fades in over 120 ms (shell-08). */
+/* The page's section (Today, or the mini-month and Calendars) fades in over 120 ms. */
 .sb-sec { animation: fade-in var(--dur-fast) var(--ease); }
 .sb-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 10px; height: 24px; display: flex; align-items: center; gap: 6px; }
-/* Tomorrow's label sits under Today's lines with a section's room above it (D460). */
+/* Tomorrow's label sits under Today's lines with a section's room above it. */
 .today .sb-label.tomorrow:not(:first-child) { margin-top: 10px; }
 .sb-foot { margin-top: auto; }
 .today-row { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; }
 @media (hover: hover) { .today-row:hover { background: var(--sub); } }
 .today-row .title { color: var(--ink); }
 .today-row .in { margin-left: auto; color: var(--ink3); font-size: 12px; white-space: nowrap; flex: none; }
-/* #78: a task line by name, its ring completing it; "3 more due tomorrow" opening the rest; a line's
+/* A task line by name, its ring completing it; "3 more due tomorrow" opening the rest; a line's
    card open, the line `sub2` as a selected row is. */
 .today-row.on { background: var(--sub2); }
 .today-row .check { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; border-radius: 999px; flex: none; }
 .today-row .check .ring { margin: 0; }
 /* A completed task's done check lands (TaskGlyph, `good`; `ring-done`, the one completion moment the
-   calendar's pane and card share) with its title struck through, going ink3 over 180 ms (polish audit
-   motion-04), for DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing; then
+   calendar's pane and card share) with its title struck through, going ink3 over 180 ms, for
+   DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing; then
    the line folds away (app/fold.ts). */
 .today-row.completing, .today-row.leaving { pointer-events: none; }
 .today-row .title { transition: color var(--dur-medium) var(--ease); }
@@ -124,16 +124,16 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row.leaving { overflow: hidden; }
 /* The next event leads with its calendar's bar, 3 × 14 in a 19 px box where tasks have their rings, so
    its time lines up with their titles; its "in 12m" warms to `caution` from 15 minutes before and to
-   `alert`, the now-line's, once under way (shell-06). */
+   `alert`, the now-line's, once under way. */
 .today-row .evbar { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; flex: none; }
 .today-row .evbar > i { width: 3px; height: 14px; border-radius: 2px; background: var(--c); }
-/* SV-210: the event's and tasks' lines put the title, wrapping to two lines, over its time or date in
+/* The event's and tasks' lines put the title, wrapping to two lines, over its time or date in
    ink3 ("12:30 PM · in 2h", "Tomorrow"), with room above and below so a fill sits clear of the text. A
    task with no date stays 28 px; the event's bar and a task's ring sit on
    the title's first line. */
 .today-row.event, .today-row.task { height: auto; min-height: 28px; align-items: flex-start; padding-top: 5px; padding-bottom: 5px; }
 .today-row.event, .today-row.task.timed { padding-top: 7px; padding-bottom: 7px; }
-/* SV-241: the event's bar is the ring's size on the title's first line, so every line's mark sits in
+/* The event's bar is the ring's size on the title's first line, so every line's mark sits in
    one column at one height as events and timed tasks share a list. */
 .today-row.event .evbar, .today-row.task .check { height: 1.35em; }
 .today-row.event .evbar > i { height: 13px; }
@@ -150,17 +150,17 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .fd.today-card .card-h { padding-top: 12px; }
 .fd.today-card.settled { transition: top var(--dur-medium) var(--ease); }
 @keyframes today-card-in { from { opacity: 0; transform: scale(.96); } }
-/* Todoist's open ring: 13 px, a 1.5 px stroke in its project's colour (`--ring`, SV-25), else `ink3`
+/* Todoist's open ring: 13 px, a 1.5 px stroke in its project's colour (`--ring`), else `ink3`
    (DESIGN.md › Glyphs), its lightness clamped to the theme's band and Todoist's hue and chroma kept,
-   with the same colour at 14% inside, as a chip's tint (#175). A ring that completes shows its check,
+   with the same colour at 14% inside, as a chip's tint. A ring that completes shows its check,
    11 px and centred on the whole ring, under the pointer. */
 .ring { --ring-base: var(--ring, var(--ink3)); --ring-shown: oklch(from var(--ring-base) clamp(var(--ringMin), l, var(--ringMax)) c h);
   width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ring-shown); background: color-mix(in oklch, var(--ring-shown) 14%, transparent);
   flex: none; display: inline-block; margin: 0 3px 0 1px; position: relative; }
 .ring > .icon { position: absolute; inset: -1.5px; margin: auto; color: var(--ring-shown); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
-/* A ring that completes (the Today block's lines, the day pane's rows, the card's, SV-242) answers the
+/* A ring that completes (the Today block's lines, the day pane's rows, the card's) answers the
    pointer plainly: it grows to 1.15, its fill rises to 34% with a 3 px halo of its colour at 16%, and
-   its check shows (#175, #350). A disabled one doesn't answer. */
+   its check shows. A disabled one doesn't answer. */
 .today-row .check .ring, .ag-task .check .ring, .fd-mark.check .ring {
   transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 @media (hover: hover) {
@@ -170,7 +170,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .today-row .check:hover .ring > .icon, .ag-task .check:enabled:hover .ring > .icon, .fd-mark.check:not([aria-disabled]):hover .ring > .icon { opacity: 1; }
 }
 /* A done check that reopens (the day pane's rows, Calendar's card) answers the same way in its `good`:
-   1.15 and a 3 px `good` halo at 16% (#350). */
+   1.15 and a 3 px `good` halo at 16%. */
 .ag-task .check .task-glyph.done, .fd-mark.check .task-glyph.done { border-radius: 999px; transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 @media (hover: hover) {
   .ag-task .check:enabled:hover .task-glyph.done, .fd-mark.check:not([aria-disabled]):hover .task-glyph.done {
@@ -179,32 +179,32 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 
 .main { display: grid; grid-template-rows: var(--header) minmax(0, 1fr); min-width: 0; min-height: 0; position: relative; }
 .hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
-/* Each page's title is its heading one (axe's page-has-heading-one, SV-99), drawn as before. */
+/* Each page's title is its heading one (axe's page-has-heading-one), drawn as before. */
 .hd-title { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap; }
 .seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: var(--sub); height: 28px; flex: none; position: relative; }
 .seg > * { position: relative; height: 24px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; color: var(--ink2); font-size: 12.5px; }
 .seg > .on { color: var(--ink); }
 /* The `on` segment's fill is a `sub3` thumb under it, always drawn and always on its transition, so
    when another segment turns on it travels there, position and width together, on a slight spring
-   (#317; ui/seg.ts places it, at once for anything else). Under reduced motion it jumps. */
+   (ui/seg.ts places it, at once for anything else). Under reduced motion it jumps. */
 .seg::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: var(--thumb-w, 0px); transform: translateX(var(--thumb-x, 0px)); border-radius: 8px; background: var(--sub3);
   transition: transform var(--thumb-dur) var(--thumb-spring), width var(--thumb-dur) var(--thumb-spring); }
 .seg:not([data-thumb])::before { visibility: hidden; }
 .seg[data-still]::before { transition: none; }
 @media (prefers-reduced-motion: reduce) { .seg::before { transition: none; } }
-/* The Inbox's views (SV-221, D471): Unread's red badge at 16 px, Attention's count in `caution`, leaning
-   toward ink in Light to read at 4.5:1 on the thumb (#337). */
+/* The Inbox's views: Unread's red badge at 16 px, Attention's count in `caution`, leaning
+   toward ink in Light to read at 4.5:1 on the thumb. */
 .ib-views .ubadge { min-width: 16px; height: 16px; padding: 0 5px; font-size: 10.5px; }
 .ib-views .n { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); font-size: 12px; font-weight: 500; }
 .search { width: var(--mailSearch); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--chip); border: 1px solid var(--edge); color: var(--ink3); flex: none; }
-/* A focused field wakes: `edgeFocus`, stronger than hover's border, on `cardOn` (white in Light) (#172). */
+/* A focused field wakes: `edgeFocus`, stronger than hover's border, on `cardOn` (white in Light). */
 .search:focus-within { border-color: var(--edgeFocus); background: var(--cardOn); color: var(--ink); }
 .search input { color: var(--ink); }
 .search input::placeholder { color: var(--ink3); opacity: 1; }
 .kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 5px; background: var(--sub2); color: var(--ink3); font-size: 11px; font-weight: 500; line-height: 1; flex: none; }
 .btn { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border-radius: 999px; background: var(--ink); color: var(--onInk); font-weight: 500; font-size: 13px; white-space: nowrap; flex: none; }
 .btn.ghost { background: var(--sub2); color: var(--ink); }
-/* A link drawn as a ghost button (the detail's Open, SV-77) fills too: `:enabled` never matches a link. */
+/* A link drawn as a ghost button (the detail's Open) fills too: `:enabled` never matches a link. */
 @media (hover: hover) { .btn.ghost:is(:enabled, [href]):hover { background: var(--sub3); } }
 .btn.out { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--edgeOn); }
 .btn.quiet { background: transparent; color: var(--ink2); padding: 0 10px; }
@@ -222,39 +222,39 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .gh .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
 .gh .chev { margin-left: auto; color: var(--ink3); }
 .gh .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-/* A group opens and closes like a drawer (inbox-14): its one chevron turns to point right while it's
+/* A group opens and closes like a drawer: its one chevron turns to point right while it's
    collapsed, over 120 ms, its rows fold (app/fold.ts), and a collapsed group's preview fades in. */
 :is(.gh, .nfold) .chev .icon { transition: transform var(--dur-fast) var(--ease); }
 :is(.gh, .nfold).collapsed .chev .icon { transform: rotate(-90deg); }
 .gh .preview { animation: fade-in var(--dur-fast) var(--ease); }
 @keyframes fade-in { from { opacity: 0; } }
-/* Attention is the loudest block (#167): its band takes `caution` into its panel, its label and count
+/* Attention is the loudest block: its band takes `caution` into its panel, its label and count
    `caution` over a 20% caution line; its unread dots are `caution`, and a row read but not Done keeps
    a 6 px caution ring, as it's still counted in the pill. */
 .gh.att { background: color-mix(in srgb, var(--caution) var(--attTint), var(--panel)); color: var(--caution); border-bottom-color: color-mix(in srgb, var(--caution) 20%, transparent); }
 .gh.att .n { color: var(--caution); }
 .gh.first { border-top: 0; }
 /* Group headers and All's day headings stay at the top while their rows scroll under them, each next
-   one sliding over the last (inbox-10); the keyboard's cursor never parks a row under one. In All the
+   one sliding over the last; the keyboard's cursor never parks a row under one. In All the
    day outranks the lanes: its name `ink2`, its date `ink3`. */
 .list .gh { position: sticky; top: 0; z-index: 2; }
 .list { scroll-padding-top: 30px; }
 .list.all .gh.day { color: var(--ink2); }
 .list.all .gh.day .date { color: var(--ink3); }
 /* Today's heading is lit in `accent`, "you are here": its name 500 on a tint at Attention's strength, a 20% line
-   under it, its date as every day's (SV-240, D500). The name takes 15% `ink`: plain `accent` is 4.0:1 on the
+   under it, its date as every day's. The name takes 15% `ink`: plain `accent` is 4.0:1 on the
    tint in Light, under axe's 4.5. */
 .list .gh.day.today { color: color-mix(in oklch, var(--accent), var(--ink) 15%); font-weight: 500; background: color-mix(in srgb, var(--accent) var(--attTint), var(--panel)); border-bottom-color: color-mix(in srgb, var(--accent) 20%, transparent); }
 .list .gh.day.today .date { font-weight: 400; }
-/* A day with unread mail says how many after its date (D449): "· 3 new" in the date's case and
+/* A day with unread mail says how many after its date: "· 3 new" in the date's case and
    `ink3`, the count `ink2`, as a band's. */
-/* The Inbox's header (D449): its new count beside the title, quiet as the phone's, and Mark all as
-   read before the search, its glyph as ⌘K's (#123). */
+/* The Inbox's header: its new count beside the title, quiet as the phone's, and Mark all as
+   read before the search, its glyph as ⌘K's. */
 .hd .mark-all .kbd { margin-left: 4px; }
-/* Each group's glyph before its label (#119): shape alone, in the header's ink3; Attention's flag in caution, as its count. */
+/* Each group's glyph before its label: shape alone, in the header's ink3; Attention's flag in caution, as its count. */
 .gh .gi { display: grid; color: var(--ink3); }
 .gh.att .gi { color: var(--caution); }
-/* A band's own hover and cursor (#158): `sub` and `sub2` laid over its panel, as a row's lie over the
+/* A band's own hover and cursor: `sub` and `sub2` laid over its panel, as a row's lie over the
    page, drawn as an inset fill so they fade over 120 ms as every fill does. */
 .gh { box-shadow: inset 0 0 0 100vmax transparent; }
 .gh.collapsed.cur { box-shadow: inset 0 0 0 100vmax var(--sub2); }
@@ -264,17 +264,17 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ud { width: 12px; flex: none; display: grid; place-items: center; }
 .ud::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: transparent; }
 .row.unread .ud::before, .arow.unread .ud::before { background: var(--ink); }
-/* Opening an unread email fades its dot out (DESIGN.md › Decided while building #13). */
+/* Opening an unread email fades its dot out. */
 .ud::before { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 :is(.arow, .row).att.unread .ud::before { background: var(--caution); }
 :is(.arow, .row).att:not(.unread) .ud::before { box-shadow: inset 0 0 0 1.5px var(--caution); }
-/* Noise recedes (#168): an unread Noise row's sender and subject `ink2` at 400 and its dot `ink3`; a read one's `ink3`. */
+/* Noise recedes: an unread Noise row's sender and subject `ink2` at 400 and its dot `ink3`; a read one's `ink3`. */
 .row.noise.unread .from, .row.noise.unread .subj b { color: var(--ink2); font-weight: 400; }
 .row.noise.unread .ud::before { background: var(--ink3); }
 .row.noise:not(.unread) .from, .row.noise:not(.unread) .subj b { color: var(--ink3); }
 /* A row (or header, or the prompt) leaving folds away under app/fold.ts's motion, out of the pointer's way. */
 .list .leaving { overflow: hidden; pointer-events: none; }
-/* Before it folds, a row Done or Trash took plays a 120 ms beat (inbox-05): Done tints it `good` (14%,
+/* Before it folds, a row Done or Trash took plays a 120 ms beat: Done tints it `good` (14%,
    Light 12%) and its dot gives way to a 14 px check in `good`; Trash tints it `alert` 8% with a 14 px
    bin in `alert`. The tint is the row's own 120 ms fill change; the glyph grows in from .6. */
 :is(.row, .arow).beat-done { background: color-mix(in oklch, var(--good) 14%, transparent); }
@@ -286,7 +286,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .beat-done .ud > .icon { color: var(--good); }
 .beat-trash .ud > .icon { color: var(--alert); }
 @keyframes beat-in { from { opacity: 0; transform: scale(.6); } }
-/* Done in All, where its row stays (SV-69): it ticks in place, as Done's beat (the check landing, the
+/* Done in All, where its row stays: it ticks in place, as Done's beat (the check landing, the
    `good` tint), and the tint and check let go over 260 ms; meanwhile its text settles in `ink3` beside a
    Done tag, unread or not, as search's Done results read. */
 .list.all .row.ticked { animation: tick-settle calc(var(--dur-fast) + var(--dur-slow)) var(--ease); }
@@ -299,7 +299,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 @keyframes tick-settle { from, 32% { background: color-mix(in oklch, var(--good) 14%, transparent); } }
 @keyframes tick-out { to { opacity: 0; } }
 /* The list sits beside the pane, so the sender takes a quarter of its row (between 112 px and its own
-   width) and the summary keeps room (#240). */
+   width) and the summary keeps room. */
 .row .from { width: clamp(112px, 24%, 172px); flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .subj { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .subj .sum { color: var(--ink3); }
@@ -310,7 +310,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .code-line .copy { height: 22px; padding: 0 8px; font-size: 12px; }
 .code-line .sum { font-size: 12px; }
 .row .age { width: 64px; flex: none; text-align: right; color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
-/* The account: a colour dot and its label, on every row, never dropped (decision 41). */
+/* The account: a colour dot and its label, on every row, never dropped. */
 .row .ac { display: inline-flex; align-items: center; gap: 6px; flex: none; width: var(--ac-w, 76px); color: var(--ink3); font-size: 12px; white-space: nowrap; }
 .row .ac .label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .code { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: .06em; color: var(--ink); }
@@ -318,11 +318,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .arow:last-child { border-bottom: 0; }
 @media (hover: hover) { .arow:hover { background: var(--sub); } }
 .arow.cur { background: var(--sub2); }
-/* The open email (#164): `sub3`, stronger than the cursor's `sub2`, with a 2 px `accent` bar that ties
+/* The open email: `sub3`, stronger than the cursor's `sub2`, with a 2 px `accent` bar that ties
    it to the reading pane and fades in with the row's 120 ms box-shadow. A press is the rows' shared
    `sub3` at --dur-press (below). */
 .row.open, .arow.open { background: var(--sub3); box-shadow: inset 2px 0 0 var(--accent); }
-/* A selected email is drawn as the open one is (#249). */
+/* A selected email is drawn as the open one is. */
 .row.sel, .arow.sel { background: var(--sub3); box-shadow: inset 2px 0 0 var(--accent); }
 .arow .ud { grid-row: 1; height: 18px; }
 .arow .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
@@ -340,7 +340,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .tag.caution { color: var(--caution); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--caution) 35%, transparent); background: color-mix(in oklch, var(--caution) 12%, var(--chip)); }
 /* A change waiting for its provider (DESIGN.md › Interaction rules). */
 .row.pending, .arow.pending { opacity: .5; }
-/* An empty Inbox view (SV-226): its own line drawing, 160 to 260 px as the list widens, in strokes the
+/* An empty Inbox view: its own line drawing, 160 to 260 px as the list widens, in strokes the
    icons' weight, mostly `ink3` with one touch of the view's colour, drawn in once over about 400 ms;
    then its headline, a quiet line in `ink3` and Show All, a size up in a list 1200 px wide. The block
    sits a third of the way down. Its strokes stay 1.8 px however wide it draws (a browser without
@@ -377,11 +377,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .rd-tools .tool { padding: 0 9px; }
   .rd-tools .tool .kbd { display: none; }
 }
-/* Done is Attention mail's verb: its check `good`, its label `ink` (#163). Trash warns under the pointer
-   in `alert` and presses in it (#169); every tool presses as pills do (below). */
+/* Done is Attention mail's verb: its check `good`, its label `ink`. Trash warns under the pointer
+   in `alert` and presses in it; every tool presses as pills do (below). */
 .rd-tools .tool.done { color: var(--ink); }
 .rd-tools .tool.done .icon { color: var(--good); }
-/* Mail already Done says so where Done was, without being a button (SV-69). */
+/* Mail already Done says so where Done was, without being a button. */
 .rd-tools .rd-done { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; color: var(--ink2); font-size: 12.5px; flex: none; }
 .rd-tools .rd-done .icon { color: var(--good); }
 .rd-tools .tool.trash:hover { color: var(--alert); background: color-mix(in oklch, var(--alert) 12%, transparent); }
@@ -389,7 +389,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* Reply's place, after Open in Gmail, empty until reply exists. */
 .rd-tools .reply-slot { display: contents; }
 .rd-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-/* Each email swaps in from the side the user stepped from (reader-03), as the week pages: up 8 px from
+/* Each email swaps in from the side the user stepped from, as the week pages: up 8 px from
    below going down the list (J, ↓, Done or Trash moving on), down 8 px from above going up (K, ↑), over
    180 ms; a click fades it in over 120 ms. The first email shows at once (in a narrow window it
    arrives with the pane). */
@@ -399,7 +399,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .rd-swap[data-swap="fade"] { animation: fade-in var(--dur-fast) var(--ease); }
 @keyframes rd-in-next { from { opacity: 0; transform: translateY(8px); } }
 @keyframes rd-in-prev { from { opacity: 0; transform: translateY(-8px); } }
-/* A verification code lifted into the reader (reader-04): a 56 px card as the facts card's, the code in
+/* A verification code lifted into the reader: a 56 px card as the facts card's, the code in
    Geist Mono 22 / 500 / .12em, Copy, and its countdown at the right in `ink3` 12.5; expired, the code
    steps back to `ink3`. */
 .code-card { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 12px 0 18px; background: var(--card); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn); flex: none; }
@@ -422,7 +422,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--sub2); color: var(--ink); display: grid; place-items: center; font-weight: 500; font-size: 13px; flex: none; }
 .rd-acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .rd-acts .btn { height: 28px; font-size: 12.5px; padding: 0 12px; }
-/* The actions step back so subject, sender and body lead (#170): labels ink2, icons ink3, ink under the pointer. */
+/* The actions step back so subject, sender and body lead: labels ink2, icons ink3, ink under the pointer. */
 .rd-acts .btn.out { color: var(--ink2); }
 .rd-acts .btn.out .icon { color: var(--ink3); }
 .rd-acts .btn.out:enabled:hover, .rd-acts .btn.out:enabled:hover .icon { color: var(--ink); }
@@ -430,12 +430,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .mailtext { color: var(--ink); font-size: 14px; line-height: 1.55; max-width: 600px; overflow-wrap: anywhere; }
 .mailtext p { margin: 0 0 12px; }
 
-/* ---------- Mail details (F2) ---------- */
+/* ---------- Mail details ---------- */
 /* The Pinned shelf: Unpin takes the age's place under the pointer (board 10). */
 .row.shelf .hact { display: none; width: 64px; flex: none; justify-content: flex-end; }
 @media (hover: hover) { .row.shelf:hover .hact { display: flex; } }
 @media (hover: hover) { .row.shelf:hover .age { display: none; } }
-/* A pinned email's row in its group (inbox-09): a 14 px keep-fill in `ink3` just before its account;
+/* A pinned email's row in its group: a 14 px keep-fill in `ink3` just before its account;
    pinned here, it grows in from .6 over 120 ms. (A row folding onto the shelf holds `sub3` after its
    fold, app/fold.ts › foldInLanding.) */
 .pinmark { display: grid; color: var(--ink3); flex: none; margin-left: -4px; }
@@ -446,12 +446,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .prompt { margin: 6px 16px 10px 24px; padding: 10px 10px 10px 14px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edgeOn); display: flex; align-items: center; gap: 12px; color: var(--ink); flex: none; }
 .prompt .prompt-icon { color: var(--ink3); }
 .code-line .copy .icon { color: var(--ink2); }
-/* Copied confirms in `good` for its 1.5 s (inbox-11): a 14% `good` fill, words and glyph `good`, under
+/* Copied confirms in `good` for its 1.5 s: a 14% `good` fill, words and glyph `good`, under
    the pointer too; in its last minute the countdown reads in seconds, in `caution`. */
 .btn.ghost.copy.copied, .btn.ghost.copy.copied:enabled:hover { background: color-mix(in oklch, var(--good) 14%, transparent); color: color-mix(in oklch, var(--good) var(--washTint), var(--ink)); }
 :is(.code-line, .code-card) .copy.copied .icon { color: var(--good); }
 .row .code-line .sum.soon, .code-card .expiry.soon { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); }
-/* All (board 05, #48): the Pinned shelf (D105), day headings, lane labels under them, the kind where an
+/* All (board 05): the Pinned shelf, day headings, lane labels under them, the kind where an
    FYI run starts, each day's Noise folded to one line, clock times. Only the headings are bands. */
 .gh .date { text-transform: none; letter-spacing: 0; font-size: 12px; }
 .lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 16px 3px 24px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
@@ -466,26 +466,26 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list.all .row.shelf .hact { width: 72px; }
 .list.all .row .subj .alertsubj { color: var(--alert); font-weight: 500; }
 .list.all .row .subj .code { font-size: 13px; }
-/* The kind is a subheading over its run, as the row has no room for its column (#237). */
+/* The kind is a subheading over its run, as the row has no room for its column. */
 .list.all .kh { display: flex; height: 24px; flex: none; align-items: flex-end; gap: 6px; padding: 0 16px 4px 24px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
 /* Destructive actions turn `alert` under the pointer and affirming ones `good`, both neutral at rest
-   (#169): the floating detail's Delete, the editor's More › Delete, and the phone's card's Complete. */
+  : the floating detail's Delete, the editor's More › Delete, and the phone's card's Complete. */
 .ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
 .ibtn.affirm:hover { background: color-mix(in oklch, var(--good) 16%, transparent); color: var(--good); }
 /* The app's one toast: the export's `.toast`, a 40 px pill at the bottom centre of the main area,
-   24 px up, as on the phone, covering no header control (D506, reversing #92's move to the top);
+   24 px up, as on the phone, covering no header control;
    above Settings (30–31). */
 .toast { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); height: 40px; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 16px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); white-space: nowrap; z-index: 35;
   translate: var(--dx, 0px) var(--lift, 0px); transition: translate var(--dur-fast) var(--ease); user-select: none; -webkit-user-select: none; }
 /* A line with no button keeps the same room on both sides. */
 .toast:not(:has(button)) { padding-right: 16px; }
 /* Each toast rises in over 180 ms, one replacing another afresh (App.tsx keys it), and fades out over
-   120 ms, sinking 4 px, taking no clicks meanwhile (DESIGN.md › Decided while building, the one toast). */
+   120 ms, sinking 4 px, taking no clicks meanwhile. */
 .toast { animation: toast-in var(--dur-medium) var(--ease); }
 .toast.leaving { animation: toast-out var(--dur-fast) var(--ease) forwards; pointer-events: none; }
 @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(.96); } }
 @keyframes toast-out { to { opacity: 0; transform: translateX(-50%) translateY(4px); } }
-/* It swipes away, left or right (D506): under the pointer it lifts 2 px with a grab cursor; dragged it
+/* It swipes away, left or right: under the pointer it lifts 2 px with a grab cursor; dragged it
    follows the pointer and fades (ToastPill.tsx), snapping back if let go short; swiped off, it carries
    on 48 px the way it went as it fades. */
 @media (hover: hover) { .toast:hover { --lift: -2px; cursor: grab; } }
@@ -495,14 +495,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* Its tone's 16 px glyph leads, 10 px before the words: done `check` in `good`, taken away `delete` in
    `ink3`, a failure `error` in `alert` with an `alert` ring and an 8% `alert` wash. */
 .toast.done, .toast.gone, .toast.failed, .toast.pinned { padding-left: 12px; }
-/* A pin made out of the shelf's sight leads with `keep` in `ink3` (inbox-09). */
+/* A pin made out of the shelf's sight leads with `keep` in `ink3`. */
 .toast.pinned .tone { color: var(--ink3); }
 .toast .tone { width: 18px; height: 18px; display: grid; place-items: center; margin-right: -4px; flex: none; }
 .toast.done .tone { color: var(--good); }
 .toast.gone .tone { color: var(--ink3); }
 .toast.failed .tone { color: var(--alert); }
 .toast.failed { background: color-mix(in oklch, var(--alert) 8%, var(--cardOn)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent), var(--shadow-pill); }
-/* A line with an action shows its time draining as a 2 px hairline, never waiting (D506). It runs the
+/* A line with an action shows its time draining as a 2 px hairline, never waiting. It runs the
    pill's whole width, clipped by the pill's own shape, so it starts out in the rounded ends, its ends
    cut along their curve, rather than where the flat edge begins. */
 .toast.timed { overflow: hidden; }
@@ -513,14 +513,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 
 /* The reader's tools: Pin on a pinned email is Unpin, held (board 10). */
 .rd-tools .tool.active { background: var(--sub2); color: var(--ink); }
-/* The pane is always beside the list on a desktop (SV-217, D464), at its dragged width, giving way so
+/* The pane is always beside the list on a desktop, at its dragged width, giving way so
    the list keeps 420. */
 .pane { position: relative; max-width: calc(100% - 420px); }
-/* With nothing open: the page's content, and its keys pinned to the bottom (SV-217, SV-218). */
+/* With nothing open: the page's content, and its keys pinned to the bottom. */
 .pane-empty { flex: 1 1 auto; display: flex; flex-direction: column; gap: 16px; padding: 24px 28px 20px; color: var(--ink3); min-height: 0; }
 .pane-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pane-foot p { margin: 0; }
-/* The foot's facts line, led by the pane's trouble when there is some (#335): one `warning` chip in
+/* The foot's facts line, led by the pane's trouble when there is some: one `warning` chip in
    `alert` with how many, and over it, under the pointer or focus, a card of each in `alert` with its
    fix. The card's foot reaches down to the chip, so the pointer crosses into it without it closing. */
 .pane-facts { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 24px; }
@@ -537,12 +537,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .pane-keys > li { display: inline-flex; align-items: center; gap: 4px; }
 .pane-keys > li > span:last-child { margin-left: 2px; }
 /* Behind every empty pane, a faint glow of the mark's three colours, gone well before the pane's
-   edges (SV-218's, shared from SV-219). */
+   edges. */
 .pane-empty { background:
   radial-gradient(38% 30% at 42% 30%, color-mix(in srgb, var(--cool) var(--paneGlow), transparent), transparent 70%),
   radial-gradient(34% 28% at 60% 36%, color-mix(in srgb, var(--caution) calc(var(--paneGlow) * .85), transparent), transparent 70%),
   radial-gradient(36% 30% at 48% 46%, color-mix(in srgb, var(--violet) var(--paneGlow), transparent), transparent 70%); }
-/* The Inbox's: how the mail day is going, one block centred across the pane and a third of the way down it (SV-218, #331). Trouble
+/* The Inbox's: how the mail day is going, one block centred across the pane and a third of the way down it. Trouble
    first, in `caution` with its fix; the mark; what needs the user as a `caution` band like
    Attention's (`flag`, its overdue at full strength), or All caught up as a `good` one (`task_alt`);
    today's strip, three cells on `panel` in a `hair` box, each number over its glyph and label at 12
@@ -567,17 +567,17 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .md-tile.done.lit { background: color-mix(in srgb, var(--good) 5%, var(--panel)); }
 .md-tile.done.lit > dd, .md-tile.done.lit > dt > .icon { color: var(--good); }
 /* FYI's wash is `cool` at 4% (9% in Light) with its glyph in `cool`, the number in `ink`: too faint to read as
-   `accent`'s "you are here" (#331, an exception to #163's one job per colour). */
+   `accent`'s "you are here" (an exception to one job per colour). */
 .md-tile.fyi.lit { background: color-mix(in srgb, var(--cool) var(--fyiWash), var(--panel)); }
 .md-tile.fyi.lit > dt > .icon { color: var(--cool); }
 .md-kept { color: var(--ink3); font-size: 12px; }
-/* A neutral band over a boxed list of rows, News's recap (#332) and Jobs's recent movement (#336). */
+/* A neutral band over a boxed list of rows, News's recap and Jobs's recent movement. */
 .nd-recap { width: min(100%, 460px); display: flex; flex-direction: column; align-items: center; gap: 12px; flex: none; }
 .md-need.nd-away { color: var(--ink); background: color-mix(in srgb, var(--sub) 70%, var(--page)); box-shadow: inset 0 0 0 1px var(--hair); }
 .md-need.nd-away > .icon { color: var(--ink3); }
 .nd-list { list-style: none; margin: 0; padding: 0; width: 100%; border: 1px solid var(--hair); border-radius: 12px; background: var(--panel); overflow: hidden; text-align: left; }
 .nd-list > li + li { border-top: 1px solid var(--hair); }
-/* The pane's left edge resizes it (2026-10-09), and shows it can (reader-09, SV-201): a 10 px strip
+/* The pane's left edge resizes it, and shows it can: a 10 px strip
    straddling the border (placed from inside it; the pane draws past its left side for it, as its
    scroller clips its own content). At rest it's only the border. Under the pointer, after 80 ms so a
    pass doesn't flash, a 2 px `accent` line covers the border, and a pill fixed at its middle (10 × 30,
@@ -598,7 +598,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* Protected mail (board 03). */
 .protected-line { display: flex; align-items: center; gap: 6px; color: var(--alert); font-size: 12.5px; font-weight: 500; }
 .rd-subj.protected { margin-top: -4px; }
-/* The selection's emails under its count (#249): sender and subject, as a list row's, with an × to unselect. */
+/* The selection's emails under its count: sender and subject, as a list row's, with an × to unselect. */
 .sel-list { list-style: none; margin: 0; padding: 0 16px 24px 20px; }
 .sel-list > li { display: flex; align-items: center; gap: 4px; height: 38px; border-bottom: 1px solid var(--hair); }
 .sel-list > li:last-child { border-bottom: 0; }
@@ -620,21 +620,21 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 @media (hover: hover) { .imgbar .lnk:hover { background: var(--sub2); } }
 /* An HTML email: a sandboxed frame as wide as the reading pane, on a white card of radius 14, as tall as its page says it is. */
 .mailframe { display: block; width: 100%; border: 0; background: #ffffff; flex: none; color-scheme: light; }
-/* The card keeps the email 16 px from its top and bottom and up to 20 px from its sides (#254),
+/* The card keeps the email 16 px from its top and bottom and up to 20 px from its sides,
    outside the email's page so its own styles can't take the room away. The sides give way so the
    frame keeps 600 px, the width most emails are built at, rather than zooming them down. Night
-   takes the glare off its white (#f2f2f2), Light gives it a hairline ring, not a shadow (#171). */
+   takes the glare off its white (#f2f2f2), Light gives it a hairline ring, not a shadow. */
 .mailframe-box { flex: none; border-radius: var(--r-card); padding: 16px clamp(0px, (100% - 600px) / 2, 20px); background: #ffffff; filter: brightness(var(--mailDim)); box-shadow: 0 0 0 1px var(--mailEdge);
   transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
-/* Until its page says how tall it is (#229): 240 px held on `sub`, the frame unseen; then it fades in. */
+/* Until its page says how tall it is: 240 px held on `sub`, the frame unseen; then it fades in. */
 .mailframe-box.measuring { background: var(--sub); filter: none; box-shadow: none; }
 .mailframe-box .mailframe { transition: opacity var(--dur-fast) var(--ease); }
 .mailframe-box.measuring .mailframe { opacity: 0; }
-/* Attachments: 44 px cards, radius 14, 280 wide or wider to show the whole name (board 10; Decided while building #61). */
+/* Attachments: 44 px cards, radius 14, 280 wide or wider to show the whole name (board 10). */
 .attachments { display: flex; flex-wrap: wrap; gap: 8px; }
 .attach { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px 0 7px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); width: max-content; min-width: var(--attachment); max-width: 100%; text-align: left; flex: none; --t: var(--ink2); --t-mix: 14%; }
 @media (hover: hover) { .attach:hover { box-shadow: inset 0 0 0 1px var(--edgeHover); } }
-/* The type's tile (#122): 30 px, concentric in the card, its colour by type; 12 px before the name. */
+/* The type's tile: 30 px, concentric in the card, its colour by type; 12 px before the name. */
 .attach .type { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; margin-right: 2px; color: var(--t); background: color-mix(in oklch, var(--t) var(--t-mix), transparent); transition: background-color var(--dur-fast) var(--ease); }
 .attach[data-type="pdf"] { --t: var(--alert); }
 .attach[data-type="image"] { --t: var(--violet); }
@@ -647,11 +647,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .attach .size { color: var(--ink3); font-size: 12px; }
 .attach .size.problem { color: var(--alert); }
 .attach .look { color: var(--ink3); display: grid; transition: color var(--dur-fast) var(--ease); }
-/* A previewable card opens its preview from all but its Download link (SV-25). */
+/* A previewable card opens its preview from all but its Download link. */
 .attach .open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; height: 100%; text-align: left; }
 .attach .dl, .preview-head .dl { color: var(--ink2); font-size: 12.5px; height: 24px; padding: 0 10px 0 8px; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; white-space: nowrap; flex: none; }
 .pop { background: var(--modal); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
-/* Every menu is one component (DESIGN.md › Decided while building #149): a popover, 6 px inside, its
+/* Every menu is one component: a popover, 6 px inside, its
    32 px items 2 px apart, each radius 10, `ink2` with a 16 px `ink3` glyph; the pointer and the
    keyboard's cursor both fill it `sub2` with its words and glyph `ink`; the checked one is `ink` with a
    check at its end; one that can't be picked is at .5. Places' two-line items are 44. ⌘K's items and
@@ -665,14 +665,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .menu-i[aria-checked="true"] { color: var(--ink); }
 .menu-i[aria-checked] > .icon:last-child, .menu-i .kbd { margin-left: auto; }
 .menu-i[aria-checked] > .icon:last-child { color: var(--ink); }
-/* A disabled item reads as unavailable: `ink3` at .6, its key hint left out (ContextMenu.tsx, D447). A
+/* A disabled item reads as unavailable: `ink3` at .6, its key hint left out (ContextMenu.tsx). A
    note is a quiet line, `ink3` at full strength, with nothing to press. */
 .menu-i:disabled { opacity: .6; background: none; color: var(--ink3); }
 .menu-i.note:disabled { opacity: 1; cursor: default; }
-/* The right-click menu (#248): the same menu at the pointer, over everything but the palette and Settings' scrims, its groups apart by a hairline. */
+/* The right-click menu: the same menu at the pointer, over everything but the palette and Settings' scrims, its groups apart by a hairline. */
 .ctx-menu { position: fixed; z-index: 38; min-width: 208px; max-width: 320px; }
 .ctx-menu .menu-i > .ell { min-width: 0; }
-/* The shared tooltip (#299): the drag tip's look, wrapping past 320 px, over everything but signing in. */
+/* The shared tooltip: the drag tip's look, wrapping past 320 px, over everything but signing in. */
 .tip { position: fixed; z-index: 50; max-width: 320px; padding: 4px 9px; border-radius: var(--r-chip); background: var(--cardOn);
   box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); font-size: 12px; line-height: 16px; color: var(--ink);
   overflow-wrap: anywhere; pointer-events: none; animation: fade-in var(--dur-fast) var(--ease); }
@@ -694,15 +694,15 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .preview-csv tr:first-child td { color: var(--ink); font-weight: 500; }
 .ibtn.sm { width: 26px; height: 26px; }
 
-/* ---------- Sign-in (darma's card) ---------- */
+/* ---------- Sign-in ---------- */
 .sign-in-page { position: relative; height: 100%; overflow: hidden; background: var(--page); }
-/* Anchored from its top a little above the middle, so a line appearing grows it down, not up (Decided while building #71). */
+/* Anchored from its top a little above the middle, so a line appearing grows it down, not up. */
 .sign-in {
   position: absolute; left: 50%; top: max(24px, calc(50% - 120px)); transform: translateX(-50%);
   width: 380px; display: flex; flex-direction: column; gap: 20px; padding: 24px 24px 20px;
   background: var(--modal); border: 1px solid var(--edgeOn); border-radius: var(--r-modal); box-shadow: var(--shadow-modal);
 }
-/* A little more of the brand: the mark at 24, the name 15 / 600 (#136). */
+/* A little more of the brand: the mark at 24, the name 15 / 600. */
 .sign-in .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; padding-left: 2px; }
 /* In Night the modal shadow drew a faint box on the near-black page; deeper, it reads as depth. Light keeps the modal's. */
 :root[data-theme="night"] .sign-in { box-shadow: 0 30px 80px rgba(0,0,0,.6); }
@@ -731,14 +731,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .sign-in .btn .kbd { background: color-mix(in srgb, var(--onInk) 14%, transparent); color: var(--onInk); }
 .recovery { margin: 0; padding: 12px 14px; border-radius: var(--r-card); background: var(--sub); font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink); user-select: text; }
 
-/* ---------- Every control answers the pointer (DESIGN.md › Decided while building #12) ---------- */
+/* ---------- Every control answers the pointer ---------- */
 /* The export's hover where it draws one; otherwise a `sub` fill on flat controls, rows and menu items,
    an `edgeHover` border on outlined buttons and fields, and the primary button a touch dimmer. Fills
    and borders change over 120 ms. Disabled controls don't answer, and a touch screen has no hover. */
 .btn, .ibtn, .nav, .today-row, .row, .arow, .gh, .nfold, .rd-tools .tool, .imgbar .lnk, .unpin, .attach, .dl, .search, .input, .seg > *, .retry, .hbar .act {
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
-/* A segment's labels hand over with the thumb (#317): the one it leaves lets go of `ink` at once,
+/* A segment's labels hand over with the thumb: the one it leaves lets go of `ink` at once,
    the one it lands on takes it as the thumb arrives, and the one turned on drops its hover at once. */
 .seg > * { transition: background-color var(--dur-fast) var(--ease), color var(--thumb-ink) linear, transform var(--dur-fast) var(--ease); }
 .seg > .on { transition: color var(--thumb-ink) linear var(--thumb-ink-delay), transform var(--dur-fast) var(--ease); }
@@ -752,18 +752,18 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .nfold:not(.cur):hover { background: var(--sub); }
   .search:not(:focus-within):hover, .input:not(:focus, .failed):hover { border-color: var(--edgeHover); }
   a.dl:hover, a.attach:hover .dl, button.dl:enabled:hover { background: var(--sub); color: var(--ink); }
-  /* An attachment under the pointer (#122): its tile deepens, its eye turns ink, and in Night the card lifts to cardOn (Light stays white). */
+  /* An attachment under the pointer: its tile deepens, its eye turns ink, and in Night the card lifts to cardOn (Light stays white). */
   .attach:hover { --t-mix: 22%; }
   .attach:hover .look { color: var(--ink); }
   :root[data-theme="night"] .attach:hover { background: var(--cardOn); }
   .menu-i:not(:disabled):hover { background: var(--sub2); color: var(--ink); }
   .menu-i:not(:disabled):hover .icon { color: var(--ink); }
-  /* A destructive item (the editor's More › Delete) turns `alert` under the pointer (#169). */
+  /* A destructive item (the editor's More › Delete) turns `alert` under the pointer. */
   .menu-i.danger:not(:disabled):hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
   .menu-i.danger:not(:disabled):hover .icon { color: var(--alert); }
 }
 
-/* ---------- The rail (DESIGN.md › Layout › Shell and Compact; #140, D507) ---------- */
+/* ---------- The rail ---------- */
 /* The sidebar folded to 56 px of icons: always from 640 to 1099 px, and from 1100 below 1600 px until
    `` ` `` or its edge opens it (sidebarRail.ts puts `.rail` on the shell and on the sidebar). */
 .app.rail { grid-template-columns: var(--rail) minmax(0, 1fr); }
@@ -774,7 +774,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .sb.rail .nav > .grow, .sb.rail .nav > .cnt, .sb.rail .nav > .kbd { display: none; }
 /* The unread badge, at 16 px on Inbox's icon. */
 .sb.rail .nav > .ubadge { position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10.5px; box-shadow: 0 0 0 2px var(--panel); }
-/* The next-up slot (TodayBlock.tsx; D509): 18 px under the icons, a 40 px clock over its countdown in
+/* The next-up slot (TodayBlock.tsx): 18 px under the icons, a 40 px clock over its countdown in
    `ink2` 11 / 500, warming as the Today block's "in 12m" does. */
 .sb.rail .today.next-up { margin-top: 18px; }
 .sb.rail .today-row.next { flex-direction: column; justify-content: center; gap: 2px; width: 40px; height: auto; padding: 6px 0; }
@@ -800,7 +800,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 :is(.sb-edge:hover, .sb-edge:focus-visible) .grip { opacity: 1; transform: none; transition-duration: var(--dur-fast), var(--dur-medium); }
 .sb-edge:hover::before, .sb-edge:hover .grip { transition-delay: 80ms; }
 
-/* ---------- The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; #140) ---------- */
+/* ---------- The compact tier, 640 to 1099 px ---------- */
 /* An iPad or a half-width window: the sidebar is the rail (above), an open email or story covers the
    list rather than squeezing it (its tools lead with Back; Esc, J / K and ↑ ↓ as before), and the
    header's search gives way before anything else does. Calendar.css has the grid's part. */
@@ -812,7 +812,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .hd > .search { width: auto; flex: 0 1 var(--mailSearch); min-width: 0; }
   .hd > .search.active { flex-basis: 520px; }
   .hd > .cal-title { flex-shrink: .01; overflow: hidden; text-overflow: ellipsis; }
-  /* Beside the Inbox's views, Mark all as read is its icon alone, named in its tooltip (#338). */
+  /* Beside the Inbox's views, Mark all as read is its icon alone, named in its tooltip. */
   .hd > .mark-all > :is(.lbl, .kbd) { display: none; }
   .palette { max-width: calc(100% - 32px); }
 
@@ -844,7 +844,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 @keyframes scrim-in { from { opacity: 0; } }
 /* In a narrow window a pane's content arrives over the list, 12 px, as the editor does after E; swapping
    what it shows (J, K, another row) keeps the pane, so that stays instant. On a desktop the pane is
-   always there, so nothing arrives (SV-217). */
+   always there, so nothing arrives. */
 @keyframes pane-in { from { opacity: 0; transform: translateX(12px); } }
 @media (min-width: 640px) and (max-width: 1099px) {
   .pane > :not(.pane-edge) { animation: pane-in var(--dur-medium) var(--ease); }
@@ -868,11 +868,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .btn.out:not(:disabled):is(:active, [data-echo]) { background: var(--sub2); }
 :is(.btn.quiet:not(:disabled), .rd-tools .tool, .seg > :not(.on), .imgbar .lnk, .hbar .act):is(:active, [data-echo]) { background: var(--sub3); color: var(--ink); }
 :is(.row, .arow, .nav, .today-row, .ag-item, .nw-row, .nw-lead, .calrow, .menu-i, .palette .item):is(:active, [data-echo]) { background: var(--sub3); transition-duration: var(--dur-press); }
-/* Trash presses in its own `alert`, 20% (#169). */
+/* Trash presses in its own `alert`, 20%. */
 .rd-tools .tool.trash:is(:active, [data-echo]) { background: color-mix(in oklch, var(--alert) 20%, transparent); color: var(--alert); }
 
-/* Pinned's glyph is `sun`, and each FYI kind's glyph its own `kind*` hue (#340); Other's and the Noise
-   fold's are muted, `kindOther` and `kindNoise` (#344). */
+/* Pinned's glyph is `sun`, and each FYI kind's glyph its own `kind*` hue; Other's and the Noise
+   fold's are muted, `kindOther` and `kindNoise`. */
 .gh.pinned .gi { color: var(--sun); }
 .list.all .kh[data-kind=deliveries] > .icon { color: var(--kindDeliveries); }
 .list.all .kh[data-kind=money] > .icon { color: var(--kindMoney); }

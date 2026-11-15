@@ -1,7 +1,7 @@
-// F6's pure rules as tables: recurring scope and its consequences (boards 14 and 15b), overlaps
+// The grid's pure rules as tables: recurring scope and its consequences (boards 14 and 15b), overlaps
 // (the editor's conflict preview, board 13, and the agenda's line, board 12b), and direct
 // manipulation (drop targets and their tooltip, board 15; clone, copy and paste; multi-select; the
-// failed card's lines, board 19b), with v1's quick-action and deadline cases carried over (darma SV-15).
+// failed card's lines, board 19b), with quick actions and deadlines.
 import type {CommandOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -34,7 +34,7 @@ const gym = event('Gym', '2026-10-07', '07:00', '08:00', {recurring: true, recur
 const study = event('Study group', '2026-10-09', '18:30', '20:30');
 const dinner = event('Dinner with Sam', '2026-10-09', '19:00', '21:00', {place: 'Blue Door', address: '2118 Sunset Blvd'});
 
-describe('recurring scope (DESIGN.md › Recurring events)', () => {
+describe('recurring scope', () => {
   test('board 15b: Gym dropped from Wed, Oct 7 on Thu, Oct 8', () => {
     expect(scopeChoices('2026-10-07', '2026-10-08')).toEqual([
       {scope: 'this', label: 'This event', line: 'Thu, Oct 8 only'},
@@ -52,7 +52,7 @@ describe('recurring scope (DESIGN.md › Recurring events)', () => {
     ['2026-10-09', '2026-10-05', ['Mon, Oct 5 only', 'Fri → Mon from Oct 9 on', 'Fri → Mon, past ones too']],
   ])('%s → %s', (from, to, lines) => expect(scopeChoices(from, to).map(choice => choice.line)).toEqual(lines));
   test('an all-day or task move has no time', () => expect(moveLine('Trip', '2026-10-07', '2026-10-08', null, zone)).toBe('Trip · Wed, Oct 7 → Thu, Oct 8'));
-  test('F6b: to another calendar, Google moves a series, never one occurrence', () => {
+  test('to another calendar, Google moves a series, never one occurrence', () => {
     expect(calendarMoveChoices('2026-10-07', 'Classes')).toEqual([
       {scope: 'following', label: 'This and following', line: 'To Classes from Oct 7 on'},
       {scope: 'all', label: 'All events', line: 'To Classes, past ones too'},
@@ -72,7 +72,7 @@ describe('overlaps (the conflict preview)', () => {
     // All-day events and tasks take no time.
     ['the morning', span('09:00', '10:00'), 'No conflicts'],
   ])('%s', (_, draft, line) => expect(conflictLine(overlapsWith(draft, friday)).text).toBe(line));
-  test('an event with no end takes no time: it overlaps nothing, and nothing overlaps it (SV-78)', () => {
+  test('an event with no end takes no time: it overlaps nothing, and nothing overlaps it', () => {
     const call = event('Call', '2026-10-09', '19:00', '19:00');
     expect(spanOf(call)).toBeNull();
     expect(overlapsWith(span('19:00', '19:00'), friday)).toEqual([]);
@@ -86,7 +86,7 @@ describe('overlaps (the conflict preview)', () => {
     ['a free draft over a busy one', [study], true, 'No conflicts'],
     ['a free draft over a free one', [event('Workshop', '2026-10-09', '19:00', '20:00', {transparency: 'transparent'})], true, 'No conflicts'],
     ['a busy one still clashes', [event('Workshop', '2026-10-09', '19:00', '20:00', {transparency: 'opaque'})], false, 'Overlaps Workshop · 1h'],
-  ])('SV-180, D440: free time clashes with nothing: %s', (_, others, free, line) => expect(conflictLine(overlapsWith(span('19:00', '21:00'), others, null, free)).text).toBe(line));
+  ])('free time clashes with nothing: %s', (_, others, free, line) => expect(conflictLine(overlapsWith(span('19:00', '21:00'), others, null, free)).text).toBe(line));
   test('an event doesn\'t overlap itself', () => expect(overlapsWith(spanOf(study)!, [study], study.key)).toEqual([]));
   test.each([[90 * 60_000, '1h 30m'], [45 * 60_000, '45m'], [2 * 3600_000, '2h']])('%i ms is %s', (ms, text) => expect(shortDuration(ms)).toBe(text));
   const h = (hour: number, minute = 0) => hour * 60 + minute;
@@ -109,7 +109,7 @@ describe('overlaps (the conflict preview)', () => {
     ['a free event during a busy one', freeDinner, [study, freeDinner], null],
     ['both free', freeDinner, [freeStudy, freeDinner], null],
     ['busy during busy still says so', dinner, [study, dinner], 'Overlaps Study group until 8:30 PM'],
-  ])('SV-180: the agenda\'s line leaves free events out: %s', (_, one, day, line) => expect(agendaOverlap(one, day, zone)).toBe(line));
+  ])('the agenda\'s line leaves free events out: %s', (_, one, day, line) => expect(agendaOverlap(one, day, zone)).toBe(line));
   test('the agenda: an event that starts during another says so (board 12b); the other says nothing', () => {
     expect(agendaOverlap(dinner, [study, dinner], zone)).toBe('Overlaps Study group until 8:30 PM');
     expect(agendaOverlap(study, [study, dinner], zone)).toBeNull();
@@ -119,11 +119,11 @@ describe('overlaps (the conflict preview)', () => {
   });
 });
 
-describe('dropping on another day (board 15; v1\'s reschedule and deadline models)', () => {
+describe('dropping on another day (board 15)', () => {
   test.each([
     ['Gym Wed → Thu keeps 7 AM', gym, '2026-10-08', {starts_at: at('2026-10-08', '07:00'), ends_at: at('2026-10-08', '08:00')}],
     ['back a week', dinner, '2026-10-02', {starts_at: at('2026-10-02', '19:00'), ends_at: at('2026-10-02', '21:00')}],
-    // v1's DST fix: across the change on Nov 1 the wall-clock time stays.
+    // Across the change on Nov 1 the wall-clock time stays.
     ['across daylight saving', event('Late', '2026-10-31', '23:00', '23:30'), '2026-11-02', {starts_at: at('2026-11-02', '23:00'), ends_at: at('2026-11-02', '23:30')}],
     ['into the next day', event('Show', '2026-10-09', '22:00', '01:00', {ends_at: at('2026-10-10', '01:00')}), '2026-10-10', {starts_at: at('2026-10-10', '22:00'), ends_at: at('2026-10-11', '01:00')}],
     ['all day, two days', item({all_day: true, start_date: '2026-10-09', end_date: '2026-10-11'}), '2026-10-12', {start_date: '2026-10-12', end_date: '2026-10-14'}],
@@ -131,14 +131,14 @@ describe('dropping on another day (board 15; v1\'s reschedule and deadline model
     ['a task', task('Pay rent', '2026-10-07'), '2026-10-09', {due_date: '2026-10-09'}],
     ['a timed task', task('Call', '2026-10-07', {due_at: at('2026-10-07', '17:00')}), '2026-10-08', {due_date: '2026-10-08', due_at: at('2026-10-08', '17:00')}],
   ])('%s', (_, one, to, change) => expect(dropChange(one, to, zone)).toEqual(change));
-  test('a drop on its own day does nothing (v1)', () => {
+  test('a drop on its own day does nothing', () => {
     expect(dropChange(gym, '2026-10-07', zone)).toBeNull();
     expect(dropChange(task('Pay rent', '2026-10-07'), '2026-10-07', zone)).toBeNull();
   });
   test.each([
     ['an event', gym, true],
     ['a task', task('Pay rent', '2026-10-07'), true],
-    // v1's deadline rule: a repeating task would move its whole pattern (and Todoist refuses, D16); a done one stays.
+    // A repeating task would move its whole pattern (and Todoist refuses); a done one stays.
     ['a repeating task', task('Water plants', '2026-10-07', {recurring: true, due_string: 'every wed'}), false],
     ['a done task', task('Return library books', '2026-10-05', {done: true}), false],
     ['Google\'s own kind', item({title: 'Birthday', all_day: true, start_date: '2026-10-20', end_date: '2026-10-21', read_only: true}), false],
@@ -152,7 +152,7 @@ describe('dropping on another day (board 15; v1\'s reschedule and deadline model
   ])('tooltip, %s', (_, one, to, label) => expect(dropLabel(one, to, zone)).toBe(label));
 });
 
-describe('F6b: a drag held near the grid\'s top or bottom edge scrolls it', () => {
+describe('a drag held near the grid\'s top or bottom edge scrolls it', () => {
   // The grid from 30 to 1000 in the section's CSS pixels; a 48 px band each side, up to 18 px a frame.
   test.each([
     ['in the middle', 500, 0],
@@ -165,7 +165,7 @@ describe('F6b: a drag held near the grid\'s top or bottom edge scrolls it', () =
   ])('%s', (_, pointer, step) => expect(edgeScroll(pointer, 30, 1000)).toBe(step));
 });
 
-describe('clone, copy and paste (v1\'s clone and clipboard payloads)', () => {
+describe('clone, copy and paste (clone and clipboard payloads)', () => {
   test('a clone of one Gym is an event of its own on the same day, with its reminders, Time to Leave, colour and description', () => {
     expect(copyOf({...gym, colour: 'good', leave_reminder: true, description: 'Locker <b>114</b>'}, 0, zone)).toEqual({
       kind: 'event', calendar_id: 1, title: 'Gym', all_day: false, starts_at: at('2026-10-07', '07:00'), ends_at: at('2026-10-07', '08:00'),
@@ -195,7 +195,7 @@ describe('a create drawn at once, and ⌘Z', () => {
     const input = {...copyOf(task('Water plants', '2026-10-07'), 0, zone), repeat: 'every mon'};
     expect(pendingItem(input, -1, at('2026-10-07', '09:12'))).toMatchObject({recurring: true, due_string: 'every mon', reminders: []});
   });
-  describe('Try again draws the change pending at once (SV-42)', () => {
+  describe('Try again draws the change pending at once', () => {
     const failure = command({id: 7, kind: 'item_update', state: 'failed', settled_at: at('2026-10-07', '09:06')});
     const failedDinner = {...dinner, command: failure};
     test.each<[string, ItemOut, ReadonlyMap<number, string | null>, string | undefined]>([

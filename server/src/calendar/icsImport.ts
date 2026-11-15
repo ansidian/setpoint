@@ -1,11 +1,11 @@
-// SV-181: an .ics file into one of the user's Google calendars, reviewed first (D436, D437).
-// - readImport: the file read into drafts (src/domain/icsImport.ts, SV-178), in start order, each
+// An .ics file into one of the user's Google calendars, reviewed first.
+// - readImport: the file read into drafts (src/domain/icsImport.ts), in start order, each
 //   saying whether it's over and which calendars already hold its iCalUID. Nothing goes to Google.
 // - importEvent: one draft as a command, carried out by Google's events.import
 //   (src/providers/gcal/mutations.ts): `item_create` with a new row for an event the calendar doesn't
 //   hold, `item_update` of the row it does (Google updates it in place). The mirror shows it at once,
 //   pending, as any change; Move back takes a new one off and puts an updated one back.
-// SV-182's Add to calendar on an email's .ics reads the attachment's bytes through readImport too.
+// Add to calendar on an email's .ics reads the attachment's bytes through readImport too.
 import type {IcsEventOut, IcsImportEvent, IcsImportInput, IcsReadOut} from '@setpoint/shared';
 import {and, eq, inArray, isNull} from 'drizzle-orm';
 import {createCommand} from '../commands/index.ts';
@@ -77,7 +77,7 @@ function columnsOf(store: Store, event: IcsImportEvent): Partial<ItemRow> {
 
 /**
  * One event into a Google calendar by its iCalUID. Refused, changing nothing, for a calendar that
- * isn't Google's or that the user can only read (SV-191), or while the event the calendar holds for it has a change of its own on its way.
+ * isn't Google's or that the user can only read, or while the event the calendar holds for it has a change of its own on its way.
  */
 export function importEvent(store: Store, input: IcsImportInput): CommandRow {
   const calendar = store.db.select().from(t.calendars).where(eq(t.calendars.id, input.calendar_id)).get();

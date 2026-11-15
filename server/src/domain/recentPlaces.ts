@@ -1,4 +1,4 @@
-// Recent places (darma SV-71): what a bare "@" in the editor's line and an empty Place field offer
+// Recent places: what a bare "@" in the editor's line and an empty Place field offer
 // before anything is typed. They're the places the user's events have used, the most used first,
 // then the most recent. Spellings of one place count together, shown as the latest one spells it,
 // with the latest address any of them has. A link is a meeting, not a place to offer.

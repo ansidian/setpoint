@@ -1,7 +1,7 @@
 // A world with one Google account (Personal) connected as Connect Gmail connects it (one consent,
 // written to its Gmail and Calendar sources), the Google Calendar adapter pointed at a fake Google
-// on 127.0.0.1, and the sync engine. The user's calendar is
-// the brief's: Gym Mon/Wed/Fri 7–8 AM from Aug 31, Dinner with Sam Fri Oct 9 7–9 PM at Blue Door.
+// on 127.0.0.1, and the sync engine. The user's calendar is the seed's:
+// Gym Mon/Wed/Fri 7–8 AM from Aug 31, Dinner with Sam Fri Oct 9 7–9 PM at Blue Door.
 import {and, eq} from 'drizzle-orm';
 import * as t from '../src/db/schema.ts';
 import {zoned} from '../src/dev/sample.ts';
@@ -21,7 +21,7 @@ export const PERSONAL = 'user@example.com';
 export const HOLIDAYS = 'en.usa#holiday@group.v.calendar.google.com';
 export const PUBLIC_URL = 'https://setpoint.example.com';
 
-/** Connect Gmail's outcome for Personal (B2's flow without the browser): one consent for Gmail and Calendar. */
+/** Connect Gmail's outcome for Personal (the flow without the browser): one consent for Gmail and Calendar. */
 export function connectPersonal(store: Store, accountId?: number) {
   return connectMailAccount(store, {
     provider: 'gmail', address: PERSONAL, label: 'Personal', colour: 'cool', icon: 'person', accountId,

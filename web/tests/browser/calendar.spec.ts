@@ -1,5 +1,5 @@
 // The Calendar in the browser: boards 11 and 11b built and checked (11b's busy Saturday is the
-// busy-saturday fixture, decision D3), then the flows: the grid's sizes, paging through months, a
+// busy-saturday fixture), then the flows: the grid's sizes, paging through months, a
 // calendar toggled off and on, the "+3" popover opening and closing with Esc, selecting a day and an item,
 // the mini-month, and the Today block's links landing on the right day.
 import assert from 'node:assert/strict';
@@ -16,7 +16,7 @@ const text = (page: Page, selector: string) => page.locator(selector).first().te
 const chips = (page: Page, date: string) => page.locator(`.cell[data-date="${date}"] :is(.ev, .tk)`).allTextContents();
 
 test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist', async () => {
-  // Time to Leave comes from live routes; the time-to-leave fixture (D3) holds the board's estimate.
+  // Time to Leave comes from live routes; the time-to-leave fixture holds the board's estimate.
   // The server's clock holds at the seed's 9:12 AM, so a slow start can't move the now-line's minute.
   const setpoint = await startSetpoint({fixtures: ['time-to-leave'], clock: 'frozen'});
   try {
@@ -27,7 +27,7 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     assert.equal(await page.locator('.ag-item', {hasText: 'Dentist'}).locator('.leave').textContent(), 'Leave by 2:05 PM · 18 min');
     assert.equal(await page.locator('.ag-item .leave').count(), 1, 'only Dentist has one today');
-    // #125: the line names the calendar; the place has its own line.
+    // The line names the calendar; the place has its own line.
     const dentist = page.locator('.ag-item', {hasText: 'Dentist'});
     assert.equal(await dentist.locator('.line').textContent(), '2:30 – 3:30 PM · Personal');
     assert.equal(await dentist.locator('.place').textContent(), 'Smile Dental');
@@ -38,7 +38,7 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
   }
 });
 
-test('board 11b, #324: a busy Saturday folds into "+3"; its popover stays open while its items are used and closes when you\'re done with it', async () => {
+test('board 11b: a busy Saturday folds into "+3"; its popover stays open while its items are used and closes when you\'re done with it', async () => {
   const setpoint = await startSetpoint({fixtures: ['busy-saturday']});
   try {
     const page = await setpoint.page('target');
@@ -63,7 +63,7 @@ test('board 11b, #324: a busy Saturday folds into "+3"; its popover stays open w
     await popover.waitFor();
     await page.locator('.hd-title').click();
     await until('a click elsewhere closes it', () => popover.count(), count => count === 0);
-    // Its items, their card and the pane keep it open (#324).
+    // Its items, their card and the pane keep it open.
     await more.click();
     await popover.locator('.ev', {hasText: 'Movie night'}).click();
     await page.getByRole('dialog', {name: 'Movie night'}).waitFor();
@@ -106,7 +106,7 @@ test('board 11b, #324: a busy Saturday folds into "+3"; its popover stays open w
 });
 
 // Which month a scroll shows, and which rows it draws, are monthAtScroll's and rowsInView's, tables in
-// calendar.test.ts; the wheel's scrolls went with them (D416).
+// calendar.test.ts; the wheel's scrolls went with them.
 test('← → P N and ‹ › page through months, the header, tab title and mini-month reading each; T comes back to today', async () => {
   const setpoint = await startSetpoint();
   try {
@@ -149,7 +149,7 @@ test('a calendar toggled off leaves the grid and the agenda, and comes back on; 
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar/2026-10-09`);
-    // Its own row (Dinner with Sam's says it overlaps Study group, F6).
+    // Its own row (Dinner with Sam's says it overlaps Study group).
     await page.locator('.ag-item', {hasText: 'Study group'}).first().waitFor();
     assert.equal(await page.locator('.calrow .ring').count(), 0, 'Todoist reads as the others');
     const personal = page.locator('.calrow', {hasText: 'Personal'});
@@ -213,7 +213,7 @@ test('a calendar toggled off and straight back on stays on, on screen and at the
   }
 });
 
-test('SV-56: Leave by is due 15 minutes before leaving, in the pane and the card, and goes once the event starts', async () => {
+test('Leave by is due 15 minutes before leaving, in the pane and the card, and goes once the event starts', async () => {
   // Dentist at 2:30 PM, leave by 2:05 PM (the time-to-leave fixture). The server's clock holds at
   // 9:12 AM and the page's is the check's, moved on to 2:10 PM and then 2:45 PM.
   const setpoint = await startSetpoint({fixtures: ['time-to-leave'], clock: 'frozen'});
@@ -250,7 +250,7 @@ test('SV-56: Leave by is due 15 minutes before leaving, in the pane and the card
   }
 });
 
-test('SV-56: a day whose items are only hidden says how many and offers Show all, with Undo; every calendar off marks the header', async () => {
+test('a day whose items are only hidden says how many and offers Show all, with Undo; every calendar off marks the header', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -305,7 +305,7 @@ test('selecting a day updates the right pane; an item turns solid; Esc lets it g
     await page.locator('.cell[data-date="2026-10-08"]').click({position: {x: 100, y: 150}});
     await until('the pane shows Thu, Oct 8', () => text(page, '.rp-date'), title => title === 'Thu, Oct 8');
     assert.equal(new URL(page.url()).pathname, '/calendar/2026-10-08');
-    // Its counts stand in until the forecast is in (D17).
+    // Its counts stand in until the forecast is in.
     await until('Thu, Oct 8\'s forecast', () => text(page, '.rp-sub'), line => line === 'Cloudy · 72° / 59°');
     assert.deepEqual(await page.locator('.ag-day').allTextContents(), ['Events', 'Tasks · due tomorrow']);
     assert.equal(await page.locator('.nowline').count(), 0, 'the now-line is today\'s');
@@ -322,7 +322,7 @@ test('selecting a day updates the right pane; an item turns solid; Esc lets it g
     // A recurring occurrence is selected alone.
     await page.locator('.cell[data-date="2026-10-12"] .ev', {hasText: 'Gym'}).click();
     await until('Mon Oct 12\'s Gym', () => text(page, '.rp-date'), title => title === 'Mon, Oct 12');
-    // It turns solid 60 ms into the floating detail's glide (F5).
+    // It turns solid 60 ms into the floating detail's glide.
     await until('only Mon Oct 12\'s Gym is solid', () => page.locator('.ev.sel').count(), count => count === 1);
     assert.equal(await page.locator('.cell[data-date="2026-10-12"] .ev.sel').count(), 1);
     assert.match(new URL(page.url()).search, /^\?at=/);
@@ -375,7 +375,7 @@ test('the Today block\'s card opens its item on Calendar, and an item\'s link la
   }
 });
 
-test('S8 (SV-25, D54): a task made with a new project loads the calendar\'s Todoist projects again once Todoist has made it', async () => {
+test('a task made with a new project loads the calendar\'s Todoist projects again once Todoist has made it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -399,7 +399,7 @@ const monthTop = (month: string) => monthTopRow(month) * layout.monthRow;
 const scrollTop = (page: Page) => page.locator('.cal-scroll').evaluate(element => Math.round(element.scrollTop));
 
 // The glide's path between months is by eye, and where it sets out from is glideStart's table in
-// calendar.test.ts (D416).
+// calendar.test.ts.
 test('paging lands on the month it went to, N N N chaining on to January; Month from Week lands at once', async () => {
   const setpoint = await startSetpoint();
   try {
@@ -426,7 +426,7 @@ test('paging lands on the month it went to, N N N chaining on to January; Month 
   }
 });
 
-test('SV-211: Tab and Shift-Tab step Month | Week from anywhere; in the editor Tab is its own', async () => {
+test('Tab and Shift-Tab step Month | Week from anywhere; in the editor Tab is its own', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -508,7 +508,7 @@ test('a calendar search lights its matches, every occurrence of a series, and le
   }
 });
 
-test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row with "+N", its viewer stepping and stopping at the ends, L opening it and looping through it; none on a Sunday, "No mail today" on a Monday', async () => {
+test('the selected day\'s USPS Informed Delivery in the rail, one row with "+N", its viewer stepping and stopping at the ends, L opening it and looping through it; none on a Sunday, "No mail today" on a Monday', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -547,11 +547,11 @@ test('SV-274: the selected day\'s USPS Informed Delivery in the rail, one row wi
     await page.mouse.click(10, 10);
     await viewer.waitFor({state: 'detached'});
 
-    // L opens the day's mail at its first scan (D573); its hint is in the header.
+    // L opens the day's mail at its first scan; its hint is in the header.
     await section.locator('.rp-mail-head .kbd', {hasText: 'L'}).waitFor();
     await page.keyboard.press('l');
     await viewer.getByText('1 of 8').waitFor();
-    // L again steps on, and from the last loops to the first (D574).
+    // L again steps on, and from the last loops to the first.
     await page.keyboard.press('l');
     await viewer.getByText('2 of 8').waitFor();
     for (let at = 2; at < 8; at += 1) await page.keyboard.press('l');

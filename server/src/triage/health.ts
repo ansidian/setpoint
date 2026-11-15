@@ -1,5 +1,4 @@
-// Triage's health (DESIGN.md › Health and states: "Triage is down, as of 9:09 AM", with the Unsorted
-// group under Attention). Like a source's, it's about the last attempt, not about whether mail
+// Triage's health ("Triage is down, as of 9:09 AM", with the Unsorted group under Attention). Like a source's, it's about the last attempt, not about whether mail
 // arrived: triage is down while its last model call failed (or there was no model to call when an
 // email needed one), as of its last successful call. A success brings it back.
 import type {TriageStatusOut} from '@setpoint/shared';

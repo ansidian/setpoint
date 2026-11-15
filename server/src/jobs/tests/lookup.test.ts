@@ -1,8 +1,8 @@
-// The JD lookup as it runs (J3), against an ephemeral database holding the seed's mail, with the
+// The JD lookup as it runs, against an ephemeral database holding the seed's mail, with the
 // hiring platforms and posting pages (./fakeWeb.ts) and Anthropic (Haiku's check and reading, Sonnet
 // with its web search, in the tool's real response shape) faked at the HTTP boundary. Jobs's own
-// sample is cleared, so each test makes the applications it looks up, with their emails, as J2
-// leaves them. The Done-when list: confident, unsure (three at most), not found and failed, a failed
+// sample is cleared, so each test makes the applications it looks up, with their emails, as the reader
+// leaves them. What it covers: confident, unsure (three at most), not found and failed, a failed
 // lookup retrying while a not-found one doesn't, a saved JD never overwritten, Look it up by hand on a
 // closed application, and the seed loading with its numbers and triggering nothing.
 import {jobsChangeSchema, jobsPageSchema, MAX_PASTED_CHARS, SEED_NOW} from '@setpoint/shared';
@@ -103,7 +103,7 @@ async function setup({key = true}: {key?: boolean} = {}) {
     throw new Error('Jobs kept coming');
   };
   let emails = 0;
-  /** An application as J2's confirmation leaves it: `looking` for its JD, its emails in the Jobs account. */
+  /** An application as a confirmation the reader reads leaves it: `looking` for its JD, its emails in the Jobs account. */
   const make = ({company, title, platform, appliedAt = '2026-10-05T17:20:00.000Z', requisitionId = null, status = 'applied', jdLookup = 'looking', emails: copies = []}: Made) => {
     const {id} = db.insert(j.jobsApplications).values({
       company, title, titleKey: title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(), requisitionId, platform, accountId, appliedAt, status, statusSetBy: 'email',
@@ -118,7 +118,7 @@ async function setup({key = true}: {key?: boolean} = {}) {
         unread: false, trashed: false, archived: false,
       }]).inserted;
       db.insert(j.jobsEvents).values({applicationId: id, at, kind: copy.kind, sender: copy.from[0], subject: copy.subject, messageId: messageId!, createdAt: at}).run();
-      // J2 read it already.
+      // The reader read it already.
       db.insert(j.jobsEmailsRead).values({messageId: messageId!, readAt: at, outcome: index === 0 ? 'application' : 'event', at, applicationId: id}).run();
     });
     return id;
@@ -144,7 +144,7 @@ const match = (verdicts: string[]) => () => ({tool: {verdicts: verdicts.map((ver
 const reading = (tool: Record<string, unknown>) => () => ({tool, usage: {input: 1800, output: 260}});
 const FORBIDDEN = {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}};
 
-describe('confident (decision 54)', () => {
+describe('confident', () => {
   test('a platform\'s posting the check is sure of is saved silently, with what Haiku read in it', async () => {
     const s = await setup();
     const id = s.make(LUCERNE);
@@ -183,7 +183,7 @@ describe('confident (decision 54)', () => {
     ]);
   });
 
-  test('a saved JD is never overwritten by a second lookup (decision 53)', async () => {
+  test('a saved JD is never overwritten by a second lookup', async () => {
     const s = await setup();
     const id = s.make(LUCERNE);
     s.answers({submit_posting_check: match(['match', 'no']), submit_posting_reading: reading(LUCERNE_READING)});
@@ -262,7 +262,7 @@ describe('confident (decision 54)', () => {
     ]);
   });
 
-  test('an application\'s own page in the email is never read or checked: the lookup carries on to search (SV-130)', async () => {
+  test('an application\'s own page in the email is never read or checked: the lookup carries on to search', async () => {
     const s = await setup();
     const page = 'https://fabrikam.tracker.example/jobs/6120884/candidates/8f2c1d9e';
     s.web.serve(page, htmlPage(fixture('posting-page.html')));
@@ -294,7 +294,7 @@ describe('confident (decision 54)', () => {
   });
 });
 
-describe('unsure (decision 54)', () => {
+describe('unsure', () => {
   test('nothing is saved; the candidates wait in Needs you as a JD to confirm, and search doesn\'t run', async () => {
     const s = await setup();
     const id = s.make(LUCERNE);
@@ -323,7 +323,7 @@ describe('unsure (decision 54)', () => {
     s.answers({submit_posting_search: () => searched([1, 2, 3, 4].map(n => ({url: `https://wideworldimporters.example/careers/jobs/${n}`, title: `Software Developer ${n}`, location: 'Remote', site: 'Wide World Importers', verdict: 'maybe'})))});
     await s.drain();
     expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.link)).toEqual([1, 2, 3].map(n => `https://wideworldimporters.example/careers/jobs/${n}`));
-    // Each of the three is opened before it's offered (D388); these turn Jobs away, so they stay, unread.
+    // Each of the three is opened before it's offered; these turn Jobs away, so they stay, unread.
     expect(s.web.asked()).toEqual([1, 2, 3].map(n => `wideworldimporters.example/careers/jobs/${n}`));
     expect(s.asked()).toEqual(['submit_posting_search']);
   });
@@ -339,7 +339,7 @@ describe('unsure (decision 54)', () => {
   });
 });
 
-describe('GovernmentJobs, through its site-wide search (D389)', () => {
+describe('GovernmentJobs, through its site-wide search', () => {
   const CONTOSO: Made = {
     company: 'City of Contoso', title: 'Office Assistant II', platform: 'GovernmentJobs',
     emails: [{kind: 'applied', from: ['City of Contoso', 'noreply@governmentjobs.example'], subject: 'Your application for Office Assistant II', body: 'Thank you for applying to Office Assistant II. Sign in at https://governmentjobs.example/js_login.cfm to see your application.'}],
@@ -504,7 +504,7 @@ describe('GovernmentJobs, through its site-wide search (D389)', () => {
   });
 });
 
-describe('a search\'s candidates are opened before they\'re offered (D388)', () => {
+describe('a search\'s candidates are opened before they\'re offered', () => {
   const FABRIKAM: Made = {company: 'Fabrikam', title: 'Data Analyst', platform: 'Workday', appliedAt: '2026-10-06T21:00:00.000Z'};
   const one = (n: number, verdict = 'maybe') => ({url: `https://fabrikam.example/careers/jobs/${n}`, title: `Data Analyst ${n}`, location: 'Atlanta, GA', site: 'Fabrikam Careers', verdict});
   const links = (s: Awaited<ReturnType<typeof setup>>, id: number) => applicationDetail(s.store, id).candidates.map(candidate => candidate.link);
@@ -523,7 +523,7 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
     expect(s.posting(id)).toBeUndefined();
     expect(links(s, id)).toEqual([one(2).url, one(3).url]);
     expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'candidates', candidates: 2});
-    // Both came back unreadable, which is what the picker says of them (SV-140).
+    // Both came back unreadable, which is what the picker says of them.
     expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.unreadable)).toEqual([true, true]);
     expect(jobsPage(s.store).needs_you[0]!.candidates.map(candidate => candidate.unreadable)).toEqual([true, true]);
   });
@@ -566,7 +566,7 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
     expect(jobsPage(s.store).needs_you).toEqual([]);
   });
 
-  test('a sole match that reads is saved with no check, and the others aren\'t opened (decision 54)', async () => {
+  test('a sole match that reads is saved with no check, and the others aren\'t opened', async () => {
     const s = await setup();
     s.web.serve(one(1).url, htmlPage(fixture('posting-page.html')));
     const id = s.make(FABRIKAM);
@@ -612,7 +612,7 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
     await s.drain();
     expect(s.lookupJobs(id).map(job => job.state)).toEqual(['done']);
     expect(links(s, id)).toEqual([one(1).url, one(2).url, one(3).url]);
-    // A failure says nothing about the page, so none of them is marked (SV-140).
+    // A failure says nothing about the page, so none of them is marked.
     expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.unreadable)).toEqual([false, false, false]);
   });
 
@@ -669,8 +669,8 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
   });
 });
 
-describe('not found (D320)', () => {
-  test('a pick Jobs can\'t read keeps its link and asks nothing more, and Look it up turns that link down, so the search can\'t offer it again (SV-140)', async () => {
+describe('not found', () => {
+  test('a pick Jobs can\'t read keeps its link and asks nothing more, and Look it up turns that link down, so the search can\'t offer it again', async () => {
     const s = await setup();
     const link = 'https://www.glassdoor.example/job-listing/data-analyst-2291';
     s.web.serve(link, {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}});
@@ -697,7 +697,7 @@ describe('not found (D320)', () => {
     expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'candidates', candidates: 1}, candidates: [{link: other}]});
   });
 
-  test('a failed pick\'s link is lost as Open posting when the search after it finds nothing, and only that link is turned down (SV-140)', async () => {
+  test('a failed pick\'s link is lost as Open posting when the search after it finds nothing, and only that link is turned down', async () => {
     const s = await setup();
     const [failed, kept] = ['https://www.glassdoor.example/job-listing/1', 'https://www.glassdoor.example/job-listing/2'];
     s.web.serve(failed, FORBIDDEN);
@@ -721,7 +721,7 @@ describe('not found (D320)', () => {
     expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link: null});
   });
 
-  test('a lookup still under way doesn\'t count as a failed pick: its link isn\'t turned down (SV-140)', async () => {
+  test('a lookup still under way doesn\'t count as a failed pick: its link isn\'t turned down', async () => {
     const s = await setup();
     const link = 'https://www.glassdoor.example/job-listing/3';
     s.web.serve(link, FORBIDDEN);
@@ -769,7 +769,7 @@ describe('not found (D320)', () => {
   });
 });
 
-describe('the posting pasted in (SV-140)', () => {
+describe('the posting pasted in', () => {
   const TEXT = `About the role\n\n${'We need an analyst who builds the weekly reports the whole company reads, and the pipelines behind them. '.repeat(3)}\n\nWhat you'll need:\n- SQL\n- Clear writing`;
   const READ = {summary: 'An analyst for the weekly reports.', location: 'Atlanta, GA', workplace: 'hybrid', workplace_detail: '2 days', salary: '$70,000–$82,000', must_haves: ['SQL'], nice_to_haves: ['Python']};
   const LINK = 'https://www.glassdoor.example/job-listing/data-analyst-2291';
@@ -968,7 +968,7 @@ describe('the posting pasted in (SV-140)', () => {
     expect(applicationDetail(s.store, other).posting).toMatchObject({summary: READ.summary, source: 'pasted'});
   });
 
-  test('Undo keeps the reading that landed since its correction: a location, a title; and Not this posting undone before it was read is read again (SV-170)', async () => {
+  test('Undo keeps the reading that landed since its correction: a location, a title; and Not this posting undone before it was read is read again', async () => {
     const s = await setup();
     const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
     await paste(s, id, TEXT);
@@ -1067,7 +1067,7 @@ describe('the posting pasted in (SV-140)', () => {
   });
 });
 
-describe('stopped to paste the posting (SV-170)', () => {
+describe('stopped to paste the posting', () => {
   const TEXT = `About the role\n\n${'We need an analyst who builds the weekly reports the whole company reads, and the pipelines behind them. '.repeat(3)}`;
   const READ = {summary: 'An analyst for the weekly reports.', location: 'Atlanta, GA', workplace: 'hybrid', workplace_detail: '2 days', salary: null, must_haves: ['SQL'], nice_to_haves: []};
   type S = Awaited<ReturnType<typeof setup>>;
@@ -1219,7 +1219,7 @@ describe('failed: retried with backoff, never "No JD found"', () => {
 });
 
 describe('when it runs', () => {
-  test('a confirmation J2 reads is looked up straight after, while the posting is up', async () => {
+  test('a confirmation the reader reads is looked up straight after, while the posting is up', async () => {
     const s = await setup();
     const accountId = s.store.db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get()!.id;
     const [messageId] = upsertMessages(s.store, accountId, [{
@@ -1242,7 +1242,7 @@ describe('when it runs', () => {
     expect(applicationDetail(s.store, made!.id).jd).toMatchObject({state: 'found', source: 'platform', platform: 'Greenhouse'});
   });
 
-  test('one closed before its lookup started isn\'t looked up (decision 57); one already queued or running is left to it', async () => {
+  test('one closed before its lookup started isn\'t looked up; one already queued or running is left to it', async () => {
     const s = await setup();
     const closed = s.make({...LUCERNE, status: 'rejected'});
     const open = s.make({company: 'Relecloud', title: 'Support Engineer', platform: 'Greenhouse'});

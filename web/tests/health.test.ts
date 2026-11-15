@@ -49,7 +49,7 @@ describe('health and states', () => {
     ], now, zone).map(line => [line.key, line.source, line.text])).toEqual([['Personal', 2, 'Personal, as of 9:14 PM'], ['iCloud', 5, 'iCloud, as of 8:40 AM, IMAP said no.']]);
   });
 
-  // SV-20: the calendar's right pane, its sources' lines in order; Google Calendar's accounts as one, the worst.
+  // The calendar's right pane, its sources' lines in order; Google Calendar's accounts as one, the worst.
   const source = (id: number, provider: SourceOut['provider'], fields: Partial<HealthOut>): SourceOut => ({
     id, provider, account_id: null, name: provider, sync: {mode: 'poll', interval_seconds: 300, push_renews_at: null}, health: health(fields), has_credentials: true, dev: false,
   });

@@ -1,5 +1,5 @@
-// The dev seed's News (BRIEF.md › Sample data › News, round 3): the hazard leads, the sections' full
-// lists, and `npm run seed` writing the images.
+// The dev seed's News: the hazard leads, the sections' full lists, and `npm run seed` writing the
+// images.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,7 +18,7 @@ function seeded(): Store {
 }
 
 describe('All', () => {
-  test('a story led by a hazard source names its hazard, for its glyph; every other lead none (news-08)', () => {
+  test('a story led by a hazard source names its hazard, for its glyph; every other lead none', () => {
     const store = seeded();
     const leads = new Map(newsSection(store, 'local').stories.map(story => [story.headline, story.lead.hazard]));
     expect(leads.get('Red Flag Warning for the valleys until Thu 6 PM')).toBe('nws');

@@ -1,9 +1,9 @@
-// The Inbox is a view of state (decision 6; BRIEF.md › The Inbox; DESIGN.md › The list):
+// The Inbox is a view of state:
 // Attention until Done, read or not; FYI and Noise until read, from any day; Unsorted while triage
 // hasn't sorted it; Pinned until unpinned, whatever its lane or read state. Trashed mail is out of
 // every view, Done mail out of the Inbox, and a code's row leaves at its expiry. Mail archived at
 // its provider (Gmail's Archive, moved out of iCloud's INBOX) leaves the Inbox too: it was handled
-// there, and providers are the truth (B2; All and search still show it).
+// there, and providers are the truth (All and search still show it).
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroup, Kind, Lane} from '@setpoint/shared';
 
@@ -49,9 +49,9 @@ export interface Group<T> {
 }
 
 /**
- * The groups in DESIGN.md's order, empty ones left out. A pinned email is on the shelf and also in
- * its group, so the shelf never hides it from where it belongs. Every group starts expanded
- * (2026-10-10); the list keeps what the user collapses.
+ * The groups in INBOX_GROUPS's order, empty ones left out. A pinned email is on the shelf and also in
+ * its group, so the shelf never hides it from where it belongs. Every group starts expanded;
+ * the list keeps what the user collapses.
  */
 export function inboxGroups<T extends InboxCandidate>(messages: T[], now: string): Group<T>[] {
   const byGroup = new Map<InboxGroup, T[]>();
@@ -79,7 +79,7 @@ export interface Counts {
 }
 
 /**
- * The counts the Inbox shows (decision 48): attention not Done, read or not (the pill); every unread
+ * The counts the Inbox shows: attention not Done, read or not (the pill); every unread
  * email in the Inbox, Noise included; unread FYI; and unread per account. Opening drops the unread
  * counts; only Done drops the pill.
  */
@@ -106,9 +106,9 @@ export function nextInboxChange(messages: InboxCandidate[], now: string): string
 }
 
 /**
- * Mark all as read's emails: every unread email outside Attention and Security, Noise included
- * (BRIEF.md › The Inbox). Attention mail not yet Done keeps its read state, and so does Security, so
- * a live code or a sign-in alert isn't swept away with the newsletters (UX #4); trashed and archived
+ * Mark all as read's emails: every unread email outside Attention and Security, Noise included.
+ * Attention mail not yet Done keeps its read state, and so does Security, so
+ * a live code or a sign-in alert isn't swept away with the newsletters; trashed and archived
  * mail, which the Inbox doesn't show, isn't touched.
  */
 export function markAllReadTargets<T extends InboxCandidate>(messages: T[]): T[] {
@@ -116,7 +116,7 @@ export function markAllReadTargets<T extends InboxCandidate>(messages: T[]): T[]
     && !(message.lane === 'attention' && !message.doneAt) && !(message.lane === 'fyi' && message.kind === 'security'));
 }
 
-/** What the Inbox's empty pane counts from one email (SV-218). */
+/** What the Inbox's empty pane counts from one email. */
 export interface DayCandidate extends InboxCandidate {
   triagedAt: string | null;
   triageSource: string | null;
@@ -133,7 +133,7 @@ export interface MailDay {
 const OVERDUE_MS = 24 * 60 * 60 * 1000;
 
 /**
- * How the mail day is going since `dayStart` (the user's midnight, SV-218, D465): Done today; what
+ * How the mail day is going since `dayStart` (the user's midnight): Done today; what
  * needs the user (Attention not Done, the attention pill's number) and how much of it has waited
  * over 24 hours since arriving; and what triage sorted today out of Attention, to FYI and to Noise.
  * The pass over backfilled history isn't today's sorting, and trashed mail counts nowhere.

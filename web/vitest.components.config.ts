@@ -1,4 +1,4 @@
-// Component tests (SV-101): one widget at a time, rendered by React in a real Chromium with the
+// Component tests: one widget at a time, rendered by React in a real Chromium with the
 // app's own stylesheet and tokens, in Vitest's browser mode. They take the Chromium the browser
 // checks launch (Playwright's own, else Google Chrome) and download nothing. One headless page for a
 // few seconds, so run alone they don't take the test lock (web/tests/browser/lock.ts).

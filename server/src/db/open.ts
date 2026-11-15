@@ -43,7 +43,7 @@ export function openDatabase(file: string): OpenDatabase {
 /**
  * An in-memory copy of a database from its `sqlite.serialize()`, as it stood: nothing migrates, and
  * writes reach only the copy. Tests start from one, since migrating and seeding each time was most
- * of what a seeded test cost (SV-143).
+ * of what a seeded test cost.
  */
 export const openImage = (image: Buffer): OpenDatabase => connected(new Database(image));
 

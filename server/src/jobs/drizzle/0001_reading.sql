@@ -1,5 +1,5 @@
--- J2. application_id's ON DELETE set null is added by hand: drizzle-kit leaves it out of ADD COLUMN, and
--- without it J6's Delete would be refused while a read email points at the application.
+-- application_id's ON DELETE set null is added by hand: drizzle-kit leaves it out of ADD COLUMN, and
+-- without it Delete would be refused while a read email points at the application.
 CREATE TABLE `jobs_reader` (
 	`id` integer PRIMARY KEY NOT NULL,
 	`last_success_at` text,

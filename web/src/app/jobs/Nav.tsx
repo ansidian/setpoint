@@ -1,4 +1,4 @@
-// Jobs in the shell (DESIGN.md › Jobs › Shell; D313, D325): the sidebar's item under News, `work`, its
+// Jobs in the shell: the sidebar's item under News, `work`, its
 // count the Needs you count in ink2 (gone at zero), its tooltip "Jobs · 3 need you"; in the rail
 // its slot after News, its count a neutral 16 px badge (jobs.css). Only while Jobs is on:
 // turned on, it folds in under News over 180 ms (39a); off, it has no item, and `4` opens the off page

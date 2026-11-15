@@ -1,4 +1,4 @@
-// Selecting several emails (DESIGN.md #249): ⌘-click and ⇧-click select rows without opening or
+// Selecting several emails: ⌘-click and ⇧-click select rows without opening or
 // reading them, and the reading pane shows the selection; the first ⌘-click takes the open email, and
 // a plain click ends it and opens. A selected row's right-click offers the selection's actions and
 // another row's its own; E trashes every one with one toast, and ⌘Z brings every one back; Mark

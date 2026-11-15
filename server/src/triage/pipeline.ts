@@ -1,13 +1,13 @@
-// One email through triage (BRIEF.md › Triage): rules first, then the cheap model, then the strong
+// One email through triage: rules first, then the cheap model, then the strong
 // model when the cheap one is unsure, and the policy last (src/domain/triagePolicy.ts).
 //
 // - A rule that decides the lane still has the cheap model read the email, for its organisation,
-//   type, key date, summary and security facts (decision 10: extracted once, at triage); without a
+//   type, key date, summary and security facts (extracted once, at triage); without a
 //   model, or when it fails, the rule's lane stands with what the history pass can read.
-// - Hard-risk mail (v1's words) goes straight to the strong model unless the user's rule names its
+// - Hard-risk mail goes straight to the strong model unless the user's rule names its
 //   sender or keeps it in Attention.
 // - The cheap model's Attention, unsure, unreadable or protected answers go to the strong model; an
-//   unsure strong answer is FYI (decision 30).
+//   unsure strong answer is FYI.
 // - With no model to ask and no rule deciding, the email can't be sorted: TriageUnavailable, and it
 //   waits in Unsorted. A provider's refusal is thrown as it came, for the job's retry policy.
 //
@@ -22,7 +22,7 @@ import {detectVerificationCode} from '../domain/verificationCode.ts';
 export type Tier = 'cheap' | 'strong';
 
 export interface TriageEmail extends RuleEmail {
-  // Read only for its verification code (SV-68): some senders put the code only in the HTML.
+  // Read only for its verification code: some senders put the code only in the HTML.
   bodyHtml: string | null;
   receivedAt: string;
   accountLabel: string | null;
@@ -123,7 +123,7 @@ export async function triageEmail(context: PipelineContext, email: TriageEmail, 
 
 /**
  * Backfilled history, sorted as it lands without a model: the rules, the history pass's reading,
- * then the same policy, as history (never Attention, SV-4 D19). Nothing is left Unsorted. Once a key
+ * then the same policy, as history (never Attention). Nothing is left Unsorted. Once a key
  * exists, the one-time extraction pass (src/triage/history.ts) has the cheap model fill in what this
  * reading guessed, without touching the lane.
  */

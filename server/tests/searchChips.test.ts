@@ -1,4 +1,4 @@
-// The chip grammar (BRIEF.md › Search): words become organisation, type, date, account and kind
+// The chip grammar: words become organisation, type, date, account and kind
 // chips; everything else stays free text. Dates resolve in the owner's zone against the clock,
 // preferring the past.
 import type {SearchChip} from '@setpoint/shared';
@@ -23,7 +23,7 @@ const parse = (text: string, now = SEED_NOW) => {
   return {chips: parsed.chips.map(show), text: parsed.text};
 };
 
-describe('parseQuery: the brief\'s example', () => {
+describe('parseQuery: the sample example', () => {
   test('northwind rejection march → Northwind · Rejection · Mar 2026', () => {
     const parsed = parseQuery('northwind rejection march', {...VOCABULARY, now: SEED_NOW, timeZone: TIME_ZONE});
     expect(parsed.chips).toEqual([
@@ -81,7 +81,7 @@ describe('parseQuery: a question\'s own words never start an organisation', () =
   });
 });
 
-describe('parseQuery: "!" leaves out what a word names (SV-31)', () => {
+describe('parseQuery: "!" leaves out what a word names', () => {
   test.each<[string, string, string[], string]>([
     // name, query, chips, free text left
     ['a type', '!confirmation', ['Not Type Confirmation'], ''],
@@ -99,7 +99,7 @@ describe('parseQuery: "!" leaves out what a word names (SV-31)', () => {
   });
 });
 
-describe('parseQuery: what words form when a reading owns the rest (SV-138)', () => {
+describe('parseQuery: what words form when a reading owns the rest', () => {
   const read = (text: string, fromWords: 'dates' | 'none') => {
     const parsed = parseQuery(text, {...VOCABULARY, now: SEED_NOW, timeZone: TIME_ZONE, fromWords});
     return {chips: parsed.chips.map(show), left: parsed.text};
@@ -138,7 +138,7 @@ describe('parseQuery: dates in the owner\'s zone, preferring the past (now: Wed 
     ['a course number stays text', 'cs 101', [], 'cs 101'],
     ['today', 'today', ['Date Today [2026-10-07, 2026-10-08)'], ''],
     ['yesterday', 'yesterday', ['Date Yesterday [2026-10-06, 2026-10-07)'], ''],
-    ['last week, Sunday to Saturday (SV-29)', 'last week', ['Date Sep 27 – Oct 3 [2026-09-27, 2026-10-04)'], ''],
+    ['last week, Sunday to Saturday', 'last week', ['Date Sep 27 – Oct 3 [2026-09-27, 2026-10-04)'], ''],
     ['this week', 'this week', ['Date Oct 4 – Oct 10 [2026-10-04, 2026-10-11)'], ''],
     ['last month', 'last month', ['Date Sep 2026 [2026-09-01, 2026-10-01)'], ''],
     ['last year', 'last year', ['Date 2025 [2025-01-01, 2026-01-01)'], ''],

@@ -1,9 +1,9 @@
-// BRIEF.md › Sample data › News (round 3) as rows, so the News page can be built before ingest (N2)
-// and sorting (N3) exist. The outlets and companies are real and every event is invented (incidents
-// happen to Fabrikam); local stories stay at the level of Los Angeles. The user last looked Mon at 10:40
-// PM, so a story seen then and given a fact since is updated (◐), one never seen is new (●).
+// News's sample data as rows, so the News page works without ingest and sorting. The outlets and
+// companies are real and every event is invented (incidents happen to Fabrikam); local stories stay
+// at the level of Los Angeles. The user last looked Mon at 10:40 PM, so a story seen then and given
+// a fact since is updated (◐), one never seen is new (●).
 //
-// - All: Local, Tech, AI and General with the brief's stories, then enough more for "12 more in
+// - All: Local, Tech, AI and General with the sample's stories, then enough more for "12 more in
 //   Local", "7 more in Tech", "4 more in AI" and "9 more in General" (one AI story is also General's).
 // - While you were away: 14 stories that left the page unseen on Tuesday (Local 3, Tech 2, AI 4,
 //   General 5), of which the recap shows each section's biggest 2: their last facts came on Sunday, 48
@@ -40,7 +40,7 @@ const local = (key: string, name: string, url: string, reads = 'Feed', extra: Pa
 const other = (key: string, name: string, section: NewsSection): NewsSourceSpec =>
   ({key: `seed:${key}`, name, section, kind: 'feed', adapter: 'feed', url: example(key), reads: 'Feed'});
 
-/** The local list's stand-ins (D91 keeps the real one out of the repository). */
+/** The local list's stand-ins (the real one stays out of the repository). */
 const SEED_LOCAL: NewsSourceSpec[] = [
   local('ktla', 'KTLA · Local news', example('ktla', 'news/local/feed/'), 'Feed, summary only', {summaryOnly: true, icon: 'live_tv'}),
   local('nbc-la', 'NBC Los Angeles · Local', example('nbclosangeles', 'news/local/?rss=y'), 'Feed and two area tags', {icon: 'live_tv'}),
@@ -107,7 +107,7 @@ interface SampleStory {
   headline: string;
   oneLine?: string;
   summary?: string;
-  // N3's ranking, 0–100; a block shows its top three and up to two more scoring 70 or over.
+  // The ranking, 0–100; a block shows its top three and up to two more scoring 70 or over.
   score: number;
   first: string;
   // [at, fact], oldest first; the last is the last new fact.
@@ -119,7 +119,7 @@ interface SampleStory {
   articles: [SampleArticle, ...(SampleArticle | string)[]];
   // Left the page before the user saw it: archived, in the recap.
   missed?: true;
-  // Rated under the write gate, so never written: only its section's Also reported shows it (D452).
+  // Rated under the write gate, so never written: only its section's Also reported shows it.
   held?: true;
   upcoming?: {name: string; startsAt: string};
 }
@@ -344,7 +344,7 @@ export const SAMPLE_STORIES: SampleStory[] = [
     score: 64, ...gone('20:45'), articles: [{outlet: 'ABC News', at: at('tue', '06:55'), image: 25}, 'CBS News', 'AP News', 'NBC News']},
   {sections: ['general'], headline: 'Automaker recalls 1.2 million pickups over a brake defect', oneLine: 'Dealers will replace a brake line for free',
     score: 62, ...gone('21:30'), articles: [{outlet: 'NBC News', at: at('tue', '07:15')}, 'Reuters', 'USA Today']},
-  // ---- Under the write gate: Also reported only, headline and outlet (D452). Last, so the stories
+  // ---- Under the write gate: Also reported only, headline and outlet. Last, so the stories
   // above keep their ids (the iPhone contract's fixtures name some). ----
   {sections: ['local'], headline: 'Central library hosts a fall book sale this weekend', held: true,
     score: 37, first: at('tue', '12:40'), facts: [[at('tue', '12:40'), 'A book sale runs Saturday and Sunday']],

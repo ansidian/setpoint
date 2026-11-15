@@ -1,4 +1,4 @@
-// A plain-text email body as the reader draws it (DESIGN.md › The reader: 14 / 1.55, max 600 px):
+// A plain-text email body as the reader draws it (DESIGN.md › Type: 14 / 1.55, max 600 px):
 // paragraphs at blank lines, and each paragraph's own line breaks kept.
 
 /** The paragraphs of `text`, each a list of its lines. */

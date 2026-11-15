@@ -1,10 +1,10 @@
-// The full posting (DESIGN.md › The application's detail; board 33, D307): a 44 px row under the lists,
+// The full posting (board 33): a 44 px row under the lists,
 // "Full posting", how it was found, the link's host and Show. Show, or Space on its row, turns the row
 // into the section's sticky head and unfolds the text under it over 260 ms (a clip from the top, its
 // paragraphs fading in over 180 ms from 60 ms), while the pane scrolls the head up under the tools, so
 // the summary and lists slide away rather than the text appearing off screen. Collapse, the head or
 // Esc folds it back over 180 ms and scrolls back to the row. The text is the posting's own words,
-// cleaned to markdown and never rewritten. Arriving from mail's JD popover (#271), it's unfolded
+// cleaned to markdown and never rewritten. Arriving from mail's JD popover, it's unfolded
 // already, the pane at it, with no motion.
 import type {PostingOut} from '@setpoint/shared';
 import {Fragment, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState} from 'react';

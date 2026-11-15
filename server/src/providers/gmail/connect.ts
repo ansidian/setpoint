@@ -1,6 +1,5 @@
-// Connect Gmail and Reconnect: one Google consent for Gmail and Calendar (v1's combined scopes),
-// returning to /api/ea/accounts/gmail/callback, the path v1 registered, so the same Google client
-// takes v2's callback as a second redirect URI.
+// Connect Gmail and Reconnect: one Google consent for Gmail and Calendar (combined scopes),
+// returning to /api/ea/accounts/gmail/callback, a redirect URI the Google client has registered.
 //
 // Google's redirect back is a cross-site navigation, so the SameSite=Strict session cookie isn't
 // sent with it. The `state` is the proof instead: Setpoint seals it with its own key (AES-GCM,
@@ -39,7 +38,7 @@ export function authorizeUrl(store: Store, client: GoogleClient, redirectUri: st
   const state: State = {account_id: account?.id ?? null, expires_at: store.now().getTime() + STATE_TTL_MS, nonce: randomBytes(12).toString('base64url')};
   const params = new URLSearchParams({
     client_id: client.clientId, redirect_uri: redirectUri, response_type: 'code', scope: GOOGLE_SCOPES.join(' '),
-    // A refresh token every time, so a reconnect always replaces a revoked one (v1).
+    // A refresh token every time, so a reconnect always replaces a revoked one.
     access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true',
     state: encryptSecret(keyring(store), JSON.stringify(state), STATE_CONTEXT),
     ...(account ? {login_hint: account.address} : {}),

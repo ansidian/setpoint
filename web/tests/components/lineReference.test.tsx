@@ -1,4 +1,4 @@
-// What the line reads (LineReference.tsx; darma SV-114, D295): the ? at the editor's line opens the
+// What the line reads (LineReference.tsx): the ? at the editor's line opens the
 // reference under it, every example with what it reads; Esc closes it and not the editor, focus
 // going back to the ?; a press outside closes it. That the examples read so is lineReference.test.ts;
 // the ? on the line, beside the email's mark, is editor.spec.ts.
@@ -26,7 +26,7 @@ function Line() {
   );
 }
 
-// The editor draws again as the pointer crosses a lit phrase (its hover, SV-209); here, on call.
+// The editor draws again as the pointer crosses a lit phrase (its hover); here, on call.
 let redraw = () => {};
 function Redrawing() {
   const [, setTimes] = useState(0);
@@ -96,7 +96,7 @@ test('the kept phrase is marked in its example, under the note that says how', a
   await expect.element(page.getByText('Click a lit phrase, or press ⌥⌫ inside it, and it stays words.')).toBeVisible();
 });
 
-test('the editor drawing again while it is open leaves its entrance alone, not played again (SV-209)', async () => {
+test('the editor drawing again while it is open leaves its entrance alone, not played again', async () => {
   await render(<Redrawing />);
   await question.click();
   await expect.element(card).toBeVisible();

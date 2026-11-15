@@ -1,5 +1,5 @@
-// Credentials at rest (adapted from v1's encryption tests): AES-256-GCM in the v2 format, bound to
-// where each value is stored, and write-only through the API.
+// Credentials at rest: AES-256-GCM with the key's id in each value, bound to where each value is
+// stored, and write-only through the API.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';

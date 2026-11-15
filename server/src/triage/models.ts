@@ -1,7 +1,7 @@
 // Which models triage asks (bring your own key; Settings › AI). A chosen model id needs the Anthropic
 // key; with no choice, triage takes the built-in models. They're Claude Sonnet 5.5 cheap and Claude
-// Opus 5.5 strong (2026-10-08, D25; ids from the claude-api skill). The one-time history pass (D20) has
-// its own choice, Claude Haiku 5.5 by default (D26): a year of mail on Sonnet would cost about 20× as
+// Opus 5.5 strong (ids from the claude-api skill). The one-time history pass has
+// its own choice, Claude Haiku 5.5 by default: a year of mail on Sonnet would cost about 20× as
 // much. A chosen strong model that can't be asked falls back to the cheap model, so escalation still
 // asks again rather than not at all.
 import type {AiModelChoiceOut, AiProvider, Settings} from '@setpoint/shared';

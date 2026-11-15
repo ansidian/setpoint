@@ -1,4 +1,4 @@
--- Hand-edited (SV-74), as 0009 and 0013 were: the migrator runs in a transaction, where PRAGMA
+-- Hand-edited, as 0009 and 0013 were: the migrator runs in a transaction, where PRAGMA
 -- foreign_keys=OFF does nothing, so dropping `items` would cascade to its own completed
 -- occurrences (recurring_item_id ON DELETE CASCADE, which a copy made first points at too) and to
 -- Time to Leave's routes (travel_estimates.item_id). Both tables are kept aside, `items` is made

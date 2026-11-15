@@ -1,14 +1,14 @@
-// The editor in the right pane (DESIGN.md › Editor; boards 13 and 14). A new event or task starts
+// The editor in the right pane (boards 13 and 14). A new event or task starts
 // from one line that parses as it's typed ("Dinner with Sam fri 7-9pm @Blue Door": date, time and
 // end, place, calendar, each parsed part marked), with the fields under it to check or change: the
 // title, the date and times, the place with Places suggestions, the calendar, reminders (Settings ›
-// Notifications' default, override 8; presets and Custom…, Reminders.tsx), the repeat, then the conflict preview, a small timeline of
+// Notifications' default; presets and Custom…, Reminders.tsx), the repeat, then the conflict preview, a small timeline of
 // the day. Batch drafts add more events ("Create 2 events ⌘Enter"). A Todoist task uses the same
-// editor with its due date, project, labels and repeat (F6b: Todoist's words, sent with the date).
+// editor with its due date, project, labels and repeat (Todoist's words, sent with the date).
 // Opened from an email (the proposal card's More options), the fields hold what the card held, and
 // those the email gave keep the card's "from the email" mark until they're changed; opened from
 // News's Upcoming (its Add to calendar), the keynote's proposal, as an email's is, its calendar picked
-// the same way (N3), but with no "from the email" marks. Editing an item shows its fields directly (board 14), says
+// the same way, but with no "from the email" marks. Editing an item shows its fields directly (board 14), says
 // what it was ("Was 7:00 – 8:00 AM"), and a recurring event asks This event, This and following or
 // All events in place of the footer before it saves. Nothing is created or changed until ⌘Enter.
 import type {CalendarOut, Colour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ItemsOut, PlaceSuggestionOut, ProposalField, ProposalOut, RecentPlaceOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
@@ -53,15 +53,15 @@ export interface EditorOpen {
   message?: number | null;
   // News's Upcoming keynote, its Add to calendar.
   upcoming?: number | null;
-  // Drafts the page kept when the user left Calendar with this editor started, to carry on from (UX #3).
+  // Drafts the page kept when the user left Calendar with this editor started, to carry on from.
   kept?: KeptDrafts;
   // A range dragged on the week view: its times (null for all day) and days.
   slot?: Slot;
-  // SV-181: a one-event .ics file, as a filled-in draft that Create imports with its iCalUID (D437).
+  // A one-event .ics file, as a filled-in draft that Create imports with its iCalUID.
   ics?: IcsEventOut;
 }
 
-/** Where a new event was put on the week view: its time when the line names none (DESIGN.md › Week view). */
+/** Where a new event was put on the week view: its time when the line names none. */
 export interface Slot {
   start: number | null;
   end: number | null;
@@ -80,22 +80,22 @@ type Manual = 'date' | 'time' | 'place' | 'calendar' | 'recurrence' | 'labels' |
 interface Draft {
   id: number;
   kind: ItemKind;
-  // The line as typed (an edited item's title as it's edited, SV-90).
+  // The line as typed (an edited item's title as it's edited).
   text: string;
-  // The line's title words: what it reads once its phrases are taken out (D290).
+  // The line's title words: what it reads once its phrases are taken out.
   title: string;
-  // Phrases clicked back to title words (D290), which the line no longer reads until they're typed into.
+  // Phrases clicked back to title words, which the line no longer reads until they're typed into.
   plain: Span[];
   date: string;
-  // SV-74: a new task's date taken off with its ×; `date` stays, for a day picked again.
+  // A new task's date taken off with its ×; `date` stays, for a day picked again.
   undated: boolean;
-  // The day it was put on (opened on, or a grid day clicked, D56): its date when the line names none.
+  // The day it was put on (opened on, or a grid day clicked): its date when the line names none.
   day: string;
   // Minutes after the date's midnight; null is all day (an event) or no time (a task). A timed
-  // event's end may be days on (SV-29).
+  // event's end may be days on.
   start: number | null;
   end: number | null;
-  // An all-day event's days, its date the first (SV-29); 1 otherwise.
+  // An all-day event's days, its date the first; 1 otherwise.
   days: number;
   // The time it was put at on the week view (a range dragged, a slot clicked): its time when the
   // line names none, as `day` is its date.
@@ -103,40 +103,40 @@ interface Draft {
   place: string;
   // Set when a suggestion was picked (or the item had one).
   address: string | null;
-  // The line's place text a suggestion was picked for ("mcd"): the place stops there (SV-27).
+  // The line's place text a suggestion was picked for ("mcd"): the place stops there.
   picked: string | null;
   // Null: the first calendar shown (events).
   calendarId: number | null;
-  // Null: Settings › Notifications' default (override 8), which the server applies too. Picked in
+  // Null: Settings › Notifications' default, which the server applies too. Picked in
   // the editor (or an edited item's own); the line's sit beside them.
   reminders: number[] | null;
-  // The line's reminder phrases (SV-112, D293): they replace the default and sit beside what's
+  // The line's reminder phrases: they replace the default and sit beside what's
   // picked, as offsets from the item's moment as it stands (`remindersOf`).
   lineReminders: ReminderRead[];
-  // SV-31: Time to Leave, added from the reminder menu; never by default.
+  // Time to Leave, added from the reminder menu; never by default.
   leaveReminder: boolean;
   recurrence: string | null;
   project: string | null;
-  // Set when New project was picked for it: Todoist makes it with the task (SV-25, D50).
+  // Set when New project was picked for it: Todoist makes it with the task.
   newProject: boolean;
-  // The line's #project text a menu pick was made for: the project stops there (SV-25).
+  // The line's #project text a menu pick was made for: the project stops there.
   pickedProject: string | null;
-  // The same for an event's #calendar (D57).
+  // The same for an event's #calendar.
   pickedCalendar: string | null;
   // A task's Todoist labels and repeat (Todoist's words).
   labels: string[];
   repeat: string | null;
   // Fields an email gave (More options on its proposal card), marked until they're changed; the
-  // description's From: line among them (SV-270), a mark the server's list doesn't carry.
+  // description's From: line among them, a mark the server's list doesn't carry.
   fromEmail: Marked[];
   // Fields set by hand: the line's parse no longer changes them.
   manual: Manual[];
-  // SV-264: the description as the field reads it (logic/description.ts), written in its provider's
-  // format on save; `descriptionLossy` when the item's own held formatting that reading drops (D547).
+  // The description as the field reads it (logic/description.ts), written in its provider's
+  // format on save; `descriptionLossy` when the item's own held formatting that reading drops.
   description: Block[];
   descriptionLossy: boolean;
   // What it opened with (an email's or a keynote's proposal), which the line falls back to where it
-  // names none: a phrase typed changes the field, and taken out puts it back (SV-208).
+  // names none: a phrase typed changes the field, and taken out puts it back.
   base: Base;
 }
 
@@ -177,18 +177,18 @@ function emptyDraft(kind: ItemKind, date: string, slot: Slot | null = null): Dra
 }
 
 /**
- * The instant a draft's reminders count from (D288): its start or due time, an all-day event's
+ * The instant a draft's reminders count from: its start or due time, an all-day event's
  * midnight, or a dated task's Settings' task time (`taskTime`, minutes); a task with no date has none.
  */
 const anchorOf = (draft: Draft, taskTime: number, timeZone: string) => (draft.kind === 'task' && draft.undated ? null
   : Date.parse(instantAt(draft.date, draft.start ?? (draft.kind === 'task' ? taskTime : 0), timeZone)));
 
-/** A draft's reminders with its line's (SV-112): null while Settings' default. */
+/** A draft's reminders with its line's: null while Settings' default. */
 const remindersOf = (draft: Draft, taskTime: number, timeZone: string) =>
   withLine(draft.reminders, lineOffsets(draft.lineReminders, anchorOf(draft, taskTime, timeZone), timeZone));
 
 /**
- * What the line's reminder phrases count from when it names no day or time (SV-112): the item's day
+ * What the line's reminder phrases count from when it names no day or time: the item's day
  * and its start, the slot's or 9:00 AM for a new event, an all-day one's midnight, a task's Settings'
  * task time; an edited item's own. A task with no date has none, so its phrases stay words.
  */
@@ -207,9 +207,9 @@ const withDefaults = (draft: Draft, calendar: number | null, reminders: number[]
 });
 
 /**
- * SV-181: an .ics file's one event as a new draft (D437): its title as words only, none of them read
- * (D290), its day and time in the user's zone, place, repeat, and its own reminders, never Settings'
- * default (D438); the calendar already holding it, if one does. The fields are set, so the line's parse
+ * An .ics file's one event as a new draft: its title as words only, none of them read,
+ * its day and time in the user's zone, place, repeat, and its own reminders, never Settings'
+ * default; the calendar already holding it, if one does. The fields are set, so the line's parse
  * leaves them be.
  */
 function fromIcs(event: IcsEventOut, timeZone: string): Draft {
@@ -234,7 +234,7 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
   const days = item.kind === 'event' && !timed && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
   const description = readDescription(formatOf(item.kind), item.description);
   return {
-    // SV-273: a subtask can have no date; it opens with none, and a day picked gives it one.
+    // A subtask can have no date; it opens with none, and a day picked gives it one.
     id: nextDraft++, kind: item.kind, text: item.title, title: item.title, plain: [], date, undated: item.kind === 'task' && !item.due_date, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
     calendarId: item.calendar_id, reminders: item.reminders, lineReminders: [], leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
     description: description.blocks, descriptionLossy: description.lossy, fromEmail: [], manual: [], base: NO_BASE,
@@ -242,10 +242,10 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
 }
 
 /**
- * An email's or a keynote's proposal as a new draft (SV-208): its title in the line as words only,
- * none of them read (D290), as the iPhone's typeTitle; its day, time, place, calendar and project
+ * An email's or a keynote's proposal as a new draft: its title in the line as words only,
+ * none of them read, as the iPhone's typeTitle; its day, time, place, calendar and project
  * are what the line falls back to, so the line still reads what's typed after it. With no day from
- * the email it starts with none, which Create then asks for (SV-24).
+ * the email it starts with none, which Create then asks for.
  */
 function fromProposal(draft: Draft, {proposal, reminders, newProject}: Handed, timeZone: string): Draft {
   const item = proposal.item;
@@ -255,7 +255,7 @@ function fromProposal(draft: Draft, {proposal, reminders, newProject}: Handed, t
   const end = item.starts_at ? start! + (item.ends_at ? Math.round((Date.parse(item.ends_at) - Date.parse(item.starts_at)) / 60_000) : DEFAULT_LENGTH) : null;
   const days = item.kind === 'event' && item.all_day && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
   const base = {calendarId: item.calendar_id ?? draft.calendarId, place: item.place ?? '', project: item.project};
-  // D553: the description starts with "From: *subject*", marked as the email's (a keynote's has no marks, N5).
+  // The description starts with "From: *subject*", marked as the email's (a keynote's has no marks).
   const source = proposal.source;
   const marks: Marked[] = source && proposal.message_id ? [...proposal.from_email, 'description'] : proposal.from_email;
   return {
@@ -265,14 +265,14 @@ function fromProposal(draft: Draft, {proposal, reminders, newProject}: Handed, t
   };
 }
 
-/** What a draft's line reads after "#": a task's project, from Todoist's, or an event's calendar (D57). */
+/** What a draft's line reads after "#": a task's project, from Todoist's, or an event's calendar. */
 const lineHash = (draft: Draft, projects: string[], calendars: CalendarOut[]) => (draft.kind === 'task'
   ? {kind: 'project' as const, names: projects, picked: draft.pickedProject}
   : {kind: 'calendar' as const, names: calendars.map(calendar => calendar.name), picked: draft.pickedCalendar});
 
 /**
- * A draft's line as parsed; an edited item's (`original`) reads only what the edit typed (SV-90).
- * Its plain phrases are hidden from the parser and come back as title words (D290).
+ * A draft's line as parsed; an edited item's (`original`) reads only what the edit typed.
+ * Its plain phrases are hidden from the parser and come back as title words.
  */
 function readLine(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], original: Draft | null, taskTime: number): ParsedTitle {
   const hidden = masked(text, draft.plain);
@@ -284,10 +284,10 @@ function readLine(draft: Draft, text: string, today: string, calendars: Calendar
 }
 
 /**
- * The Title typed into an edited item (SV-90): what the edit typed changes the item's own fields,
+ * The Title typed into an edited item: what the edit typed changes the item's own fields,
  * as on a new item's line, and a phrase taken out again puts back what the item had. Fields set by
  * hand stay; a time typed after the date was set by hand keeps the days picked. A reminder phrase
- * typed adds to the item's reminders (SV-112, D293).
+ * typed adds to the item's reminders.
  */
 function retypeEdit(draft: Draft, text: string, original: Draft, today: string, calendars: CalendarOut[], projects: string[], taskTime: number): Draft {
   const plain = retyped(draft.plain, draft.text, text);
@@ -297,7 +297,7 @@ function retypeEdit(draft: Draft, text: string, original: Draft, today: string, 
   if (by('reminders')) next.lineReminders = parsed.reminders ?? [];
   const base = by('date') && by('time') ? original : draft;
   Object.assign(next, editedWhen({date: by('date') ? original.date : draft.date, start: base.start, end: base.end, days: base.days},
-    // A span of days (all day) needs both its day and time; a length only its time (SV-111).
+    // A span of days (all day) needs both its day and time; a length only its time.
     {date: by('date') ? parsed.date : null, start: by('time') ? parsed.start : null, end: by('time') ? parsed.end : null,
       days: by('date') && by('time') ? parsed.days : null, length: by('time') ? parsed.length : null}, draft.kind));
   if (by('place') && draft.kind === 'event') {
@@ -323,7 +323,7 @@ function retype(draft: Draft, text: string, today: string, calendars: CalendarOu
   const parsed = readLine({...draft, plain}, text, today, calendars, projects, null, taskTime);
   const next = {...draft, text, plain, title: parsed.title};
   const by = (field: Manual) => !draft.manual.includes(field);
-  // The line's reminders replace Settings' default, beside what's picked (SV-112, D293).
+  // The line's reminders replace Settings' default, beside what's picked.
   if (by('reminders')) next.lineReminders = parsed.reminders ?? [];
   if (by('date')) {
     next.date = parsed.date ?? draft.day;
@@ -331,20 +331,20 @@ function retype(draft: Draft, text: string, today: string, calendars: CalendarOu
     if (parsed.date !== null) next.undated = false;
   }
   if (by('time')) {
-    // Days picked by hand stay: the end moves to its last day (SV-29).
+    // Days picked by hand stay: the end moves to its last day.
     const later = draft.manual.includes('date') ? extraDays(draft.start, draft.end, draft.days) * 1440 : 0;
     if (draft.kind === 'event' && parsed.days !== null && by('date')) {
-      // A span of days with no time is all day over them (SV-111).
+      // A span of days with no time is all day over them.
       Object.assign(next, {start: null, end: null, days: parsed.days});
     } else if (parsed.start !== null) {
       next.start = parsed.start;
       next.end = draft.kind === 'event' ? (parsed.end ?? parsed.start + DEFAULT_LENGTH) + later : null;
     } else if (draft.kind === 'event' && parsed.length !== null) {
-      // A length with no time starts at the default start, the slot's else 9:00 AM (SV-111, D292).
+      // A length with no time starts at the default start, the slot's else 9:00 AM.
       next.start = draft.slot?.start ?? DEFAULT_START;
       next.end = next.start + parsed.length + later;
     } else if (draft.slot) {
-      // The week view's slot, or a proposal's time (a task's too, SV-208).
+      // The week view's slot, or a proposal's time (a task's too).
       next.start = draft.slot.start;
       next.end = draft.kind === 'task' || draft.slot.end === null ? null : draft.slot.end + later;
       if (!draft.manual.includes('date') && draft.kind === 'event') next.days = draft.slot.days;
@@ -365,7 +365,7 @@ function retype(draft: Draft, text: string, today: string, calendars: CalendarOu
     next.calendarId = calendars.find(calendar => calendar.name === parsed.calendar)?.id ?? draft.base.calendarId;
     next.pickedCalendar = null;
   }
-  // A task's repeat goes to Todoist in its words (SV-25).
+  // A task's repeat goes to Todoist in its words.
   if (by('recurrence') && draft.kind === 'event') next.recurrence = parsed.recurrence;
   if (by('recurrence') && draft.kind === 'task') next.repeat = taskRepeat(parsed.recurrence);
   // A picked project stays while the line still has the text it was picked for, as a place does.
@@ -384,7 +384,7 @@ function createInput(draft: Draft, timeZone: string, todoist: number | null): It
   if (!draft.title.trim()) return null;
   if (draft.kind === 'task') {
     if (todoist === null) return null;
-    // With no date (SV-74) it has no time or repeat either: a repeat starts on a day.
+    // With no date it has no time or repeat either: a repeat starts on a day.
     const dated = !draft.undated;
     return {
       kind: 'task', calendar_id: todoist, title: draft.title.trim(), all_day: true, starts_at: null, ends_at: null, start_date: null, end_date: null,
@@ -392,7 +392,7 @@ function createInput(draft: Draft, timeZone: string, todoist: number | null): It
       place: null, address: null, attendees: [], ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: dated ? draft.repeat : null, description: writeDescription('markdown', draft.description),
     };
   }
-  // An email that gave no day leaves the event without one until it's picked (SV-24).
+  // An email that gave no day leaves the event without one until it's picked.
   if (draft.calendarId === null || draft.undated) return null;
   const when = draft.start === null
     ? {all_day: true, starts_at: null, ends_at: null, start_date: draft.date, end_date: addDays(draft.date, draft.days)}
@@ -432,9 +432,9 @@ function changesOf(draft: Draft, original: Draft, timeZone: string): ItemChanges
   if (draft.calendarId !== original.calendarId && draft.calendarId !== null) changes.calendar_id = draft.calendarId;
   if (draft.kind === 'task' && draft.repeat !== original.repeat) changes.repeat = draft.repeat;
   if (draft.kind === 'task' && draft.labels.join('\n') !== original.labels.join('\n')) changes.labels = draft.labels;
-  // SV-264 (D547): sent only when it reads differently, so one left alone stays as its provider has it.
+  // Sent only when it reads differently, so one left alone stays as its provider has it.
   if (!sameDescription(draft.description, original.description)) changes.description = writeDescription(formatOf(draft.kind), draft.description);
-  // SV-273 (D568): a subtask's date taken off, its time, repeat and reminders going with it.
+  // A subtask's date taken off, its time, repeat and reminders going with it.
   if (undating) {
     Object.assign(changes, {due_date: null, due_at: null, repeat: null});
     if (original.reminders?.length) changes.reminders = [];
@@ -444,8 +444,8 @@ function changesOf(draft: Draft, original: Draft, timeZone: string): ItemChanges
 }
 
 /**
- * A draft as the grid draws it (a dashed ghost on its day, board 13), "New event" until it has a title (SV-29).
- * A task with no project yet is drawn in `defaultProject`, where the server will put it (SV-72).
+ * A draft as the grid draws it (a dashed ghost on its day, board 13), "New event" until it has a title.
+ * A task with no project yet is drawn in `defaultProject`, where the server will put it.
  */
 export function draftPreview(draft: Draft & {reminders: number[]}, timeZone: string, todoist: number | null, defaultProject: string | null = null): ItemOut | null {
   const input = createInput({...draft, title: draft.title || draft.text || `New ${draft.kind}`}, timeZone, todoist);
@@ -458,7 +458,7 @@ export function draftPreview(draft: Draft & {reminders: number[]}, timeZone: str
   } as ItemOut;
 }
 
-/** Tab alone, which picks a suggestion as Enter does (SV-29). */
+/** Tab alone, which picks a suggestion as Enter does. */
 const accepts = (event: ReactKeyboardEvent) => event.key === 'Tab' && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
 
 // ---------- The marked line ----------
@@ -467,9 +467,9 @@ const markClass: Record<Mark['kind'], string> = {when: 'tok-d', place: 'tok-p', 
 
 /**
  * The line's text with its marks: a #calendar in its calendar's colour, a #project in its project's
- * (SV-56; `ink2` while it names no project yet, or a new one). The mark still being typed, its menu
+ * (`ink2` while it names no project yet, or a new one). The mark still being typed, its menu
  * open, is `live`, only a dashed underline; the one just picked lands, its tint brightening once
- * (polish audit calflows-06).
+ *.
  */
 function Marked({text, marks, calendarColour, projectColour, live = null, landed = null, over = null}: {
   text: string;
@@ -479,7 +479,7 @@ function Marked({text, marks, calendarColour, projectColour, live = null, landed
   // Where the live mark and the one just picked start.
   live?: number | null;
   landed?: number | null;
-  // Where the mark under the pointer starts, which a click makes title words (D290).
+  // Where the mark under the pointer starts, which a click makes title words.
   over?: number | null;
 }) {
   const parts: ReactNode[] = [];
@@ -496,7 +496,7 @@ function Marked({text, marks, calendarColour, projectColour, live = null, landed
 }
 
 /**
- * Whether a field just changed as a side effect, for its 600 ms flash (polish audit calflows-06):
+ * Whether a field just changed as a side effect, for its 600 ms flash:
  * `value` changed while `cause`, the field's own input, didn't (the address has none: a pick fills it).
  */
 function useFlash(value: string, cause: string): boolean {
@@ -516,7 +516,7 @@ const FLASH_MS = 600;
 const MIRROR_EVENTS = ['scroll', 'input', 'select', 'keyup', 'focus', 'blur'] as const;
 
 /**
- * Keeps the line's marks under its letters (SV-56): a line longer than the field scrolls inside the
+ * Keeps the line's marks under its letters: a line longer than the field scrolls inside the
  * input, so the mirror moves with it, and says which sides are cut short, which fade.
  */
 function useMirror(input: RefObject<HTMLInputElement | null>, mirror: RefObject<HTMLSpanElement | null>, text: string) {
@@ -561,20 +561,20 @@ interface EditorProps {
   onSave: (item: ItemOut, changes: ItemChanges, scope: RecurringScope) => void;
   onDelete: (item: ItemOut) => void;
   onClose: () => void;
-  // Esc inside the editor: the page closes what's on top (the editor before a floating detail beside it, SV-273), else the editor.
+  // Esc inside the editor: the page closes what's on top (the editor before a floating detail beside it), else the editor.
   onEscape?: () => void;
   // Whether the draft holds anything (choice 14: E or New doesn't replace it then).
   onDirty?: (dirty: boolean) => void;
-  // The drafts as they stand, after every change, for the page to keep if it's left (UX #3).
+  // The drafts as they stand, after every change, for the page to keep if it's left.
   onKeep?: (kept: KeptDrafts) => void;
-  // A day clicked on the grid for the active new draft (D56); on the week view's hours, its time too.
+  // A day clicked on the grid for the active new draft; on the week view's hours, its time too.
   place?: {day: string; at?: number};
-  // SV-208: the editor as an email's proposal card.
+  // The editor as an email's proposal card.
   card?: EditorCard;
 }
 
 /**
- * The editor as an email's proposal card (DESIGN.md › Proposal, board 08), in the reader or an
+ * The editor as an email's proposal card (board 08), in the reader or an
  * answer: the card's head, the conflict line in the date row in place of the timeline, no batch
  * drafts, and Create waiting in the card until the provider confirms.
  */
@@ -594,24 +594,24 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // Where a task with no project goes, as the server picks it: Settings' default project, else Todoist's Inbox.
   const defaultProject = projects?.find(one => one.name === settings?.todoist.default_project)?.name ?? projects?.find(one => one.inbox)?.name ?? null;
   const {data: todoistLabels} = useResource<TodoistLabelOut[]>(open.kind === 'task' ? TODOIST_LABELS_PATH : null);
-  // The Google calendars an event can go in: not one the user can only read (SV-191).
+  // The Google calendars an event can go in: not one the user can only read.
   const google = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google' && calendar.writable), [calendars]);
   const projectNames = useMemo(() => (projects ?? []).map(project => project.name), [projects]);
   const todoist = (calendars ?? []).find(calendar => calendar.provider === 'todoist')?.id ?? null;
   const fallbackCalendar = google.find(calendar => calendar.visible)?.id ?? google[0]?.id ?? null;
   const eventDefault = settings?.reminders.event_minutes_before ?? null;
-  // Time to Leave's chip says how it leaves, or that Settings has it off (SV-31).
+  // Time to Leave's chip says how it leaves, or that Settings has it off.
   const leaveTitle = settings && !settings.time_to_leave.enabled ? 'Time to Leave is off in Settings › Calendar'
     : `Leave by live routes from Home, with a ${settings?.time_to_leave.buffer_minutes ?? 5} min buffer`;
   const defaultReminders = useMemo(() => (open.kind === 'event' && eventDefault !== null ? [eventDefault] : []), [open.kind, eventDefault]);
-  // What a dated task without a time counts its reminders from (D288).
+  // What a dated task without a time counts its reminders from.
   const taskTime = taskTimeMinutes(settings?.reminders.task_time ?? null);
   const editing = open.item ?? null;
   // An event moves only between the calendars of its own Google account (Google's events.move).
   const accountOf = editing ? (calendars ?? []).find(one => one.id === editing.calendar_id)?.account_id : undefined;
   const calendarChoices = useMemo(() => (editing ? google.filter(one => one.account_id === accountOf) : google), [editing, google, accountOf]);
   const {list: accounts} = useAccounts();
-  // A name the menu lists twice carries its account (SV-191).
+  // A name the menu lists twice carries its account.
   const calendarName = (one: CalendarOut) => <CalendarName label={calendarLabel(one, calendarChoices, accounts)} />;
 
   const [original] = useState(() => (editing ? fromItem(editing, timeZone) : null));
@@ -625,7 +625,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const [menu, setMenu] = useState<'calendar' | 'repeat' | 'reminder' | 'labels' | 'more' | null>(null);
   const menuRef = useMenuRef(menu, () => setMenu(null));
   const [places, setPlaces] = useState<{query: string; list: PlaceSuggestionOut[]; cur: number} | null>(null);
-  // SV-71: the Place field was focused, so it offers the recent places; and the recent list's cursor, or Esc.
+  // The Place field was focused, so it offers the recent places; and the recent list's cursor, or Esc.
   const [placeAsked, setPlaceAsked] = useState(false);
   const [recentMenu, setRecentMenu] = useState<{query: string; cur: number; closed: boolean} | null>(null);
   // The line's #project menu: its cursor, and whether Esc closed it, for the project typed.
@@ -641,9 +641,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const raw = drafts.find(one => one.id === draft.id)!;
 
   // From an email (/calendar/new?message=): the email's proposal fills the first draft. From News's
-  // Upcoming: the keynote's proposal (N3), its name, day and time and the calendar an email's would
+  // Upcoming: the keynote's proposal, its name, day and time and the calendar an email's would
   // take. The news gave its fields, but "from the email" would be wrong of a keynote and DESIGN draws
-  // no mark of the news's own, so they come with none, as if typed (N5).
+  // no mark of the news's own, so they come with none, as if typed.
   const [seeded, setSeeded] = useState(false);
   useEffect(() => {
     // A kept draft already holds what the email gave, and what the user changed since.
@@ -674,7 +674,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   useEffect(() => () => onPreview([], null), [onPreview]);
 
   // Places for the place as it's typed (in the line or the field), until one is picked; a link has none.
-  // The place a proposal came with isn't searched until it's changed (SV-208).
+  // The place a proposal came with isn't searched until it's changed.
   const placeQuery = draft.kind === 'event' && draft.address === null && !PLACE_URL.test(draft.place.trim()) && draft.place.trim() !== draft.base.place.trim() ? draft.place.trim() : '';
   useEffect(() => {
     if (placeQuery.length < 2) return;
@@ -692,32 +692,32 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // Open until one is picked, the place changes, or Esc (not on blur: a click elsewhere in the editor would land on a moved target).
   const placesOpen = !!places && places.query === placeQuery && places.list.length > 0;
 
-  // An edited item's line names only the calendars it can move to (SV-90).
+  // An edited item's line names only the calendars it can move to.
   const parsed = useMemo(() => readLine(raw, raw.text, today, calendarChoices, projectNames, original, taskTime),
     [raw, today, calendarChoices, projectNames, original, taskTime]);
-  // A #project (a task) or #calendar (an event, D57) typed in the line shows its field's menu until
+  // A #project (a task) or #calendar (an event) typed in the line shows its field's menu until
   // one is picked, the line has none, or Esc.
   const hashMark = parsed.marks.find(mark => draft.text[mark.start] === '#');
-  // On an edited item, a lone "#" or "@" is one only where the edit typed it (SV-90).
+  // On an edited item, a lone "#" or "@" is one only where the edit typed it.
   const typed = original ? typedSpan(original.title, draft.text) : null;
   const bare = (trigger: '#' | '@') => {
     const found = bareToken(draft.text, trigger);
     return found && (!typed || (found.start >= typed.start && found.start < typed.end)) ? found : null;
   };
-  // A lone "#" ending the line opens the whole menu before anything is typed (SV-71).
+  // A lone "#" ending the line opens the whole menu before anything is typed.
   const bareHash = hashMark ? null : bare('#');
   const lineMark: Mark | undefined = hashMark ?? (bareHash ? {start: bareHash.start, end: draft.text.length, kind: draft.kind === 'task' ? 'project' : 'calendar'} : undefined);
   const lineQuery = !lineMark ? null
     : draft.kind === 'task' ? (draft.pickedProject === null && !draft.manual.includes('project') ? (hashMark ? parsed.project : '') : null)
       : draft.pickedCalendar === null && !draft.manual.includes('calendar') ? draft.text.slice(lineMark.start + 1, lineMark.end).replace(/\s*,$/, '') : null;
-  // Editing a task offers only Todoist's projects (D54).
+  // Editing a task offers only Todoist's projects.
   const projectLine = draft.kind === 'task' && lineQuery !== null ? projectMenu(lineQuery, projects ?? [], draft.newProject || !!editing) : [];
-  // Both menus put the names starting with what's typed first, as the line reads them (SV-56).
+  // Both menus put the names starting with what's typed first, as the line reads them.
   const calendarLine = draft.kind === 'event' && lineQuery !== null ? rankMatches(lineQuery, calendarChoices, one => one.name) : [];
   const lineCount = projectLine.length + calendarLine.length;
   const lineCur = Math.min(lineMenu?.query === lineQuery ? lineMenu.cur : 0, lineCount - 1);
   const lineOpen = lineCount > 0 && !(lineMenu?.query === lineQuery && lineMenu.closed);
-  // Before Places can search (two letters), the places events have used (SV-71): under a lone "@" (or
+  // Before Places can search (two letters), the places events have used: under a lone "@" (or
   // "@" and a letter) ending the line, or once the Place field is focused with less than that in it.
   // Like Places' list, it stays until a pick, Esc or Tab, not on blur.
   const {data: recent} = useResource<RecentPlaceOut[]>(draft.kind === 'event' ? RECENT_PLACES_PATH : null);
@@ -728,9 +728,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const recentOpen = recentList.length > 0 && !(recentMenu?.query === recentQuery && recentMenu.closed);
   // The place's one menu: the recent places, or Places' suggestions for what's typed.
   const placeMenuShown = recentOpen ? {list: recentList, cur: recentCur, query: recentQuery!} : placesOpen ? {list: places.list, cur: places.cur, query: placeQuery} : null;
-  // An unknown project not picked as new isn't sent (D50): Create waits, and the line under Project says why.
+  // An unknown project not picked as new isn't sent: Create waits, and the line under Project says why.
   const projectChosen = draft.kind === 'task' && projects && draft.project !== original?.project ? projectChoice(draft.project ?? '', projects, draft.newProject) : null;
-  // The line's #project in its project's colour, as the Project field's dot (SV-56).
+  // The line's #project in its project's colour, as the Project field's dot.
   const projectTodoist = draft.kind === 'task' && !draft.newProject && draft.project ? projects?.find(one => one.name.toLowerCase() === draft.project!.toLowerCase())?.colour : null;
   useMirror(line, lineMarks, draft.text);
   const projectProblem = projectChosen && 'problem' in projectChosen ? projectChosen.problem : null;
@@ -739,7 +739,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     if (!editing && !card?.quiet) line.current?.focus();
   }, [editing, active, card?.quiet]);
   // E on an item focuses its line with its title words selected, so typing renames it rather than
-  // reaching the calendar's keys (UX #7), and the phrases typed stay (D290).
+  // reaching the calendar's keys, and the phrases typed stay.
   const opening = useRef(titleRun(draft.text, parsed.marks));
   useEffect(() => {
     if (!editing) return;
@@ -762,7 +762,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     // A field changed by hand loses its "from the email" mark.
     const edited: Marked[] = [];
     if (next.title !== undefined) edited.push('title');
-    // The day and times share one row and one mark: a change to either takes it (SV-208).
+    // The day and times share one row and one mark: a change to either takes it.
     if (next.date !== undefined || next.start !== undefined || next.end !== undefined) edited.push('date', 'time');
     if (next.place !== undefined) edited.push('place');
     if (next.description !== undefined) edited.push('description');
@@ -772,13 +772,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   };
   const mark = (...fields: Marked[]) => (fields.some(field => draft.fromEmail.includes(field))
     ? <span className="srcm" role="img" aria-label="From the email" data-tip="From the email"><Icon name="mail" size={14} /></span> : null);
-  // The email's title is the line's, so its mark sits at the line's trailing edge (D290).
+  // The email's title is the line's, so its mark sits at the line's trailing edge.
   const titleMark = mark('title');
-  // An edited item's Title is its line (SV-90), and so is a new item's (D290): its title words
+  // An edited item's Title is its line, and so is a new item's: its title words
   // changed lose the email's mark.
   const reread = (one: Draft, text: string) => {
     const next = original ? retypeEdit(one, text, original, today, calendarChoices, projectNames, taskTime) : retype(one, text, today, google, projectNames, taskTime);
-    // What the line changed loses the email's mark, as a field changed by hand does (SV-208).
+    // What the line changed loses the email's mark, as a field changed by hand does.
     const edited: Marked[] = [];
     if (next.title !== one.title) edited.push('title');
     if (next.date !== one.date || next.undated !== one.undated || next.start !== one.start || next.end !== one.end) edited.push('date', 'time');
@@ -792,7 +792,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     madePlain.current.delete(draft.id);
     setDrafts(list => list.map(one => (one.id === draft.id ? reread(one, text) : one)));
   };
-  // D290: a lit phrase clicked, or ⌥⌫ with the caret inside it, is title words again, and what it set goes.
+  // A lit phrase clicked, or ⌥⌫ with the caret inside it, is title words again, and what it set goes.
   const makePlain = (mark: Mark) => {
     madePlain.current.set(draft.id, [...madePlain.current.get(draft.id) ?? [], {text: draft.text, plain: draft.plain}]);
     setDrafts(list => list.map(one => (one.id === draft.id ? reread({...one, plain: [...one.plain, {start: mark.start, end: mark.end}]}, one.text) : one)));
@@ -829,14 +829,14 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     line.current?.setSelectionRange(caret.current, caret.current);
     caret.current = null;
   }, [draft.text]);
-  // The mark just picked, brightening once as it lands (polish audit calflows-06).
+  // The mark just picked, brightening once as it lands.
   const [landed, setLanded] = useState<{start: number; seq: number} | null>(null);
   useEffect(() => {
     if (!landed) return;
     const timer = window.setTimeout(() => setLanded(current => (current === landed ? null : current)), motion.slow);
     return () => window.clearTimeout(timer);
   }, [landed]);
-  /** A pick for the line's "@place" or "#name" (its mark): the line reads the name in full, then a space (SV-29). */
+  /** A pick for the line's "@place" or "#name" (its mark): the line reads the name in full, then a space. */
   const completeLine = (mark: Mark, name: string, picked: Partial<Draft>) => {
     const next = completeToken(draft.text, mark.start, mark.end, name);
     caret.current = next.caret;
@@ -883,11 +883,11 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     setDrafts(list => [...list, fresh]);
     setActive(fresh.id);
   };
-  // A folded draft of the batch goes with its × (SV-29).
+  // A folded draft of the batch goes with its ×.
   const removeDraft = (id: number) => setDrafts(list => list.filter(one => one.id !== id));
 
   // A grid day clicked moves the active new draft there, unless its line names a day or Date was set
-  // by hand (D56).
+  // by hand.
   const [placed, setPlaced] = useState(place);
   if (place !== placed) {
     setPlaced(place);
@@ -916,7 +916,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     return 'problem' in chosen ? null : {...input, ...chosen};
   });
   const ready = inputs.filter((input): input is ItemCreateInput => input !== null);
-  // The card's Create stays pressable and says what it waits for (SV-24): a day typed and Create
+  // The card's Create stays pressable and says what it waits for: a day typed and Create
   // pressed without leaving the field still makes it.
   const [cardProblem, setCardProblem] = useState<string | null>(null);
   const submit = () => {
@@ -947,7 +947,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       event.preventDefault();
       submit();
     } else if (event.key === 'Backspace' && event.altKey && !event.metaKey && !event.ctrlKey && event.target === line.current && line.current.selectionStart === line.current.selectionEnd) {
-      // ⌥⌫ inside a lit phrase makes it words (D290); at its edge it deletes a word, as ever.
+      // ⌥⌫ inside a lit phrase makes it words; at its edge it deletes a word, as ever.
       const inside = markInside(parsed.marks, line.current.selectionStart ?? 0);
       if (inside) {
         event.preventDefault();
@@ -977,7 +977,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       const delta = event.key === 'ArrowDown' ? 1 : -1;
       setPlaces({...places, cur: (places.cur + delta + places.list.length) % places.list.length});
     } else if (placesOpen && (event.key === 'Enter' || accepts(event))) {
-      // Tab picks as Enter does (SV-29); from the Place field it goes on to the next field.
+      // Tab picks as Enter does; from the Place field it goes on to the next field.
       if (event.key === 'Enter' || event.target === line.current) event.preventDefault();
       pick(places.list[places.cur]!);
     } else if (lineOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
@@ -990,10 +990,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   };
 
   const calendar = (calendars ?? []).find(one => one.id === draft.calendarId);
-  // An event's last day (SV-29): its date for a one-day event and every task.
+  // An event's last day: its date for a one-day event and every task.
   const lastDay = kind === 'event' ? addDays(draft.date, extraDays(draft.start, draft.end, draft.days)) : draft.date;
   // Each row whose value the line gave takes its mark's colour on its glyph; set by hand, it's `ink3`
-  // again (polish audit calflows-06).
+  // again.
   const fromLine = (kind: Mark['kind'], ...fields: Manual[]) => parsed.marks.some(one => one.kind === kind) && !fields.some(field => draft.manual.includes(field));
   const echo = {
     when: fromLine('when', 'date', 'time') ? 'from-when' : undefined,
@@ -1011,7 +1011,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // A recurring event moving to another calendar goes as a series (Google can't move one occurrence).
   const choices = original && draft.calendarId !== original.calendarId && calendar ? calendarMoveChoices(original.date, calendar.name) : original ? scopeChoices(original.date, draft.date) : [];
   const noun = kind === 'event' ? 'event' : 'task';
-  // SV-181: an .ics event the picked calendar already holds is updated there by Create (D436).
+  // An .ics event the picked calendar already holds is updated there by Create.
   const updating = open.ics && draft.id === drafts[0]!.id && draft.calendarId !== null && open.ics.existing.includes(draft.calendarId)
     ? google.find(one => one.id === draft.calendarId)?.name ?? null : null;
   const changed = (field: 'date' | 'start' | 'end') => !!original && draft[field] !== original[field];
@@ -1019,14 +1019,14 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     ? `Was ${draft.date !== original.date ? `${dayTitle(original.date)} · ` : ''}${timeRange(editing, timeZone)}`
     : null;
 
-  // What the reminders count from (D288): the start or due time, an all-day event's midnight, or a
+  // What the reminders count from: the start or due time, an all-day event's midnight, or a
   // dated task's Settings' task time (9:00 AM at None); a task with no date has none.
   const untimedTask = kind === 'task' && !draft.undated && draft.start === null;
   const reminderFrom = anchorOf(draft, taskTime, timeZone);
   const countsFrom = untimedTask && reminderFrom !== null ? `Counts from ${clockTime(reminderFrom, timeZone)}` : null;
 
   // The card's conflict line (board 08), worked out again by the server's rule as the day and time
-  // change (SV-208); the email's own until the day's items load.
+  // change; the email's own until the day's items load.
   const conflictDay = card && kind === 'event' && !draft.undated ? draft.date : null;
   const {data: dayList} = useResource<ItemsOut>(conflictDay ? itemsPath(conflictDay, addDays(conflictDay, 1)) : null);
   const proposal = card?.proposal;
@@ -1074,8 +1074,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
       <div className="ed-scroll">
         <div className="ed-line">
-          {/* An edited item's Title is a line too, reading only what's typed into it (SV-90); a new item's
-              title is its line's title words, with no Title field under it (D290). */}
+          {/* An edited item's Title is a line too, reading only what's typed into it; a new item's
+              title is its line's title words, with no Title field under it. */}
           <label className={`field big nl${titleMark ? ' src' : ''}${overMark !== null ? ' over' : ''}`}>
             <span ref={lineMarks} className="nl-marks" aria-hidden="true">
               <span className="nl-text"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} projectColour={projectTodoist ? TODOIST_COLOURS[projectTodoist] : null}
@@ -1112,8 +1112,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               shown={draft.undated ? '' : lastDay === draft.date ? dayTitle(draft.date) : `${dayTitle(draft.date)} – ${dayTitle(lastDay)}`}
               today={today} read={text => parseDay(text, today)} onValue={date => change({date, undated: false}, ['date'])}
               range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change({...spanTo(from, to, draft.start, draft.end), undated: false}, ['date'])} : undefined}
-              // SV-74: a new task can go to Todoist with no date, its time going with it; a day picked brings one back.
-              // SV-273 (D568): an edited subtask's too, which stays in its task's checklist; a task's date stays on.
+              // A new task can go to Todoist with no date, its time going with it; a day picked brings one back.
+              // An edited subtask's too, which stays in its task's checklist; a task's date stays on.
               onClear={kind === 'task' && (!editing || editing.parent_id !== null) ? () => {
                 change({undated: true, start: null, ...(editing ? {reminders: [], repeat: null} : {})}, ['date', 'time']);
                 form.current?.focus();
@@ -1133,7 +1133,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                 )}
                 <button type="button" className="ibtn sm" aria-label={kind === 'event' ? 'All day' : 'Remove time'} data-tip={kind === 'event' ? 'All day' : 'Remove time'}
                   onClick={() => {
-                    // An event keeps its days (SV-29).
+                    // An event keeps its days.
                     change({start: null, end: null, days: extraDays(draft.start, draft.end, 1) + 1}, ['time']);
                     // The fields it was beside go: the editor keeps focus, for ⌘Enter and Esc.
                     form.current?.focus();
@@ -1251,7 +1251,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           ) : (
             <>
               <Icon name="work" size={17} className={`g-proj ${echo.project ?? ''}`} style={projectTodoist ? {'--c': TODOIST_COLOURS[projectTodoist]} as CSSProperties : undefined} />
-              {/* SV-273: a subtask is in its task's project; moved to another, Todoist would take it out from under its task. */}
+              {/* A subtask is in its task's project; moved to another, Todoist would take it out from under its task. */}
               {editing?.parent_id != null ? <span className="ink2 sub-project" data-tip="A subtask is in its task's project">{draft.project}</span> : (
               <ProjectField value={draft.project ?? ''} isNew={draft.newProject} projects={projects ?? []} noNew={!!editing}
                 placeholder={settings?.todoist.default_project ?? projects?.find(one => one.inbox)?.name ?? 'Inbox'}
@@ -1295,7 +1295,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           <RemindersRow reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today} glyph={`g-remind ${echo.reminder ?? ''}`}
             menuOpen={menu === 'reminder'} menuRef={menuRef} onMenu={open => setMenu(open ? 'reminder' : null)}
             onChange={list => {
-              // Ticked beside the line's they're picked; one the line set taken out sets them by hand (SV-112).
+              // Ticked beside the line's they're picked; one the line set taken out sets them by hand.
               const {reminders, byHand} = rowReminders(list, raw.reminders, lineOffsets(raw.lineReminders, reminderFrom, timeZone));
               change(byHand ? {reminders, lineReminders: []} : {reminders}, byHand ? ['reminders'] : []);
             }}
@@ -1305,7 +1305,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                 <button type="button" className="x" aria-label="Remove Time to Leave" onClick={() => change({leaveReminder: false})}><Icon name="close" size={14} /></button>
               </span>
             )}
-            // SV-31: an event with a time and a place can have Time to Leave, with Settings' buffer, while Settings has it on.
+            // An event with a time and a place can have Time to Leave, with Settings' buffer, while Settings has it on.
             menuItems={kind === 'event' && !draft.leaveReminder && draft.start !== null && draft.place.trim() && settings?.time_to_leave.enabled && (
               <button type="button" role="menuitem" className="menu-i" onClick={() => {
                 change({leaveReminder: true});
@@ -1318,7 +1318,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             setMenu(null);
           }} />}
 
-          {/* D552: on the proposal card too, starting with the email's or story's From: line (D553). */}
+          {/* On the proposal card too, starting with the email's or story's From: line. */}
           <Icon name="notes" size={17} className="desc-glyph" />
           <DescriptionField key={`${draft.id}${seeded ? ':seeded' : ''}`} blocks={raw.description} kind={kind} mark={mark('description')} onChange={description => change({description})}
             note={editing && original && draft.descriptionLossy && !sameDescription(draft.description, original.description) ? 'Saving drops formatting Setpoint can\'t show' : null} />
@@ -1395,7 +1395,7 @@ function RepeatRow({draft, open, menuRef, onToggle, onPick}: {draft: Draft; open
 
 /**
  * Places under the place (board 13): the name with what was typed in bold, the address, ↵ on the one
- * Enter picks. The proposal card's floats under its field as a menu (SV-71).
+ * Enter picks. The proposal card's floats under its field as a menu.
  */
 export function PlaceList({places, cur, query, floating = false, onPick}: {places: PlaceSuggestionOut[]; cur: number; query: string; floating?: boolean; onPick: (place: PlaceSuggestionOut) => void}) {
   return (
@@ -1425,7 +1425,7 @@ interface ConflictPreviewProps {
   draft: Draft;
   items: ItemOut[];
   except: string | null;
-  // A free event (D440): it clashes with nothing.
+  // A free event: it clashes with nothing.
   free: boolean;
   title: string;
   colour: Colour | null;
@@ -1437,7 +1437,7 @@ interface ConflictPreviewProps {
 /**
  * A small timeline of the day (boards 13 and 14): what the event overlaps in one lane, the event
  * (dashed while new) in the next, the shared time hatched in `caution`, and the line under it. Free
- * events are left out, and a free event overlaps nothing (D440).
+ * events are left out, and a free event overlaps nothing.
  */
 function ConflictPreview({draft, items, except, free, title, colour, calendarColour, isNew, timeZone}: ConflictPreviewProps) {
   const start = draft.start!;

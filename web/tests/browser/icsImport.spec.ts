@@ -1,15 +1,15 @@
-// SV-181: importing an .ics file from Calendar (D436, D437), with Google's stand-in (the dev
+// Importing an .ics file from Calendar, with Google's stand-in (the dev
 // provider, which refuses "Poster session" the first time it's sent). The journey: a conference's
 // schedule dropped on the grid, reviewed in the right pane (its past event unticked, the Career fair
 // already on Jobs), imported one at a time, a refused event retried, the events on the grid, and
 // Undo taking back only the ones the import made. Then one event from the header's Import .ics…,
 // opened in the editor and created there; and ⌘K's Import .ics… with files that can't be imported.
-// SV-182: the same from an email's .ics tile, Add to calendar reading the stored attachment on the
+// The same from an email's .ics tile, Add to calendar reading the stored attachment on the
 // server (the dev provider serves src/dev/icsFiles.ts by name): the seed's interview invite into the
 // editor, and, linked to that email by SQL, a schedule into the review, one that only cancels, and
 // one that can't be read, said in place.
-// SV-190: while a file is dragged over the grid it lights and says whether it will import (DESIGN.md
-// #305): leaving, Esc or the drop clears it; a PDF or several files are refused before the drop; the
+// While a file is dragged over the grid it lights and says whether it will import:
+// leaving, Esc or the drop clears it; a PDF or several files are refused before the drop; the
 // review takes none; and at 820 wide the pill centres beside the open review.
 // The list's own behaviour (ticks, counts, the picker) is the component test's (importPane.test.tsx).
 import assert from 'node:assert/strict';
@@ -111,7 +111,7 @@ const dropTip = (page: Page, line: string) => page.getByRole('status').filter({h
 
 const row = (page: Page, title: string) => page.locator('.cal-import .imp-item', {has: page.locator('.title', {hasText: title})});
 
-test('SV-181: a schedule dropped on the grid is reviewed, imported one at a time, a refused event retried, and Undo takes back only what it made', async () => {
+test('a schedule dropped on the grid is reviewed, imported one at a time, a refused event retried, and Undo takes back only what it made', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -164,7 +164,7 @@ test('SV-181: a schedule dropped on the grid is reviewed, imported one at a time
   }
 });
 
-test('SV-181: one event, picked with Import .ics…, opens the editor filled in, and Create imports it with its own reminder', async () => {
+test('one event, picked with Import .ics…, opens the editor filled in, and Create imports it with its own reminder', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -189,7 +189,7 @@ test('SV-181: one event, picked with Import .ics…, opens the editor filled in,
   }
 });
 
-test('SV-181: ⌘K\'s Import .ics… with a file that can\'t be read, or has nothing to import, says so and sends nothing', async () => {
+test('⌘K\'s Import .ics… with a file that can\'t be read, or has nothing to import, says so and sends nothing', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -214,7 +214,7 @@ test('SV-181: ⌘K\'s Import .ics… with a file that can\'t be read, or has not
   }
 });
 
-test('SV-190: a file dragged over the grid says it will import, leaving or Esc clears it, and a file that isn\'t an .ics is refused before the drop', async () => {
+test('a file dragged over the grid says it will import, leaving or Esc clears it, and a file that isn\'t an .ics is refused before the drop', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -271,7 +271,7 @@ test('SV-190: a file dragged over the grid says it will import, leaving or Esc c
   }
 });
 
-test('SV-190: at 820 wide the pill lies beside the open review, and the review takes no file', async () => {
+test('at 820 wide the pill lies beside the open review, and the review takes no file', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page({width: 820, height: 760});
@@ -324,7 +324,7 @@ async function openEmail(page: Page, base: string, id: number) {
 
 const invitation = (page: Page, filename: string) => page.locator('.attach[data-type="calendar"]', {hasText: filename});
 
-test('SV-182: an email\'s invite has Add to calendar, which opens Calendar on its day with the editor filled in, and Create imports it', async () => {
+test('an email\'s invite has Add to calendar, which opens Calendar on its day with the editor filled in, and Create imports it', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -347,7 +347,7 @@ test('SV-182: an email\'s invite has Add to calendar, which opens Calendar on it
   }
 });
 
-test('SV-182: an email\'s schedule opens the review on its first day, one that only cancels says so in the toast, and one that can\'t be read says so on its tile', async () => {
+test('an email\'s schedule opens the review on its first day, one that only cancels says so in the toast, and one that can\'t be read says so on its tile', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');

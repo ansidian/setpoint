@@ -1,4 +1,4 @@
-// News's empty pane's numbers (SV-219, D466): feeds failing every attempt for 6 hours as a table over
+// News's empty pane's numbers: feeds failing every attempt for 6 hours as a table over
 // the rule, and the rest over the seed through the API.
 import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -11,7 +11,7 @@ import {signedIn, world} from './helpers.ts';
 const NOW = '2026-10-07T16:12:00.000Z';
 const eqId = (id: number) => eq(t.newsSources.id, id);
 
-describe('News\'s day (SV-219)', () => {
+describe('News\'s day', () => {
   test.each([
     ['none failing', [null, null], 0],
     ['failing six hours to the minute counts', ['2026-10-07T10:12:00.000Z'], 1],

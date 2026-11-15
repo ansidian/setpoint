@@ -1,8 +1,8 @@
 // An .ics file's text read into import drafts: the events a Google `events.import` will write,
 // keyed on each event's iCalUID, with a count of what the file had that an import leaves out, and
-// why (SV-178, D436–D438). Pure: it reads the file it's given and sends nothing.
+// why. Pure: it reads the file it's given and sends nothing.
 //
-// What an event keeps (D438): its title (trimmed), times and zone, repeats (RRULE with EXDATE and
+// What an event keeps: its title (trimmed), times and zone, repeats (RRULE with EXDATE and
 // RDATE, and its changed occurrences, RECURRENCE-ID), location, description, URL, free/busy and the
 // alarms that fall before its start. What it drops, counted by reason: cancelled events, to-dos and
 // other non-events, events with no start, alarms after the start or at a fixed time, and
@@ -16,7 +16,7 @@ import type {IcsDropReason, ItemWhen} from '@setpoint/shared';
 import {addDays, localDay, zonedInstant} from './time.ts';
 import {windowsZone} from './windowsZones.ts';
 
-/** The most an import takes (D437). */
+/** The most an import takes. */
 export const ICS_MAX_BYTES = 2 * 1024 * 1024;
 export const ICS_MAX_EVENTS = 1000;
 /** Google keeps at most 5 reminders on an event, up to 4 weeks before it. */
@@ -33,7 +33,7 @@ export interface IcsEvent extends ItemWhen {
   // a single event written in UTC, or a zone the file names but nobody knows).
   time_zone: string | null;
   location: string | null;
-  // Google's description: the file's plain text, shown as the event's description (SV-264, D546).
+  // Google's description: the file's plain text, shown as the event's description.
   description: string | null;
   // Google's `source.url`: an http or https link only.
   url: string | null;

@@ -1,7 +1,7 @@
-// Jobs in mail (J7; DESIGN.md › Jobs › In mail; boards 37a–37c; D306) through its one route, against
+// Jobs in mail (boards 37a–37c) through its one route, against
 // the seed: the application an email belongs to (the reader's JD chip), Applied before on the Indeed
 // match email (the row's and the reader's badge), a correction's alias still matching, nothing while
-// Jobs is off, and mail's counts as they were (D313). The company matching itself is reading.test.ts's table.
+// Jobs is off, and mail's counts as they were. The company matching itself is reading.test.ts's table.
 import {jobsMailSchema} from '@setpoint/shared';
 import type {JobsMailOut} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -67,7 +67,7 @@ describe('GET /api/jobs/mail', () => {
     expect((await ask([indeed])).messages[0]!.applied_before).toMatchObject({query: 'contoso pharma labs', count: 1, latest: {id: before.latest.id, company: 'Contoso Pharma Labs'}});
   });
 
-  test('with Jobs off, nothing; and mail\'s counts never change (D313)', async () => {
+  test('with Jobs off, nothing; and mail\'s counts never change', async () => {
     const {w, c, message, ask} = await seeded();
     const counts = mailCounts(w.store);
     const ids = [message('Interview availability for Software Engineer I'), message('Associate Software Engineer @ Contoso Pharmaceuticals')];

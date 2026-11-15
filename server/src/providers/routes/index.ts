@@ -1,8 +1,8 @@
 // Live drive times for Time to Leave: Google's Routes API from Home's coordinates to the event's
-// place, traffic-aware. Harvested from v1's `platform/google-routes` (see SV-6): the two-field mask
-// (billed by what's asked), DRIVE with TRAFFIC_AWARE_OPTIMAL, a duration like "901.25s" rounded up,
-// no route is a refusal, nothing of Google's body echoed. Added: the departure time (v1 asked about
-// traffic now, for an event hours away), and the key is Settings' Google Maps key (Places').
+// place, traffic-aware: the two-field mask (billed by what's asked), DRIVE with
+// TRAFFIC_AWARE_OPTIMAL, a duration like "901.25s" rounded up, no route is a refusal, nothing of
+// Google's body echoed, traffic at the departure time (not now, for an event hours away), and the key
+// is Settings' Google Maps key (Places').
 import {ProviderError} from '../../sync/errors.ts';
 import {requestJson} from '../http.ts';
 import type {HttpOptions} from '../http.ts';

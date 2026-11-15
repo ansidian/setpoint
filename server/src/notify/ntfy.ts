@@ -21,7 +21,7 @@ function hostOf(server: string): string {
 }
 
 /**
- * Publishes, or throws in words the user can act on (the polish audit's states-11): "Can’t reach
+ * Publishes, or throws in words the user can act on: "Can’t reach
  * ntfy.example.net", "ntfy.example.net didn’t answer in time", or "ntfy answered 401, unauthorized"
  * with ntfy's own words, never the network library's "fetch failed".
  */

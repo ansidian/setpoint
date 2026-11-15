@@ -1,4 +1,4 @@
-// Search over the seed (BRIEF.md › Search, boards 06 and 07): chips filter exactly and come newest
+// Search over the seed (boards 06 and 07): chips filter exactly and come newest
 // first; free text alone ranks by how well the words matched, newest first within each tier, with
 // no importance boost, and counts what's about the search; each result says why it matched and what
 // to highlight; All's mail is covered (archived in, trashed out); and the log keeps each search and
@@ -43,7 +43,7 @@ const NORTHWIND = {kind: 'organisation', value: 'Northwind', label: 'Northwind'}
 const REJECTION = {kind: 'type', value: 'rejection', label: 'Rejection'};
 const BOARD_CHIPS = [NORTHWIND, REJECTION, {kind: 'date', from: '2026-03-01', to: '2026-04-01', label: 'Mar 2026'}];
 
-describe('search over the seed: the brief\'s and the boards\' examples', () => {
+describe('search over the seed: the sample\'s and the boards\' examples', () => {
   test('Northwind · Rejection · Mar 2026, "Update on your application" first (board 06)', () => {
     const w = world({seed: true});
     const out = search(w, '', {chips: BOARD_CHIPS});
@@ -149,7 +149,7 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     expect(search(w, 'the', {chips: BOARD_CHIPS}).results.map(result => result.subject)).toEqual(['Update on your application', 'Your application for Data Engineer Intern']);
   });
 
-  test('a search no email fully matches says so (UX #10)', () => {
+  test('a search no email fully matches says so', () => {
     const w = world({seed: true});
     expect(search(w, 'lease renewal').partial).toBe(false);
     const tokyo = search(w, 'flight to tokyo');
@@ -178,7 +178,7 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     expect(reasons(interview.results[0]!)).toBe('Org Northwind · Subject interview');
   });
 
-  test('"!" leaves out what it names: a Not chip, or the mail with a word; neither is a reason (SV-31)', () => {
+  test('"!" leaves out what it names: a Not chip, or the mail with a word; neither is a reason', () => {
     const w = world({seed: true});
     const notRejection = search(w, '!rejection', {chips: [NORTHWIND]});
     expect(notRejection.chips).toEqual([NORTHWIND, {...REJECTION, not: true}]);
@@ -226,8 +226,8 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
 
   test('pages, with the indexing line while the first backfill runs', () => {
     const w = world({seed: true});
-    // The Jobs account's seven emails (the brief's five, Jobs's Indeed match email, round 4, and the
-    // interview invite, SV-182).
+    // The Jobs account's seven emails (five sample ones, Jobs's Indeed match email and the
+    // interview invite).
     const jobs = w.store.db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get()!.id;
     const first = search(w, '', {chips: [{kind: 'account', value: jobs, label: 'Jobs'}], limit: 2});
     expect(first).toMatchObject({total: 7, next_offset: 2});

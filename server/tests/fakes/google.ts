@@ -18,7 +18,7 @@ const googleError = (code: number, message: string, reason: string, status?: str
 /** Google's compact instance suffix: 20261007T140000Z, or 20261007 for a day. */
 /**
  * A start or end as events.patch leaves it: merged field by field into what it was, a null clearing
- * its field (SV-117).
+ * its field.
  */
 const patchedTime = (was: EventTime | undefined, change: EventTime | undefined): EventTime | undefined => {
   if (change === undefined) return was;
@@ -70,9 +70,9 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
   const droppedTokens = new Set<string>();
   const channels: {id: string; calendarId: string; address: string; token: string; resourceId: string; expiration: number}[] = [];
   const stopped: {id: string; resourceId: string}[] = [];
-  // Every events.import body, as sent (SV-181).
+  // Every events.import body, as sent.
   const imports: {calendarId: string; body: GoogleEvent}[] = [];
-  // Every events.patch body, as sent (SV-264).
+  // Every events.patch body, as sent.
   const patches: GoogleEvent[] = [];
   // iCalUIDs events.import refuses, with Google's code and words.
   const importRefusals = new Map<string, {code: number; message: string}>();
@@ -109,7 +109,7 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
     for (const date of occurrenceDates(rule, firstDay, localDay(timeMin, zone), localDay(timeMax, zone))) {
       const originalStart = allDay ? date : zonedInstant(date, localTime(master.start!.dateTime!, zone), zone);
       if (rule.untilAt && originalStart > rule.untilAt) continue;
-      // An EXDATE in the series' zone or in UTC (an .ics import's, SV-181).
+      // An EXDATE in the series' zone or in UTC (an .ics import's).
       if (exdates.has(allDay ? date.replace(/-/g, '') : `${date.replace(/-/g, '')}T${localTime(master.start!.dateTime!, zone).replace(':', '')}00`) || exdates.has(compact(originalStart))) continue;
       const id = `${master.id}_${compact(originalStart)}`;
       const exception = calendarEvents(calendarId).get(id);
@@ -159,7 +159,7 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       const account = accessTokens.get((request.headers.authorization ?? '').replace(/^Bearer /, ''))!;
       return {status: 200, body: {kind: 'calendar#calendarList', items: calendars.filter(entry => listedFor.get(entry.id)?.includes(account) ?? true)}};
     }),
-    // calendarList.patch (SV-20): the user's colour for a calendar. RGB only with colorRgbFormat=true,
+    // calendarList.patch: the user's colour for a calendar. RGB only with colorRgbFormat=true,
     // and then both colours, as Google asks.
     on('PATCH', /^\/calendar\/v3\/users\/me\/calendarList\/([^/]+)$/, (request, match) => {
       if (!authorized(request)) return unauthorized();
@@ -224,7 +224,7 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       if (invalid) return invalid;
       return {status: 200, body: publicEvent(store(calendarId, inserted))};
     }),
-    // events.import (SV-181): a private copy keyed on its iCalUID. One the calendar holds (deleted
+    // events.import: a private copy keyed on its iCalUID. One the calendar holds (deleted
     // ones too, taken back as Google does) is replaced in place, keeping its id; an exception is the
     // series' iCalUID with the start it replaces. No invitations; only `default` events.
     on('POST', /^\/calendar\/v3\/calendars\/([^/]+)\/events\/import$/, (request, match) => {
@@ -265,7 +265,7 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       const body = request.body as GoogleEvent;
       patches.push(body);
       const patched = {...publicEvent(event), ...body, start: patchedTime(event.start, body.start), end: patchedTime(event.end, body.end)};
-      // A null description deletes the field, as Google's patch semantics have it (SV-264).
+      // A null description deletes the field, as Google's patch semantics have it.
       if (patched.description === null) delete patched.description;
       const invalid = timeRefusal(patched);
       if (invalid) return invalid;

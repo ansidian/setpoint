@@ -1,6 +1,6 @@
 // The "+N" popover (board 11b): the day's every item, hanging from its "+N" over the cells below so
 // the cell stays readable, inside the grid. Every item can be selected, and dragged out onto another
-// day (F6b; the popover closes as it lifts). It stays open while what's in it is used (#324) and
+// day (the popover closes as it lifts). It stays open while what's in it is used and
 // closes on Esc, its close button, a click elsewhere, C, D, New or a change of view. It
 // grows from its "+N" over 180 ms and closes at once (DESIGN.md › Motion).
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
@@ -49,7 +49,7 @@ export function DayPopover({date, items, section, selected, calendars, now, time
   useEffect(() => {
     const onDown = (event: PointerEvent) => {
       const target = event.target as Element | null;
-      // Using what's in it doesn't close it (#324): its items, their floating detail and menus, and the
+      // Using what's in it doesn't close it: its items, their floating detail and menus, and the
       // right pane, which shows the same day.
       if (card.current?.contains(target) || target?.closest(`[data-more="${date}"], .fd, .ctx-menu, .rpane`)) return;
       onClose();

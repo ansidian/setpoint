@@ -1,4 +1,4 @@
-// Mail boards' fixtures (SV decision D3), registered in index.ts: the dev seed holds BRIEF.md's
+// Mail boards' fixtures, registered in index.ts: the dev seed holds the sample's
 // counts exactly, and a board whose state differs gets a small change layered on a freshly seeded
 // database instead.
 //
@@ -7,16 +7,16 @@
 //   recovery-html   03: Google's recovery-email alert as the board's HTML email
 //   new-digest      09: four Northwind Engineering digests cleared unopened (the real prompt's run)
 //                   and a fifth that arrived "now", unread in Attention
-//                   (4 attention, 20 unread, Jobs 3); B3's GET /api/mail/prompts raises the prompt
+//                   (4 attention, 20 unread, Jobs 3); GET /api/mail/prompts raises the prompt
 //   code-expiring   mail checks: Contoso Insurance's code expires 12 seconds after the seed's moment
 //   newsletter-html mail checks: Contoso Coffee's newsletter as a mailing service builds one, mostly
 //                   images with only a width, in a shell wider than the frame
 //   stitched-html   mail checks: Woodgrove Bank's statement as three whole HTML documents, one after
 //                   the other
 //   viewport-html   mail checks: Litware's webinar invitation with its page sized to the window and
-//                   centred in it, as some mailing services build one (SV-228)
+//                   centred in it, as some mailing services build one
 //   positioned-html mail checks: Consolidated Messenger's delivery notice in a box positioned out of
-//                   the page's flow, so nothing in the flow is as tall as the email (SV-228)
+//                   the page's flow, so nothing in the flow is as tall as the email
 //   last-year       search checks: a Northwind rejection from Dec 20, 2025, so a row's age carries its
 //                   year ("Dec 20, 2025"), the longest it gets
 import {SEED_NOW} from '@setpoint/shared';
@@ -147,7 +147,7 @@ export const IMAGE_NEWSLETTER_HTML = `<!doctype html>
 </div>
 </body></html>`;
 
-// The shape a bank's mail system gives a notice (SV-127): three whole documents, one after the other,
+// The shape a bank's mail system gives a notice: three whole documents, one after the other,
 // each with its own head and body: a banner with the top of a card over it, the message, the footer.
 const stitched = (style: string, rows: string) => `<html><head><style>body { background-color: #edf0f2; margin: 0; } ${style}</style></head>
 <body style="background-color: #edf0f2"><table width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table></body></html>`;
@@ -165,7 +165,7 @@ export const STITCHED_NOTICE_HTML = stitched('.band { height: 120px; }', `
     <p>This mailbox isn't read, so please don't reply to this email.</p>
   </td><td></td></tr>`);
 
-// The shape some mailing services give an email (SV-228): the page as tall as the window, flexed and
+// The shape some mailing services give an email: the page as tall as the window, flexed and
 // centred in it, so in a frame sized to its page the page would size itself to the frame.
 export const VIEWPORT_INVITE_HTML = `<!DOCTYPE html>
 <html lang="en"><head><style>html,body{margin:0 auto!important;padding:0!important;height:100vh!important;width:100%!important;background-color:#f9fafb;display:inline-flex!important;justify-content:center!important;align-items:center!important;font-size:16px}
@@ -184,7 +184,7 @@ p{margin:0;padding:0}.card-body{padding:1.5em}.card-body p{font-size:1.1em;line-
 </tbody></table></div>
 </body></html>`;
 
-// A notice held in an absolutely positioned box (SV-228): the page's own flow ends where it starts.
+// A notice held in an absolutely positioned box: the page's own flow ends where it starts.
 export const POSITIONED_NOTICE_HTML = `<html><head><style>.shell { position: absolute; top: 0; left: 0; right: 0; } .notice { max-width: 560px; margin: 0 auto; padding: 32px; font: 15px/1.5 Helvetica, sans-serif; }</style></head>
 <body><div class="shell"><div class="notice">
   <h1>Your package is out for delivery</h1>
@@ -220,7 +220,7 @@ const DIGEST_BODY = 'This week on the Northwind Engineering blog: new posts from
 
 /**
  * Board 09: four weeks of Northwind Engineering digests triaged to Attention and Done from the row
- * without opening (read later by Mark all as read, outside Attention), which is the run B3's real
+ * without opening (read later by Mark all as read, outside Attention), which is the run the real
  * pattern prompt counts, and a fifth digest that arrived "now", unread in Attention.
  */
 export function newDigest({db}: OpenDatabase) {

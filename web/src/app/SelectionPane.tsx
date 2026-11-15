@@ -1,4 +1,4 @@
-// The reading pane while emails are selected (DESIGN.md #249, option B): the reader's tools for the
+// The reading pane while emails are selected (option B): the reader's tools for the
 // whole selection, Done H (for the ones that can be), Trash E, Pin or Unpin P, Mark read or Mark
 // unread ⇧U, and Clear Esc at the right; then "3 emails selected" where the subject goes, and each
 // email in the list's order, sender and subject as its row reads them (a summary in the subject's

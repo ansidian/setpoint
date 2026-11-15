@@ -1,6 +1,6 @@
-// How the JD lookup reads the web (J3; decision 54): the hiring platforms' public job APIs
+// How the JD lookup reads the web: the hiring platforms' public job APIs
 // (Greenhouse's job board API, Lever's postings API, Ashby's posting API), GovernmentJobs' site-wide
-// search (D389) and posting pages, each request with Setpoint's honest, named User-Agent, through
+// search and posting pages, each request with Setpoint's honest, named User-Agent, through
 // News's one way to GET (redirects followed by hand, never to the home network, a cap on what's read,
 // failures classified for the retry policy). Only production is given the real hosts (server.ts): a
 // dev run, `npm run try`, the seed and every test get none, or example domains served by a fake on
@@ -259,7 +259,7 @@ export interface GovernmentJob extends PostingCandidate {
 
 const hasClass = (element: Element, name: string) => attr(element, 'class')?.split(/\s+/).includes(name) ?? false;
 
-/** The results in the search's HTML; none in markup it doesn't recognise, so a change on the site is a miss and search still runs (D388). */
+/** The results in the search's HTML; none in markup it doesn't recognise, so a change on the site is a miss and search still runs. */
 export function governmentJobsResults(html: string, base: string): GovernmentJob[] {
   const items = findAll(node => node.name === 'li' && hasClass(node, 'job-item'), parseDocument(html).children);
   return items.flatMap((item): GovernmentJob[] => {

@@ -1,7 +1,7 @@
 // The shell in the browser: signing in (claiming with a setup token, then the password, or a
-// recovery code), the layout's fixed sizes (DESIGN.md › Layout) at the desktop size, no focus
+// recovery code), the layout's fixed sizes at the desktop size, no focus
 // rings, the account filter, the page keys, the tab title, the sidebar folding to its rail and its
-// next-up slot (D507, D509), and live updates from a change made elsewhere.
+// next-up slot, and live updates from a change made elsewhere.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -54,7 +54,7 @@ test('the sign-in card claims Setpoint with the setup token, then signs in with 
   }
 });
 
-test('the sign-in card answers: a refusal selects what was typed; Use a passkey leads while nothing is typed (the polish audit\'s states-14)', async () => {
+test('the sign-in card answers: a refusal selects what was typed; Use a passkey leads while nothing is typed', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -153,7 +153,7 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
       await page.locator('.list .row').first().waitFor();
       assert.equal((await box(page, '.sb')).width, 248);
       assert.equal((await box(page, '.hd')).height, 56);
-      // Nothing open: the empty pane is there all the same (SV-217), so nothing moves as an email opens or closes.
+      // Nothing open: the empty pane is there all the same, so nothing moves as an email opens or closes.
       assert.equal((await box(page, '.pane.idle')).width, 680);
       assert.equal((await box(page, '.list')).width, pagePx(SIZES.target.width) - 248 - 680);
       const row = page.locator('.list .row:has(b[data-tip^="Final exam schedule"])');
@@ -163,7 +163,7 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
       await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
       assert.equal((await box(page, '.pane:not(.idle)')).width, 680);
       assert.deepEqual(await rested(still), before, 'opening moves nothing');
-      // Every row keeps its account while the pane is open (decision 41).
+      // Every row keeps its account while the pane is open.
       for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
       const scroll = await page.evaluate(() => [document.documentElement.scrollHeight, document.documentElement.clientHeight, document.documentElement.scrollWidth, document.documentElement.clientWidth]);
       assert.deepEqual([scroll[0], scroll[2]], [scroll[1], scroll[3]]);
@@ -185,7 +185,7 @@ test('the account filter\'s old address is the plain Inbox; 1 and 2 go to Inbox 
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
-    // No account filter (D476): ?account=4 lands on every account's Inbox, its address the Inbox's,
+    // No account filter: ?account=4 lands on every account's Inbox, its address the Inbox's,
     // with no account rows under Inbox in the sidebar.
     await page.goto(`${setpoint.base}/inbox?account=4`);
     await page.locator('.list .row').first().waitFor();
@@ -200,7 +200,7 @@ test('the account filter\'s old address is the plain Inbox; 1 and 2 go to Inbox 
     await page.keyboard.press('1');
     await page.locator('.list .row').first().waitFor();
     assert.equal(new URL(page.url()).pathname, '/inbox');
-    // The Today block's lines open their card over the page (#78), not Calendar.
+    // The Today block's lines open their card over the page, not Calendar.
     await page.locator('.today-row', {hasText: 'Dentist'}).click();
     await page.locator('.today-card', {hasText: 'Dentist'}).waitFor();
     assert.equal(new URL(page.url()).pathname, '/inbox');
@@ -210,7 +210,7 @@ test('the account filter\'s old address is the plain Inbox; 1 and 2 go to Inbox 
   }
 });
 
-test('#78: the Today block names its tasks, tomorrow\'s under their own label (D460), and a line opens its card over the open email; E edits it on Calendar, not Trash', async () => {
+test('the Today block names its tasks, tomorrow\'s under their own label, and a line opens its card over the open email; E edits it on Calendar, not Trash', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -220,17 +220,17 @@ test('#78: the Today block names its tasks, tomorrow\'s under their own label (D
     const lines = page.locator('.sb .today-row');
     await until('the Today block', () => lines.allTextContents(), texts => texts.length === 5);
     assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
-    // D460: tomorrow's event and task sit under a label of their own.
+    // Tomorrow's event and task sit under a label of their own.
     assert.deepEqual(await page.locator('.sb .today .sb-label').allTextContents(), ['Today', 'Tomorrow']);
     assert.equal(await page.locator('.sb .today > *').evaluateAll(children => children.findIndex(child => child.textContent === 'Tomorrow')), 4);
 
     // The card opens over the open email, which stays behind it; where it sits and its motion (which
-    // reduce motion doesn't change, DESIGN.md › Principles) are by eye (D416, D417).
+    // reduce motion doesn't change, DESIGN.md › Principles) are by eye.
     await lines.filter({hasText: 'Renew car registration'}).click();
     const card = page.locator('.today-card');
     await card.locator('.fd-title', {hasText: 'Renew car registration'}).waitFor();
     assert.equal(new URL(page.url()).pathname.startsWith('/inbox/'), true);
-    // SV-242: Complete is the ring beside the title, not a footer action.
+    // Complete is the ring beside the title, not a footer action.
     assert.deepEqual(await card.locator('.card-acts button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') ?? button.textContent)),
       ['EditE', 'Open in Calendar', 'Delete']);
     assert.equal(await card.locator('.card-h').getByRole('button', {name: 'Complete'}).count(), 1);
@@ -293,7 +293,7 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
   }
 });
 
-test('SV-249: a repeating task completed from Today has Undo, which puts it back open on its day (D510)', async () => {
+test('a repeating task completed from Today has Undo, which puts it back open on its day', async () => {
   const setpoint = await startSetpoint();
   try {
     const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
@@ -327,7 +327,7 @@ test('SV-249: a repeating task completed from Today has Undo, which puts it back
   }
 });
 
-test('SV-241: a timed task shows its time and takes its place by it, among the Today block\'s events (D501) and in the day pane\'s tasks (D502)', async () => {
+test('a timed task shows its time and takes its place by it, among the Today block\'s events and in the day pane\'s tasks', async () => {
   const setpoint = await startSetpoint();
   try {
     // Pay rent at 8:00 AM, before the seed's 9:12 AM; tomorrow's Renew car registration at 9:30 AM.
@@ -351,7 +351,7 @@ test('SV-241: a timed task shows its time and takes its place by it, among the T
     await page.goto(`${setpoint.base}/calendar/2026-10-07`);
     const tasks = page.locator('.rpane .ag-task');
     await until('the day\'s tasks', () => tasks.allTextContents(), texts => texts.length === 2);
-    // SV-272: the lab report's subtasks, done of all, before its project.
+    // The lab report's subtasks, done of all, before its project.
     assert.deepEqual(await tasks.allTextContents(), ['Pay rent8:00 AMHome', 'CS 101 lab report1/4School']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -359,7 +359,7 @@ test('SV-241: a timed task shows its time and takes its place by it, among the T
   }
 });
 
-test('SV-245: below 1600 px the sidebar starts as the rail with its next-up slot; [, its edge and ⌘K open and fold it, kept on reload; the pointer resting on it brings it out over the page (D507, D509)', async () => {
+test('below 1600 px the sidebar starts as the rail with its next-up slot; [, its edge and ⌘K open and fold it, kept on reload; the pointer resting on it brings it out over the page', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     // A MacBook's window, where the 1.075 zoom applies.
@@ -440,14 +440,14 @@ test('live updates: an email read elsewhere loses its dot and leaves the counts 
     await setpoint.api('POST', `/mail/messages/${signIn.id}/read`, {unread: false});
     await until('the sidebar follows', () => page.locator('.nav:has-text("Inbox") .ubadge').textContent(), text => text === '18');
     assert.equal((await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread, 18);
-    // It stays in its day, read, then and after leaving the Inbox (D449).
+    // It stays in its day, read, then and after leaving the Inbox.
     const signInRow = page.locator('.row[data-key^="all:"]', {hasText: 'New sign-in'});
     await until('the dot goes', () => signInRow.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
     await page.keyboard.press('2');
     await page.waitForURL(/\/calendar/);
     await page.keyboard.press('1');
     await until('still in its day, read', () => signInRow.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
-    // Done elsewhere drops Attention's count; the title counts unread (SV-221).
+    // Done elsewhere drops Attention's count; the title counts unread.
     const google = inbox.groups.flatMap(group => group.rows).find(item => item.subject.startsWith('Your recovery email'))!;
     await setpoint.api('POST', `/mail/messages/${google.id}/done`, {done: true});
     await until('Attention\'s count drops', () => page.locator('.hd .ib-views .n').textContent(), text => text === '2');

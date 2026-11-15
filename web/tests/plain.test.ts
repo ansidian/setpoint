@@ -1,4 +1,4 @@
-// SV-110 (D290): a lit phrase made title words again, as tables. The rules are the iPhone's
+// A lit phrase made title words again, as tables. The rules are the iPhone's
 // (setpoint-ios QuickAddDraft: `type`, `makePlain`, `masked`, `unmasked`). Today is the seed's Wed,
 // Oct 7, 2026.
 import {describe, expect, test} from 'vitest';

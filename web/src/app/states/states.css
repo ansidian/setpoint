@@ -1,6 +1,6 @@
 /* Health and states (design-export/styles/setpoint.css › .bar, .offline-pill; board 19a). */
 
-/* The one spinner (DESIGN.md #54; the polish audit's states-15): `progress_activity` turning every
+/* The one spinner: `progress_activity` turning every
    900 ms, `ink2` by default, 6 px after what it follows. `spin-later` holds it back a second where a
    wait is usually shorter (calendar.css). */
 .spin { display: inline-flex; color: var(--ink2); margin-left: 6px; vertical-align: -3px; }
@@ -8,9 +8,9 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes spin-later { from { visibility: hidden; } }
 
-/* A line with progress along its foot (states-15, search-12, news-13): search's first backfill and
+/* A line with progress along its foot: search's first backfill and
    News's first run. A 2 px `sub2` track over the line's hairline, and in it the share done (`--done`)
-   in `ink3`, neutral as a usage meter is (#134), easing over 260 ms as it grows. */
+   in `ink3`, neutral as a usage meter is, easing over 260 ms as it grows. */
 .progress { position: relative; }
 .progress::before, .progress::after { content: ""; position: absolute; left: 0; bottom: -1px; height: 2px; pointer-events: none; }
 .progress::before { right: 0; background: var(--sub2); }
@@ -21,8 +21,8 @@
 .list > .hbar.caution .act:hover { background: var(--sub); }
 .list > .hbar.muted { min-height: 32px; color: var(--ink3); font-size: 12.5px; }
 .list > .hbar.failing { min-height: 32px; color: var(--caution); font-size: 12.5px; }
-/* The fix on the line (states-08): Check now after a stale or failing line's words, no dot before it
-   since the pill and the gap set it apart (SV-271), in the `.act` look of the bar's Reconnect but
+/* The fix on the line: Check now after a stale or failing line's words, no dot before it
+   since the pill and the gap set it apart, in the `.act` look of the bar's Reconnect but
    `ink2`, 12.5 and 24 px tall, `sub` and `ink` under the pointer; "Checking…" in its place until the
    check lands. The Inbox's lines and the calendar pane's. */
 .check-now { flex: none; height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; color: var(--ink2); font-size: 12.5px; white-space: nowrap;
@@ -34,20 +34,20 @@ button.check-now:hover { background: var(--sub); color: var(--ink); }
 
 .offline-pill { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 14px; border-radius: 999px; background: var(--alert); color: var(--onAlert); box-shadow: var(--shadow-pill); font-weight: 500; white-space: nowrap; }
 .main > .offline-pill { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 5; animation: pill-in var(--dur-medium) var(--ease); }
-/* It comes in from 8 px above over 180 ms, and goes over 120 ms (States.tsx), so a state arrives gently (states-13). */
+/* It comes in from 8 px above over 180 ms, and goes over 120 ms (States.tsx), so a state arrives gently. */
 @keyframes pill-in { from { opacity: 0; transform: translate(-50%, -8px); } }
 .offline-pill .retry { height: 26px; padding: 0 10px 0 8px; border-radius: 999px; background: color-mix(in oklch, var(--onAlert) 14%, transparent); display: inline-flex; align-items: center; gap: 6px; }
 .offline-pill .retry:hover { background: color-mix(in oklch, var(--onAlert) 22%, transparent); }
 /* Everything under the pill: dimmed, lighter, so what's on screen can still be read, scrolled and
-   opened (states-05); only what would change something is held back, its keys refused (States.tsx)
+   opened; only what would change something is held back, its keys refused (States.tsx)
    and its writes too (client.ts). The dim comes and goes over 180 ms. */
 .main > .content { transition: opacity var(--dur-medium) var(--ease), filter var(--dur-medium) var(--ease); }
 .main.offline > .content { opacity: .62; filter: grayscale(.5); }
 .main.down :is(.rd-tools .tool, .rd-acts .btn, .check, .hd .mark-all, .unpin, .copy, .check-now, .hbar .act) { pointer-events: none; }
 .main.offline :is(.rd-tools .tool, .rd-acts .btn, .check, .hd .mark-all, .unpin, .copy, .check-now, .hbar .act) { opacity: .4; }
 
-/* Setpoint unreachable at launch (DESIGN.md › Health and states): the mark at 36 px where the sign-in
-   card's top sits (#71), dimmed, and the pill 22 px under it. */
+/* Setpoint unreachable at launch: the mark at 36 px where the sign-in
+   card's top sits, dimmed, and the pill 22 px under it. */
 .boot { position: relative; height: 100%; overflow: hidden; background: var(--page); }
 .boot-at { position: absolute; left: 50%; top: max(24px, calc(50% - 120px)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 22px; }
 .boot.unreachable .mark { opacity: .5; filter: grayscale(.4); }

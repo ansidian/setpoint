@@ -1,4 +1,4 @@
-// Setpoint on job boards' service worker (SV-174). It asks Setpoint's POST /api/jobs/check about
+// Setpoint on job boards' service worker. It asks Setpoint's POST /api/jobs/check about
 // postings (the job pane's, or a page of the list's cards at once) with the extension's own token,
 // kept in chrome.storage.local beside Setpoint's address. The request is made here rather than on
 // the board's page, so the page never sees the token, and the host permission the options page asks

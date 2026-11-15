@@ -1,4 +1,4 @@
-// Selecting several emails (DESIGN.md #249) as tables: ⌘-click in and out, the first taking the open
+// Selecting several emails as tables: ⌘-click in and out, the first taking the open
 // email; ⇧-click's range from the anchor; the selection in list order; and what its tools offer.
 import type {MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';

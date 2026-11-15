@@ -1,4 +1,4 @@
-// Paired iPhones (SV-84, D276): Settings › Security's one-time pairing code, the app's exchange of it
+// Paired iPhones: Settings › Security's one-time pairing code, the app's exchange of it
 // for a device token, requests signed in by that bearer token, and Revoke.
 import {describe, expect, test} from 'vitest';
 import {issuePairingCode, PAIRING_MINUTES} from '../src/auth/devices.ts';

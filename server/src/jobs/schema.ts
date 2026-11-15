@@ -1,7 +1,7 @@
-// Jobs's tables (J1), all `jobs_`, in their own Drizzle schema and migrations folder (./drizzle, made
+// Jobs's tables, all `jobs_`, in their own Drizzle schema and migrations folder (./drizzle, made
 // by `npx drizzle-kit generate --config src/jobs/drizzle.config.ts` from server/), applied with their
 // own migrations table after the main ones (./db.ts). They point at mail by message and account id
-// only, as plain integers with no foreign key, and nothing in mail's tables points back (D303), so
+// only, as plain integers with no foreign key, and nothing in mail's tables points back, so
 // drop.sql removes them without touching mail and mail never waits on Jobs.
 //
 // Timestamps are ISO 8601 UTC strings; JSON columns hold values checked by `@setpoint/shared`.
@@ -20,10 +20,10 @@ const quoted = (values: readonly string[]) => sql.raw(values.map(value => `'${va
 export const JOBS_MIGRATIONS_TABLE = 'jobs_migrations';
 
 /**
- * An application: a company and a role (decision 51). `titleKey` is the title normalised (case,
+ * An application: a company and a role. `titleKey` is the title normalised (case,
  * brackets and tags like "remote" ignored) for matching; `requisitionId` wins over it when an email
  * gives one. Status is never Ghosted (that's computed), and `statusSetBy` says whether an email or the
- * user set it (decision 68). Applications are kept for good (decision 63).
+ * user set it. Applications are kept for good.
  */
 export const jobsApplications = sqliteTable('jobs_applications', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -42,22 +42,22 @@ export const jobsApplications = sqliteTable('jobs_applications', {
   // The latest step as the email states it ("Interview Tue Oct 13, 2:00 PM").
   step: text('step'),
   stepAt: text('step_at'),
-  // A re-application links to the closed one before it (decision 51).
+  // A re-application links to the closed one before it.
   reappliedFromId: integer('reapplied_from_id').references((): AnySQLiteColumn => jobsApplications.id, {onDelete: 'set null'}),
-  // Made by Track this: Applied is its email's date (decision 69).
+  // Made by Track this: Applied is its email's date.
   firstSeenInEmail: integer('first_seen_in_email', {mode: 'boolean'}).notNull().default(false),
   // Its confirmation named no company (Indeed's "Indeed Application: <title>") and no match email
-  // paired with it yet: `company` holds the platform until one does (J2).
+  // paired with it yet: `company` holds the platform until one does.
   companyUnknown: integer('company_unknown', {mode: 'boolean'}).notNull().default(false),
   // Where its JD lookup stands; a saved posting is `found` (jobs_postings).
   jdLookup: text('jd_lookup', {enum: JD_LOOKUPS}).notNull().default('none'),
   jdLookupAt: text('jd_lookup_at'),
-  // The user stopped its lookup to paste the posting (SV-170): `not_found`, saying "Lookup stopped",
+  // The user stopped its lookup to paste the posting: `not_found`, saying "Lookup stopped",
   // until the next lookup or answer clears it.
   jdLookupStoppedAt: text('jd_lookup_stopped_at'),
-  // Its lookup was started by the history pass's end (J4): what it's unsure of goes to From history.
+  // Its lookup was started by the history pass's end: what it's unsure of goes to From history.
   jdLookupFromHistory: integer('jd_lookup_from_history', {mode: 'boolean'}).notNull().default(false),
-  // Pinned to the table's Pinned shelf (SV-243, D504), newest first; cleared when it closes (D505).
+  // Pinned to the table's Pinned shelf, newest first; cleared when it closes.
   pinnedAt: text('pinned_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -70,7 +70,7 @@ export const jobsApplications = sqliteTable('jobs_applications', {
 ]);
 
 /**
- * A timeline event (decision 63, D317). It keeps its own copy of what it shows, so it outlives the
+ * A timeline event. It keeps its own copy of what it shows, so it outlives the
  * email; `messageId` (mail's messages.id, no foreign key) links to the email while it exists.
  */
 export const jobsEvents = sqliteTable('jobs_events', {
@@ -92,14 +92,14 @@ export const jobsEvents = sqliteTable('jobs_events', {
   check('jobs_events_kind', sql`${table.kind} in (${quoted(JOB_EVENT_KINDS)})`),
 ]);
 
-/** An application's saved JD (decision 53): kept as it was, never overwritten. */
+/** An application's saved JD: kept as it was, never overwritten. */
 export const jobsPostings = sqliteTable('jobs_postings', {
   id: integer('id').primaryKey({autoIncrement: true}),
   applicationId: integer('application_id').notNull().unique().references(() => jobsApplications.id, {onDelete: 'cascade'}),
   fullText: text('full_text').notNull(),
   summary: text('summary').notNull(),
   location: text('location'),
-  // The user set the location (SV-170): no reading writes it again.
+  // The user set the location: no reading writes it again.
   locationSetAt: text('location_set_at'),
   workplace: text('workplace', {enum: JOB_WORKPLACES}),
   workplaceDetail: text('workplace_detail'),
@@ -116,7 +116,7 @@ export const jobsPostings = sqliteTable('jobs_postings', {
   check('jobs_postings_workplace', sql`${table.workplace} is null or ${table.workplace} in (${quoted(JOB_WORKPLACES)})`),
 ]);
 
-/** A posting the lookup was unsure of (decision 54): offered in Needs you, and again by Not this posting. */
+/** A posting the lookup was unsure of: offered in Needs you, and again by Not this posting. */
 export const jobsJdCandidates = sqliteTable('jobs_jd_candidates', {
   id: integer('id').primaryKey({autoIncrement: true}),
   applicationId: integer('application_id').notNull().references(() => jobsApplications.id, {onDelete: 'cascade'}),
@@ -126,9 +126,9 @@ export const jobsJdCandidates = sqliteTable('jobs_jd_candidates', {
   link: text('link').notNull(),
   position: integer('position').notNull(),
   foundAt: text('found_at').notNull(),
-  // How the lookup found it (J6: a pick saves it as found this way); null reads as a search.
+  // How the lookup found it (a pick saves it as found this way); null reads as a search.
   source: text('source', {enum: JD_SOURCES}),
-  // The user picked it (J6): the lookup reads this one and saves it.
+  // The user picked it: the lookup reads this one and saves it.
   pickedAt: text('picked_at'),
   // Opening it came back `unreadable` (a 403, a non-HTML answer, a page with no text Jobs can use),
   // so the picker says so; a failure to reach it says nothing about the page, and leaves this false.
@@ -138,8 +138,8 @@ export const jobsJdCandidates = sqliteTable('jobs_jd_candidates', {
 ]);
 
 /**
- * A posting the user said isn't this application's (J6: None of these, Not this posting): no lookup
- * saves or offers it again (decision 58).
+ * A posting the user said isn't this application's (None of these, Not this posting): no lookup
+ * saves or offers it again.
  */
 export const jobsRejectedPostings = sqliteTable('jobs_rejected_postings', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -151,7 +151,7 @@ export const jobsRejectedPostings = sqliteTable('jobs_rejected_postings', {
 ]);
 
 /**
- * Another company and role an application answers to because the user said so (J6, decision 58):
+ * Another company and role an application answers to because the user said so:
  * a merge's other application, an email moved or assigned to it, a title or company edited by hand.
  * A later email naming it finds this application (rules.ts `Alias`). A null company is its own.
  */
@@ -167,7 +167,7 @@ export const jobsAliases = sqliteTable('jobs_aliases', {
 ]);
 
 /**
- * What a correction or an answer changed, kept for its toast's Undo (J6): the rows as they were
+ * What a correction or an answer changed, kept for its toast's Undo: the rows as they were
  * before, and the rows it made. Undo puts them back exactly (./undo.ts); a day later they go.
  */
 export const jobsUndo = sqliteTable('jobs_undo', {
@@ -177,7 +177,7 @@ export const jobsUndo = sqliteTable('jobs_undo', {
 });
 
 /**
- * What waits in Needs you (decisions 50, 54, 57). Like an event, it keeps its own copy of the email
+ * What waits in Needs you. Like an event, it keeps its own copy of the email
  * (date, sender, subject, line), and links to it by message id while it exists. One the history pass
  * was unsure of is `fromHistory` (From history, folded). A resolved item stays, with how.
  */
@@ -200,7 +200,7 @@ export const jobsNeedsYou = sqliteTable('jobs_needs_you', {
   messageId: integer('message_id'),
   createdAt: text('created_at').notNull(),
   resolvedAt: text('resolved_at'),
-  // How it was answered (J6): "picked", "assigned", "tracked", "not_about_a_job", "dismissed"…
+  // How it was answered: "picked", "assigned", "tracked", "not_about_a_job", "dismissed"…
   resolution: text('resolution'),
 }, table => [
   index('jobs_needs_you_open').on(table.resolvedAt, table.fromHistory),
@@ -210,9 +210,9 @@ export const jobsNeedsYou = sqliteTable('jobs_needs_you', {
 ]);
 
 /**
- * Every email Jobs has read, once (decision 61): never read or charged for again. J2 keeps what the
+ * Every email Jobs has read, once: never read or charged for again. It keeps what the
  * model read in it (null for the seed's and for an answer it couldn't use), so the rules can run
- * again without asking (Indeed's pairs, blocked emails, J6's corrections) and J4 can re-run history.
+ * again without asking (Indeed's pairs, blocked emails, the corrections) and the history pass can run again.
  */
 export const jobsEmailsRead = sqliteTable('jobs_emails_read', {
   messageId: integer('message_id').primaryKey(),
@@ -228,15 +228,15 @@ export const jobsEmailsRead = sqliteTable('jobs_emails_read', {
   titleKey: text('title_key'),
   requisitionId: text('requisition_id'),
   line: text('line'),
-  // The application it went to, or made; a Needs you item's is null until J6 assigns it.
+  // The application it went to, or made; a Needs you item's is null until it's assigned.
   applicationId: integer('application_id').references(() => jobsApplications.id, {onDelete: 'set null'}),
 }, table => [
   index('jobs_emails_read_event').on(table.event, table.at),
 ]);
 
 /**
- * What Not an application blocked (decision 67): each of its emails, so none makes an application
- * again, and its company and role, so no later email naming them does either. J6 keeps that company
+ * What Not an application blocked: each of its emails, so none makes an application
+ * again, and its company and role, so no later email naming them does either. Not an application keeps that company
  * and role here, as the application had them (null falls back to what the email was read as), and a
  * row without an email holds the role alone, for an application whose emails Setpoint never held.
  * `applicationId` is the application it was, gone now, for Undo.
@@ -253,7 +253,7 @@ export const jobsBlockedEmails = sqliteTable('jobs_blocked_emails', {
   uniqueIndex('jobs_blocked_emails_message').on(table.messageId),
 ]);
 
-/** A field the user set by hand (decision 58): no later email, re-run or lookup overwrites it. */
+/** A field the user set by hand: no later email, re-run or lookup overwrites it. */
 export const jobsHandSet = sqliteTable('jobs_hand_set', {
   applicationId: integer('application_id').notNull().references(() => jobsApplications.id, {onDelete: 'cascade'}),
   field: text('field', {enum: JOB_HAND_FIELDS}).notNull(),
@@ -265,13 +265,13 @@ export const jobsHandSet = sqliteTable('jobs_hand_set', {
 
 /**
  * Jobs's own settings, one row, kept here rather than in the app's settings so removing Jobs leaves
- * nothing behind: on or off (off until the user turns it on), and the accounts it reads (D310).
+ * nothing behind: on or off (off until the user turns it on), and the accounts it reads.
  */
 export const jobsSettings = sqliteTable('jobs_settings', {
   id: integer('id').primaryKey(),
   enabled: integer('enabled', {mode: 'boolean'}).notNull().default(false),
-  // When it was last turned on: mail received from then on is read as it's triaged (J2); what came
-  // before is the history pass's (J4). Null reads as `updated_at`.
+  // When it was last turned on: mail received from then on is read as it's triaged; what came
+  // before is the history pass's. Null reads as `updated_at`.
   enabledAt: text('enabled_at'),
   accounts: text('accounts', {mode: 'json'}).$type<JobsReadAccount[]>().notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -280,7 +280,7 @@ export const jobsSettings = sqliteTable('jobs_settings', {
 ]);
 
 /**
- * The history pass (J4, decisions 57 and 72), one row: the last one started. It reads, oldest first,
+ * The history pass, one row: the last one started. It reads, oldest first,
  * what Jobs hasn't read in the accounts it lists from before `before` (when Jobs was turned on).
  * `total` is fixed when it starts; while it runs, what it has read is counted from jobs_emails_read
  * (read since `started_at`, received before `before`), and `read` is kept once it's done. No row is a
@@ -300,7 +300,7 @@ export const jobsHistory = sqliteTable('jobs_history', {
 ]);
 
 /**
- * How Jobs's reading of mail stands (J2), one row, as triage's health: down while its last model call
+ * How Jobs's reading of mail stands, one row, as triage's health: down while its last model call
  * failed (or there was no key to call with), as of its last success. Emails wait meanwhile, counted
  * on the page ("5 emails not read yet"), and are read once it's back.
  */
@@ -318,7 +318,7 @@ export const jobsReader = sqliteTable('jobs_reader', {
 ]);
 
 /**
- * The browser extension's bearer token for POST /api/jobs/check (SV-173), one row, as Home Assistant's
+ * The browser extension's bearer token for POST /api/jobs/check, one row, as Home Assistant's
  * is: only its SHA-256 kept, issued and rotated by the CLI (`jobs-token`), and revoking deletes it.
  */
 export const jobsCheckToken = sqliteTable('jobs_check_token', {

@@ -1,5 +1,4 @@
-// News's rules for the store (N1; BRIEF.md › News › Stories, New and seen, While you were away;
-// DESIGN.md › News): when a story leaves the page and when its archive goes, its dot, what's new since
+// News's rules for the store: when a story leaves the page and when its archive goes, its dot, what's new since
 // the user looked, which image copies an expired story keeps, how many stories a block shows, the
 // leading outlet, a story's main section, when a whole section's line shows, and the recap's stories
 // and when it's put away. Pure, so each is tested as a table.
@@ -11,9 +10,9 @@ import type {ArticleSubject} from './newsSorting.ts';
 const HOUR = 60 * 60_000;
 const DAY = 24 * HOUR;
 
-/** A story leaves the page 48 hours after its last new fact, so one that keeps developing stays up (D86). */
+/** A story leaves the page 48 hours after its last new fact, so one that keeps developing stays up. */
 export const STORY_TTL_MS = 48 * HOUR;
-/** The archive keeps an expired story's summary, sources and thumbnail this long (search, D91). */
+/** The archive keeps an expired story's summary, sources and thumbnail this long (search). */
 export const ARCHIVE_MS = 90 * DAY;
 
 export const expiresAt = (lastNewFactAt: string) => new Date(Date.parse(lastNewFactAt) + STORY_TTL_MS).toISOString();
@@ -27,7 +26,7 @@ export function storyStage(lastNewFactAt: string, now: string): 'page' | 'archiv
 }
 
 /**
- * The dot (D87), per story, never per article: new until seen; updated when a fact arrived after
+ * The dot, per story, never per article: new until seen; updated when a fact arrived after
  * the user last saw it; otherwise seen.
  */
 export function storyState(seenAt: string | null, lastNewFactAt: string): StoryState {
@@ -46,7 +45,7 @@ export type ImageVariant = 'large' | 'thumb';
 
 /**
  * The copies' sizes, at twice their drawn size: the large one for a block's lead, the pane and the
- * article (16:9), and the row thumbnail. Each is cropped to fill (N2).
+ * article (16:9), and the row thumbnail. Each is cropped to fill.
  */
 export const IMAGE_SIZES: Record<ImageVariant, {width: number; height: number}> = {
   large: {width: 640, height: 360},
@@ -55,7 +54,7 @@ export const IMAGE_SIZES: Record<ImageVariant, {width: number; height: number}> 
 
 /**
  * The copies an expired story keeps of its own image: in the archive, only the thumbnail, for its rows
- * in search and the recap, which has no leads (#298). Every other article's copy goes with the page,
+ * in search and the recap, which has no leads. Every other article's copy goes with the page,
  * and all of them when the archive does.
  */
 export function keepsImage(stage: 'page' | 'archive' | 'purge', image: {articleId: number; variant: ImageVariant}, storyImageArticleId: number | null): boolean {
@@ -66,7 +65,7 @@ export function keepsImage(stage: 'page' | 'archive' | 'purge', image: {articleI
 
 /** A block shows at least this many stories, when it has them, … */
 export const BLOCK_MIN = 3;
-/** … and at most this many (DESIGN.md › The list: "top 3–7 stories, biggest first"; D451). */
+/** … and at most this many ("top 3–7 stories, biggest first"). */
 export const BLOCK_MAX = 7;
 /** Past the first three, a block goes on only while a story scores at least this (scores run 0–100). */
 export const BLOCK_BAR = 70;
@@ -74,7 +73,7 @@ export const BLOCK_BAR = 70;
 /**
  * How many of a section's stories, biggest first, All's block shows: the top three, then up to four
  * more that clear the bar, so a big day shows more and a quiet one stays short. The rest are only in
- * the section's own list, which All doesn't link to (D451).
+ * the section's own list, which All doesn't link to.
  */
 export function blockSize(scores: readonly number[]): number {
   let size = Math.min(scores.length, BLOCK_MIN);
@@ -91,7 +90,7 @@ export interface OutletArticle {
 
 /**
  * The articles a story lists, newest first, one per outlet (an outlet's newest): a metered paper
- * counts toward ranking but is never shown (D89).
+ * counts toward ranking but is never shown.
  */
 export function listedArticles<A extends OutletArticle>(articles: readonly A[]): A[] {
   const byOutlet = new Map<string, A>();
@@ -123,15 +122,15 @@ export interface StoryReading {
   publishedAt: string;
   // From an official hazard source (NWS, USGS, Cal Fire, AirNow).
   hazard: boolean;
-  // The model's subject for it (N3); null when it was never read, as with the seed's stand-ins.
+  // The model's subject for it; null when it was never read, as with the seed's stand-ins.
   subject: ArticleSubject | null;
 }
 
 /**
- * A story's main section (D102), the one block All shows it in: Local for a hazard source's story,
+ * A story's main section, the one block All shows it in: Local for a hazard source's story,
  * else the section its subject names, read from its lead article (or, when that wasn't read, its
  * earliest article that was); either only when the story is in it. Otherwise its first section by
- * position. Derived from what's stored, so stories sorted before D102 need no re-sort.
+ * position. Derived from what's stored, so stories already sorted need no re-sort.
  */
 export function mainSection(sections: readonly NewsSection[], articles: readonly StoryReading[], leadArticleId: number | null): NewsSection | null {
   if (!sections.length) return null;
@@ -147,7 +146,7 @@ export function mainSection(sections: readonly NewsSection[], articles: readonly
 export const sectionOrder = (sections: readonly NewsSection[]) => NEWS_SECTIONS.filter(section => sections.includes(section));
 
 /**
- * The page's line for a section (DESIGN.md › States): only when every source in it that has been
+ * The page's line for a section: only when every source in it that has been
  * checked is stale or failing ("Local, as of 9:14 PM", as of the newest success among them). One
  * failing feed shows only in Settings › News; sources never checked yet say nothing.
  */
@@ -160,11 +159,11 @@ export function sectionHealth(healths: readonly (Health | null)[]): {state: 'sta
   return {state: checked.some(health => health.state === 'stale') ? 'stale' : 'failing', asOf};
 }
 
-/** A feed shows as failing on News's pane only once it has failed every attempt this long (D466). */
+/** A feed shows as failing on News's pane only once it has failed every attempt this long. */
 export const FEED_FAILING_MS = 6 * HOUR;
 
 /**
- * How many feeds News's pane says are failing (SV-219, D466): those whose failure began at least six
+ * How many feeds News's pane says are failing: those whose failure began at least six
  * hours ago and hasn't been broken by a success since (a success clears `failingSince`). Intermittent
  * failures, and a source only stale, never count.
  */
@@ -173,9 +172,9 @@ export function feedsFailing(sources: readonly {failingSince: string | null}[], 
   return sources.filter(source => source.failingSince !== null && Date.parse(source.failingSince) <= before).length;
 }
 
-// ---- While you were away (#298, D418, D419, D422, D429) ----
+// ---- While you were away ----
 
-/** The recap holds up to this many stories per section (8 at most, D429). */
+/** The recap holds up to this many stories per section (8 at most). */
 export const RECAP_PER_SECTION = 2;
 /** Once it has been on screen, the recap is put away after the user has been away from News this long. */
 export const RECAP_AWAY_MS = HOUR;
@@ -205,7 +204,7 @@ export function recapAt(state: RecapState, now: string): RecapState {
 
 /**
  * The recap's stories from those that can be in it, biggest first: up to two per section (the one
- * its row names), grouped in the blocks' order. The rest aren't shown or counted anywhere (D422, D429).
+ * its row names), grouped in the blocks' order. The rest aren't shown or counted anywhere.
  */
 export function recapStories<S extends {section: NewsSection}>(stories: readonly S[], perSection = RECAP_PER_SECTION): S[] {
   return NEWS_SECTIONS.flatMap(section => stories.filter(story => story.section === section).slice(0, perSection));

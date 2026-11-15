@@ -1,4 +1,4 @@
-// Triage as it runs (B3): durable jobs on the engine, Unsorted while it's down and re-sorted once it
+// Triage as it runs: durable jobs on the engine, Unsorted while it's down and re-sorted once it
 // recovers, the health line, the ledger, backfilled history, once per email, and the learning loop
 // and its API (pattern prompts, Yes into a learned rule, No into quiet, rules, AI), and
 // new Attention and FYI mail sent by ntfy once sorted.
@@ -148,7 +148,7 @@ describe('once per email, history, the ledger', () => {
     expect(fake.requests).toHaveLength(1);
   });
 
-  test('a code only in the HTML part is found, for new mail and history alike (SV-68)', async () => {
+  test('a code only in the HTML part is found, for new mail and history alike', async () => {
     const {fake, world, deliver} = await setup();
     setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
     fake.answer(() => decision({kind: 'security', type: 'verification_code', organisation: 'Contoso'}));
@@ -189,7 +189,7 @@ describe('once per email, history, the ledger', () => {
   });
 });
 
-describe('a written rule\'s actions (SV-236)', () => {
+describe('a written rule\'s actions', () => {
   const UPS = {fromName: 'UPS', fromAddress: 'auto@ups.example', subject: 'Your package was delivered', bodyText: 'Left at front door.'};
   const ruleCommands = (world: Awaited<ReturnType<typeof setup>>['world'], id: number) =>
     world.store.db.select().from(t.commands).where(and(eq(t.commands.target, 'message'), eq(t.commands.targetId, id))).all();
@@ -197,7 +197,7 @@ describe('a written rule\'s actions (SV-236)', () => {
   async function withRule(actions: {mark_read: boolean; trash: RuleTrash}) {
     const env = await setup();
     const rule = createRule(env.world.store, {match: {from_domains: ['ups.example']}, lane: 'noise', kind: null, enabled: true, ...actions});
-    // Mail arriving after the rule was saved (D493).
+    // Mail arriving after the rule was saved.
     env.world.advance(60_000);
     return {...env, rule};
   }
@@ -206,7 +206,7 @@ describe('a written rule\'s actions (SV-236)', () => {
     [{mark_read: true, trash: 'now'}, {unread: false, trashed: true}, {kind: 'trash', payload: {mark_read: true}}],
     [{mark_read: false, trash: 'now'}, {unread: true, trashed: true}, {kind: 'trash', payload: {mark_read: false}}],
     [{mark_read: true, trash: 'never'}, {unread: false, trashed: false}, {kind: 'mark_read', payload: {unread: false}}],
-    // A delay only stores when it's due (SV-237); the minute pass sends the trash.
+    // A delay only stores when it's due; the minute pass sends the trash.
     [{mark_read: false, trash: '1d'}, {unread: true, trashed: false}, null],
     [{mark_read: true, trash: '1h'}, {unread: false, trashed: false}, {kind: 'mark_read', payload: {unread: false}}],
   ] as const)('new mail a rule with %j sorts ends %j, by the command %j', async (actions, state, command) => {
@@ -273,7 +273,7 @@ describe('a written rule\'s actions (SV-236)', () => {
   });
 });
 
-describe('a rule\'s delayed trash (SV-237)', () => {
+describe('a rule\'s delayed trash', () => {
   const UPS = {fromName: 'UPS', fromAddress: 'auto@ups.example', subject: 'Your package was delivered', bodyText: 'Left at front door.'};
   type World = Awaited<ReturnType<typeof setup>>['world'];
   const trashes = (world: World, id: number) =>
@@ -393,7 +393,7 @@ describe('a rule\'s delayed trash (SV-237)', () => {
   });
 });
 
-describe('turning off or deleting a rule with trashes waiting (SV-238)', () => {
+describe('turning off or deleting a rule with trashes waiting', () => {
   const UPS = {fromName: 'UPS', fromAddress: 'auto@ups.example', subject: 'Your package was delivered', bodyText: 'Left at front door.'};
 
   /** A rule trashing ups.example mail an hour after it arrives, three emails from it sorted, one of them pinned. */
@@ -464,7 +464,7 @@ describe('turning off or deleting a rule with trashes waiting (SV-238)', () => {
 // A delayed trash's payload without the touched ids: what sent it.
 const cause = ({touched: _touched, ...payload}: Record<string, unknown>) => payload;
 
-describe('a verification code\'s trash at its expiry (SV-252)', () => {
+describe('a verification code\'s trash at its expiry', () => {
   type World = Awaited<ReturnType<typeof setup>>['world'];
   const CODE = {fromName: 'Contoso', fromAddress: 'no-reply@contoso.example', subject: 'Your sign-in code is 482913', bodyText: 'Enter 482913 to sign in.'};
   const trashes = (world: World, id: number) =>
@@ -574,7 +574,7 @@ describe('a verification code\'s trash at its expiry (SV-252)', () => {
   });
 });
 
-describe('a code email a written rule also trashes later (SV-252)', () => {
+describe('a code email a written rule also trashes later', () => {
   const CODE = {fromName: 'Contoso', fromAddress: 'no-reply@contoso.example', subject: 'Your sign-in code is 482913', bodyText: 'Enter 482913 to sign in.'};
 
   async function both(trash: RuleTrash, expiryMinutes = 15) {
@@ -751,7 +751,7 @@ function triageWorldOnly() {
 }
 
 describe('the API', () => {
-  test('prompts, answers, rules, triage health and AI as F2 and F7 read them', async () => {
+  test('prompts, answers, rules, triage health and AI as the web app reads them', async () => {
     const {world} = triageWorldOnly();
     const api = await signedIn(world, {triage: world.worker});
     expect((await api.send('GET', '/api/mail/triage')).body).toEqual({state: 'healthy', as_of: null, reason: null, unsorted: 0, history: {state: 'not_started', done: 0, total: 0}});
@@ -771,7 +771,7 @@ describe('the API', () => {
     const second = (await api.send('POST', '/api/mail/rules', {body: {match: {subject_includes: ['registrar']}, lane: 'attention'}})).body;
     expect((await api.send('PUT', '/api/mail/rules/order', {body: {rule_ids: [second.id, created.body.id]}})).body.map((rule: {id: number}) => rule.id).slice(0, 2)).toEqual([second.id, created.body.id]);
     expect((await api.send('PATCH', `/api/mail/rules/${created.body.id}`, {body: {enabled: false}})).body.enabled).toBe(false);
-    // Only turning a rule off answers for its waiting trashes (D495).
+    // Only turning a rule off answers for its waiting trashes.
     expect((await api.send('PATCH', `/api/mail/rules/${created.body.id}`, {body: {enabled: false, waiting: 'cancel'}})).body.trashes_waiting).toBe(0);
     expect((await api.send('PATCH', `/api/mail/rules/${created.body.id}`, {body: {lane: 'fyi', waiting: 'cancel'}})).status).toBe(400);
     expect((await api.send('DELETE', `/api/mail/rules/${second.id}?waiting=later`)).status).toBe(400);
@@ -794,7 +794,7 @@ describe('the API', () => {
     // Only Anthropic's models are offered.
     expect((await api.send('GET', '/api/ai')).body.models.every((model: {provider: string}) => model.provider === 'anthropic')).toBe(true);
     expect((await api.send('PATCH', '/api/settings', {body: {ai: {triage_model: 'claude-haiku-5-5'}}})).status).toBe(200);
-    // What Default is for each model, whatever is chosen, so the picker can name it (UX #14).
+    // What Default is for each model, whatever is chosen, so the picker can name it.
     expect((await api.send('GET', '/api/ai')).body.defaults).toEqual({
       triage_model: 'claude-sonnet-5-5', triage_strong_model: 'claude-opus-5-5', history_model: 'claude-haiku-5-5', alfred_model: 'claude-opus-5-5',
     });

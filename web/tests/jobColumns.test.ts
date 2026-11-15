@@ -1,4 +1,4 @@
-// The Jobs table's column widths (DESIGN.md › The table, #353; SV-246, D508) as tables: a width
+// The Jobs table's column widths as tables: a width
 // kept in bounds, the widths a browser kept, a drag or key stopping at Role's floor, and a fit.
 import {describe, expect, test} from 'vitest';
 import {columnWidth, fitWidth, resizeTo, ROLE_MIN, START_WIDTHS, storedWidths} from '../src/logic/jobColumns.ts';

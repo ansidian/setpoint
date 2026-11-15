@@ -1,5 +1,4 @@
-// Search, Alfred's Answer card and the proposal card's rules (DESIGN.md › Search, Alfred's Answer
-// card, Proposal; SV-23's calendar search): what the field asks, the results line, each reason's parts, the highlighted runs,
+// Search, Alfred's Answer card, the proposal card's and the calendar search's rules: what the field asks, the results line, each reason's parts, the highlighted runs,
 // what the reader highlights, and how a proposal's time reads.
 import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
@@ -63,7 +62,7 @@ export const fieldSegments = (result: Pick<SearchResultOut, 'subject' | 'excerpt
   segments(result[field], result.highlights.filter(run => run.field === field));
 
 /**
- * The reasons a mail result shows (polish audit search-11): only what its lines don't already show. A
+ * The reasons a mail result shows: only what its lines don't already show. A
  * sender's or organisation's goes when the sender line is highlighted, a subject's when the subject is,
  * a body's when the excerpt is, and a date's always (it's the row's own day, in its age column). Type,
  * kind, account and a body match the excerpt doesn't hold stay. None left, the row has no why line.
@@ -92,7 +91,7 @@ export function reasonParts(label: string): {key: string; value: string} {
 
 /** The results line's parts: "2 results", then "newest first" when chips order them so (the calendar's have no order). */
 export function resultsLine(out: Pick<SearchOut, 'total'> & Partial<Pick<SearchOut, 'order' | 'partial'>>): string[] {
-  // A search that fell back to any word says so, rather than showing a near miss as a match (UX #10).
+  // A search that fell back to any word says so, rather than showing a near miss as a match.
   const count = out.partial && out.total
     ? ['No email has every word', `${out.total} ${out.total === 1 ? 'has' : 'have'} some of them`]
     : [`${out.total} ${out.total === 1 ? 'result' : 'results'}`];
@@ -164,7 +163,7 @@ export const toggledFold = (fold: MentionsFold): MentionsFold => ({...fold, open
 /** The fold's line: "12 more mention these words". */
 export const mentionsLine = (more: number, partial: boolean) => `${more} more ${more === 1 ? 'mentions' : 'mention'} ${partial ? 'some of ' : ''}these words`;
 
-/** The rows a suggestion's chips hid, as far as the user has asked for them (D392). */
+/** The rows a suggestion's chips hid, as far as the user has asked for them. */
 export interface LeftOut<R> {
   open: boolean;
   rows: readonly R[];
@@ -196,7 +195,7 @@ const SUGGEST_MIN_LETTERS = 3;
 export const suggestionKey = (text: string) => text.trim().replace(/\s+/g, ' ').toLowerCase();
 
 /**
- * Whether a pause on the field's text asks for a suggestion (D392): not with chips a suggestion left
+ * Whether a pause on the field's text asks for a suggestion: not with chips a suggestion left
  * in the field, which are the search's one reading, not for text too short to mean anything, and not
  * for text the user turned one down for. A "!word"'s Not chip is what they typed, and doesn't count.
  */
@@ -298,7 +297,7 @@ export function alfredStepLine(step: AskStep | null, scoped = false): string {
   return `Preparing the ${step.kind}…`;
 }
 
-/** A step Alfred has finished, in its trail (search-04): its tool's glyph and what it did, in the past tense. */
+/** A step Alfred has finished, in its trail: its tool's glyph and what it did, in the past tense. */
 export function alfredStepDone(step: AskStep): {icon: IconName; text: string} {
   if (step.tool === 'search_mail') return {icon: 'search', text: `Searched “${step.query}”`};
   if (step.tool === 'get_email') return {icon: 'mail', text: `Read ${step.from}’s email`};
@@ -322,7 +321,7 @@ export function shownSources<T>(sources: readonly T[], all: boolean): {shown: T[
 }
 
 /**
- * The names holding what's typed, any case, best first (SV-56): those starting with it, then those
+ * The names holding what's typed, any case, best first: those starting with it, then those
  * with a word starting with it, then the rest, each in list order; all of them for nothing typed.
  * The line reads "#ho" as the name it starts, so the menu's first row is the one it reads.
  */
@@ -350,7 +349,7 @@ export const namesProject = (text: string, projects: {name: string}[]) => projec
 
 /**
  * Project's menu for what's typed: the matching projects, then New project for a name none has
- * exactly, unless it's already picked as new (SV-25).
+ * exactly, unless it's already picked as new.
  */
 export const projectMenu = (text: string, projects: {name: string}[], isNew: boolean): {name: string; isNew: boolean}[] => [
   ...projectMatches(text, projects).map(project => ({name: project.name, isNew: false})),
@@ -358,7 +357,7 @@ export const projectMenu = (text: string, projects: {name: string}[], isNew: boo
 ];
 
 /**
- * A task proposal's project as Create sends it (SV-24, D50): none typed is Settings' default; a
+ * A task proposal's project as Create sends it: none typed is Settings' default; a
  * project's name in any case is that project; a new one is made only when the user picked New project,
  * and otherwise the card says so rather than guessing.
  */
@@ -376,9 +375,9 @@ const PROVIDER_NAMES: Record<SourceProvider, string> = {gmail: 'Gmail', icloud: 
 export const failedLine = (provider: SourceProvider | null, message: string | null) =>
   [provider ? PROVIDER_NAMES[provider] : null, message ?? 'It wasn’t created.'].filter(Boolean).join(', ');
 
-// ---------- SV-23: calendar search ----------
+// ---------- Calendar search ----------
 
-/** Before typing, the calendar's search says what it finds (DESIGN.md › Decided while building #24). */
+/** Before typing, the calendar's search says what it finds. */
 export const CALENDAR_SEARCH_HINT = 'Search events and tasks by title, place, people or calendar, or a date like ‘march’';
 
 /** The results under Upcoming, then Past, leaving out an empty heading. */

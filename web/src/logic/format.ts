@@ -120,7 +120,7 @@ export function timeLeft(end: string, now: number): string {
 
 /**
  * A code row's countdown: "Expires in 11 min" (whole minutes, rounded up), and in its last minute
- * "Expires in 42 sec" (polish audit inbox-11).
+ * "Expires in 42 sec".
  */
 export function expiresIn(at: string, now: number): string {
   const left = Date.parse(at) - now;
@@ -129,7 +129,7 @@ export function expiresIn(at: string, now: number): string {
 }
 
 /**
- * How long until a rule's waiting trash (DESIGN.md #347), beside auto_delete on its row: "14 min",
+ * How long until a rule's waiting trash, beside auto_delete on its row: "14 min",
  * "3 h", "2 d", each rounded up, never below a minute (the pass takes it within the minute it falls due).
  */
 export function trashLeft(at: string, now: number): string {

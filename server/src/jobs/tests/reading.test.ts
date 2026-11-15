@@ -1,5 +1,4 @@
-// Jobs reading mail (J2): the rules as tables, with prod's shapes invented over (decisions 50, 51, 55,
-// 56, 67, 68): loose company names, normalised titles and requisition IDs, a confident match, what
+// Jobs reading mail: the rules as tables, with prod's shapes invented over: loose company names, normalised titles and requisition IDs, a confident match, what
 // each email does (Indeed's pairs, a re-application after a rejection, a confirmation twice, the
 // same title under two IDs, a rejection with no confirmation, a Business email that isn't Career),
 // a status set by hand, blocked emails, and the model's answer read leniently.
@@ -11,7 +10,7 @@ import type {JobEmailEvent} from '../prompt.ts';
 import {appliedBefore, checkPosting, isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
 import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail, StatusEvent} from '../rules.ts';
 
-describe('companies match loosely (decision 51)', () => {
+describe('companies match loosely', () => {
   test.each<[string, string, boolean]>([
     ['Fabrikam Labs', 'Fabrikam', true],
     ['wide world', 'Wide World Importers', true],
@@ -33,7 +32,7 @@ test.each([['R-2026-118', 'r2026118'], ['r 2026 118', 'r2026118'], ['JR104', 'jr
   expect(requisitionKey(id)).toBe(key);
 });
 
-describe('which mail Jobs reads (decision 56)', () => {
+describe('which mail Jobs reads', () => {
   test.each<[string, JobReadMode | null, Kind | null, boolean]>([
     ['Jobs reads every email, Career', 'every', 'career', true],
     ['Business reads Career', 'career', 'career', true],
@@ -50,7 +49,7 @@ const app = (company: string, title: string | null, status: JobStatus = 'applied
   appliedAt: '2026-10-01T16:00:00.000Z', companyUnknown: false, ...more,
 });
 
-describe('a confident match (decision 51)', () => {
+describe('a confident match', () => {
   const fabrikam = app('Fabrikam', 'Software Engineer II');
   const humongousA = app('Humongous Insurance', 'Data Analyst', 'applied', {requisitionId: 'R-100'});
   const humongousB = app('Humongous Insurance', 'Data Analyst', 'applied', {requisitionId: 'R-200'});
@@ -78,7 +77,7 @@ describe('a confident match (decision 51)', () => {
   });
 });
 
-describe('statuses (decisions 55, 68)', () => {
+describe('statuses', () => {
   const at = (day: string) => `2026-10-${day}T16:00:00.000Z`;
   test.each<[string, string, Parameters<typeof statusAfter>[1], string, JobStatus | null]>([
     ['an interview moves it to In process', at('01'), 'interview', at('05'), 'in_process'],
@@ -92,7 +91,7 @@ describe('statuses (decisions 55, 68)', () => {
   });
 });
 
-describe('what corrections give an application to answer to (decision 58, J6)', () => {
+describe('what corrections give an application to answer to', () => {
   // Merged with Fabrikam's Data Analyst; given the Software Engineer II email by Assign to…; retitled by hand.
   const merged = app('Contoso', 'Software Engineer I', 'applied', {aliases: [
     {company: 'Fabrikam', titleKey: titleKey('Data Analyst'), requisitionId: null},
@@ -118,7 +117,7 @@ describe('what corrections give an application to answer to (decision 58, J6)', 
   });
 });
 
-describe('the status the emails make it (Let emails decide, D365)', () => {
+describe('the status the emails make it (Let emails decide)', () => {
   const at = (day: string) => `2026-10-${day}T16:00:00.000Z`;
   const event = (day: string, kind: StatusEvent['kind'], line: string | null = null): StatusEvent => ({at: at(day), kind, line, subject: `${kind} email`});
   test.each<[string, StatusEvent[], ReturnType<typeof statusFromEvents>]>([
@@ -133,7 +132,7 @@ describe('the status the emails make it (Let emails decide, D365)', () => {
   });
 });
 
-describe('blocked by Not an application (decision 67, D321)', () => {
+describe('blocked by Not an application', () => {
   const blocked: BlockedEmail[] = [{messageId: 40, company: 'Litware', titleKey: 'sales engineer', requisitionId: null}];
   test.each<[string, number, string, string | null, boolean]>([
     ['the blocked email itself', 40, 'Litware', null, true],
@@ -146,7 +145,7 @@ describe('blocked by Not an application (decision 67, D321)', () => {
   });
 });
 
-describe('what each email does (decision 50)', () => {
+describe('what each email does', () => {
   const fabrikam = app('Fabrikam', 'Software Engineer II', 'applied', {id: 1});
   const humongousA = app('Humongous Insurance', 'Data Analyst', 'applied', {id: 2, requisitionId: 'R-100'});
   const humongousB = app('Humongous Insurance', 'Data Analyst', 'in_process', {id: 3, requisitionId: 'R-200'});
@@ -278,7 +277,7 @@ describe('the model\'s answer, read leniently', () => {
 
 });
 
-describe('Applied before in mail (J7, D306): a match email\'s company, loosely and by its aliases', () => {
+describe('Applied before in mail: a match email\'s company, loosely and by its aliases', () => {
   const contoso = app('Contoso Pharmaceuticals', 'Associate Software Engineer', 'rejected', {appliedAt: '2026-09-16T18:00:00.000Z'});
   const contosoOld = app('Contoso Pharmaceuticals Inc.', 'Lab Tools Intern', 'withdrawn', {appliedAt: '2026-03-02T18:00:00.000Z'});
   const contosoLabs = app('Contoso', 'QA Engineer', 'applied', {appliedAt: '2026-08-10T18:00:00.000Z'});

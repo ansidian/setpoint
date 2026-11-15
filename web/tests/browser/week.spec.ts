@@ -1,4 +1,4 @@
-// The week view in the browser (DESIGN.md › Week view; board 16 drawn Sunday first): switching from
+// The week view in the browser (board 16 drawn Sunday first): switching from
 // Month and back with the view kept in the address, the week's layout at the design target, paging
 // and Today, a range dragged into the editor, a block moved and resized by drag with its Undo, a
 // recurring block's scope asked on the drop, and the floating detail on a block.
@@ -44,8 +44,8 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     await page.keyboard.press('w');
     await block(page, '2026-10-07', 'Dentist').waitFor();
     assert.match(page.url(), /\/calendar\?view=week$/);
-    // Board 16 is read on Week as it loads, not as it zooms in from Month (polish audit grids-09), which
-    // is by eye (D416).
+    // Board 16 is read on Week as it loads, not as it zooms in from Month, which
+    // is by eye.
     await page.goto(`${setpoint.base}/calendar?view=week`);
     await block(page, '2026-10-07', 'Dentist').waitFor();
     await pauseClock(page);
@@ -63,7 +63,7 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     await page.clock.resume();
     // Tasks sit in the all-day row; the mini-month marks the week.
     await page.locator('.wk-all .tk', {hasText: 'Pay rent'}).waitFor();
-    assert.deepEqual(await page.locator('.mini .wk').allTextContents(), ['4', '5', '6', '7', '8', '9', '10'], 'one band for the week (polish audit calpanes-05)');
+    assert.deepEqual(await page.locator('.mini .wk').allTextContents(), ['4', '5', '6', '7', '8', '9', '10'], 'one band for the week');
     assert.equal(await block(page, '2026-10-07', 'Dentist').getAttribute('aria-label'), 'Dentist, Wed, Oct 7, 2:30 – 3:30 PM, Personal');
 
     // Paging keeps the view and the address; Today comes back.
@@ -203,7 +203,7 @@ test('a recurring block dropped asks this, following or all; a click opens the f
     await page.keyboard.press('Escape');
     await until('the prompt closed', () => page.locator('.scope-card').count(), count => count === 0);
 
-    // Where the card lies beside its block is placement.test.ts's (D417).
+    // Where the card lies beside its block is placement.test.ts's.
     await block(page, '2026-10-07', 'Dentist').click();
     await page.getByRole('dialog', {name: 'Dentist'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);

@@ -2,7 +2,7 @@
 // sample's News, the board fixtures asked for, a setup token and, with --claim, the first claim as
 // POST /api/auth/claim leaves it: the owner and one signed-in session, at the seed's moment, with
 // tests' bcrypt cost. Built once per set of fixtures rather than by every check, whose claim was
-// 0.25 s of a core each time (SV-143), and in one process rather than four (SV-145).
+// 0.25 s of a core each time, and in one process rather than four.
 //
 //   SETPOINT_DATA_DIR=… node server/src/dev/template.ts [--claim <password>] [fixture…]
 //

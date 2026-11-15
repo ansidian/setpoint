@@ -4,9 +4,9 @@
 // its own after a dropped connection with the last id; a stream that's refused (the server down, or
 // the session gone) reconnects after a few seconds and asks whether it's still signed in.
 //
-// While the stream is down Setpoint is offline (DESIGN.md › Health and states): changes are refused
+// While the stream is down Setpoint is offline: changes are refused
 // at once rather than queued (client.ts), and if it's still down after a 2 s grace the pill says since
-// when and the page dims, still readable (the polish audit's states-05), so a laptop waking or a
+// when and the page dims, still readable, so a laptop waking or a
 // Wi-Fi handoff never cries wolf. Retry now reconnects at once.
 import {LIVE_EVENT_TYPES} from '@setpoint/shared';
 import type {LiveEvent} from '@setpoint/shared';
@@ -23,7 +23,7 @@ let lastId: string | null = null;
 let timer: number | undefined;
 let onRefused: () => void = () => {};
 
-/** How long the stream may be down before the page says so (states-05). */
+/** How long the stream may be down before the page says so. */
 export const OFFLINE_GRACE_MS = 2000;
 
 /** Down since this moment (the server's clock), or null while the stream is up; changes are refused meanwhile. */

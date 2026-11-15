@@ -1,4 +1,4 @@
-// SV-272: Todoist's order keys, as tables: a key between two others, the one subtask a reorder
+// Todoist's order keys, as tables: a key between two others, the one subtask a reorder
 // moved, and siblings sorted by their keys.
 import {describe, expect, test} from 'vitest';
 import {bySiblingOrder, orderKeyBetween, singleMove} from '../src/domain/orderKey.ts';
@@ -12,7 +12,7 @@ describe('a key between two keys', () => {
     ['a0V', 'a1', 'a0l'],
     ['Zz', 'a0', 'ZzV'],
     ['az', null, 'b00'],
-    // Keys read from Todoist (2026-11-13): it kept "a3" as sent, between these two.
+    // Keys read from Todoist: it kept "a3" as sent, between these two.
     ['a27Gt', 'a3JDF', 'a3'],
     // Out of order, the same, or not keys at all: nothing to offer.
     ['a1', 'a0', null],

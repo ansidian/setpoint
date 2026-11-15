@@ -1,4 +1,4 @@
-// Alfred (BRIEF.md › Alfred; DESIGN.md › Alfred's Answer card): a question, answered by a model that
+// Alfred: a question, answered by a model that
 // uses Setpoint's own queries as tools, with the emails the answer rests on as its sources, and
 // follow-up turns in a short thread held here by id. "Ask about this email" scopes a thread to one
 // email. When the mail doesn't say, the answer is null and `searched` says what Alfred searched
@@ -7,7 +7,7 @@
 // Every model call goes in the AI usage ledger (purpose `alfred`). A failed call saves nothing: the
 // thread stays as it was before the question, so asking again works.
 //
-// Harvested from v1's `alfred-run` and `alfred-conversations` (SV-5): the tool loop with a step limit,
+// The tool loop has a step limit,
 // one reminder when a turn ends without the expected tool call, the provider and model bound when the
 // thread starts, the transcript restored on failure, and threads that end after four idle hours.
 import type {AnswerOut, AnswerSourceOut, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
@@ -34,13 +34,13 @@ export interface AlfredOptions {
   // The provider's base URL; tests point it at a fake on 127.0.0.1.
   endpoints?: AiEndpoints;
   timeoutMs?: number;
-  // Reads an email's invite for a proposal (SV-263); without it a proposal is the text's.
+  // Reads an email's invite for a proposal; without it a proposal is the text's.
   engine?: SyncEngine | null;
 }
 
-/** Model turns per question before Alfred gives up (v1 allowed 12 tool rounds). */
+/** Model turns per question before Alfred gives up */
 const MAX_STEPS = 10;
-/** A thread ends after this long idle (v1's four hours); a follow-up then starts over. */
+/** A thread ends after this long idle (four hours); a follow-up then starts over. */
 const THREAD_IDLE_MS = 4 * 60 * 60_000;
 /** Threads are kept a week, then deleted. */
 const THREAD_KEPT_MS = 7 * 24 * 60 * 60_000;
@@ -209,7 +209,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
           } else {
             const step = input.ask_id ? stepOf(store, call.name, call.input) : null;
             if (step) steps.set(input.ask_id!, step);
-            // SV-263: a proposal takes what the email's invite says, read here since the tools don't wait.
+            // A proposal takes what the email's invite says, read here since the tools don't wait.
             const proposed = call.name === 'propose_item' ? Number(call.input?.message_id) : null;
             if (proposed && context.seen.has(proposed) && !context.invites!.has(proposed)) context.invites!.set(proposed, await inviteOf(store, options.engine ?? null, proposed));
             const outcome = runTool(context, call.name, call.input);
@@ -219,7 +219,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
         if (final) pending = results;
         else items.push(...client.toolResults(results));
       } else if (!nudged) {
-        // v1's one reminder: a turn that ends without the answer tool is asked once more.
+        // One reminder: a turn that ends without the answer tool is asked once more.
         nudged = true;
         items.push(...client.userTurn(ANSWER_NUDGE));
       } else {

@@ -1,4 +1,4 @@
-// The one-time extraction pass over backfilled history (SV-4 D20), with the history model faked: it
+// The one-time extraction pass over backfilled history, with the history model faked: it
 // starts once the backfills are done and a key is set, fills what the history pass guessed without
 // touching the lane, resumes after a restart, and never charges for an email twice.
 import {and, eq} from 'drizzle-orm';
@@ -61,7 +61,7 @@ test('it starts once the backfills are done and a key is set, and fills fields w
   expect(world.message(rejection)).toMatchObject({lane: 'fyi', kind: 'career', organisation: 'Northwind', via: 'Greenhouse', type: 'rejection', summary: 'Data Engineer Intern'});
   expect(world.message(rejection).extractedAt).not.toBeNull();
   expect(world.message(locked)).toMatchObject({lane: 'fyi', protected: true, kind: 'security', organisation: 'Google', type: 'alert', securityFacts: {what: 'Password changed', device: 'Pixel 9'}});
-  // Only the history model (Haiku 5.5 by default, D26, not triage's Sonnet), once per email, every call in the ledger.
+  // Only the history model (Haiku 5.5 by default, not triage's Sonnet), once per email, every call in the ledger.
   expect(fake.requests.map(request => request.model)).toEqual(['claude-haiku-5-5', 'claude-haiku-5-5']);
   expect(ledger().map(entry => entry.messageId).sort()).toEqual([rejection, locked].sort());
 

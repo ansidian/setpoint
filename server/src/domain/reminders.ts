@@ -1,17 +1,16 @@
-// When reminders go off, and what they say (BRIEF.md › ntfy; Settings › Notifications: events some
-// minutes before, tasks at a time on the due day, each None by default, D49). Rewritten from v1's reminder rows (see SV-6): v2
-// derives each reminder from the item as it is now, so a moved, cancelled or completed item needs
-// no bookkeeping, and the dedupe key (the occurrence's start, the minutes) sends each once.
-// Carried over from v1:
-// - a reminder may go late, within a grace, but never long after (v1 6 hours; here 1 hour, as a
-//   "10 min before" is no use later);
-// - a reminder an item moved into the past doesn't fire (v1 b9a4306a): only moments after the
-//   scheduler's last pass count;
-// - all-day events count from local midnight (v1 497ea1af); a dated task reminds at Settings' time
+// When reminders go off, and what they say (Settings › Notifications: events some minutes before,
+// tasks at a time on the due day, each None by default). Each reminder is derived from the item as
+// it is now, so a moved, cancelled or completed item needs no bookkeeping, and the dedupe key (the
+// occurrence's start, the minutes) sends each once.
+// - a reminder may go late, within a grace, but never long after (1 hour, as a "10 min before" is
+//   no use later);
+// - a reminder an item moved into the past doesn't fire: only moments after the scheduler's last
+//   pass count;
+// - all-day events count from local midnight; a dated task reminds at Settings' time
 //   on its day, a timed one at its time (and never at a UTC instant read as wall-clock time); with
 //   Settings' task time at None, a task reminds only at the reminders it has itself.
-// SV-109: an offset may be negative, after the item's moment (D287), and a dated task's own
-// reminders count from Settings' time on its day, or 9:00 AM at None (D288).
+// An offset may be negative, after the item's moment, and a dated task's own
+// reminders count from Settings' time on its day, or 9:00 AM at None.
 import {zonedInstant} from './time.ts';
 
 const MINUTE = 60_000;
@@ -40,17 +39,17 @@ export interface Reminder {
   minutes: number;
 }
 
-/** A dated task without a time counts from this when Settings' task time is None (D288). */
+/** A dated task without a time counts from this when Settings' task time is None. */
 export const UNTIMED_TASK_ANCHOR = '09:00';
 
-/** Every reminder an item (or occurrence) has, at its moment; a negative offset is after it (D287). */
+/** Every reminder an item (or occurrence) has, at its moment; a negative offset is after it. */
 export function remindersOf(item: ReminderItem, settings: {taskTime: string | null; timeZone: string}): Reminder[] {
   const at = (anchor: string, minutes: number) => new Date(Date.parse(anchor) - minutes * MINUTE).toISOString();
   const fromAnchor = (anchor: string, offsets: number[]) => offsets.map(minutes => ({at: at(anchor, minutes), key: `reminder:${item.id}@${anchor}:${minutes}`, minutes}));
   if (item.kind === 'task') {
     if (item.done || !item.due_date) return [];
     if (item.due_at) return fromAnchor(item.due_at, item.reminders.length || settings.taskTime === null ? item.reminders : [0]);
-    // D288: its own reminders count from Settings' time on its day (9:00 AM at None), in place of that one.
+    // Its own reminders count from Settings' time on its day (9:00 AM at None), in place of that one.
     if (item.reminders.length) return fromAnchor(zonedInstant(item.due_date, settings.taskTime ?? UNTIMED_TASK_ANCHOR, settings.timeZone), item.reminders);
     if (settings.taskTime === null) return [];
     return [{at: zonedInstant(item.due_date, settings.taskTime, settings.timeZone), key: `reminder:${item.id}@${item.due_date}T${settings.taskTime}`, minutes: 0}];

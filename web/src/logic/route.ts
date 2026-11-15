@@ -2,28 +2,28 @@
 // same place. The paths agree with `deepLinkPath` in @setpoint/shared (the server builds ntfy's
 // click links from it): /inbox/12 opens an email, /calendar/item/3 an item, /calendar/2026-10-07 a
 // day, /settings/accounts a Settings page. An Inbox view other than All rides in the query
-// (?view=unread, SV-221); the account filter's old ?account=2 is the plain Inbox (D476).
+// (?view=unread); the account filter's old ?account=2 is the plain Inbox.
 // /calendar/new?kind=event opens the editor on a new item; &message=12 pre-fills it from that email's
 // proposal (the proposal card's More options). /calendar/item/3/edit opens the editor on item 3 (the
-// Today block's card's Edit, DESIGN.md › Decided while building #78). The week view rides in the
-// query on every calendar address (?view=week); Month is the address without it (DESIGN.md › Week view).
+// Today block's card's Edit). The week view rides in the
+// query on every calendar address (?view=week); Month is the address without it.
 // /calendar/new?kind=event&upcoming=4 opens it on News's Upcoming keynote 4 (its Add to calendar).
-// News (after 2.0): /news is All, /news/local a section; /story/18 after either opens a story in the
+// News: /news is All, /news/local a section; /story/18 after either opens a story in the
 // pane, and /article/2 after that one of its sources. Catch up's old address, /news/missed, is All,
-// where the recap is (#298).
-// Jobs (after News): /jobs is the page, /jobs/12 with application 12 open in its detail; from mail
-// (J7), /jobs/12/posting arrives with its full posting unfolded, and /jobs?q=contoso searched; from
-// Settings › Jobs's Show (J8), /jobs/from-history arrives with From history unfolded.
+// where the recap is.
+// Jobs (after News): /jobs is the page, /jobs/12 with application 12 open in its detail; from mail,
+// /jobs/12/posting arrives with its full posting unfolded, and /jobs?q=contoso searched; from
+// Settings › Jobs's Show, /jobs/from-history arrives with From history unfolded.
 import {ITEM_KINDS, NEWS_SECTIONS} from '@setpoint/shared';
 import type {ItemKind, NewsSection} from '@setpoint/shared';
 
-/** Settings' nav in its three groups, in the sidebar's order (D512); ↑ ↓ walk them as one list. */
+/** Settings' nav in its three groups, in the sidebar's order; ↑ ↓ walk them as one list. */
 export const SETTINGS_GROUPS = [['accounts'], ['mail', 'calendar', 'news', 'jobs'], ['notifications', 'ai', 'appearance', 'security']] as const;
 export const SETTINGS_PAGES = SETTINGS_GROUPS.flat();
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 export type Compose = {kind: ItemKind; message: number | null; upcoming?: number};
-/** The Inbox's views (SV-221, D471): All, then Unread, Attention, FYI and Noise. */
+/** The Inbox's views: All, then Unread, Attention, FYI and Noise. */
 export const INBOX_VIEWS = ['all', 'unread', 'attention', 'fyi', 'noise'] as const;
 export type InboxView = (typeof INBOX_VIEWS)[number];
 
@@ -75,7 +75,7 @@ export function parseRoute(pathname: string, search = ''): Route {
   }
   const asked = query.get('view');
   const view = asked !== 'all' && (INBOX_VIEWS as readonly string[]).includes(asked ?? '') ? {view: asked as InboxView} : {};
-  // All's old address (/inbox/all/12) from before the Inbox was one list (SV-70) lands there too.
+  // All's old address (/inbox/all/12) from before the Inbox was one list lands there too.
   if (first === 'inbox' && second === 'all') return {page: 'inbox', open: positive(third), ...view};
   return {page: 'inbox', open: first === 'inbox' ? positive(second) : null, ...view};
 }

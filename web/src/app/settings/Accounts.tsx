@@ -1,7 +1,7 @@
 // Settings › Accounts (board 17): Connect Gmail and Connect iCloud; each mail account with its drag
-// handle (order; ↑ ↓ on the handle too), colour from darma's 11 swatches, icon, label, address, how
+// handle (order; ↑ ↓ on the handle too), colour from the 11 swatches, icon, label, address, how
 // it syncs and its state, Reconnect when it needs sign-in; then the sources (Google Calendar,
-// Todoist, Weather) the same way. Todoist's row is its only connection (D514): Connect Todoist while
+// Todoist, Weather) the same way. Todoist's row is its only connection: Connect Todoist while
 // it isn't connected, Reconnect in its menu once it is.
 import type {AccountOut, CalendarOut, Settings, SourceOut, TodoistProjectOut} from '@setpoint/shared';
 import {SWATCH_COLOURS} from '@setpoint/shared';
@@ -73,7 +73,7 @@ export function AccountsPage() {
     )}>
       {icloud && <IcloudForm address={icloud.address} onDone={() => setIcloud(null)} />}
       <Section label="Mail">
-        {/* Each account's state is said only once it's known (states-01). */}
+        {/* Each account's state is said only once it's known. */}
         {!accounts || !sources ? <SkeletonRows count={5} tile /> : <div {...order.groupProps}>
           {list.map((account, index) => (
             <AccountRow key={account.id} account={account} source={mailSource(account)} now={now} drag={order.rowProps(account, index)}
@@ -191,9 +191,9 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
   );
 }
 
-/** A row in trouble, failing or needing sign-in, takes `caution` at 7%, as Settings › News's failing rows do (states-04). */
+/** A row in trouble, failing or needing sign-in, takes `caution` at 7%, as Settings › News's failing rows do. */
 const warnRow = (state: SourceState) => state.kind === 'failing' || state.kind === 'needs_reconnect';
-/** Its state's words: `caution` in trouble, `ink2` once checks stopped, under an `ink3` glyph (settings-01). */
+/** Its state's words: `caution` in trouble, `ink2` once checks stopped, under an `ink3` glyph. */
 const stateClass = (state: SourceState, checkFailed: boolean) => (state.tone === 'caution' || checkFailed ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state');
 
 /** A source's row; one with `onReconnect` (Todoist) offers it in its menu, and by its state when it needs sign-in. */
@@ -229,7 +229,7 @@ function SourceRow({source, name, sub, now, onReconnect, busy}: {source: SourceO
 }
 
 /**
- * Todoist's row while it isn't connected (D514): what it brings, "Not connected" where the state
+ * Todoist's row while it isn't connected: what it brings, "Not connected" where the state
  * goes, and Connect Todoist, by the state as an account's Reconnect is and in its menu.
  */
 function TodoistConnectRow({onConnect, busy}: {onConnect: () => void; busy: boolean}) {

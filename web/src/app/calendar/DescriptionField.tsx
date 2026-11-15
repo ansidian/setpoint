@@ -1,9 +1,9 @@
-// The editor's Description field (DESIGN.md › Editor; SV-264, D546, D547): the browser's editable
+// The editor's Description field: the browser's editable
 // field under a small bar of formats, with no library. What's in it is only ever read through
 // logic/description.ts's reader, so whatever is typed, pasted or dropped comes out as the short list
 // of formats and nothing else; a paste goes in already read that way. An event has underline, a
 // task doesn't (Markdown has none). Its links open on ⌘-click (Ctrl on Windows), as a typed field
-// can't open them on a plain one; a Gmail link to an email Setpoint has opens in the reader (SV-270).
+// can't open them on a plain one; a Gmail link to an email Setpoint has opens in the reader.
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {ClipboardEvent, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {fitting, isEmpty, readHtml, safeHref, writeHtml} from '../../logic/description.ts';
@@ -116,9 +116,9 @@ export interface DescriptionFieldProps {
   // What it opens with; after that the field holds its own text and says what it reads as.
   blocks: Block[];
   kind: 'event' | 'task';
-  // Under the field once it's changed, when its source held formatting the list can't (D547).
+  // Under the field once it's changed, when its source held formatting the list can't.
   note: string | null;
-  // A proposal's "from the email" mark, at the field's top end until it's changed (SV-270).
+  // A proposal's "from the email" mark, at the field's top end until it's changed.
   mark?: ReactNode;
   onChange: (blocks: Block[]) => void;
 }
@@ -134,7 +134,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
   const formats = FORMATS.filter(format => kind === 'event' || format.command !== 'underline');
   // A press outside that takes the focus (the proposal card's Create, just under the field) keeps
   // the bar until it ends: folded at once, the bar would move what was pressed from under the
-  // pointer before the press lands on it (SV-270).
+  // pointer before the press lands on it.
   const pressing = useRef(false);
   useEffect(() => {
     const down = () => {
@@ -252,7 +252,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
   };
 
   // Tab and Shift-Tab in a list nest its item under the one before or bring it out a level, as
-  // Google Calendar's editor does (SV-268). A first item has nothing to nest under and a top-level
+  // Google Calendar's editor does. A first item has nothing to nest under and a top-level
   // one nothing to come out of, so there they do nothing; outside a list Tab moves on as ever.
   const tab = (event: KeyboardEvent) => {
     const selection = document.getSelection();

@@ -34,7 +34,7 @@ export function changeColumns(changes: ItemChanges): Partial<ItemRow> {
     ['recurrence', 'recurrence'], ['place', 'place'], ['address', 'address'], ['attendees', 'attendees'], ['reminders', 'reminders'], ['leave_reminder', 'leaveReminder'], ['project', 'project'], ['colour', 'colour'], ['labels', 'labels'], ['description', 'description'],
   ];
   for (const [from, to] of map) if (changes[from] !== undefined) (columns as Record<string, unknown>)[to] = changes[from];
-  // A task's repeat is its due words until Todoist answers with its own (F6b).
+  // A task's repeat is its due words until Todoist answers with its own.
   if (changes.repeat !== undefined) Object.assign(columns, {dueString: changes.repeat, dueRecurring: changes.repeat !== null});
   return columns;
 }
@@ -61,7 +61,7 @@ function snapshot(store: Store, ids: number[]): ItemSnapshot[] {
 
 /** Move back: deletes what the change created and puts the changed rows back as they were. */
 /**
- * SV-249 (D510): the done occurrences that reopen: each repeating task's latest, while the task still
+ * The done occurrences that reopen: each repeating task's latest, while the task still
  * repeats. Todoist puts the task back on that day; an older one is a record of work done, as Todoist
  * treats it.
  */

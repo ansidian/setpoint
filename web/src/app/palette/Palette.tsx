@@ -1,4 +1,4 @@
-// ⌘K (DESIGN.md › ⌘K; board 20): commands, not search. ⌘K opens it over everything with the scrim
+// ⌘K (board 20): commands, not search. ⌘K opens it over everything with the scrim
 // behind; on an open email it lists This email (the reader's, commands.ts), then Go to and
 // Appearance with the current theme ticked (and, from 1100 px, Open or Fold the sidebar). Typing finds every command, the ones that only have a
 // key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill; Enter runs; Esc closes it, and focus
@@ -28,7 +28,7 @@ import './palette.css';
 
 const THEME_ICONS = {system: 'contrast', light: 'light_mode', night: 'dark_mode'} as const;
 
-// Settings' sections in the nav's order (D512), found by typing what they hold ("rules", "ntfy", "keys"; UX #20), each with its nav's glyph (#123).
+// Settings' sections in the nav's order, found by typing what they hold ("rules", "ntfy", "keys"), each with its nav's glyph.
 const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
   {page: 'accounts', keywords: 'gmail google icloud todoist reconnect connect'},
   {page: 'mail', keywords: 'rules domains trusted codes expiry triage'},
@@ -59,7 +59,7 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
       id: `theme-${choice}`, section: 'appearance', label: THEME_LABELS[choice], icon: THEME_ICONS[choice], ticked: theme === choice,
       keywords: `theme appearance${choice === 'night' ? ' dark' : ''}`, run: () => setThemeChoice(choice),
     })),
-    // Under Appearance, with `` ` ``, from 1100 px up, where the sidebar opens and folds (D507).
+    // Under Appearance, with `` ` ``, from 1100 px up, where the sidebar opens and folds.
     ...(sidebarFoldable(window.innerWidth) ? [sidebarCommand(isRail())] : []),
     {id: 'new-event', section: 'more', label: 'New event', icon: 'event', hint: 'C', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null}})},
     {id: 'new-task', section: 'more', label: 'New task', icon: 'task_alt', hint: 'D', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'task', message: null}})},
@@ -159,7 +159,7 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
                 return (
                   <button key={command.id} type="button" role="option" aria-selected={mine === at} className={mine === at ? 'item cur' : 'item'}
                     onMouseMove={() => mine !== at && setCursor(mine)} onClick={() => run(command)}>
-                    {/* Alfred's sparkle is drawn in his ink wherever it shows (#173). */}
+                    {/* Alfred's sparkle is drawn in his ink wherever it shows. */}
                     <Icon name={command.icon} alfred={command.icon === 'auto_awesome'} />
                     <span><Matched label={command.label} query={query} /></span>
                     {command.hint && <span className="kbd">{command.hint}</span>}
@@ -176,7 +176,7 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
   );
 }
 
-/** A command's label with the word prefixes typed marked (shell-13), so the results answer what was typed. */
+/** A command's label with the word prefixes typed marked, so the results answer what was typed. */
 function Matched({label, query}: {label: string; query: string}) {
   const parts: ReactNode[] = [];
   let at = 0;

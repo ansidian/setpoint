@@ -1,4 +1,4 @@
-// Paste the posting (DESIGN.md › The application's detail, #278; darma SV-140): the user's own copy of
+// Paste the posting: the user's own copy of
 // a posting, for one Jobs couldn't read or find. An inline area in the JD section rather than a modal,
 // focused as it opens, with Save and Cancel. ⌘Enter saves and Esc cancels, going no further (Esc would
 // close the pane). A refusal stays in place with the text, for another go.

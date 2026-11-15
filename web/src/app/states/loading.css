@@ -1,4 +1,4 @@
-/* Loading (DESIGN.md › Motion, Decided while building #225): a skeleton shows after --skel-delay
+/* Loading (DESIGN.md › Motion): a skeleton shows after --skel-delay
    (none on a quick answer), fades in over 180 ms, then breathes, every bar in phase: its opacity to
    --skel-low and back over --skel-breathe. Bars are `sub2` on the page, `sub3` inside a `sub` group.
    What replaces it fades in over 120 ms (.sk-arrive). */
@@ -48,7 +48,7 @@
 /* ---------- The sidebar: .acct, .today-row (styles.css) ---------- */
 .sk-today { display: flex; flex-direction: column; gap: 2px; }
 .sk-line { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
-/* The event's two lines (SV-210), as tall as .today-row.ev; its bars line up with the tasks' titles. */
+/* The event's two lines, as tall as .today-row.ev; its bars line up with the tasks' titles. */
 .sk-line:first-child { height: auto; padding-top: 7px; padding-bottom: 7px; }
 .sk-ev { display: flex; flex-direction: column; justify-content: space-around; gap: 1px; height: calc(13px * 1.35 + 1px + 12px * 1.35); padding-left: 27px; }
 .sk-ring { width: 13px; height: 13px; flex: none; border-radius: 999px; border: 1.5px solid var(--skel-on-sub); margin: 0 3px 0 1px; }
@@ -123,7 +123,7 @@
 .sk-result > .r1 { grid-column: 3; }
 .sk-result > .l2, .sk-result > .l3 { grid-column: 2 / 4; }
 
-/* ---------- A failed load (#228): the failing health line's look, in place of what didn't load ---------- */
+/* ---------- A failed load: the failing health line's look, in place of what didn't load ---------- */
 .load-failed { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; color: var(--caution); font-size: 12.5px; min-width: 0; }
 .load-failed .act { color: var(--ink); height: 26px; padding: 0 10px 0 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; flex: none; transition: background-color var(--dur-fast) var(--ease); }
 .load-failed .act .icon { color: var(--ink2); }
@@ -134,7 +134,7 @@
 .rpane .load-failed { margin-top: 10px; padding: 0 16px 0 20px; }
 .settings .load-failed { padding: 0 4px; }
 
-/* ---------- Setpoint starting (#233): the mark where Unreachable's sits (states.css .boot) ---------- */
+/* ---------- Setpoint starting: the mark where Unreachable's sits (states.css .boot) ---------- */
 /* A skeleton's timing: hidden through a quick start, then it fades in and breathes. */
 .boot.starting .mark { animation: sk-in var(--dur-medium) var(--ease) var(--skel-delay) both, sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + var(--dur-medium)) infinite; }
 /* What follows a start that showed the mark (the app, the sign-in card) fades in, as a crossfade. */

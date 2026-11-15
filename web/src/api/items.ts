@@ -1,7 +1,7 @@
 // The calendar's resources (shared/src/api/items.ts has the routes): items and weather by month,
-// one item, the calendars with their toggles, and F6's changes to items. A toggle shows at once and
+// one item, the calendars with their toggles, and changes to items. A toggle shows at once and
 // is Setpoint's own setting, not a provider change, so it needs no command; a calendar's colour
-// (SV-20) is written to Google, so it is one.
+// is written to Google, so it is one.
 import type {CalendarOut, Colour, CommandOut, ItemChanges, ItemCreateInput, ItemKind, PlaceSuggestionOut, ProposalOut, RecurringScope, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
 import {addMonths, firstOfMonth} from '../logic/calendar.ts';
 import {afterPending, cachedPaths, getJson, refresh, refreshIfShown, sendJson, updateCached} from './client.ts';
@@ -48,7 +48,7 @@ async function setCalendarShown(id: number, shown: {visible: boolean} | {listed:
 }
 
 /**
- * SV-20: a Google calendar's colour, a change to Google through the command layer. It shows at once;
+ * A Google calendar's colour, a change to Google through the command layer. It shows at once;
  * the calendar answers with the command pending, and live events bring Google's answer.
  */
 export async function setCalendarColour(id: number, colour: Colour): Promise<void> {
@@ -68,7 +68,7 @@ export async function settleCalendarColour(commandId: number, how: 'retry' | 'mo
   refreshIfShown(CALENDARS_PATH);
 }
 
-// ---------- F6: changes, through the command layer ----------
+// ---------- Changes, through the command layer ----------
 // Each change answers with its command at once (pending); the grid then refetches its months, so the
 // item shows where the change put it, at .5 until the provider confirms, or failed in place. Live
 // events bring the confirmation or the failure.
@@ -76,10 +76,10 @@ export async function settleCalendarColour(commandId: number, how: 'retry' | 'mo
 export const SETTINGS_PATH = '/settings';
 export const TODOIST_PROJECTS_PATH = '/todoist/projects';
 export const TODOIST_LABELS_PATH = '/todoist/labels';
-// SV-71: the places events have used, for a bare "@" and an empty Place field.
+// The places events have used, for a bare "@" and an empty Place field.
 export const RECENT_PLACES_PATH = '/places/recent';
 
-/** SV-25: a Todoist project's colour, written to Todoist as a calendar's is to Google. */
+/** A Todoist project's colour, written to Todoist as a calendar's is to Google. */
 export async function setProjectColour(id: string, colour: TodoistColour): Promise<void> {
   updateCached<TodoistProjectOut[]>(TODOIST_PROJECTS_PATH, list => list.map(one => (one.id === id ? {...one, colour} : one)));
   try {
@@ -114,7 +114,7 @@ const SETTLE_WAIT_MS = 60_000;
 /**
  * A command until its provider settles it, as it last stood (still pending if the provider takes
  * over a minute): for a change with nothing on the grid to fail in place (an email's Add as task,
- * a task created with no date, SV-74).
+ * a task created with no date).
  */
 export async function untilSettled(command: CommandOut): Promise<CommandOut> {
   const ends = Date.now() + SETTLE_WAIT_MS;
@@ -133,10 +133,10 @@ export const createItems = (inputs: ItemCreateInput[]) => change(async () => {
   return commands;
 });
 
-// SV-273 (D566): subtasks added in a row go one after another, so they land in the order typed.
+// Subtasks added in a row go one after another, so they land in the order typed.
 let subtasksAdded: Promise<unknown> = Promise.resolve();
 
-/** SV-273: a new subtask (`parent_id`) at the end of its task's checklist: added there, or cloned (D569). */
+/** A new subtask (`parent_id`) at the end of its task's checklist: added there, or cloned. */
 export function createSubtask(input: Partial<ItemCreateInput> & Pick<ItemCreateInput, 'kind' | 'calendar_id' | 'title'> & {parent_id: number}): Promise<CommandOut> {
   // The server takes the next once Todoist has the one before (`command_pending` meanwhile).
   const sent = subtasksAdded.catch(() => undefined).then(() => change(() => afterPending(() => sendJson<CommandOut>('POST', '/items', input))));
@@ -145,7 +145,7 @@ export function createSubtask(input: Partial<ItemCreateInput> & Pick<ItemCreateI
 }
 
 /**
- * SV-208: an email's proposal created from its card, which waits there, at .5, until the provider
+ * An email's proposal created from its card, which waits there, at .5, until the provider
  * settles it, a failure staying in the card with the provider's words.
  */
 export const createSettled = (input: ItemCreateInput) => change(async () => untilSettled(await sendJson<CommandOut>('POST', '/items', input)));
@@ -162,7 +162,7 @@ export const deleteItem = (id: number, input: {scope?: RecurringScope; occurrenc
 export const completeItem = (id: number, done: boolean, occurrenceDate: string | null = null) =>
   change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/complete`, {done, occurrence_date: occurrenceDate})));
 
-/** SV-272: a task's subtasks in a new order, every one named. */
+/** A task's subtasks in a new order, every one named. */
 export const reorderSubtasks = (id: number, subtaskIds: number[]) =>
   change(() => afterPending(() => sendJson<CommandOut>('PUT', `/items/${id}/subtasks/order`, {subtask_ids: subtaskIds})));
 

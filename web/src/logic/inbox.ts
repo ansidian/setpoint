@@ -1,7 +1,7 @@
-// The Inbox's rules (DESIGN.md › The list; BRIEF.md › The Inbox). The server sends the groups in
+// The Inbox's rules. The server sends the groups in
 // order with their rows and counts (src/domain/inbox.ts there); the list (logic/all.ts) draws
 // Attention and the shelf from them. This holds what's common: each row's line, Undo's held rows, how the
-// keyboard cursor moves, and the counts' at-once changes (DESIGN.md › Interaction rules).
+// keyboard cursor moves, and the counts' at-once changes.
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroup, InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut, MessageType} from '@setpoint/shared';
 import type {IconName} from '../ui/glyphs.ts';
@@ -15,7 +15,7 @@ export const GROUP_LABELS: Record<InboxGroup, string> = {
 /**
  * Each group's glyph, before its header's label and before All's kind word, so a lane reads at a
  * glance without its word. Shape alone, in the header's `ink3`; only Attention's flag is `caution`, as its
- * count is (Decided while building #119).
+ * count is.
  */
 export const GROUP_GLYPHS: Record<InboxGroup, IconName> = {
   pinned: 'keep', attention: 'flag', unsorted: 'pending', security: 'lock', deliveries: 'local_shipping', money: 'payments',
@@ -24,7 +24,7 @@ export const GROUP_GLYPHS: Record<InboxGroup, IconName> = {
 
 /**
  * An email Undo put back (Done, Trash) before the server's list has it again, and where it was, so it
- * shows there at once (D449: nothing else holds a row any more).
+ * shows there at once (nothing else holds a row).
  */
 export interface HeldRow {
   group: InboxGroup;
@@ -141,7 +141,7 @@ export const sender = (row: Pick<MessageRowOut, 'organisation' | 'from_name'>) =
 
 /**
  * A one-line row's text: its lead, then " · " and the rest in `ink3`. The summary, when triage wrote
- * one, takes the subject's place, and the subject moves to the row's tooltip (SV-25); otherwise the
+ * one, takes the subject's place, and the subject moves to the row's tooltip; otherwise the
  * subject leads. A security row's lead is its decisive fact ("New sign-in · MacBook Pro · Los
  * Angeles"); a code row shows its code. The platform ("via Workday") ends the line, as the Attention
  * row has it after the sender.
@@ -242,14 +242,14 @@ export function inboxAfterPin(inbox: InboxOut, id: number, pinned: boolean, from
 
 /**
  * Whether a pin lands where it's seen: any of the places (the shelf's rows, or with no shelf yet the
- * first day's header, where it comes) shows more than a pixel inside the list's box (inbox-09). None
+ * first day's header, where it comes) shows more than a pixel inside the list's box. None
  * to go by counts as seen.
  */
 export function inSight(places: {top: number; bottom: number}[], box: {top: number; bottom: number}): boolean {
   return !places.length || places.some(place => place.bottom > box.top + 1 && place.top < box.bottom - 1);
 }
 
-/** A Security row (a code, a sign-in alert): Mark all as read leaves it unread (UX #4). */
+/** A Security row (a code, a sign-in alert): Mark all as read leaves it unread. */
 const isSecurity = (row: MessageRowOut) => row.lane === 'fyi' && row.kind === 'security';
 
 /**
@@ -275,14 +275,14 @@ export function inboxAfterMarkAllRead(inbox: InboxOut): InboxOut {
 
 /**
  * Whether Mark all as read reads the email, as the server picks them: unread, outside Attention
- * unless Done, and outside Security (UX #4).
+ * unless Done, and outside Security.
  */
 export const markAllReads = (row: MessageRowOut): boolean =>
   row.unread && !(row.lane === 'attention' && !row.done) && !isSecurity(row);
 
 /**
  * The emails Mark all as read reads, each once, though the Pinned shelf shows it twice: the Inbox's
- * groups', and the days' `shown` (D449: they keep read FYI mail, and Undo's unread is there first).
+ * groups', and the days' `shown` (they keep read FYI mail, and Undo's unread is there first).
  * Its toast counts them, and Undo marks them unread again.
  */
 export const markAllReadIds = (groups: InboxGroupOut[], shown: MessageRowOut[] = []): number[] =>
@@ -314,8 +314,7 @@ export function inboxAfterUnread(inbox: InboxOut, id: number): InboxOut {
 export const showsPending = (row: Pick<MessageRowOut, 'command'>) => row.command?.state === 'pending' && row.command.kind !== 'open';
 
 /**
- * The email that opens after Done or Trash on the open one (2026-10-07, replacing part of
- * D10): the next email row in list order, the one that takes its place, skipping group headers and
+ * The email that opens after Done or Trash on the open one: the next email row in list order, the one that takes its place, skipping group headers and
  * collapsed groups and the same email shown again (the Pinned shelf). None at the end: the reader
  * closes.
  */
@@ -327,7 +326,7 @@ export function nextAfterLeaving(stops: Stop[], key: string | null, id: number):
   return rows.slice(at + 1).find(stop => stop.id !== id)?.id ?? null;
 }
 
-/** Whether a code's row has expired: it leaves the Inbox then (DESIGN.md › The list), before the server's next answer. */
+/** Whether a code's row has expired: it leaves the Inbox then, before the server's next answer. */
 export const codeExpired = (row: Pick<MessageRowOut, 'code'>, now: number) => row.code !== null && Date.parse(row.code.expires_at) <= now;
 
 /**
@@ -354,9 +353,9 @@ export function withoutExpiredCodes(groups: InboxGroupOut[], now: number): Inbox
 }
 
 /**
- * A pattern prompt (BRIEF.md › Triage; DESIGN.md › Pattern prompt): mail of one organisation and
- * type that the user keeps marking Done from the row without opening. B3 offers these; until it does
- * there's no route for them in @setpoint/shared, so this is the shape the web expects.
+ * A pattern prompt: mail of one organisation and
+ * type that the user keeps marking Done from the row without opening. Triage offers these; this is
+ * the shape the web expects.
  */
 export interface PatternPrompt {
   id: number;

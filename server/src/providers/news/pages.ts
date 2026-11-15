@@ -1,9 +1,9 @@
-// Page reads (N2; BRIEF.md › Sources): where a lab has no feed, its page is read directly. A news
+// Page reads: where a lab has no feed, its page is read directly. A news
 // page (Anthropic's, Mistral's) lists links to its posts, each then read like a feed's article; the
 // Claude release notes (`config.layout: "dated_sections"`) are dated sections of one page, each its
 // own article with its own text. The cursor keeps the conditional GET's validators and the posts
 // already seen, so a post is news once, and an undated post first seen on the first read isn't
-// passed off as new. A read that finds no posts at all fails (BRIEF.md › When things break): the
+// passed off as new. A read that finds no posts at all fails: the
 // page's layout has probably changed, and quiet would hide it.
 import {canonicalUrl, outletOf, postedAt} from '../../domain/newsIngest.ts';
 import {datedSections, listedPosts} from '../../domain/newsPages.ts';

@@ -1,5 +1,4 @@
-// Search and Alfred (BRIEF.md › Search and Alfred; DESIGN.md › Search, Alfred's Answer card and
-// Proposal). B1 wrote the first shapes; B4 built them and changed them where noted.
+// Search and Alfred: the search, Alfred's Answer card and its proposals.
 //
 //   POST /api/search                        SearchInput        SearchOut
 //   POST /api/search/suggestion             SearchSuggestionInput SearchSuggestOut (a reading of the field, offered as a suggestion)
@@ -10,7 +9,7 @@
 //   GET  /api/alfred/conversations/:id                         ConversationOut (the thread so far)
 //   GET  /api/alfred/asks/:ask_id                              AskStepOut (what Alfred is doing for it)
 //   POST /api/proposals/from-message        ProposalInput      ProposalOut (Add to calendar / Add as task)
-//   POST /api/calendar/search               CalendarSearchInput CalendarSearchOut (SV-23)
+//   POST /api/calendar/search               CalendarSearchInput CalendarSearchOut
 //
 // Nothing here creates anything: a proposal's `item` is what POST /api/items takes, and only Create
 // sends it.
@@ -24,7 +23,7 @@ import type {MessageRowOut} from './mail.ts';
 // A day or range in the owner's zone, end exclusive: "Mar 2026" is 2026-03-01 to 2026-04-01.
 const dateChipSchema = z.strictObject({kind: z.literal('date'), from: localDate, to: localDate, label: z.string().min(1)});
 
-// SV-31: a mail chip typed after "!" ("!confirmation") leaves out what it matches: "Not Type Confirmation ×".
+// A mail chip typed after "!" ("!confirmation") leaves out what it matches: "Not Type Confirmation ×".
 const not = {not: z.literal(true).optional()};
 
 /**
@@ -50,7 +49,7 @@ export const MAX_SEARCH_CHIPS = 10;
 
 /**
  * The field: the chips it already shows, and the text typed after them. Words stay words, a date's
- * too (D392), so a phone sending only `text` gets keyword results and no filter it can't see. A word
+ * too, so a phone sending only `text` gets keyword results and no filter it can't see. A word
  * after "!" leaves out what it names: a Not chip, or, staying text, the mail that has it. Words in
  * "quotes" always stay text.
  * A later page of the same search passes `search_id` and `offset` (`next_offset` from the last page).
@@ -66,7 +65,7 @@ export const searchInput = z.strictObject({
   // The sidebar's account, when search runs inside one (as an account chip would).
   account_id: id.optional(),
   limit: z.int().min(1).max(200).default(50),
-  // B4: paging.
+  // Paging.
   offset: z.int().min(0).default(0),
   search_id: id.optional(),
   read: z.enum(SEARCH_READS).optional(),
@@ -76,7 +75,7 @@ export const searchInput = z.strictObject({
 export type SearchInput = z.input<typeof searchInput>;
 
 /**
- * Why a result matched, in DESIGN.md's one case style: "Org Northwind", "Type Rejection", "Date Mar
+ * Why a result matched, in sentence case: "Org Northwind", "Type Rejection", "Date Mar
  * 14", "Subject lease renewal", "Body signed". `matched` holds the words to highlight.
  */
 export interface MatchReasonOut {
@@ -95,13 +94,13 @@ export interface HighlightOut {
 export interface SearchResultOut extends MessageRowOut {
   // Chips first (org, type, date, account, kind), then the text: sender, subject, body.
   reasons: MatchReasonOut[];
-  // B4: the body around the first highlighted word, with "…" where it's cut; the body's start when
+  // The body around the first highlighted word, with "…" where it's cut; the body's start when
   // no word is in the body.
   excerpt: string;
   highlights: HighlightOut[];
 }
 
-/** SV-138: what a search with `read` says of its chips. */
+/** What a search with `read` says of its chips. */
 export interface SearchReadingOut {
   // Emails matching the words the chips left out: "6 more emails match your words". `read: 'left_out'` lists them.
   more: number;
@@ -116,30 +115,30 @@ export interface SearchOut {
   chips: SearchChip[];
   // Free text left after the chips.
   text: string;
-  // B4: "newest" with no words to order by ("2 results · newest first"), or for Alfred's search with a
-  // chip; "match" for words, ordered by how well they matched, each tier newest first (SV-137). A
-  // reading's chips narrow and keep that order (SV-138).
+  // "newest" with no words to order by ("2 results · newest first"), or for Alfred's search with a
+  // chip; "match" for words, ordered by how well they matched, each tier newest first. A
+  // reading's chips narrow and keep that order.
   order: 'newest' | 'match';
-  // B4: every match; `results` is this page of them.
+  // Every match; `results` is this page of them.
   total: number;
-  // SV-137: how many of the matches, from the top, are about the search. The rest only mention it
+  // How many of the matches, from the top, are about the search. The rest only mention it
   // and may be folded away ("12 more mention these words"). `total` when nothing's in the second
   // section, and 0 when everything is, which shows as a plain list.
   first_section: number;
   // No email had every word, so these have some of them ("No email has every word · 1 has some of
-  // them", UX #10).
+  // them").
   partial: boolean;
   results: SearchResultOut[];
-  // B4: the next page's offset, or null on the last page.
+  // The next page's offset, or null on the last page.
   next_offset: number | null;
   // During the first backfill: "Indexing · 62%, showing what's indexed so far".
   indexing: {progress: number} | null;
-  // SV-138: null unless the request had `read`.
+  // Null unless the request had `read`.
   reading: SearchReadingOut | null;
 }
 
 /**
- * D392: asks for a suggestion for the field's exact text. Only this route can reach the model. With
+ * Asks for a suggestion for the field's exact text. Only this route can reach the model. With
  * `model: false` it says at once what the date grammar alone would suggest, and whether a reading is
  * worth asking for (`reads`); with `model` it answers with both. `chips` are the field's Not chips.
  */
@@ -189,7 +188,7 @@ export const searchSuggestionLogInput = z.strictObject({
 /** The search log: which result was opened, and where it was in the list (0-based). */
 export const searchOpenedInput = z.strictObject({search_id: id, message_id: id, position: z.int().min(0)});
 
-/** The search log: a chip the user took off a search (SV-138), so a wrong reading can be seen. */
+/** The search log: a chip the user took off a search, so a wrong reading can be seen. */
 export const searchChipRemovedInput = z.strictObject({search_id: id, chip: searchChipSchema});
 
 /**
@@ -223,7 +222,7 @@ export interface AnswerSourceOut {
   organisation: string | null;
   from_name: string;
   received_at: string;
-  // B4: the row's pin glyph (board 07).
+  // The row's pin glyph (board 07).
   pinned: boolean;
 }
 
@@ -232,7 +231,7 @@ export const PROPOSAL_FIELDS = ['title', 'date', 'time', 'place'] as const;
 export type ProposalField = (typeof PROPOSAL_FIELDS)[number];
 
 /**
- * B4 (replaces B1's flat fields): the item a proposal would create, as POST /api/items takes it, so
+ * The item a proposal would create, as POST /api/items takes it, so
  * Create sends it (as the user edited it) and More options opens it in the editor. Fields the email
  * didn't give are null: an event with no time is all day, and one with no date has none yet (the
  * card asks for it). `reminders` is left out, so Settings' default applies.
@@ -255,7 +254,7 @@ export interface ProposalItemOut {
 }
 
 /**
- * SV-270 (D553–D555): where a proposal came from, for its description's first line, "From:
+ * Where a proposal came from, for its description's first line, "From:
  * *subject*": the email's subject and its Gmail address (null for a non-Gmail account), or the
  * story's headline and Setpoint's address for it.
  */
@@ -267,7 +266,7 @@ export interface ProposalSourceOut {
 /**
  * A pre-filled event or task the user reviews before anything is created (board 08). `conflict` is "Free
  * that evening" or "Overlaps Study group · 1h 30m" for an event with a date, null otherwise.
- * `source` is missing from an Alfred answer saved before SV-270.
+ * `source` is missing from an Alfred answer saved before proposals carried it.
  */
 export interface ProposalOut {
   kind: ItemKind;
@@ -288,11 +287,10 @@ export interface EmphasisOut {
 export interface AnswerOut {
   conversation_id: number;
   turn_id: number;
-  // B4: the question this turn answers, for the thread.
+  // The question this turn answers, for the thread.
   question: string;
   // One or two lines; null when Alfred couldn't find it ("Couldn't find that in your mail").
   answer: string | null;
-  // B4.
   emphasis: EmphasisOut[];
   sources: AnswerSourceOut[];
   // What it searched ("Northwind · Rejection · Mar 2026", "lease renewal"), said when it couldn't answer.
@@ -300,7 +298,7 @@ export interface AnswerOut {
   proposals: ProposalOut[];
 }
 
-/** B4: GET /api/alfred/conversations/:id, the short thread so far, oldest turn first. */
+/** GET /api/alfred/conversations/:id, the short thread so far, oldest turn first. */
 export interface ConversationOut {
   conversation_id: number;
   // The email it's scoped to (Ask about this email), or null.
@@ -311,7 +309,7 @@ export interface ConversationOut {
 /** POST /api/proposals/from-message: Add to calendar / Add as task, pre-filled from the email. */
 export const proposalInput = z.strictObject({message_id: id, kind: z.enum(ITEM_KINDS)});
 
-// ---- SV-23: calendar search (DESIGN.md › Decided while building #24) ----
+// ---- Calendar search ----
 
 /**
  * A calendar search's chips: a date or range, as mail's, and a calendar by name ("Classes"; "Todoist"

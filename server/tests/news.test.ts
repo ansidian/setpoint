@@ -1,7 +1,7 @@
-// News's store against an ephemeral database (N1): stories leave the page 48 hours after their last
+// News's store against an ephemeral database: stories leave the page 48 hours after their last
 // new fact into the archive, which keeps the summary, sources and thumbnail and drops the rest, and
 // goes after 90 days; seen is per story; the recap holds the biggest of what left unseen, fixed once
-// on screen and put away after an hour away or by Done (#298); the routes serve it all; News sources
+// on screen and put away after an hour away or by Done; the routes serve it all; News sources
 // keep their health to Settings › News; and the worker reads sources through their adapters.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -136,7 +136,7 @@ describe('the archive', () => {
     expect(articleDetail(w.store, nbc)).toMatchObject({text: null, feed_summary: 'The feed\'s summary', image: null});
   });
 
-  test('a story that leaves unseen keeps only its thumbnail too, as the recap has no leads; a large copy Missed kept for its lead goes at the next expiry (#298)', () => {
+  test('a story that leaves unseen keeps only its thumbnail too, as the recap has no leads; a large copy Missed kept for its lead goes at the next expiry', () => {
     const {w, images, source} = newsWorld();
     const ktla = addArticle(w, source.id, {outlet: 'KTLA', at: ago(30)});
     const nbc = addArticle(w, source.id, {outlet: 'NBC Los Angeles', at: ago(31)});
@@ -148,7 +148,7 @@ describe('the archive', () => {
     expect(files(images)).toEqual([`${ktla}-thumb.png`]);
     expect(recapSchema.parse(newsRecap(w.store)).stories[0]!.image).toMatchObject({large: null, thumb: {width: 4, height: 3}});
 
-    // As Missed left one before the recap (#115): its large copy goes, file and all.
+    // As Missed left one before the recap: its large copy goes, file and all.
     saveNewsImage(w.store, images, ktla, 'large', copy);
     expect(expireNews(w.store, images).files).toEqual([`${ktla}-large.png`]);
     expect(files(images)).toEqual([`${ktla}-thumb.png`]);
@@ -209,7 +209,7 @@ describe('seen, per story', () => {
 
 });
 
-describe('All shows a story once, in its main section\'s block (D102)', () => {
+describe('All shows a story once, in its main section\'s block', () => {
   const read = (w: World, articleId: number, subject: ArticleNotes['subject'], sections: NewsSection[]) => w.store.db.update(t.newsArticles)
     .set({notes: {sections, kind: 'event', subject, facts: ['A fact'], importance: 60, place: null, keynote: null}}).where(eq(t.newsArticles.id, articleId)).run();
 
@@ -247,7 +247,7 @@ describe('All shows a story once, in its main section\'s block (D102)', () => {
   });
 });
 
-describe('While you were away (#298)', () => {
+describe('While you were away', () => {
   /** Stories that leave the page unseen now, in Local. */
   function leftUnseen(w: World, sourceId: number, scores: number[]) {
     const lastFact = new Date(w.store.now().getTime() - 48 * HOUR).toISOString();
@@ -275,7 +275,7 @@ describe('While you were away (#298)', () => {
     putRecapAway(w.store);
     expect(newsPage(w.store)).toMatchObject({missed: null, recap: null});
     expect(missed(w.store)).toEqual({since: null, count: 0, days: []});
-    // Its stories stay unseen and in search's archive (D426).
+    // Its stories stay unseen and in search's archive.
     expect(recap.stories.map(story => storyDetail(w.store, story.id).state)).toEqual(recap.stories.map(() => 'new'));
     const source = w.store.db.select().from(t.newsSources).get()!;
     w.advance(HOUR);
@@ -450,12 +450,13 @@ describe('News sources on the sync engine', () => {
     const sources = newsSourcesSchema.parse(newsSources(w.store));
     const row = (id: number) => sources.sections.flatMap(section => section.sources).find(source => source.id === id)!;
     expect(row(npr.id).health).toMatchObject({state: 'healthy', last_check_at: SEED_NOW, failing_since: null});
-    // Sources N2 hasn't built an adapter for aren't read and have no health yet, rather than failing.
+    // Sources whose adapter the worker wasn't given aren't read and have no health yet, rather than
+    // failing.
     const nws = w.store.db.select().from(t.newsSources).where(eq(t.newsSources.key, 'nws-alerts')).get()!;
     expect(row(nws.id).health).toBeNull();
     const jobs = w.store.db.select().from(t.jobs).all();
     expect(jobs.filter(job => job.kind === 'news').every(job => feeds.some(feed => feed.id === job.newsSourceId))).toBe(true);
-    // N3: what they brought is sorted next, as a durable job, one at a time.
+    // What they brought is sorted next, as a durable job, one at a time.
     const sorts = jobs.filter(job => job.kind !== 'news');
     expect(new Set(sorts.map(job => job.key))).toEqual(new Set(['news_sort']));
     expect(sorts.filter(job => job.state === 'queued' || job.state === 'running').length).toBeLessThanOrEqual(1);
@@ -547,7 +548,7 @@ describe('News health stays in Settings › News', () => {
   });
 });
 
-describe('the lists of sources (D91)', () => {
+describe('the lists of sources', () => {
   test('the built-in list is registered by key; the local list comes from the data directory, first copied from the checkout\'s', () => {
     const w = world();
     const dataDir = tempDir();
@@ -581,7 +582,7 @@ describe('the lists of sources (D91)', () => {
     expect(w.store.db.select().from(t.newsSources).where(eq(t.newsSources.key, 'local:channel-4')).get()!.retiredAt).toBeNull();
   });
 
-  test('N5: a source names its tile\'s icon, kept in its config and given to Settings › News; one not allowed makes the list unreadable, so nothing changes', () => {
+  test('a source names its tile\'s icon, kept in its config and given to Settings › News; one not allowed makes the list unreadable, so nothing changes', () => {
     const w = world();
     const dataDir = tempDir();
     fs.writeFileSync(path.join(dataDir, LOCAL_SOURCES_FILE), JSON.stringify({sources: [
@@ -642,7 +643,7 @@ describe('the lists of sources (D91)', () => {
     ]);
   });
 
-  test('a built-in source already registered takes its new address, config and interval at start, keeping its row (AirNow\'s file, SV-45)', () => {
+  test('a built-in source already registered takes its new address, config and interval at start, keeping its row (AirNow\'s file)', () => {
     const w = world();
     ensureNewsSources(w.store, []);
     const row = () => w.store.db.select().from(t.newsSources).where(eq(t.newsSources.key, 'airnow')).get()!;

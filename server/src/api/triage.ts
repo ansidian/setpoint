@@ -13,7 +13,7 @@ import {historyProgress} from '../triage/history.ts';
 import {aiOverview, answerPrompt, createRule, currentPrompts, deleteRule, listRules, reorderRules, updateRule} from '../triage/learning.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
-// Delete's ?waiting=cancel (D495); left out, the rule's waiting trashes run.
+// Delete's ?waiting=cancel; left out, the rule's waiting trashes run.
 const ruleDeleteQuery = z.object({waiting: z.enum(RULE_WAITING).optional()});
 
 async function body(c: Context): Promise<unknown> {

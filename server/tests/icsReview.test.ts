@@ -1,4 +1,4 @@
-// SV-181: whether an .ics file's event is over, so the review starts it unticked (D437).
+// Whether an .ics file's event is over, so the review starts it unticked.
 import {describe, expect, test} from 'vitest';
 import {importPast} from '../src/domain/icsReview.ts';
 

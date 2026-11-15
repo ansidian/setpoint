@@ -1,6 +1,6 @@
 // Windows time zone names, as Outlook and Exchange write them in an .ics file's TZID ("Pacific
 // Standard Time"), to the IANA zone each stands for: CLDR's windowsZones table, its territory-001
-// (main) entry for each (SV-178, D438).
+// (main) entry for each.
 
 const WINDOWS_ZONES: Record<string, string> = {
   'Dateline Standard Time': 'Etc/GMT+12',

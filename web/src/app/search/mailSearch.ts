@@ -1,4 +1,4 @@
-// Mail's search field (DESIGN.md › Search; D392). Typing runs a keyword search after a short pause,
+// Mail's search field. Typing runs a keyword search after a short pause,
 // and its words stay words: the results are the words' results, the same with or without Enter, which
 // only moves the keyboard into them.
 //
@@ -9,7 +9,7 @@
 // (`read: 'kept'`), and those filter until they're taken off. A chip's × puts its word back, and a
 // suggestion the user turned down doesn't return for those words.
 //
-// The phone's field is `plain` (SI-64 comes later): its words stay words and no suggestion is asked.
+// The phone's field is `plain`: its words stay words and no suggestion is asked.
 import type {SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import {searchChipRemoved, searchMail, searchOpened, searchSuggestion, searchSuggestionLog} from '../../api/search.ts';
@@ -42,7 +42,7 @@ export interface Search extends SearchFieldState<SearchChip, SearchOut, SearchRe
   listed: SearchResultOut[];
   /** The search log: the user opened this result, at its place in the list. */
   opened: (id: number) => void;
-  /** A result as an action left it: read once opened, Done (UX #9). */
+  /** A result as an action left it: read once opened, Done. */
   mark: (id: number, change: Partial<SearchResultOut>) => void;
   question: () => string;
 }

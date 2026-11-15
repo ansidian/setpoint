@@ -1,6 +1,5 @@
-// The floating detail's glide as pure rules (DESIGN.md › The glide; design-export/motion/glide.json;
-// board 12c): its duration by distance, the position curve with its ~3% overshoot, the overshoot
-// shrinking to the room left at the grid's edges (decision 47, override 1), a retarget that keeps
+// The floating detail's glide as pure rules (design-export/motion/glide.json; board 12c): its duration by distance, the position curve with its ~3% overshoot, the overshoot
+// shrinking to the room left at the grid's edges, a retarget that keeps
 // the card's position and velocity, and the new content's 6 px slide in the direction of travel.
 // Every figure comes from the token module; the motion itself runs in app/calendar/detail/.
 import {glide} from '../tokens.ts';
@@ -63,7 +62,7 @@ export const GLIDE_PEAK = (() => {
 })();
 
 /**
- * The overshoot an axis is allowed near an edge (decision 47): the curve's own (≈3% of `travel`)
+ * The overshoot an axis is allowed near an edge: the curve's own (≈3% of `travel`)
  * where there's room, else only the `room` left between the card at rest and the grid's edge in
  * the direction of travel, so it settles there with less bounce. Never negative.
  */

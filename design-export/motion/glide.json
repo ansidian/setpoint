@@ -1,5 +1,5 @@
 {
-  "$source": "Board 12c (source/project/Glide-motion.dc.html) and BRIEF.md decisions 36–37",
+  "$source": "Board 12c (source/project/Glide-motion.dc.html)",
   "glide": {
     "position": {
       "property": "transform: translate(x, y) (FLIP)",

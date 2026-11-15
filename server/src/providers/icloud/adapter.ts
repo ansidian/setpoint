@@ -1,6 +1,6 @@
-// The iCloud adapter (BUILD-PLAN.md › B2): IMAP with an app-specific password over one pooled
+// The iCloud adapter: IMAP with an app-specific password over one pooled
 // connection per account, polled every 2 minutes; the \Seen flag both ways; Trash with Undo; and
-// the 365-day backfill. Harvested from v1's server/email/icloud.ts (see SV-3).
+// the 365-day backfill.
 //
 // Each poll (sync) selects INBOX and
 // - fetches what arrived since the stored UID (the cursor is UIDVALIDITY and the last UID seen;
@@ -33,9 +33,9 @@ export const ICLOUD_IMAP: ImapEndpoint = {host: 'imap.mail.me.com', port: 993, s
 
 export interface ICloudAdapterOptions {
   endpoint?: ImapEndpoint;
-  // v1: close a pooled connection after 10 minutes unused.
+  // Close a pooled connection after 10 minutes unused.
   idleMs?: number;
-  // v1: give up on a connect after 15 seconds.
+  // Give up on a connect after 15 seconds.
   connectTimeoutMs?: number;
   // Backfill: messages fetched per step.
   backfillChunk?: number;
@@ -78,7 +78,7 @@ interface Pooled {
 }
 
 /**
- * One persistent connection per source (v1's pool): concurrent callers share the connect in
+ * One persistent connection per source: concurrent callers share the connect in
  * flight; a dead or failed connection is evicted so the next call connects afresh; idle ones close.
  */
 class ImapPool {
@@ -117,7 +117,7 @@ class ImapPool {
       }
     }
     if (existing) this.evict(sourceId, existing);
-    // Claim the slot before awaiting, so a second caller shares this connect (v1 REL-06).
+    // Claim the slot before awaiting, so a second caller shares this connect.
     const entry: Pooled = {key, lastUsed: Date.now(), client: Promise.resolve(null as unknown as ImapFlow)};
     entry.client = (async () => {
       const client = this.newClient(username, password);
@@ -343,7 +343,7 @@ export class ICloudAdapter implements SourceAdapter {
     });
   }
 
-  /** SV-274: the message's source (UID FETCH BODY[]) again. */
+  /** The message's source (UID FETCH BODY[]) again. */
   async source(context: AdapterContext, message: {providerId: string}): Promise<Buffer | null> {
     return this.withMailbox(context, INBOX, async client => {
       const uid = uidOf(message.providerId, String(client.mailbox && client.mailbox.uidValidity));
@@ -375,7 +375,7 @@ export class ICloudAdapter implements SourceAdapter {
         case 'mark_unread':
           return expect(await client.messageFlagsRemove(range, [SEEN], {uid: true}), 'mark it unread');
         case 'trash': {
-          // A written rule's Trash with Mark read (DESIGN.md #347): seen first, as the user's Mark read does.
+          // A written rule's Trash with Mark read: seen first, as the user's Mark read does.
           if (command.payload.mark_read === true) expect(await client.messageFlagsAdd(range, [SEEN], {uid: true}), 'mark it read');
           const trash = await trashMailbox(client);
           const moved = await client.messageMove(range, trash, {uid: true});
@@ -416,12 +416,12 @@ function expect(result: boolean, what: string) {
 
 async function search(client: ImapFlow, query: Parameters<ImapFlow['search']>[0]): Promise<number[]> {
   const result = await client.search(query, {uid: true});
-  // v1 (strict checks): a failed SEARCH isn't an empty inbox.
+  // A failed SEARCH isn't an empty inbox.
   if (result === false) throw new ProviderError('transient', 'iCloud\'s search failed.');
   return Array.isArray(result) ? result : [];
 }
 
-/** The mailbox iCloud flags as \Trash ("Deleted Messages"); v1 assumed "Trash". */
+/** The mailbox iCloud flags as \Trash ("Deleted Messages"), not always "Trash". */
 async function trashMailbox(client: ImapFlow): Promise<string> {
   const folders = await client.list();
   return folders.find(folder => folder.specialUse === '\\Trash')?.path

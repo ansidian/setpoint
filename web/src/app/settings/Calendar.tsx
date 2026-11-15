@@ -1,9 +1,9 @@
-// Settings › Calendar (not drawn; DESIGN.md › Settings' row pattern, BRIEF.md › Settings): which
-// calendars show and each Google calendar's colour (SV-20, written to Google), Home for Time to Leave and the forecast (a place, with its coordinates),
-// Time to Leave's switch and Buffer, under Home since it leaves from there (D513),
-// Todoist's projects with their colours (SV-25, written to Todoist) and the default project for a task
-// with none (D514: Settings has no Todoist page; its connection is Accounts › Sources' row), weather
-// on or off, the forecast's Pirate Weather key (the weather source's credential, D16) and the Google
+// Settings › Calendar (not drawn): which
+// calendars show and each Google calendar's colour (written to Google), Home for Time to Leave and the forecast (a place, with its coordinates),
+// Time to Leave's switch and Buffer, under Home since it leaves from there,
+// Todoist's projects with their colours (written to Todoist) and the default project for a task
+// with none (Settings has no Todoist page; its connection is Accounts › Sources' row), weather
+// on or off, the forecast's Pirate Weather key (the weather source's credential) and the Google
 // Maps key that Places and Time to Leave's routes use, both write-only. The page scrolls.
 import type {CalendarOut, PlaceSuggestionOut, SecretOut, Settings, SourceOut, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
 import {SWATCH_COLOURS, TODOIST_COLOURS, TODOIST_COLOUR_NAMES} from '@setpoint/shared';
@@ -52,7 +52,7 @@ export function CalendarPage() {
       </Section>
 
       <Section label="Home">
-        {/* "Not set" only once it's known (states-01). */}
+        {/* "Not set" only once it's known. */}
         {!settings && !editingHome ? <SkeletonRows count={1} /> : <div className="set-group">
           {editingHome ? <HomeSearch onDone={() => setEditingHome(false)} /> : (
             <Row title={home ? home.label : 'Not set'} sub={home ? home.address : 'Time to Leave and the forecast start from Home'}>
@@ -68,7 +68,7 @@ export function CalendarPage() {
       </Section>
 
       <Section label="Todoist">
-        {/* Whether it's connected is said only once it's known (states-01). */}
+        {/* Whether it's connected is said only once it's known. */}
         {!sources || !projects || !settings ? <SkeletonRows count={3} one /> : !todoistConnected(sources) ? (
           <div className="set-group">
             <Row title="Not connected" sub="Tasks with a date show on the calendar">
@@ -111,8 +111,8 @@ export function CalendarPage() {
 }
 
 /**
- * Time to Leave (D513, moved from Notifications): its switch, which needs Home and says so without
- * one (UX #13), and the buffer, in 5 min steps from 0 to 120. It leaves from Home, the group above.
+ * Time to Leave (moved from Notifications): its switch, which needs Home and says so without
+ * one, and the buffer, in 5 min steps from 0 to 120. It leaves from Home, the group above.
  */
 function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Parameters<typeof patchSettings>[0]) => void}) {
   const leave = settings.time_to_leave;
@@ -133,7 +133,7 @@ function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Pa
 }
 
 /**
- * A calendar's row: its colour, picked from darma's swatches and written to Google (SV-20, D33), so
+ * A calendar's row: its colour, picked from the swatches and written to Google, so
  * Google's own app matches; then its name and whether it shows. Todoist has its ring and no colour.
  * A colour waiting for Google shows at .5 with the spinner; one Google refused stays, with Google's
  * words, Try again and Change back.
@@ -181,7 +181,7 @@ const colourName = (colour: TodoistColour) => colour[0]!.toUpperCase() + colour.
 const swatch = (colour: TodoistColour | null) => ({'--c': colour ? TODOIST_COLOURS[colour] : 'var(--ink2)'}) as CSSProperties;
 
 /**
- * A project's row (SV-25, D54), as Settings › Calendar's calendar rows: its colour, picked from
+ * A project's row, as Settings › Calendar's calendar rows: its colour, picked from
  * Todoist's own 20 and written to Todoist, so its apps match and its tasks' rings take it. Waiting
  * for Todoist it shows at .5 with the spinner; one Todoist refused stays, with Todoist's words, Try
  * again and Change back.

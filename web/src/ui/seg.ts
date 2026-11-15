@@ -1,4 +1,4 @@
-// The segmented control's thumb (DESIGN.md › Decided while building #179, #317): a `sub3` pill under
+// The segmented control's thumb: a `sub3` pill under
 // the `on` segment, always drawn and always moving on its transition, so when another segment turns
 // on it travels there, position and width together, settling with a slight spring. What isn't a
 // segment turning on (the first placement, a resize, the fonts arriving, a count's width changing)

@@ -1,8 +1,8 @@
-// News (N4; DESIGN.md › News, boards 25–27) against the seed's sample (BRIEF.md › Sample data ›
-// News): All's blocks, Upcoming and the pill; the empty pane with the recap, its panel and News's facts (SV-219); the story pane, its Sources, an article
-// (26a) and one that can't be read here (26b); a section (27) with Also reported (D452); While you were away (#298) with Done
+// News (boards 25–27) against the seed's sample:
+// All's blocks, Upcoming and the pill; the empty pane with the recap, its panel and News's facts; the story pane, its Sources, an article
+// (26a) and one that can't be read here (26b); a section (27) with Also reported; While you were away with Done
 // and Undo; seen; the held order with the pill; Add to calendar; the keys; and board 31, board 25 in
-// Light (N5); Tab and Shift-Tab between the views (SV-207). A change to News arrives as ingest's will: the
+// Light; Tab and Shift-Tab between the views. A change to News arrives as ingest's will: the
 // server's database changes, then a `news` live event names stories (here, seeing one already seen
 // sends it, as nothing else in the server writes News yet).
 import assert from 'node:assert/strict';
@@ -33,7 +33,7 @@ const stateOf = async (setpoint: Setpoint, id: number) => (await setpoint.api<St
 
 /**
  * All without its recap, as it is once an hour away has put it away: for the checks about the blocks
- * under it, whose rows it would push down. The route stays for the iPhone app (D451).
+ * under it, whose rows it would push down. The route stays for the iPhone app.
  */
 const putRecapAway = (setpoint: Setpoint) => setpoint.api('POST', '/news/recap/done');
 
@@ -43,7 +43,7 @@ const recapShown = (page: Page) => page.waitForResponse(response => response.url
 
 /**
  * Waits until the server has seen every story whose row is wholly in the list's view with a dot
- * (DESIGN.md › Keys and behaviour: about a second); the dots stay for the visit (#95). Resolves with
+ * (about a second); the dots stay for the visit. Resolves with
  * those stories.
  */
 async function seenSettled(page: Page, setpoint: Setpoint): Promise<number[]> {
@@ -103,9 +103,9 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     assert.equal(await page.locator('aside.sb .nav.on').textContent(), 'News');
     assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['All', 'Local', 'Tech', 'AI', 'General']);
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');
-    // The blocks in their fixed order (D451); the recap is the pane's (SV-219).
+    // The blocks in their fixed order; the recap is the pane's.
     assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
-    // Each block ends after its stories, with no "N more in ‹section›" (D451).
+    // Each block ends after its stories, with no "N more in ‹section›".
     assert.equal(await page.getByText(/ more in /).count(), 0);
     assert.equal(await page.locator('.pane.idle .nd-row').count(), 8);
     assert.equal(await page.locator('.nw-up').textContent(), 'UpcomingApple event · Tue Oct 20 · 10 AMMacRumors +6Add to calendar');
@@ -164,7 +164,7 @@ test('board 31: board 25 in Light', async () => {
   }
 });
 
-test('D451: a block whose stories all show in other blocks isn\'t drawn in All; the section\'s own list still holds them', async () => {
+test('a block whose stories all show in other blocks isn\'t drawn in All; the section\'s own list still holds them', async () => {
   const setpoint = await startSetpoint();
   try {
     // Every Tech story's main section made AI (the seed's stand-ins have no reading, so it's their first), and Tech's Upcoming gone.
@@ -201,7 +201,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     assert.deepEqual(await pane.locator('.st-new .it').allTextContents(), ['8:40 AMGrew from 150 to 400 acres overnight; evacuation warnings widened', '6:55 AMTwo schools in the warning area are closed for the day']);
     assert.deepEqual(await pane.locator('.src-row .o').allTextContents(), ['KTLASummary only', 'NBC Los Angeles', 'CBS Los Angeles', 'ABC7', 'FOX 11']);
     assert.deepEqual(await pane.locator('.src-row .fav').allTextContents(), ['K', 'NBC', 'CBS', '7', '11']);
-    // The pane's body as one 600 px column at the reading measure (#98) is by eye (D417).
+    // The pane's body as one 600 px column at the reading measure is by eye.
     // Opening it saw it: its dot goes at once, and the server has it.
     const fireId = await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres');
     await until('seen on the server', () => stateOf(setpoint, fireId), state => state === 'seen');
@@ -241,7 +241,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
   }
 });
 
-test('New since you looked shows the newest four facts, then "6 more"; a click opens the rest and the card grows (the polish audit\'s news-12)', async () => {
+test('New since you looked shows the newest four facts, then "6 more"; a click opens the rest and the card grows', async () => {
   const setpoint = await startSetpoint();
   try {
     await putRecapAway(setpoint);
@@ -293,7 +293,7 @@ test('a section (27): the header\'s Local opens Local\'s full list, biggest firs
     // Shown now, Water main is seen after its second on screen.
     await until('Water main seen', () => stateOf(setpoint, water), state => state === 'seen', 5000);
     await seenSettled(page, setpoint);
-    // Also reported ends the list (D452): the stories never written, headline, outlet and age, each a
+    // Also reported ends the list: the stories never written, headline, outlet and age, each a
     // link to its outlet's article; none is a story row, so none has a dot or is seen.
     const also = page.locator('.nw-also');
     assert.equal(await also.locator('.nw-also-hd').textContent(), 'Also reported');
@@ -310,7 +310,7 @@ test('a section (27): the header\'s Local opens Local\'s full list, biggest firs
   }
 });
 
-test('While you were away (#298, SV-219): All\'s empty pane holds the recap, each section\'s biggest two, naming their sections; nothing slides in, and the pill counts none of it', async () => {
+test('While you were away: All\'s empty pane holds the recap, each section\'s biggest two, naming their sections; nothing slides in, and the pill counts none of it', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -352,7 +352,7 @@ test('While you were away (#298, SV-219): All\'s empty pane holds the recap, eac
   }
 });
 
-test('SV-219: a recap story opens in a panel over the list\'s column, the pane live beside it; J / K step, a row switches, Esc or a click elsewhere closes; opened, it\'s seen', async () => {
+test('a recap story opens in a panel over the list\'s column, the pane live beside it; J / K step, a row switches, Esc or a click elsewhere closes; opened, it\'s seen', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -403,7 +403,7 @@ test('SV-219: a recap story opens in a panel over the list\'s column, the pane l
   }
 });
 
-test('SV-219: News\'s pane says when the page was ranked and is next, what today brought and the quiet facts; a feed failing every attempt for 6 hours shows, opening Settings › News', async () => {
+test('News\'s pane says when the page was ranked and is next, what today brought and the quiet facts; a feed failing every attempt for 6 hours shows, opening Settings › News', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -431,7 +431,7 @@ test('SV-219: News\'s pane says when the page was ranked and is next, what today
   }
 });
 
-test('the recap has no Done (D451): only the server puts it away, after an hour away, its stories still unseen; put away, the next visit has none', async () => {
+test('the recap has no Done: only the server puts it away, after an hour away, its stories still unseen; put away, the next visit has none', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -448,7 +448,7 @@ test('the recap has no Done (D451): only the server puts it away, after an hour 
     await row(page, 'Brush fire near the 210').waitFor();
     await page.locator('.pane.idle .nd-fresh').waitFor();
     assert.equal(await page.locator('.nd-recap').count(), 0);
-    assert.deepEqual(await Promise.all(ids.map(id => stateOf(setpoint, id))), ids.map(() => 'new'), 'put away, not seen (D426)');
+    assert.deepEqual(await Promise.all(ids.map(id => stateOf(setpoint, id))), ids.map(() => 'new'), 'put away, not seen');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -467,8 +467,8 @@ test('seen: the stories on screen as the page loads, or opened, even off screen;
     await seenSettled(page, setpoint);
     assert.equal(await stateOf(setpoint, hurricane), 'new', 'below the fold');
     // How long on screen counts, and flicking past not, are sight's, dueSeen's and nextSeen's, tables in
-    // news.test.ts; the scrolls they needed here went (D416).
-    // The rows seen on arrival keep their dots for the visit (#95).
+    // news.test.ts; the scrolls they needed here went.
+    // The rows seen on arrival keep their dots for the visit.
     assert.match(await row(page, 'Red Flag Warning').getAttribute('class') ?? '', /\bnew\b/);
     // A reload is a new visit: the stories seen have no dot.
     await page.reload();
@@ -505,7 +505,7 @@ test('the order holds: a change updates rows on screen in place, the rest waits 
     await row(page, 'Red Flag Warning').locator('.sm', {hasText: 'Gusts to 60 mph, humidity under 8%'}).waitFor();
     await until('the car wash turns updated in place', () => carWash.getAttribute('class'), value => /\bupd\b/.test(value ?? ''));
     assert.deepEqual(await order(), before, 'nothing moved');
-    // N takes the new order; its scroll to the top is by eye (D416).
+    // N takes the new order; its scroll to the top is by eye.
     await page.keyboard.press('n');
     await until('the new order', () => page.locator('.nw-list [data-story]').first().textContent(), text => text?.startsWith('Water main break floods an intersection') ?? false);
     const arrived = [...new Set((await order()).filter(id => !before.includes(id)))].sort();
@@ -565,7 +565,7 @@ test('keys: 3 opens News; J and K move; Enter opens; J opens the next with one o
   }
 });
 
-test('SV-207: Tab and Shift-Tab step All | Local | Tech | AI | General, wrapping, after a click too; the open story stays where the next view lists it; J reaches Also reported, whose Enter opens its article; Tab in Search news is the browser\'s', async () => {
+test('Tab and Shift-Tab step All | Local | Tech | AI | General, wrapping, after a click too; the open story stays where the next view lists it; J reaches Also reported, whose Enter opens its article; Tab in Search news is the browser\'s', async () => {
   const setpoint = await startSetpoint();
   try {
     await putRecapAway(setpoint);
@@ -634,7 +634,7 @@ test('Upcoming\'s Add to calendar opens Calendar\'s editor on the Apple event, T
     await putRecapAway(setpoint);
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/news`);
-    // One path, as an email's: the server's proposal for the keynote (N3), its calendar picked as an email's is.
+    // One path, as an email's: the server's proposal for the keynote, its calendar picked as an email's is.
     const proposed = page.waitForResponse(response => /\/api\/news\/events\/\d+\/proposal$/.test(new URL(response.url()).pathname) && response.request().method() === 'POST');
     await page.locator('.nw-up .btn', {hasText: 'Add to calendar'}).click();
     const proposal = await (await proposed).json() as {item: {calendar_id: number | null}; from_email: string[]};
@@ -645,7 +645,7 @@ test('Upcoming\'s Add to calendar opens Calendar\'s editor on the Apple event, T
       ['Tue, Oct 20', '10:00 AM', '11:00 AM']);
     assert.deepEqual(proposal.from_email, ['title', 'date', 'time']);
     assert.notEqual(proposal.item.calendar_id, null);
-    // The news gave the fields, but they carry no "from the email" mark (N5).
+    // The news gave the fields, but they carry no "from the email" mark.
     assert.equal(await editor.locator('.srcm').count(), 0, 'no "from the email" marks');
     assert.equal(await editor.locator('.legend').count(), 0, 'no "From the email" legend');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -654,7 +654,7 @@ test('Upcoming\'s Add to calendar opens Calendar\'s editor on the Apple event, T
   }
 });
 
-test('Upcoming\'s row opens a popover with the story behind the keynote, which opens it; Esc or a press outside puts it away (#100)', async () => {
+test('Upcoming\'s row opens a popover with the story behind the keynote, which opens it; Esc or a press outside puts it away', async () => {
   const setpoint = await startSetpoint();
   try {
     await putRecapAway(setpoint);
@@ -691,7 +691,7 @@ test('Upcoming\'s row opens a popover with the story behind the keynote, which o
   }
 });
 
-test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps everything inside its row, its whole name · date in its tooltip', async () => {
+test('a narrow list: with a story open at 1280 × 800, Upcoming keeps everything inside its row, its whole name · date in its tooltip', async () => {
   const setpoint = await startSetpoint();
   try {
     await putRecapAway(setpoint);

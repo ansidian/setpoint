@@ -1,4 +1,4 @@
-// News's API sources (N2; BRIEF.md › Sources): the hazards' official data, each asked about the home
+// News's API sources: the hazards' official data, each asked about the home
 // location in Settings › Calendar (NWS alerts for its zones, found from the point; USGS, Cal Fire and
 // AirNow within their radius), and Hacker News through Algolia over its points. A hazard source isn't
 // ready, so isn't read, until the home location is set. AirNow's is its free hourly reporting-area

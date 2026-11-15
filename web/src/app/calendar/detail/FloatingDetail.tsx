@@ -1,7 +1,7 @@
-// The floating detail (DESIGN.md › The floating detail; boards 12a, 12b, 12c and 12d): a 360 px card
-// beside the selected item (or the right-pane row it was clicked on, #322), placed on the side covering the fewest other items, that glides to the
+// The floating detail (boards 12a, 12b, 12c and 12d): a 360 px card
+// beside the selected item (or the right-pane row it was clicked on), placed on the side covering the fewest other items, that glides to the
 // next item clicked, can be dragged from anywhere but its buttons and text and left anywhere in the
-// grid, and hands the item to the right pane's editor with Edit or E. It lives in the month section, as F4's overlays do.
+// grid, and hands the item to the right pane's editor with Edit or E. It lives in the month section, as the grid's other overlays do.
 // motion.ts runs the motion; this renders the card and tells it what's selected.
 import {useEffect, useLayoutEffect, useState, useSyncExternalStore} from 'react';
 import type {RefObject} from 'react';
@@ -21,11 +21,11 @@ export interface FloatingDetailProps {
   section: RefObject<HTMLElement | null>;
   scroller: RefObject<HTMLElement | null>;
   timeZone: string;
-  // F6's Clone, Copy, Colour and Delete.
+  // Clone, Copy, Colour and Delete.
   actions?: DetailActions;
   onClose: () => void;
   onEdit: (target: DetailTarget) => void;
-  // SV-273: px at the grid's right edge the card keeps clear of, for the compact tier's editor over it.
+  // Px at the grid's right edge the card keeps clear of, for the compact tier's editor over it.
   room?: number;
 }
 
@@ -45,7 +45,7 @@ export function FloatingDetail({target, exit, section, scroller, timeZone, actio
     engine.makeRoom(room);
   }, [engine, room]);
 
-  // SV-264: the card growing at rest (a description opened with More) is placed again, so it stays inside the grid.
+  // The card growing at rest (a description opened with More) is placed again, so it stays inside the grid.
   const [grown] = useState(() => new ResizeObserver(() => engine.onResize()));
   useEffect(() => () => grown.disconnect(), [grown]);
 
@@ -60,7 +60,7 @@ export function FloatingDetail({target, exit, section, scroller, timeZone, actio
     if (!element || !host) return;
     const onScroll = () => engine.onScroll();
     element.addEventListener('scroll', onScroll, {passive: true});
-    // The right pane's own scroll, for a card beside one of its rows (#322).
+    // The right pane's own scroll, for a card beside one of its rows.
     const onPaneScroll = (event: Event) => (event.target as Element | null)?.closest?.('.rpane') && engine.onPaneScroll();
     document.addEventListener('scroll', onPaneScroll, {capture: true, passive: true});
     const observer = new ResizeObserver(() => engine.onResize());

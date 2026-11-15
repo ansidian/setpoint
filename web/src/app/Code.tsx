@@ -1,8 +1,8 @@
-// A verification code's parts, shared by the list's code row (DESIGN.md › The list) and the reader's
-// code card (polish audit reader-04): Copy, which confirms in `good` for a second and a half and says
-// so when the clipboard refuses (#109), and the countdown, which moves on as its words change, each
-// second through its last minute ("Expires in 42 sec", in `caution`, inbox-11). A code copied reads its
-// email (#295): `onCopied` runs once the clipboard has it.
+// A verification code's parts, shared by the list's code row and the reader's
+// code card: Copy, which confirms in `good` for a second and a half and says
+// so when the clipboard refuses, and the countdown, which moves on as its words change, each
+// second through its last minute ("Expires in 42 sec", in `caution`). A code copied reads its
+// email: `onCopied` runs once the clipboard has it.
 import {useEffect, useState} from 'react';
 import type {MouseEvent} from 'react';
 import {serverNow} from '../api/auth.ts';
@@ -21,7 +21,7 @@ export function CodeCopy({value, onCopied}: {value: string; onCopied?: () => voi
     const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
     return () => window.clearTimeout(timer);
   }, [copied]);
-  // A clipboard that refuses says so (#41).
+  // A clipboard that refuses says so.
   const copy = (event: MouseEvent) => {
     event.stopPropagation();
     const writing = navigator.clipboard ? navigator.clipboard.writeText(value) : Promise.reject(new Error('No clipboard'));
@@ -58,7 +58,7 @@ export function useCountdown(at: string): {text: string; soon: boolean; expired:
 }
 
 /**
- * The reader's code card (reader-04), after the sender: the code in Geist Mono at 22 px in two groups,
+ * The reader's code card, after the sender: the code in Geist Mono at 22 px in two groups,
  * Copy, and at the right its countdown on the clock, not the email's own words; once expired it says
  * so and the code steps back to `ink3`.
  */

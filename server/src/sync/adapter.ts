@@ -1,6 +1,6 @@
-// The adapter interface every provider implements (BUILD-PLAN.md › B1 › The sync engine): the
-// engine schedules and records; adapters talk to their provider. B2 adds Gmail and iCloud, B5
-// Google Calendar, Todoist and weather; the dev provider serves the seed.
+// The adapter interface every provider implements: the
+// engine schedules and records; adapters talk to their provider: Gmail, iCloud, Google Calendar,
+// Todoist and weather; the dev provider serves the seed.
 import type {Credentials} from '@setpoint/shared';
 import type * as t from '../db/schema.ts';
 import type {Store} from '../store.ts';
@@ -62,7 +62,7 @@ export interface SourceAdapter {
    */
   attachment?(context: AdapterContext, message: {providerId: string}, attachmentId: string): Promise<AttachmentBytes | null>;
   /**
-   * A mail adapter's email, its RFC 822 source fetched again: a USPS digest's scans (SV-274), which
+   * A mail adapter's email, its RFC 822 source fetched again: a USPS digest's scans, which
    * the record doesn't keep. Null when the provider no longer has the email.
    */
   source?(context: AdapterContext, message: {providerId: string}): Promise<Buffer | null>;

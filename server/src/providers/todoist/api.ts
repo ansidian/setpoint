@@ -1,8 +1,8 @@
-// Todoist's unified API (v1, as v1 used) over plain fetch: the Sync endpoint for the mirror (and,
-// SV-249, a repeating task's undo, a Sync command), the completed-tasks list for one-off tasks
-// completed in Todoist's own apps, the activity log for a repeating task's occurrences completed
-// there (SV-251), and the task endpoints for changes. Errors carry Todoist's own words; 401 and 403 mean the connection was revoked (v1 never
-// treated them so, see SV-6), 429 waits.
+// Todoist's unified API (v1) over plain fetch: the Sync endpoint for the mirror (and a repeating
+// task's undo, a Sync command), the completed-tasks list for one-off tasks completed in Todoist's
+// own apps, the activity log for a repeating task's occurrences completed there, and the task
+// endpoints for changes. Errors carry Todoist's own words; 401 and 403 mean the connection was
+// revoked, 429 waits.
 import {createHash} from 'node:crypto';
 import {kindOfStatus, ProviderError} from '../../sync/errors.ts';
 import {reasonPhrase, requestJson} from '../http.ts';
@@ -23,9 +23,9 @@ export interface TodoistTask {
   child_order?: number;
   parent_id?: string | null;
   order_key?: string | null;
-  // F6b: label names.
+  // Label names.
   labels?: string[];
-  // SV-264: Markdown; an empty string when the task has none.
+  // Markdown; an empty string when the task has none.
   description?: string;
 }
 
@@ -112,7 +112,7 @@ export class TodoistApi {
   }
 
   /**
-   * One Sync command (SV-249), its uuid the command's request id so Todoist drops a repeat. Todoist
+   * One Sync command, its uuid the command's request id so Todoist drops a repeat. Todoist
    * answers 200 either way: `sync_status[uuid]` is "ok", or its refusal with Todoist's own words.
    */
   async command(type: string, args: Record<string, unknown>, uuid: string): Promise<void> {
@@ -137,7 +137,7 @@ export class TodoistApi {
     return tasks;
   }
 
-  /** A task event type's activity log entries in [since, until), every page (SV-251). */
+  /** A task event type's activity log entries in [since, until), every page. */
   async activities(eventType: 'completed' | 'updated', since: string, until: string): Promise<TodoistActivity[]> {
     const events: TodoistActivity[] = [];
     let cursor: string | undefined;

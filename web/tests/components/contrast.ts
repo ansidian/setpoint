@@ -1,4 +1,4 @@
-// Contrast for the component tests (SV-220's audit): WCAG's ratio between a text's colour and everything
+// Contrast for the component tests: WCAG's ratio between a text's colour and everything
 // behind it, composited from the outside in, as the page paints it.
 
 /** Colours read as they are, not part way through a transition from the other theme; returns what puts transitions back. */

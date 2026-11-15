@@ -1,25 +1,23 @@
-// How free text matches an email, and how a result says why it matched (BRIEF.md › Search; DESIGN.md
-// › Search and Override 12). Pure: the search query (src/search/search.ts) runs these over the
-// full-text index's candidates.
+// How free text matches an email, and how a result says why it matched. Pure: the
+// search query (src/search/search.ts) runs these over the full-text index's candidates.
 //
-// The field's search (SV-137) requires every word but filler, a word's prefix or plural anywhere in
+// The field's search requires every word but filler, a word's prefix or plural anywhere in
 // the index, so ranking only orders and sections what today's every-word search finds. How well a
 // word matched decides its tier (matchTier): an email about the search comes before one that only
-// mentions it, newest first within each, with no importance boost (decision 9).
+// mentions it, newest first within each, with no importance boost.
 //
-// Alfred's broad search keeps what's harvested from v1's email search (SV-5): the query's words as
-// prefix terms with their singular or plural form (`email-search-query` pluralVariants), and v1's
-// zero-result ladder, so one stray word degrades a search instead of emptying it: every word must
-// match, and when none do, any word but filler ("When does my lease renewal need to be signed?"
-// finds lease, renewal or signed, as board 07's results show). v1's middle step (every word but
-// filler) is left out: a question's words broaden the search for Alfred's card rather than narrow
-// it. v1's scoring (`email-search-ranking`) is not carried: it ranked lane, urgency and deadlines
-// above the match (decision 9). Broad free text alone ranks by the best field any word matched,
+// Alfred's broad search takes the query's words as prefix terms with their singular or plural form
+// (pluralVariants), and a zero-result ladder, so one stray word degrades a search instead of
+// emptying it: every word must match, and when none do, any word but filler ("When does my lease
+// renewal need to be signed?" finds lease, renewal or signed, as board 07's results show). There is
+// no middle step (every word but filler): a question's words broaden the search for Alfred's card
+// rather than narrow it. Lane, urgency and deadlines never rank above the match. Broad free text
+// alone ranks by the best field any word matched,
 // sender (and organisation) before subject before body, then newest first.
 import type {MatchField, MessageType} from '@setpoint/shared';
 import {fold, NEGATED, TYPE_CHIP_WORDS, TYPE_WORDS, wordsOf} from './searchChips.ts';
 
-/** v1's filler words (FTS_QUERY_STOPWORDS), plus "need", which questions to Alfred are full of. */
+/** Filler words, plus "need", which questions to Alfred are full of. */
 export const FILLER_WORDS = new Set([
   'a', 'about', 'all', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'been', 'by', 'can', 'could', 'did', 'do', 'does',
   'earliest', 'email', 'emails', 'find', 'first', 'for', 'from', 'get', 'had', 'has', 'have', 'her', 'his', 'how', 'i', 'in', 'is',
@@ -35,7 +33,7 @@ export function textTerms(text: string): string[] {
 }
 
 /**
- * Free text's "!word"s (SV-31), whose words leave out the mail that has any of them, and the text
+ * Free text's "!word"s, whose words leave out the mail that has any of them, and the text
  * left to match: `invoice !proseware` matches invoice and leaves out Proseware's.
  */
 export function withoutExcluded(text: string): {text: string; excluded: string[]} {
@@ -48,7 +46,7 @@ export function withoutExcluded(text: string): {text: string; excluded: string[]
   return {text: kept.join(' '), excluded: [...new Set(excluded)]};
 }
 
-/** v1's regular English singular/plural partner of a word of 4+ letters ("rejections" ↔ "rejection"). */
+/** The regular English singular/plural partner of a word of 4+ letters ("rejections" ↔ "rejection"). */
 export function pluralVariants(term: string): string[] {
   if (term.length < 4 || /[^a-z]/.test(term)) return [];
   if (term.endsWith('ies')) return [`${term.slice(0, -3)}y`];
@@ -125,7 +123,7 @@ export function ftsExpression(terms: string[], mode: 'and' | 'or', columns?: str
 const typeForms = (type: MessageType) => TYPE_CHIP_WORDS[type].flatMap(word => formsOf(word));
 
 /**
- * What a reading's type chip finds beyond the classified type (D386): one of the type's words, whole,
+ * What a reading's type chip finds beyond the classified type: one of the type's words, whole,
  * in the subject, summary or search terms. Never the body, or newsletters that mention it come back.
  */
 export const typeWordsExpression = (types: MessageType[]) => `{subject summary search_terms} : (${[...new Set(types.flatMap(typeForms))].map(form => `"${form}"`).join(' OR ')})`;
@@ -143,7 +141,7 @@ export function typeWordsIn(row: Pick<TextRow, 'subject' | 'summary' | 'searchTe
 }
 
 /**
- * The index's columns for each field, in BRIEF.md's order of preference. A row's summary and search
+ * The index's columns for each field, in order of preference. A row's summary and search
  * terms rank with its body for now: they're words about the email, and a match there has no place
  * of its own in a result.
  */
@@ -205,7 +203,7 @@ export type RankedRow = TextRow & {type: MessageType | null};
 // Words between two a search has for them to still read as one thing, in the body.
 const NEAR_WORDS = 8;
 
-/** The field's tiers, best first; each is newest first (DESIGN.md › Search). */
+/** The field's tiers, best first; each is newest first. */
 export const TIER = {
   sender: 0,
   phrase: 1,
@@ -287,7 +285,7 @@ export function isLinkOnly(row: RankedRow, words: SearchWord[], said: string): b
 }
 
 /**
- * Which fields each term matched, in BRIEF.md's order: sender (and organisation), subject, body. These
+ * Which fields each term matched, in order of preference: sender (and organisation), subject, body. These
  * are the index's words, so a link's path never reads as a match, and body takes the summary and
  * search terms as FIELD_TIERS does.
  */

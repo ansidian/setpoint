@@ -1,4 +1,4 @@
-// A list's rows as they show while it changes (DESIGN.md › Decided while building #13): a row that
+// A list's rows as they show while it changes: a row that
 // leaves stays, folding out, in the place it had, and a row that arrives folds in when its email was
 // shown already (Pin moves it onto the shelf) or left just now (Undo brings it back). app/fold.ts
 // draws the motion; the list decides which rows fold.

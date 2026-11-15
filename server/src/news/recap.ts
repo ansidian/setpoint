@@ -1,4 +1,4 @@
-// While you were away's state (#298; DESIGN.md › News › While you were away): the user on News, the
+// While you were away's state: the user on News, the
 // recap on screen, Done and its Undo. The rule for the hour away is src/domain/news.ts's; its stories
 // are src/queries/news.ts's. A change the page draws goes out as a `news` event naming every section,
 // so All, in any tab, asks again.
@@ -48,7 +48,7 @@ export function noteHere(store: Store, shown: readonly number[] | null) {
   });
 }
 
-/** Done: the recap put away at once, its stories still unseen (D426). Returns what Undo puts back. */
+/** Done: the recap put away at once, its stories still unseen. Returns what Undo puts back. */
 export function putRecapAway(store: Store): RecapUndoOut {
   return transaction(store, () => {
     const now = isoNow(store);

@@ -1,4 +1,4 @@
-// Every email's search terms (SV-136): Claude Haiku 5.5 reads the email once and writes, in the user's
+// Every email's search terms: Claude Haiku 5.5 reads the email once and writes, in the user's
 // everyday words, what it's about, because search only knows an email's own words and the user often
 // searches by meaning. It's apart from triage since rules-sorted mail may never reach a model, and
 // terms are for finding mail, not sorting it. Modelled on the history pass (src/triage/history.ts):

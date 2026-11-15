@@ -1,4 +1,4 @@
-// The phone at 390 × 844 (DESIGN.md › Phone; board 21; F8): board 21's three phones (the Inbox after
+// The phone at 390 × 844 (board 21): board 21's three phones (the Inbox after
 // reading Northwind, the reader on it, the agenda), the Inbox, reader and agenda by taps, read
 // state, Done, Trash with Undo, Mark unread and read, Mark all as read, plain search, and every kind of deep link an ntfy
 // notification carries (`deepLinkPath`): an email, an event, one occurrence of a recurring event, a
@@ -36,7 +36,7 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
     const page = await inbox(setpoint);
     await page.locator('.list .row:has(b[data-tip^="Interview availability"])').tap();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
-    // Opening it read it: 18 (override 2).
+    // Opening it read it: 18.
     await until('the server read it', () => counts(setpoint), value => value.unread === 18);
 
     await page.locator('.ph-back').tap();
@@ -52,7 +52,7 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
   }
 });
 
-test('#239: on the phone a row\'s summary wraps rather than being cut, and the kinds are subheadings', async () => {
+test('on the phone a row\'s summary wraps rather than being cut, and the kinds are subheadings', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -69,7 +69,7 @@ test('#239: on the phone a row\'s summary wraps rather than being cut, and the k
   }
 });
 
-test('SV-73: on the phone a Done row\'s tag covers neither its sender, its account nor its summary', async () => {
+test('on the phone a Done row\'s tag covers neither its sender, its account nor its summary', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     await setpoint.api('POST', `/mail/messages/${await email(setpoint, 'Interview availability')}/done`, {done: true});
@@ -116,10 +116,10 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     const page = await inbox(setpoint);
     assert.equal(await page.locator('.sb').count(), 0);
     assert.deepEqual(await page.locator('.ph-tab').allTextContents(), ['Inbox', 'Agenda']);
-    // The list, as on the desktop: Attention, the Pinned shelf, then the days, Today first (D449).
+    // The list, as on the desktop: Attention, the Pinned shelf, then the days, Today first.
     const headers = (await page.locator('.gh').allTextContents()).map(text => text.trim().split(/\s/)[0]!.toLowerCase());
     assert.deepEqual(headers.slice(0, 3), ['attention', 'pinned', 'today']);
-    // Every row keeps its account; the Pinned row's "Sep 30" stays on one line (override 11).
+    // Every row keeps its account; the Pinned row's "Sep 30" stays on one line.
     for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
     const age = await box(page, '.row.shelf .age');
     assert.ok(age.height < 20, `the age is one line (${age.height}px)`);
@@ -127,8 +127,8 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     const [from, subject] = [await box(page, '.row.shelf .from'), await box(page, '.row.shelf .subj')];
     assert.ok(subject.y >= from.y + from.height, 'the subject sits under the sender');
     assert.equal(await page.locator('.row.shelf .from').evaluate(text => text.scrollWidth <= text.clientWidth), true, '"Parkside Apartments" whole');
-    // … and the subject takes the row's whole width under it (at the list's 15 px, #144, a long one
-    // wraps to a second line and ends in "…" past it, #239).
+    // … and the subject takes the row's whole width under it (at the list's 15 px, a long one
+    // wraps to a second line and ends in "…" past it).
     const [shelf, line] = [await box(page, '.row.shelf'), await box(page, '.row.shelf .subj')];
     assert.equal(line.x, from.x, 'the subject starts under the sender');
     assert.equal(Math.round(line.x + line.width), shelf.x + shelf.width - 16, 'and runs to the row\'s end');
@@ -160,7 +160,7 @@ test('read state on the phone: a tap opens and reads; scrolling and opening Nois
   const setpoint = await startSetpoint();
   try {
     const page = await inbox(setpoint);
-    // Nothing reads on a scroll, so the check makes none (D416).
+    // Nothing reads on a scroll, so the check makes none.
     await page.locator('.list .nfold').first().tap();
     await page.locator('.row:has(b[data-tip^="Fall sale"])').waitFor();
     // Nothing happens to wait for: opening Noise reads nothing.
@@ -198,7 +198,7 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
     await until('read again', () => counts(setpoint), value => value.unread === 18);
 
     // Done: out of Attention, with Undo in the toast; back to the list, with nothing else opened or
-    // read (UX #12).
+    // read.
     await page.locator('.ph-acts button', {hasText: 'Done'}).tap();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
     await page.locator('.rd-subj').waitFor({state: 'detached'});
@@ -218,12 +218,12 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
     await until('it came back', () => setpoint.api<InboxOut>('GET', '/mail/inbox'), value => value.groups.some(group => group.rows.some(row => row.id === exams)));
 
     // Mark all as read: everything outside Attention (where Northwind, never opened, stays unread)
-    // and Security, whose three stay unread (UX #4).
+    // and Security, whose three stay unread.
     await page.locator('.ph-back').tap();
     assert.ok((await counts(setpoint)).unread_fyi > 3);
     await page.locator('.hd button[aria-label="Mark all as read"]').tap();
     await until('all but Security read', () => counts(setpoint), value => value.unread_fyi === 3 && value.unread === 4, 5000);
-    // Every row stays where it is: Northwind, left unread, in Attention, and Security's three in their day (D449).
+    // Every row stays where it is: Northwind, left unread, in Attention, and Security's three in their day.
     await until('the rest read', () => page.locator('.list .row.unread:not(.done)').count(), count => count === 4, 5000);
     await page.locator('.list .row.unread[data-key^="attention:"]:has(b[data-tip^="Interview availability"])').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
@@ -232,7 +232,7 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
   }
 });
 
-test('SV-159: the reader\'s Copy on an email marked unread reads it again, and offers Mark unread', async () => {
+test('the reader\'s Copy on an email marked unread reads it again, and offers Mark unread', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -255,7 +255,7 @@ test('SV-159: the reader\'s Copy on an email marked unread reads it again, and o
   }
 });
 
-test('no account filter (D476), and plain search with no chips and no Alfred', async () => {
+test('no account filter, and plain search with no chips and no Alfred', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await inbox(setpoint);
@@ -303,7 +303,7 @@ test('the agenda: today and the next 7 days, empty days folded, an item\'s detai
     assert.deepEqual((await page.locator('.ph-agenda .pday').allTextContents()).map(text => text.trim()), [
       'Today · Wed, Oct 778° / 61°', 'Thu, Oct 872° / 59°', 'Fri, Oct 9', 'Sat, Oct 10 – Sun, Oct 11No events', 'Mon, Oct 12', 'Tue, Oct 1364° / 55°', 'Wed, Oct 14',
     ]);
-    // A forecast's high and low sit before its icon, as a month cell's do (Decided while building #83).
+    // A forecast's high and low sit before its icon, as a month cell's do.
     assert.equal(await page.locator('.ph-agenda .pwx').first().getAttribute('data-tip'), 'Sunny · 78° / 61°');
     // The day heads never wrap.
     for (const head of await page.locator('.ph-agenda .pday').all()) assert.equal((await head.boundingBox())!.height, 30);
@@ -329,7 +329,7 @@ test('the agenda: today and the next 7 days, empty days folded, an item\'s detai
   }
 });
 
-test('SV-109: a task\'s custom reminder on the phone reads as its moment, the offset beside it, inside the card', async () => {
+test('a task\'s custom reminder on the phone reads as its moment, the offset beside it, inside the card', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const {items} = await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-08');
@@ -417,7 +417,7 @@ test('deep links at the iPhone size: an email, an event, one occurrence, a task\
     await page.locator('.ph-settings', {hasText: 'Settings is on the desktop'}).waitFor();
     assert.equal(new URL(page.url()).pathname, '/settings/accounts');
     await page.locator('.ph-settings button', {hasText: 'Sign out'}).tap();
-    // It asks once, in the toast (UX #21).
+    // It asks once, in the toast.
     await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).tap();
     await page.getByLabel('Password').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);

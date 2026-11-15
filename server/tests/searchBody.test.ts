@@ -1,4 +1,4 @@
-// What search indexes of a body (SV-135): links become their domain, once; plain boilerplate near
+// What search indexes of a body: links become their domain, once; plain boilerplate near
 // the end goes; everything else stays as it was written.
 import {describe, expect, test} from 'vitest';
 import {searchBody, withoutLinks} from '../src/domain/searchBody.ts';

@@ -1,14 +1,13 @@
-// Time to Leave's rules (BRIEF.md › Calendar: from Home, using live routes, with the buffer).
-// Harvested from v1's `time-to-leave-model` (see SV-6): the physical-location test, the leave time
-// (start − buffer − travel) and the bounded route-check cadence. v2 changes: the buffer comes from
-// Settings (5 min by default, not 15), the leave time is floored to the minute and the travel time
+// Time to Leave's rules: from Home, using live routes, with the buffer. The physical-location test,
+// the leave time (start − buffer − travel) and the bounded route-check cadence. The buffer comes
+// from Settings (5 min by default), the leave time is floored to the minute and the travel time
 // rounded up, so "Leave by 2:05 PM · 18 min" adds up exactly; and implausible routes (a geocode in
 // the wrong city) are refused instead of sending the user out hours early.
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
-// A destination that's only a link or a video call has no route (v1's two patterns).
+// A destination that's only a link or a video call has no route.
 const URL_ONLY = /^(?:(?:https?:\/\/|www\.)\S+|[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/\S*)?)$/i;
 const ZOOM_ONLY = /^(?:zoom(?: meeting| call| video conference)?|join zoom|google meet|meet|teams|microsoft teams(?: meeting)?)$/i;
 
@@ -40,7 +39,7 @@ export function leaveAt(startsAt: string, durationSeconds: number, bufferMinutes
 }
 
 /**
- * When to check the route next (v1's cadence): more than 3 hours before leaving, once at 3 hours
+ * When to check the route next: more than 3 hours before leaving, once at 3 hours
  * before; between 1 and 3 hours, every 15 minutes; in the last hour (or past it), every 5; never
  * after the start, and not at all once it has started.
  */

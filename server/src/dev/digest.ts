@@ -1,4 +1,4 @@
-// SV-274: an invented USPS Informed Delivery digest, shaped like the real one (an HTML body whose
+// An invented USPS Informed Delivery digest, shaped like the real one (an HTML body whose
 // mailpieces are `cid:` images, a campaign with its ride-along ad, a package line, the logo and a
 // tracking pixel), for the dev provider and the tests. Its scans are drawn here: grey envelopes and
 // flats with an address block, a stamp and a barcode, each a little different. Nothing in it comes
@@ -161,7 +161,7 @@ export const DEV_DIGESTS: readonly (DevDigestOptions & {providerId: string})[] =
   {day: '2026-09-30', scans: 4, seed: 1},
 ].map(digest => ({...digest, providerId: `seed-digest-${digest.day}`}));
 
-/** The scans kept from a seed digest's source, in its order; its campaigns' pictures aren't (D572). */
+/** The scans kept from a seed digest's source, in its order; its campaigns' pictures aren't. */
 export const devDigestScans = (digest: DevDigestOptions) => Array.from({length: digest.scans}, (_, n) => devScan((digest.seed ?? 1) + n));
 
 /** A real digest's From and Gmail's Authentication-Results for it, DMARC on the parent domain. */
@@ -179,12 +179,12 @@ export function insertDevDigests(db: Pick<OpenDatabase['db'], 'insert' | 'select
   for (const digest of DEV_DIGESTS) {
     if (db.select({id: t.messages.id}).from(t.messages).where(eq(t.messages.providerId, digest.providerId)).get()) continue;
     const receivedAt = zonedInstant(digest.day, '07:30', SEED_TIME_ZONE);
-    // What the digest says, campaigns counted; what's kept leaves them out (D572).
+    // What the digest says, campaigns counted; what's kept leaves them out.
     const pieces = digest.scans + (digest.campaigns ?? 0) + (digest.withoutImage ?? 0);
     const kept = digest.scans + (digest.withoutImage ?? 0);
     const body = `You have ${pieces} mailpiece(s) and 1 inbound package(s) arriving soon.`;
     // Gmail's verdict in a real digest's shape, DMARC on the parent domain, through the evaluator the
-    // mirror uses, so the seed can't call a digest authenticated that the real path wouldn't (SV-274).
+    // mirror uses, so the seed can't call a digest authenticated that the real path wouldn't.
     const senderAuth = evaluateGmailSenderAuthentication(DEV_DIGEST_AUTH, DIGEST_SENDER, new Date(receivedAt));
     const message = db.insert(t.messages).values({
       accountId, providerId: digest.providerId, threadId: `${digest.providerId}-thread`,

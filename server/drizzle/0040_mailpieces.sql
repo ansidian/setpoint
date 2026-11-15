@@ -51,7 +51,7 @@ PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE UNIQUE INDEX `jobs_active_key` ON `jobs` (`key`) WHERE "jobs"."state" in ('queued', 'running');--> statement-breakpoint
 CREATE INDEX `jobs_due` ON `jobs` (`state`,`run_at`);--> statement-breakpoint
 ALTER TABLE `messages` ADD `usps_digest` integer DEFAULT false NOT NULL;--> statement-breakpoint
--- Hand-written below this line (SV-274): digests already in the record leave the Inbox, as new ones
+-- Hand-written below this line: digests already in the record leave the Inbox, as new ones
 -- will (src/domain/mailpieces.ts › isDigestSender). If this migration is regenerated, append this
 -- block again unchanged.
 UPDATE `messages` SET `usps_digest` = 1 WHERE lower(`from_address`) = 'uspsinformeddelivery@email.informeddelivery.usps.com' AND `sender_authenticated` = 1 AND `subject` LIKE 'Your Daily Digest for %';

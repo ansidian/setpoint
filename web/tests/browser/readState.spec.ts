@@ -1,9 +1,9 @@
-// The read-state rules in the browser (DESIGN.md › Interaction rules; BRIEF.md › Read state and
-// Done), at 1677 × 1050 and an iPhone size, each on a fresh seed: an email turns read only when
+// The read-state rules in the browser (DESIGN.md › Interaction rules),
+// at 1677 × 1050 and an iPhone size, each on a fresh seed: an email turns read only when
 // opened (Enter or a click) or by Mark all as read; moving the cursor, scrolling and opening a
 // Noise line never read anything; the counts follow at once, opening dropping the unread counts
 // and only Done dropping Attention's count. The seed starts at 3 attention and 19 unread. Reading
-// never moves a row: unread mail sits in its day (SV-199, D449).
+// never moves a row: unread mail sits in its day.
 // A row's key says where it is: Attention ("attention:22") or its day ("all:5").
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
@@ -65,7 +65,7 @@ for (const size of sizes) {
         await point(row(page, `attention:${northwind}`));
         assert.equal(await cursorKey(page), `attention:${northwind}`);
         // Opening Today's Noise from the keyboard (its line is a cursor stop), closing it by a click,
-        // and opening it again. Nothing reads on a scroll, so the check makes none (D416).
+        // and opening it again. Nothing reads on a scroll, so the check makes none.
         await point(row(page, TODAY_NOISE));
         await page.keyboard.press('Enter');
         await page.locator('.row:has(b[data-tip^="Fall sale"])').waitFor();
@@ -121,7 +121,7 @@ for (const size of sizes) {
       }
     });
 
-    test('a click opens and reads an FYI email, which keeps its place in its day, then and after leaving the Inbox (D449)', async () => {
+    test('a click opens and reads an FYI email, which keeps its place in its day, then and after leaving the Inbox', async () => {
       const setpoint = await startSetpoint();
       try {
         const page = await load(setpoint, size);
@@ -178,7 +178,7 @@ for (const size of sizes) {
         assert.equal((await counts(setpoint)).attention, 3);
         // H: Done. It leaves Attention and its count drops; the next email, Northwind, opens and so
         // reads (2026-10-07: Done on the open email opens the next). The phone goes back to the
-        // list instead, opening nothing (UX #12).
+        // list instead, opening nothing.
         const unread = size === 'iphone' ? 18 : 17;
         await page.keyboard.press('h');
         await until('it leaves Attention', () => row(page, `attention:${google}`).count(), count => count === 0);
@@ -203,7 +203,7 @@ for (const size of sizes) {
       }
     });
 
-    test('Mark all as read reads everything outside Attention and Security (UX #4), every row in its place; then Done empties Attention', async () => {
+    test('Mark all as read reads everything outside Attention and Security, every row in its place; then Done empties Attention', async () => {
       const setpoint = await startSetpoint();
       try {
         const page = await load(setpoint, size);
@@ -241,7 +241,7 @@ for (const size of sizes) {
   });
 }
 
-test('Mark all as read leaves Security unread in its day at once, before All\'s next answer (UX #4, D449)', async () => {
+test('Mark all as read leaves Security unread in its day at once, before All\'s next answer', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint, 'target');
@@ -264,7 +264,7 @@ test('Mark all as read leaves Security unread in its day at once, before All\'s 
   }
 });
 
-test('mail read and Done elsewhere shows as it comes: the dots go, Attention empties, and the list starts at the shelf (SV-25, D449)', async () => {
+test('mail read and Done elsewhere shows as it comes: the dots go, Attention empties, and the list starts at the shelf', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint, 'target');
@@ -275,8 +275,8 @@ test('mail read and Done elsewhere shows as it comes: the dots go, Attention emp
     const inbox = await setpoint.api<InboxOut>('GET', '/mail/inbox');
     for (const one of inbox.groups.find(group => group.group === 'attention')!.rows) await setpoint.api('POST', `/mail/messages/${one.id}/done`, {done: true});
     await until('nothing waits on the server', () => counts(setpoint), value => value.attention === 0 && value.unread === 0);
-    // Nothing holds a row: the dots go and Attention empties as the lists come (D449). Done mail
-    // can be unread still, and shows no dot (#241).
+    // Nothing holds a row: the dots go and Attention empties as the lists come. Done mail
+    // can be unread still, and shows no dot.
     await until('the dots go', () => page.locator('.list .row.unread:not(.done)').count(), count => count === 0, 5000);
     await until('the shelf leads', () => page.locator('.list .gh:not(.day)').allTextContents(), bands => bands.join() === 'Pinned 1', 5000);
     assert.equal(await page.locator('.ubadge').count(), 0, 'no badge counts unread mail');
@@ -287,7 +287,7 @@ test('mail read and Done elsewhere shows as it comes: the dots go, Attention emp
   }
 });
 
-test('SV-150: a change on its way keeps its count: counts asked meanwhile, from before the server has it, don\'t bring the old one back', async () => {
+test('a change on its way keeps its count: counts asked meanwhile, from before the server has it, don\'t bring the old one back', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint, 'target');

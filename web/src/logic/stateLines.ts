@@ -1,5 +1,5 @@
-// The state lines as they show while they change (the polish audit's states-13): a line that
-// arrives folds in, as a row does (#13), and one that goes folds out at once, whether its source is
+// The state lines as they show while they change: a line that
+// arrives folds in, as a row does, and one that goes folds out at once, whether its source is
 // healthy again or it went otherwise. The one that says something as it goes, Jobs's history pass
 // with "Read 330 emails", keeps its place for 1.2 s first. app/states/States.tsx keeps the time and
 // draws the motion.

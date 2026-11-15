@@ -1,5 +1,4 @@
-// Sender authentication (decision 25; harvested from v1's server/email/sender-authentication.ts,
-// see SV-3): whether the receiving provider says the From domain is authentic. Remote content
+// Sender authentication: whether the receiving provider says the From domain is authentic. Remote content
 // loads for an authenticated, non-Noise sender, and Settings' trust is per domain.
 //
 // It reads only the verdict the receiver added (Gmail's Authentication-Results from
@@ -377,7 +376,7 @@ export function evaluateICloudSenderAuthentication(
 }
 
 /**
- * The record's `sender_authenticated` (decision 25): true on a pass, false on a fail or a "none"
+ * The record's `sender_authenticated`: true on a pass, false on a fail or a "none"
  * (no DMARC policy, nothing aligned), null while unknown. Only true loads remote content.
  */
 export function senderAuthenticated(projection: SenderAuthentication | null): boolean | null {

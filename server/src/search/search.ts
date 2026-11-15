@@ -1,14 +1,14 @@
-// Search (BRIEF.md › Search; DESIGN.md › Search): the field's words are free text over the full-text
+// Search: the field's words are free text over the full-text
 // index, which holds an email's summary, its search terms (src/search/terms.ts) and its body without
 // links or footers (src/domain/searchBody.ts). They rank by how well they matched
-// (src/domain/searchMatch.ts › matchTier), newest first within each tier, with no importance boost
-// (decision 9): what's about the search comes first, and `first` counts it, then what only mentions
-// it. Words never become chips by themselves (D392): chips come from a suggestion the user accepted,
+// (src/domain/searchMatch.ts › matchTier), newest first within each tier, with no importance boost:
+// what's about the search comes first, and `first` counts it, then what only mentions
+// it. Words never become chips by themselves: chips come from a suggestion the user accepted,
 // a model's reading of the whole search and the date grammar (src/search/reading.ts), and a client
 // sends them back. They narrow the list and keep its order. A "!word" alone still forms a chip here,
 // a Not chip, since it says exactly what it leaves out, or stays text and leaves out the mail with
-// it (SV-31).
-// Search covers All's mail: archived mail is in (D14), trashed mail is out.
+// it.
+// Search covers All's mail: archived mail is in, trashed mail is out.
 //
 // Each search from the field is logged with its chips and the ids it returned, and opening a result
 // records its position (src/search/log.ts), so ranking can be measured against real searches.
@@ -116,13 +116,13 @@ export interface SearchMatches {
   text: string;
   terms: string[];
   order: 'newest' | 'match';
-  // No email had every word, so these have some of them (UX #10).
+  // No email had every word, so these have some of them.
   partial: boolean;
   // Every match, in order.
   ids: number[];
   // How many of `ids`, from the top, are about the search; the rest only mention it.
   first: number;
-  // A type chip also takes the type's word in an email's own fields (D386), and says which it found.
+  // A type chip also takes the type's word in an email's own fields, and says which it found.
   readingTypes: boolean;
 }
 
@@ -133,12 +133,12 @@ export interface MatchOptions {
   matching?: 'ranked' | 'broad';
   // What the words of a ranked search form: nothing, as the field's typing and what's left of a
   // reading, or dates for what a suggestion might offer. A word naming a type also finds that type
-  // (SV-137).
+  //.
   chipsFromWords?: 'dates' | 'none';
-  // Type chips are a reading's (D386), rather than the grammar's exact ones.
+  // Type chips are a reading's, rather than the grammar's exact ones.
   readingTypes?: boolean;
   // The words as typed when a reading's chips stand for some of them. They rank as words do, none of
-  // them required, so a reading narrows the list and what stays keeps its order (D392).
+  // them required, so a reading narrows the list and what stays keeps its order.
   rankText?: string;
 }
 
@@ -304,14 +304,14 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
     const words = fresh.map(term => typed.get(term) ?? term);
     return words.length ? [{field, label: `${TEXT_LABELS[field]} ${words.join(' ')}`, matched: words}] : [];
   });
-  // A word found only because it names the email's type (SV-137) has no text to point at.
+  // A word found only because it names the email's type has no text to point at.
   const named = new Set<MessageType>(matches.terms.flatMap(term => {
     const type = told.has(term) ? undefined : TYPE_WORDS[term];
     return type && type === row.type && !typeChips.some(chip => chip.value === type) ? [type] : [];
   }));
   for (const type of named) reasons.push({field: 'type', label: `Type ${TYPE_LABELS[type]}`, matched: []});
   reasons.push(...byText);
-  // A reading's type chip that found its word, not the type (D386): where the word was.
+  // A reading's type chip that found its word, not the type: where the word was.
   const typeWords: string[] = [];
   for (const chip of matches.readingTypes ? typeChips : []) {
     const found = chip.value === row.type ? null : typeWordsIn(row, chip.value);

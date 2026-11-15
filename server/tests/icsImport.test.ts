@@ -1,4 +1,4 @@
-// An .ics file read into import drafts (SV-178, D438), against invented files only.
+// An .ics file read into import drafts, against invented files only.
 import {whenProblem} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {ICS_ERRORS, ianaZone, readIcs} from '../src/domain/icsImport.ts';
@@ -51,7 +51,7 @@ describe('readIcs: files shaped like real ones', () => {
       ends_at: '2026-11-10T19:30:00.000Z',
       time_zone: 'America/New_York',
       location: 'https://meet.example.com/j/482-193-775',
-      // The folded lines joined and the \n escapes read; its links stay in the description (D439).
+      // The folded lines joined and the \n escapes read; its links stay in the description.
       description: 'Your interview with Contoso is confirmed.\n\nJoin: https://meet.example.com/j/482-193-775\nNeed to reschedule? https://jobs.example.com/interviews/7f3a9c/reschedule\nCancel: https://jobs.example.com/interviews/7f3a9c/cancel',
       reminders: [30],
     }]);
@@ -70,7 +70,7 @@ describe('readIcs: files shaped like real ones', () => {
     ]);
     expect(sessions[1]).toMatchObject({
       ical_uid: '201@devcon.example.com',
-      // Written in UTC and not repeating: shown in the user's zone. The file's X-WR-TIMEZONE and calendar name are ignored (D436).
+      // Written in UTC and not repeating: shown in the user's zone. The file's X-WR-TIMEZONE and calendar name are ignored.
       time_zone: null,
       transparency: 'transparent',
       url: 'https://devcon.example.com/sessions/201',

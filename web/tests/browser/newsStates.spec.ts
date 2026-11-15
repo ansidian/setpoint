@@ -1,4 +1,4 @@
-// News's states, search and Light (N5; DESIGN.md › News › States, boards 29a, 29b and 31) against
+// News's states, search and Light (boards 29a, 29b and 31) against
 // fixtures (server/src/dev/fixtures/newsStates.ts), which reach no model or feed: Unsorted with the AI
 // down and Show headlines, a stale section and a section with nothing new (29a); the first run (29b);
 // offline, as on every page; and Search news over the archive. Board 31 (Light) is news.spec.ts's,
@@ -51,7 +51,7 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     assert.equal(await unsorted.textContent(), '12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retryingShow headlines');
     // At the top of the list, in `caution`.
     assert.deepEqual(await page.locator('.nw-list > *').evaluateAll(all => all.slice(0, 2).map(element => element.className)), ['nw-state failing', 'nw-body']);
-    // And folded under one chip leading the empty pane's foot, with the stale section, shown in `alert` under the pointer (SV-219, #335).
+    // And folded under one chip leading the empty pane's foot, with the stale section, shown in `alert` under the pointer.
     const chip = page.locator('.pane.idle .pane-foot .pt-chip');
     assert.equal(await chip.textContent(), '2');
     assert.equal(await page.locator('.pt-card').count(), 0, 'folded');
@@ -136,7 +136,7 @@ test('board 29b: the first run, sorting the last 48 hours; no recap; nothing sor
   }
 });
 
-test('offline on News: the pill, the page dimmed but readable, J still moving the cursor (states-05); back, the pill goes', async () => {
+test('offline on News: the pill, the page dimmed but readable, J still moving the cursor; back, the pill goes', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -181,10 +181,10 @@ test('Search news: the stories found replace the list, the archive too; one open
     await page.keyboard.type('warehouse');
     const results = page.locator('section.nw-list[aria-label="Stories found"]');
     await results.locator('.bar.muted', {hasText: '1 result'}).waitFor();
-    // Mail's search header (#8): Search, no segmented control, the field 520 wide with its Esc hint.
+    // Mail's search header: Search, no segmented control, the field 520 wide with its Esc hint.
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
     assert.equal(await page.locator('.hd .seg').count(), 0);
-    // It widens over 180 ms (search-14).
+    // It widens over 180 ms.
     await until('the field 520 wide', () => page.locator('.hd .search').evaluate(field => [field.getBoundingClientRect().width, field.querySelector('.kbd')?.textContent]),
       seen => pagePx(seen[0] as number) === 520 && seen[1] === 'Esc');
     assert.equal(await results.locator('.bar.muted').textContent(), '1 result·newest first');

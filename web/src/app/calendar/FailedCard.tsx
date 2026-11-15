@@ -1,4 +1,4 @@
-// A change that failed, in place (DESIGN.md › Health and states; board 19b): a card anchored to the
+// A change that failed, in place (board 19b): a card anchored to the
 // outlined chip saying what couldn't happen ("Couldn't move Dinner with Sam"), where it was going and
 // from ("Sat, Oct 10 · 7:00 – 9:00 PM", "From Fri, Oct 9"), the place and calendar, the provider and
 // its own words, then Try again and Move back. Nothing quietly reverts: Move back is the user's.

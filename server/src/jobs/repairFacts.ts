@@ -1,12 +1,12 @@
-// Reading again the salaries and locations Jobs cut (SV-129). A reading kept 80 characters of a
+// Reading again the salaries and locations Jobs cut. A reading kept 80 characters of a
 // salary and 120 of a location, and the rest is only in the saved posting. It's for the postings
 // saved before that changed, run once with `jobs-repair-facts`, and safe to run again:
 //
 // - A posting with a value cut at those limits is read again by Haiku from its saved text, with no
 //   web lookup, on the ledger as `jobs_reading_jds`.
 // - Only the field that was cut changes, and only to a value the reading found, so a bad answer
-//   leaves the row as it was and a later run tries it again. The saved JD's text is never touched
-//   (decision 53), and neither is the application, so what the user set stays theirs (./stick.ts).
+//   leaves the row as it was and a later run tries it again. The saved JD's text is never touched,
+//  and neither is the application, so what the user set stays theirs (./stick.ts).
 //
 // It's apart from `jobs-reread` (./reread.ts): that one's --apply always starts a history pass and
 // forgets the ignored rejections again, which repairing a posting has no need of.
@@ -39,7 +39,7 @@ const cutPostings = (store: Store) => jobsDb(store.sqlite).select({
 }).from(j.jobsPostings).innerJoin(j.jobsApplications, eq(j.jobsApplications.id, j.jobsPostings.applicationId))
   .where(or(like(j.jobsPostings.salary, '%…'), like(j.jobsPostings.location, '%…')))
   .orderBy(asc(j.jobsPostings.applicationId)).all()
-  // A location the user set is theirs, whatever it looks like (SV-170).
+  // A location the user set is theirs, whatever it looks like.
   .map(posting => ({...posting, cut: FACTS.filter(fact => !(fact === 'location' && posting.locationSetAt) && wasCut(posting[fact], OLD_LIMITS[fact]))}))
   .filter(posting => posting.cut.length);
 

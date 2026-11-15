@@ -1,9 +1,9 @@
-// SV-274 (D564): the selected day's USPS mail, near the bottom of the agenda rail, over its footer.
+// The selected day's USPS mail, near the bottom of the agenda rail, over its footer.
 // No section on a day with no digest; "No mail today" when the digest says nothing is coming; else
 // one row of thumbnails, as many as fit, the last "+3" when there are more (logic/mailpieces.ts). A
 // thumbnail opens the viewer at that scan: the scan large, "2 of 5" and the day, ← → (buttons, keys
 // or a swipe) stopping at the ends, Esc, a click outside or × closing it. `L` opens it at the first
-// scan (D573), and again steps on, looping (D574). Desktop only (D275).
+// scan, and again steps on, looping. Desktop only.
 import type {MailpiecesOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {PointerEvent as ReactPointerEvent} from 'react';
@@ -38,7 +38,7 @@ export function MailStrip({date}: {date: string}) {
     return () => observer.disconnect();
   }, [showsRow]);
 
-  // `L` opens the selected day's mail at its first scan (D573), as a thumbnail does; on a day with
+  // `L` opens the selected day's mail at its first scan, as a thumbnail does; on a day with
   // nothing to show, or with a field, the editor or another dialog in front, it does nothing.
   useEffect(() => {
     if (!showsRow || open !== null) return;
@@ -98,7 +98,7 @@ function MailViewer({date, urls, start, onClose}: {date: string; urls: string[];
       if (event.key === 'Escape') onClose();
       else if (event.key === 'ArrowLeft') step(-1);
       else if (event.key === 'ArrowRight') step(1);
-      // L again steps on, from the last back to the first, where the arrows stop (D574).
+      // L again steps on, from the last back to the first, where the arrows stop.
       else if (plainKey(event, 'l')) setAt(current => (current + 1) % urls.length);
       else return;
       event.preventDefault();

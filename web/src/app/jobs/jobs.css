@@ -1,7 +1,7 @@
-/* Jobs (DESIGN.md › Jobs; boards 32–36, 40 and the states strip, design-export/jobs/jobs.css, whose
+/* Jobs (boards 32–36, 40 and the states strip, design-export/jobs/jobs.css, whose
    class names these keep without `.sp`). Jobs adds no tokens: Light is the theme's own (board 40). */
 
-/* ---------- The shell's item: Needs you's count in ink2, never caution (D313) ---------- */
+/* ---------- The shell's item: Needs you's count in ink2, never caution ---------- */
 .sb .nav.jobs > .cnt { color: var(--ink2); }
 /* The rail: the count as a 16 px badge placed as the Inbox's, but neutral (32b). */
 .sb.rail .nav.jobs > .cnt { display: grid; place-items: center; position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
@@ -10,11 +10,11 @@
 /* ---------- Header: the two numbers and search ---------- */
 .jb-hd .hd-title { animation: jb-fade var(--dur-fast) var(--ease); }
 @keyframes jb-fade { from { opacity: 0; } }
-/* Counts by status are the segmented control (D314); a count is ink3, ink2 on the segment turned on. */
+/* Counts by status are the segmented control; a count is ink3, ink2 on the segment turned on. */
 .jb-status > * { white-space: nowrap; flex: none; }
 .jb-status .n { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; transition: color var(--dur-fast) var(--ease); }
 .jb-status > .on .n { color: var(--ink2); }
-/* Per week: the last 12 weeks, oldest first; this week's bar an outline, since it isn't over (D318). */
+/* Per week: the last 12 weeks, oldest first; this week's bar an outline, since it isn't over. */
 .jb-week { position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 10px; color: var(--ink3); font-size: 12px; white-space: nowrap; flex: none;
   transition: background-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-week:hover { background: var(--sub); } }
@@ -40,7 +40,7 @@
 .jb-scroll { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; }
 .jb-col .gh > .icon { color: var(--ink3); }
 
-/* Needs you (D308, D311): one band above the table, its count ink2. It folds away while a search holds a query. */
+/* Needs you: one band above the table, its count ink2. It folds away while a search holds a query. */
 .jb-band { display: grid; grid-template-rows: 1fr; flex: none; transition: grid-template-rows var(--dur-medium) var(--ease); }
 .jb-band.folded { grid-template-rows: 0fr; }
 .jb-band > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
@@ -54,7 +54,7 @@
 .jb-need > .g { grid-column: 2; grid-row: 1; height: 18px; display: grid; place-items: center; color: var(--ink3); }
 .jb-need .l1 { grid-column: 3; display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
 .jb-need .l1 .what { color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-/* A subject that opens its email (D401): the same line, underlined under the pointer, the item's fill being the row's. */
+/* A subject that opens its email: the same line, underlined under the pointer, the item's fill being the row's. */
 .jb-need .l1 button.what { flex: 0 1 auto; text-align: left; }
 .jb-need button.what:hover, .jb-hist .what.opens button:hover { text-decoration: underline; text-underline-offset: 2px; }
 .jb-need .l1 .from { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
@@ -74,7 +74,7 @@
 .jb-cand .pick > .icon { color: var(--ink3); flex: none; transition: color var(--dur-fast) var(--ease); }
 .jb-cand .t { color: var(--ink); }
 .jb-cand .ell { flex: 1 1 auto; }
-/* What it adds of one Jobs can't read (SV-140): never the part the ellipsis takes. */
+/* What it adds of one Jobs can't read: never the part the ellipsis takes. */
 .jb-cand .cant { flex: none; white-space: nowrap; }
 .jb-cand > .ibtn { color: var(--ink3); }
 .jb-cands:not(.picked) .jb-cand.cur { background: var(--sub2); }
@@ -88,7 +88,7 @@
 .jb-need .btn .icon.after { transition: transform var(--dur-medium) var(--ease); }
 .jb-need .btn[aria-expanded="true"] .icon.after { transform: rotate(180deg); }
 
-/* From history (D311, D324), folded under the items. Dismiss all folds its rows away, then the line. */
+/* From history, folded under the items. Dismiss all folds its rows away, then the line. */
 .jb-histsec { display: grid; grid-template-rows: 1fr; flex: none; transition: grid-template-rows var(--dur-medium) var(--ease); }
 .jb-histsec > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .jb-histsec.closing { grid-template-rows: 0fr; transition-delay: var(--dur-medium); }
@@ -119,10 +119,10 @@
 .jb-hist .acts { display: flex; gap: 4px; }
 .jb-hist .acts .btn { height: 24px; font-size: 12px; padding: 0 9px; }
 
-/* ---------- The table (D309, D314) ---------- */
-/* Its columns beside the detail, which is always there (board 32; SV-217): no Platform, and JD as a
+/* ---------- The table ---------- */
+/* Its columns beside the detail, which is always there (board 32): no Platform, and JD as a
    glyph named in its tip. */
-/* Company, Applied and Status take the widths dragged or fitted at their edges (SV-246, D508), kept in
+/* Company, Applied and Status take the widths dragged or fitted at their edges, kept in
    `--w-co`, `--w-ap` and `--w-st` on `.jb-col` for any row to read; past what the window has room
    for they give way to their floors (each its heading sorted) before Role goes under 120. Applied
    starts at 80 so "APPLIED ↓" fits. Under 600 px the fractions apply and the dragged widths don't. */
@@ -169,7 +169,7 @@
 .jb-tr.open { background: var(--sub3); transition: none; }
 .jb-tr.open::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
 /* An arrival (a confirmation, Track this, the history pass) or a row an email moved on settles in from
-   sub2 over 900 ms, the arrival rule News uses (#131); its status cell crossfades as it moves (38a). */
+   sub2 over 900 ms, the arrival rule News uses; its status cell crossfades as it moves (38a). */
 .jb-tr.landed { animation: jb-landed var(--news-landed) var(--ease); }
 @keyframes jb-landed { from { background: var(--sub2); } }
 .jb-tr.moved .st { animation: jb-swap calc(var(--dur-fast) * 2) var(--ease); }
@@ -177,7 +177,7 @@
 .jb-tr > span { grid-row: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* A row is 36 px with every cell centred in it. Status alone spans a second row of the grid, so a note
    that needs it wraps to a second line and makes its row 54, leaving the other cells where they are
-   (SV-141). Past two lines it ends in an ellipsis. */
+  . Past two lines it ends in an ellipsis. */
 .jb-tr .st { grid-row: 1 / span 2; align-self: start; align-items: flex-start; padding-block: 8.5px; line-height: 18px; }
 .jb-tr .st > .sd { margin-top: 5.5px; }
 .jb-tr .st > .sd.ghost { margin-top: 5px; }
@@ -203,7 +203,7 @@
 .jb-none > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-scroll .gh.sr { border-top: 0; }
 
-/* Status: a 7 px mark, the label, then the step. Existing colours (D309), In process in its own cobalt (#264, D362), and Rejected's mark `alert` and Ghosted's ring amber, their labels `ink3` (#265). */
+/* Status: a 7 px mark, the label, then the step. Existing colours, In process in its own cobalt, and Rejected's mark `alert` and Ghosted's ring amber, their labels `ink3`. */
 .st { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
 .st .sl { flex: none; }
 .st .step { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
@@ -228,7 +228,7 @@
 .jb-pane.leaving > :not(.pane-edge) { animation: jb-leave var(--dur-fast) var(--ease) forwards; }
 @keyframes jb-leave { to { opacity: 0; } }
 .jb-pane .rd-scroll { scroll-behavior: auto; }
-/* Whose email this is, when it's an application's rather than the item's own (D402). */
+/* Whose email this is, when it's an application's rather than the item's own. */
 .jb-of { display: inline-flex; align-items: center; gap: 6px; min-width: 0; margin-left: 6px; color: var(--ink3); font-size: 12.5px; }
 .jb-of .icon { flex: none; }
 .jb-head { padding: 20px 28px 16px; display: flex; flex-direction: column; gap: 10px; flex: none; }
@@ -272,11 +272,11 @@
 .jb-label .n { letter-spacing: 0; color: var(--ink2); font-variant-numeric: tabular-nums; }
 .jb-want { margin: 8px 0 0; color: var(--ink); font-size: 14px; line-height: 1.6; max-width: 600px; user-select: text; -webkit-user-select: text; }
 .jb-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink2); font-variant-numeric: tabular-nums; }
-/* A long fact wraps inside its box, its glyph level with the first line (SV-129). */
+/* A long fact wraps inside its box, its glyph level with the first line. */
 .jb-facts > span, .jb-facts > a { display: inline-flex; align-items: flex-start; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .jb-facts .icon { color: var(--ink3); margin-top: calc((1lh - 16px) / 2); }
 .jb-facts .quiet { color: var(--ink3); }
-/* The location in place (SV-170): the title's pencil and fill under the pointer; "Add location" in ink3. */
+/* The location in place: the title's pencil and fill under the pointer; "Add location" in ink3. */
 .jb-facts .jb-place { display: inline-flex; align-items: flex-start; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; color: inherit; }
 .jb-facts .jb-place.none { color: var(--ink3); }
 /* The pencil takes no room on the line: it sits 2 px after the place, in the 18 px before the next
@@ -296,7 +296,7 @@
 .jb-lists li::before { content: ""; width: 5px; height: 5px; border-radius: 999px; background: var(--ink2); margin-top: 7px; }
 .jb-lists .nice li { color: var(--ink2); }
 .jb-lists .nice li::before { background: transparent; box-shadow: inset 0 0 0 1.2px var(--ink3); }
-/* The full posting, one step away (D307). */
+/* The full posting, one step away. */
 .jb-src { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 6px 0 14px; border-radius: 12px; background: var(--sub); color: var(--ink2); transition: background-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-src.can:hover { background: var(--sub2); } }
 .jb-src.can:active:not(:has(.tool:active)) { background: var(--sub3); transition-duration: var(--dur-press); }
@@ -314,7 +314,7 @@
 .jb-src.looking { background: transparent; box-shadow: inset 0 0 0 1px var(--edge); }
 .jb-src.looking .t { color: var(--ink2); font-weight: 400; }
 .jb-src.looking .spin { margin-left: 0; vertical-align: 0; color: var(--ink3); }
-/* Its words, then Paste the posting at the row's right, which stops the lookup (SV-170). */
+/* Its words, then Paste the posting at the row's right, which stops the lookup. */
 .jb-src.looking { padding-right: 8px; }
 .jb-src.looking > .line { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
 .jb-skel { display: flex; flex-direction: column; gap: 9px; max-width: 600px; }
@@ -327,9 +327,9 @@
 .jb-nojd .ink2 { color: var(--ink2); }
 /* Beside the line while it fits, else under it at the card's right. */
 .jb-nojd .acts { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
-/* Paste the posting (SV-140): in the JD section, under where it stands. */
+/* Paste the posting: in the JD section, under where it stands. */
 /* With two actions the words take two lines of their own, so the buttons stay beside them, or under
-   them in line with the words when the pane is too narrow (SV-140). */
+   them in line with the words when the pane is too narrow. */
 .jb-nojd.stacked { gap: 10px 16px; padding: 10px 12px 10px 14px; }
 .jb-nojd.stacked > .line { flex: 1 1 280px; align-items: flex-start; }
 .jb-nojd.stacked > .line > .icon { margin-top: calc((1lh - 16px) / 2); }
@@ -353,7 +353,7 @@
 .jb-fullhead .btn .icon { color: var(--ink3); margin-right: -4px; }
 .jb-unfold { display: flex; flex-direction: column; gap: 14px; animation: jb-unfold var(--dur-slow) var(--ease); }
 .jb-unfold.folding { animation: jb-refold var(--dur-medium) var(--ease) forwards; }
-/* Arrived unfolded from mail's popover (#271): there already, with no motion. */
+/* Arrived unfolded from mail's popover: there already, with no motion. */
 .jb-unfold.still:not(.folding), .jb-unfold.still .jb-full > * { animation: none; }
 @keyframes jb-unfold { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes jb-refold { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 100% 0); opacity: 0; } }
@@ -370,7 +370,7 @@
 .jb-full ul, .jb-full ol { margin: 0 0 12px; padding-left: 18px; }
 .jb-full li { margin: 0 0 4px; }
 .jb-full li::marker { color: var(--ink3); }
-/* The timeline (D317), oldest first: each event opens its email. */
+/* The timeline, oldest first: each event opens its email. */
 .jb-tl { display: flex; flex-direction: column; margin: 6px -8px 0; }
 .jb-ev { display: grid; grid-template-columns: 52px 14px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; min-height: 38px; padding: 0 6px 0 8px; border-radius: 10px; color: var(--ink); position: relative;
   width: 100%; text-align: left; transition: background-color var(--dur-fast) var(--ease); }
@@ -401,7 +401,7 @@
 .jb-ev .t .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-ev.quiet .t .s { color: var(--ink3); font-size: 12.5px; }
 .jb-ev .t .k { font-size: 12px; color: var(--ink3); flex: none; }
-/* Applied before at this company (D306), and its other applications. */
+/* Applied before at this company, and its other applications. */
 .jb-before { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 14px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink2); width: 100%; text-align: left;
   margin-top: 8px; transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .jb-before + .jb-before { margin-top: 6px; }
@@ -413,7 +413,7 @@
 .jb-before .st { margin-left: 6px; }
 .jb-before .chev { color: var(--ink3); margin-left: auto; }
 
-/* ---------- A narrow window, 640 to 1099 px (32b, D325) ---------- */
+/* ---------- A narrow window, 640 to 1099 px (32b) ---------- */
 /* The detail lies over the table, led by Back; it arrives 12 px from the right and Back slides it off
    the same way. The header keeps both numbers: the search field gives way first, then Per week's label. */
 @keyframes jb-slide-off { to { opacity: 0; transform: translateX(12px); } }
@@ -438,7 +438,7 @@
   .jb-week .words { display: none; }
 }
 
-/* ---------- J8's states (38a–38c) ---------- */
+/* ---------- States (38a–38c) ---------- */
 /* The AI down and the history pass: a 32 px line at the top of the column, over a hairline, as mail's
    health lines and News's first run are. The pass's progress runs along its foot (states.css's .progress). */
 .jb-state { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; font-size: 12.5px; border-bottom: 1px solid var(--hair); min-width: 0; }
@@ -446,7 +446,7 @@
 .jb-state.muted { color: var(--ink3); }
 .jb-state .spin { margin-left: 0; vertical-align: 0; color: inherit; }
 .jb-state .lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-/* The pass done: `check` in `good` and its last words for 1.2 s, then it folds out (states-13). */
+/* The pass done: `check` in `good` and its last words for 1.2 s, then it folds out. */
 .jb-state.done > .icon.ok { color: var(--good); animation: line-ok var(--dur-fast) var(--ease); }
 @keyframes line-ok { from { opacity: 0; transform: scale(.6); } }
 
@@ -458,11 +458,11 @@
 @media (hover: hover) { .jb-empty .lnk:hover { background: var(--sub2); } }
 .jb-empty .lnk:active { background: var(--sub3); transform: scale(.97); }
 
-/* Settings › Jobs (39a): each account's dot and label, then a select for what Jobs reads there (#273);
+/* Settings › Jobs (39a): each account's dot and label, then a select for what Jobs reads there;
    the group's foot under it. */
 .settings .jb-reads .acc { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); min-width: 0; }
 
-/* ---------- Menus (34a, 35a, 35b; #266–#268): the reader's menu, from its anchor's corner ---------- */
+/* ---------- Menus (34a, 35a, 35b): the reader's menu, from its anchor's corner ---------- */
 .jb-menu { position: fixed; z-index: 40; padding: 6px; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 16px); overflow-y: auto; }
 .jb-menu .jb-mlist { display: flex; flex-direction: column; gap: 1px; }
 .jb-menu .menu-i { font-size: 13px; }
@@ -490,7 +490,7 @@
 .jb-mrow > .ibtn { color: var(--ink3); }
 .jb-mrow > .ibtn.on { color: var(--ink); background: var(--sub3); }
 
-/* ---------- In mail (J7, 37a–37c, D306): the JD chip and its popover, Applied before ---------- */
+/* ---------- In mail (37a–37c): the JD chip and its popover, Applied before ---------- */
 /* The chip draws with the reader's head, under the sender's line and above the actions, with no
    entrance of its own; it answers the pointer as an outlined control does (sub, edgeHover, 120 ms). */
 .jb-chipwrap { position: relative; align-self: flex-start; display: flex; max-width: 100%; min-width: 0; }
@@ -535,8 +535,8 @@
 @media (hover: hover) { .jb-badge:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); color: var(--ink); } }
 .jb-badge:active { background: var(--sub2); transform: scale(.97); transition-duration: var(--dur-press); }
 .jb-badge.lg { height: 26px; padding: 0 10px 0 8px; font-size: 12.5px; gap: 6px; align-self: flex-start; max-width: 100%; }
-/* Jobs's empty pane (SV-220, DESIGN.md #336): News's recap box (`.nd-recap`, `.nd-list`) holding one row per
-   application, its latest status change (D470): the table's status dot for where it went, the company in
+/* Jobs's empty pane: News's recap box (`.nd-recap`, `.nd-list`) holding one row per
+   application, its latest status change: the table's status dot for where it went, the company in
    `ink` 500, then "Applied → Rejected" in the table's label colours, the day on the right in `ink3`, and
    the role under them in `ink3`. */
 .jobs-day { overflow-y: auto; min-height: 0; margin: 0 -28px; padding: 0 28px; }
@@ -551,15 +551,15 @@
 .jd-role { grid-column: 2 / -1; color: var(--ink3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (hover: hover) { .jd-move:hover { background: var(--sub); } }
 .jd-none { display: inline-flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 12.5px; flex: none; }
-/* In the pane every status takes its dot's colour (D470): Rejected `alert`, Ghosted the ghost
+/* In the pane every status takes its dot's colour: Rejected `alert`, Ghosted the ghost
    ring's `sunGlyph`, the rest as the table's labels (Withdrawn stays `ink3`, as its ring). The sweep caught
    Light's Offer at 4.38:1, so Offer and Ghosted lean toward `ink` there (`--textTint`). */
 .jd-change > .sl.rej { color: var(--alert); font-weight: 500; }
 /* Ghosted leans toward `ink` in Light (`--textTint`) to read at 4.5:1 on `panel`, as Offer does everywhere. */
 .jd-change > .sl.ghost { color: color-mix(in oklch, var(--sunGlyph) var(--textTint), var(--ink)); font-weight: 500; }
 
-/* The Pinned shelf (SV-243, D504): a small label with the pin in `sun`, the pinned rows as the table's own, then a divider before the rest.
-   The divider is a 6 px hatched band, `ink3` stripes on `panel` (D532): a row's hover, cursor and open fills are flat colours on the `sub` ramp, so a flat band read as part of a highlighted row beside it, and a pattern can't. */
+/* The Pinned shelf: a small label with the pin in `sun`, the pinned rows as the table's own, then a divider before the rest.
+   The divider is a 6 px hatched band, `ink3` stripes on `panel`: a row's hover, cursor and open fills are flat colours on the `sub` ramp, so a flat band read as part of a highlighted row beside it, and a pattern can't. */
 .jb-pin-h { height: 28px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 16px; border-bottom: 1px solid var(--hair); color: var(--ink3); font-size: 12px; font-weight: 500; }
 .jb-pin-h > .icon { color: var(--sun); }
 .jb-pin-end { height: 6px; flex: none; background: var(--panel) repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink3) 35%, transparent) 0 1px, transparent 1px 4px); border-bottom: 1px solid var(--hair); }

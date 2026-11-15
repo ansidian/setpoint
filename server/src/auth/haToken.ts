@@ -1,4 +1,4 @@
-// Home Assistant's bearer token for the read-only status endpoint (GET /api/status/ha, B6). It's
+// Home Assistant's bearer token for the read-only status endpoint (GET /api/status/ha). It's
 // separate from the owner's session: it reads that one endpoint and nothing else, and no session
 // cookie reads the endpoint in its place. There is one token at a time. The CLI issues it
 // (`npm run cli -- ha-token`, which also rotates: the old one stops working) and revokes it

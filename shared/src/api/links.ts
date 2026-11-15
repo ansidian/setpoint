@@ -1,6 +1,5 @@
 // The web app's deep links: an ntfy notification's click opens the exact email, item or Settings
-// page (BRIEF.md › ntfy; F8). The server builds them and the web app routes them, from this one
-// definition. While an iPhone is paired, an email or item opens in the app instead (appLink).
+// page. The server builds them and the web app routes them, from this one definition. While an iPhone is paired, an email or item opens in the app instead (appLink).
 export type DeepLink =
   | {to: 'message'; id: number}
   | {to: 'item'; id: number; occurrence_start?: string | null}
@@ -9,7 +8,7 @@ export type DeepLink =
 
 /**
  * The iPhone app's link for an email or item, such as "setpoint://mail/12" or "setpoint://item/3",
- * with the ids /api/mail/messages/:id and /api/items/:id take (SV-87). The app has no screen for a
+ * with the ids /api/mail/messages/:id and /api/items/:id take. The app has no screen for a
  * day or a Settings page, so those have none (null).
  */
 export function appLink(link: DeepLink): string | null {

@@ -137,7 +137,7 @@ describe('Places', () => {
     expect(google.requests).toHaveLength(calls);
   });
 
-  test('F7: a place\'s details give Home its coordinates, closing the session; Google\'s refusal is a 502', async () => {
+  test('a place\'s details give Home its coordinates, closing the session; Google\'s refusal is a 502', async () => {
     const {google, c} = await placesWorld();
     google.setPlaces([{placeId: 'home', main: '100 Example St', secondary: '100 Example St, Los Angeles, CA', distanceMeters: 0, radius: 0, lat: 34.1016, lng: -118.3267}]);
     const answer = await c.send('GET', '/api/places/home?session_token=settings-session-1');
@@ -147,7 +147,7 @@ describe('Places', () => {
     expect(await c.send('GET', '/api/places/nowhere')).toMatchObject({status: 502, body: {error: {code: 'places_failed'}}});
   });
 
-  test('F7: the dev runs\' invented places have coordinates too, never Google\'s', async () => {
+  test('the dev runs\' invented places have coordinates too, never Google\'s', async () => {
     const w = world({seed: true});
     const google = await fakeGoogle();
     const c = await signedIn(w, {providers: {places: {baseUrl: google.url}}});
@@ -158,7 +158,7 @@ describe('Places', () => {
     expect(google.requests).toHaveLength(0);
   });
 
-  test('F6: the seed\'s dev runs suggest invented places with no key, never Google; a key turns that off', async () => {
+  test('the seed\'s dev runs suggest invented places with no key, never Google; a key turns that off', async () => {
     const w = world({seed: true});
     const google = await fakeGoogle();
     const c = await signedIn(w, {providers: {places: {baseUrl: google.url}}});

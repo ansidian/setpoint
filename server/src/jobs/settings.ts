@@ -1,4 +1,4 @@
-// Settings › Jobs's server side (J4; drawn in J8, board 39a; D310, D331): on or off, the accounts it
+// Settings › Jobs's server side (board 39a): on or off, the accounts it
 // reads, the history pass's progress or when it finished, and From history's count.
 //
 // - Turning Jobs on sets `enabled_at` (mail from then on is the live reader's) and starts the history
@@ -49,7 +49,7 @@ export function updateJobsSettings(store: Store, patch: JobsSettingsPatch): Jobs
     const turnedOn = enabled && !wasOn;
     const accountsChanged = patch.accounts !== undefined && JSON.stringify(patch.accounts) !== JSON.stringify(current?.accounts ?? []);
     if (!turnedOn && !accountsChanged && enabled === wasOn) return;
-    // A row from before J4 has no `enabled_at` and reads `updated_at`: pin it before that moves.
+    // An older row has no `enabled_at` and reads `updated_at`: pin it before that moves.
     const enabledAt = turnedOn ? now : current?.enabledAt ?? current?.updatedAt ?? null;
     const values = {enabled, accounts, enabledAt, updatedAt: now};
     db.insert(j.jobsSettings).values({id: 1, ...values}).onConflictDoUpdate({target: j.jobsSettings.id, set: values}).run();

@@ -1,4 +1,4 @@
-// The command layer (after mantel's `control`; BRIEF.md › Decided elsewhere). Every change to a
+// The command layer (after mantel's `control`). Every change to a
 // provider is a command:
 // - created pending, with the mirror changed at once where the change shows at once (opening an
 //   email drops the unread counts; a moved event sits at its new time at .5 opacity), and `previous`
@@ -137,8 +137,8 @@ function transition(store: Store, commandId: number, event: CommandEvent, then: 
 
 /**
  * Effects that show only once the provider confirms: a deleted item goes, and so does a task created
- * with no date (SV-74), which isn't on the calendar, as a sync leaves undated tasks out; a subtask
- * with no date stays, in its task's checklist (SV-273).
+ * with no date, which isn't on the calendar, as a sync leaves undated tasks out; a subtask
+ * with no date stays, in its task's checklist.
  */
 function applyOnConfirm(store: Store, row: CommandRow) {
   if (row.kind === 'item_delete') deleteItemInMirror(store, row.payload as unknown as ItemDeletion);
@@ -198,7 +198,7 @@ export function getCommand(store: Store, commandId: number): CommandRow {
 /**
  * Items a change still holds (pending or failed): its target, the item it names, and the rows it
  * created or snapshotted. A sync leaves these as they are, so a pending change isn't undone by the
- * provider's older state and a failed one stays in place until Try again or Move back (B5).
+ * provider's older state and a failed one stays in place until Try again or Move back.
  */
 export function itemsHeldByCommands(store: Store): Set<number> {
   const held = new Set<number>();

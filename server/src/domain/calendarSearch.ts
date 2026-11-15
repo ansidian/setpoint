@@ -1,4 +1,4 @@
-// Calendar search (DESIGN.md › Decided while building #24; darma SV-23 D48): the field's words become
+// Calendar search: the field's words become
 // date chips (mail's grammar) and calendar chips (a calendar's name; "Todoist" is every task's), and
 // the rest is free text over each item's title, place and address, attendees, calendar, and Todoist
 // project and labels, with mail's matching (every word as a prefix with its plural, then any word but
@@ -51,7 +51,7 @@ export function parseCalendarQuery(text: string, calendars: string[], {now, time
   const today = localDay(now, timeZone);
   return parseChips<CalendarSearchChip>(text, (words, raw) => {
     const date = dateChip(words, raw, today);
-    // A month's name alone, other than this month, is both its last and its coming one: two chips, either of which matches (D51).
+    // A month's name alone, other than this month, is both its last and its coming one: two chips, either of which matches.
     if (date && bareMonth(words) && date.from.slice(0, 7) !== today.slice(0, 7)) {
       const coming = String(Number(date.from.slice(0, 4)) + 1);
       return [{kind: 'date', ...date}, {kind: 'date', ...dateChip([...words, coming], `${raw} ${coming}`, today)!}];

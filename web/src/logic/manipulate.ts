@@ -1,8 +1,7 @@
-// Direct manipulation on the month grid (DESIGN.md › Drag; BRIEF.md › Calendar): dropping an item on
-// another day, cloning it, copying and pasting, and selecting several. Rewritten from v1's
-// `calendarQuickActionModel` and `calendarDeadlineRescheduleModel` through the harvest gate (darma
-// SV-15): days move by calendar days and keep the wall-clock time in the owner's zone, so a drag
-// across a daylight-saving change keeps 7 AM at 7 AM (v1's DST fix); a drop on the same day does
+// Direct manipulation on the month grid: dropping an item on
+// another day, cloning it, copying and pasting, and selecting several. Days move by
+// calendar days and keep the wall-clock time in the owner's zone, so a drag across a
+// daylight-saving change keeps 7 AM at 7 AM; a drop on the same day does
 // nothing; a task moves by whole days, keeping its time if it has one; a repeating task, a done task,
 // Google's own kinds of event and an item whose last change hasn't settled don't move.
 import type {CommandOut, ItemChanges, ItemCreateInput, ItemOut, RecurringScope} from '@setpoint/shared';
@@ -31,7 +30,7 @@ export function shiftedBy(item: ItemOut, days: number, timeZone: string): ItemCh
 /** The day an item is on (its first, for an all-day event over several). */
 export const dayOf = (item: ItemOut, timeZone: string) => itemDays(item, timeZone)[0] ?? null;
 
-/** The change a drop on `to` makes, or null when it lands on its own day (v1: a same-day drop does nothing). */
+/** The change a drop on `to` makes, or null when it lands on its own day. */
 export function dropChange(item: ItemOut, to: string, timeZone: string): ItemChanges | null {
   const from = dayOf(item, timeZone);
   if (!from || from === to) return null;
@@ -49,7 +48,7 @@ export function dropLabel(item: ItemOut, to: string, timeZone: string): string {
 export const EDGE_SCROLL = {bandPx: 48, maxStepPx: 18} as const;
 
 /**
- * How far the month grid scrolls each frame while a drag is held near its top or bottom edge (F6b):
+ * How far the month grid scrolls each frame while a drag is held near its top or bottom edge:
  * up near the top, down near the bottom, faster the nearer the edge (and at full speed past it), and
  * not at all elsewhere. Measured in the month section's CSS pixels (geometry.ts), so the page zoom
  * (1.075 from 1440 px, 1.25 from 2200) changes nothing.
@@ -112,7 +111,7 @@ export function withCreating(items: ItemOut[], creating: Creating[]): ItemOut[] 
 }
 
 /**
- * An item as drawn after Try again on its failed change: pending at once (SV-42), until the server
+ * An item as drawn after Try again on its failed change: pending at once, until the server
  * lists that change as anything but the failure that was retried. `retried` holds each retried
  * change's id and when it had failed.
  */
@@ -146,14 +145,14 @@ export function inverseOf(item: ItemOut, changes: ItemChanges): ItemChanges {
 
 /**
  * A new item like `item`, `days` days later (Clone is 0; Paste is the distance to the day pasted
- * on). A copy of one occurrence is an event of its own: it doesn't repeat (v1 did the same).
+ * on). A copy of one occurrence is an event of its own: it doesn't repeat.
  */
 export function copyOf(item: ItemOut, days: number, timeZone: string): ItemCreateInput {
   const when = {all_day: item.all_day, starts_at: item.starts_at, ends_at: item.ends_at, start_date: item.start_date, end_date: item.end_date, due_date: item.due_date, due_at: item.due_at};
   return {
     kind: item.kind, calendar_id: item.calendar_id, title: item.title, ...when, ...(days ? shiftedBy(item, days, timeZone) : {}),
     time_zone: item.time_zone, recurrence: null, place: item.place, address: item.address, attendees: [], reminders: item.reminders,
-    // SV-264: its description goes with it, as its provider wrote it.
+    // Its description goes with it, as its provider wrote it.
     leave_reminder: item.leave_reminder, project: item.project, colour: item.colour, description: item.description,
   } as ItemCreateInput;
 }

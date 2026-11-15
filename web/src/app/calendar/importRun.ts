@@ -1,4 +1,4 @@
-// SV-181: the .ics import under review, and its run (D437). Kept in the module, as the editor's kept
+// The .ics import under review, and its run. Kept in the module, as the editor's kept
 // drafts are, so a run carries on while the user looks at another page. Events go one at a time, each
 // waiting for Google's answer (`untilSettled`); one Google refuses stays in the list with its words
 // and Retry, so a partial import never reads as done. Once every event has gone, the review closes
@@ -44,7 +44,7 @@ const subscribe = (listener: () => void) => {
 export const useImportReview = () => useSyncExternalStore(subscribe, () => review);
 
 // A file of one event, handed to Calendar to open in the editor as a draft once it's drawn: from
-// Calendar's own picker or drop, or from an email's .ics on another page (SV-182).
+// Calendar's own picker or drop, or from an email's .ics on another page.
 let handed: IcsEventOut | null = null;
 export const useHandedIcs = () => useSyncExternalStore(subscribe, () => handed);
 export function handIcs(event: IcsEventOut | null) {
@@ -53,8 +53,8 @@ export function handIcs(event: IcsEventOut | null) {
 }
 
 /**
- * SV-182: an email's .ics, read, lands as a file from Calendar does (icsLanding): nothing to import
- * says so in the toast (D444); otherwise Calendar opens on the event's day, one event in the editor
+ * An email's .ics, read, lands as a file from Calendar does (icsLanding): nothing to import
+ * says so in the toast; otherwise Calendar opens on the event's day, one event in the editor
  * and two or more in the review.
  */
 export function landIcs(name: string, read: IcsReadOut, timeZone: string) {
@@ -156,7 +156,7 @@ async function undoImport(itemIds: number[]) {
   }
 }
 
-/** One event imported from the editor (D437): sent as the review sends one, with the same toast. */
+/** One event imported from the editor: sent as the review sends one, with the same toast. */
 export async function importFromEditor(calendarId: number, calendarName: string, event: Parameters<typeof importIcsEvent>[1]) {
   try {
     const command = await untilSettled(await importIcsEvent(calendarId, event));

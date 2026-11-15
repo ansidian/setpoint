@@ -1,4 +1,4 @@
-// Setpoint's settings, typed, each with its default (DESIGN.md › Settings; BRIEF.md › Settings).
+// Setpoint's settings, typed, each with its default.
 // API fields are snake_case, as everywhere in the API. The server keeps one row per section and fills anything missing from these defaults, so a new
 // setting needs no migration. Secrets (AI keys, the Places key, ntfy's token) aren't settings: they
 // are write-only (see SECRET_NAMES). Appearance is per browser, so it isn't here either.
@@ -23,7 +23,7 @@ export const settingsSchema = z.strictObject({
     code_expiry_minutes: z.number().int().refine(value => (CODE_EXPIRY_PRESETS as readonly number[]).includes(value), 'One of 5, 10, 15, 30 or 60 minutes'),
   }),
   reminders: z.strictObject({
-    // Events: minutes before the start; tasks: a time on the due day. Null is None (D49).
+    // Events: minutes before the start; tasks: a time on the due day. Null is None.
     event_minutes_before: z.number().int().min(0).max(7 * 24 * 60).nullable(),
     task_time: clock.nullable(),
   }),
@@ -38,11 +38,11 @@ export const settingsSchema = z.strictObject({
       reminders: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
       mail: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
     }),
-    // F7: the setpoint-reminders topic's switch (board 18b): reminders, Time to Leave and reconnect alerts.
+    // The setpoint-reminders topic's switch (board 18b): reminders, Time to Leave and reconnect alerts.
     reminders: z.boolean(),
-    // Attention mail stays quiet until what lands in Attention is trusted (BRIEF.md › ntfy).
+    // Attention mail stays quiet until what lands in Attention is trusted.
     attention_mail: z.boolean(),
-    // FYI mail on the same topic, off until turned on (SV-96).
+    // FYI mail on the same topic, off until turned on.
     fyi_mail: z.boolean(),
     // One notification per source that needs reconnecting.
     reconnect_alerts: z.boolean(),
@@ -56,14 +56,14 @@ export const settingsSchema = z.strictObject({
     default_project: z.string().min(1).nullable(),
   }),
   ai: z.strictObject({
-    // Model ids, chosen in Settings › AI (B3); null uses the built-in choice.
+    // Model ids, chosen in Settings › AI; null uses the built-in choice.
     triage_model: z.string().min(1).nullable(),
     triage_strong_model: z.string().min(1).nullable(),
     alfred_model: z.string().min(1).nullable(),
-    // The one-time read of backfilled history (D20, D26).
+    // The one-time read of backfilled history.
     history_model: z.string().min(1).nullable(),
   }),
-  // N3: News's monthly cap in US dollars (D90; shown in Settings › AI's News group): past it, story
+  // News's monthly cap in US dollars (shown in Settings › AI's News group): past it, story
   // summaries use Claude Haiku 5.5 for the rest of the month.
   news: z.strictObject({
     monthly_cap_usd: z.number().min(0).max(1000),

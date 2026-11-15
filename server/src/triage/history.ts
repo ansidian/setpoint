@@ -1,8 +1,8 @@
-// The one-time extraction pass over backfilled history (SV-4 D20). History is sorted as it
+// The one-time extraction pass over backfilled history. History is sorted as it
 // lands by the rules-only pass, which guesses organisation and type from the sender and the words.
 // Once a key exists, the cheap model reads each backfilled email once to fill in its organisation,
-// platform, type, key date, summary and security facts, which search's chips rely on (B4). It never
-// touches the lane, kind or protection: history stays out of Attention (D19).
+// platform, type, key date, summary and security facts, which search's chips rely on. It never
+// touches the lane, kind or protection: history stays out of Attention.
 //
 // - It starts by itself when every mail account's backfill has finished and an AI key is set, or
 //   from the CLI (`npm run cli -- triage-history`). Starting it is recorded (schedule_marks), so

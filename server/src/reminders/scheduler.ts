@@ -1,14 +1,11 @@
 // Reminders and Time to Leave, sent through notify() (never ntfy directly). Each pass:
-// 1. Time to Leave: routes from Home are checked for the day's events with a place and Time to Leave
-//    (SV-31), on v1's cadence (src/domain/timeToLeave.ts), each answer kept only if Home, the place
-//    and the start are still what was asked about; one due to go is checked once more first (v1's
-//    refresh before deliver).
+// 1. Time to Leave: routes from Home are checked for the day's events with a place and Time to Leave,
+//   on its cadence (src/domain/timeToLeave.ts), each answer kept only if Home, the place
+//    and the start are still what was asked about; one due to go is checked once more first.
 // 2. Reminders and Time to Leave that are due go out, each once (notify()'s dedupe key); one that
 //    failed to send is tried again on later passes, within the grace.
 // 3. The pass's moment is kept, so a restart catches up on what it missed (within the grace) and
 //    an item moved into the past doesn't fire.
-// Harvested from v1's `reminder-scheduler` and `time-to-leave-refresh-service` (see SV-6); v1's
-// per-reminder rows, Discord sender and wake-time SQL aren't ported.
 import {REMINDER_LIMIT_MINUTES} from '@setpoint/shared';
 import type {ItemOut} from '@setpoint/shared';
 import {and, eq, gte, like, lt} from 'drizzle-orm';
@@ -78,7 +75,7 @@ export class ReminderScheduler {
     const lastPass = this.lastPass(now);
     const settings = getSettings(store);
     const nowMs = Date.parse(now);
-    // An after-reminder can go up to 4 weeks after its item (D287), so the items read go back that far.
+    // An after-reminder can go up to 4 weeks after its item, so the items read go back that far.
     const items = itemsInRange(store, addDays(localDay(nowMs - REMINDER_GRACE_MS, store.timeZone), -1 - REMINDER_LIMIT_MINUTES / 1440), addDays(localDay(nowMs, store.timeZone), 30)).items;
 
     await this.timeToLeave(items, now);
@@ -112,7 +109,7 @@ export class ReminderScheduler {
     const key = readSecret(store, 'places_api_key');
     if (!key) return;
     const buffer = settings.time_to_leave.buffer_minutes;
-    // Only the events the user gave Time to Leave (SV-31).
+    // Only the events the user gave Time to Leave.
     const upcoming = items.filter(item => item.kind === 'event' && item.leave_reminder && !item.all_day && item.starts_at && !item.read_only
       && Date.parse(item.starts_at) > nowMs && Date.parse(item.starts_at) - nowMs <= TIME_TO_LEAVE_HORIZON_MS
       && isPhysicalLocation(joinLocation(item.place, item.address)));

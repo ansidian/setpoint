@@ -1,10 +1,10 @@
-// A recorded invented history for Jobs's history pass (J4): five months of mail held in three
+// A recorded invented history for Jobs's history pass: five months of mail held in three
 // accounts before Jobs is turned on (Oct 8, 2026), in prod's shapes. Mail before Jul 1 is the year's
 // backfill, sorted as it landed by triage's rules-only pass (its kind and organisation guessed from
 // the words and the sender); from Jul 1 triage's model sorted each email as it came (its fields
 // here). `jobs` is what Haiku answers for Jobs, null for an email Jobs must never ask about: Business
 // mail that isn't Career (nor, in the backfill, typed a confirmation or rejection or sent by a hiring
-// platform, D355), and an account Jobs doesn't list. Companies are Microsoft's
+// platform), and an account Jobs doesn't list. Companies are Microsoft's
 // fictional ones and every address an example domain. tests/history.test.ts serves the answers from
 // the fake Anthropic and states what they make.
 export interface HistoryEmail {
@@ -62,7 +62,7 @@ export const HISTORY_EMAILS: HistoryEmail[] = [
   {
     key: 'school-applied', account: 'Business', at: '2026-06-10T16:00:00.000Z', from: ['School of Fine Art HR', 'hr@schooloffineart.example'],
     subject: 'Application received: Records Clerk', body: 'Your application for Records Clerk has been received.',
-    // Backfilled into a Career-only account, sorted Other by the rules but typed a confirmation: read (D355).
+    // Backfilled into a Career-only account, sorted Other by the rules but typed a confirmation: read.
     jobs: jobs('confirmation', 'School of Fine Art', 'Records Clerk'),
   },
   {
@@ -83,7 +83,7 @@ export const HISTORY_EMAILS: HistoryEmail[] = [
   {
     key: 'graphic-interview', account: 'Business', at: '2026-06-17T16:00:00.000Z', from: ['Graphic Design Institute', 'no-reply@hire.lever.example'],
     subject: 'Interview invitation: Program Coordinator', body: 'We would like to invite you to interview for Program Coordinator on Friday, June 19 at 2:00 PM.',
-    // Backfilled into a Career-only account, sorted Other with no type, but sent by a hiring platform: read (D355).
+    // Backfilled into a Career-only account, sorted Other with no type, but sent by a hiring platform: read.
     jobs: jobs('interview', 'Graphic Design Institute', 'Program Coordinator', null, 'Interview Fri Jun 19, 2:00 PM'),
   },
   {
@@ -148,7 +148,7 @@ export const HISTORY_EMAILS: HistoryEmail[] = [
     key: 'margies-booking', account: 'Business', at: '2026-07-15T16:00:00.000Z', from: ['Margie\'s Travel', 'bookings@margiestravel.example'],
     subject: 'Your booking is confirmed', body: 'Your hotel booking in Portland is confirmed for August 3.',
     triage: fyi('other', 'confirmation', 'Margie\'s Travel', null, 'Hotel booking confirmed'),
-    // Live mail in a Career-only account, typed a confirmation but not Career: never read (decision 56).
+    // Live mail in a Career-only account, typed a confirmation but not Career: never read.
     jobs: null,
   },
   {

@@ -1,4 +1,4 @@
-// Jobs's search (J5, decisions 52 and 62, D306, D316): company or role first, then a match only in a
+// Jobs's search: company or role first, then a match only in a
 // JD's text with the line it matched. Pure, so its ranking and its loose company matching are tested
 // as tables; queries.ts runs it over the store. It's Jobs's own: mail's search and ⌘K never see it.
 

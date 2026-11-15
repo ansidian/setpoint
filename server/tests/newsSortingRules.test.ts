@@ -1,8 +1,7 @@
-// News's sorting policy as tables (N3; BRIEF.md › What it covers, Stories, Ranking, Models and cost,
-// The page › Upcoming): the rules for a source, noise and politics as applied to the model's reading
-// ("events, not arguments", the subject wins), wire copy, candidate matching, new facts versus
-// repeats and which rewrite the story, what its writer is sent, the ranking formula and its order,
-// the cap, keynote confirmation, how the model's answers are read, and search's matching.
+// News's sorting policy as tables: the rules for a source, noise and politics as applied to the
+// model's reading ("events, not arguments", the subject wins), wire copy, candidate matching, new
+// facts versus repeats and which rewrite the story, what its writer is sent, the ranking formula
+// and its order, the cap, keynote confirmation, how the model's answers are read, and search's matching.
 import type {NewsSection} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
@@ -40,7 +39,7 @@ const LOCAL_FEED: SourceRule = {...FEED, section: 'local'};
 const HAZARD: SourceRule = {section: 'local', hazard: true, subjectCheck: false, firstParty: null};
 const HN: SourceRule = {section: 'tech', hazard: false, subjectCheck: true, firstParty: null};
 
-describe('noise and politics, as applied to the model\'s reading (D88)', () => {
+describe('noise and politics, as applied to the model\'s reading', () => {
   test.each<[string, SourceRule, ArticleNotes, {keep: true; sections: NewsSection[]} | {keep: false; reason: NoiseReason}]>([
     // Events, not arguments; the subject wins over politics.
     ['"OpenAI testifies before Congress" is in, under AI', FEED, notes('politics_argument', 'ai', ['general']), {keep: true, sections: ['ai']}],
@@ -68,7 +67,7 @@ describe('noise and politics, as applied to the model\'s reading (D88)', () => {
 
 const AP = 'COLUMBUS, Ohio (AP) — Four people were killed and two were wounded when a gunman opened fire inside a warehouse on the city\'s east side early Tuesday, police said. The suspect fled before officers arrived, and a search continued through the morning.';
 
-describe('wire copy counts as one outlet (D86)', () => {
+describe('wire copy counts as one outlet', () => {
   test.each<[string, {outlet: string; wireKey: string | null}[], number]>([
     ['five TV stations are five outlets', ['KTLA', 'NBC Los Angeles', 'CBS LA', 'ABC7', 'FOX 11'].map(outlet => ({outlet, wireKey: null})), 5],
     ['AP text republished by ABC and PBS is one', [{outlet: 'ABC News', wireKey: wireKey(AP)}, {outlet: 'PBS News', wireKey: wireKey(AP)}], 1],
@@ -94,7 +93,7 @@ describe('wire copy counts as one outlet (D86)', () => {
   });
 });
 
-// A TV station's video page opens with its latest videos, whatever the video is about (SV-164).
+// A TV station's video page opens with its latest videos, whatever the video is about.
 const FURNITURE = 'Latest videos: Crews clear debris after the storm in Fabrikam Falls; Contoso council votes on a parking plan; '
   + 'Northwind Harbor marks fifty years of its fishing fleet; Weekend forecast brings sun and mild temperatures to the valley.';
 
@@ -130,7 +129,7 @@ describe('grouping: cheap candidates first', () => {
     expect(candidates({words: significantWords(headline)}, stories).map(candidate => candidate.id)).toEqual(ids);
   });
 
-  // The polish audit's extra-09, invented: one flood, two stations, facts worded apart.
+  // Invented: one flood, two stations, facts worded apart.
   const FLOOD_STORY = 'Flash flood closes 8 roads around Fabrikam Falls overnight';
   const FLOOD_ARTICLE = 'Rising creek shuts eight Fabrikam Falls streets, crews say';
   const flood = (headline: string, at: string) => ({
@@ -163,7 +162,7 @@ describe('grouping: cheap candidates first', () => {
     expect(candidates(wanted(FLOOD_ARTICLE, ago(0)), [close(1), close(2), close(3), flood(FLOOD_STORY, ago(4))]).map(candidate => candidate.id)).toEqual([9, 3, 2]);
   });
 
-  // SV-164, invented after prod's story 17: a coastal flood weeks old. Its past (the storm, the
+  // Invented after a real case: a coastal flood weeks old. Its past (the storm, the
   // council's money, the closures) once made it share enough place words with any local article to be
   // a candidate, and the model sometimes joined one, its facts keeping the story on the page for good.
   const day = (n: number) => ago((30 - n) * 24);
@@ -256,7 +255,7 @@ describe('grouping: cheap candidates first', () => {
   });
 });
 
-describe('new facts versus repeats, as the model\'s answer is applied (D86, D427)', () => {
+describe('new facts versus repeats, as the model\'s answer is applied', () => {
   const timeline = ['A brush fire broke out near the 210', 'About 150 acres burned'];
   type Said = {storyId: number | null; newFacts: string[]; changesHeadline?: boolean | null};
 
@@ -267,7 +266,7 @@ describe('new facts versus repeats, as the model\'s answer is applied (D86, D427
     ['only the new ones count', {storyId: 1, newFacts: ['About 150 acres burned', 'Evacuation warnings issued for foothill homes'], changesHeadline: true}, {storyId: 1, newFacts: ['Evacuation warnings issued for foothill homes'], rewrite: true}],
     ['the same new fact twice counts once', {storyId: 1, newFacts: ['Grew to 400 acres', 'It grew to 400 acres'], changesHeadline: true}, {storyId: 1, newFacts: ['Grew to 400 acres'], rewrite: true}],
     ['at most three', {storyId: 1, newFacts: ['One arrest made', 'Two roads closed', 'Three schools shut', 'Four shelters opened'], changesHeadline: true}, {storyId: 1, newFacts: ['One arrest made', 'Two roads closed', 'Three schools shut'], rewrite: true}],
-    // Detail joins the timeline and shows as new, but leaves the headline, one line and summary as they are (D427).
+    // Detail joins the timeline and shows as new, but leaves the headline, one line and summary as they are.
     ['a detail that doesn\'t change the headline or one line joins without a rewrite', {storyId: 1, newFacts: ['Crews brought in sandbags'], changesHeadline: false}, {storyId: 1, newFacts: ['Crews brought in sandbags'], rewrite: false}],
     ['an answer that doesn\'t say rewrites, as before', {storyId: 1, newFacts: ['Suspect arrested'], changesHeadline: null}, {storyId: 1, newFacts: ['Suspect arrested'], rewrite: true}],
     ['no story named: a story of its own', {storyId: null, newFacts: ['Something'], changesHeadline: true}, {storyId: null, newFacts: [], rewrite: false}],
@@ -297,7 +296,7 @@ describe('new facts versus repeats, as the model\'s answer is applied (D86, D427
   });
 });
 
-describe('what a story\'s writer is sent (D427)', () => {
+describe('what a story\'s writer is sent', () => {
   const fact = (n: number) => ({at: ago(40 - n), text: `Fact ${n}`});
   const source = (id: number) => ({id, publishedAt: ago(40 - id)});
   const ids = (sources: readonly {id: number}[]) => sources.map(one => one.id);
@@ -333,7 +332,7 @@ describe('what a story\'s writer is sent (D427)', () => {
 
 const signals = (extra: Partial<RankSignals>): RankSignals => ({importance: 50, outlets: 1, local: false, distanceKm: null, lastNewFactAt: NOW, recentArticles: 1, now: NOW, ...extra});
 
-describe('ranking (D86)', () => {
+describe('ranking', () => {
   test.each<[string, Partial<RankSignals>, number]>([
     ['a fresh one-outlet story, importance 50, elsewhere', {}, 47],
     ['nothing at all', {importance: 0, lastNewFactAt: ago(48)}, 4],
@@ -372,7 +371,7 @@ describe('ranking (D86)', () => {
   });
 });
 
-describe('models and cost (D90)', () => {
+describe('models and cost', () => {
   test.each<[string, number, number, string]>([
     ['under the cap: Sonnet writes summaries', 18.4, 40, NEWS_MODELS.stories],
     ['at the cap: Haiku for the rest of the month', 40, 40, NEWS_MODELS.articles],
@@ -397,7 +396,7 @@ const claim = (outlet: string, extra: Partial<KeynoteClaim> = {}): KeynoteClaim 
   company: 'Apple', name: 'Apple event', startsAt: '2026-10-20T17:00:00.000Z', allDay: false, outlet, wireKey: null, firstParty: null, ...extra,
 });
 
-describe('keynote confirmation (BRIEF.md › The page › Upcoming)', () => {
+describe('keynote confirmation', () => {
   test.each<[string, KeynoteClaim[], {name: string; startsAt: string; allDay: boolean} | null]>([
     ['one outlet\'s invite headline isn\'t enough', [claim('MacRumors')], null],
     ['a second outlet confirms it', [claim('MacRumors'), claim('The Verge')], {name: 'Apple event', startsAt: '2026-10-20T17:00:00.000Z', allDay: false}],
@@ -451,7 +450,7 @@ describe('reading the models\' answers', () => {
   });
 });
 
-describe('search\'s matching (D91)', () => {
+describe('search\'s matching', () => {
   test.each<[string, string, string, boolean]>([
     ['every word, as a prefix', 'warehouse ohio', 'Four killed in a warehouse shooting in Ohio', true],
     ['a prefix', 'wareh', 'Four killed in a warehouse shooting', true],
@@ -464,11 +463,11 @@ describe('search\'s matching (D91)', () => {
   });
 });
 
-describe('the write gate (D452)', () => {
+describe('the write gate', () => {
   test.each<[string, {writtenAt: string | null; importance: number}, boolean]>([
     ['never written, read under 40: it waits', {writtenAt: null, importance: 39}, true],
     ['never written, read at 40: it\'s written', {writtenAt: null, importance: 40}, false],
-    ['written once, judged low since: rewrites go on (D427)', {writtenAt: '2026-10-07T12:00:00.000Z', importance: 20}, false],
+    ['written once, judged low since: rewrites go on', {writtenAt: '2026-10-07T12:00:00.000Z', importance: 20}, false],
   ])('%s', (_, story, held) => {
     expect(belowWriteGate(story)).toBe(held);
   });

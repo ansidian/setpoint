@@ -1,4 +1,4 @@
-// Jobs's pure rules as tables (J1): Ghosted, the per-week buckets, the counts, Applied before, and
+// Jobs's pure rules as tables: Ghosted, the per-week buckets, the counts, Applied before, and
 // the keys applications match on.
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import type {JobStatus} from '@setpoint/shared';
@@ -8,7 +8,7 @@ import {companyKey, countsByStatus, daysWithoutEmail, isGhosted, relatedApplicat
 
 const at = (date: string, time = '12:00') => zonedInstant(date, time, SEED_TIME_ZONE);
 
-describe('Ghosted (decision 55)', () => {
+describe('Ghosted', () => {
   // Now is Wed Oct 7, 2026, 9:12 AM Pacific.
   test.each<[string, JobStatus, string, number, boolean]>([
     ['30 days to the day', 'applied', at('2026-09-07', '23:59'), 30, true],
@@ -22,7 +22,7 @@ describe('Ghosted (decision 55)', () => {
   });
 });
 
-describe('applications per week (D314, D318)', () => {
+describe('applications per week', () => {
   test('12 weeks, Sunday to Saturday in the zone, oldest first, this week unfinished', () => {
     const weeks = weeklyCounts([], SEED_NOW, SEED_TIME_ZONE);
     expect(weeks).toHaveLength(12);
@@ -53,7 +53,7 @@ test('counts by status, Ghosted under Applied', () => {
   expect(countsByStatus([])).toEqual({all: 0, ghosted: 0, by_status: {applied: 0, in_process: 0, offer: 0, rejected: 0, withdrawn: 0}});
 });
 
-describe('Applied before and Also at (D306)', () => {
+describe('Applied before and Also at', () => {
   const app = (id: number, appliedAt: string, status: JobStatus) => ({id, appliedAt, status});
   test.each<[string, ReturnType<typeof app>, ReturnType<typeof app>[], number[], number[]]>([
     ['an earlier rejection is Applied before', app(1, '2026-10-01', 'in_process'), [app(2, '2026-02-09', 'rejected')], [2], []],
@@ -76,7 +76,7 @@ test.each([
   ['Data Engineer I [Remote]', 'data engineer i'],
   ['Web Developer - Hybrid', 'web developer'],
   ['QA Engineer, On-site', 'qa engineer'],
-])('the title %j matches as %j (decision 51)', (title, key) => {
+])('the title %j matches as %j', (title, key) => {
   expect(titleKey(title)).toBe(key);
 });
 

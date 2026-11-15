@@ -25,8 +25,8 @@ export interface World {
   events: FeedEvent[];
 }
 
-// The migrated database, with and without the seed, once per test file: a world starts from a copy
-// (SV-143). One seeded with News's image files is seeded for itself, so they're written each time.
+// The migrated database, with and without the seed, once per test file: a world starts from a copy.
+// One seeded with News's image files is seeded for itself, so they're written each time.
 const images = new Map<boolean, Buffer>();
 
 function image(seed: boolean): Buffer {

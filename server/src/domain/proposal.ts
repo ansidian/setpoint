@@ -1,15 +1,15 @@
-// Proposals (BRIEF.md › The reader: Add to calendar and Add as task open a proposal pre-filled from
-// the email: its key date, place and title; DESIGN.md › Proposal, board 08). Pure: what an email
+// Proposals (board 08): Add to calendar and Add as task open a proposal pre-filled from the email,
+// its key date, place and title. Pure: what an email
 // gives a proposal, and the conflict line against the day's items.
 //
 // From the email: the title from its subject ("Final exam schedule · CS 101" → "CS 101 final
 // exam"), the date from triage's key date, and the time and place from the line of the body that
 // names that date ("CS 101 · Software engineering — Wed, Dec 9 · 7:00 – 9:00 PM · Room 214"), read
-// with Chrono. Mail that spreads them over lines is read too (SV-263): a time on the lines right
+// with Chrono. Mail that spreads them over lines is read too: a time on the lines right
 // under the date, an address under those or alone in the next paragraph, never a footer's or a
-// shipping address. A room gets its organisation in front ("Contoso University · Room 214"). Harvested from v1's
-// calendar proposal flow (SV-5): a date with no time is all day, and an end before the start is
-// refused; v1's 30-minute default end became an hour (Google Calendar's own default).
+// shipping address. A room gets its organisation in front ("Contoso University · Room 214").
+// A date with no time is all day, an end before the start is refused, and the default end is an
+// hour after the start (Google Calendar's own default).
 import * as chrono from 'chrono-node';
 import type {ProposalField} from '@setpoint/shared';
 import {fold, wordsOf} from './searchChips.ts';
@@ -113,7 +113,7 @@ function clockIn(component: chrono.ParsedComponents, date: string, timeZone: str
 /**
  * The body's line naming the key date, with its time: the first such line that has a time, on it or
  * on the lines right under it in its block ("Thursday, November 19" over "10 am to 11 am PT"), else
- * the first that names the date at all (SV-263).
+ * the first that names the date at all.
  */
 export function keyLine(body: string, date: string, timeZone?: string): KeyLine | null {
   const blocks = blocksOf(body);
@@ -220,7 +220,7 @@ export function fromEmail(email: ProposalEmail, fields: ProposalFields, timeZone
 
 // ---- The conflict line ----
 
-// The rule lives in shared/ (freeBusy.ts), so the web's proposal card works it out again as its day and time change (SV-208).
+// The rule lives in shared/ (freeBusy.ts), so the web's proposal card works it out again as its day and time change.
 export {proposalConflict as conflictLine, durationLabel} from '@setpoint/shared';
 export type {DayItem} from '@setpoint/shared';
 

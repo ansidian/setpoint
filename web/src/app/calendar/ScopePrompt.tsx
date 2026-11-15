@@ -1,8 +1,8 @@
-// Which occurrences of a recurring event a change applies to (DESIGN.md › Recurring events; boards
-// 14 and 15b): This event (the default), This and following, All events, each with its consequence,
+// Which occurrences of a recurring event a change applies to (boards 14
+// and 15b): This event (the default), This and following, All events, each with its consequence,
 // then Move, Save or Delete ↵ and Cancel Esc. ↑ ↓ choose while it's open. The editor draws it in
 // place of its footer; a drop, a delete or a colour on the grid anchors it to the item (AnchoredCard).
-// Settings › Mail asks the same way about a rule's waiting trashes (SV-238), with its own choices.
+// Settings › Mail asks the same way about a rule's waiting trashes, with its own choices.
 import type {RecurringScope} from '@setpoint/shared';
 import {useEffect, useRef} from 'react';
 import type {ScopeChoice} from '../../logic/scope.ts';

@@ -1,6 +1,6 @@
-// Jobs's one window on mail: small, read-only functions over mail's tables (D303). Mail never
-// imports Jobs; Jobs reads mail only through here: J1's lookups, J2's email as triage left it and
-// the emails waiting to be read, and J4's history pass: what's left for it, sorted or not.
+// Jobs's one window on mail: small, read-only functions over mail's tables. Mail never
+// imports Jobs; Jobs reads mail only through here: its lookups, an email as triage left it and
+// the emails waiting to be read, and the history pass: what's left for it, sorted or not.
 import type {JobsReadAccount, Kind, MessageType} from '@setpoint/shared';
 import {and, asc, count, eq, gte, inArray, isNotNull, isNull, lt, or, sql} from 'drizzle-orm';
 import type {SQL} from 'drizzle-orm';
@@ -11,7 +11,7 @@ import {jobsEmailsRead} from './schema.ts';
 
 type MailReader = Pick<Store, 'db'>;
 
-/** Which of these message ids are still emails Setpoint holds (an event links to its email while it exists, D317). */
+/** Which of these message ids are still emails Setpoint holds (an event links to its email while it exists). */
 export function existingMessages(store: MailReader, ids: (number | null)[]): Set<number> {
   const wanted = [...new Set(ids.filter((id): id is number => id !== null))];
   if (!wanted.length) return new Set();
@@ -28,7 +28,7 @@ export function accountsByLabel(store: MailReader): Map<string, number> {
   return new Map(store.db.select({id: t.accounts.id, label: t.accounts.label}).from(t.accounts).all().map(row => [row.label, row.id]));
 }
 
-/** An email as triage left it (J2): Jobs reuses its organisation, platform, type, kind and summary. */
+/** An email as triage left it: Jobs reuses its organisation, platform, type, kind and summary. */
 export interface JobsEmail {
   id: number;
   accountId: number;
@@ -53,7 +53,7 @@ const LINK = /<?https?:\/\/\S+>?/g;
 const STUB_RATIO = 3;
 
 /**
- * What an email says, for the reader (SV-128): its text part, unless that's empty, a stub or HTML
+ * What an email says, for the reader: its text part, unless that's empty, a stub or HTML
  * itself, when its HTML's words take over; else the snippet. Only Jobs reads mail this way.
  */
 export function emailBody({text, html, snippet}: {text: string; html: string | null; snippet: string}): string {
@@ -77,7 +77,7 @@ export function jobsEmail(store: MailReader, messageId: number): JobsEmail | nul
   return {...email, body: emailBody({text: bodyText, html: bodyHtml, snippet})};
 }
 
-/** Which of these emails read differently from their text part or snippet alone (SV-128). */
+/** Which of these emails read differently from their text part or snippet alone. */
 export function readsDifferently(store: MailReader, ids: number[]): Set<number> {
   if (!ids.length) return new Set();
   const rows = store.db.select({id: t.messages.id, text: t.messages.bodyText, html: t.messages.bodyHtml, snippet: t.messages.snippet})
@@ -85,17 +85,17 @@ export function readsDifferently(store: MailReader, ids: number[]): Set<number> 
   return new Set(rows.filter(row => emailBody(row) !== (row.text.trim() || row.snippet)).map(row => row.id));
 }
 
-/** An email as the JD lookup reads it for links (J3): its sender, text and HTML, whether or not triage has sorted it; null once it's gone. */
+/** An email as the JD lookup reads it for links: its sender, text and HTML, whether or not triage has sorted it; null once it's gone. */
 export function lookupEmail(store: MailReader, messageId: number): {fromAddress: string; text: string; html: string | null} | null {
   const row = store.db.select({fromAddress: t.messages.fromAddress, bodyText: t.messages.bodyText, bodyHtml: t.messages.bodyHtml, snippet: t.messages.snippet})
     .from(t.messages).where(eq(t.messages.id, messageId)).get();
   return row ? {fromAddress: row.fromAddress, text: row.bodyText.trim() || row.snippet, html: row.bodyHtml} : null;
 }
 
-/** Which emails Jobs reads (decision 56): received in this window, in the accounts it lists, not read yet. */
+/** Which emails Jobs reads: received in this window, in the accounts it lists, not read yet. */
 export interface ReadWindow {
   accounts: JobsReadAccount[];
-  // Received at or after (J2: since Jobs was turned on), and before (J4: history).
+  // Received at or after (since Jobs was turned on), and before (the history pass).
   from?: string | null;
   before?: string | null;
 }
@@ -118,7 +118,7 @@ const fromHiringPlatform = or(...HIRING_PLATFORM_SENDERS.flatMap(name => [
 ]));
 
 /**
- * A Career-only account's email Jobs reads (decision 56, D355): triage's Career; and, for backfilled
+ * A Career-only account's email Jobs reads: triage's Career; and, for backfilled
  * mail only, which the rules sorted without a model and whose kind triage's extraction never changes,
  * one typed a confirmation or rejection (by the extraction, or the rules until it runs) or sent by a
  * hiring platform. Live mail stays Career only.
@@ -159,7 +159,7 @@ function waitingWhere(store: MailReader, window: ReadWindow, now: string): SQL |
   );
 }
 
-/** Emails triage has sorted in the window that Jobs hasn't read, oldest first (decision 72). */
+/** Emails triage has sorted in the window that Jobs hasn't read, oldest first. */
 export function emailsToRead(store: MailReader, window: ReadWindow, now: string, limit = 50): number[] {
   if (!window.accounts.length) return [];
   return store.db.select({id: t.messages.id}).from(t.messages).where(waitingWhere(store, window, now))
@@ -173,7 +173,7 @@ export function emailsWaiting(store: MailReader, window: ReadWindow): number {
 }
 
 /**
- * What the history pass (J4) has left in its window: emails it can read now (sorted by triage, as
+ * What the history pass has left in its window: emails it can read now (sorted by triage, as
  * `emailsWaiting` counts them), and emails triage hasn't sorted yet in any account it lists, which it
  * waits for, since only triage's kind says whether a Career-only account's email is one to read.
  */

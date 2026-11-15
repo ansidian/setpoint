@@ -1,4 +1,4 @@
-// A broken reader says so (SV-174): on a board's jobs page whose pane or cards it couldn't read for a
+// A broken reader says so: on a board's jobs page whose pane or cards it couldn't read for a
 // few seconds, the toolbar icon shows a badge and the tooltip "Setpoint couldn't read this LinkedIn
 // page" (or Indeed page), so a change to the board's page doesn't just make chips quietly disappear.
 // What a page expects is each board's `expects` (linkedin.ts, indeed.ts); this is how long it may wait.

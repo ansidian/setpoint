@@ -1,4 +1,4 @@
-// SV-181: the .ics import review's rules (D437): which events start ticked, what each row and the
+// The .ics import review's rules: which events start ticked, what each row and the
 // list's lines say, what's sent for each, and how a run reads as it goes. Pure; the pane
 // (app/calendar/ImportPane.tsx) and its run (app/calendar/importRun.ts) draw and send what these say.
 import type {IcsDropReason, IcsEventOut, IcsImportEvent, IcsReadOut, ItemCreateInput} from '@setpoint/shared';
@@ -8,7 +8,7 @@ import {addDays, localDate} from './format.ts';
 
 /** What the file picker takes. */
 export const ICS_ACCEPT = '.ics,text/calendar';
-/** The most an import takes (D437), checked before the file is sent. */
+/** The most an import takes, checked before the file is sent. */
 export const ICS_MAX_BYTES = 2 * 1024 * 1024;
 export const ICS_TOO_BIG = 'This file is over 2 MB, the most an import takes';
 
@@ -16,7 +16,7 @@ export const ICS_TOO_BIG = 'This file is over 2 MB, the most an import takes';
 export const isIcsFile = (file: {name: string; type: string}) => file.type === 'text/calendar' || /\.ics$/i.test(file.name);
 
 /**
- * SV-190: what a drag over the grid holds, before the drop (DESIGN.md #305). A page sees only each
+ * What a drag over the grid holds, before the drop. A page sees only each
  * item's kind and type then, not its name or size, so: one file of `text/calendar`, or of a type the
  * browser doesn't know (''), might import ('ics', the drop then judges it by name); one of any other
  * type can't ('other'); more than one file can't ('several'); and a drag that isn't of files is none
@@ -102,7 +102,7 @@ export function droppedLine(dropped: IcsReadOut['dropped']): string | null {
   return parts.length ? `Left out: ${parts.join(', ')}` : null;
 }
 
-/** A file with nothing to import says so, with what it had (D436: one that only cancels). */
+/** A file with nothing to import says so, with what it had (such as one that only cancels). */
 export function nothingLine(dropped: IcsReadOut['dropped']): string {
   const left = droppedLine(dropped);
   return left ? `Nothing to import, ${left.replace(/^Left out: /, 'the file has ')}` : 'Nothing to import, the file has no events';
@@ -113,9 +113,9 @@ export const eventDay = (event: Pick<IcsEventOut, 'all_day' | 'start_date' | 'st
   event.all_day ? event.start_date! : localDate(event.starts_at!, timeZone);
 
 /**
- * Where a read file lands (D437, D444): nothing to import says so in the toast; one event opens the
+ * Where a read file lands: nothing to import says so in the toast; one event opens the
  * editor as a draft on its day; two or more open the review, on the first upcoming event's day (or the
- * first event's, when all are past), so Calendar from an email shows where they'd go (SV-182).
+ * first event's, when all are past), so Calendar from an email shows where they'd go.
  */
 export type IcsLanding = {kind: 'nothing'; line: string} | {kind: 'draft'; event: IcsEventOut; date: string} | {kind: 'review'; date: string};
 export function icsLanding(read: IcsReadOut, timeZone: string): IcsLanding {
@@ -132,7 +132,7 @@ export function importOf(event: IcsEventOut): IcsImportEvent {
 }
 
 /**
- * One event opened in the editor (D437) and created there: the editor's fields over the file's, so it
+ * One event opened in the editor and created there: the editor's fields over the file's, so it
  * keeps its iCalUID, description, link, free/busy and changed occurrences. A repeat changed in the
  * editor replaces the file's RRULE and keeps its EXDATE and RDATE lines; one taken off drops them.
  */

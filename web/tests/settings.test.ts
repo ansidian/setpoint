@@ -58,7 +58,7 @@ describe('Settings', () => {
       .toEqual({subject_includes: ['delivered'], subject_excludes: ['return'], from_name_excludes: ['Billing'], body_excludes: ['unsubscribe']});
   });
 
-  // Add to rule (SV-160): the sender an email gives a rule, the rules it can join, and the rule with it.
+  // Add to rule: the sender an email gives a rule, the rules it can join, and the rule with it.
   test.each([
     ['no-reply@northwind.example', {text: 'northwind.example', match: {from_domains: ['northwind.example']}}],
     ['Alerts@Mail.Woodgrovebank.example', {text: 'mail.woodgrovebank.example', match: {from_domains: ['mail.woodgrovebank.example']}}],
@@ -96,7 +96,7 @@ describe('Settings', () => {
   test.each([
     [rule(2, {from_domains: ['woodgrovebank.example']}), 'From woodgrovebank.example → FYI · Money'],
     [rule(1, {from_domains: ['university.edu'], subject_includes: ['Registrar']}, {lane: 'attention', kind: null}), 'From university.edu with “Registrar” in the subject → Attention'],
-    // A written rule's actions go on after the lane (SV-236).
+    // A written rule's actions go on after the lane.
     [rule(3, {from_domains: ['ups.example']}, {lane: 'noise', kind: null, mark_read: true, trash: 'now'}), 'From ups.example → Noise, mark read, trash now'],
     [rule(4, {from_domains: ['ups.example']}, {lane: 'noise', kind: null, trash: '1d'}), 'From ups.example → Noise, trash after 1 day'],
     [rule(5, {from_domains: ['ups.example']}, {mark_read: true}), 'From ups.example → FYI · Money, mark read'],
@@ -141,7 +141,7 @@ describe('Settings', () => {
   // The other rows' middles at 26, 78 and 130 (52 px rows): above the first, between, past the last.
   test.each([[0, 0], [26, 0], [27, 1], [100, 2], [131, 3]])('the pointer at %i goes to %i', (y, to) => expect(dropIndex([26, 78, 130], y)).toBe(to));
 
-  // SV-238 (D495): Turn off's and Delete's prompt for a rule's waiting trashes.
+  // Turn off's and Delete's prompt for a rule's waiting trashes.
   test.each([
     [1, '1 email is waiting to be trashed', ['1 email stays', '1 email goes to the trash as planned']],
     [3, '3 emails are waiting to be trashed', ['3 emails stay', '3 emails go to the trash as planned']],
@@ -202,7 +202,7 @@ describe('a source\'s state names itself in its tip, its reason after', () => {
   ])('%s with %s', (words, reason, tip) => expect(stateTip(words, reason)).toBe(tip));
 });
 
-describe('Trusted domains\' count and Filter show once there are more than Show all\'s 11 (SV-253, F7)', () => {
+describe('Trusted domains\' count and Filter show once there are more than Show all\'s 11', () => {
   test.each([
     [0, '', false], [3, '', false], [DOMAINS_SHOWN, '', false], [DOMAINS_SHOWN + 1, '', true], [78, '', true],
     // A filter still applied keeps its field, so it can be cleared after removals take the list to 11.

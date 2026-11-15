@@ -1,4 +1,4 @@
--- SV-274: Gmail names a subdomain sender's DMARC domain as its parent (header.from=usps.com for
+-- Gmail names a subdomain sender's DMARC domain as its parent (header.from=usps.com for
 -- email.informeddelivery.usps.com), and the evaluator wanted the From domain exactly, so a DMARC
 -- pass was stored as a fail. It now takes the From domain or a parent on a label boundary
 -- (src/domain/senderAuthentication.ts › dmarcCovers); this puts the stored verdicts right, from the

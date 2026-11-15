@@ -61,34 +61,34 @@ const adapters = new Adapters({
   todoist: todoistAdapter(),
   weather: weatherAdapter(),
 }, config.production ? null : devProvider({delayMs: 600, refuse: boardRefusals, held: holdFile ? () => fs.existsSync(holdFile) : undefined}));
-// B3: triage runs as jobs on the same engine; with no AI key, new mail waits in Unsorted.
+// Triage runs as jobs on the same engine; with no AI key, new mail waits in Unsorted.
 // Development only (config refuses it in production): every model call goes to a fake on the loopback.
 const aiEndpoints = config.devAiUrl ? {anthropic: config.devAiUrl} : AI_ENDPOINTS;
-// Jobs reads what triage sorts in the accounts it lists (J2): triage's onSorted nudges its worker.
-// Its JD lookups (J3) read the hiring platforms and posting pages only in production.
+// Jobs reads what triage sorts in the accounts it lists: triage's onSorted nudges its worker.
+// Its JD lookups read the hiring platforms and posting pages only in production.
 const jobsReader = new JobsReader({store, endpoints: aiEndpoints, ...(config.production ? {web: jobsWeb()} : {})});
-// Search terms are written for what triage has sorted (SV-136).
+// Search terms are written for what triage has sorted.
 const searchTerms = new SearchTermsWorker({store, endpoints: aiEndpoints});
 const triage = new TriageWorker({store, endpoints: aiEndpoints, notifier, onSorted: () => {
   jobsReader.nudge();
   searchTerms.nudge();
 }});
-// And, once backfills are done and a key is set, the one-time model pass over history (D20).
+// And, once backfills are done and a key is set, the one-time model pass over history.
 const history = new HistoryExtractor({store, endpoints: aiEndpoints});
-// News: its sources read on the same engine through their adapters (N2), each new article's page
+// News: its sources read on the same engine through their adapters, each new article's page
 // and image read after, its expiry, its image copies. Only production reads them: a dev run on a
 // database that isn't the seed's registers the real list too, and must never reach a real feed.
 const newsImages = newsImagesDir(config.dataDir);
 const news = new NewsWorker({store, imagesDir: newsImages, ...(config.production ? {adapters: newsAdapters(), reader: newsReader()} : {})});
-// N3: what News reads is sorted, grouped, written and ranked on the same engine, with the keys in
-// Settings › AI (D90); a dev run asks the loopback fake, if anything.
+// What News reads is sorted, grouped, written and ranked on the same engine, with the keys in
+// Settings › AI; a dev run asks the loopback fake, if anything.
 const newsSort = new NewsSortWorker({store, endpoints: aiEndpoints});
-// SV-274: each USPS digest's scans, read from its source through the engine's adapters.
+// Each USPS digest's scans, read from its source through the engine's adapters.
 const mailpiecesWorker = new MailpiecesWorker({store, fetchSource: (sourceId, message): Promise<Buffer | null> => engine.emailSource(sourceId, message)});
 const engine: SyncEngine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader, mailpiecesWorker]});
 const connectors = {gmail: google ? gmailConnector(store, google, pubsub !== null) : null, icloud: icloudConnector(store, icloud)};
 const reminders = new ReminderScheduler({store, notifier});
-// A written rule's delayed trash (SV-237): a pass every minute.
+// A written rule's delayed trash: a pass every minute.
 const ruleTrash = new RuleTrashScheduler({store});
 const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
@@ -96,7 +96,7 @@ const app = createApp({
   routes: [jobsApi(store)],
   tokenRoutes: [jobsTokenApi(store)],
 });
-// Gmail's push: pulls v2's own Pub/Sub subscription and queues each account's sync.
+// Gmail's push: pulls Setpoint's own Pub/Sub subscription and queues each account's sync.
 const puller = pubsub ? new GmailPushPuller({store, settings: pubsub, endpoints: GOOGLE_ENDPOINTS, onPush: sourceId => engine.pushed(sourceId)}) : null;
 
 const server = serve({fetch: app.fetch, hostname: config.host, port: config.port}, info => {
@@ -108,7 +108,7 @@ reminders.start();
 ruleTrash.start();
 // The weather source (Connect Gmail makes each Google account's Calendar source).
 ensureCalendarSources(store);
-// News's built-in sources and the data directory's local list (D91).
+// News's built-in sources and the data directory's local list.
 registerNewsSources(store, config.dataDir);
 
 function shutdown(signal: NodeJS.Signals) {

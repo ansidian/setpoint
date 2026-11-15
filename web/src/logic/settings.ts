@@ -1,11 +1,11 @@
-// Settings' words and small rules (DESIGN.md › Settings; boards 17, 18a, 18b), tested as tables.
+// Settings' words and small rules (boards 17, 18a, 18b), tested as tables.
 import type {HealthOut, HealthState, Kind, Lane, MessageType, RuleMatch, RuleOut, RuleTrash, RuleWaiting, Settings, SettingsPatch, SourceOut} from '@setpoint/shared';
 import type {ScopeChoice} from './scope.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import type {SettingsPage} from './route.ts';
 import {repeats} from './tip.ts';
 
-/** Settings' pages as its nav names them, each with its glyph; ⌘K's "Settings › Mail" carries the same (#123). */
+/** Settings' pages as its nav names them, each with its glyph; ⌘K's "Settings › Mail" carries the same. */
 export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}> = {
   accounts: {label: 'Accounts', icon: 'alternate_email'},
   calendar: {label: 'Calendar', icon: 'calendar_month'},
@@ -65,7 +65,7 @@ export function ruleWords(match: RuleMatch): {text: string; bold: boolean}[] {
   }
   const quoted = (values: string[]) => values.map(text => `“${text}”`).join(' or ');
   // A field's "doesn't contain" follows its own words as "without “return”", or stands alone with
-  // the field named when the rule has no words for that field (D487).
+  // the field named when the rule has no words for that field.
   const without = (values: string[] | undefined, follows: boolean, alone: string) => {
     if (values) add(follows ? `, without ${quoted(values)}` : `${runs.length ? ', ' : ''}${alone.replace('%', quoted(values))}`);
   };
@@ -83,7 +83,7 @@ export function ruleWords(match: RuleMatch): {text: string; bold: boolean}[] {
 
 /** "2 this month", "None this month". */
 /**
- * A source's state's tip (SV-253): its words, then its reason after a comma unless they already say
+ * A source's state's tip: its words, then its reason after a comma unless they already say
  * it, so the words cut at the narrow modal can still be read: "Needs sign-in, Token has been expired".
  */
 export const stateTip = (words: string, reason: string | null | undefined) => (reason && !repeats(words, reason) ? `${words}, ${reason}` : words);
@@ -163,7 +163,7 @@ export interface RuleSender {
   match: Pick<RuleMatch, 'from_domains' | 'from_addresses'>;
 }
 
-/** Add to rule's sender (SV-160): the address's domain, or the address itself on a shared host. */
+/** Add to rule's sender: the address's domain, or the address itself on a shared host. */
 export function ruleSender(address: string): RuleSender | null {
   const value = address.trim().toLowerCase();
   const domain = value.split('@')[1] ?? '';
@@ -195,7 +195,7 @@ export function withSender(match: RuleMatch, sender: RuleSender): RuleMatch {
 export const ruleLine = (rule: Pick<RuleOut, 'match' | 'lane' | 'kind'> & Partial<Pick<RuleOut, 'mark_read' | 'trash'>>) =>
   `${ruleWords(rule.match).map(run => run.text).join('')} → ${laneTag(rule.lane, rule.kind)}${ruleActionWords(rule)}`;
 
-/** The rule form's Trash segments (DESIGN.md #347): "Never", "Now", "15 min", "1 hour", "1 day", "1 week". */
+/** The rule form's Trash segments: "Never", "Now", "15 min", "1 hour", "1 day", "1 week". */
 export const TRASH_LABELS: Record<RuleTrash, string> = {never: 'Never', now: 'Now', '15m': '15 min', '1h': '1 hour', '1d': '1 day', '1w': '1 week'};
 
 /** What a written rule does after its lane tag: ", mark read, trash now", ", trash after 1 day", or nothing. */
@@ -209,7 +209,7 @@ export function ruleActionWords({mark_read = false, trash = 'never'}: Partial<Pi
 
 const emails = (count: number) => (count === 1 ? '1 email' : `${count} emails`);
 
-/** Turn off's and Delete's prompt for a rule with trashes waiting (D495): "3 emails are waiting to be trashed". */
+/** Turn off's and Delete's prompt for a rule with trashes waiting: "3 emails are waiting to be trashed". */
 export const waitingTitle = (count: number) => `${emails(count)} ${count === 1 ? 'is' : 'are'} waiting to be trashed`;
 
 /** Its choices, Cancel them first (the default: a rule is usually turned off for catching the wrong mail). */
@@ -250,7 +250,7 @@ export const DOMAINS_SHOWN = 11;
 
 /**
  * Whether Trusted domains' label shows its count and Filter: once there are more domains than Show
- * all's 11 (SV-253, F7), or while a filter is still applied, so it can be cleared.
+ * all's 11, or while a filter is still applied, so it can be cleared.
  */
 export const domainTools = (count: number, filter: string) => count > DOMAINS_SHOWN || filter.trim() !== '';
 
@@ -259,7 +259,7 @@ export const todoistConnected = (sources: SourceOut[]) => sources.some(source =>
 
 /**
  * What a provider's return to Settings says (Connect Gmail's callback: ?connected=<id> or
- * ?error=<code>; Todoist's, to Accounts since D514: ?todoist=1 or 0), for a toast; null for a plain link.
+ * ?error=<code>; Todoist's, to Accounts: ?todoist=1 or 0), for a toast; null for a plain link.
  */
 export function connectNote(search: string): string | null {
   const query = new URLSearchParams(search);
@@ -290,7 +290,7 @@ const tokens = (count: number) => (count >= 1_000_000 ? `${(count / 1_000_000).t
 /** The month's AI spend, Triage, Alfred and News together, for Usage this month's label. */
 export const monthTotal = (usage: Record<'triage' | 'search_terms' | 'search_reading' | 'alfred' | 'news', {cost_usd: number}>) => usage.triage.cost_usd + usage.search_terms.cost_usd + usage.search_reading.cost_usd + usage.alfred.cost_usd + usage.news.cost_usd;
 
-/** Settings › AI's usage, naming what's counted: "1,204 calls · 2.4M tokens in · 48k out" (#73). */
+/** Settings › AI's usage, naming what's counted: "1,204 calls · 2.4M tokens in · 48k out". */
 export function usageLine(usage: {calls: number; input_tokens: number; output_tokens: number}): string {
   return `${usage.calls.toLocaleString('en-US')} ${usage.calls === 1 ? 'call' : 'calls'} · ${tokens(usage.input_tokens)} tokens in · ${tokens(usage.output_tokens)} out`;
 }

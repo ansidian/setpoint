@@ -1,7 +1,5 @@
-// A Google calendar's colour as one of darma's swatches (DESIGN.md › Colour: accounts and
-// calendars pick from the 11). v1 mapped Google's colours to Google's own 11 event swatches by
-// redmean distance (`calendar-event-colors`); v2's swatches are darma's oklch tokens, so the match is
-// by hue in OKLCH, and a colour with almost no chroma (Graphite, Google's greys) is `ink2`.
+// A Google calendar's colour as one of Setpoint's swatches (DESIGN.md › Colour: accounts and
+// calendars pick from the 11). The swatches are oklch tokens, so the match is by hue in OKLCH, and a colour with almost no chroma (Graphite, Google's greys) is `ink2`.
 import type {Colour, EventColour} from '@setpoint/shared';
 
 // The Night tokens' hues (web/src/tokens.ts).
@@ -31,14 +29,14 @@ export function oklch(hex: string): {l: number; c: number; h: number} | null {
 }
 
 /**
- * SV-20 (D33): what Setpoint writes as a calendar's colour at Google (calendarList.patch with
+ * What Setpoint writes as a calendar's colour at Google (calendarList.patch with
  * colorRgbFormat), each swatch's Night token in sRGB, so Google's own app shows the swatch. Each reads
  * back as its swatch: exactly (ink3 is a grey, which hue alone would read as ink2).
  */
 export const CALENDAR_HEX: Record<Colour, string> = {
   ink2: '#a3a4a8', ink3: '#8b8d92', cool: '#71c9fa', warm: '#f5ab77', caution: '#ff865b', comf: '#73d4ac', good: '#7cd591', sun: '#f7cd3a', alert: '#fd736d', violet: '#c8aefa', cyan: '#74e9d6',
 };
-/** What earlier builds wrote for a swatch since moved (SV-58, D400): calendars already carrying it read back as it. */
+/** What earlier builds wrote for a swatch since moved: calendars already carrying it read back as it. */
 const WRITTEN_BEFORE: Record<string, Colour> = {'#707277': 'ink3', '#7d7f84': 'ink3', '#57d4d4': 'cyan'};
 const WRITTEN = new Map([...Object.entries(WRITTEN_BEFORE), ...Object.entries(CALENDAR_HEX).map(([swatch, hex]) => [hex, swatch as Colour] as const)]);
 

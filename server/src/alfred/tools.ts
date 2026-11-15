@@ -1,11 +1,11 @@
-// Alfred's tools, run for the model (BRIEF.md › Alfred: the same queries and commands the UI uses).
+// Alfred's tools, run for the model (the same queries and commands the UI uses).
 // search_mail is the search field's own query (unlogged), get_email the reader's record, list_items
 // the calendar's range read (an event's place and address as one location, the line Google keeps),
 // and propose_item builds the same proposal as Add to calendar / Add as task. None of them changes
 // anything.
 //
-// Harvested from v1's `alfred-tools` (SV-5): one result shape per tool as JSON, failures as a short
-// reason the model can act on (v1's `alfred-tool-errors`, without provider bodies), date ranges
+// One result shape per tool as JSON, failures as a short reason the model can act on (without
+// provider bodies), date ranges
 // checked and capped (92 days, 366 with a query), email text fenced as untrusted, and a proposal only
 // when the tool quotes one of the user's own messages, one per question.
 import type {ItemKind, ProposalOut} from '@setpoint/shared';
@@ -41,7 +41,7 @@ export interface ToolContext {
   // The user's messages in this conversation, this one last.
   questions: string[];
   proposals: ProposalOut[];
-  // SV-263: the invite of an email a proposal is asked for, read before the tool runs (the tools
+  // The invite of an email a proposal is asked for, read before the tool runs (the tools
   // themselves don't wait on a provider); an email with none has null or no entry.
   invites?: Map<number, Invite | null>;
 }

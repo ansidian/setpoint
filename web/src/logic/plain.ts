@@ -1,4 +1,4 @@
-// SV-110 (D290): a lit phrase clicked (or ⌥⌫ with the caret in it) is title words again, as the
+// A lit phrase clicked (or ⌥⌫ with the caret in it) is title words again, as the
 // iPhone's tap is (setpoint-ios QuickAddDraft's `makePlain`, the same rules). The editor keeps the
 // line's plain spans and hides their words from the parser, so `parseTitle` needs nothing new.
 import type {Mark} from './compose.ts';
@@ -82,7 +82,7 @@ export function unmasked(text: string, words: string[]): string {
 export const markInside = (marks: Mark[], caret: number): Mark | null => marks.find(mark => mark.start < caret && caret < mark.end) ?? null;
 
 /**
- * What E selects in the line (D290): its first run of title words, the words outside its marks, so
+ * What E selects in the line: its first run of title words, the words outside its marks, so
  * typing replaces them and the phrases stay; with no title words, the caret at the line's start.
  */
 export function titleRun(text: string, marks: Mark[]): Span {

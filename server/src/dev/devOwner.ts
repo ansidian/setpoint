@@ -1,4 +1,4 @@
-// The dev copy's owner with a short password (SV-206). A real claim needs MIN_PASSWORD_LENGTH
+// The dev copy's owner with a short password. A real claim needs MIN_PASSWORD_LENGTH
 // characters, so `npm run try` writes the owner into its database itself, before the server starts:
 // it makes one with recovery codes if there's none, and puts the password back if it was changed.
 // For a local copy of the sample only; nothing here runs in the server.

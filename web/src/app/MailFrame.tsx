@@ -1,11 +1,11 @@
-// An HTML email in the reader (DESIGN.md › The reader): a sandboxed frame as wide as the reading
+// An HTML email in the reader: a sandboxed frame as wide as the reading
 // pane, radius 14 on white, as tall as the email so the reading pane scrolls it with the head. The
 // frame loads the server's body page by `src` (GET /api/mail/messages/:id/body), which carries its
 // own policy: no scripts but the reader's measuring script, and remote images only when the
 // remote-content rule allows them or the user said Show. The sandbox gives the page no origin of its
 // own, so nothing can reach in to measure it; instead the measuring script posts the page's height
 // as it lays out and as its images load, and the frame takes it. Keys pressed with the email clicked
-// into come the same way, and are pressed again on the frame, so Setpoint's keys still work (SV-149).
+// into come the same way, and are pressed again on the frame, so Setpoint's keys still work.
 import {useEffect, useRef, useState} from 'react';
 import {emailBodyPath} from '../api/mail.ts';
 
@@ -44,7 +44,7 @@ export function MailFrame({messageId, show, title}: {messageId: number; show: bo
     shown.current = src;
   }, [src]);
   // Null until the page has said how tall it is: until then the frame holds 240 px on `sub`, unseen,
-  // then fades in at its height (reader-01, #229). An email seen before starts at its last height.
+  // then fades in at its height. An email seen before starts at its last height.
   const [height, setHeight] = useState<number | null>(() => heights.get(src) ?? null);
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export function MailFrame({messageId, show, title}: {messageId: number; show: bo
         keepHeight(shown.current, next);
         setHeight(next);
       }
-      // A key pressed in the email comes to the page's own keys as if the frame itself held it (SV-149).
+      // A key pressed in the email comes to the page's own keys as if the frame itself held it.
       const key = pressedKey(data?.setpointMailKey);
       if (key) frame.current.dispatchEvent(new KeyboardEvent('keydown', {...key, bubbles: true, cancelable: true}));
     };

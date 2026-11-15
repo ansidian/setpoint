@@ -1,4 +1,4 @@
-// The learning loop over the record (decisions 27, 28; src/domain/learning.ts has the rules): pattern
+// The learning loop over the record (src/domain/learning.ts has the rules): pattern
 // prompts from repeated Done without opening, Yes into a learned rule and No into quiet, the rules
 // Settings › Mail lists (written and learned), and Settings › AI's overview.
 import {AI_MODELS} from '@setpoint/shared';
@@ -26,7 +26,7 @@ const touched = (store: Store) => noteLive(store, {type: 'mail', messages: [], a
 
 /**
  * Every verdict on attention mail: Done opened or not (new mail only; backfilled history was never
- * in the queue), and v1's imported corrections in or out of Attention.
+ * in the queue), and corrections imported at cutover in or out of Attention.
  */
 export function verdicts(store: Store): Verdict[] {
   const done = store.db.select().from(t.messages).where(and(
@@ -101,8 +101,8 @@ function monthStart(store: Store): string {
   return zonedInstant(`${today.slice(0, 7)}-01`, '00:00', store.timeZone);
 }
 
-// A rule's waiting trashes (SV-237): due, not yet sent, not spared by a pin, and the rule's own time,
-// not a code's earlier expiry (SV-252).
+// A rule's waiting trashes: due, not yet sent, not spared by a pin, and the rule's own time,
+// not a code's earlier expiry.
 const waitingOf = (ruleIds: number[]) => and(inArray(t.messages.triageRuleId, ruleIds), isNotNull(t.messages.trashDueAt), isNull(t.messages.trashedAt), isNull(t.messages.pinnedAt),
   sql`not (${t.messages.codeTrash} and ${t.messages.trashDueAt} = ${t.messages.codeExpiresAt})`);
 
@@ -122,8 +122,8 @@ function presentRules(store: Store, rows: RuleRow[]): RuleOut[] {
 }
 
 /**
- * Turning a rule off or deleting it with Cancel them (D495): its waiting trashes' due times go, so the
- * emails stay; a code email's goes back to its code's later expiry (SV-252).
+ * Turning a rule off or deleting it with Cancel them: its waiting trashes' due times go, so the
+ * emails stay; a code email's goes back to its code's later expiry.
  */
 function cancelWaiting(store: Store, ruleId: number) {
   const cancelled = store.db.update(t.messages).set({trashDueAt: sql`case when ${t.messages.codeTrash} then ${t.messages.codeExpiresAt} end`}).where(waitingOf([ruleId]))
@@ -164,10 +164,10 @@ export function updateRule(store: Store, id: number, changes: RuleUpdateInput): 
     const updated = store.db.update(t.triageRules).set({
       ...(changes.match ? {match: changes.match} : {}), lane, kind, ...(changes.enabled !== undefined ? {enabled: changes.enabled} : {}),
       ...(changes.mark_read !== undefined ? {markRead: changes.mark_read} : {}), ...(changes.trash !== undefined ? {trash: changes.trash} : {}),
-      // Its actions apply to mail arriving from now on (D493), turning it on included.
+      // Its actions apply to mail arriving from now on, turning it on included.
       changedAt: isoNow(store),
     }).where(eq(t.triageRules.id, id)).returning().get()!;
-    // Let them run, or no answer, leaves them: the pass doesn't need the rule on (D495).
+    // Let them run, or no answer, leaves them: the pass doesn't need the rule on.
     if (changes.enabled === false && changes.waiting === 'cancel') cancelWaiting(store, id);
     return presentRules(store, [updated])[0]!;
   });
@@ -175,7 +175,7 @@ export function updateRule(store: Store, id: number, changes: RuleUpdateInput): 
 
 /**
  * Deletes a rule. Undoing a learned rule also says No to its prompt, so it isn't offered again the
- * moment the rule is gone. Its waiting trashes are cancelled first if asked (D495); otherwise they
+ * moment the rule is gone. Its waiting trashes are cancelled first if asked; otherwise they
  * keep their due times, which the pass carries out with the rule gone (the email's rule goes null).
  */
 export function deleteRule(store: Store, id: number, waiting: RuleWaiting = 'run') {

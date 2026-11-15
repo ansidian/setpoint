@@ -1,4 +1,4 @@
-// The mail list's motion (DESIGN.md › Decided while building #13): a row leaving fades and its height
+// The mail list's motion: a row leaving fades and its height
 // closes over 180 ms while the rows below slide up; a row arriving opens the same way. Its text goes
 // first (by 72 ms) and the height closes after, so a folding row never shows a squashed slice of its
 // lines; arriving, its height opens first and its text comes in after. A row Done or Trash takes
@@ -83,7 +83,7 @@ export function foldIn(element: HTMLElement | null, delay = 0) {
 
 /**
  * An email folding onto the Pinned shelf: it folds in, then holds `sub3` and lets it go over 260 ms,
- * so it's clear where it landed (polish audit inbox-09), whatever the list does meanwhile.
+ * so it's clear where it landed, whatever the list does meanwhile.
  */
 export function foldInLanding(element: HTMLElement | null, delay = 0) {
   foldIn(element, delay);

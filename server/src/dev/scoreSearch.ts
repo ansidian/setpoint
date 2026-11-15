@@ -10,7 +10,7 @@
 // before scoring, as the job would: one {"id": 1, "terms": ["..."]} a line, a later line for an
 // email replacing an earlier one. Terms for mail that isn't there are left out.
 //
-// With no other flag it scores the words as typed, which form no chips (D392). Each search's
+// With no other flag it scores the words as typed, which form no chips. Each search's
 // "about" and "right" columns are the rows in the first section, and the share of its right emails
 // there.
 //

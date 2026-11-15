@@ -1,7 +1,6 @@
-// Passkeys (WebAuthn), harvested from v1's passkey store, challenge store, pending sign-ins,
-// WebAuthn config and service (SV-2's harvest notes). Challenges and pending sign-ins are stored as
-// hashes, spent once, last five minutes and belong to one security generation. A sign-in that
-// needs a passkey after the password (strict mode) carries the password's time in its pending row.
+// Passkeys (WebAuthn): the passkey store, challenge store, pending sign-ins, WebAuthn config and
+// service. Challenges and pending sign-ins are stored as hashes, spent once, last five minutes and
+// belong to one security generation. A sign-in that needs a passkey after the password (strict mode) carries the password's time in its pending row.
 import {randomBytes} from 'node:crypto';
 import {
   generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse,
@@ -31,7 +30,7 @@ export interface RelyingParty {
  * The relying party: Setpoint's public origin when set (SETPOINT_PUBLIC_URL, https in production),
  * else in development the browser's own loopback origin (localhost or 127.0.0.1, any port), so
  * passkeys work against `npm run dev` and Vite alike. Passkeys belong to the hostname, which is why
- * the cutover keeps it (BRIEF.md › Cutover).
+ * the cutover keeps it.
  */
 export function relyingParty(publicUrl: string | null, requestOrigin: string | undefined, production: boolean): RelyingParty {
   if (publicUrl) {
@@ -71,7 +70,7 @@ export interface PendingSignIn {
 /**
  * A pending sign-in under `generation`; its secret goes in a short-lived cookie. Null, making
  * nothing, when the owner's generation has moved on since the caller checked the password (a
- * security change landed while bcrypt ran), as v1's pending-auth store refused.
+ * security change landed while bcrypt ran).
  */
 export function startPendingSignIn(store: Store, passwordAt: string | null, generation = requireOwner(store).securityGeneration): string | null {
   return transaction(store, () => {
@@ -225,7 +224,7 @@ export async function registerPasskey(store: Store, rp: RelyingParty, session: {
   });
 }
 
-/** Removes a passkey; removing the last one turns strict mode off, so sign-in stays possible (v1). */
+/** Removes a passkey; removing the last one turns strict mode off, so sign-in stays possible. */
 export function deletePasskey(store: Store, generation: number, passkeyId: number): number | null {
   const passkey = store.db.select().from(t.passkeys).where(eq(t.passkeys.id, passkeyId)).get();
   if (!passkey) throw notFound('No such passkey.');

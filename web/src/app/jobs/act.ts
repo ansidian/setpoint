@@ -1,5 +1,4 @@
-// An answer or a correction, said in the toast with its Undo (DESIGN.md › Corrections: "each says what
-// it did in the toast, with Undo for 6 seconds and #147's glyph", override 36): `check` in `good` for a
+// An answer or a correction, said in the toast with its Undo for 6 seconds and its glyph: `check` in `good` for a
 // thing done ("JD saved for Lucerne Publishing", "Merged"), `delete` in `ink3` for one taken away
 // (Dismiss all, Not an application, Delete). A refusal says what failed and why, its parts joined by
 // a comma. Undo puts back exactly what was there (server/src/jobs/undo.ts).

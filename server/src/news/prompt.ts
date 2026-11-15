@@ -1,14 +1,14 @@
-// What News asks the models and how it reads their answers (N3; BRIEF.md › News › What it covers,
-// Stories, Ranking, Models and cost; D86, D88, D90, D421). Three prompts, each answered through one tool:
+// What News asks the models and how it reads their answers. Three prompts, each answered
+// through one tool:
 // - each article (Claude Haiku 5.5): its sections, what kind of thing it is and what it's about (the
 //   noise and politics policy is applied to that answer in src/domain/newsSorting.ts), its key facts,
 //   its importance against the section's guide, where it happened, and a keynote it announces;
 // - grouping (Haiku): whether an article is about one of a few likely stories, what facts it adds, and
-//   whether they change the story's headline or one line, which alone rewrites it (D427);
+//   whether they change the story's headline or one line, which alone rewrites it;
 // - a story (Claude Sonnet 5.5, Haiku past the monthly cap): the neutral headline, the one line and
-//   the summary, from Haiku's fact notes in the story's window (D427), with the lead article, the best
+//   the summary, from Haiku's fact notes in the story's window, with the lead article, the best
 //   image and how much the story matters against its sections' guides. That judgement is the story's
-//   importance in the ranking; no separate call ranks the stories (D421).
+//   importance in the ranking; no separate call ranks the stories.
 // Each system prompt is fixed text, so its cached prefix holds; what changes rides in the input.
 // Answers are read leniently, field by field: what doesn't fit is dropped, and only an answer missing
 // what the step can't do without is unusable (null).
@@ -203,7 +203,7 @@ export interface PromptSource {
 
 /**
  * The story as its writer sees it: on a rewrite, the headline and summary it has, which carry its past;
- * then its window's facts and sources (writerWindow, D427).
+ * then its window's facts and sources (writerWindow).
  */
 export function storyInput(story: {headline: string | null; summary: string | null; sections: NewsSection[]; facts: {at: string; text: string}[]}, sources: readonly PromptSource[]): string {
   return [

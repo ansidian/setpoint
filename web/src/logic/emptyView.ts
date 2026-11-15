@@ -1,4 +1,4 @@
-// An empty Inbox view's words (SV-226): its headline, and one quiet line with something earned.
+// An empty Inbox view's words: its headline, and one quiet line with something earned.
 import {readerTime} from './format.ts';
 import type {InboxView} from './route.ts';
 

@@ -1,4 +1,4 @@
-// A full passkey ceremony in the browser (F7; B1 flagged it): Chromium's virtual authenticator over
+// A full passkey ceremony in the browser: Chromium's virtual authenticator over
 // the DevTools protocol, on http://localhost (WebAuthn won't take an IP address as its relying party).
 // Settings › Security asks for the password first, adds a passkey, turns on "a password and a
 // passkey"; after Sign out the card takes the password, then the passkey; then the passkey alone
@@ -47,7 +47,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
 
     // Sign out (the foot of Settings' nav), then the password, then the passkey.
     await page.locator('.settings .set-nav .nav', {hasText: 'Sign out'}).click();
-    // It asks once, in the toast (UX #21).
+    // It asks once, in the toast.
     await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).click();
     await page.locator('.sign-in').waitFor();
     await page.locator('.sign-in input[type="password"]').fill(password);
@@ -74,7 +74,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
     await page.locator('.settings .set-nav .nav', {hasText: 'Security'}).click();
     await page.locator('.settings .set-label', {hasText: 'Confirm it'}).waitFor();
     assert.equal(await page.getByRole('button', {name: 'Make new codes'}).isDisabled(), true);
-    // Add iPhone too: it mints a token that never idles out (#250).
+    // Add iPhone too: it mints a token that never idles out.
     const addIphone = page.locator('.settings .set-label').getByRole('button', {name: 'Add iPhone'});
     assert.equal(await addIphone.isDisabled(), true);
     await page.locator('.settings input[name="password"]').fill('not it');

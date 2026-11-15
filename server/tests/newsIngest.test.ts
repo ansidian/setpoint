@@ -1,4 +1,4 @@
-// News ingest end to end (N2), on the sync engine against fakes on 127.0.0.1 that answer as each
+// News ingest end to end, on the sync engine against fakes on 127.0.0.1 that answer as each
 // source does: a feed's conditional GET and its articles' text and image copies, the summary-only,
 // metered and discovery rules, page reads, the hazard APIs from the home location, Hacker News, and
 // the health tests (a dead feed, a page read that finds nothing, a 429 with Retry-After). Every
@@ -53,7 +53,7 @@ function tempDir() {
   return dir;
 }
 
-/** An empty Setpoint whose News reads through N2's adapters, with a directory for image copies. */
+/** An empty Setpoint whose News reads through the real adapters, with a directory for image copies. */
 function ingestWorld() {
   const w = world();
   const images = tempDir();

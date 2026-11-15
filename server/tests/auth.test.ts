@@ -1,6 +1,5 @@
-// Sign-in (harvested from v1's server/auth; SV-2): the first claim by setup token, the password and
-// its shared budget, sessions stored as hashes, recovery codes, security transitions, strict mode
-// and passkeys' challenges.
+// Sign-in: the first claim by setup token, the password and its shared budget, sessions stored as
+// hashes, recovery codes, security transitions, strict mode and passkeys' challenges.
 import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -52,7 +51,7 @@ describe('the first claim', () => {
   });
 });
 
-test('a hash made outside Setpoint verifies: the owner\'s came over from v1, made by its own bcrypt', async () => {
+test('a hash made outside Setpoint verifies', async () => {
   const owner = {passwordHash: '$2b$04$/NB2JnssvCyVI2i5UmcMI.6Nmy9BgDprm68KwtvENW9loVWj/U0ES'} as Owner;
   expect(await passwordMatches(owner, 'correct horse battery staple')).toBe(true);
   expect(await passwordMatches(owner, 'not the password')).toBe(false);

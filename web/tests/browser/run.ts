@@ -3,13 +3,13 @@
 // waits for the lock, saying whose run it waits for. The build and the checks together get LIMIT
 // minutes, then everything is stopped, so a hung run can't sit for hours. At the end it prints the
 // run's time against BUDGET and the slowest checks (slowest.ts). Checks run without traces, so what
-// failed runs again with them (SV-144), up to RETRACED checks, the run failing whatever that finds:
+// failed runs again with them, up to RETRACED checks, the run failing whatever that finds:
 // its traces are under test-results/browser/traces/ (harness.ts), emptied at the start of each run,
 // and a check that passes the second time says so. A run that passes
 // records its spec files for the content they read (passes.ts), unless the files changed meanwhile,
 // so release:check doesn't run them again. `-- settings --only "board 17"` runs only the
 // checks whose names start that way, and isn't recorded. A file's checks run side by side, as many as
-// SLOTS shared out over the files run (SV-102): one file uses every slot, a whole run one each.
+// SLOTS shared out over the files run: one file uses every slot, a whole run one each.
 // Each check boots its server from a bundle made here (bundle.ts).
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
@@ -26,7 +26,7 @@ const LIMIT = minutes('SETPOINT_BROWSER_LIMIT_MIN', 15);
 // A full run alone, with some room; past it, the run says so (it doesn't fail).
 const BUDGET = minutes('SETPOINT_BROWSER_BUDGET_MIN', 5);
 // Checks at once on this machine (the files a whole run runs side by side): 10 and 12 took about
-// 2m20s, against 8's 2m34s and 6's 3m04s, at a higher peak (SV-146).
+// 2m20s, against 8's 2m34s and 6's 3m04s, at a higher peak.
 const SLOTS = 8;
 // A failure past this many is the harness or the build, not something a trace of each would show.
 const RETRACED = 10;

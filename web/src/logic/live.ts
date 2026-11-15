@@ -1,19 +1,19 @@
-// What a live event refreshes (BUILD-PLAN.md › B1: the web refreshes only what an event names), as
+// What a live event refreshes (only what an event names), as
 // paths of the API resources on screen. A `mail` event names emails and accounts: the Inbox and
 // All lists, the counts and triage's health (its Unsorted count) show them, and an open email
 // refreshes only when it's named. An `items` event refreshes the item ranges, and the calendars and
-// Todoist's projects (their colours, SV-25) when it names a calendar; a `health` event the accounts
+// Todoist's projects (their colours) when it names a calendar; a `health` event the accounts
 // and sources. A `news` event refreshes News's lists (All with its recap, a section) when it names
 // stories or sections, since a story's row lives in them; the page holds their order and draws only
 // the rows' dots, sources and summaries in place, keeping the rest behind its pill (logic/news.ts). An
 // open story refreshes only when it's named, Settings › News only when sources are, and an article
-// never. Every `news` event refreshes sorting's state and Show headlines (N5): one naming nothing says
+// never. Every `news` event refreshes sorting's state and Show headlines: one naming nothing says
 // sorting's state changed (down, back, the first run done), one naming sources brought articles to
 // wait, and one naming stories sorted some.
 import type {LiveEvent} from '@setpoint/shared';
 
 /**
- * The keys refused while Setpoint is offline (states-05): those that change something, H, E, P, C, D,
+ * The keys refused while Setpoint is offline: those that change something, H, E, P, C, D,
  * Delete and Backspace, ⇧I, ⇧U and ⌘Z. Reading keys go through: J, K, Enter, Esc, /, 1, 2, 3, the
  * arrows, U, O, M, W, T and N.
  */
@@ -25,7 +25,7 @@ export function offlineRefuses(event: Pick<KeyboardEvent, 'key' | 'shiftKey' | '
   return ['h', 'e', 'p', 'c', 'd', 'Delete', 'Backspace'].includes(key);
 }
 
-// The agenda rail's USPS mail (SV-274) rides on `mail` too: a digest's scans come as an email does.
+// The agenda rail's USPS mail rides on `mail` too: a digest's scans come as an email does.
 const MAIL_LISTS = ['/mail/inbox', '/mail/counts', '/mail/all', '/mail/triage', '/mail/day', '/mail/mailpieces'];
 
 export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): string[] {
@@ -45,7 +45,7 @@ export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): str
       return mounted.filter(path => (lists && (path === '/news' || under('/news/sections')(path)))
         || named.has(path) || (event.sources.length > 0 && path === '/news/sources') || path === '/news/status' || path === '/news/unsorted' || path === '/news/day');
     }
-    // Jobs (after News, J1): its page and detail, once J5 draws them.
+    // Jobs: its page and detail.
     case 'jobs':
       return mounted.filter(under('/jobs'));
   }

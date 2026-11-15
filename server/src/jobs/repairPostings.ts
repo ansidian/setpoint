@@ -1,4 +1,4 @@
-// Taking away the application pages Jobs saved as JDs (SV-130). A link to an applicant's own page read
+// Taking away the application pages Jobs saved as JDs. A link to an applicant's own page read
 // like a posting, and the check let it through, so a saved JD can hold the applicant's name, contact
 // details and answers. Links like it are no longer read (./lookupRules.ts). This is for the JDs saved
 // before that, run once with `jobs-repair-postings`, and safe to run again:
@@ -6,8 +6,8 @@
 // - It finds the JDs the email's link gave whose link is an application's own page, by the rule the
 //   lookup uses. A JD found any other way is left alone, and so is one the user picked, whatever its
 //   link: a lookup's own save takes its candidates with it, so a saved JD with candidates is a pick.
-// - Each is taken away as Not this posting takes one (./corrections.ts), the only way a saved JD goes
-//   (decision 53), so its link is turned down for good (./stick.ts). A new lookup then starts, which
+// - Each is taken away as Not this posting takes one (./corrections.ts), the only way a saved JD goes,
+//  so its link is turned down for good (./stick.ts). A new lookup then starts, which
 //   the server runs: it's no longer offered that link, and carries on to the platforms and search.
 // - The Undo that keeps goes at once: no toast offers it here, and it holds the saved text.
 // - It says only which applications, never the saved text, since that's what holds the details.

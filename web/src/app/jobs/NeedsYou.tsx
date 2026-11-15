@@ -1,14 +1,14 @@
-// Needs you (DESIGN.md › Needs you; boards 32, 34a–34c; D308, D311, D313, D324, #266): the band above
+// Needs you (boards 32, 34a–34c): the band above
 // the table under its group header, today's items, and From history folded under them.
 //
 // - A JD to confirm: its candidates as a group, ↑ ↓ choosing and Enter picking while the item has the
 //   cursor; each candidate's arrow opens its posting without picking it; None of these last.
 // - An update to assign: Assign to… (the company's applications first, Another application…, Not
-//   about a job), and Not about a job. Each application offers its email (D402), opening beside the
+//   about a job), and Not about a job. Each application offers its email, opening beside the
 //   menu, which stays, so the update can be told from them before it's assigned.
-// - An email to track: Track this (decision 69), which makes the application and opens it.
-// - From history: each row's two buttons (Choose… is a menu, #266), and Dismiss all with its Undo.
-// - An item with an email: its subject opens that email where the detail sits (D401). The page holds
+// - An email to track: Track this, which makes the application and opens it.
+// - From history: each row's two buttons (Choose… is a menu), and Dismiss all with its Undo.
+// - An item with an email: its subject opens that email where the detail sits. The page holds
 //   which, and the item shows it as the table shows its open row; reading it answers nothing.
 //
 // Answered (34b, as the Today block's task): the press lands, the item holds its place, taking no
@@ -38,7 +38,7 @@ const KIND_GLYPHS: Record<NeedsYouItemOut['kind'], IconName> = {jd_to_confirm: '
 
 export const needKey = (id: number) => `n:${id}`;
 
-/** How long an answered item stays put before it folds: a double-click's second press finds it there, not the item riding up (#106). */
+/** How long an answered item stays put before it folds: a double-click's second press finds it there, not the item riding up. */
 const HOLD_MS = 360;
 
 interface Answered {
@@ -71,7 +71,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   folded: boolean;
   now: number;
   timeZone: string;
-  // How many times Settings › Jobs's Show has asked for From history (J8): each ask unfolds it.
+  // How many times Settings › Jobs's Show has asked for From history: each ask unfolds it.
   unfoldHistory?: number;
   // The item an email is open for: its own, or (with `of`) that of an application in its Assign to….
   reading?: {item: number; of: string | null} | null;
@@ -80,7 +80,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   onOpen: (id: number) => void;
   // An item's subject: its email opens, or closes if it's the one open.
   onRead: (item: NeedsYouItemOut) => void;
-  // An application's email, for this item, from Assign to… (D402).
+  // An application's email, for this item, from Assign to….
   onLook: (item: NeedsYouItemOut, row: ApplicationRowOut) => void;
 }) {
   const [open, setOpen] = useState(unfoldHistory > 0);
@@ -175,7 +175,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   const choose = (item: NeedsYouItemOut, element: HTMLElement) =>
     openMenu(`choose:${item.id}`, chooseMenu(item.candidates, {pick: candidate => pick(item, candidate), none: () => none(item)}), element);
 
-  // Dismiss all (D324): the rows fold away together, then the line; Undo brings them back.
+  // Dismiss all: the rows fold away together, then the line; Undo brings them back.
   const dismissAll = () => {
     const ids = liveHistory.map(entry => entry.item.id);
     setGone(set => new Set([...set, ...ids]));

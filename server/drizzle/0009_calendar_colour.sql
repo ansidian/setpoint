@@ -1,4 +1,4 @@
--- Hand-edited (SV-20), one drizzle-kit fault: the migrator runs in a transaction, where PRAGMA
+-- Hand-edited, one drizzle-kit fault: the migrator runs in a transaction, where PRAGMA
 -- foreign_keys=OFF does nothing, so dropping `commands` would cascade to the jobs of pending
 -- commands (jobs.command_id ON DELETE CASCADE) and leave those commands waiting forever. They're
 -- kept aside and put back after the rename. If this migration is regenerated, make the edit again.

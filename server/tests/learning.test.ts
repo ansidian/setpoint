@@ -1,5 +1,4 @@
-// Pattern prompts as tables (BUILD-PLAN.md › B3 › Done when: prompts'
-// threshold, never for protected mail, Yes and No quieting them).
+// Pattern prompts as tables: their threshold, never for protected mail, Yes and No quieting them.
 import {describe, expect, test} from 'vitest';
 import {patternPrompts, promptKey} from '../src/domain/learning.ts';
 import type {Verdict} from '../src/domain/learning.ts';
@@ -22,7 +21,7 @@ describe('patternPrompts', () => {
     ['protected mail never counts toward a prompt', run([2, 9, 16, 23], {protected: true}), null],
     ['another type is another pattern', [...run([2, 9]), ...run([16, 23], {type: 'receipt'})], null],
     ['the organisation ignores case and spacing', [...run([2, 9]), ...run([16, 23], {organisation: 'northwind '})], 4],
-    ['imported v1 corrections count, without ids', [...run([2, 9], {messageId: null}), ...run([16, 23])], 4],
+    ['imported corrections count, without ids', [...run([2, 9], {messageId: null}), ...run([16, 23])], 4],
   ])('%s', (_, verdicts, count) => {
     const prompts = patternPrompts(verdicts, new Set());
     expect(prompts[0]?.count ?? null).toBe(count);

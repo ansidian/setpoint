@@ -1,4 +1,4 @@
-// News's writes (N1): a source's heartbeat, the articles a fetch brought, stories seen, and the
+// News's writes: a source's heartbeat, the articles a fetch brought, stories seen, and the
 // expiry that moves a story from the page to the archive (48 h after its last new fact) and drops the
 // archive after 90 days (src/domain/news.ts has the rules). Each is one transaction; image files go
 // once it commits.
@@ -18,7 +18,7 @@ import {deleteImageFiles, saveNewsImage} from './images.ts';
 
 /**
  * A News source's health, as for `sources` (src/domain/health.ts), from its own schedule. Null until
- * its first check: a source no adapter reads yet (N2 adds them) is neither healthy nor failing.
+ * its first check: a source no adapter reads yet is neither healthy nor failing.
  */
 export function newsSourceHealth(source: NewsSourceRow, now: string): NewsSourceHealthOut | null {
   if (source.lastCheckAt === null) return null;
@@ -47,7 +47,7 @@ export function recordNewsCheck(store: Store, sourceId: number, error: ProviderE
  * Keeps what a fetch brought, once per source and canonical URL (a feed repeats its items); the
  * source's own flags carry to its articles. Text a source gave with an article (official data) is
  * kept as its text, never a metered or discovery article's. Returns the new articles' ids, which
- * wait Unsorted until N3 sorts them into stories.
+ * wait Unsorted until sorting puts them into stories.
  */
 export function storeArticles(store: Store, source: NewsSourceRow, articles: readonly FetchedArticle[]): number[] {
   const now = isoNow(store);
@@ -65,9 +65,9 @@ export function storeArticles(store: Store, source: NewsSourceRow, articles: rea
 }
 
 /**
- * What reading a new article gave (N2): its page's text, and its image's copies, saved through
+ * What reading a new article gave: its page's text, and its image's copies, saved through
  * saveNewsImage. A page that was read and yielded no text marks the article summary only, so the
- * pane shows its feed summary and the link (BRIEF.md › When things break); that isn't an error.
+ * pane shows its feed summary and the link; that isn't an error.
  */
 export function storeArticleReading(store: Store, imagesDir: string | null, articleId: number, plan: ReadingPlan, reading: ArticleReading) {
   const article = store.db.select().from(t.newsArticles).where(eq(t.newsArticles.id, articleId)).get();
@@ -90,7 +90,7 @@ function sectionsOf(store: Store, storyIds: number[]): NewsSection[] {
 }
 
 /**
- * Stories seen (D87): a row fully on screen for about a second, or opened. Per story, never per
+ * Stories seen: a row fully on screen for about a second, or opened. Per story, never per
  * article; seeing an updated story clears its dot until the next new fact. Returns the stories that
  * exist.
  */
@@ -129,7 +129,7 @@ export function expireNews(store: Store, imagesDir: string | null): ExpiryOutcom
     const files: string[] = [];
     const leaving = store.db.select().from(t.newsStories).where(and(isNull(t.newsStories.expiredAt), lte(t.newsStories.lastNewFactAt, pageCutoff))).all();
     for (const story of leaving) {
-      // The first run's fill never goes to the recap: there's none until there's history (N3).
+      // The first run's fill never goes to the recap: there's none until there's history.
       const unseen = story.seenAt === null && !story.backfill;
       store.db.update(t.newsStories).set({expiredAt: expiresAt(story.lastNewFactAt), expiredUnseen: unseen}).where(eq(t.newsStories.id, story.id)).run();
       const articleIds = store.db.select({id: t.newsStoryArticles.articleId}).from(t.newsStoryArticles).where(eq(t.newsStoryArticles.storyId, story.id)).all().map(row => row.id);
@@ -143,7 +143,7 @@ export function expireNews(store: Store, imagesDir: string | null): ExpiryOutcom
       store.db.delete(t.newsFacts).where(eq(t.newsFacts.storyId, story.id)).run();
     }
 
-    // The large copies Missed kept for its leads (#115) go as the archive's do, now the recap has none (#298).
+    // The large copies Missed kept for its leads go as the archive's do, now the recap has none.
     const missedLeads = store.db.select({image: t.newsImages}).from(t.newsStories)
       .innerJoin(t.newsStoryArticles, eq(t.newsStoryArticles.storyId, t.newsStories.id))
       .innerJoin(t.newsImages, eq(t.newsImages.articleId, t.newsStoryArticles.articleId))
@@ -177,7 +177,7 @@ export function expireNews(store: Store, imagesDir: string | null): ExpiryOutcom
 }
 
 /**
- * What a recap can hold (#298): stories over the bar that left the page before the user saw them,
+ * What a recap can hold: stories over the bar that left the page before the user saw them,
  * after the last recap was put away. Before the first was, it's what Missed held: those that left
  * unseen and haven't been seen since.
  */
@@ -189,8 +189,8 @@ export const recapCondition = (putAwayAt: string | null) => and(
 /** On the page: not yet expired, and not past the 48 hours even if the expiry hasn't run yet. */
 export const liveCondition = (now: string) => and(isNull(t.newsStories.expiredAt), gt(t.newsStories.lastNewFactAt, new Date(Date.parse(now) - STORY_TTL_MS).toISOString()));
 
-/** Written, or never held back: a story under the write gate shows only under Also reported (D452). */
+/** Written, or never held back: a story under the write gate shows only under Also reported. */
 export const writtenCondition = () => eq(t.newsStories.belowGate, false);
 
-/** Shown: a story under the bar never shows (N3, D86), on the page, in the recap or in search. */
+/** Shown: a story under the bar never shows, on the page, in the recap or in search. */
 export const overBar = () => gte(t.newsStories.score, STORY_BAR);

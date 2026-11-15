@@ -1,6 +1,6 @@
-// Search, the Answer card and the proposal card's rules (DESIGN.md › Search, Alfred's Answer card,
-// Proposal) as tables: highlighted runs, reasons, the results line, what Alfred is asked, what the
-// reader highlights, and how a proposal's time reads; SV-23's calendar results: Upcoming then Past,
+// Search, the Answer card and the proposal card's rules as tables:
+// highlighted runs, reasons, the results line, what Alfred is asked, what the
+// reader highlights, and how a proposal's time reads; calendar results: Upcoming then Past,
 // the row's day, and its line with a series' rule.
 import type {AnswerOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
@@ -55,7 +55,7 @@ describe('resultSender: the organisation, else the name, with that field\'s high
   });
 });
 
-// search-11: a reason shows only when the row doesn't already show it.
+// A reason shows only when the row doesn't already show it.
 describe('shownReasons: what a result\'s why line keeps', () => {
   const org: MatchReasonOut = {field: 'organisation', label: 'Org Northwind', matched: ['Northwind']};
   const type: MatchReasonOut = {field: 'type', label: 'Type Rejection', matched: []};
@@ -86,7 +86,7 @@ describe('shownReasons: what a result\'s why line keeps', () => {
   });
 });
 
-describe('reasonParts: the kind, then what matched (DESIGN.md override 12)', () => {
+describe('reasonParts: the kind, then what matched', () => {
   test.each([
     ['Org Northwind', {key: 'Org', value: 'Northwind'}],
     ['Date Mar 14', {key: 'Date', value: 'Mar 14'}],
@@ -105,7 +105,7 @@ describe('the results line and the indexing line', () => {
   ])('%i, %s', (total, order, parts) => {
     expect(resultsLine({total, order})).toEqual(parts);
   });
-  test('no email has every word: says so, and how many have some (UX #10)', () => {
+  test('no email has every word: says so, and how many have some', () => {
     expect(resultsLine({total: 1, order: 'match', partial: true})).toEqual(['No email has every word', '1 has some of them']);
     expect(resultsLine({total: 3, order: 'newest', partial: true})).toEqual(['No email has every word', '3 have some of them', 'newest first']);
   });
@@ -202,7 +202,7 @@ describe('what the field asks', () => {
     ['chips: their labels, which read back as the same chips', chips, '', ['Northwind', 'Rejection', 'Mar 2026'], 'Northwind Rejection Mar 2026'],
     ['a question alone', [], 'When does my lease renewal need to be signed? ', ['When does my lease renewal need to be signed?'], 'When does my lease renewal need to be signed?'],
     ['chips, then words', chips.slice(0, 1), 'interview', ['Northwind', 'interview'], 'Northwind interview'],
-    ['a Not chip after "!", as typed (SV-31)', [chips[0]!, {...chips[1]!, not: true}], 'invoice !proseware', ['Northwind', '!Rejection', 'invoice !proseware'], 'Northwind !Rejection invoice !proseware'],
+    ['a Not chip after "!", as typed', [chips[0]!, {...chips[1]!, not: true}], 'invoice !proseware', ['Northwind', '!Rejection', 'invoice !proseware'], 'Northwind !Rejection invoice !proseware'],
   ])('%s', (_name, given, text, parts, question) => {
     expect(queryParts(given, text)).toEqual(parts);
     expect(alfredQuestion(given, text)).toBe(question);
@@ -352,7 +352,7 @@ describe('the Answer card\'s lines', () => {
   });
 });
 
-describe('a task proposal\'s project (SV-24, D50)', () => {
+describe('a task proposal\'s project', () => {
   const projects = [{name: 'Inbox'}, {name: 'School'}, {name: 'Home'}];
   test.each<[string, boolean, ReturnType<typeof projectChoice>]>([
     ['', false, {project: null, create_project: false}],
@@ -368,7 +368,7 @@ describe('a task proposal\'s project (SV-24, D50)', () => {
     expect(projectMatches('', projects)).toHaveLength(3);
     expect([namesProject('school', projects), namesProject('Scho', projects)]).toEqual([true, false]);
   });
-  // SV-56: names starting with what's typed come first, then those with a word starting with it, then
+  // Names starting with what's typed come first, then those with a word starting with it, then
   // those merely holding it, each in list order, so the menu's first row is what the line reads.
   test.each<[string, string[]]>([
     ['ho', ['Home', 'School']],
@@ -384,7 +384,7 @@ describe('a task proposal\'s project (SV-24, D50)', () => {
     ['  JOB ', ['Odd jobs', 'Jobs'], ['Jobs', 'Odd jobs']],
     ['x', ['Jobs'], []],
   ])('%j among %j ranks %j', (text, names, ranked) => expect(rankMatches(text, names.map(name => ({name})), one => one.name).map(one => one.name)).toEqual(ranked));
-  // SV-25: once New project is picked for a name, the menu doesn't offer it again.
+  // Once New project is picked for a name, the menu doesn't offer it again.
   test.each<[string, boolean, string[]]>([
     ['', false, ['Inbox', 'School', 'Home']],
     ['o', false, ['Inbox', 'School', 'Home', 'New project “o”']],
@@ -408,7 +408,7 @@ describe('failedLine: a failed Create, in the provider\'s own words', () => {
   });
 });
 
-describe('SV-23: calendar results', () => {
+describe('calendar results', () => {
   test('Upcoming, then Past, leaving out an empty heading', () => {
     const groups = (flags: boolean[]) => calendarResultGroups(flags.map((upcoming, index) => ({upcoming, index})))
       .map(group => `${group.heading} ${group.results.map(result => result.index).join(',')}`);

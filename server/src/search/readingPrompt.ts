@@ -3,8 +3,8 @@
 // beside each reading, so wrong readings can be told apart by the prompt that made them.
 //
 // It's given only the organisations and types in the search's best keyword matches, with counts. A
-// version given every organisation misread more and repeated itself less (SV-133's query
-// understanding test). Dates aren't the model's: the grammar reads them (dateChip), the same every
+// version given every organisation misread more and repeated itself less in a query
+// understanding test. Dates aren't the model's: the grammar reads them (dateChip), the same every
 // time, and the model only says when the words the grammar took for a date are really a name.
 import {MESSAGE_TYPES} from '@setpoint/shared';
 import type {MessageType} from '@setpoint/shared';

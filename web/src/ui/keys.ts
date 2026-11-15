@@ -1,4 +1,4 @@
-// Keyboard helpers shared by the shortcuts (darma's).
+// Keyboard helpers shared by the shortcuts.
 import {motion} from '../tokens.ts';
 
 /** Whether a key went to a text field, where shortcuts stay out of the way. */
@@ -24,7 +24,7 @@ export function echoKey(hint: string) {
   window.setTimeout(() => delete button.dataset.echo, motion.press);
 }
 
-/** A ⇧-click on a row selects emails (DESIGN.md #249), not the text between it and the last click. */
+/** A ⇧-click on a row selects emails, not the text between it and the last click. */
 export function keepTextUnselected(event: {shiftKey: boolean; preventDefault: () => void}) {
   if (event.shiftKey) event.preventDefault();
 }

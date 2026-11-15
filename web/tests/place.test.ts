@@ -16,7 +16,7 @@ describe('the place and its address', () => {
   ])('%s', (_, place, address, lines) => expect(placeLines(place, address)).toEqual(lines));
 });
 
-describe('a link in the place (SV-77)', () => {
+describe('a link in the place', () => {
   test.each([
     ['nothing', null, null, null],
     ['a place with no link', 'Smile Dental', '1420 Elm St', null],
@@ -26,7 +26,7 @@ describe('a link in the place (SV-77)', () => {
     ['punctuation after it stays out', 'Zoom (https://zoom.us/j/1).', null, {url: 'https://zoom.us/j/1', host: 'zoom.us', only: false}],
     ['a link split into the address by its comma', 'Zoom', 'https://zoom.us/j/1', {url: 'https://zoom.us/j/1', host: 'zoom.us', only: false}],
     ['the first of two', 'https://a.example/1 or https://b.example/2', null, {url: 'https://a.example/1', host: 'a.example', only: false}],
-    // SV-179 (Andy, 2026-11-04): a bare domain with a real top-level domain is one, opened as https.
+    // A bare domain with a real top-level domain is one, opened as https.
     ['a bare domain alone', 'meet.example.com', null, {url: 'https://meet.example.com', host: 'meet.example.com', only: true}],
     ['a bare domain among words', 'Watch at stream.example.tv/live', null, {url: 'https://stream.example.tv/live', host: 'stream.example.tv', only: false}],
     ['a name with a dot isn\'t', 'St.Louis', null, null],

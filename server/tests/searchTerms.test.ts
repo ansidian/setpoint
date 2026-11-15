@@ -1,4 +1,4 @@
-// Every email's search terms (SV-136), with Haiku faked at the HTTP boundary: new mail is read once
+// Every email's search terms, with Haiku faked at the HTTP boundary: new mail is read once
 // triage has sorted it, older mail only on the go-ahead, trashed mail never, each email is charged for
 // at most once per prompt, it resumes after a restart, and with no key nothing changes.
 import {eq} from 'drizzle-orm';

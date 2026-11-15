@@ -1,5 +1,5 @@
-// SV-95: the title line's parser for the iPhone app (setpoint-ios), which runs it in JavaScriptCore
-// so the same words parse the same way on both clients (darma SI-10, D8). Built into
+// The title line's parser for the iPhone app (setpoint-ios), which runs it in JavaScriptCore
+// so the same words parse the same way on both clients (D8). Built into
 // shared/compose/compose.js, a global `SetpointCompose` with no module loader and no DOM, by
 // web/tests/composeBundle.test.ts (`npm run compose:record`), which also records
 // shared/compose/cases.json; `npm test` fails when either is stale against compose.ts.
@@ -22,10 +22,10 @@ export interface ParseTitleInput {
   pickedPlace?: string | null;
   // The text a "#" menu pick was made for (a project for a task, a calendar for an event).
   pickedHash?: string | null;
-  // Editing an item (SV-90): its title before the edit and its day, "2026-10-14". Only what the
+  // Editing an item: its title before the edit and its day, "2026-10-14". Only what the
   // edit typed is read, and a repeat with no day counts from the item's day.
   edit?: {before: string; day: string} | null;
-  // What reminder phrases count from (SV-112): the item's day and its moment's minutes after midnight
+  // What reminder phrases count from: the item's day and its moment's minutes after midnight
   // when the line names neither, and how many reminders it keeps beside the line's. Without it (a task
   // with no date) a reminder phrase stays words.
   remind?: ReminderBase | null;
@@ -45,7 +45,7 @@ export function typedSpan(input: {before: string; after: string}): {start: numbe
 
 /**
  * An edited item's when once its typed day and time are read (its `date`, `start`, `end`, and an
- * event's `days` and `length` from parseTitle, SV-111; without the last two, as before).
+ * event's `days` and `length` from parseTitle, the last two optional).
  */
 export function editedWhen(input: {item: When; read: {date: string | null; start: number | null; end: number | null; days?: number | null; length?: number | null}; kind: 'event' | 'task'}): When {
   return whenEdited(input.item, input.read, input.kind);

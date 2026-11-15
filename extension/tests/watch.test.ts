@@ -1,4 +1,4 @@
-// The toolbar badge's rule (SV-174): a jobs page that stays unread past the grace says so, and one
+// The toolbar badge's rule: a jobs page that stays unread past the grace says so, and one
 // that reads takes it away.
 import {describe, expect, test} from 'vitest';
 import {badgeOf, GRACE_MS, watch} from '../src/watch.ts';

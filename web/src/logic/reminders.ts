@@ -1,11 +1,11 @@
-// Reminders as the editor and the detail word them (DESIGN.md › Editor; darma SV-109, D287–D289):
+// Reminders as the editor and the detail word them:
 // each is minutes from the item's moment, a negative one after it, 4 weeks either side. The
 // moment is a timed event's start, a timed task's due time, an all-day event's midnight, and a dated
 // task's Settings' task time on its day (9:00 AM at None); a task with no date has none. A preset's
 // offset keeps its words ("10 min before"); any other reads as the moment it goes off, the offset
 // quiet beside it ("Sun, Oct 25, 8:00 PM" · "1 day 18 hrs before").
 //
-// The line's reminders (SV-112, D293) become offsets here, a moment counted in real minutes from the
+// The line's reminders become offsets here, a moment counted in real minutes from the
 // item's in its time zone. On a new item they replace Settings' default and sit beside what's ticked
 // in the editor; on an edited item they add to its own. Taking the phrase out takes out only them.
 import type {ItemOut} from '@setpoint/shared';
@@ -21,7 +21,7 @@ const MINUTE = 60_000;
 export const REMINDER_PRESETS = [0, 5, 10, 15, 30, 60, 120, 1440];
 /** As many as an item can have (the API's limit). */
 export const REMINDER_MAX = 10;
-/** What a dated task without a time counts from when Settings' task time is None (D288). */
+/** What a dated task without a time counts from when Settings' task time is None. */
 export const UNTIMED_TASK_TIME = '09:00';
 
 const isPreset = (minutes: number) => REMINDER_PRESETS.includes(minutes);

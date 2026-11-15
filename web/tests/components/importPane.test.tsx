@@ -1,4 +1,4 @@
-// SV-181: the .ics import review's own behaviour (ImportPane.tsx on importRun.ts, D437): past events
+// The .ics import review's own behaviour (ImportPane.tsx on importRun.ts): past events
 // start unticked, the rows and Tick all tick, the footer counts what's ticked, the calendar picked
 // says how many it already holds and marks them, the checkboxes take its colour, and Cancel closes it.
 // Sending is the browser check's (icsImport.spec.ts), with the server and Google's stand-in.
@@ -16,7 +16,7 @@ import {colour} from './colour.ts';
 const calendar = (id: number, name: string, colour: CalendarOut['colour']): CalendarOut =>
   ({id, provider: 'google', account_id: 1, name, colour, position: id, visible: true, listed: true, writable: true, command: null});
 const CALENDARS = [calendar(1, 'Personal', 'cool'), calendar(3, 'Jobs', 'violet')];
-// Enough calendars that an in-flow menu would push the list well down (SV-189).
+// Enough calendars that an in-flow menu would push the list well down.
 const MANY = [...CALENDARS, calendar(4, 'Family', 'good'), calendar(5, 'Classes', 'sun'), calendar(6, 'Gym', 'warm'), calendar(7, 'Travel', 'cyan')];
 const event = (uid: string, title: string, fields: Partial<IcsEventOut> = {}): IcsEventOut => ({
   ical_uid: uid, sequence: 0, title, all_day: false, starts_at: '2026-10-15T16:00:00.000Z', ends_at: '2026-10-15T17:00:00.000Z', start_date: null, end_date: null,
@@ -86,7 +86,7 @@ test('the calendar picked says how many of the ticked it already holds, marks th
   await expect.element(page.getByText(/already on/)).not.toBeInTheDocument();
 });
 
-test('the Into menu lies over the list, inside the pane, each calendar with its dot (SV-189)', async () => {
+test('the Into menu lies over the list, inside the pane, each calendar with its dot', async () => {
   await review(MANY);
   const tickAll = page.getByRole('button', {name: 'Tick all'});
   const before = tickAll.element().getBoundingClientRect().top;

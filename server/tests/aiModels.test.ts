@@ -1,4 +1,4 @@
-// The model client against the fake Anthropic (tests/fakeModels.ts): request shapes v1 learned
+// The model client against the fake Anthropic (tests/fakeModels.ts): the request shapes
 // (forced tool, thinking off, cacheable prefix), usage and the provider's refusals as the retry
 // policy's kinds. Plus the ledger's cost table, and what a model saved for OpenAI now reads as.
 import {describe, expect, test} from 'vitest';

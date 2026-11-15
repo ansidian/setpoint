@@ -1,4 +1,4 @@
-// Todoist's webhook at POST /api/todoist/webhook (v1's route test, ported): signed deliveries wake
+// Todoist's webhook at POST /api/todoist/webhook: signed deliveries wake
 // one sync of the Todoist source and nothing else, without a session or Setpoint's own page;
 // redeliveries are taken once, for 30 days.
 import {createHmac} from 'node:crypto';
@@ -37,7 +37,7 @@ describe('Todoist webhook', () => {
     expect(jobs()).toHaveLength(1);
   });
 
-  test('SV-251: a delivery while the sync is running brings one more sync once it\'s done, so a change made just after the sync read Todoist isn\'t left for the next poll', async () => {
+  test('a delivery while the sync is running brings one more sync once it\'s done, so a change made just after the sync read Todoist isn\'t left for the next poll', async () => {
     const {w, sourceId, signed, jobs} = setup();
     expect(await signed('delivery-1')).toBe(200);
     w.store.db.update(t.jobs).set({state: 'running'}).run();

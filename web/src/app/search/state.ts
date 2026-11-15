@@ -1,4 +1,4 @@
-// The calendar's and News's search fields (SV-23, N5) and Alfred's thread; mail's field is
+// The calendar's and News's search fields and Alfred's thread; mail's field is
 // mailSearch.ts, whose chips come from Enter.
 //
 // The calendar's search runs as the user types (a short pause), with the chips already in the field
@@ -35,7 +35,7 @@ export interface SearchFieldState<C, O, R> {
   out: O | null;
   results: R[];
   error: string | null;
-  // A search is on its way (search-03): the field's glyph turns once it has taken a moment.
+  // A search is on its way: the field's glyph turns once it has taken a moment.
   pending: boolean;
   setText: (text: string) => void;
   /** Enter: takes the chips the server found, and resolves once that's done, ready for the keys to leave the field. */
@@ -163,11 +163,11 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
 
 export type CalendarSearch = SearchFieldState<CalendarSearchChip, CalendarSearchOut, CalendarSearchResultOut>;
 
-/** SV-23: the calendar's search, its results in the right pane. */
+/** The calendar's search, its results in the right pane. */
 export const useCalendarSearch = (): CalendarSearch =>
   useSearchField<CalendarSearchChip, CalendarSearchResultOut, CalendarSearchOut>((text, chips, after) => searchCalendar({text, chips, offset: after?.next_offset ?? 0}), false);
 
-/** News's search (N5): words only, no chips, over the 90-day archive; one page of stories, newest first. */
+/** News's search: words only, no chips, over the 90-day archive; one page of stories, newest first. */
 export interface NewsSearchPage {
   chips: never[];
   text: string;
@@ -187,7 +187,7 @@ export interface Alfred {
   // The question on its way (answers aren't streamed), and what Alfred is doing for it.
   waiting: string | null;
   step: AskStep | null;
-  // Every step Alfred has taken for the last question, in turn, the last its current one (search-04).
+  // Every step Alfred has taken for the last question, in turn, the last its current one.
   trail: AskStep[];
   // The server's words for the last question that failed, and that question, for the field again.
   error: string | null;

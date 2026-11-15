@@ -1,5 +1,5 @@
 // The API over the seed, as the web app uses it: the live stream, commands with Try again and Move
-// back, items, settings and accounts, and the parts B4 and B5 build later.
+// back, items, settings and accounts, search and Places.
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {failCommand} from '../src/commands/index.ts';
@@ -72,7 +72,7 @@ describe('commands over the API', () => {
   });
 });
 
-describe('reminders (SV-109, D287)', () => {
+describe('reminders', () => {
   test('signed minutes from the item\'s moment, 4 weeks either side, 10 at most', async () => {
     const w = world({seed: true});
     const c = await signedIn(w);
@@ -93,11 +93,11 @@ describe('reads', () => {
     expect(month.items.filter((item: {title: string}) => item.title === 'Dentist')).toMatchObject([{place: 'Smile Dental', address: '1420 Elm St', reminders: [30]}]);
     expect((await c.send('PATCH', '/api/calendars/2', {body: {visible: false}})).body).toMatchObject({name: 'Classes', visible: false, listed: true, command: null});
     expect((await c.send('PATCH', '/api/calendars/2', {body: {listed: false}})).body).toMatchObject({name: 'Classes', visible: false, listed: false});
-    // SV-20: a colour answers with its command pending; Todoist's has none, and an empty change is refused.
+    // A colour answers with its command pending; Todoist's has none, and an empty change is refused.
     expect((await c.send('PATCH', '/api/calendars/2', {body: {colour: 'sun'}})).body).toMatchObject({name: 'Classes', colour: 'sun', command: {kind: 'calendar_colour', state: 'pending'}});
     expect((await c.send('PATCH', '/api/calendars/4', {body: {colour: 'sun'}})).status).toBe(400);
     expect((await c.send('PATCH', '/api/calendars/2', {body: {}})).status).toBe(400);
-    // SV-25: a project's colour answers with its command pending; a colour Todoist doesn't have is refused.
+    // A project's colour answers with its command pending; a colour Todoist doesn't have is refused.
     expect((await c.send('PATCH', '/api/todoist/projects/seed-project-3', {body: {colour: 'teal'}})).body).toMatchObject({name: 'Home', colour: 'teal', command: {kind: 'project_colour', state: 'pending'}});
     expect((await c.send('PATCH', '/api/todoist/projects/seed-project-2', {body: {colour: 'sun'}})).status).toBe(400);
     expect((await c.send('GET', '/api/weather?from=2026-10-07&to=2026-10-09')).status).toBe(200);
@@ -125,12 +125,12 @@ describe('reads', () => {
     expect(patched.body).toMatchObject({mail: {code_expiry_minutes: 30}, notifications: {ntfy_server: 'https://ntfy.example.com', topics: {reminders: 'setpoint-reminders'}}});
     expect((await c.send('PATCH', '/api/settings', {body: {mail: {code_expiry_minutes: 7}}})).status).toBe(400);
     expect((await c.send('GET', '/api/settings')).body.mail.code_expiry_minutes).toBe(30);
-    // A reminder default set, then back to None (D49).
+    // A reminder default set, then back to None.
     expect((await c.send('PATCH', '/api/settings', {body: {reminders: {event_minutes_before: 10, task_time: '08:00'}}})).body.reminders).toEqual({event_minutes_before: 10, task_time: '08:00'});
     expect((await c.send('PATCH', '/api/settings', {body: {reminders: {event_minutes_before: null, task_time: null}}})).body.reminders).toEqual({event_minutes_before: null, task_time: null});
   });
 
-  test('search answers over an empty mailbox (B4); Places needs its key (B5)', async () => {
+  test('search answers over an empty mailbox; Places needs its key', async () => {
     const w = world();
     const c = await signedIn(w);
     expect((await c.send('POST', '/api/search', {body: {text: 'northwind'}})).body).toMatchObject({total: 0, results: [], text: 'northwind', order: 'match'});

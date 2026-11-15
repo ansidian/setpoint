@@ -1,7 +1,6 @@
-// The typed live events: one Server-Sent Events stream at GET /api/events (BRIEF.md › Decided
-// elsewhere). Each event names what changed, so the web refetches only that: the rows of those
-// emails and the counts, the items in view, the sources' health, or News's stories. Commands ride
-// on the event of what they change.
+// The typed live events: one Server-Sent Events stream at GET /api/events. Each event names what
+// changed, so the web refetches only that: the rows of those emails and the counts, the items in
+// view, the sources' health, or News's stories. Commands ride on the event of what they change.
 import type {LiveEventType, NewsSection} from '../enums.ts';
 import type {JobsLiveEvent} from '../jobs/api.ts';
 
@@ -9,14 +8,14 @@ export type LiveEvent =
   | {type: 'mail'; messages: number[]; accounts: number[]; commands: number[]}
   | {type: 'items'; items: number[]; calendars: number[]; commands: number[]}
   | {type: 'health'; sources: number[]}
-  // News (N1): `stories` changed in place (their dot, sources or summary: the page updates those rows
-  // without reordering, D87); `sections` gained, lost or re-ranked stories (the page holds its order
+  // News: `stories` changed in place (their dot, sources or summary: the page updates those rows
+  // without reordering); `sections` gained, lost or re-ranked stories (the page holds its order
   // behind the "3 new · 1 updated" pill); `sources` are News sources whose health changed (Settings ›
-  // News only: News sources never ride on `health`, which is the accounts' and calendar's). N3: one
+  // News only: News sources never ride on `health`, which is the accounts' and calendar's). One
   // naming nothing means sorting's state changed (down, back, or the first run done): GET
   // /api/news/status again.
   | {type: 'news'; stories: number[]; sections: NewsSection[]; sources: number[]}
-  // Jobs (after News, J1): a module that can be removed whole; its event is in shared/src/jobs/.
+  // Jobs: a module that can be removed whole; its event is in shared/src/jobs/.
   | JobsLiveEvent;
 
 // Compile-time check that the union covers LIVE_EVENT_TYPES exactly.
@@ -28,7 +27,7 @@ export type LiveEventCheck = [LiveEvent['type']] extends [LiveEventType] ? ([Liv
  * - `ready` starts each connection, with the id to resume from;
  * - `resync` means refetch everything (a reconnect after more than the server kept, a restart, or
  *   another process's write);
- * - `ping` every 25 s shows an open tab the stream still works (darma's pattern).
+ * - `ping` every 25 s shows an open tab the stream still works.
  */
 export const STREAM_EVENTS = ['ready', 'resync', 'ping'] as const;
 export interface ReadyOut {

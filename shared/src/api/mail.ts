@@ -1,9 +1,8 @@
-// Mail: the Inbox, All, an email, and the changes the user makes (BRIEF.md › Mail; DESIGN.md › Mail and
-// Interaction rules).
+// Mail: the Inbox, All, an email, and the changes the user makes.
 //
 //   GET  /api/mail/inbox?account_id=3          InboxOut (counts are always every account's)
 //   GET  /api/mail/counts                      MailCountsOut (the sidebar and the tab title)
-//   GET  /api/mail/day                         MailDayOut (the Inbox's empty pane, SV-218)
+//   GET  /api/mail/day                         MailDayOut (the Inbox's empty pane)
 //   GET  /api/mail/all?account_id=&before=&limit=   AllOut
 //   GET  /api/mail/messages/:id                MessageOut, without marking it read
 //   POST /api/mail/messages/:id/open           MessageOut; marks it read (a command) if unread
@@ -14,7 +13,7 @@
 //   POST /api/mail/mark-all-read               {account_id?}       {commands: CommandOut[]}
 //   GET/POST /api/mail/trusted-domains, DELETE /api/mail/trusted-domains/:domain
 //   GET  /api/mail/indexing                    IndexingOut (the first backfill's progress)
-//   GET  /api/mail/gmail-link?account=&id=     GmailLinkOut (a description's Gmail link, D555)
+//   GET  /api/mail/gmail-link?account=&id=     GmailLinkOut (a description's Gmail link)
 import {z} from 'zod';
 import type {InboxGroup, Kind, Lane, MessageType} from '../enums.ts';
 import type {SecurityFacts} from '../message.ts';
@@ -44,7 +43,7 @@ export interface MessageRowOut {
   fact: string | null;
   // A verification code, and when its row leaves the Inbox ("Expires in 11 min").
   code: {value: string; expires_at: string} | null;
-  // When a written rule's delayed trash takes it ("Trash in 3 h", DESIGN.md #347); null when none
+  // When a written rule's delayed trash takes it ("Trash in 3 h"); null when none
   // waits, a pinned email's included.
   trash_due_at: string | null;
   attachment_count: number;
@@ -52,7 +51,7 @@ export interface MessageRowOut {
   command: CommandOut | null;
 }
 
-/** One Inbox group, in DESIGN.md's order (INBOX_GROUPS); empty groups are left out. */
+/** One Inbox group, in INBOX_GROUPS' order; empty groups are left out. */
 export interface InboxGroupOut {
   group: InboxGroup;
   count: number;
@@ -61,9 +60,8 @@ export interface InboxGroupOut {
 }
 
 /**
- * The counts, which follow the rules at once (DESIGN.md › Interaction rules): opening an unread
- * email drops `unread` and its account's; only Done drops `attention`. They count what the Inbox
- * shows, so an expired code's row leaves them too.
+ * The counts, which change at once: opening an unread email drops `unread` and its
+ * account's; only Done drops `attention`. They count what the Inbox shows, so an expired code's row leaves them too.
  */
 export interface MailCountsOut {
   // Attention not Done, read or not: the sidebar's pill and mantel's attention half.
@@ -76,7 +74,7 @@ export interface MailCountsOut {
 }
 
 /**
- * How the mail day is going, for the Inbox's pane with nothing open (SV-218, D465). Today is since
+ * How the mail day is going, for the Inbox's pane with nothing open. Today is since
  * the user's midnight. Not in the iPhone app's contract.
  */
 export interface MailDayOut {
@@ -105,7 +103,7 @@ export interface InboxOut {
 
 export const inboxInput = z.strictObject({account_id: z.coerce.number().int().positive().optional()});
 
-/** All: every email, Noise included, newest first, by local day (DESIGN.md › All). */
+/** All: every email, Noise included, newest first, by local day. */
 export const allInput = z.strictObject({
   account_id: z.coerce.number().int().positive().optional(),
   // The previous page's `next_before`.
@@ -131,7 +129,7 @@ export interface AttachmentOut {
 }
 
 /**
- * Why remote content loads or not (decision 25):
+ * Why remote content loads or not:
  * - `trusted`: the sender's domain is in Settings › Mail's trusted domains;
  * - `authenticated`: the sender passed DMARC (or aligned DKIM) and the email isn't Noise;
  * - `noise`: authenticated, but Noise never loads by itself;
@@ -148,7 +146,7 @@ export type RemoteContentReason = (typeof REMOTE_CONTENT_REASONS)[number];
 export interface RemoteContentOut {
   // The sender's domain (accounts.google.com), as the reader's head shows it.
   domain: string;
-  // What "Always show from …" trusts: the sender's whole domain (google.com), D28.
+  // What "Always show from …" trusts: the sender's whole domain (google.com).
   trust_domain: string;
   sender_authenticated: boolean | null;
   trusted: boolean;
@@ -161,7 +159,7 @@ export interface MessageOut extends MessageRowOut {
   thread_id: string;
   body_text: string;
   body_html: string | null;
-  // Pre-fills proposals; never shown on its own (decision 16).
+  // Pre-fills proposals; never shown on its own.
   key_date: string | null;
   security: SecurityFacts | null;
   attachments: AttachmentOut[];
@@ -179,7 +177,7 @@ export interface MarkAllReadOut {
 }
 
 /**
- * SV-270 (D555): the email an Open in Gmail address names, by its account's address and Gmail's
+ * The email an Open in Gmail address names, by its account's address and Gmail's
  * message id, so a description's link opens it in the reader; null when Setpoint doesn't have it.
  */
 export const gmailLinkInput = z.strictObject({account: z.string().min(1), id: z.string().min(1)});
@@ -206,7 +204,7 @@ export interface IndexingOut {
   accounts: {account_id: number; progress: number; done: boolean}[];
 }
 
-/** SV-274: GET /api/mail/mailpieces?day=YYYY-MM-DD, the agenda rail's USPS mail for a day. */
+/** GET /api/mail/mailpieces?day=YYYY-MM-DD, the agenda rail's USPS mail for a day. */
 export const mailpiecesInput = z.strictObject({day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)});
 export interface MailScanOut {
   id: number;

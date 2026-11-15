@@ -1,4 +1,4 @@
-// The calendar's read queries (SV-2 decision D4): items in a range with recurring events expanded,
+// The calendar's read queries: items in a range with recurring events expanded,
 // one item, the calendars and the weather. Events and Todoist tasks are one item model.
 import type {CalendarOut, CommandOut, ItemOut, ItemsOut, RecentPlaceOut, SubtaskOut, TimeToLeaveOut, TodoistLabelOut, TodoistProjectOut, WeatherDayOut} from '@setpoint/shared';
 import {eventLink, isTodoistColour} from '@setpoint/shared';
@@ -18,7 +18,7 @@ import type {Store} from '../store.ts';
 type ItemRow = typeof t.items.$inferSelect;
 
 /**
- * SV-191: the calendars the user can only read (a subscribed holiday calendar): every event on one is
+ * The calendars the user can only read (a subscribed holiday calendar): every event on one is
  * read-only, as Google's own kinds of event are, so nothing in Setpoint offers to change it.
  */
 function readOnlyCalendars(store: Store): Set<number> {
@@ -27,9 +27,9 @@ function readOnlyCalendars(store: Store): Set<number> {
 }
 
 /**
- * SV-272: each Todoist task's subtasks by the task's Todoist id, in Todoist's order. A repeating
- * subtask's done occurrences are rows of their own and aren't listed. SV-273: each task's id by its
- * Todoist id too, so a subtask names its task (D569).
+ * Each Todoist task's subtasks by the task's Todoist id, in Todoist's order. A repeating
+ * subtask's done occurrences are rows of their own and aren't listed. Each task's id by its
+ * Todoist id too, so a subtask names its task.
  */
 interface SubtaskIndex {
   byParent: Map<string, SubtaskOut[]>;
@@ -94,7 +94,7 @@ function occurrences(row: ItemRow, from: string, to: string, fromAt: string, toA
   const duration = Date.parse(row.endsAt!) - Date.parse(row.startsAt!);
   const first = localDay(row.startsAt!, zone);
   const rule = parseRule(row.recurrence!, until => localDay(until, zone));
-  // A rule this expander doesn't cover shows its first occurrence; B5's provider expansion takes over.
+  // A rule this expander doesn't cover shows its first occurrence; the provider's expansion takes over.
   const dates = rule ? occurrenceDates(rule, first, from < first ? first : addDayBefore(from), to) : [first];
   const time = localTime(row.startsAt!, zone);
   return dates
@@ -128,7 +128,7 @@ export function itemsInRange(store: Store, from: string, to: string): ItemsOut {
     if (row.cancelled) continue;
     const command = commands.get(row.id) ?? null;
     if (row.kind === 'task') {
-      // SV-272: a subtask with no date is only in its parent's checklist.
+      // A subtask with no date is only in its parent's checklist.
       if (row.dueDate === null) continue;
       // A repeating task done on this day is its completed occurrence's row, not the task's.
       const doneHere = row.recurringItemId === null && replaced.get(row.id)?.has(row.dueDate!);
@@ -150,7 +150,7 @@ export function itemsInRange(store: Store, from: string, to: string): ItemsOut {
   return {from, to, items};
 }
 
-/** SV-23: rows presented as the range read presents them, with their commands and Time to Leave. */
+/** Rows presented as the range read presents them, with their commands and Time to Leave. */
 export function itemPresenter(store: Store): (row: ItemRow, occurrence?: {start: string; end: string}) => ItemOut {
   const commands = itemCommands(store);
   const locked = readOnlyCalendars(store);
@@ -189,7 +189,7 @@ export function weatherDays(store: Store, from: string, to: string, enabled: boo
     .orderBy(t.weatherDays.date).all().map(row => ({date: row.date, condition: row.condition, high_f: row.highF, low_f: row.lowF}));
 }
 
-/** Todoist's projects with their colours, and SV-25's colour change waiting for Todoist or failed. */
+/** Todoist's projects with their colours, and a colour change waiting for Todoist or failed. */
 export function todoistProjects(store: Store): TodoistProjectOut[] {
   const presentCommand = commandPresenter(store);
   const commands = new Map(activeCommands(store, 'project').map(row => [row.targetId, presentCommand(row)]));
@@ -197,14 +197,14 @@ export function todoistProjects(store: Store): TodoistProjectOut[] {
     .map(row => ({id: row.providerId, name: row.name, inbox: row.inbox, colour: isTodoistColour(row.colour) ? row.colour : null, command: commands.get(row.id) ?? null}));
 }
 
-/** The places events have used, for a bare "@" and an empty Place field (SV-71). */
+/** The places events have used, for a bare "@" and an empty Place field. */
 export function recentPlaceList(store: Store): RecentPlaceOut[] {
   const rows = store.db.select({place: t.items.place, address: t.items.address, startsAt: t.items.startsAt, startDate: t.items.startDate}).from(t.items)
     .where(and(eq(t.items.kind, 'event'), isNotNull(t.items.place), eq(t.items.cancelled, false))).all();
   return recentPlaces(rows.map(row => ({place: row.place!, address: row.address, at: row.startsAt ?? row.startDate})));
 }
 
-/** Todoist's labels, for a task's labels picker (F6b). */
+/** Todoist's labels, for a task's labels picker. */
 export function todoistLabels(store: Store): TodoistLabelOut[] {
   return store.db.select().from(t.todoistLabels).orderBy(asc(t.todoistLabels.position), asc(t.todoistLabels.name)).all()
     .map(row => ({id: row.providerId, name: row.name}));

@@ -1,4 +1,4 @@
-// The reading pane (DESIGN.md › The reader): 680 px beside the list, there only while an email is
+// The reading pane: 680 px beside the list, there only while an email is
 // open. Tools (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Reply's reserved place, previous, next,
 // More), the head (the protected line, subject, sender, organisation and platform, account, time),
 // security mail's facts card, the actions, then the body: plain text, or HTML in a sandboxed frame
@@ -9,7 +9,7 @@
 // (InboxPage) does. Its head has mail's slot under the sender's line and above the actions
 // (slots.tsx), which another module may fill.
 //
-// On the phone (DESIGN.md › Phone; board 21) it covers the page: Back and Pin at the top, the email
+// On the phone (board 21) it covers the page: Back and Pin at the top, the email
 // full width, and Done (on Attention mail), Trash, Mark unread (then Mark read) and Open in Gmail at the bottom.
 //
 // EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
@@ -58,15 +58,15 @@ export interface ReaderActions {
   openInGmail: () => void;
   step: (delta: 1 | -1) => void;
   close: () => void;
-  // ⇧U: unread again, and the reader closes so it stays so (UX #11).
+  // ⇧U: unread again, and the reader closes so it stays so.
   markUnread: () => void;
-  // Its code copied: read, quietly (#295).
+  // Its code copied: read, quietly.
   codeCopied: () => void;
 }
 
 export function Reader({id, travel = null, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen, back = 'Inbox'}: {
   id: number;
-  // How the user stepped to it, for its swap (reader-03); null for a click.
+  // How the user stepped to it, for its swap; null for a click.
   travel?: Travel | null;
   // Its row in the list, so the tools are right before the email itself has loaded.
   row: MessageRowOut | undefined;
@@ -87,13 +87,13 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const message = data?.id === id ? data : undefined;
   const cards = useCards(id);
   // The More menu, open for this email; it shows only on Security and Noise mail, where it holds the
-  // proposals (2026-10-08; SV-24).
+  // proposals.
   const [moreFor, setMoreFor] = useState<number | null>(null);
-  // Done only on Attention mail not yet Done (#93).
+  // Done only on Attention mail not yet Done.
   const listed = message ?? (row?.id === id ? row : undefined);
   const moreItems = listed && readerActions(listed).proposals === 'more';
   const doneable = listed ? readerActions(listed).done : false;
-  // Attention mail already Done says so in its place (SV-69).
+  // Attention mail already Done says so in its place.
   const isDone = listed ? listed.lane === 'attention' && listed.done : false;
   // The tools draw from the email's row until the email itself is in, so they're right at once:
   // Unpin on pinned mail, and Open in Gmail on Gmail's mail only (an email has its Gmail link exactly
@@ -113,7 +113,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
     setToggles({id, count: toggled + 1});
     void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message, null, 'failed'));
   };
-  // A copied code reads the email (#295); on the phone after Mark unread, as Mark read would.
+  // A copied code reads the email; on the phone after Mark unread, as Mark read would.
   const codeCopied = () => (markedUnread ? toggleRead() : actions.codeCopied());
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
   // the email stays unread; from the email's row too, as the tools are, so it's there at once. The
@@ -138,7 +138,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         </div>
       )}
       <div className="rd-tools">
-        {/* Only in the compact tier, where the reader covers the list (#140). */}
+        {/* Only in the compact tier, where the reader covers the list. */}
         <button className="ibtn rd-back" type="button" aria-label="Back to the list" data-tip="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
         {doneable && <button className="tool done" type="button" data-hint="h" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
         {isDone && <span className="rd-done"><Icon name="check" />Done</span>}
@@ -163,7 +163,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         )}
       </div>
       <Swap id={id} travel={travel}>
-        {/* The head from the email's row at once; only the body waits for the email (reader-01, #229). */}
+        {/* The head from the email's row at once; only the body waits for the email. */}
         <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} />
       </Swap>
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
@@ -190,7 +190,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
 
 /**
  * The pane's scroller. Each email opens at its top, one shown before (straight from the cache) too,
- * and swaps in from the side the user stepped from (reader-03): up 8 px from below going down the
+ * and swaps in from the side the user stepped from: up 8 px from below going down the
  * list, down from above going up, a fade for a click; the first email shows at once (in a narrow
  * window it arrives with the pane's slide over the list), not as a swap. The tools stay still.
  */
@@ -230,7 +230,7 @@ type Panel = {kind: ItemKind; proposal: ProposalOut | null} | {kind: 'ask'} | nu
 type Cards = ReturnType<typeof useCards>;
 
 // A card asked for from outside the reader (an email row's right-click: Add to calendar, Add as task,
-// Ask about this email, DESIGN.md #248), taken by the reader once it shows that email.
+// Ask about this email), taken by the reader once it shows that email.
 let asked: {id: number; card: ItemKind | 'ask'} | null = null;
 const askers = new Set<() => void>();
 
@@ -245,7 +245,7 @@ function useCards(id: number) {
   const [state, setState] = useState<{id: number; panel: Panel}>({id, panel: null});
   // Another email starts with no card.
   const panel = state.id === id ? state.panel : null;
-  // What the user does sets this email's card, whatever another email left open (SV-24); an answer
+  // What the user does sets this email's card, whatever another email left open; an answer
   // arriving late lands only if this email and its card are still the ones shown.
   const show = (next: Panel) => setState({id, panel: next});
   const settle = (change: (panel: Panel) => Panel) => setState(current => (current.id === id ? {id, panel: change(current.panel)} : current));
@@ -306,7 +306,7 @@ function useCards(id: number) {
   return cards;
 }
 
-/** The reader's More menu (2026-10-08): Add to calendar and Add as task on Security and Noise mail. */
+/** The reader's More menu: Add to calendar and Add as task on Security and Noise mail. */
 function MoreMenu({actions, onClose}: {actions: MenuAction[]; onClose: () => void}) {
   const menu = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -351,7 +351,7 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
   cards: Cards;
   // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
   unread: boolean;
-  // Its code copied, which reads it (#295).
+  // Its code copied, which reads it.
   onCodeCopied: () => void;
 }) {
   const {panel, alfred} = cards;
@@ -371,7 +371,7 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
 /**
  * The email: its head and its body. The head draws from the email's row (`listed`) until the email
  * itself is in, so it's there at once; the body waits, a skeleton meanwhile (with an attachment's
- * card when it has one), or why it couldn't load (reader-01, phone-04, #229). With no `cards`, it's
+ * card when it has one), or why it couldn't load. With no `cards`, it's
  * the email alone: no slot and no actions.
  */
 function Email({listed, message, load, accounts, now, timeZone, marks, cards, unread = false, onCodeCopied}: {
@@ -419,7 +419,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
     <div className="rd-head">
       {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected, always stays in Attention</div>}
       <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" role="img" aria-label="Unread" data-tip="Unread" />}{listed.subject}</h1>
-      {/* Triage's summary, which the list shows in the subject's place, kept here once it's open (#238). */}
+      {/* Triage's summary, which the list shows in the subject's place, kept here once it's open. */}
       {summary && <p className="rd-sum selectable">{summary}</p>}
       <div className="rd-meta">
         <span className="avatar" style={{background: `color-mix(in oklch, ${colour} 22%, var(--cardOn))`, color: colour}}>{who.slice(0, 1).toUpperCase()}</span>
@@ -432,8 +432,8 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           <div className="to"><span data-tip={account?.address} data-tip-quick>to you</span></div>
         </div>
         {/* The account and time, and under them a waiting trash in words, as the row shows it: reading
-            doesn't spare it, pinning does (DESIGN.md #347, D490). A code's own trash names its expiry
-            rather than a second countdown beside the code card's (SV-252). */}
+            doesn't spare it, pinning does. A code's own trash names its expiry
+            rather than a second countdown beside the code card's. */}
         <div className="rd-right">
           <div>
             <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
@@ -446,7 +446,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           )}
         </div>
       </div>
-      {/* A verification code lifted out of the body, with Copy and its countdown (reader-04), from the row at once. */}
+      {/* A verification code lifted out of the body, with Copy and its countdown, from the row at once. */}
       {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}
       {message?.security && (
         <div className={message.protected || message.security.unfamiliar ? 'facts-card alert' : 'facts-card'}>
@@ -518,7 +518,7 @@ function Body({message, marks, arrived}: {message: MessageOut; marks: string[]; 
 
 /**
  * The pane's left edge, dragged (or ← → when focused) to make it wider or narrower, and double-clicked
- * to put it back to 680 (News's story pane shares it). Its grip sits fixed at the edge's middle (SV-201):
+ * to put it back to 680 (News's story pane shares it). Its grip sits fixed at the edge's middle:
  * one that followed the pointer ran ahead of it under the wide screen's zoom. The pointer moves in the
  * window's pixels and the pane's width is the page's, so the drag divides by the zoom.
  */

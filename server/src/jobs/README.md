@@ -10,28 +10,28 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
 - `server/src/jobs/` (this one): its tables ([`schema.ts`](schema.ts)), migrations ([`drizzle/`](drizzle),
   with their own table, `jobs_migrations`, run by [`db.ts`](db.ts)), pure rules ([`rules.ts`](rules.ts)),
   reads ([`queries.ts`](queries.ts)), routes ([`api.ts`](api.ts)), the seed ([`seed.ts`](seed.ts)), the
-  drop migration ([`drop.sql`](drop.sql)) and its tests ([`tests/`](tests)). J2 adds reading mail:
+  drop migration ([`drop.sql`](drop.sql)) and its tests ([`tests/`](tests)). Reading mail:
   the worker and one email's read ([`reader.ts`](reader.ts)), its state and health
   ([`readerState.ts`](readerState.ts)), Haiku's prompt ([`prompt.ts`](prompt.ts)) and models and
-  ledger ([`models.ts`](models.ts)). J3 adds the JD lookup: its run and what it keeps
+  ledger ([`models.ts`](models.ts)). The JD lookup: its run and what it keeps
   ([`lookup.ts`](lookup.ts)), its pure rules ([`lookupRules.ts`](lookupRules.ts)), the platforms'
   APIs and posting pages ([`web.ts`](web.ts)), markdown cleaning ([`markdown.ts`](markdown.ts)) and
-  its prompts ([`jdPrompt.ts`](jdPrompt.ts)). J4 adds the history pass: starting, resuming and
+  its prompts ([`jdPrompt.ts`](jdPrompt.ts)). The history pass: starting, resuming and
   ending it ([`history.ts`](history.ts)), its state and progress ([`historyState.ts`](historyState.ts)),
   Settings › Jobs's turning on and off ([`settings.ts`](settings.ts)) and From history's Dismiss all
-  ([`needsYou.ts`](needsYou.ts)); the reader reads it. J6 adds Needs you's answers (the rest of
+  ([`needsYou.ts`](needsYou.ts)); the reader reads it. Needs you's answers (the rest of
   [`needsYou.ts`](needsYou.ts)), the corrections ([`corrections.ts`](corrections.ts)), their Undo
   ([`undo.ts`](undo.ts)) and the guards that make every correction stick ([`stick.ts`](stick.ts)).
 - `shared/src/jobs/`: its enums, API schemas and types, and the `jobs` live event (the contract
   needs a third folder, since `web/` can't import server code).
 - `web/src/app/jobs/`: the page ([`JobsPage.tsx`](../../../web/src/app/jobs/JobsPage.tsx)), its table, Needs you
-  (its answers J6's), Per week, the status filter, the detail and its full posting, the shell's item
+  and its answers, Per week, the status filter, the detail and its full posting, the shell's item
   and `4` ([`Nav.tsx`](../../../web/src/app/jobs/Nav.tsx)), its calls through `web/src/api/client.ts`
   ([`api.ts`](../../../web/src/app/jobs/api.ts)), what it writes ([`words.ts`](../../../web/src/app/jobs/words.ts))
-  and its styles ([`jobs.css`](../../../web/src/app/jobs/jobs.css)) (J5); J6's menus ([`Menu.tsx`](../../../web/src/app/jobs/Menu.tsx),
+  and its styles ([`jobs.css`](../../../web/src/app/jobs/jobs.css)); the menus ([`Menu.tsx`](../../../web/src/app/jobs/Menu.tsx),
   what they hold in [`menus.ts`](../../../web/src/app/jobs/menus.ts)), the candidate picker, the field in place, the area that takes a pasted posting
-  ([`PastePosting.tsx`](../../../web/src/app/jobs/PastePosting.tsx)), and the toast with Undo ([`act.ts`](../../../web/src/app/jobs/act.ts)); J7's fillers of mail's slots, the JD chip with its
-  popover and Applied before ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)); J8's states, the history pass's
+  ([`PastePosting.tsx`](../../../web/src/app/jobs/PastePosting.tsx)), and the toast with Undo ([`act.ts`](../../../web/src/app/jobs/act.ts)); the fillers of mail's slots, the JD chip with its
+  popover and Applied before ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)); the states, the history pass's
   and the AI down's lines and Jobs off ([`States.tsx`](../../../web/src/app/jobs/States.tsx)), and Settings › Jobs with
   Settings › AI's Jobs group ([`JobsSettings.tsx`](../../../web/src/app/jobs/JobsSettings.tsx)). The shell imports only
   [`index.ts`](../../../web/src/app/jobs/index.ts).
@@ -53,7 +53,7 @@ files marked *imports* import the folders.
 | `shared/src/index.ts`, the last line (*imports*) | `export * from './jobs/index.ts'`: the contract reaches `@setpoint/shared` |
 | `shared/src/api/live.ts`, the `JobsLiveEvent` import and the union's last member (*imports*) | the `jobs` live event is one of `LiveEvent`'s |
 | `shared/src/enums.ts`, `LIVE_EVENT_TYPES` | `'jobs'` is a live event type |
-| `server/src/live/feed.ts`, `merge` | two `jobs` events in one transaction merge into one, the later history progress kept (J4) |
+| `server/src/live/feed.ts`, `merge` | two `jobs` events in one transaction merge into one, the later history progress kept |
 | `server/src/server.ts`, the `./jobs/index.ts` import (*imports*) | brings in `migrateJobs` and `jobsApi` |
 | `server/src/cli.ts`, the `./jobs/index.ts` and `./providers/ai/index.ts` imports (*imports*), `jobs-reread`, `jobs-repair-facts` and `jobs-repair-postings` and their lines in `USAGE` | reading again what was read before Jobs read HTML, the salaries and locations a reading cut, and taking away the application pages saved as JDs; the `./providers/ai/index.ts` import, the commands' `await` and `async` on `main` can stay, and `eslint.config.js`'s `JOBS_WIRING` line goes with it |
 | `server/src/server.ts`, after `openDatabase` | `migrateJobs(sqlite)`: Jobs's tables, after the app's migrations |
@@ -63,38 +63,38 @@ files marked *imports* import the folders.
 | `package.json`, `extension:build`, the `typecheck` script's `tsc -p extension/tsconfig.json` and `@types/chrome` | building the extension and typechecking it |
 | `vitest.config.ts`, the `extension/vitest.config.ts` project | the extension's tests in `npm test` |
 | `eslint.config.js`, the extension's two blocks | its globals: Chromium's and the extension APIs' for `src/` and `tests/`, Node's for its build and config |
-| `server/src/server.ts`, `jobsReader` and TriageWorker's `onSorted` (J2) | Jobs's reading worker, nudged each time triage sorts an email |
-| `server/src/server.ts`, the engine's `workers` (J2) | `jobsReader` runs its `jobs_read` jobs on the sync engine: the reading, each JD lookup (J3) and each pasted posting's reading |
-| `server/src/server.ts`, `jobsReader`'s `web` (J3) | `jobsWeb()`, the platforms' real APIs and posting hosts and GovernmentJobs' site, given only in production |
-| `server/src/triage/worker.ts`, the `onSorted` option (J2) | the generic hook the line above uses: told after each email is sorted; it names no module, so it can stay |
-| `server/src/db/schema.ts`, `JOB_KINDS`, and `server/drizzle/0021_jobs_reading.sql` (J2) | `'jobs_read'` is a kind of engine job (the migration rebuilds `jobs` for its CHECK) |
-| `shared/src/enums.ts`, `AI_PURPOSES`, and the same migration (J2) | Jobs's three parts of the AI usage ledger: `jobs_emails` (J2), `jobs_finding_jds` and `jobs_reading_jds` (J3) |
-| `server/src/providers/ai/index.ts`, `ModelRequest.webSearch` (J3) | the generic hook Jobs's search uses: Claude's web search beside a call's tool, a paused turn resumed, searches counted; it names no module, so it can stay |
-| `server/src/domain/aiCost.ts`, `webSearches` (J3) | web searches priced in the ledger at $10 per 1,000; generic, so it can stay |
+| `server/src/server.ts`, `jobsReader` and TriageWorker's `onSorted` | Jobs's reading worker, nudged each time triage sorts an email |
+| `server/src/server.ts`, the engine's `workers` | `jobsReader` runs its `jobs_read` jobs on the sync engine: the reading, each JD lookup and each pasted posting's reading |
+| `server/src/server.ts`, `jobsReader`'s `web` | `jobsWeb()`, the platforms' real APIs and posting hosts and GovernmentJobs' site, given only in production |
+| `server/src/triage/worker.ts`, the `onSorted` option | the generic hook the line above uses: told after each email is sorted; it names no module, so it can stay |
+| `server/src/db/schema.ts`, `JOB_KINDS`, and `server/drizzle/0021_jobs_reading.sql` | `'jobs_read'` is a kind of engine job (the migration rebuilds `jobs` for its CHECK) |
+| `shared/src/enums.ts`, `AI_PURPOSES`, and the same migration | Jobs's three parts of the AI usage ledger: `jobs_emails`, `jobs_finding_jds` and `jobs_reading_jds` |
+| `server/src/providers/ai/index.ts`, `ModelRequest.webSearch` | the generic hook Jobs's search uses: Claude's web search beside a call's tool, a paused turn resumed, searches counted; it names no module, so it can stay |
+| `server/src/domain/aiCost.ts`, `webSearches` | web searches priced in the ledger at $10 per 1,000; generic, so it can stay |
 | `server/src/api/app.ts`, `routes` in `AppOptions` and its mount after News's | the generic hook the line above uses; it names no module, so it can stay |
 | `server/src/dev/sample.ts`, the `../jobs/index.ts` import (*imports*) | brings in `seedJobs` |
-| `server/src/dev/sample.ts`, the end of `seedSampleData` | `seedJobs({sqlite, db, usage})`: Jobs's sample for `npm run seed`, `npm run try`, the browser checks and the tests' seeded worlds, with its AI usage this month where mail's sample has its own (J8) |
+| `server/src/dev/sample.ts`, the end of `seedSampleData` | `seedJobs({sqlite, db, usage})`: Jobs's sample for `npm run seed`, `npm run try`, the browser checks and the tests' seeded worlds, with its AI usage this month where mail's sample has its own |
 | `server/src/dev/sample.ts`, the last of `SAMPLE_EMAILS` | the Indeed match email Jobs's sample reads (mail's own data; it can stay) |
-| `web/src/logic/live.ts`, `pathsForEvent`'s `jobs` case | a `jobs` event refreshes what's mounted under `/jobs`: the page, the shell's item (`/jobs/nav`), an open application and a search (J5) |
-| `web/src/logic/route.ts`, the `jobs` route (J5) | `/jobs` and `/jobs/12` (an application open) in the address bar; J7 adds `/jobs/12/posting` (Full posting from mail, #271) and `?q=` (Applied before's search), J8 `/jobs/from-history` (Settings › Jobs's Show); it names no module, so it imports nothing |
-| `web/src/app/App.tsx`, the `./jobs/index.ts` import (*imports*, J5) | `JobsPage` for the `jobs` route (the phone's goes to the Inbox, decision 49), and `goToJobs` for `4` (on or off, J8); J7 adds `jobsMailSlots` to it |
-| `web/src/app/App.tsx`, `fillMailSlots(jobsMailSlots)` and the `./slots.tsx` import (J7) | Jobs fills mail's slots ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)): the reader's JD chip, and Applied before on the reader and the rows |
-| `web/src/app/slots.tsx` (J7) | the generic slots the line above fills: a hook the Inbox's list calls with its rows, and the reader head's component; unfilled, both draw nothing; it names no module, so it can stay |
-| `web/src/app/AllList.tsx`, `useRowSlot` and `{afterSubject(row)}` (J7) | each row draws the slot after its subject; it imports only `slots.tsx`, so it can stay |
-| `web/src/app/Reader.tsx`, `<ReaderSlot>` before the actions (J7) | the reader's head draws the slot under the sender's line; it imports only `slots.tsx`, so it can stay |
-| `web/src/app/Sidebar.tsx`, the `./jobs/index.ts` import and `<JobsNavItem>` after News (*imports*, J5) | the sidebar's Jobs item with its Needs you count, and in the compact tier the rail's slot with its neutral badge |
-| `web/src/app/palette/Palette.tsx`, the `../jobs/index.ts` import and `...jobsCommands()` in Go to (*imports*, J5) | ⌘K's "Jobs 4", while Jobs is on (search stays out of ⌘K) |
-| `web/src/app/palette/Palette.tsx`, the `jobs` line of `SETTINGS_SECTIONS` (J8) | ⌘K's "Settings › Jobs" |
-| `web/src/app/settings/Settings.tsx`, the `../jobs/index.ts` import, `jobs: JobsSettingsPage` in `PAGES` and `...JOBS_SETTINGS_PATHS` (*imports*, J8) | Settings › Jobs, loaded with the other pages as Settings opens |
-| `web/src/app/settings/Ai.tsx`, the `../jobs/index.ts` import, `<JobsAiGroup>`, `<JobsUsageRow>` and `useJobsSpend()` in Usage this month's total (*imports*, J8) | Settings › AI's Jobs group after News's, and Jobs's row in Usage this month, its total in the label's |
-| `web/src/app/settings/parts.tsx`, `Page`'s `note` (J8) | the generic hook Settings › Jobs's "62 applications" uses; it names no module, so it can stay |
-| `web/src/logic/route.ts`, `'jobs'` in `SETTINGS_PAGES` (J8) | Settings › Jobs between News and AI, and /settings/jobs |
-| `web/src/logic/settings.ts`, `SETTINGS_NAV`'s `jobs` (J8) | Settings' nav item, Jobs with `work` |
-| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, J6's menus, candidate picker and title field, J7's JD chip, popover and Applied before, J8's words, the Pinned shelf's order, and the extension's chip saying an application's standing as mail does (removed with the module) |
-| `web/tests/browser/jobsMail.spec.ts` (J7) | the browser checks of the slots against the seed; with Jobs removed it goes, as `jobs.spec.ts` does; it imports nothing from the folders |
-| `web/tests/browser/jobsStates.spec.ts` (J8) | the browser checks of the states, Settings › Jobs and Settings › AI's Jobs group in Night and Light; it goes with Jobs, and imports nothing from the folders |
-| Jobs's lines in `web/tests/browser/settings.spec.ts` (30a's nav, 30b's Jobs group, its usage row and the total with it, $25.20 for $21.35), `sweep.spec.ts` (J8's states and Jobs off, with their `node:path` and `node:sqlite` imports) and `web/tests/shell.test.ts` (`/jobs/from-history`) (J8) | they import nothing from the folders; with Jobs removed, the boards' Jobs patches go too |
-| `web/tests/browser/jobs.spec.ts`, and Jobs's lines in `sweep.spec.ts`, `news.spec.ts`, `palette.spec.ts`, `compact.spec.ts` and `web/tests/shell.test.ts` (J5) | the browser checks and the sweep's Jobs route; the shell's lists that now name Jobs; they import nothing from the folders |
+| `web/src/logic/live.ts`, `pathsForEvent`'s `jobs` case | a `jobs` event refreshes what's mounted under `/jobs`: the page, the shell's item (`/jobs/nav`), an open application and a search |
+| `web/src/logic/route.ts`, the `jobs` route | `/jobs` and `/jobs/12` (an application open) in the address bar, `/jobs/12/posting` (Full posting from mail), `?q=` (Applied before's search) and `/jobs/from-history` (Settings › Jobs's Show); it names no module, so it imports nothing |
+| `web/src/app/App.tsx`, the `./jobs/index.ts` import (*imports*) | `JobsPage` for the `jobs` route (the phone's goes to the Inbox), `goToJobs` for `4` (on or off) and `jobsMailSlots` |
+| `web/src/app/App.tsx`, `fillMailSlots(jobsMailSlots)` and the `./slots.tsx` import | Jobs fills mail's slots ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)): the reader's JD chip, and Applied before on the reader and the rows |
+| `web/src/app/slots.tsx` | the generic slots the line above fills: a hook the Inbox's list calls with its rows, and the reader head's component; unfilled, both draw nothing; it names no module, so it can stay |
+| `web/src/app/AllList.tsx`, `useRowSlot` and `{afterSubject(row)}` | each row draws the slot after its subject; it imports only `slots.tsx`, so it can stay |
+| `web/src/app/Reader.tsx`, `<ReaderSlot>` before the actions | the reader's head draws the slot under the sender's line; it imports only `slots.tsx`, so it can stay |
+| `web/src/app/Sidebar.tsx`, the `./jobs/index.ts` import and `<JobsNavItem>` after News (*imports*) | the sidebar's Jobs item with its Needs you count, and in the compact tier the rail's slot with its neutral badge |
+| `web/src/app/palette/Palette.tsx`, the `../jobs/index.ts` import and `...jobsCommands()` in Go to (*imports*) | ⌘K's "Jobs 4", while Jobs is on (search stays out of ⌘K) |
+| `web/src/app/palette/Palette.tsx`, the `jobs` line of `SETTINGS_SECTIONS` | ⌘K's "Settings › Jobs" |
+| `web/src/app/settings/Settings.tsx`, the `../jobs/index.ts` import, `jobs: JobsSettingsPage` in `PAGES` and `...JOBS_SETTINGS_PATHS` (*imports*) | Settings › Jobs, loaded with the other pages as Settings opens |
+| `web/src/app/settings/Ai.tsx`, the `../jobs/index.ts` import, `<JobsAiGroup>`, `<JobsUsageRow>` and `useJobsSpend()` in Usage this month's total (*imports*) | Settings › AI's Jobs group after News's, and Jobs's row in Usage this month, its total in the label's |
+| `web/src/app/settings/parts.tsx`, `Page`'s `note` | the generic hook Settings › Jobs's "62 applications" uses; it names no module, so it can stay |
+| `web/src/logic/route.ts`, `'jobs'` in `SETTINGS_PAGES` | Settings › Jobs between News and AI, and /settings/jobs |
+| `web/src/logic/settings.ts`, `SETTINGS_NAV`'s `jobs` | Settings' nav item, Jobs with `work` |
+| `web/tests/components/jobs.test.tsx` (*imports*) | the component tests of Per week, the status filter and the full posting, the menus, candidate picker and title field, the JD chip, popover and Applied before, the words, the Pinned shelf's order, and the extension's chip saying an application's standing as mail does (removed with the module) |
+| `web/tests/browser/jobsMail.spec.ts` | the browser checks of the slots against the seed; with Jobs removed it goes, as `jobs.spec.ts` does; it imports nothing from the folders |
+| `web/tests/browser/jobsStates.spec.ts` | the browser checks of the states, Settings › Jobs and Settings › AI's Jobs group in Night and Light; it goes with Jobs, and imports nothing from the folders |
+| Jobs's lines in `web/tests/browser/settings.spec.ts` (30a's nav, 30b's Jobs group, its usage row and the total with it, $25.20 for $21.35), `sweep.spec.ts` (the states and Jobs off, with their `node:path` and `node:sqlite` imports) and `web/tests/shell.test.ts` (`/jobs/from-history`) | they import nothing from the folders; with Jobs removed, the boards' Jobs patches go too |
+| `web/tests/browser/jobs.spec.ts`, and Jobs's lines in `sweep.spec.ts`, `news.spec.ts`, `palette.spec.ts`, `compact.spec.ts` and `web/tests/shell.test.ts` | the browser checks and the sweep's Jobs route; the shell's lists that now name Jobs; they import nothing from the folders |
 | `server/tests/contract.test.ts`, the `jobs` `noteLive` | the iPhone app's contract records the event (it ignores the type) |
 | `shared/contract/` | the recorded `jobs` event and `LIVE_EVENT_TYPES` (re-recorded by `npm run contract:record`) |
 | `server/vitest.config.ts`, `include` | runs `src/jobs/tests/` |
@@ -102,17 +102,17 @@ files marked *imports* import the folders.
 
 `web/src/api/live.ts` listens for every type in `LIVE_EVENT_TYPES`, so it needs no line of its own.
 
-J7's slots on the reader and the row are in the table: with Jobs removed, `fillMailSlots` goes with
+The slots on the reader and the row are in the table: with Jobs removed, `fillMailSlots` goes with
 App.tsx's import, and the slots draw nothing.
 
-The hook (J2) is triage's, not storing's: Jobs reads an email only once triage has typed it, so being
+The hook is triage's, not storing's: Jobs reads an email only once triage has typed it, so being
 told when one is stored would tell it nothing it could act on. A missed nudge costs nothing: the
 worker looks for what waits every five minutes, and after a restart.
 
 The `onSorted`, `JOB_KINDS` and `AI_PURPOSES` lines don't import Jobs, so they aren't in `JOBS_WIRING`:
 the lint rule still refuses an import of Jobs from triage.
 
-## Reading mail (J2)
+## Reading mail
 
 - **What:** emails triage has sorted in the accounts Jobs lists (every email in Jobs, only Career
   elsewhere), received since Jobs was last turned on (`jobs_settings.enabled_at`), not in
@@ -125,18 +125,18 @@ the lint rule still refuses an import of Jobs from triage.
 - **The AI down:** the job fails by the one retry policy and the emails wait; `GET /api/jobs` carries
   `reading` (how many wait, and since when it's down), and a `jobs` event naming nothing goes out when
   that changes. A missing key waits for Settings › AI, and the rescan tries again.
-- **J3's seam:** a confirmation makes its application with `jd_lookup = 'looking'` and `jd_lookup_at`
-  set: its lookup is due. The ledger's `jobs_finding_jds` and `jobs_reading_jds` are J3's.
-- **J4's feed:** the history pass reads the older mail oldest first through the same `readEmail` and
+- **The JD lookup's seam:** a confirmation makes its application with `jd_lookup = 'looking'` and `jd_lookup_at`
+  set: its lookup is due. The ledger's `jobs_finding_jds` and `jobs_reading_jds` are the lookup's.
+- **The history pass's feed:** the history pass reads the older mail oldest first through the same `readEmail` and
   rules, with `fromHistory`. Each is read once whichever reads it first.
 
-## The JD lookup (J3)
+## The JD lookup
 
-- **When:** J2's confirmation leaves its application at `jd_lookup = 'looking'`. After each
+- **When:** a confirmation the reader reads leaves its application at `jd_lookup = 'looking'`. After each
   reading run and on the five-minute rescan, `queueDueLookups` queues a lookup for each one still
-  open; one closed before its lookup started goes back to `none` (decision 57). Look it up
-  (`POST /api/jobs/applications/:id/lookup`, any application, open or closed), J6's Track this and
-  J4's history pass call `requestLookup(store, id)`, which marks it `looking` at once, answers its
+  open; one closed before its lookup started goes back to `none`. Look it up
+  (`POST /api/jobs/applications/:id/lookup`, any application, open or closed), Track this and
+  the history pass call `requestLookup(store, id)`, which marks it `looking` at once, answers its
   waiting JD to confirm and queues the job; a saved JD answers `saved` (409 on the route) and is
   never replaced.
 - **How it runs:** each lookup is a `jobs_read` job keyed `jobs_jd:<application>` on Jobs's own
@@ -182,7 +182,7 @@ the lint rule still refuses an import of Jobs from triage.
   clears it. The running job watches the `jobs` events for its application and, once it's no longer
   `looking` (stopped, pasted, Undo), aborts its model and web calls and finishes, never retried.
 
-## The history pass (J4)
+## The history pass
 
 - **When:** turning Jobs on (`PATCH /api/jobs/settings {enabled: true}`, [`settings.ts`](settings.ts))
   sets `enabled_at` and starts it ([`history.ts`](history.ts) `startHistory`): what the accounts it
@@ -203,7 +203,7 @@ the lint rule still refuses an import of Jobs from triage.
   In a Career-only account backfilled mail is read when it's Career, or typed a confirmation or
   rejection (by triage's extraction, or the rules until it runs), or sent from a hiring platform's
   mail domain (mail.ts `HIRING_PLATFORM_SENDERS`), since the rules make few emails Career and the
-  extraction never changes the kind. Live mail there stays Career only (decision 56). An email the provider refuses
+  extraction never changes the kind. Live mail there stays Career only. An email the provider refuses
   outright (a 400) is passed over, the pass ends without it, and a later pass tries it again.
 - **JDs:** the applications it makes start at `jd_lookup = 'none'`, so no lookup runs while a later
   email may still close them. At its end (`finishHistory`) the open ones never looked up become
@@ -219,11 +219,11 @@ the lint rule still refuses an import of Jobs from triage.
   as `dismissed`, the same as ignoring each ([`needsYou.ts`](needsYou.ts)), and answers their ids;
   `POST /api/jobs/from-history/undo {needs_you: [ids]}` brings back those still dismissed.
 
-## Search (J5)
+## Search
 
 - **What:** `GET /api/jobs/search?q=…` ([`search.ts`](search.ts), run over the store by `queries.ts`
   `jobsSearch`): company or role first, then an application whose JD's text alone matched, with the
-  line it matched (decision 62). Jobs's own: mail's search and ⌘K never see it.
+  line it matched. Jobs's own: mail's search and ⌘K never see it.
 - **Company or role** ranks best first, then newest: the query's words start the company's name in
   order, the last perhaps unfinished ("wide world", "humon"); they start words of the company; of the
   role; of the two together. Case and punctuation never count, as companies match elsewhere.
@@ -239,7 +239,7 @@ the lint rule still refuses an import of Jobs from triage.
   Ghosted; with the accounts Jobs reads and its earliest email, for the pane's quiet line. Not in the
   iPhone app's contract. It's under `/jobs`, so the `jobs` event refreshes it.
 
-## Needs you's answers and the corrections (J6)
+## Needs you's answers and the corrections
 
 - **The routes** (each answers `JobsChangeOut`, `{undo, application}`): a candidate picked
   (`POST /applications/:id/jd/pick`), None of these (`…/jd/none`) or the posting pasted
@@ -249,7 +249,7 @@ the lint rule still refuses an import of Jobs from triage.
   Merge with… (`…/merge`), Not this posting, Not an application (`POST …/not-this-posting|not-an-application`)
   and Delete (`DELETE /applications/:id`); an event's Move to… and Not about this
   (`POST /events/:id/move|not-about-this`). `POST /undo/:token` is the toast's Undo. Look up the JD
-  again is J3's `…/lookup`. All under /api/jobs.
+  again is the lookup's `…/lookup`. All under /api/jobs.
 - **Undo** ([`undo.ts`](undo.ts)): before it writes, a correction keeps every row it may touch (its
   applications with their events, JD, candidates, hand-set fields, aliases and turned-down postings,
   the Needs you items, the emails' read records and blocks) in `jobs_undo`, and says what it made.
@@ -261,7 +261,7 @@ the lint rule still refuses an import of Jobs from triage.
   event and by an email the user brings to an application); a merge, a move, an assignment and an
   edited title or company leave the application answering to the company and role they brought
   (`jobs_aliases`, rules.ts `Alias`), so a later email finds it; Not an application blocks its emails
-  and its company and role (`jobs_blocked_emails`, decision 67), and Delete blocks nothing; a posting
+  and its company and role (`jobs_blocked_emails`), and Delete blocks nothing; a posting
   turned down by None of these or Not this posting (`jobs_rejected_postings`) is never saved or
   offered again, and a lookup writes only while its application is still `looking` (`stillLooking`),
   so Undo or a correction made while it ran wins. Emails are read once, so a history re-run never
@@ -286,7 +286,7 @@ the lint rule still refuses an import of Jobs from triage.
   `statusFromEvents`) unless the user set it; an email brought in that sets a status later than one
   set by hand takes over, as it would have on arrival.
 
-## Jobs in mail (J7)
+## Jobs in mail
 
 - **What:** `GET /api/jobs/mail?messages=1,2,3` ([`queries.ts`](queries.ts) `jobsInMail`) answers what mail's
   slots draw for a page of rows, or the email the reader has open, in one request (up to 500 ids):
@@ -304,14 +304,14 @@ the lint rule still refuses an import of Jobs from triage.
   ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)) before the first draw. The list's rows are asked
   about in one request, then one for each set it adds (a page, a day's Noise opened, new mail), never
   one per row; the reader asks for its one email. Being under `/jobs`, a `jobs` event refreshes both.
-  Neither draws on the phone (decision 49) or while Jobs is off, and nothing is asked then.
+  Neither draws on the phone or while Jobs is off, and nothing is asked then.
 - **Leaving for Jobs:** the JD chip's popover goes to `/jobs/12` (Open in Jobs) or `/jobs/12/posting`
-  (Full posting, #271), the application arriving with its pane simply there; Applied before goes to
+  (Full posting), the application arriving with its pane simply there; Applied before goes to
   `/jobs?q=<query>`, searched. The page drops what the address carried once it's arrived.
 - **The seed** keeps the Indeed match email as the reader would have read it (its event, company and
   role), so its badge shows (board 37c).
 
-## States and Settings (J8)
+## States and Settings
 
 - **The page's lines** ([`States.tsx`](../../../web/src/app/jobs/States.tsx), 38a, 38b): `GET /api/jobs`'s `history`
   draws the pass's line while it's `running` or `waiting`, and its
@@ -321,7 +321,7 @@ the lint rule still refuses an import of Jobs from triage.
   `jobs` events.
 - **Off** (38c): the page's one line, with Turn on opening Settings › Jobs, its switch focused. `4` opens it;
   the sidebar, the rail and ⌘K's Go to leave Jobs out.
-- **Settings › Jobs** (39a): `GET`/`PATCH /api/jobs/settings`. Reads is a select on each account (#273),
+- **Settings › Jobs** (39a): `GET`/`PATCH /api/jobs/settings`. Reads is a select on each account,
   sending the whole list; Show goes to `/jobs/from-history`, From history unfolded.
 - **Settings › AI's Jobs group** (39b): `GET /api/jobs/ai` ([`models.ts`](models.ts) `jobsAi`): the three models,
   whether there's a key, and this month's ledger for `jobs_emails`, `jobs_finding_jds` and `jobs_reading_jds`

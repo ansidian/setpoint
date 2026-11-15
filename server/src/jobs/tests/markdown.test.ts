@@ -1,4 +1,4 @@
-// A posting's text cleaned to readable markdown (J3, decision 53), as a table: headings (a bold-only
+// A posting's text cleaned to readable markdown, as a table: headings (a bold-only
 // paragraph too), paragraphs, lists and nested lists, Greenhouse's escaped HTML, the page's own
 // furniture and lines dropped, whitespace and entities, and plain text's bullets and headings.
 import {describe, expect, test} from 'vitest';

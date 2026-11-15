@@ -1,4 +1,4 @@
-// News's invented fixtures (N2), each shaped like its source's real format and naming no real outlet
+// News's invented fixtures, each shaped like its source's real format and naming no real outlet
 // or event: the files in fixtures/news/, with {{BASE}} standing for wherever the test serves them
 // (a fake on 127.0.0.1, or an example domain for the parsers' tables).
 import fs from 'node:fs';

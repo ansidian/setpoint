@@ -1,4 +1,4 @@
-// The phone's shell (DESIGN.md › Phone; board 21): below 640 px the same pages and routes in one
+// The phone's shell (board 21): below 640 px the same pages and routes in one
 // column, with Inbox and Agenda in a tab bar at the bottom in place of the sidebar. Settings stays on
 // the desktop: a Settings link (a reconnect alert's) says so here, with Sign out.
 import type {MailCountsOut} from '@setpoint/shared';
@@ -14,7 +14,7 @@ import {askSignOut} from './signOut.ts';
 import {toInbox} from './toInbox.ts';
 
 const PHONE = window.matchMedia(`(max-width: ${viewport.phoneBelow - 1}px)`);
-// The compact tier (#140): an iPad or a half-width window, the sidebar a rail and the panes over
+// The compact tier: an iPad or a half-width window, the sidebar a rail and the panes over
 // what they'd squeeze.
 const COMPACT = window.matchMedia(`(min-width: ${viewport.phoneBelow}px) and (max-width: ${viewport.compactBelow - 1}px)`);
 const follow = (query: MediaQueryList) => (listener: () => void) => {
@@ -39,7 +39,7 @@ const TABS: {label: string; icon: 'inbox' | 'calendar_today'; page: Route['page'
 ];
 
 /**
- * The tab bar (#142): the current tab in its filled glyph; the Inbox tab badged with the attention
+ * The tab bar: the current tab in its filled glyph; the Inbox tab badged with the attention
  * count while Attention waits and the Inbox isn't showing (its header has the pill); a tap on the
  * current tab takes its list back to the top (the agenda to today), as the page's inner scroller is
  * out of reach of iOS's tap on the status bar.

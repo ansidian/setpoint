@@ -1,4 +1,4 @@
-// An item's description on screen (SV-264, D546, D547): the floating detail's row (formatted, drawn
+// An item's description on screen: the floating detail's row (formatted, drawn
 // from the short list of formats and never from the provider's markup; folded at 6 lines under More)
 // and the editor's Description field (the bar while it has focus, an event's Underline and a task's
 // none, typing, a format, a link, a paste read through the same list). The reading and writing of
@@ -60,7 +60,7 @@ test('the detail: a description sits after who\'s coming, under the notes glyph,
   await expect.element(link).toHaveAttribute('rel', 'noopener noreferrer');
 });
 
-test('the detail: a nested list sits inside its item, as Google Calendar draws it (SV-268)', async () => {
+test('the detail: a nested list sits inside its item, as Google Calendar draws it', async () => {
   await card(item({description: '<ul><li><b>Parking</b>:<ul><li>On the street</li><li>The lot behind</li></ul></li><li>Bring a pen</li></ul>'}));
   await expect.element(page.getByText('On the street')).toBeVisible();
   const outer = [...shown().querySelectorAll(':scope > ul > li')];
@@ -122,7 +122,7 @@ function Measured({heights, children}: {heights: number[]; children: ReactNode})
   return <>{children}</>;
 }
 
-test('the detail: a description\'s row has its final height when the card is first drawn, More included, so the card is measured once (SV-267)', async () => {
+test('the detail: a description\'s row has its final height when the card is first drawn, More included, so the card is measured once', async () => {
   for (const description of [LONG, 'One line']) {
     const heights: number[] = [];
     const one = item({description});
@@ -290,7 +290,7 @@ test('the field: it grows with its text to 8 lines, then keeps its height with t
   expect(getComputedStyle(box.element()).overflowY).toBe('auto');
 });
 
-// SV-268: Tab and Shift-Tab in a list nest and un-nest its item, as Google Calendar's editor does.
+// Tab and Shift-Tab in a list nest and un-nest its item, as Google Calendar's editor does.
 const LIST = '<ul><li>Laptop</li><li>Charger</li><li>Pen</li></ul>';
 const into = async (text: string) => {
   await page.getByText(text, {exact: true}).click();

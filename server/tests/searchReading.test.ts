@@ -1,4 +1,4 @@
-// The server's reading of a whole search, offered as a suggestion (SV-138, SV-142, D386, D392), with
+// The server's reading of a whole search, offered as a suggestion, with
 // Haiku faked at the HTTP boundary: what it's given, how its answer becomes chips once accepted, what
 // those leave out, when a suggestion is worth offering, and every way a reading can fail to come. All
 // searches and names here are invented.
@@ -173,7 +173,7 @@ describe('filters from the model', () => {
     expect(out.chips).toEqual([{kind: 'organisation', value: 'Contoso Insurance', label: 'Contoso Insurance'}]);
   });
 
-  test('a type chip finds the classified type, or the word in the subject, summary or terms, never the body (D386)', async () => {
+  test('a type chip finds the classified type, or the word in the subject, summary or terms, never the body', async () => {
     const {fake, w, read} = await setup();
     const typed = mail(w, 'Gadget order', {type: 'receipt'});
     const subject = mail(w, 'Gadget receipt enclosed');

@@ -1,13 +1,13 @@
-// The pane beside the Inbox, News and Jobs with nothing open in it (SV-217, D464): always there on a
+// The pane beside the Inbox, News and Jobs with nothing open in it: always there on a
 // desktop, at the dragged width, so the list and header never move as an item opens or closes. Each
-// page fills it: the Inbox's mail day (SV-218, InboxDay.tsx), News's recap (SV-219, NewsDay.tsx) and
-// Jobs's recent movement (SV-220, JobsDay.tsx).
+// page fills it: the Inbox's mail day (InboxDay.tsx), News's recap (NewsDay.tsx) and
+// Jobs's recent movement (JobsDay.tsx).
 //
 // In a narrow window an open item covers the list, and the empty pane comes over it only from a
-// 30 px `right_panel_open` button before search, as Calendar's day does (#196): lit while showing,
+// 30 px `right_panel_open` button before search, as Calendar's day does: lit while showing,
 // closed by the button again or Esc, on every load, and when an item opens.
 //
-// While its page is up, the pane's answers stay on screen even with an item open (SV-222), so a
+// While its page is up, the pane's answers stay on screen even with an item open, so a
 // change to the mail meanwhile refreshes them rather than forgetting them, and closing the item brings
 // the pane back as it was. Its mark settles in only the first time the pane shows in a visit.
 import {useState} from 'react';
@@ -77,8 +77,8 @@ export interface PaneTrouble {
 }
 
 /**
- * The pane's trouble, folded under one `warning` chip in `alert` at the start of the foot's facts line
- * (SV-219, DESIGN.md #335), so the block above never moves: the pointer over it, or focus, shows a card
+ * The pane's trouble, folded under one `warning` chip in `alert` at the start of the foot's facts line,
+ * so the block above never moves: the pointer over it, or focus, shows a card
  * above it listing each in `alert` with its fix, which the pointer can move into; leaving it or Esc
  * puts it away. Nothing shows without trouble.
  */

@@ -1,10 +1,10 @@
-// Settings (DESIGN.md › Settings; boards 17, 18a, 18b, 30a, 30b, 39a): a 1040 × 720 modal over the page,
+// Settings (boards 17, 18a, 18b, 30a, 30b, 39a): a 1040 × 720 modal over the page,
 // the scrim behind, not in the address bar. The 220 px nav holds the pages in three groups with a gap
-// between them (D512: Accounts · Mail, Calendar, News, Jobs · Notifications, AI, Appearance, Security), Accounts marked while a
+// between them (Accounts · Mail, Calendar, News, Jobs · Notifications, AI, Appearance, Security), Accounts marked while a
 // source needs sign-in and News while a feed fails, and Sign out at its foot. ↑ ↓ in the nav change page; Esc closes the
 // topmost thing (a menu first, then Settings); keys inside never reach the page under it, and
 // focus goes back where it was. Opening it loads every page's answers, so a page switched to shows
-// at once; until a group's answers come it draws skeleton rows, never a default as a fact (#226).
+// at once; until a group's answers come it draws skeleton rows, never a default as a fact.
 import type {AccountOut, NewsSourcesOut} from '@setpoint/shared';
 import {useEffect, useRef} from 'react';
 import type {JSX, KeyboardEvent} from 'react';
@@ -32,7 +32,7 @@ import {SecurityPage} from './Security.tsx';
 import {closeSettings, openSettings, useSettingsPage} from './store.ts';
 import './settings.css';
 
-// Every page's answers, loaded as Settings opens so a page switched to shows at once (settings-05).
+// Every page's answers, loaded as Settings opens so a page switched to shows at once.
 const PAGE_PATHS = [
   ACCOUNTS_PATH, SOURCES_PATH, CALENDARS_PATH, TODOIST_PROJECTS_PATH, SETTINGS_PATH, RULES_PATH, TRUSTED_PATH, NOTIFY_STATUS_PATH,
   SECRETS_PATH, AI_PATH, SECURITY_PATH, NEWS_SOURCES_PATH, ...JOBS_SETTINGS_PATHS,

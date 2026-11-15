@@ -1,10 +1,10 @@
-/* The Calendar page (DESIGN.md › Calendar): the month grid, the "+N" popover, the right pane and the
+/* The Calendar page: the month grid, the "+N" popover, the right pane and the
    sidebar's Calendar section. Values and class names are design-export/styles/setpoint.css's
-   (without `.sp`), as boards 11 and 11b draw them; DESIGN.md wins where they differ. */
+   (without `.sp`), as boards 11 and 11b draw them; the app wins where they differ. */
 
 /* ---------- The header ---------- */
 .cal-title { min-width: 128px; }
-/* Paging swaps the title the way the grid went (polish audit grids-04): a later month rises in 6 px,
+/* Paging swaps the title the way the grid went: a later month rises in 6 px,
    an earlier one falls in; a week slides in from the side its days come from. */
 .cal-title[data-dir] { animation: cal-title-in var(--titleSwap) var(--ease); }
 .cal-title[data-dir="next"] { --title-from: translateY(var(--titleShift)); }
@@ -12,7 +12,7 @@
 .cal-title[data-view="week"][data-dir="next"] { --title-from: translateX(var(--titleShift)); }
 .cal-title[data-view="week"][data-dir="prev"] { --title-from: translateX(calc(-1 * var(--titleShift))); }
 @keyframes cal-title-in { from { opacity: 0; transform: var(--title-from); } }
-/* T always answers (polish audit grids-11): as Today lands, today's disc on the grid, in the week's
+/* T always answers: as Today lands, today's disc on the grid, in the week's
    heads and in the mini-month swells to 1.18 and back over 260 ms, once. */
 .dn.today.pulse, .mini > .t.pulse { animation: today-pulse var(--dur-slow) var(--ease); }
 @keyframes today-pulse { 40% { transform: scale(1.18); } }
@@ -23,7 +23,7 @@
 
 /* ---------- The month ---------- */
 .cal-month { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-/* Back from Week, the month settles out around the selected week's row (polish audit grids-09). */
+/* Back from Week, the month settles out around the selected week's row. */
 .cal-month[data-enter="out"] { animation: cal-zoom-out var(--dur-medium) var(--ease); transform-origin: 50% var(--zoom-y); }
 @keyframes cal-zoom-out { from { opacity: 0; transform: scale(1.015); } }
 .cal-dow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); height: var(--weekdayRow); align-items: center; border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
@@ -36,7 +36,7 @@
 .cell { border-right: 1px solid var(--hair); border-bottom: 1px solid var(--hair); padding: 6px 6px 4px; display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
 .cell:nth-child(7n) { border-right: 0; }
 /* In this order: a day outside the month takes its tint over a weekend's, and the selected day over
-   both. Weekends sit back and the days outside the shown month further (#160); `out` flips as the
+   both. Weekends sit back and the days outside the shown month further; `out` flips as the
    scroll moves the shown month, so it eases. */
 .cell { transition: background-color var(--dur-medium) var(--ease); }
 .cell.weekend { background: var(--dayOff); }
@@ -44,17 +44,17 @@
 /* Today keeps its disc's own ink outside the month too. */
 .cell.out .dn:not(.today) { color: var(--ink3); }
 .cell.sel { background: var(--sub); }
-/* The selected day's number takes a `sub3` disc, as the mini-month's and the pane's heading carry it (polish audit calpanes-06). */
+/* The selected day's number takes a `sub3` disc, as the mini-month's and the pane's heading carry it. */
 .cell.sel .dn:not(.today) { background: var(--sub3); color: var(--ink); font-weight: 500; }
-/* A day that's over keeps its number in ink3 (#161). */
+/* A day that's over keeps its number in ink3. */
 .cell.past .dn:not(.today, .month) { color: var(--ink3); }
-/* Each month's boundary, as v1 traces it: today's month in `accent`, the others fainter. */
+/* Each month's boundary: today's month in `accent`, the others fainter. */
 .cell.edge-top::after, .cell.edge-left::after { content: ''; position: absolute; inset: 0; pointer-events: none; --edge: color-mix(in oklch, var(--accent) 32%, transparent); }
 .cell.edge-now::after { --edge: var(--accent); }
 .cell.edge-top::after { border-top: 1.5px solid var(--edge); }
 .cell.edge-left::after { border-left: 1.5px solid var(--edge); }
 .dhead { display: flex; align-items: center; gap: 4px; height: var(--dayHead); padding: 0 2px 0 4px; flex: none; }
-/* A day answers the pointer (polish audit grids-06): `sub` at 55% laid over its tints, over 120 ms, and
+/* A day answers the pointer: `sub` at 55% laid over its tints, over 120 ms, and
    a 20 px + after its number that makes an event on it (only where there's a pointer to hover). */
 .cell { --cellHover: color-mix(in srgb, var(--sub) 55%, transparent); }
 .cell::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--cellHover); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
@@ -69,14 +69,14 @@
 .dadd:active { transform: scale(.92); background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
 @media (hover: none) { .dadd { display: none; } }
 .dn { font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink2); min-width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 999px; }
-/* Today is a disc in the now-line's `alert` (#165), in the month, the week's heads and the mini-month. */
+/* Today is a disc in the now-line's `alert`, in the month, the week's heads and the mini-month. */
 .dn.today { background: var(--alert); color: var(--onAlert); font-weight: 600; }
 .dn.month { width: auto; padding: 0 6px; font-weight: 500; }
 .dn.month:not(.today) { color: var(--ink); }
 .cell.out .dn.month:not(.today) { color: var(--ink2); }
 .wx { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
 .wx .temps { font-size: 11.5px; color: var(--ink3); white-space: nowrap; }
-/* The high leads the low (#174). */
+/* The high leads the low. */
 .wx .hi { color: var(--ink2); }
 .wx .icon { flex: none; }
 /* Narrow cells keep the icon and drop the high / low. */
@@ -86,9 +86,9 @@
 .wx.cloud { color: var(--ink2); }
 .wx.rain { color: var(--cool); }
 
-/* Events: tinted chips (decision 38): the calendar's colour as text, its lightness capped at --tintL
-   (#159), a 3 px inset bar, the colour at --evtint as fill; the selected item turns solid, with no
-   outline ring; a past item turns grey, its bar and fill faint (#161). */
+/* Events: tinted chips: the calendar's colour as text, its lightness capped at --tintL
+  , a 3 px inset bar, the colour at --evtint as fill; the selected item turns solid, with no
+   outline ring; a past item turns grey, its bar and fill faint. */
 .ev { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 6px 0 9px; border-radius: 6px; color: oklch(from var(--c, var(--cool)) min(l, var(--tintL)) c h);
   background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent); box-shadow: inset 3px 0 0 var(--c, var(--cool));
   font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
@@ -97,15 +97,15 @@
 .ev.past { color: var(--ink3); background: color-mix(in oklch, var(--c, var(--cool)) calc(var(--evtint) / 2), transparent); box-shadow: inset 3px 0 0 color-mix(in oklch, var(--c, var(--cool)) 45%, transparent); }
 .ev.past .t { opacity: 1; }
 .ev.pending, .tk.pending { opacity: .5; }
-/* On its way (polish audit calflows-02): an event's bar is dashed rather than solid, still for the
-   first second (#54), then marching with the spinner; arrived, its tint brightens to `--evland` once
+/* On its way: an event's bar is dashed rather than solid, still for the
+   first second, then marching with the spinner; arrived, its tint brightens to `--evland` once
    and settles over 420 ms, and its .5 eases back over 120 ms. A task keeps .5 and the spinner, and the ease. */
 .ev.pending { box-shadow: none; background-image: repeating-linear-gradient(to bottom, var(--c, var(--cool)) 0 3px, transparent 3px 6px); background-size: 3px 100%; background-repeat: no-repeat;
   animation: sending 900ms linear 1s infinite; }
 @keyframes sending { to { background-position: 0 6px; } }
 .ev.landed:not(.sel) { animation: landed 420ms var(--ease); }
 @keyframes landed { 0% { background-color: color-mix(in oklch, var(--c, var(--cool)) var(--evland), transparent); } }
-/* Deleted (polish audit calflows-11): a chip fades and shrinks out over 120 ms, then folds up over 180,
+/* Deleted: a chip fades and shrinks out over 120 ms, then folds up over 180,
    so the chips under it slide up into its place, as a mail row folds; Undo or ⌘Z unfolds it back in
    reverse over 180 ms, then its tint lands. */
 .ev.removing, .tk.removing { animation: chip-out var(--dur-fast) var(--ease) forwards, chip-fold var(--dur-medium) var(--ease) var(--dur-fast) forwards; pointer-events: none; }
@@ -119,7 +119,7 @@
 .tk { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 4px; border-radius: 6px; color: var(--ink); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
 .tk .ring { --ring-base: var(--ring, var(--ink2)); width: 12px; height: 12px; vertical-align: -2px; margin: 0 6px 0 0; }
 .tk .task-glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
-/* SV-272: a task with subtasks is a row, its count at the right in `ink3` and its title cut before it. */
+/* A task with subtasks is a row, its count at the right in `ink3` and its title cut before it. */
 .tk.counted { display: flex; align-items: center; }
 .tk.counted .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .tk.counted .count { display: inline-flex; align-items: center; gap: 2px; flex: none; margin-left: 6px; color: var(--ink3); font-size: 11px; }
@@ -132,12 +132,12 @@
 .more:hover { color: var(--ink2); }
 .more.open { background: var(--sub2); color: var(--ink); border-radius: 6px; align-self: flex-start; }
 /* The month's "+N" has a chip's footprint, its count lined up with the chips' titles, `sub` under the
-   pointer, then a dot for each of the first three items it folds (DESIGN.md › Month grid). */
+   pointer, then a dot for each of the first three items it folds. */
 .cell .more { height: var(--calendarChip); padding: 0 6px 0 9px; border-radius: 6px; align-self: flex-start; gap: 5px; }
 @media (hover: hover) { .cell .more:not(.open):hover { background: var(--sub); } }
 .more-dots { display: inline-flex; align-items: center; gap: 3px; }
 .more-dots .md { width: 6px; height: 6px; border-radius: 999px; background: var(--c, var(--cool)); }
-/* A task's dot is its ring, its Todoist colour clamped per theme as the ring's is (#175). */
+/* A task's dot is its ring, its Todoist colour clamped per theme as the ring's is. */
 .more-dots .md.task { background: none; box-shadow: inset 0 0 0 1.5px oklch(from var(--ring, var(--ink2)) clamp(var(--ringMin), l, var(--ringMax)) c h); }
 
 /* The "+N" popover (board 11b): the day's every item, hanging from the "+N"; Esc closes it. */
@@ -159,7 +159,7 @@
 .rp-sub .cloud { color: var(--ink2); }
 .rp-sub .rain { color: var(--cool); }
 .rp-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-/* Another day picked: its items slide in 6 px from its side over 120 ms, its heading fades in (polish audit calpanes-06). */
+/* Another day picked: its items slide in 6 px from its side over 120 ms, its heading fades in. */
 .rp-scroll[data-dir="next"] { animation: day-in-next var(--dur-fast) var(--ease); }
 .rp-scroll[data-dir="prev"] { animation: day-in-prev var(--dur-fast) var(--ease); }
 .rp-head > [data-swap] { animation: day-head-in var(--dur-fast) var(--ease); }
@@ -170,7 +170,7 @@
 .ag-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 20px; }
 .ag-item:hover { background: var(--sub); }
 .ag-item.sel { background: var(--sub2); }
-/* A past event turns grey, as on the grid (#161): its time and title `ink3`, its bar at 45%. */
+/* A past event turns grey, as on the grid: its time and title `ink3`, its bar at 45%. */
 .ag-item.past .when, .ag-item.past .title { color: var(--ink3); }
 .ag-item.past .cbar { background: color-mix(in oklch, var(--c) 45%, transparent); }
 .ag-item .when { width: 64px; flex: none; color: var(--ink2); font-variant-numeric: tabular-nums; font-size: 12.5px; padding-top: 1px; }
@@ -178,10 +178,10 @@
 .ag-item .title { display: block; color: var(--ink); font-weight: 500; }
 .ag-item.past .title { font-weight: 400; }
 .ag-item .line { font-size: 12.5px; }
-/* Where the event is, on its own line (#125): location_on, or videocam and the host for a call. */
+/* Where the event is, on its own line: location_on, or videocam and the host for a call. */
 .ag-item .place { font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--ink3); min-width: 0; }
 .ag-item .leave { font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--ink2); transition: color var(--dur-fast) var(--ease); }
-/* SV-56: from 15 minutes before leaving until the event starts, Leave by and its car are `caution`. */
+/* From 15 minutes before leaving until the event starts, Leave by and its car are `caution`. */
 .ag-item .leave.due { color: var(--caution); }
 .ag-item .in { font-size: 12px; }
 .ag-item .repeat { color: var(--ink3); }
@@ -190,7 +190,7 @@
 .ag-task .task-glyph { margin-left: 2px; }
 .ag-task .title { color: var(--ink); font-weight: 400; }
 /* Done, its title struck in `ink3`, the strike a line drawn under the text, so ticking it off draws
-   it left to right over 180 ms as its done check lands (the Today block's, #106; polish audit calpanes-08). */
+   it left to right over 180 ms as its done check lands, as the Today block's does. */
 .ag-task.done .title { color: var(--ink3); }
 .ag-task.done .title > span { background: linear-gradient(currentColor, currentColor) 0 55% / 100% 1px no-repeat; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .ag-task.just-done .title > span { animation: strike-in var(--dur-medium) var(--ease); }
@@ -198,14 +198,14 @@
 @keyframes strike-in { from { background-size: 0% 1px; } }
 .ag-task .spin { margin-right: 6px; }
 .ag-task .project { font-size: 12px; }
-/* SV-272: a task's subtasks, done of all, before its project: a button that opens its checklist
+/* A task's subtasks, done of all, before its project: a button that opens its checklist
    under the row. */
 .ag-task .count { font-size: 12px; display: inline-flex; align-items: center; gap: 3px; flex: none; color: var(--ink3); padding: 2px 4px; margin: -2px -4px; border-radius: 6px; }
 .ag-task .count:hover, .ag-task .count[aria-expanded="true"] { color: var(--ink); background: var(--sub2); }
 .ag-subtasks { padding: 0 20px 8px; }
 /* The checklist (Subtasks.tsx), in the floating detail and the day pane: a handle column, the ring,
    the title. The handle shows under the pointer or with focus; a dragged row is at .5 and the
-   others slide to make room, as Settings' lists do (#14). */
+   others slide to make room, as Settings' lists do. */
 .subtasks { display: flex; flex-direction: column; }
 .subtask { display: flex; align-items: flex-start; gap: 6px; padding: 2px 0; color: var(--ink2); }
 .subtask .handle { width: 17px; height: 19px; flex: none; display: grid; place-items: center; padding: 0; color: var(--ink3); opacity: 0; cursor: grab; transition: opacity var(--dur-fast) var(--ease); }
@@ -216,23 +216,23 @@
 .subtask.pending, .subtask.dragging { opacity: .5; }
 .subtask.failed .fd-mark .icon { color: var(--alert); }
 .subtask .acts { display: inline-flex; flex: none; margin: -4px 0; }
-/* SV-273: a title that opens the editor reads as text; a dated one's date and bell after it (D567). */
+/* A title that opens the editor reads as text; a dated one's date and bell after it. */
 button.subtask, .subtask button.title { border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .subtask button.title { padding: 0; }
 button.subtask { padding: 2px 0; width: 100%; }
 .subtask button.title:hover { color: var(--ink); }
 .subtask .due { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; font-size: 12px; white-space: nowrap; vertical-align: 1px; }
-/* The last row, "Add subtask" (D566): `ink3` with its add glyph in the ring column, a field in place once clicked. */
+/* The last row, "Add subtask": `ink3` with its add glyph in the ring column, a field in place once clicked. */
 .subtask.add { color: var(--ink3); }
 .subtask.add .fd-mark .icon { color: var(--ink3); }
 button.subtask.add:hover { color: var(--ink2); }
 .subtask.add input.title { padding: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); line-height: 19px; }
 .subtask.add input.title::placeholder { color: var(--ink3); }
 .subtasks.reordering > [data-order] { transition: transform var(--dur-medium) var(--ease), opacity var(--dur-fast) var(--ease); }
-/* A timed task's title over its start (D502), its ring on the title's line, as a search result's. */
+/* A timed task's title over its start, its ring on the title's line, as a search result's. */
 .ag-task.timed { align-items: flex-start; }
 .ag-task.timed .check { padding-top: 2px; }
-/* The next event, lifted out of the list (polish audit calpanes-01): a tint of its colour at 9% (14%
+/* The next event, lifted out of the list: a tint of its colour at 9% (14%
    under the pointer, 16% selected), its time in `ink` and "in 5h" in its colour at 500; its content
    keeps the rows' 20 px inset. Under way, its bar fills as it goes, the rest at 30%. */
 .ag-item.next { margin: 2px 8px; padding: 8px 12px; border-radius: 10px; background: color-mix(in oklch, var(--c) 9%, transparent); }
@@ -241,13 +241,13 @@ button.subtask.add:hover { color: var(--ink2); }
 .ag-item.next .when { color: var(--ink); }
 .ag-item.next .in { color: oklch(from var(--c) min(l, var(--tintL)) c h); font-weight: 500; font-size: 12.5px; }
 .ag-item.ongoing .cbar { background: linear-gradient(var(--c) 0 calc(var(--gone) * 100%), color-mix(in oklch, var(--c) 30%, transparent) calc(var(--gone) * 100%) 100%); }
-/* The now-line, in `alert` with the time, drawn as the week's (polish audit calpanes-04): 1.5 px with
+/* The now-line, in `alert` with the time, drawn as the week's: 1.5 px with
    an 8 px dot centred on the events' colour bars. */
 .nowline { display: flex; align-items: center; gap: 12px; padding: 6px 20px; }
 .nowline .t { width: 64px; color: var(--alert); font-size: 12px; font-weight: 500; }
 .nowline .line { height: 1.5px; flex: 1; background: var(--alert); position: relative; }
 .nowline .line::before { content: ''; position: absolute; left: -2.5px; top: -3.25px; width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
-/* An event under way carries the now-line (#321). It is always the lifted next one, so its content sits
+/* An event under way carries the now-line. It is always the lifted next one, so its content sits
    12 px in and 8 px down. The dot rides the bar at the time gone, the time takes the start time's
    column (held inside the row), and the line goes on to the content edge at 35%, under the text. */
 .ag-item.ongoing { position: relative; }
@@ -258,11 +258,11 @@ button.subtask.add:hover { color: var(--ink2); }
 .nowride .dot { position: absolute; left: calc(64px + 12px - 2.5px); top: calc(100% * var(--gone) - 4px); width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
 .nowride .rule { position: absolute; left: calc(64px + 12px + 3px); right: 0; top: calc(100% * var(--gone) - .75px); height: 1.5px; background: color-mix(in oklch, var(--alert) 35%, transparent); }
 .ag-empty { padding: 18px 20px 8px; color: var(--ink3); display: flex; align-items: center; gap: 6px; }
-/* An empty day leads with its glyph (event_available, or visibility_off when calendars hide its items), 8 px before the words (#124). */
+/* An empty day leads with its glyph (event_available, or visibility_off when calendars hide its items), 8 px before the words. */
 .ag-empty > .icon { margin-right: 2px; }
 .ag-empty button { color: var(--ink2); }
 .ag-empty button:hover { color: var(--ink); }
-/* An empty day's ghost rows (polish audit calpanes-09): 36 px, radius 10, the drafts' dashed outline in
+/* An empty day's ghost rows: 36 px, radius 10, the drafts' dashed outline in
    `edgeOn`, `ink2`; under the pointer `sub`, `ink` and an `edgeHover` outline, over 120 ms. */
 .ag-ghosts { display: flex; flex-direction: column; gap: 6px; padding: 14px 8px 0; }
 .ag-ghost { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 12px; border-radius: 10px; outline: 1.5px dashed var(--edgeOn); outline-offset: -1.5px; color: var(--ink2); text-align: left;
@@ -271,7 +271,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .ag-ghost > .ring { width: 14px; height: 14px; margin: 0 0 0 1px; }
 @media (hover: hover) { .ag-ghost:hover { background: var(--sub); color: var(--ink); outline-color: var(--edgeHover); } }
 .ag-ghost:active { background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
-/* SV-56: every calendar off, a glyph after the header's title says the view is filtered. */
+/* Every calendar off, a glyph after the header's title says the view is filtered. */
 .cal-hidden { display: inline-flex; vertical-align: -2px; margin-left: 6px; }
 .rp-foot { margin-top: auto; padding: 12px 16px 16px 20px; border-top: 1px solid var(--hair); display: flex; gap: 8px; align-items: center; color: var(--ink3); flex: none; }
 .rp-foot .hint { font-size: 12px; }
@@ -283,7 +283,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .mini-head .step { display: inline-flex; }
 .mini { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; padding: 0 6px; }
 .mini > * { height: var(--miniDay); display: grid; place-items: center; font-size: 12px; color: var(--ink2); font-variant-numeric: tabular-nums; border-radius: 999px; }
-/* True 26 px discs (polish audit calpanes-05): the pointer `sub2`, the selected day `sub3` with its
+/* True 26 px discs: the pointer `sub2`, the selected day `sub3` with its
    number `ink` at 500, so the two never look alike; the week view's shown week one `sub2` band, its
    ends round, today's disc on it; six rows always, so nothing under it moves; ‹ › slide the days in
    8 px from the side they come from over 180 ms. */
@@ -306,7 +306,7 @@ button.subtask.add:hover { color: var(--ink2); }
 @keyframes mini-in-prev { from { opacity: 0; transform: translateX(-8px); } }
 .calrow { height: var(--calendarRow); width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; text-align: left; }
 .calrow:hover { background: var(--sub); }
-/* Off, a calendar's name recedes with its box (polish audit calpanes-11); Todoist has no mark of its own (calpanes-13). */
+/* Off, a calendar's name recedes with its box; Todoist has no mark of its own. */
 .calrow[aria-pressed="false"] { color: var(--ink3); }
 .chk { width: 14px; height: 14px; border-radius: 4px; background: var(--c); display: grid; place-items: center; flex: none; }
 .chk::after { content: ""; width: 3px; height: 7px; border: solid var(--onAccent); border-width: 0 1.6px 1.6px 0; transform: translateY(-1px) rotate(45deg); }
@@ -316,14 +316,14 @@ button.subtask.add:hover { color: var(--ink2); }
 .chk { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .chk::after { transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 
-/* A calendar toggled (polish audit calpanes-11): hidden, its items fade out over 120 ms before they go;
+/* A calendar toggled: hidden, its items fade out over 120 ms before they go;
    shown, they fade in over 180 ms. */
 .ev.leaving, .tk.leaving, .wb.leaving, .ag-item.leaving { animation: ev-out var(--dur-fast) var(--ease) forwards; pointer-events: none; }
 .ev.entering, .tk.entering, .wb.entering, .ag-item.entering { animation: ev-in var(--dur-medium) var(--ease); }
 @keyframes ev-out { to { opacity: 0; } }
 @keyframes ev-in { from { opacity: 0; } }
 
-/* ---------- F6: direct manipulation and changes in place ---------- */
+/* ---------- Direct manipulation and changes in place ---------- */
 /* A draft, a drag's origin, or a drop waiting on its scope: a dashed ghost in the item's colour
    (boards 13, 15, 15b); faded while the drop waits. */
 .ev.ghost { background: color-mix(in oklch, var(--c) 14%, transparent); box-shadow: none; outline: 1.5px dashed var(--c); outline-offset: -1.5px; color: oklch(from var(--c) min(l, var(--tintL)) c h); }
@@ -333,12 +333,12 @@ button.subtask.add:hover { color: var(--ink2); }
 /* Lifted (board 15): tilted −1.5° and scaled 1.04 with the popover shadow, following the pointer. */
 .ev.lift, .tk.lift { position: absolute; z-index: 6; pointer-events: none; transform: var(--lift); box-shadow: var(--shadow-pop); }
 .tk.lift { background: var(--sub2); }
-/* Picked up, it eases into its tilt, scale and shadow over 120 ms (polish audit motion-15). */
+/* Picked up, it eases into its tilt, scale and shadow over 120 ms. */
 .ev.lift, .tk.lift { animation: lift-in var(--dur-fast) var(--ease); }
 @keyframes lift-in { from { transform: none; box-shadow: none; } }
 /* The day under the drag takes the item's colour (`--dc`; a task's `ink3`), its fill at 9% and a 1.5 px
    ring at 55% (Light 7% and 50%), over 120 ms, and shows where the item would land among its items as
-   a dashed slot, its colour at 70% over 10% (polish audit calflows-09). */
+   a dashed slot, its colour at 70% over 10%. */
 .cal-month { --droptint: 9%; --dropedge: 55%; }
 :root[data-theme="light"] .cal-month { --droptint: 7%; --dropedge: 50%; }
 .cell.drop { background: color-mix(in oklch, var(--dc) var(--droptint), transparent); box-shadow: inset 0 0 0 1.5px color-mix(in oklch, var(--dc) var(--dropedge), transparent);
@@ -347,7 +347,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .drag-tip { position: absolute; z-index: 6; height: 22px; display: flex; align-items: center; padding: 0 9px; border-radius: 999px; background: var(--cardOn);
   box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); font-size: 12px; color: var(--ink); white-space: nowrap; pointer-events: none; }
 .ev, .tk { touch-action: none; }
-/* SV-190: a file dragged over the grid (DESIGN.md #305) lights it as a task's drop does, in `ink3`: its
+/* A file dragged over the grid lights it as a task's drop does, in `ink3`: its
    fill at the drop tint (9%, Light 7%) under a 1.5 px dashed ring at 70%, 6 px inside its edges, with
    the drag tip's pill at its centre. A file that can't import shows the pill alone, in `ink2`. Both
    fade in over 120 ms, opacity only, and go at once. At z 4 they sit over the week's sticky top, and
@@ -361,7 +361,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .ev .icon, .tk .icon { display: inline-block; vertical-align: -2px; }
 .ev.failed .icon, .tk.failed .icon { margin-right: 4px; }
 .tk.failed { color: var(--alert); box-shadow: inset 0 0 0 1px var(--alert); }
-/* Waiting shows at .5 at once, the shared spinner (states.css) only after a second (DESIGN.md #54); its place is kept so the title doesn't shift. */
+/* Waiting shows at .5 at once, the shared spinner (states.css) only after a second; its place is kept so the title doesn't shift. */
 .ev .spin, .tk .spin, .ag-item .spin, .cal-row .spin { animation: spin-later 0s 1s both; }
 .ev .spin { color: inherit; }
 
@@ -399,28 +399,28 @@ button.subtask.add:hover { color: var(--ink2); }
 .provider-says .provider { font-size: 11.5px; margin-bottom: 3px; }
 .failed-acts { display: flex; gap: 8px; padding-top: 2px; }
 
-/* The agenda's F6 lines. */
-/* The stacked facts share one 4 px gap (#125). */
+/* The agenda's overlap line, pending items and task rings. */
+/* The stacked facts share one 4 px gap. */
 .ag-item .overlap { font-size: 12px; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 .ag-item.pending { opacity: .5; }
 .ag-task .check { display: grid; place-items: center; flex: none; }
 .ag-item .spin { margin-left: 0; vertical-align: 0; }
 
-/* SV-20: the calendar's sources' stale and failing lines, atop the right pane (board 19b's .bar.muted). */
-/* Atop the grid instead in the compact tier, where the day's pane isn't drawn (#140). */
+/* The calendar's sources' stale and failing lines, atop the right pane (board 19b's .bar.muted). */
+/* Atop the grid instead in the compact tier, where the day's pane isn't drawn. */
 .rpane > .rp-health, .cal-health > .rp-health { flex: none; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--hair); font-size: 12.5px; color: var(--ink3); }
 .rpane > .rp-health.failing, .cal-health > .rp-health.failing { color: var(--caution); padding-top: 7px; padding-bottom: 7px; line-height: 18px; }
 .rpane > .rp-health.failing > .icon, .cal-health > .rp-health.failing > .icon { align-self: flex-start; margin-top: 1px; }
-/* Check now on the line (states-08), kept whole after the words; on a failing line that wraps, centred
-   on the words (SV-271). */
+/* Check now on the line, kept whole after the words; on a failing line that wraps, centred
+   on the words. */
 .rp-health > .rp-act { flex: none; display: inline-flex; align-items: center; }
 .cal-health { flex: none; display: flex; flex-direction: column; }
 
-/* The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact, #140): beside the 400 px pane the
+/* The compact tier, 640 to 1099 px: beside the 400 px pane the
    grid would be 184 to 643 px, its chips cut to "7 A…", so it takes the width, and the right pane
    lies over its right side, with an overlay's shadow, while it holds the editor or search; the day's
    own pane isn't drawn. The floating detail floats over it, as it would over the grid; beside the
-   editor it glides clear of it (SV-273, motion.ts). */
+   editor it glides clear of it (motion.ts). */
 @media (min-width: 640px) and (max-width: 1099px) {
   .cal-content { flex-direction: column; }
   .cal-content > .rpane { position: absolute; top: 0; right: 0; bottom: 0; z-index: 4; background: var(--page); border-left: 1px solid var(--edgeOn); box-shadow: var(--shadow-pop); }
@@ -428,22 +428,22 @@ button.subtask.add:hover { color: var(--ink2); }
   .cal-content > .rpane:not(.handed) { animation: rpane-over var(--dur-medium) var(--ease); }
   .cal-content .fd { z-index: 5; }
   @keyframes rpane-over { from { transform: translateX(24px); opacity: 0; } }
-  /* The day's pane, brought over by its header button (D183, polish audit calpanes-14), lies where the
+  /* The day's pane, brought over by its header button, lies where the
      editor does; its sources' health already sits atop the grid. The button is lit `sub2` while it's open. */
   .cal-content > .rpane > .rp-health { display: none; }
   .ibtn.cal-daypane[aria-pressed="true"] { background: var(--sub2); color: var(--ink); }
-  /* SV-190: a file's pill centres in the part of the grid an open pane leaves uncovered (#305). */
+  /* A file's pill centres in the part of the grid an open pane leaves uncovered. */
   .cal-content:has(> .rpane) .drag-tip.file-drop-tip { left: calc((100% - var(--rightPane)) / 2); }
 }
-/* Under 720 px, with the day's button beside search, New is its + alone, so the header stays whole (D183). */
+/* Under 720 px, with the day's button beside search, New is its + alone, so the header stays whole. */
 @media (min-width: 640px) and (max-width: 719px) {
   .hd .btn.cal-new { width: 30px; padding: 0; justify-content: center; }
   .hd .btn.cal-new > .cal-new-label, .hd .btn.cal-new > .kbd { display: none; }
-  /* SV-181: no room for Import .ics… here; ⌘K and a file dropped on the grid still import. */
+  /* No room for Import .ics… here; ⌘K and a file dropped on the grid still import. */
   .hd .ibtn.cal-import-open { display: none; }
 }
 
-/* SV-23: calendar search in the right pane (DESIGN.md › Decided while building #24), on search's own
+/* Calendar search in the right pane, on search's own
    values (search.css): the results line as board 06's .bar.muted, rows as the agenda's plus why. */
 .cal-search .bar.muted { flex: none; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 20px; color: var(--ink3); font-size: 12.5px; border-bottom: 1px solid var(--hair); }
 .cal-search .bar.failing { color: var(--caution); }
@@ -458,16 +458,15 @@ button.subtask.add:hover { color: var(--ink2); }
 .cs-more:hover { background: var(--sub); color: var(--ink); }
 .cal-search .no-results { padding-left: 20px; }
 
-/* ---------- Every control answers the pointer (DESIGN.md › Decided while building #12) ---------- */
+/* ---------- Every control answers the pointer ---------- */
 .more, .tk, .calrow, .mini > button, .ag-item, .ropt, .ag-empty button, .cs-more { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), filter var(--dur-medium) var(--ease); }
-/* Items and cells are controls: the arrow, never the text cursor (DESIGN.md › Decided while building #151). */
+/* Items and cells are controls: the arrow, never the text cursor. */
 .ev, .tk, .cell, .wb { cursor: default; }
 /* A chip keeps its own fill (its selection turns solid on the glide's schedule), so the pointer's
    answer lies over it: its own colour at `--evhover`, deepening it (a solid, selected chip keeps the
-   `sub` it had). Pressed, it gives to .97 and deepens to 28% until a drag lifts it (DESIGN.md › Decided
-   while building #152). */
+   `sub` it had). Pressed, it gives to .97 and deepens to 28% until a drag lifts it. */
 .ev { position: relative; transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), filter var(--dur-medium) var(--ease); }
-/* A calendar search dims what it doesn't match to .3 over 180 ms, and back (polish audit search-10); as
+/* A calendar search dims what it doesn't match to .3 over 180 ms, and back; as
    a filter, so a match waiting for its provider keeps its own .5 on top. */
 .ev.unmatched, .tk.unmatched { filter: opacity(.3); }
 .ev::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in oklch, var(--c, var(--cool)) var(--evhover), transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
@@ -479,7 +478,7 @@ button.subtask.add:hover { color: var(--ink2); }
   .ev:not(.ghost, .lift):hover::after { opacity: 1; }
 }
 
-/* ---------- SV-181: an .ics file's review, in the right pane (D437) ---------- */
+/* ---------- An .ics file's review, in the right pane ---------- */
 /* The calendar it goes into, and how many of the ticked it already holds, under the heading. */
 .imp-to { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 8px 16px 10px 20px; border-bottom: 1px solid var(--hair); font-size: 12.5px; }
 .imp-to .imp-already { flex-basis: 100%; }
@@ -507,7 +506,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .imp-foot .btn.quiet { margin-left: auto; }
 .imp-foot .btn.quiet .kbd { margin-left: 4px; }
 
-/* SV-274 (D564): the day's USPS mail over the rail's footer, one row of same-size thumbnails, never
+/* The day's USPS mail over the rail's footer, one row of same-size thumbnails, never
    wrapping, and its viewer over a scrim. */
 .rp-mail { flex: none; border-top: 1px solid var(--hair); padding: 12px 16px 14px 20px; }
 .rp-mail-head { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }

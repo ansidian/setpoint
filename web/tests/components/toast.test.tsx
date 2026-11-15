@@ -1,6 +1,6 @@
 // The one toast (ToastPill.tsx on toast.ts): a new one replaces the last, it doesn't wait under the
-// pointer, it swipes away (D506) and fades out; a failure stays longer; what's held back until it goes
-// is let go however it goes. Its look and its motion are by eye (D269): a swipe is read by its outcome.
+// pointer, it swipes away and fades out; a failure stays longer; what's held back until it goes
+// is let go however it goes. Its look and its motion are by eye: a swipe is read by its outcome.
 // The clock is Vitest's, so its six and eight seconds pass at once.
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -14,7 +14,7 @@ const toast = page.getByRole('status');
 interface Worn {
   name: string;
   // On the test's clock, which runs on by itself, so a time is measured here rather than bounded by
-  // what the test advanced: on a busy machine a read can come seconds of that clock late (SV-144).
+  // what the test advanced: on a busy machine a read can come seconds of that clock late.
   at: number;
 }
 

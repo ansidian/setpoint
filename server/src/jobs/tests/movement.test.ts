@@ -1,4 +1,4 @@
-// The Jobs pane's recent movement (SV-220, D467, D470) against an ephemeral database: each application's
+// The Jobs pane's recent movement against an ephemeral database: each application's
 // latest status change, newest first, the last eight. An email changes it only when it sets a status
 // the application didn't have; a hand move comes from what its emails had set; turning Ghosted comes
 // from Applied at the start of the day 30 days after the last email of any kind; and a new

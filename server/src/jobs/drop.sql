@@ -1,4 +1,4 @@
--- Removing Jobs (D303, server/src/jobs/README.md › Removal): drops every jobs_ table and Jobs's
+-- Removing Jobs (server/src/jobs/README.md › Removal): drops every jobs_ table and Jobs's
 -- migrations table. Mail's tables and rows are untouched: nothing in them points at Jobs. Children
 -- first, so it runs with foreign keys on.
 DROP TABLE IF EXISTS `jobs_events`;

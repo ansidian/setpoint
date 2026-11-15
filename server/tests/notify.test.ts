@@ -81,7 +81,7 @@ describe('notify()', () => {
     expect(notifier.status()).toMatchObject({last_error: null});
   });
 
-  // The polish audit's states-11: Node's own "fetch failed" isn't words the user can act on.
+  // Node's own "fetch failed" isn't words the user can act on.
   test('a server that can\'t be reached, or doesn\'t answer in time, is said in words, by its host', async () => {
     const w = world({seed: true});
     const closed = http.createServer();
@@ -115,7 +115,7 @@ describe('Send test', () => {
   });
 });
 
-describe('while an iPhone is paired (SV-87)', () => {
+describe('while an iPhone is paired', () => {
   const mail = {kind: 'mail' as const, topic: 'mail' as const, title: 'Google', body: 'Your recovery email was changed', link: {to: 'message' as const, id: 2}};
   const reminder = {kind: 'reminder' as const, topic: 'reminders' as const, title: 'Dentist', body: '2:30 PM · Smile Dental', link: {to: 'item' as const, id: 2, occurrence_start: '2026-10-07T21:30:00.000Z'}};
   const task = {kind: 'reminder' as const, topic: 'reminders' as const, title: 'Pay rent', body: 'Due today', link: {to: 'day' as const, date: '2026-10-07'}};

@@ -1,4 +1,4 @@
-// The Jobs table's column widths (SV-246, D508): Company, Applied and Status are dragged by a
+// The Jobs table's column widths: Company, Applied and Status are dragged by a
 // heading's edge or fitted to their content; Role takes what's left, the gutter and JD stay put.
 // Pure: the page measures, this decides.
 

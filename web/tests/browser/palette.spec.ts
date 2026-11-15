@@ -1,4 +1,4 @@
-// ⌘K in the browser (F7; DESIGN.md › ⌘K): board 20, what it lists on the open email, then its
+// ⌘K in the browser: board 20, what it lists on the open email, then its
 // commands: the open email's (Done, Add to calendar's proposal, Mark unread), Go to, Appearance with
 // the current theme ticked, typing finding the commands that only have a key, the keyboard cursor,
 // and Esc giving focus back.
@@ -103,8 +103,8 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
     assert.deepEqual(await page.locator('.palette .cmdk-label').allTextContents(), ['Go to', 'Appearance']);
     assert.equal(await page.locator('.palette input').getAttribute('placeholder'), 'Type a command…');
     await page.keyboard.type('new');
-    // N5: Settings › News is found by its name too.
-    // The Inbox's Go to next unread too, by its keyword, its key U (D449).
+    // Settings › News is found by its name too.
+    // The Inbox's Go to next unread too, by its keyword, its key U.
     assert.deepEqual(await items(page), ['News3', 'Go to next unreadU', 'New eventC', 'New taskD', 'Settings › News']);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
@@ -154,7 +154,7 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
   }
 });
 
-test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" Notifications, "keys" AI, "projects" and "buffer" Calendar (D514, D513)', async () => {
+test('typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" Notifications, "keys" AI, "projects" and "buffer" Calendar', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -180,7 +180,7 @@ test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail,
   }
 });
 
-test('UX #21: Sign out from ⌘K asks once in the toast; nothing happens until its Sign out', async () => {
+test('Sign out from ⌘K asks once in the toast; nothing happens until its Sign out', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');

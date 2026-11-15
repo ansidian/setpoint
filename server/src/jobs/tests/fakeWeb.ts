@@ -1,4 +1,4 @@
-// The web the JD lookup reads, faked at the HTTP boundary (J3): one fake on 127.0.0.1 serves every
+// The web the JD lookup reads, faked at the HTTP boundary: one fake on 127.0.0.1 serves every
 // example domain, the hiring platforms' APIs and posting pages alike, from the invented fixtures in
 // ./fixtures, in each API's real shape. The lookup's fetch sends `https://<host>/<path>` to the fake
 // as `/<host>/<path>`, and refuses any host that isn't an example domain, so no test reaches a real

@@ -1,10 +1,10 @@
-// Todoist's webhook at POST /api/todoist/webhook (v1's path, so the app's registration in Todoist's
-// console still matches). Harvested from v1's `todoist-webhook` (see SV-8), keeping its rules:
+// Todoist's webhook at POST /api/todoist/webhook (the path the app's registration in Todoist's
+// console names). Its rules:
 // - the signature is HMAC-SHA256 of the raw body with the app's client secret, base64, compared in
 //   constant time after a length check; no secret or no signature is refused;
 // - X-Todoist-Delivery-Id is required and taken once (a redelivery queues nothing), kept 30 days;
 // - the payload is never applied: a delivery only wakes the Todoist source's sync.
-// v1's debounce, coalescing and backstop are the engine's job key and 5-minute poll.
+// The engine's job key and 5-minute poll do the debounce, coalescing and backstop.
 import {createHmac, timingSafeEqual} from 'node:crypto';
 import {and, eq, isNull, lt} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';

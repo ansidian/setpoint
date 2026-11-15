@@ -1,4 +1,4 @@
-// SV-274 (D564): USPS's mail, kept 30 days for the agenda rail. Each digest the mirror marks
+// USPS's mail, kept 30 days for the agenda rail. Each digest the mirror marks
 // (src/sync/mailMirror.ts) is a durable `mailpieces` job: its source is fetched again through its
 // account's adapter, its mailpieces' pictures read (src/providers/mime.ts › readDigest, ads left out)
 // and kept under the day it's for. Every ten minutes the worker queues digests from the last 30 days

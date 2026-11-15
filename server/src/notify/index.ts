@@ -1,8 +1,8 @@
-// The one notification outlet (BRIEF.md › ntfy): reminders, Time to Leave, a source that needs
+// The one notification outlet: reminders, Time to Leave, a source that needs
 // reconnecting and Send test all go through notify(), which logs each one and delivers it by ntfy.
 // Nothing else knows about ntfy (the lint enforces it). Topics come from Settings › Notifications
 // (`setpoint-reminders`, `setpoint-mail`), and each notification's click opens the exact email,
-// item or Settings page: in the iPhone app while one is paired, for an email or item (SV-87).
+// item or Settings page: in the iPhone app while one is paired, for an email or item.
 // The link is chosen as each notification is sent, so a retry follows a pairing or a Revoke since.
 // ntfy is one delivery; APNs could later be a second beside it, given the same Notification.
 import {appLink, deepLinkPath} from '@setpoint/shared';

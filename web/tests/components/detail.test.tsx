@@ -1,8 +1,8 @@
-// The floating detail's link (DetailContent.tsx; DESIGN.md #245, darma SV-77 and SV-179, D439): an
+// The floating detail's link (DetailContent.tsx): an
 // event whose place has no link but which has its own (Google's source.url) gets a line of its own,
 // `link` and the host with the whole link as its tip, and Open taking it to a new tab. A place that is
-// a link keeps SV-77's line and its one Open, and a task or an event with no link has none. `O` and the
-// card on the seed's Career fair stay in detail.spec.ts. D447 (amending SV-191's #306): a read-only
+// a link keeps its place line and its one Open, and a task or an event with no link has none. `O` and the
+// card on the seed's Career fair stay in detail.spec.ts. A read-only
 // event says so on its calendar's line, with why as its tip, and leaves out what it can't do.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
@@ -78,7 +78,7 @@ test('a link the server wouldn\'t send (javascript:) is never drawn as one', asy
   expect(document.querySelector('a.fd-open')).toBeNull();
 });
 
-test('D447: a read-only event says so on its calendar\'s line, the reason as its tip, and leaves out Edit and the actions, the row going with nothing left', async () => {
+test('a read-only event says so on its calendar\'s line, the reason as its tip, and leaves out Edit and the actions, the row going with nothing left', async () => {
   const holidays = {...CALENDAR, name: 'Holidays in United States', writable: false};
   const screen = await card(event({read_only: true}), holidays);
   const line = page.getByText('Read-only · Holidays in United States');
@@ -94,7 +94,7 @@ test('D447: a read-only event says so on its calendar\'s line, the reason as its
   expect(document.querySelector('.card-acts')).toBeNull();
 });
 
-test('D447: off Calendar, a read-only event\'s card keeps Open in Calendar and nothing it can\'t do; a writable one keeps its calendar line and Edit', async () => {
+test('off Calendar, a read-only event\'s card keeps Open in Calendar and nothing it can\'t do; a writable one keeps its calendar line and Edit', async () => {
   const screen = await render(
     <div className="fd" role="dialog" aria-label="Veterans Day" style={{position: 'relative'}}>
       <div className="card float"><div className="fd-body"><div className="fd-layer in">
@@ -112,12 +112,12 @@ test('D447: off Calendar, a read-only event\'s card keeps Open in Calendar and n
   expect(page.getByText(/Read-only/).query()).toBeNull();
 });
 
-// SV-197 (#308): the title wraps, up to 3 lines, on the 360 px card, the dot and Close on its first line.
+// The title wraps, up to 3 lines, on the 360 px card, the dot and Close on its first line.
 const LONG = 'Interview with the hiring committee for Associate Software Engineer at Contoso, round two, with the team leads and a short tour of the office afterwards';
 const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
 const lines = () => Math.round((box('.fd-title').height - 4) / 22);
 
-test('SV-197: a title wraps rather than being cut, and stops at 3 lines with an ellipsis, the whole title its tip', async () => {
+test('a title wraps rather than being cut, and stops at 3 lines with an ellipsis, the whole title its tip', async () => {
   const screen = await card(event({title: 'Daylight Saving Time ends in the United States today'}));
   const title = page.getByText('Daylight Saving Time ends in the United States today');
   await expect.element(title).toBeVisible();
@@ -132,7 +132,7 @@ test('SV-197: a title wraps rather than being cut, and stops at 3 lines with an 
   expect(cut.scrollHeight).toBeGreaterThan(cut.clientHeight);
 });
 
-test('SV-197: the dot and Close sit on the title\'s first line, wrapped or not', async () => {
+test('the dot and Close sit on the title\'s first line, wrapped or not', async () => {
   for (const title of ['Career fair', LONG]) {
     const screen = await card(event({title}));
     await expect.element(page.getByText(title)).toBeVisible();
@@ -144,17 +144,17 @@ test('SV-197: the dot and Close sit on the title\'s first line, wrapped or not',
   }
 });
 
-test('SV-197: on the 360 px card a read-only holiday\'s calendar line fits on one line', async () => {
+test('on the 360 px card a read-only holiday\'s calendar line fits on one line', async () => {
   await card(event({read_only: true}), {...CALENDAR, name: 'Holidays in United States', writable: false});
   const line = page.getByText('Read-only · Holidays in United States');
   await expect.element(line).toBeVisible();
   expect(box('.fact.cal > span').height).toBeLessThanOrEqual(box('.fact.cal .icon').height + 4);
 });
 
-// SV-242 (D503, #350): with actions, a task's ring beside its title is its Complete, its done check
-// Reopen, through actions.complete; a repeating task's latest done occurrence reopens too (SV-249,
-// D510), and an older one and a task waiting on Todoist keep it disabled with their tips, and the footer has no Complete. Without actions (the phone's read-only
-// card, D275) the ring stays a mark and the footer keeps its unavailable Complete.
+// With actions, a task's ring beside its title is its Complete, its done check
+// Reopen, through actions.complete; a repeating task's latest done occurrence reopens too,
+// and an older one and a task waiting on Todoist keep it disabled with their tips, and the footer has no Complete. Without actions (the phone's read-only
+// card) the ring stays a mark and the footer keeps its unavailable Complete.
 function task(fields: Partial<ItemOut>): ItemOut {
   return event({key: '8', id: 8, kind: 'task', title: 'Pay rent', place: null, starts_at: null, ends_at: null, due_date: '2026-10-07', project: 'Home', ...fields});
 }
@@ -175,7 +175,7 @@ async function taskCard(item: ItemOut, complete: (task: ItemOut) => void) {
 const ring = () => page.getByRole('button', {name: /^(Complete|Reopen)$/});
 const footer = () => [...document.querySelectorAll('.card-acts button')].map(button => button.getAttribute('aria-label') ?? button.textContent);
 
-test('SV-242: an open task\'s ring beside its title completes it, and the footer has no Complete', async () => {
+test('an open task\'s ring beside its title completes it, and the footer has no Complete', async () => {
   const completed: string[] = [];
   await taskCard(task({}), one => completed.push(one.title));
   await expect.element(ring()).toHaveAccessibleName('Complete');
@@ -186,7 +186,7 @@ test('SV-242: an open task\'s ring beside its title completes it, and the footer
   expect(completed).toEqual(['Pay rent']);
 });
 
-test('SV-242: a done task\'s check reopens it through the same action', async () => {
+test('a done task\'s check reopens it through the same action', async () => {
   const completed: boolean[] = [];
   await taskCard(task({done: true, done_at: '2026-10-07T16:00:00.000Z', can_reopen: true}), one => completed.push(one.done));
   await expect.element(ring()).toHaveAccessibleName('Reopen');
@@ -195,7 +195,7 @@ test('SV-242: a done task\'s check reopens it through the same action', async ()
   expect(completed).toEqual([true]);
 });
 
-test('SV-249: a repeating task\'s latest done occurrence reopens through the same action', async () => {
+test('a repeating task\'s latest done occurrence reopens through the same action', async () => {
   const reopened: [number, boolean][] = [];
   await taskCard(task({key: '9', id: 9, done: true, done_at: '2026-10-07T16:00:00.000Z', recurring: true, due_string: 'every month', can_reopen: true}), one => reopened.push([one.id, one.done]));
   await expect.element(ring()).toHaveAccessibleName('Reopen');
@@ -205,7 +205,7 @@ test('SV-249: a repeating task\'s latest done occurrence reopens through the sam
   expect(reopened).toEqual([[9, true]]);
 });
 
-test('SV-242, SV-249: an older done occurrence of a repeating task and a task waiting on Todoist keep the ring disabled, with their tips, and a click does nothing', async () => {
+test('an older done occurrence of a repeating task and a task waiting on Todoist keep the ring disabled, with their tips, and a click does nothing', async () => {
   const completed: string[] = [];
   for (const [item, tip] of [
     [task({done: true, done_at: '2026-10-07T16:00:00.000Z', recurring: true, due_string: 'every month', can_reopen: false}), 'Todoist has moved this repeating task on'],
@@ -221,7 +221,7 @@ test('SV-242, SV-249: an older done occurrence of a repeating task and a task wa
   expect(completed).toEqual([]);
 });
 
-test('SV-242: without actions (the phone) the ring is no button and the footer keeps its unavailable Complete', async () => {
+test('without actions (the phone) the ring is no button and the footer keeps its unavailable Complete', async () => {
   await card(task({}));
   await expect.element(page.getByText('Pay rent')).toBeVisible();
   expect(document.querySelector('.card-h button.fd-mark')).toBeNull();

@@ -1,5 +1,5 @@
-// Settings › Security (not drawn; DESIGN.md › Settings' row pattern): the password, how sign-in
-// works (a password or a passkey, or both), passkeys, paired iPhones (#250) and recovery codes (new
+// Settings › Security (not drawn): the password, how sign-in
+// works (a password or a passkey, or both), passkeys, paired iPhones and recovery codes (new
 // ones shown once); Sign out is the nav's foot. Changes need the password confirmed in the last 10
 // minutes, so the page asks for it first; revoking an iPhone doesn't, since it only takes access away.
 import type {AuthMode, DeviceOut, PairingOut, SecurityOut} from '@setpoint/shared';
@@ -38,7 +38,7 @@ export function SecurityPage() {
       {security && locked && <ConfirmPassword />}
 
       <Section label="Sign-in">
-        {/* How sign-in works, the passkeys and the codes left, only once they're known (states-01). */}
+        {/* How sign-in works, the passkeys and the codes left, only once they're known. */}
         {!security ? <SkeletonRows count={2} /> : <div className="set-group">
           {editing === 'password' ? (
             <form className="set-row ctl form" onKeyDown={escapeCancels(() => setEditing(null))} onSubmit={event => {
@@ -147,7 +147,7 @@ function ConfirmPassword() {
 const PAIRED_POLL_MS = 2000;
 
 /**
- * Paired iPhones (#250, D276): + Add iPhone opens the QR inside the group, with its link to copy and
+ * Paired iPhones: + Add iPhone opens the QR inside the group, with its link to copy and
  * how long it lasts; once the phone pairs, the panel closes and its row is there. A code doesn't
  * outlive its panel: Cancel, or leaving the page, withdraws it.
  */

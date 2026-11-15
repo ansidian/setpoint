@@ -1,12 +1,12 @@
-// Search, Alfred and proposals in the browser (BUILD-PLAN.md › F3), at the design target on a fresh
-// seed each: words staying words as they're typed, a suggestion on a pause against a fake Anthropic
-// (D392), nothing moving as it comes and goes, click and Tab accepting it, results replacing the list
+// Search, Alfred and proposals in the browser, at the design target on a fresh
+// seed each: words staying words as they're typed, a suggestion on a pause against a fake Anthropic,
+// nothing moving as it comes and goes, click and Tab accepting it, results replacing the list
 // with the reader and J / K / Enter working the same, each open logged with its position, a chip
 // removed, what the chips left out, a reading slow, failed or overtaken, no results, Esc back to the
 // Inbox; Alfred's Answer card from ⌘Enter with a follow-up, and from the reader (Ask about this
 // email), against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key;
-// the proposal card (Calendar's editor, SV-208) and its Create through the command layer, and the More menu on Security
-// mail. SV-23: calendar search, from the header's button, `/` or ⌘F, with its results in the right
+// the proposal card (Calendar's editor) and its Create through the command layer, and the More menu on Security
+// mail. Calendar search, from the header's button, `/` or ⌘F, with its results in the right
 // pane; a click, Enter, ↓ and J / K selecting results on the grid; E to the editor and back; Esc.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
@@ -45,7 +45,7 @@ async function load(setpoint: Setpoint, {clock}: {clock?: 'running' | 'stopped'}
 
 /**
  * A window tall enough that a first page of results ends within the list's reach for the next, so
- * later pages come as the results load, with no scroll (D416). What the list's end asks for is
+ * later pages come as the results load, with no scroll. What the list's end asks for is
  * nextAsk's, a table in search.test.ts.
  */
 const TALL = {width: 1677, height: 4400};
@@ -177,7 +177,7 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     await until('the filtered list', () => titles(page), shown => shown.join() === 'Update on your application,Your application for Data Engineer Intern');
     assert.equal(await page.locator('.search-list .bar').textContent(), '2 results');
     assert.equal(await suggestion(page).count(), 0);
-    // Only the reason the row doesn't already show (search-11): its organisation is highlighted, its day is its age.
+    // Only the reason the row doesn't already show: its organisation is highlighted, its day is its age.
     assert.equal(await page.locator('.arow.result .why').first().textContent(), 'Type Rejection');
     assert.equal(await page.locator('.arow.result').first().locator('.from mark.hl').textContent(), 'Northwind Talent');
     assert.equal(await page.locator('.ask').textContent(), 'Ask Alfred · Northwind Talent · Rejection · Mar 2026⌘Enter');
@@ -202,7 +202,7 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     // The reader's next steps through the results.
     await page.locator('.rd-tools [aria-label="Next email"]').click();
     await page.locator('.rd-subj', {hasText: 'Your application for Data Engineer Intern'}).waitFor();
-    // `/` with the search open selects the whole query, chips too (SV-25); End keeps it to add a word.
+    // `/` with the search open selects the whole query, chips too; End keeps it to add a word.
     await page.keyboard.press('/');
     assert.equal(await page.locator('.search .qchip.sel').count(), 3);
     await page.keyboard.press('End');
@@ -939,7 +939,7 @@ test('search\'s fold across pages: what\'s above it pages in, nothing under it i
   }
 });
 
-test('SV-142: once a newer search has left, the list\'s end coming in reach asks no page of the answer still showing, so none lands under the newer rows', async () => {
+test('once a newer search has left, the list\'s end coming in reach asks no page of the answer still showing, so none lands under the newer rows', async () => {
   const setpoint = await startSetpoint({fixtures: ['ledger-audit']});
   try {
     const page = await load(setpoint);
@@ -1019,7 +1019,7 @@ test('a click on a chip, the search glyph or the Esc hint keeps every chip and g
   }
 });
 
-test('"!" leaves out what a word names, as it\'s typed and on Enter: a Not chip, or the mail with a word kept as typed; the model is given only the rest; a quote stays whole (SV-31)', async () => {
+test('"!" leaves out what a word names, as it\'s typed and on Enter: a Not chip, or the mail with a word kept as typed; the model is given only the rest; a quote stays whole', async () => {
   const {setpoint, fake, stop} = await withAlfred({readings: {...SEED_READINGS, renewal: {keywords: 'renewal'}}});
   try {
     const page = await load(setpoint, {clock: 'running'});
@@ -1067,12 +1067,12 @@ test('"!" leaves out what a word names, as it\'s typed and on Enter: a Not chip,
   }
 });
 
-test('UX #9: search results show what was done to them: an opened one loses its dot, Done is marked, Trash takes it out until Undo', async () => {
+test('search results show what was done to them: an opened one loses its dot, Done is marked, Trash takes it out until Undo', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
     await page.keyboard.press('/');
-    // Google: the protected recovery email, in Attention, so it has Done (#93), and the sign-in alerts.
+    // Google: the protected recovery email, in Attention, so it has Done, and the sign-in alerts.
     await page.keyboard.type('google');
     await page.keyboard.press('Enter');
     const rows = page.locator('.arow.result');
@@ -1241,7 +1241,7 @@ test('Alfred\'s sources and the results: a long account label and an age with it
   }
 });
 
-test('Alfred: the card says what Alfred is doing as it works, the steps it took above it (search-04); a long list shows its first five sources and Show all; the answer keeps a reading measure', async () => {
+test('Alfred: the card says what Alfred is doing as it works, the steps it took above it; a long list shows its first five sources and Show all; the answer keeps a reading measure', async () => {
   // Each of Alfred's turns is held until the check has read what the card says meanwhile.
   const fake = await fakeAlfred(listAlfred, {held: true});
   const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
@@ -1264,7 +1264,7 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     await until('the search it runs', () => waiting.textContent(), text => text === 'Searching “the”…');
     fake.release();
     await until('the email it reads', () => waiting.textContent(), text => Boolean(text?.startsWith('Reading ') && text.endsWith('’s email…')));
-    // Its trail (search-04): the search it ran stays above; two bars hold the answer's place.
+    // Its trail: the search it ran stays above; two bars hold the answer's place.
     const trail = page.locator('.answer .trail .done-step');
     await until('the search it ran', () => trail.allTextContents(), lines => lines.join() === 'Searched “the”');
     await until('the answer\'s place', () => page.locator('.answer [data-skeleton="answer"] .sk-bar').count(), count => count === 2);
@@ -1367,7 +1367,7 @@ test('Alfred about one email: its first line reads "Reading this email…", and 
   }
 });
 
-test('SV-71: the proposal card\'s Place, emptied, offers the places events have used; a letter narrows them, Enter takes one, Esc closes only the list', async () => {
+test('the proposal card\'s Place, emptied, offers the places events have used; a letter narrows them, Enter takes one, Esc closes only the list', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -1399,7 +1399,7 @@ test('SV-71: the proposal card\'s Place, emptied, offers the places events have 
   }
 });
 
-test('SV-180: a free event that evening leaves the proposal card\'s conflict line free', async () => {
+test('a free event that evening leaves the proposal card\'s conflict line free', async () => {
   // Exam review drop-in, 7 – 8 PM on Wed, Dec 9, is marked free; a busy one would read "Overlaps Exam review drop-in · 1h".
   const setpoint = await startSetpoint({fixtures: ['free-review']});
   try {
@@ -1415,7 +1415,7 @@ test('SV-180: a free event that evening leaves the proposal card\'s conflict lin
   }
 });
 
-test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the email, Create waits for Google Calendar; Add as task reads its line (SV-208)', async () => {
+test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the email, Create waits for Google Calendar; Add as task reads its line', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -1424,7 +1424,7 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     // The card itself, not the copy that folds away in its place once it closes (app/fold.ts).
     const card = page.locator('.pane .prop:not([aria-hidden])');
     await card.waitFor();
-    // The email's title is the line's, its words read as words only (D290).
+    // The email's title is the line's, its words read as words only.
     assert.equal(await card.locator('.nl-input').inputValue(), 'CS 101 final exam');
     assert.equal(await card.locator('.nl [data-start]').count(), 0, 'nothing in the title lit');
     assert.deepEqual(await card.locator('.prow .field input').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)), ['Wed, Dec 9', '7:00 PM', '9:00 PM']);
@@ -1433,16 +1433,16 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
       picks => picks.join() === 'Classes,10 min before');
     assert.equal(await card.locator('input[aria-label="Place"]').inputValue(), 'Contoso University · Room 214');
     assert.equal(await card.locator('.conflict').textContent(), 'Free that evening');
-    // The title's, the day and time's, the place's and the description's From: line (SV-270).
+    // The title's, the day and time's, the place's and the description's From: line.
     assert.equal(await card.locator('.srcm').count(), 4);
-    // The ? keeps to the line inside the card's padding: within its top and bottom (SV-208), and
+    // The ? keeps to the line inside the card's padding: within its top and bottom, and
     // inside its edge.
     const boxes = await card.evaluate(element => ['.nl', '.nl > .srcm', '.lr-q'].map(selector => element.querySelector(selector)!.getBoundingClientRect().toJSON() as DOMRect));
     const [field, mark, question] = boxes as [DOMRect, DOMRect, DOMRect];
     assert.ok(question.top >= field.top && question.bottom <= field.bottom, `the ? at ${question.top}–${question.bottom}, inside the line's ${field.top}–${field.bottom}`);
     assert.ok(question.right < field.right && question.right > mark.right, 'the ? inside the line, after the mark');
     assert.equal(await page.locator('.rd-acts .btn.ghost').textContent(), 'Add to calendar');
-    // A press outside the reminder menu closes it; the card stays (SV-24).
+    // A press outside the reminder menu closes it; the card stays.
     await card.locator('button[aria-label="Add reminder"]').click();
     await card.locator('.pop.menu').waitFor();
     await card.locator('.card-h').click();
@@ -1455,8 +1455,8 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     const exams = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-12-01&to=2027-01-01')).items.filter(item => item.title === 'CS 101 final exam');
     assert.equal((await exams()).length, 0);
     // Create: pending (.5) until Google Calendar confirms, then the card goes and the toast says where.
-    // The day takes typing (SV-24): moved to Friday, the email's mark goes, and the conflict line is
-    // Friday's (SV-208).
+    // The day takes typing: moved to Friday, the email's mark goes, and the conflict line is
+    // Friday's.
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     await card.waitFor();
     await card.locator('input[aria-label="Date"]').fill('dec 11');
@@ -1477,14 +1477,14 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     await card.locator('button', {hasText: 'Create'}).click();
     await page.locator('.pane .prop.pending').waitFor();
     create();
-    // The card closing is the answer: a create says nothing (DESIGN #247).
+    // The card closing is the answer: a create says nothing.
     await card.waitFor({state: 'detached'});
     await setpoint.idle();
     assert.equal(await page.locator('.toast').count(), 0, 'no toast for a create');
     const [created] = await exams();
     const classes = (await setpoint.api<CalendarOut[]>('GET', '/calendars')).find(calendar => calendar.name === 'Classes')!;
     assert.deepEqual([created?.calendar_id, created?.starts_at, created?.ends_at, created?.place], [classes.id, '2026-12-12T03:00:00.000Z', '2026-12-12T05:00:00.000Z', 'Contoso University · Room 214']);
-    // Add as task: the line reads what's typed after the email's title, as the editor's does (SV-208).
+    // Add as task: the line reads what's typed after the email's title, as the editor's does.
     await page.locator('.rd-acts button', {hasText: 'Add as task'}).click();
     await card.waitFor();
     assert.equal(await card.locator('input[aria-label="Project"]').inputValue(), 'School');
@@ -1492,7 +1492,7 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     await line.fill('Study for the final dec 8');
     await until('the line\'s day', () => card.locator('input[aria-label="Due date"]').inputValue(), day => day === 'Tue, Dec 8');
     assert.deepEqual(await card.locator('.nl [data-start]').allTextContents(), ['dec 8']);
-    // The title and day changed lose their marks; the description's From: line, left alone, keeps its own (SV-270).
+    // The title and day changed lose their marks; the description's From: line, left alone, keeps its own.
     assert.deepEqual(await card.locator('.srcm').evaluateAll(marks => marks.map(mark => !!mark.closest('.desc-field'))), [true]);
     // A phrase taken out puts the email's day back.
     await line.fill('Study for the final');
@@ -1526,11 +1526,11 @@ test('Security mail: Add to calendar and Add as task are in the More menu, which
     await menu.locator('button', {hasText: 'Add to calendar'}).click();
     await page.locator('.pane .prop .nl-input').waitFor();
     assert.equal(await menu.count(), 0);
-    // On other mail the buttons stay under the head, and More, holding nothing, doesn't show (SV-24).
+    // On other mail the buttons stay under the head, and More, holding nothing, doesn't show.
     await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).waitFor();
     assert.equal(await page.locator('.rd-tools [aria-label="More"]').count(), 0);
-    // The sign-in's proposal, left open, doesn't stop this email's (SV-24).
+    // The sign-in's proposal, left open, doesn't stop this email's.
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     await until('this email\'s proposal', () => page.locator('.pane .prop .nl-input').inputValue(), title => title === 'CS 101 final exam');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -1539,7 +1539,7 @@ test('Security mail: Add to calendar and Add as task are in the More menu, which
   }
 });
 
-test('a proposal with no day from the email starts blank; a day typed and Create, without leaving the field, makes it (SV-24)', async () => {
+test('a proposal with no day from the email starts blank; a day typed and Create, without leaving the field, makes it', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -1598,8 +1598,8 @@ test('calendar search: the header turns into Search, chips and results in the ri
     await until('the marked row', () => selectedRow(page), rows => rows.join() === 'Study group');
     await page.keyboard.press('k');
     await detailOf(page, 'CS 101 lecture').waitFor();
-    // A free word: the match highlighted in the row and its reason. `/` selects the whole query
-    // (SV-25), so the word replaces it.
+    // A free word: the match highlighted in the row and its reason. `/` selects the whole query,
+    // so the word replaces it.
     await page.keyboard.press('/');
     assert.equal(await page.locator('.search .qchip.sel').count(), 2);
     await page.keyboard.type('blue');
@@ -1672,7 +1672,7 @@ test('calendar search: the button and ⌘F, Todoist as every task under Upcoming
     await page.keyboard.press('ArrowDown');
     await detailOf(page, 'CS 101 lab report').waitFor();
     await until('the marked row', () => selectedRow(page), rows => rows.join() === 'CS 101 lab report');
-    // `/` with the search open selects the whole query, chips too (SV-25); End keeps it to add a word.
+    // `/` with the search open selects the whole query, chips too; End keeps it to add a word.
     await page.keyboard.press('/');
     assert.equal(await page.locator('.search .qchip.sel').count(), 1);
     await page.keyboard.press('End');
@@ -1683,7 +1683,7 @@ test('calendar search: the button and ⌘F, Todoist as every task under Upcoming
     assert.equal(await page.locator('.cal-search .no-results').textContent(), 'No events or tasks matchTodoistzebra');
     await page.locator('.no-results .x[aria-label="Remove zebra"]').click();
     await until('the rows', () => calendarRows(page), rows => rows.length === 4);
-    // SV-29: a query emptied after searching closes the search, as Esc would.
+    // A query emptied after searching closes the search, as Esc would.
     await page.keyboard.press('/');
     await page.keyboard.press('Backspace');
     await page.locator('.hd-title', {hasText: 'October 2026'}).waitFor();
@@ -1694,7 +1694,7 @@ test('calendar search: the button and ⌘F, Todoist as every task under Upcoming
   }
 });
 
-test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes one only when New project is picked (SV-24, D50)', async () => {
+test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes one only when New project is picked', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -1719,7 +1719,7 @@ test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes
     // New project, picked, makes it with the task.
     await field.fill('Work');
     await menu.locator('.menu-i', {hasText: 'New project “Work”'}).click();
-    // SV-25: the pick shows, tagged New, and isn't offered again.
+    // The pick shows, tagged New, and isn't offered again.
     await card.locator('.field .tag', {hasText: 'New'}).waitFor();
     assert.equal(await field.inputValue(), 'Work');
     await field.click();
@@ -1735,7 +1735,7 @@ test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes
   }
 });
 
-test('search-13: no results are the field\'s own chips, and × knocking one off takes the line with it', async () => {
+test('no results are the field\'s own chips, and × knocking one off takes the line with it', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');

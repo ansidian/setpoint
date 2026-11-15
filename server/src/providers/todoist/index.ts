@@ -1,8 +1,8 @@
 // The Todoist adapter: one source, polled every 5 minutes (the webhook comes at cutover), with the
 // access token from Todoist's OAuth (stored as the source's key; Todoist's tokens don't expire).
 // Changes go through the command layer: create, change, complete (a repeating task's occurrence),
-// reopen (a repeating task's done occurrence by a Sync command, SV-249) and delete, and a project's colour (SV-25), each pending until Todoist answers. Adapted from v1's `todoist` and
-// `tasks-service` (see SV-6): `due_lang: en` so a due string reads as English, the occurrence check
+// reopen (a repeating task's done occurrence by a Sync command) and delete, and a project's colour, each pending until Todoist answers.
+// `due_lang: en` so a due string reads as English, the occurrence check
 // before a repeating task is closed (src/commands/items.ts), Todoist's own words when it refuses.
 import {and, eq} from 'drizzle-orm';
 import type {CommandRow} from '../../commands/index.ts';
@@ -34,7 +34,7 @@ const itemRow = (store: Store, id: number) => store.db.select().from(t.items).wh
 const dueOf = (store: Store, row: ItemRow) => ({...writeDue({dueDate: row.dueDate, dueAt: row.dueAt, repeat: row.dueRecurring ? repeatOf(row.dueString) : null}, store.timeZone), due_lang: 'en'});
 
 /**
- * SV-249: the due a reopened occurrence puts back, as the Sync command takes it: the day (with its
+ * The due a reopened occurrence puts back, as the Sync command takes it: the day (with its
  * time, wall-clock in the user's zone), the repeat as Todoist words it.
  */
 function occurrenceDue(store: Store, row: ItemRow) {
@@ -60,7 +60,7 @@ function projectId(store: Store, name: string | null): string | undefined {
 const namedProject = (store: Store, name: string | null) =>
   (name ? store.db.select().from(t.todoistProjects).where(eq(t.todoistProjects.name, name)).get()?.providerId : undefined);
 
-/** A project the user chose to make (SV-24, D50): made in Todoist, then listed here at once rather than at the next sync. */
+/** A project the user chose to make: made in Todoist, then listed here at once rather than at the next sync. */
 async function newProject(store: Store, todoist: TodoistApi, name: string, requestId: string): Promise<string> {
   const project = await todoist.createProject(name, requestId);
   store.db.insert(t.todoistProjects).values({providerId: project.id, name: project.name, position: project.child_order ?? 0, inbox: false}).onConflictDoNothing().run();
@@ -99,7 +99,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
   switch (command.kind) {
     case 'item_create': {
       if (!target) return;
-      // SV-273: a subtask goes under its task, in the task's project, at the end of its subtasks.
+      // A subtask goes under its task, in the task's project, at the end of its subtasks.
       const parent = target.parentProviderId;
       const create = parent === null && (command.payload.input as {create_project?: boolean} | undefined)?.create_project && target.project && !namedProject(store, target.project);
       const project = parent !== null ? undefined : create ? await newProject(store, todoist, target.project!, requestId('project')) : projectId(store, target.project);
@@ -116,7 +116,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
     }
     case 'item_update': {
       if (!target) return;
-      // SV-272: a task's subtasks reordered. The one that moved is sent its new order key; subtasks
+      // A task's subtasks reordered. The one that moved is sent its new order key; subtasks
       // without keys are each sent their place, by the Sync command Todoist is retiring for the keys.
       if (Array.isArray(command.payload.subtask_ids)) {
         const moved = command.payload.moved as {id: number; order_key: string} | undefined;
@@ -134,7 +134,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
       if (changes.title !== undefined) body.content = target.title;
       if (changes.due_date !== undefined || changes.due_at !== undefined || changes.repeat !== undefined) Object.assign(body, dueOf(store, target));
       if (changes.labels !== undefined) body.labels = target.labels ?? [];
-      // SV-264: Todoist's update takes a string and keeps what's left out; an empty one clears it.
+      // Todoist's update takes a string and keeps what's left out; an empty one clears it.
       if (changes.description !== undefined) body.description = target.description ?? '';
       if (Object.keys(body).length) takeDue(store, target.id, await todoist.updateTask(target.providerId, body, requestId('update')));
       if (changes.project !== undefined) {
@@ -152,7 +152,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
     }
     case 'item_reopen':
       if (!target) return;
-      // SV-249: a repeating task's done occurrence reopens as Todoist's own Undo does, by the Sync
+      // A repeating task's done occurrence reopens as Todoist's own Undo does, by the Sync
       // command that puts the task back on that day; Todoist's reopen does nothing on it.
       if (typeof command.payload.occurrence_date === 'string') await todoist.command('item_update_date_complete', {id: target.providerId, due: occurrenceDue(store, target), is_forward: 0}, requestId());
       else await todoist.reopenTask(target.providerId, requestId());

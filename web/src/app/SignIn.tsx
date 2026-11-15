@@ -1,4 +1,4 @@
-// The sign-in card, darma's (DESIGN.md › Not designed yet: sign-in follows darma's card): alone on
+// The sign-in card: alone on
 // the page, the mark and Setpoint over its fields. The first time it claims Setpoint with the setup
 // token from `npm run cli -- setup-token` and a new password, then shows the recovery codes once;
 // afterwards it asks for the password. A refusal keeps the text, turns the field's border `alert`
@@ -6,7 +6,7 @@
 // where Setpoint asks for both, the passkey follows the password. A lost password is replaced with
 // a recovery code: the code and a new password, then new codes, shown once as the claim's are.
 //
-// The card answers (the polish audit's states-14): a refusal shakes it once and selects what was
+// The card answers: a refusal shakes it once and selects what was
 // typed, so typing replaces it; with passkeys registered and nothing typed, Use a passkey is the
 // solid button; and signed in, it scales away as the app fades in (Root.tsx keeps it, `leaving`).
 import {MIN_PASSWORD_LENGTH} from '@setpoint/shared';

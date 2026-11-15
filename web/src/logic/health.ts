@@ -1,8 +1,8 @@
-// Health and states (DESIGN.md › Health and states; BRIEF.md › Health and states), as the lines
+// Health and states, as the lines
 // and words they show. Healthy shows nothing. Needs reconnect is a bar at the top of the Inbox;
 // stale is a muted line, failing the same line in `caution` with the provider's reason; triage down
 // notes the Unsorted group. Settings › Accounts says each source's state on its row, and the
-// calendar's right pane has its own sources' lines (SV-20).
+// calendar's right pane has its own sources' lines.
 import type {AccountOut, HealthOut, SourceOut, TriageStatusOut} from '@setpoint/shared';
 import {clockTime, readerTime} from './format.ts';
 import {mergeSources} from './settings.ts';
@@ -27,7 +27,7 @@ export function reconnectLine(accounts: Pick<AccountOut, 'label' | 'health'>[]):
 }
 
 /**
- * Where the needs-reconnect bar's Reconnect goes (states-08): straight to Google's sign-in for the
+ * Where the needs-reconnect bar's Reconnect goes: straight to Google's sign-in for the
  * one Gmail account needing it, as its row in Settings › Accounts does; for iCloud's app password,
  * or several accounts, Settings › Accounts.
  */
@@ -41,7 +41,7 @@ export interface HealthLine {
   text: string;
 }
 
-/** "Personal, as of 9:14 PM" (stale), "Personal, as of 9:14 PM, <reason>" (failing); nothing for healthy. Status lines take commas (D50). */
+/** "Personal, as of 9:14 PM" (stale), "Personal, as of 9:14 PM, <reason>" (failing); nothing for healthy. Status lines take commas. */
 export function healthLine(name: string, health: HealthOut, now: number, timeZone: string): HealthLine | null {
   if (health.state !== 'stale' && health.state !== 'failing') return null;
   const since = health.as_of ? `as of ${asOf(health.as_of, now, timeZone)}` : 'not checked yet';
@@ -51,7 +51,7 @@ export function healthLine(name: string, health: HealthOut, now: number, timeZon
 
 /**
  * A page's line for one source: its words, keyed by the name it gives (stable while the words
- * change), with the source Check now checks and its health, to see the check land (states-08).
+ * change), with the source Check now checks and its health, to see the check land.
  */
 export interface SourceLine extends HealthLine {
   key: string;
@@ -71,7 +71,7 @@ export function inboxHealthLines(accounts: Pick<AccountOut, 'label' | 'health' |
 const CALENDAR_SOURCES = [['google_calendar', 'Google Calendar'], ['todoist', 'Todoist'], ['weather', 'Weather']] as const;
 
 /**
- * SV-20: the calendar's right pane lines (board 19b's "Todoist, as of 8:40 AM"), stale or failing,
+ * The calendar's right pane lines (board 19b's "Todoist, as of 8:40 AM"), stale or failing,
  * for Google Calendar (its accounts' sources as one, the worst, as Settings › Accounts shows it),
  * Todoist and Weather.
  */
@@ -91,7 +91,7 @@ export function triageNote(triage: Pick<TriageStatusOut, 'state' | 'as_of'> | un
 }
 
 /**
- * Which glyph a Settings row's state leads with (the polish audit's settings-01, states-04): a `good`
+ * Which glyph a Settings row's state leads with: a `good`
  * dot when checked, `history` when checks stopped, `warning` when failing, `sync_problem` when it
  * needs sign-in; nothing before a first check.
  */

@@ -1,6 +1,6 @@
 // Calendar changes as commands: create, change (with recurring scope), delete, and complete or
 // reopen a task. Each goes to the calendar's source: its Google account's Calendar connection, or
-// Todoist. SV-20 adds a Google calendar's colour, SV-25 a Todoist project's.
+// Todoist. A Google calendar's colour and a Todoist project's go the same way.
 import type {Colour, TodoistColour, ItemCreateInput, ItemUpdateInput, ItemScopeInput} from '@setpoint/shared';
 import {whenProblem} from '@setpoint/shared';
 import {and, asc, eq, isNull} from 'drizzle-orm';
@@ -24,7 +24,7 @@ function calendar(store: Store, calendarId: number) {
   return row;
 }
 
-/** SV-191: a calendar the user can only read (a subscribed holiday calendar) takes no change. */
+/** A calendar the user can only read (a subscribed holiday calendar) takes no change. */
 export function refuseReadOnlyCalendar(row: {accessRole: string | null}) {
   if (!calendarWritable(row.accessRole)) throw invalid('This calendar is read-only.');
 }
@@ -47,7 +47,7 @@ function item(store: Store, itemId: number): ItemRow {
 /**
  * Where a task made with no project goes, as Todoist is sent it: Settings' default project, else
  * the Inbox. The mirror has it there from the start rather than from a later sync, which may never
- * bring it back: one that ran while the create was on its way has already gone past it (SV-88).
+ * bring it back: one that ran while the create was on its way has already gone past it.
  */
 function taskProjectByDefault(store: Store, defaultProject: string | null): string | null {
   const named = defaultProject ? store.db.select().from(t.todoistProjects).where(eq(t.todoistProjects.name, defaultProject)).get() : undefined;
@@ -55,7 +55,7 @@ function taskProjectByDefault(store: Store, defaultProject: string | null): stri
 }
 
 /**
- * SV-273 (D566): the task a new subtask goes under, and where: after its last subtask, by an order key
+ * The task a new subtask goes under, and where: after its last subtask, by an order key
  * when its subtasks all have one, and by place as well. A task Todoist doesn't have yet takes none, as
  * a subtask's own subtasks are added in Todoist (Setpoint's checklist is one level).
  */
@@ -66,7 +66,7 @@ function subtaskPlace(store: Store, parentId: number, calendarId: number) {
   if (isLocalProviderId(parent.providerId)) throw invalid('This task isn\'t in Todoist yet; add its subtasks once it is.');
   const siblings = store.db.select().from(t.items)
     .where(and(eq(t.items.calendarId, parent.calendarId), eq(t.items.parentProviderId, parent.providerId), isNull(t.items.recurringItemId), eq(t.items.cancelled, false))).all().sort(bySiblingOrder);
-  // Todoist puts each at the end as it arrives, so they go one after another, in the order added (D566).
+  // Todoist puts each at the end as it arrives, so they go one after another, in the order added.
   if (siblings.some(sibling => {
     const active = activeCommand(store, 'item', sibling.id);
     return active?.kind === 'item_create' && active.state === 'pending';
@@ -84,7 +84,7 @@ export function createItem(store: Store, input: ItemCreateInput): CommandRow {
   if ((target.provider === 'todoist') !== (input.kind === 'task')) throw invalid(input.kind === 'task' ? 'Tasks go in Todoist.' : 'Events go in a Google calendar.');
   if (input.kind === 'task' && input.colour) throw invalid('Todoist tasks have no colour of their own.');
   if (input.kind === 'event' && (input.labels.length || input.repeat)) throw invalid('Labels and a Todoist repeat are a task\'s; an event repeats by its rule.');
-  // SV-74: Todoist would drop a repeat sent without the day it starts on.
+  // Todoist would drop a repeat sent without the day it starts on.
   if (input.kind === 'task' && input.repeat && !input.due_date) throw invalid('A repeat needs a due date.');
   const place = input.parent_id === undefined ? null : subtaskPlace(store, input.parent_id, input.calendar_id);
   const settings = getSettings(store);
@@ -106,7 +106,7 @@ export function createItem(store: Store, input: ItemCreateInput): CommandRow {
   });
 }
 
-/** SV-273: a subtask's task, whose checklist redraws when the subtask changes. */
+/** A subtask's task, whose checklist redraws when the subtask changes. */
 function parentOf(store: Store, row: ItemRow): number[] {
   if (row.parentProviderId === null) return [];
   const parent = store.db.select({id: t.items.id}).from(t.items).where(and(eq(t.items.calendarId, row.calendarId), eq(t.items.providerId, row.parentProviderId))).get();
@@ -120,16 +120,16 @@ export function updateItem(store: Store, itemId: number, input: ItemUpdateInput)
   refuseReadOnlyCalendar(calendar(store, row.calendarId));
   if (row.kind === 'task' && row.recurringItemId !== null) throw invalid('A completed occurrence can\'t be changed.');
   if (row.kind === 'event' && ((input.changes.labels?.length ?? 0) > 0 || input.changes.repeat)) throw invalid('Labels and a Todoist repeat are a task\'s; an event repeats by its rule.');
-  // SV-74: an undated task isn't mirrored, so taking a task's date off would drop it with no Undo; a
+  // An undated task isn't mirrored, so taking a task's date off would drop it with no Undo; a
   // subtask stays in its task's checklist, so its date comes off here, its time, repeat and reminders
-  // with it (SV-273, D568).
+  // with it.
   if (row.kind === 'task' && input.changes.due_date === null && row.parentProviderId === null) throw invalid('A task\'s date is taken off in Todoist.');
-  // SV-273: Todoist takes a subtask moved to another project out from under its task, and Setpoint would lose it.
+  // Todoist takes a subtask moved to another project out from under its task, and Setpoint would lose it.
   if (row.parentProviderId !== null && input.changes.project !== undefined && input.changes.project !== row.project) throw invalid('A subtask stays in its task\'s project.');
   const changes = {...input.changes};
   if (row.kind === 'task' && changes.due_date === null) Object.assign(changes, {due_at: null, repeat: null, reminders: []});
   if (row.kind === 'task' && (changes.due_date !== undefined || changes.due_at !== undefined || changes.repeat !== undefined)) {
-    // A new date goes to Todoist with the repeat in one due string, or Todoist would drop the repeat (D16).
+    // A new date goes to Todoist with the repeat in one due string, or Todoist would drop the repeat.
     const repeat = repeatAfter(row, changes.repeat);
     if (repeat === undefined) throw invalid('Todoist didn\'t say how this task repeats, so its date changes in Todoist.');
     changes.repeat = repeat;
@@ -175,10 +175,10 @@ export function deleteItem(store: Store, itemId: number, input: ItemScopeInput):
 }
 
 /**
- * Completes or reopens a task. A repeating task completes one occurrence, named by its due date
- * (v1's tasks-service): only the one Todoist has open now, and only once. The completed occurrence
+ * Completes or reopens a task. A repeating task completes one occurrence, named by its due date:
+ * only the one Todoist has open now, and only once. The completed occurrence
  * becomes a row of its own, done on its day, which stays after Todoist moves the task on (the
- * tombstone); the task itself is hidden on that day meanwhile. SV-249 (D510): the task's latest done
+ * tombstone); the task itself is hidden on that day meanwhile. The task's latest done
  * occurrence reopens, by its own id: the row goes and the task is back on that day, the change the
  * task's own; an older one stays done.
  */
@@ -216,7 +216,7 @@ export function completeItem(store: Store, itemId: number, done: boolean, occurr
     });
   }
   if ((row.doneAt !== null) === done) throw conflict('unchanged', done ? 'That task is already done.' : 'That task is already open.');
-  // SV-272: a subtask's check redraws its parent's checklist; the parent itself stays as it is (D558).
+  // A subtask's check redraws its parent's checklist; the parent itself stays as it is.
   const parent = parentOf(store, row);
   return createCommand(store, {
     target: 'item', kind: done ? 'item_complete' : 'item_reopen', sourceId: calendarSourceId(store, row.calendarId), payload: {item_id: row.id, done},
@@ -228,7 +228,7 @@ export function completeItem(store: Store, itemId: number, done: boolean, occurr
 }
 
 /**
- * SV-272: a task's subtasks in a new order, every one named once. They show in it at once. Todoist
+ * A task's subtasks in a new order, every one named once. They show in it at once. Todoist
  * orders siblings by their order keys, so the one subtask that moved gets a new key between its new
  * neighbours' and only it is sent; subtasks Todoist gave no keys are each sent their place instead.
  * The change is the task's (an `item_update`), and Move back puts the subtasks back as they were.
@@ -262,7 +262,7 @@ export function reorderSubtasks(store: Store, itemId: number, ids: number[]): Co
 }
 
 /**
- * SV-20 (D33): a Google calendar's colour, picked from the swatches and written to the user's calendar
+ * A Google calendar's colour, picked from the swatches and written to the user's calendar
  * list at Google, so Google's own app matches. It shows at once, pending until Google confirms.
  */
 export function setCalendarColour(store: Store, calendarId: number, colour: Colour): CommandRow {
@@ -279,7 +279,7 @@ export function setCalendarColour(store: Store, calendarId: number, colour: Colo
 }
 
 /**
- * SV-25 (D54): a Todoist project's colour, picked from Todoist's own and written to Todoist, so its
+ * A Todoist project's colour, picked from Todoist's own and written to Todoist, so its
  * apps match; its tasks' rings take it. It shows at once, pending until Todoist confirms.
  */
 export function setProjectColour(store: Store, providerId: string, colour: TodoistColour): CommandRow {

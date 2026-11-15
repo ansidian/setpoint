@@ -1,13 +1,13 @@
-// News sorting's job worker on the sync engine (N3), following triage's: durable `news_sort` jobs.
+// News sorting's job worker on the sync engine, following triage's: durable `news_sort` jobs.
 // - `news_sort` sorts what waits Unsorted (src/news/sorter.ts). The News worker queues it after each
 //   source's job, once that job has read its new articles' pages; every few minutes, and as soon as
 //   the keys change, it's queued again while anything waits, so articles a down AI left Unsorted are
 //   sorted once it's back.
 // - `news_rank` scores the stories on the page again every hour, as recency moves with the clock. It
-//   asks no model: each story's importance is judged as it's written (D421).
+//   asks no model: each story's importance is judged as it's written.
 // Each model call is written to the AI usage ledger and to sorting's health; a refusal fails the job
 // by the one retry policy, and the articles wait Unsorted meanwhile ("Anthropic unreachable since
-// 8:52 AM, retrying"). Production asks with the keys in Settings › AI (D90).
+// 8:52 AM, retrying"). Production asks with the keys in Settings › AI.
 import {and, eq, gt, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {STORY_TTL_MS} from '../domain/news.ts';

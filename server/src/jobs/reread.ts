@@ -1,4 +1,4 @@
-// Reading again what Jobs read before it saw an email's HTML (SV-128). It's for mail read before
+// Reading again what Jobs read before it saw an email's HTML. It's for mail read before
 // that fix, run once with `jobs-reread`, and safe to run again:
 //
 // - An application with no title, or waiting for its company, that its confirmation's HTML can fill
@@ -6,7 +6,7 @@
 //   theirs (./stick.ts). One still open looks for its JD again, the title-less search's candidates
 //   going with it.
 // - Then the ignored emails that now read differently, and the ignored rejections, which the rules
-//   now take differently (D384), are forgotten, and a history pass reads them through the usual
+//   now take differently, are forgotten, and a history pass reads them through the usual
 //   rules. Only ignored ones: an email that made something may have been moved or assigned since,
 //   and those are never replayed (./stick.ts).
 import {OPEN_JOB_STATUSES} from '@setpoint/shared';

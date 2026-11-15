@@ -1,4 +1,4 @@
-// News's one way to read the web (N2): a GET with Setpoint's honest User-Agent, a conditional GET's
+// News's one way to read the web: a GET with Setpoint's honest User-Agent, a conditional GET's
 // validators when it has them, a per-request limit on top of the job's signal, redirects followed by
 // hand so none leads to the home network, and a cap on what it reads. Every failure is a
 // ProviderError the one retry policy understands: a refusal by its status ("404 Not Found"), a 429,

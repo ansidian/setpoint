@@ -1,4 +1,4 @@
-// Reading a new News article (N2; BRIEF.md › The page: Thumbnails; When things break): its page for
+// Reading a new News article: its page for
 // the readable text and its og:image, and the best image copied at Setpoint's two sizes, cropped to
 // fill, so outlets never see the user's browsing and a blocked hotlink can't break a row. The best image
 // is the feed's (Media RSS or an enclosure); the page's og:image stands in when the feed has none,

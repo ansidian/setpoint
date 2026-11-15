@@ -1,4 +1,4 @@
-// Mail changes (BRIEF.md › Read state and Done; DESIGN.md › Interaction rules). Read state and
+// Mail changes (DESIGN.md › Interaction rules). Read state and
 // trash are the provider's, so they're commands: opening an unread email marks it read in Gmail or
 // iCloud (counts drop at once), Mark read / unread, Trash and its Undo, Mark all as read (one
 // provider call per account), and a written rule's Mark read and Trash on new mail. Done and Pin are Setpoint's own (no provider has them), so they
@@ -80,11 +80,11 @@ export function trashMessage(store: Store, messageId: number, trashed: boolean):
   });
 }
 
-// A code's trash and a rule's delayed trash on the same email: the earlier one is due (SV-252).
+// A code's trash and a rule's delayed trash on the same email: the earlier one is due.
 const earlier = (a: string | null, b: string | null) => (a === null ? b : b === null ? a : a < b ? a : b);
 
 /**
- * A written rule's actions on new mail it just sorted (DESIGN.md #347), carried out as the user's own
+ * A written rule's actions on new mail it just sorted, carried out as the user's own
  * Mark read and Trash are: a command, the mirror changed at once, and a refusal failed in place with
  * Try again and Move back. Trash now with Mark read is one trash command that marks it read first,
  * since an email takes one change at a time. A delayed trash only stores when it's due, for the
@@ -110,11 +110,11 @@ export function ruleActions(store: Store, messageId: number, ruleId: number, act
 /**
  * Mark all as read: every unread email outside Attention, Noise included, as one command (one
  * provider call) per account. The emails read at once, as opening one does, so a load before the
- * provider confirms doesn't bring them back (D84); an email with its own change waiting is left to it.
+ * provider confirms doesn't bring them back; an email with its own change waiting is left to it.
  */
 export function markAllRead(store: Store, accountId?: number): CommandRow[] {
   return transaction(store, () => {
-    // USPS's digest isn't in the Inbox (SV-274), so Mark all as read leaves it as it is.
+    // USPS's digest isn't in the Inbox, so Mark all as read leaves it as it is.
     const shown = eq(t.messages.uspsDigest, false);
     const candidates = store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all();
     const busy = new Set(store.db.select({id: t.commands.targetId}).from(t.commands)
@@ -139,7 +139,7 @@ export function markAllRead(store: Store, accountId?: number): CommandRow[] {
 
 /**
  * Done (`H`) takes an email out of Attention, recording whether it was opened first, which teaches
- * triage quietly (decision 27). Not Done puts it back.
+ * triage quietly. Not Done puts it back.
  */
 export function setDone(store: Store, messageId: number, done: boolean): MessageRow {
   return transaction(store, () => {
@@ -154,8 +154,8 @@ export function setDone(store: Store, messageId: number, done: boolean): Message
 
 /**
  * Pin (`P`) keeps an email on the Pinned shelf until it's unpinned. Pinning also cancels a waiting
- * trash. Unpinning doesn't bring a rule's back (D490), but brings a code's back at its original
- * expiry while the code is live; unpinned after it, the email stays (D511).
+ * trash. Unpinning doesn't bring a rule's back, but brings a code's back at its original
+ * expiry while the code is live; unpinned after it, the email stays.
  */
 export function setPinned(store: Store, messageId: number, pinned: boolean): MessageRow {
   return transaction(store, () => {
@@ -170,7 +170,7 @@ export function setPinned(store: Store, messageId: number, pinned: boolean): Mes
 }
 
 /**
- * A delayed trash, now due (the minute pass, src/triage/ruleTrash.ts): a rule's or a code's (SV-252),
+ * A delayed trash, now due (the minute pass, src/triage/ruleTrash.ts): a rule's or a code's,
  * the user's own Trash command, sent once, so the due time goes as it's sent. Its payload says which:
  * `code` when the due time is the code's expiry, else the rule's `rule_id`. Refused, changing nothing,
  * while the email has a change of its own waiting; the due time stays for the next pass. A trash the

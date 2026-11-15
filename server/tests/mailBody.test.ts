@@ -112,7 +112,7 @@ describe('GET /api/mail/messages/:id/attachments/:attachment through the dev pro
     expect(response.body).toMatch(/^%PDF-1\.4[\s\S]*\(Renewal agreement\.pdf\) Tj[\s\S]*%%EOF\n$/);
   });
 
-  test('SV-182: the seed\'s interview invite reads into one event for review, nothing sent to Google', async () => {
+  test('the seed\'s interview invite reads into one event for review, nothing sent to Google', async () => {
     const w = world({seed: true});
     const engine = new SyncEngine({store: w.store, adapters: new Adapters({}, devProvider())});
     const api = await signedIn(w, {engine});

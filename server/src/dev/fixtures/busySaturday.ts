@@ -1,5 +1,5 @@
 // Board 11b's busy Sat, Oct 17: six Personal events and two Todoist tasks, so five rows fit the
-// cell and the rest fold into "+3" (SV decision D3: the seed keeps the brief's calendar).
+// cell and the rest fold into "+3" (the seed keeps the sample's calendar).
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import type {OpenDatabase} from '../../db/open.ts';

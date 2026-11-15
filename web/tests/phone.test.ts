@@ -1,4 +1,4 @@
-// The phone's rules as tables (DESIGN.md › Phone; board 21): where the agenda starts, its range, and
+// The phone's rules as tables (board 21): where the agenda starts, its range, and
 // its days with empty runs collapsed.
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
@@ -107,7 +107,7 @@ describe('the agenda (board 21)', () => {
   });
 });
 
-// Today's now-line (#138), the seed's 9:12 AM: before the first timed event not over, else after the
+// Today's now-line, the seed's 9:12 AM: before the first timed event not over, else after the
 // last timed one; all-day events and tasks never place it, and a day with no timed event has none.
 test.each([
   ['the seed: after the past Gym, before the Dentist', [event('Gym', '2026-10-07', '07:00', '08:00'), event('Dentist', '2026-10-07', '14:30', '15:30'), task('Pay rent', '2026-10-07')], 1],
@@ -123,5 +123,5 @@ test.each([
   expect(today?.kind === 'day' ? [today.nowAt, agendaNowAt(today.lines)] : null).toEqual([expected, expected]);
 });
 
-// SV-162's fix: one email to another doesn't slide on the phone, after an Undo too.
-test('the phone\'s reader doesn\'t slide from one email to another (#139)', () => expect(phoneSlide(true, 4, 5)).toBe(null));
+// One email to another doesn't slide on the phone, after an Undo too.
+test('the phone\'s reader doesn\'t slide from one email to another', () => expect(phoneSlide(true, 4, 5)).toBe(null));

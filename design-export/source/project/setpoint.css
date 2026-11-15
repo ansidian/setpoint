@@ -1,4 +1,4 @@
-/* Setpoint v2 — shared board styles. Tokens are mantel's (darma's Night), Light is darma-style opaque. */
+/* Setpoint v2 — shared board styles. Tokens are mantel's Night; Light is opaque. */
 
 .sp {
   --page: #050506; --panel: #08090a; --card: #0c0d0f; --cardOn: #131417; --chip: #0f1013; --modal: #0c0d0f;
@@ -23,7 +23,7 @@
   box-sizing: border-box; position: relative; overflow: hidden;
 }
 .sp.light {
-  /* darma Light (panel, inks, lines and accents exact) */
+  /* Light (panel, inks, lines and accents exact) */
   --page: #f8f8f6; --panel: #f1f1ee; --card: #ffffff; --cardOn: #f4f4f2; --chip: #ffffff; --modal: #ffffff;
   --ink: #1d1e21; --ink2: #56585d; --ink3: #6d6f74;
   --edge: rgba(29,30,33,.1); --edgeOn: rgba(29,30,33,.17); --edgeHover: rgba(29,30,33,.22); --hair: rgba(29,30,33,.08);
@@ -84,7 +84,7 @@
 .sp .today-row .t { color: var(--ink); width: 58px; flex: none; }
 .sp .today-row .in { margin-left: auto; color: var(--ink3); font-size: 12px; }
 .sp .ring { width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ink3); flex: none; display: inline-block; }
-/* darma's done glyph: a filled disc with the check knocked out */
+/* The done glyph: a filled disc with the check knocked out */
 .sp .ring.done, .sp .tk.done .ring { border: 0; position: relative; background: var(--comf);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm3.6 5.2-4.4 4.7-2.2-2.1-1 1.1 3.2 3.1 5.4-5.8z'/%3E%3C/svg%3E") center / contain no-repeat;
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm3.6 5.2-4.4 4.7-2.2-2.1-1 1.1 3.2 3.1 5.4-5.8z'/%3E%3C/svg%3E") center / contain no-repeat; }

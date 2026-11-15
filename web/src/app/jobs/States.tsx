@@ -1,8 +1,8 @@
-// Jobs's states (J8; DESIGN.md › Jobs › States; boards 38a–38c):
-// - The AI down (38b, #218): "5 emails not read yet, Anthropic unreachable since 8:52 AM, retrying" in
+// Jobs's states (boards 38a–38c):
+// - The AI down (38b): "5 emails not read yet, Anthropic unreachable since 8:52 AM, retrying" in
 //   `caution`, led by `warning`, at the top of the column. It folds in as it comes and out once the AI
-//   is back, as mail's health lines do (states-13).
-// - The history pass (38a, D311, D326): the shared spinner and "Reading history · 140 of 330 emails ·
+//   is back, as mail's health lines do.
+// - The history pass (38a): the shared spinner and "Reading history · 140 of 330 emails ·
 //   showing what’s read so far", muted, its progress along its foot easing over 260 ms; each
 //   application lands at its date's place (JobsPage). Done, it shows its check and "Read 330 emails"
 //   for 1.2 s, then folds away (180 ms).

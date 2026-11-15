@@ -1,4 +1,4 @@
-// Where the history pass stands (J4; BRIEF.md › Jobs › History, When things break; decisions 57, 72):
+// Where the history pass stands:
 // its one row (./schema.ts jobsHistory) and the progress the page, Settings › Jobs and the `jobs`
 // live event carry: "Reading history · 140 of 330 emails" while it runs, waiting while the AI is
 // down, "Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM" once it's done.

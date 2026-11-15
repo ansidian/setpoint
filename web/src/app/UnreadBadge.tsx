@@ -1,5 +1,5 @@
-// The red unread badge (SV-221, D471): Inbox's in the sidebar and the rail, and Unread's segment. Its
-// count rolls (Count), and a rise registers from the corner of the eye (shell-11): it swells to 1.22
+// The red unread badge: Inbox's in the sidebar and the rail, and Unread's segment. Its
+// count rolls (Count), and a rise registers from the corner of the eye: it swells to 1.22
 // and back over 260 ms. A fall, the user's own reading, stays quiet. From none it scales in from .6;
 // at none it scales out before it goes.
 import {useEffect, useRef, useState} from 'react';

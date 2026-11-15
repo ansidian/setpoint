@@ -1,4 +1,4 @@
-// News's sources that are APIs (N2; BRIEF.md › Sources): official data for hazards (National Weather
+// News's sources that are APIs: official data for hazards (National Weather
 // Service alerts for the home location's zones, hazards only; USGS earthquakes, Cal Fire incidents
 // and AirNow's air quality, each kept within its distance of the home point), whose data is the
 // article's text, so they're never read as pages; and Hacker News stories over their points. Each
@@ -41,12 +41,12 @@ export function nwsZones(json: unknown): string[] {
 /** NWS's coordinates: at most four decimals (more is a redirect), without trailing zeros. */
 export const nwsPoint = (home: Point) => `${Number(home.lat.toFixed(4))},${Number(home.lng.toFixed(4))}`;
 
-// Warnings and watches about the weather that aren't hazards in BRIEF's sense (fire, flood, storms,
+// Warnings and watches about the weather that aren't hazards (fire, flood, storms,
 // hurricanes, disasters): crops' frost and the sea's small craft.
 const NOT_HAZARDS = /\b(frost|freeze|small craft|gale|hazardous seas|brisk wind|lake wind|marine|test)\b/i;
 
 /**
- * Whether an alert is a hazard (BRIEF.md › What it covers: weather counts only as a hazard): every
+ * Whether an alert is a hazard (weather counts only as a hazard): every
  * warning, watch and emergency but crops' and the sea's, and an advisory or statement only when NWS
  * rates it severe or extreme.
  */
@@ -155,7 +155,7 @@ function calFireList(json: unknown): {incident: Json; lat: number | null; lng: n
 /**
  * Active incidents from Cal Fire's list within the radius of home, updated in the last 48 hours.
  * A fire's acres and containment change in place, so each change is its own article (one revision
- * of the incident's page), which N3 groups into the fire's story as a new fact.
+ * of the incident's page), which sorting groups into the fire's story as a new fact.
  */
 export function calFireIncidents(json: unknown, home: Point, {radiusKm}: {radiusKm: number}, listUrl: string, now: string): IngestedArticle[] {
   return calFireList(json).flatMap(({incident, lat, lng}) => {
@@ -285,7 +285,7 @@ export function airNowReportingAreas(file: string, home: Point, {radiusKm, minAq
 /**
  * Stories from Algolia's Hacker News search with at least the points, in the last 48 hours: the
  * story's own link (or its discussion, for a text post), and its points and comments as its summary.
- * Whether one is about tech or AI is N3's to judge.
+ * Whether one is about tech or AI is sorting's to judge.
  */
 export function hnStories(json: unknown, {minPoints}: {minPoints: number}, now: string): IngestedArticle[] {
   const hits = record(json)?.hits;

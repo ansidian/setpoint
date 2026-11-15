@@ -1,4 +1,4 @@
-// Jobs's search (J5, D316) as tables: loose company matching, the ranking of company or role
+// Jobs's search as tables: loose company matching, the ranking of company or role
 // matches, the line a JD's text matched; then the route against the seed (36a, 36b), and the shell's
 // item (GET /api/jobs/nav).
 import {jobsNavSchema, jobsSearchSchema} from '@setpoint/shared';
@@ -8,7 +8,7 @@ import {jobsApi} from '../api.ts';
 import {matchedLine, nameRank, searchApplications, searchWords, startsName} from '../search.ts';
 import type {Searchable} from '../search.ts';
 
-describe('loose company matching (decision 62)', () => {
+describe('loose company matching', () => {
   test.each<[string, string, boolean]>([
     ['wide world', 'Wide World Importers', true],
     ['wide wor', 'Wide World Importers', true],
@@ -26,7 +26,7 @@ describe('loose company matching (decision 62)', () => {
   });
 });
 
-describe('company or role, best first (D316)', () => {
+describe('company or role, best first', () => {
   test.each<[string, string, number | null]>([
     ['the company starts with it', 'humongous ins', 0],
     ['its words start the company\'s', 'insurance', 1],

@@ -1,4 +1,4 @@
-// Whether the sidebar is folded to its icon rail (DESIGN.md › Layout › Shell; D507, SV-245). Under
+// Whether the sidebar is folded to its icon rail. Under
 // 1100 px (the compact tier) it's always the rail; from there to 1599 it starts as the rail and from
 // 1600 open, and a choice made by hand (`` ` `` or the rail's edge) wins over that in both directions.
 import {viewport} from '../tokens.ts';

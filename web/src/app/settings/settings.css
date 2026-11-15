@@ -1,4 +1,4 @@
-/* Settings (DESIGN.md › Settings; boards 17, 18a, 18b): the export's .scrim, .modal, .set-* and
+/* Settings (boards 17, 18a, 18b): the export's .scrim, .modal, .set-* and
    .switch, and the boards' own rules, all scoped to the modal. */
 .settings-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; }
 .settings { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--settingsWidth); height: var(--settingsHeight); max-width: calc(100% - 32px); max-height: calc(100% - 32px); display: flex; background: var(--modal); border-radius: var(--r-modal); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-modal); overflow: hidden; z-index: 31; }
@@ -15,20 +15,20 @@
 .settings .set-nav { width: var(--settingsNav); flex: none; border-right: 1px solid var(--hair); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--panel); }
 .settings .set-navtitle { height: 36px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 .settings .set-nav .nav { width: 100%; text-align: left; }
-/* A page under keyboard focus takes hover's `sub`; the current one keeps its raised chip (#166). */
+/* A page under keyboard focus takes hover's `sub`; the current one keeps its raised chip. */
 .settings .set-nav .nav:not(.on):focus-visible { background: var(--sub); }
 .settings .set-nav .nav .warn { color: var(--caution); }
-/* The nav's own glyph colours (ink3, ink on the current page) stop at the mark, which stays caution (#123). */
+/* The nav's own glyph colours (ink3, ink on the current page) stop at the mark, which stays caution. */
 .settings .set-nav .nav .warn .icon { color: inherit; }
 .settings .set-nav .foot { margin-top: auto; }
-/* The nav's three groups, a gap between them (D512). */
+/* The nav's three groups, a gap between them. */
 .settings .set-nav .nav.gap { margin-top: 14px; }
 
 /* Its 1 px transparent top and bottom keep what scrolls by inside the modal's ring rather than over it. */
 .settings .set-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 19px 28px 23px 32px; border-block: 1px solid transparent; position: relative; overflow-y: auto; scroll-timeline: --setmain y; }
 /* The page's title stays at the top while the page scrolls, over the page's own colour, with a
    hairline under it once the page has scrolled (a scroll-driven animation over the first 24 px), and
-   the × stays where it was: `.settings` has a transform, so `fixed` places it on the modal (#132). The
+   the × stays where it was: `.settings` has a transform, so `fixed` places it on the modal. The
    head stops 1 px short of the modal's right edge, its corner concentric with the modal's, so it never
    covers the modal's ring. */
 .settings .set-head { position: sticky; top: -19px; z-index: 3; height: 59px; display: flex; align-items: center; gap: 8px; margin: -19px -27px 14px -32px; padding: 19px 67px 0 32px; flex: none; background: var(--modal);
@@ -40,18 +40,18 @@
 .settings .set-x { position: fixed; top: 24px; right: 20px; z-index: 4; }
 /* A section's label stays under the title while its rows scroll by (News's 62 sources). Its right side
    takes the rows' 16 px, so what it holds there (ntfy's state, Mail's count and Filter, AI's total)
-   ends on the controls under it; a quiet button there lands its words on that edge (SV-253, F5). */
+   ends on the controls under it; a quiet button there lands its words on that edge. */
 .settings .set-label { position: sticky; top: 40px; z-index: 1; background: var(--modal); height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
 .settings .set-label .r { margin-left: auto; display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
 .settings .set-label .r > .btn.quiet:last-child { margin-right: -10px; }
-/* AI's month total takes the costs' look under it, `ink` 13 px at 500 (D519). */
+/* AI's month total takes the costs' look under it, `ink` 13 px at 500. */
 .settings .set-label .r .total { color: var(--ink); font-size: 13px; font-weight: 500; }
 .settings .set-sec { flex: none; }
 .settings .set-sec + .set-sec { margin-top: 14px; }
-/* The group doesn't clip, so a row's menu shows whole over what follows (darma SV-21); its first and
+/* The group doesn't clip, so a row's menu shows whole over what follows; its first and
    last rows take its corners instead. */
 .settings .set-group { border-radius: var(--settingsGroupRadius); background: var(--sub); }
-/* A second group under the same label (Calendar's Todoist: its projects, then Default project, D514). */
+/* A second group under the same label (Calendar's Todoist: its projects, then Default project). */
 .settings .set-group.next { margin-top: 8px; }
 .settings .set-group > :first-child { border-top-left-radius: inherit; border-top-right-radius: inherit; }
 .settings .set-group > :last-child { border-bottom-left-radius: inherit; border-bottom-right-radius: inherit; }
@@ -60,18 +60,18 @@
 .settings .set-row.one { min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
 .settings .set-row.ctl { min-height: 48px; padding-top: 7px; padding-bottom: 7px; }
 /* A row ending in presets (Mail's Code expiry) keeps its words whole: where the modal is too narrow for
-   both, the presets drop under them rather than squeezing the title onto two lines (SV-256). */
+   both, the presets drop under them rather than squeezing the title onto two lines. */
 .settings .set-row:has(> .seg) { flex-wrap: wrap; row-gap: 8px; }
 .settings .set-row:has(> .seg) > .lines { flex: 1 0 auto; }
 .settings .set-row.warn { background: color-mix(in oklch, var(--caution) 7%, transparent); }
 .settings .set-row.dragging { opacity: .5; }
-/* A button at a row's end is 30 px, the height of the selects and stepper beside it (D516); the shared
+/* A button at a row's end is 30 px, the height of the selects and stepper beside it; the shared
    `.btn.sm` stays 26 elsewhere, as do a label's buttons and the head's Connect buttons. Only the row's
    own buttons, its state's and its form's: a rule's prompt and the pairing panel's Copy keep theirs, and
-   Add rule's form takes 30 for its Add and Cancel only, by its own rule below (D518). */
+   Add rule's form takes 30 for its Add and Cancel only, by its own rule below. */
 .settings .set-row:not(.rule-form) > .btn.sm, .settings .set-row > :is(.state, .form) > .btn.sm { height: 30px; }
 /* A quiet one at a row's very end lands its words on the rows' 16 px edge, where an outlined one's edge
-   is (SV-253, F12). */
+   is (F12). */
 .settings .set-row:not(.rule-form) > .btn.quiet:last-child, .settings .set-row > .form > .btn.quiet:last-child { margin-right: -10px; }
 /* While a row is dragged the others make room, easing (app/settings/order.ts). */
 .settings .reordering > [data-order] { transition: transform var(--dur-medium) var(--ease), opacity var(--dur-fast) var(--ease); }
@@ -79,41 +79,40 @@
 .settings .s { color: var(--ink3); font-size: 12.5px; }
 .settings .lines { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 /* A row's two lines take whole-pixel line boxes, the nearest to 1.35, so a two-line row and every
-   sticky label under it land on whole pixels (D517); 1.35 left them at 36.42 px. */
+   sticky label under it land on whole pixels; 1.35 left them at 36.42 px. */
 .settings .lines > .t, .settings .lines > .topic { line-height: 18px; }
 .settings .lines > .s { line-height: 17px; }
 .settings .line { margin: 0; padding: 6px 4px 0; color: var(--ink3); font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
 .settings .line.failed { color: var(--alert); }
 .settings .line.caution { color: var(--caution); }
-/* A test that worked leads with `check` in `good`; its words stay `ink3` (states-11). */
+/* A test that worked leads with `check` in `good`; its words stay `ink3`. */
 .settings .line.done > .icon { color: var(--good); }
 /* A group's note under it (Mail › Rules, Jobs › Reads): 34 px at least, and a wrapped one grows by whole
-   17 px lines with 8 px of air above and below, rather than touching the group and the next label (SV-253,
-   F10). */
+   17 px lines with 8 px of air above and below, rather than touching the group and the next label. */
 .settings .note { display: flex; align-items: center; gap: 8px; min-height: 34px; margin: 0; padding: 8px 4px; line-height: 17px; color: var(--ink3); font-size: 12.5px; flex: none; }
 
 /* A switch: 34 × 20. On is a `switchOn` track (`good`) with a `switchKnobOn` knob, off recedes to an
-   `ink3` knob on `sub3`, and a press stretches the knob 4 px toward its travel (#176). */
+   `ink3` knob on `sub3`, and a press stretches the knob 4 px toward its travel. */
 .settings .switch { width: 34px; height: 20px; border-radius: 999px; background: var(--sub3); position: relative; flex: none; transition: background-color var(--dur-fast) var(--ease); }
 .settings .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: var(--ink3);
   transition: left var(--dur-fast) var(--ease), width var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
 .settings .switch.on { background: var(--switchOn); }
 .settings .switch.on::after { left: 16px; background: var(--switchKnobOn); }
-/* Pressed, its knob stretches toward where it's going (DESIGN.md › Decided while building #151). */
+/* Pressed, its knob stretches toward where it's going. */
 .settings .switch:enabled:active::after { width: 20px; }
 .settings .switch.on:enabled:active::after { left: 12px; }
 .settings .switch:disabled { opacity: .5; }
 
 /* Accounts (board 17). */
-/* The handle's glyph is 18 px; its hit area reaches 24 without moving it (SV-253, F11). */
+/* The handle's glyph is 18 px; its hit area reaches 24 without moving it (F11). */
 .settings .handle { color: var(--ink3); margin: 0 -4px 0 -6px; display: grid; cursor: grab; position: relative; }
 .settings .handle::after { content: ""; position: absolute; inset: -3px; }
 .settings .sw { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; flex: none; }
 .settings .sw::before { content: ""; width: 12px; height: 12px; border-radius: 999px; background: var(--c); }
 .settings .sw:enabled:hover, .settings .sw.on { background: var(--sub2); }
 .settings .aico { width: 30px; height: 30px; border-radius: var(--r-row); display: grid; place-items: center; flex: none; color: var(--ink2); background: var(--sub2); }
-/* Where the row runs short (Settings at 820 px), how it syncs and its state give way before the name does (SV-99),
-   every row of a group alike (SV-253): the name's basis is 0 rather than its words, so each row shrinks
+/* Where the row runs short (Settings at 820 px), how it syncs and its state give way before the name does,
+   every row of a group alike: the name's basis is 0 rather than its words, so each row shrinks
    its sync and state by the same amount and their columns line up. The name keeps 120 px, and the state
    gives way at half the sync's rate, so at the 820 px modal an account's "Checked 11:27 AM" stays whole. */
 .settings .lines.cols { flex: 1 1 0; min-width: 120px; }
@@ -122,8 +121,8 @@
 .settings .state { width: 214px; flex: 0 1 auto; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
 .settings .state.caution { color: var(--caution); }
 .settings .state .ell { min-width: 0; }
-/* A source's state leads with its glyph, so one glance down the column finds the one in trouble
-   (settings-01, under states-04's tones): a 7 px `good` dot when checked, `history` in `ink3` when
+/* A source's state leads with its glyph, so one glance down the column finds the one in trouble:
+   a 7 px `good` dot when checked, `history` in `ink3` when
    checks stopped (its words a step up, `ink2`, still muted), `warning` in `caution` when failing,
    `sync_problem` when it needs sign-in, and the shared spinner while Check now runs. */
 .settings .state .okdot { margin-right: 1px; }
@@ -133,14 +132,14 @@
 .settings .spin.hg { margin: 0; vertical-align: 0; color: var(--ink3); }
 :is(.settings, .cal-import) .anchor { position: relative; display: inline-flex; flex: none; }
 /* A row's menu and a select's: the app's one menu (styles.css), under its button's right edge, or
-   its left with `.left`. The import review's Into select takes the same (SV-189). */
+   its left with `.left`. The import review's Into select takes the same. */
 :is(.settings, .cal-import) .menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 2; min-width: 180px; }
 :is(.settings, .cal-import) .menu.left { right: auto; left: 0; }
 /* The section holding an open menu stacks over the ones after it, so their sticky labels stay under
    the menu even while a page switch's fade makes each section its own layer (a page whose answers
    were loaded as Settings opened shows at once, and can be clicked within the fade). */
 .settings .set-main > :has(.menu, .rule-ask) { position: relative; z-index: 2; }
-/* Turn off's and Delete's prompt for a rule's waiting trashes (SV-238): the recurring scope prompt
+/* Turn off's and Delete's prompt for a rule's waiting trashes: the recurring scope prompt
    (calendar.css's .scope-*), hung from the rule's menu button as its menu is. */
 .settings .rule-ask { position: absolute; top: calc(100% + 6px); right: 0; z-index: 2; width: 300px; padding: 6px; transform-origin: top right; }
 .settings .rule-ask[data-up] { top: auto; bottom: calc(100% + 6px); transform-origin: bottom right; }
@@ -150,19 +149,18 @@
 :is(.settings, .cal-import) .menu:not(.left) { transform-origin: top right; }
 :is(.settings, .cal-import) .menu[data-up]:not(.left) { transform-origin: bottom right; }
 /* A select's menu (parts.tsx › Select): the current choice in ink with its check at the end, a choice
-   that can't be picked yet at .5 (an AI model without its key, UX #14), and a long list scrolls. */
+   that can't be picked yet at .5 (an AI model without its key), and a long list scrolls. */
 :is(.settings, .cal-import) .menu.pick { max-height: 320px; overflow-y: auto; }
 .settings .swatches { display: grid; grid-template-columns: repeat(6, 24px); gap: 4px; padding: 4px; min-width: 0; }
 /* In a picker, the current colour is ringed in itself, 4.5 px clear of its dot, and a dot swells to 1.25
-   under the pointer, so the choice and the pointer never look alike (DESIGN.md › Decided while
-   building #155). */
+   under the pointer, so the choice and the pointer never look alike. */
 .settings .swatches .sw.on { background: none; box-shadow: inset 0 0 0 1.5px var(--c); }
 .settings .swatches .sw::before { transition: transform var(--dur-fast) var(--ease); }
 @media (hover: hover) {
   .settings .swatches .sw:enabled:hover { background: none; }
   .settings .swatches .sw:enabled:hover::before { transform: scale(1.25); }
 }
-/* Todoist's 20 colours (SV-25), in four rows of five. */
+/* Todoist's 20 colours, in four rows of five. */
 .settings .swatches.todoist { grid-template-columns: repeat(5, 24px); }
 .settings .icons { display: grid; grid-template-columns: repeat(5, 30px); gap: 4px; padding: 4px; min-width: 0; }
 /* An account's icons, after its options: set off by a hairline. */
@@ -183,22 +181,22 @@
 .settings .rule-form .rule-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .settings .rule-form .rule-line.add { grid-column: 2; }
 .settings .rule-form .filter { min-width: 170px; }
-/* One label size (SV-253, F9): a filter's, Mark read and Trash take the 13 px of If from and the other inline forms' labels. */
+/* One label size: a filter's, Mark read and Trash take the 13 px of If from and the other inline forms' labels. */
 .settings .rule-form :is(.filter, .pair > .s) { font-size: 13px; }
-/* The rule form's last line (DESIGN.md #347, #364, D518): Mark read's switch, Trash's presets, then Add
+/* The rule form's last line: Mark read's switch, Trash's presets, then Add
    and Cancel at its right end. Each label wraps with its control, so a narrow modal drops a pair whole. */
 .settings .rule-form .rule-line.last { flex-wrap: wrap; gap: 8px 16px; }
 .settings .rule-form .pair { display: flex; align-items: center; gap: 8px; }
 .settings .rule-form .pair > .s { white-space: nowrap; }
 .settings .rule-form .ends { margin-left: auto; }
-/* Add and Cancel are an inline form's, 30 px with Cancel's words 16 px in, as D516's rows have them. */
+/* Add and Cancel are an inline form's, 30 px with Cancel's words 16 px in, as Settings' rows have them. */
 .settings .rule-form .ends > .btn.sm { height: 30px; }
 .settings .rule-form .ends > .btn.quiet:last-child { margin-right: -10px; }
 /* Its error line takes a whole-pixel line box, so the form stays on whole pixels when it shows. */
 .settings .rule-form > [role="alert"] { line-height: 17px; }
 /* Narrower than the 820 px modal (a window under 852, down to the compact tier's 640) the two columns no
    longer hold a filter's line or Trash's presets, so the form is one column: each lead over its line,
-   a line wrapping where it runs short, and the presets a little tighter (SV-256). */
+   a line wrapping where it runs short, and the presets a little tighter. */
 @media (min-width: 640px) and (max-width: 851px) {
   .settings .form.rule-form { grid-template-columns: minmax(0, 1fr); }
   .settings .rule-form .rule-line { flex-wrap: wrap; }
@@ -218,7 +216,7 @@
 .settings .rule.off { opacity: .5; }
 /* Where the modal is narrower than its full 1040 (a window under 1072), a rule is two lines, so neither
    half is cut: the sender out to the menu, then "→ lane, actions" with the count at its right; the handle
-   and the menu (or a learned rule's Undo) sit across both (#368). What's still cut, in the 640 tier, has
+   and the menu (or a learned rule's Undo) sit across both. What's still cut, in the 640 tier, has
    its tip. */
 @media (min-width: 640px) and (max-width: 1071px) {
   .settings .set-row[data-rule] { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "handle words words end" "handle send when end"; gap: 2px 12px; }
@@ -234,9 +232,9 @@
 /* An empty state's action, as the agenda's "No events · New event" (DESIGN.md › Copy). Not `.empty`, the
    Inbox's centred All caught up, which would stack it in a tall box. */
 .settings .set-empty button { color: var(--ink2); position: relative; }
-/* Its words are 17 px tall; its hit area reaches 25 without moving them (SV-253, F11). */
+/* Its words are 17 px tall; its hit area reaches 25 without moving them (F11). */
 .settings .set-empty button::after { content: ""; position: absolute; inset: -4px -2px; }
-/* An empty group's line leads with its glyph, 20 px in ink3, the row's 12 px before the words (#124). */
+/* An empty group's line leads with its glyph, 20 px in ink3, the row's 12 px before the words. */
 .settings .set-empty-icon { display: grid; color: var(--ink3); }
 .settings .set-empty button:focus-visible { color: var(--ink); }
 .settings .when { width: 120px; flex: none; text-align: right; color: var(--ink3); font-size: 12.5px; }
@@ -254,7 +252,7 @@
 
 /* Notifications (board 18b). */
 .settings .topic { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
-/* The board's select, in Settings and SV-181's import review. */
+/* The board's select, in Settings and the calendar's import review. */
 :is(.settings, .cal-import) .select { position: relative; height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border-radius: var(--r-row); background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink); white-space: nowrap; flex: none; }
 :is(.settings, .cal-import) .select .icon { color: var(--ink3); }
 :is(.settings, .cal-import) .select:focus-visible, :is(.settings, .cal-import) .select[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--edgeOn); }
@@ -262,9 +260,9 @@
 .settings .stepper .v { min-width: 52px; text-align: center; color: var(--ink); }
 .settings .okdot { width: 7px; height: 7px; border-radius: 999px; background: var(--good); flex: none; }
 .settings .okdot.off { background: var(--ink3); }
-/* ntfy failing is a source struggling, so `caution`, as every failing source is (states-04). */
+/* ntfy failing is a source struggling, so `caution`, as every failing source is. */
 .settings .okdot.warn { background: var(--caution); }
-/* Send test (states-11, settings-07): while it sends the shared spinner stands in its glyph's 17 px
+/* Send test: while it sends the shared spinner stands in its glyph's 17 px
    place, and a test that went ticks `good` for 2 s. */
 .settings .send-test .spin { margin: 0; color: inherit; vertical-align: 0; }
 .settings .send-test .icon.sent { color: var(--good); }
@@ -278,14 +276,14 @@
 /* Security: recovery codes, shown once. */
 .settings .codes { margin: 0; padding: 12px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink); user-select: text; -webkit-user-select: text; columns: 2; }
 
-/* Calendar (SV-20) and Todoist's projects (SV-25): a colour waiting for its provider, and one it refused. */
+/* Calendar and Todoist's projects: a colour waiting for its provider, and one it refused. */
 .settings .cal-row.pending .sw { opacity: .5; }
 .settings .cal-row .spin { margin-left: 0; }
 .settings .cal-row .s.failed { color: var(--alert); }
 /* Todoist's ring sits where the others' swatch buttons (24 px) do. */
 .settings .cal-row > .ring { margin: 0 5.5px; }
 
-/* The pointer (DESIGN.md › Decided while building #12): rows that are buttons (Home's suggestions,
+/* The pointer: rows that are buttons (Home's suggestions,
    Appearance's choices) take a `sub` fill, fields an `edgeHover` border, the handle darkens, and a
    switch's knob (off) or track (on) turns as the primary button does. */
 .settings button.set-row, .settings .set-empty button, .settings .sw, .settings .icons button, .settings .dom, .settings .dom .x, .settings .handle,
@@ -300,7 +298,7 @@
 }
 
 /* Appearance: the chosen theme's row is filled as the nav's current page is, its icon tile inverted and
-   its check `good` (DESIGN.md › Decided while building #155). */
+   its check `good`. */
 .settings [role="radiogroup"] .set-row[aria-checked="true"] { background: var(--sub2); }
 .settings [role="radiogroup"] .set-row[aria-checked="true"] .s { color: var(--ink2); }
 .settings [role="radiogroup"] .set-row[aria-checked="true"] .aico { background: var(--ink); color: var(--onInk); }
@@ -321,7 +319,7 @@
 /* AI's News group (board 30b): a model in use, this month's 160 × 6 meter and its amount. The money reads
    first: the amount and each cost in ink, the costs at 500. The meter is neutral, `ink3` on a `sub2` track
    (3.4:1 in Night, 4.1:1 in Light), as a usage meter is neither "you are here" nor an identity, and turns
-   `caution` from 90% of the cap, before it's reached (#134). */
+   `caution` from 90% of the cap, before it's reached. */
 .settings .val { color: var(--ink2); font-size: 12.5px; white-space: nowrap; flex: none; }
 .settings .meter { width: 160px; height: 6px; border-radius: 999px; background: var(--sub2); overflow: hidden; flex: none; }
 .settings .meter > span { display: block; height: 100%; border-radius: 999px; background: var(--ink3); transition: width var(--dur-slow) var(--ease), background-color var(--dur-fast) var(--ease); }
@@ -330,7 +328,7 @@
 .settings .cost { color: var(--ink); font-weight: 500; flex: none; }
 .settings .s > .caution { color: var(--caution); }
 
-/* Security › iPhones (#250): the pairing panel, its QR on a tile that scans in either theme (dark
+/* Security › iPhones: the pairing panel, its QR on a tile that scans in either theme (dark
    modules on the lightest surface the theme has), the link in mono beside Copy, and its countdown,
    in `caution` through its last minute as a code's is. */
 .settings .set-row.pairing { align-items: center; gap: 16px; padding-top: 14px; padding-bottom: 14px; }
@@ -347,7 +345,7 @@
 /* The narrowest windows of the compact tier (640 to 739 px, a modal of 608 to 707) can't hold a source's
    name, sync and state side by side: the sync column goes, News's name gives way to 120 px as Accounts'
    does, and the state keeps what's left, its words in its tip. AI's rows put a model's name or the
-   month's meter under their words rather than squeezing them (SV-258). */
+   month's meter under their words rather than squeezing them. */
 @media (min-width: 640px) and (max-width: 739px) {
   .settings .set-row > .prov { display: none; }
   .settings .news-src .lines.cols { min-width: 120px; }

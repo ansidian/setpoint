@@ -1,4 +1,4 @@
-// SV-191: a Google calendar the user can only read (a subscribed holiday calendar is `reader`).
+// A Google calendar the user can only read (a subscribed holiday calendar is `reader`).
 // Its role is kept from the calendar list, calendarWritable says whether its events can change, and
 // an ordinary event on it reads as read-only, refused as Google's own kinds of event are.
 import {icsImportInput, itemUpdateInput} from '@setpoint/shared';
@@ -16,7 +16,7 @@ describe('whether a calendar can be written to, from Google\'s accessRole', () =
   test.each([
     ['owner', true],
     ['writer', true],
-    // Writes everything but private events (Andy, 2026-11-04).
+    // Writes everything but private events.
     ['writerWithoutPrivateAccess', true],
     ['reader', false],
     ['freeBusyReader', false],

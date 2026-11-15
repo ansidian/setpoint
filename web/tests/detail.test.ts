@@ -1,5 +1,5 @@
-// The floating detail's lines as tables (boards 12a and 12b; DESIGN.md › Right pane for Time to Leave,
-// and when its line turns `caution` and when it goes, SV-56).
+// The floating detail's lines as tables (boards 12a and 12b): Time to Leave's,
+// and when its line turns `caution` and when it goes.
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -34,7 +34,7 @@ describe('Time to Leave', () => {
     ['none', null, null],
   ])('%s', (_, leave, line) => expect(leaveLine(item({time_to_leave: leave}), zone, morning)?.text ?? null).toBe(line));
 
-  // SV-56: Dentist at 2:30 PM, leave by 2:05 PM. The line turns `caution` 15 minutes before
+  // Dentist at 2:30 PM, leave by 2:05 PM. The line turns `caution` 15 minutes before
   // leaving and stays so until the event starts; from then it's gone.
   const dentist = item({starts_at: at('2026-10-07', '14:30'), ends_at: at('2026-10-07', '15:30'),
     time_to_leave: {leave_at: at('2026-10-07', '14:05'), travel_minutes: 18, checked_at: at('2026-10-07', '09:00')}});
@@ -71,7 +71,7 @@ describe('reminders', () => {
   ])('%j → %s', (minutes, line) => expect(remindersLine(minutes)).toBe(line));
 });
 
-// A recurring event's card says it's a series, as the repeat field words it (#126).
+// A recurring event's card says it's a series, as the repeat field words it.
 describe('repeat', () => {
   test.each<[string, Partial<ItemOut>, string | null]>([
     ['Gym, weekly on three days', {recurring: true, recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR', starts_at: at('2026-10-07', '07:00')}, 'Weekly on Mon, Wed, Fri'],

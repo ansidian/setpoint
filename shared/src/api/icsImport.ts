@@ -1,15 +1,15 @@
-// SV-181: an .ics file's events into one of the user's Google calendars (D436, D437), reviewed first.
+// An .ics file's events into one of the user's Google calendars, reviewed first.
 //
 //   POST /api/calendar/import/read     the file's bytes (text/calendar)   IcsReadOut
 //   POST /api/calendar/import          IcsImportInput                     CommandOut
-//   POST /api/mail/messages/:id/attachments/:attachment/ics   (no body)  IcsReadOut   (SV-182)
+//   POST /api/mail/messages/:id/attachments/:attachment/ics   (no body)  IcsReadOut  
 //
 // The read sends nothing to Google: it answers the file's events as drafts, in start order, each
 // with the calendars that already hold its iCalUID, or refuses the file with one line (400). The
 // import writes one event through Google's events.import, as a command of its own: `item_create`
 // for an event new to the calendar, `item_update` for one it already holds (Google updates it in
-// place). The web app sends them one at a time, waiting for each to settle; SV-182's Add to calendar
-// on an email's .ics reads the stored attachment into the same IcsReadOut, through its account's
+// place). The web app sends them one at a time, waiting for each to settle. Add to calendar on
+// an email's .ics reads the stored attachment into the same IcsReadOut, through its account's
 // adapter, and imports the same way.
 import {z} from 'zod';
 import {EVENT_COLOURS, TRANSPARENCIES} from '../enums.ts';
@@ -31,11 +31,11 @@ export interface IcsFieldsOut {
   // The file's LOCATION, as the mirror splits Google's (a place, then its address).
   place: string | null;
   address: string | null;
-  // Google's description (shown since SV-264, D546) and `source.url`.
+  // Google's description and `source.url`.
   description: string | null;
   url: string | null;
   transparency: Transparency;
-  // Minutes before the start: the file's own alarms only, never Settings' default (D438).
+  // Minutes before the start: the file's own alarms only, never Settings' default.
   reminders: number[];
 }
 

@@ -1,6 +1,6 @@
-// The Gmail adapter (BUILD-PLAN.md › B2): the history cursor, the reconciliation sweep, the
+// The Gmail adapter: the history cursor, the reconciliation sweep, the
 // 365-day backfill, the users.watch behind Pub/Sub push, and read state, trash and Mark all as read
-// sent back to Gmail. Harvested from v1's gmail-sync and its helpers (see SV-3).
+// sent back to Gmail.
 //
 // - sync (on a push, or every 2 minutes without Pub/Sub): pages history from the stored history
 //   id, fetches what arrived in the inbox, and re-reads the labels of what changed. A 404 (history
@@ -33,15 +33,15 @@ export interface GmailAdapterOptions {
   // Backfill: ids per page and pages per job.
   pageSize?: number;
   backfillPagesPerStep?: number;
-  // Messages fetched at once (v1 used 15).
+  // Messages fetched at once.
   concurrency?: number;
   // The sweep's window.
   sweepDays?: number;
 }
 
-// v1: more history pages than this between syncs means recovering by resync, not paging on.
+// More history pages than this between syncs means recovering by resync, not paging on.
 const MAX_HISTORY_PAGES = 20;
-// v1: renew a watch a day before it lapses (watches last about a week).
+// Renew a watch a day before it lapses (watches last about a week).
 const WATCH_RENEWAL_LEAD_MS = 24 * 60 * 60_000;
 // A sweep re-reads at most this many messages' labels; the next sweep carries on.
 const MAX_SWEEP_REREADS = 500;
@@ -253,7 +253,7 @@ export class GmailAdapter implements SourceAdapter {
     return attachmentFromSource(Buffer.from(found.raw, 'base64url'), attachmentId);
   }
 
-  /** SV-274: the message's source (format=raw) again. */
+  /** The message's source (format=raw) again. */
   async source(context: AdapterContext, message: {providerId: string}): Promise<Buffer | null> {
     const found = await this.api(context).raw(message.providerId);
     return found?.raw ? Buffer.from(found.raw, 'base64url') : null;
@@ -275,7 +275,7 @@ export class GmailAdapter implements SourceAdapter {
       case 'mark_unread':
         return api.modify(id, ['UNREAD'], []);
       case 'trash':
-        // A written rule's Trash with Mark read (DESIGN.md #347): read first, as the user's Mark read does.
+        // A written rule's Trash with Mark read: read first, as the user's Mark read does.
         if (command.payload.mark_read === true) await api.modify(id, [], ['UNREAD']);
         return api.trash(id);
       case 'untrash':

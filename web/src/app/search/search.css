@@ -3,11 +3,11 @@
 
 /* ---------- The field ---------- */
 /* While it holds a search, the field widens to 520 (boards 06 and 07) and its hint reads Esc; it grows
-   leftward over 180 ms, with the panes, rather than jumping (search-14). */
+   leftward over 180 ms, with the panes, rather than jumping. */
 .search.active { width: 520px; }
 .hd > .search { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
   width var(--dur-medium) var(--ease), flex-basis var(--dur-medium) var(--ease); }
-/* A search on its way (#235): once it's taken a moment, the glass gives way to the spinner. */
+/* A search on its way: once it's taken a moment, the glass gives way to the spinner. */
 .search .glass { position: relative; display: grid; flex: none; }
 /* The shared spinner (states.css), in the glass's place and colour. */
 .search .glass > .spin { position: absolute; inset: 0; display: grid; place-items: center; margin-left: 0; vertical-align: 0; color: inherit; animation: glass-on 0s var(--skel-delay) both; }
@@ -26,12 +26,11 @@
 .search .qchip .x, .no-results .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); flex: none; }
 .search .qchip .x:hover, .no-results .x:hover { background: var(--sub3); color: var(--ink); }
 /* A chip answers as a whole when its × is under the pointer, so it's clear which one goes; a word that
-   becomes a chip pops in over 120 ms (Search.tsx collapses a removed one away). DESIGN.md › Decided
-   while building #154. */
+   becomes a chip pops in over 120 ms (Search.tsx collapses a removed one away). */
 .search .qchip { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); animation: qchip-in var(--dur-fast) var(--ease); }
 @keyframes qchip-in { from { opacity: 0; transform: scale(.92); } }
 @media (hover: hover) { .search .qchip:has(.x:hover) { background: var(--sub3); box-shadow: inset 0 0 0 1px var(--edgeHover); } }
-/* The match highlight: Night's `sun` at 26%, Light's own highlighter yellow (`hl`, #172). */
+/* The match highlight: Night's `sun` at 26%, Light's own highlighter yellow (`hl`). */
 mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding: 0 1px; }
 
 /* ---------- Results ---------- */
@@ -39,7 +38,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .search-list .bar.muted { color: var(--ink3); min-height: 32px; font-size: 12.5px; border-bottom: 1px solid var(--hair); }
 .search-list .bar.after-card { border-top: 1px solid var(--hair); }
 .search-list .bar.failing { color: var(--caution); }
-/* A suggestion (D392): the end of the results line, its filters in ink2 and its count in ink3, so it
+/* A suggestion: the end of the results line, its filters in ink2 and its count in ink3, so it
    reads as an offer rather than as what's in force; `sub` under the pointer, as the fold's line is. It
    takes the line's height and no more. The line stays one line whatever comes: its own words give way
    first by an ellipsis and, in a list too narrow for both, beside an open email, altogether, so the
@@ -55,7 +54,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 @media (hover: hover) { .search-list .suggest:hover { background: var(--sub); color: var(--ink); } }
 .search-list .suggest:active { background: var(--sub3); transition-duration: var(--dur-press); }
 /* The fold over what only mentions the search: the results line's words, a Noise line's answers
-   (#158) and its one chevron, turned to point right while folded (#198). */
+   and its one chevron, turned to point right while folded. */
 .search-list .mentions { transition: background-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 12.5px; text-align: left; }
 .search-list .mentions .chev { display: grid; margin-left: auto; }
 .search-list .mentions .chev .icon { transition: transform var(--dur-fast) var(--ease); }
@@ -63,22 +62,22 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .search-list .mentions.cur, .search-list .mentions:focus-visible { background: var(--sub2); }
 @media (hover: hover) { .search-list .mentions:not(.cur):hover { background: var(--sub); } }
 .search-list .mentions:active { background: var(--sub3); transition-duration: var(--dur-press); }
-/* The first backfill's line (states-15, search-12): the shared spinner before its words, in the line's ink3,
+/* The first backfill's line: the shared spinner before its words, in the line's ink3,
    and its progress along its foot (states.css › .progress). */
 .search-list .bar .spin { margin-left: 0; vertical-align: 0; color: inherit; }
 .arow.result .l1 .pin { color: var(--ink3); display: grid; }
-/* A Done result stays, quieter, with its tag (UX #9). */
+/* A Done result stays, quieter, with its tag. */
 .arow.result.done .from, .arow.result.done .l2, .arow.result.done .l3 { color: var(--ink3); }
 .arow .why { grid-column: 2 / 4; font-size: 12px; color: var(--ink3); display: flex; align-items: center; gap: 6px; padding-top: 2px; white-space: nowrap; overflow: hidden; }
 .arow .why b { font-weight: 400; color: var(--ink2); }
-/* Ask Alfred reads in ink, his mark in its gradient; no tinted hover, as the AI has no hue of its own (#173). */
+/* Ask Alfred reads in ink, his mark in its gradient; no tinted hover, as the AI has no hue of its own. */
 .ask { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px 0 24px; color: var(--ink); border-bottom: 1px solid var(--hair); flex: none; text-align: left; }
 .ask:hover { background: var(--sub); }
 .no-results { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px 16px 16px 24px; color: var(--ink2); flex: none; border-bottom: 1px solid var(--hair); }
-/* Nothing found leads with search_off, 20 px in ink3, 12 px before the words (#124). */
+/* Nothing found leads with search_off, 20 px in ink3, 12 px before the words. */
 .no-results > .icon { color: var(--ink3); margin-right: 4px; }
-/* Each part is the field's own chip (search-13): 22 px, `sub2`, `ink` at 400, its × and its whole-chip
-   answer (#154); a Not chip keeps its "Not" in `ink3`, as the field's label is. */
+/* Each part is the field's own chip: 22 px, `sub2`, `ink` at 400, its × and its whole-chip
+   answer; a Not chip keeps its "Not" in `ink3`, as the field's label is. */
 .no-results .part { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap;
   transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .no-results .part .k { color: var(--ink3); font-size: 11px; }
@@ -103,7 +102,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .answer .card-h > .icon { color: var(--ink); }
 .ans { margin: 0; max-width: 620px; font-size: 15px; line-height: 1.45; color: var(--ink); user-select: text; -webkit-user-select: text; }
 .ans b { font-weight: 500; }
-/* The answer's key fact points at its evidence (search-15): underlined in the yellow the email marks it
+/* The answer's key fact points at its evidence: underlined in the yellow the email marks it
    with (`sun` at 70% in Night, Light's `hl`), 2 px and 3 px under. */
 .ans b { text-decoration: underline; text-decoration-color: color-mix(in oklch, var(--sun) 70%, transparent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 :root[data-theme="light"] .ans b { text-decoration-color: var(--hl); }
@@ -126,7 +125,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .turn-sep { height: 1px; background: var(--hair); margin: 4px 0 2px; flex: none; }
 .q { align-self: flex-end; max-width: 70%; padding: 6px 12px; border-radius: var(--r-card); background: var(--sub2); color: var(--ink); user-select: text; -webkit-user-select: text; }
 .waiting { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; height: 22px; }
-/* Alfred's trail while it works (#236): each step done a 20 px row, its tool's 14 px glyph, in ink3;
+/* Alfred's trail while it works: each step done a 20 px row, its tool's 14 px glyph, in ink3;
    what it's doing now shimmers, ink sweeping through ink3; two bars hold the answer's place. Once
    answered the trail folds away over 180 ms as the answer fades up (styles.css › turn-in). The
    header's glyph twinkles. */
@@ -169,17 +168,17 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .prop-foot .legend { display: inline-flex; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; }
 .prop .failed-line { padding-left: 30px; }
 .menu-anchor { position: relative; display: inline-flex; }
-/* Place keeps its column's width with the recent places' menu under it (SV-71). */
+/* Place keeps its column's width with the recent places' menu under it. */
 .pgrid > .menu-anchor { display: flex; min-width: 0; }
 .pgrid > .menu-anchor > .field { flex: 1; min-width: 0; }
 .prop .pop.menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 4; min-width: 100%; }
 .prop .pop.menu[data-up] { top: auto; bottom: calc(100% + 4px); }
 .prop .pop.menu[data-right] { left: auto; right: 0; }
 
-/* The reader's More menu (2026-10-08): the app's one menu (styles.css), under its button's right edge. */
+/* The reader's More menu: the app's one menu (styles.css), under its button's right edge. */
 .more-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 5; min-width: 200px; }
 
-/* The pointer (DESIGN.md › Decided while building #12): fields take an `edgeHover` border. */
+/* The pointer: fields take an `edgeHover` border. */
 .ask, .src, .srcs .more, .search .qchip .x, .no-results .x, .answer .field, .prop .field { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 @media (hover: hover) {
   .answer .field:not(:focus-within):hover, .prop .field:not(:focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }

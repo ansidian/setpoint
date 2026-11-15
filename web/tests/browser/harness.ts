@@ -1,14 +1,14 @@
-// The browser checks' harness (`npm run test:browser`; BUILD-PLAN.md › Rules for every slice).
+// The browser checks' harness (`npm run test:browser`).
 // Each check gets its own Setpoint: a copy of a fresh seed in a scratch data directory, the real
 // server on a free port serving the production build (web/dist) with the seed's clock, claimed in
 // its template so the browser starts signed in. Under run.ts the server is a bundle of the source
 // (bundle.ts), which is a third of the boot. Spec files run side by side (eight at
 // once, run.ts), each check on its own port and data. Chromium comes from playwright-core:
-// the browser Playwright keeps in its cache, else the installed Google Chrome (darma's way);
+// the browser Playwright keeps in its cache, else the installed Google Chrome;
 // nothing is downloaded.
-// A check that fails, or that its timeout cancels, runs again with a trace of its pages (run.ts,
-// SV-144), kept under test-results/browser/traces/, saying where in the run's output, to open with
-// `npx playwright-core show-trace <file>` (SV-75).
+// A check that fails, or that its timeout cancels, runs again with a trace of its pages (run.ts),
+// kept under test-results/browser/traces/, saying where in the run's output, to open with
+// `npx playwright-core show-trace <file>`.
 // `rested` takes a one-shot read of a computed style or box once nothing on the check's pages is
 // moving (the lint asks).
 import {spawn, spawnSync} from 'node:child_process';
@@ -74,10 +74,10 @@ export async function closeBrowser() {
 }
 
 // Each check with the contexts and pages it opened, for its traces and for `rested`. A spec file's
-// checks run side by side (SV-102), so the check a page belongs to is the one whose body is running,
+// checks run side by side, so the check a page belongs to is the one whose body is running,
 // kept in async context rather than in one variable. SETPOINT_BROWSER_TRACE=1 has each context record
 // a trace, a failed or timed-out check's being kept. Traces were a third of a run's CPU, so none is
-// the default, with what failed run again with one (run.ts, SV-144).
+// the default, with what failed run again with one (run.ts).
 const TRACE = (process.env.SETPOINT_BROWSER_TRACE ?? '0') !== '0';
 // Where a failed check is noted, for run.ts.
 const FAILED = process.env.SETPOINT_BROWSER_FAILED;
@@ -115,7 +115,7 @@ async function asCheck(t: TestContext, body: (t: TestContext) => unknown): Promi
 }
 
 // How many of a spec file's checks run at once: run.ts sets it from how many files it runs, so a run
-// of one file uses every slot and a whole run stays at about eight checks at a time (SV-102).
+// of one file uses every slot and a whole run stays at about eight checks at a time.
 const WIDTH = Math.max(1, Number(process.env.SETPOINT_FILE_CONCURRENCY ?? 1));
 const queued: (() => void)[] = [];
 let replaying = false;
@@ -145,7 +145,7 @@ function register(entry: () => void) {
 
 type Body = (t: TestContext) => unknown;
 
-/** node:test's `test` for the browser checks: each is its own Check, and a file's run side by side (SV-102). */
+/** node:test's `test` for the browser checks: each is its own Check, and a file's run side by side. */
 export function test(name: string, ...rest: [Body] | [TestOptions, Body]): void {
   const body = rest.at(-1) as Body;
   const options = rest.length > 1 ? rest[0] as TestOptions : {};
@@ -184,7 +184,7 @@ function keepTraces(check: Check): Promise<string[]> {
 /**
  * Reads once nothing on the check's pages is moving (`still`), for a one-shot read of a computed
  * style or box: an element mid-entrance, mid-fade or mid-slide measures as it passes, not where it
- * rests (SV-75; the lint asks). A read that polls until a value holds (`until`) needs no rest; one
+ * rests (the lint asks). A read that polls until a value holds (`until`) needs no rest; one
  * meant to catch motion says so on the line before it.
  */
 export async function rested<T>(read: () => Promise<T>): Promise<T> {
@@ -279,7 +279,7 @@ function template(fixtures: string[], claim: boolean, env: NodeJS.ProcessEnv): T
     const building = fs.mkdtempSync(`${dir}.building-`);
     const buildEnv = {...env, SETPOINT_DATA_DIR: path.join(building, 'data')};
     // The sample's News, never the checkout's snapshot of real news: the checks are the sample's.
-    // Claimed here, so a check has its signed-in session without a claim of its own (SV-143).
+    // Claimed here, so a check has its signed-in session without a claim of its own.
     fs.writeFileSync(path.join(building, 'template.json'), run([TEMPLATE, ...(claim ? ['--claim', PASSWORD] : []), ...fixtures], buildEnv));
     try {
       fs.renameSync(building, dir);
@@ -296,7 +296,7 @@ function template(fixtures: string[], claim: boolean, env: NodeJS.ProcessEnv): T
 export interface StartOptions {
   // `false` leaves it for the sign-in card to claim.
   claim?: boolean;
-  // Board fixtures layered on the seed (server/src/dev/fixtures/, decision D3).
+  // Board fixtures layered on the seed (server/src/dev/fixtures/).
   fixtures?: string[];
   // `seed` runs on from the seed's moment; `frozen` holds there.
   clock?: 'seed' | 'frozen';
@@ -308,7 +308,7 @@ export interface StartOptions {
 export async function startSetpoint({claim = true, fixtures = [], clock = 'seed', env: extra = {}}: StartOptions = {}): Promise<Setpoint & {setupToken: string}> {
   if (!fs.existsSync(path.join(WEB_DIST, 'index.html'))) throw new Error('web/dist has no build: run `npm run build` first.');
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-browser-'));
-  // The compile cache takes about a quarter off the CPU of a server's boot, and a check boots one (SV-143).
+  // The compile cache takes about a quarter off the CPU of a server's boot, and a check boots one.
   const env: NodeJS.ProcessEnv = {
     NODE_COMPILE_CACHE: path.join(ROOT, 'node_modules', '.cache', 'node-compile'),
     ...process.env, SETPOINT_DATA_DIR: dataDir, SETPOINT_CLOCK: clock, SETPOINT_WEB_DIR: WEB_DIST, ...extra,
@@ -428,7 +428,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
       });
       page.on('requestfinished', request => loading.delete(request));
       page.on('requestfailed', request => loading.delete(request));
-      // What a failed font load is told apart by, said only when one fails (SV-265): the page's font
+      // What a failed font load is told apart by, said only when one fails: the page's font
       // requests that failed or were answered with an error, and its navigations, in order.
       const fontTrail: string[] = [];
       const fontName = (request: Request) => new URL(request.url()).pathname.split('/').pop();
@@ -469,10 +469,10 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
 /**
  * Resolves once a page that just loaded is ready to read: no /api request in flight (the live
  * stream aside) across two drawn frames, so what the first answers asked for has come too, and
- * every web font loaded, so text has its real widths (SV-40). The fonts are loaded rather than
+ * every web font loaded, so text has its real widths. The fonts are loaded rather than
  * awaited: `document.fonts.ready` is already settled before the first text asks for them. A font
  * that fails to load still fails the check, its error carrying `trail` and each face's state, so it
- * names its cause (SV-265: a NetworkError said only that some font request failed).
+ * names its cause, not only that some font request failed.
  */
 async function ready(page: Page, loading: Set<Request>, trail: () => string[]) {
   await answered(page, loading, 'the page\'s first data');
@@ -512,7 +512,7 @@ async function drawnTwice(page: Page): Promise<void> {
 /**
  * A response the check waited for (`waitForResponse`, `page.on('response')`) read whole and drawn:
  * those resolve on its headers, before the app has its body, so a read straight after can find the
- * page as it was (SV-195).
+ * page as it was.
  */
 export async function drawn(page: Page, response: Response): Promise<void> {
   await response.finished();
@@ -522,7 +522,7 @@ export async function drawn(page: Page, response: Response): Promise<void> {
 /**
  * Stops the page's clock, installed by the check (page.clock.install), at about now, so what it
  * reads by the minute ("in 10m", the now-line's time) or a window such as the toast's Undo doesn't
- * run on with real time on a busy machine (SV-195). The check then moves it on itself (`runFor`,
+ * run on with real time on a busy machine. The check then moves it on itself (`runFor`,
  * `fastForward`). pauseAt stops the clock and then runs it on to the time given; a time real time
  * has already passed is refused, and is asked again from the stopped clock's own now.
  */
@@ -539,8 +539,8 @@ export async function pauseClock(page: Page): Promise<void> {
 
 /**
  * Holds the toast showing so its time (and its Undo) waits while the check reads the server before
- * pressing Undo: its 6 s run on real time otherwise, which a busy machine can use up (SV-195). The
- * toast no longer waits under the pointer (D506), so this sets the app's test-only hold, which the
+ * pressing Undo: its 6 s run on real time otherwise, which a busy machine can use up. The
+ * toast no longer waits under the pointer, so this sets the app's test-only hold, which the
  * toast's going clears. Answers the toast.
  */
 export async function holdToast(page: Page): Promise<Locator> {
@@ -576,7 +576,7 @@ export async function point(row: Locator): Promise<void> {
  * animation or transition under 2 s; the toast's Undo clock and spinners aside) has run its course,
  * and the page has drawn twice since, so what `rested` reads is where it rests
  * (an overlay mid-entrance is scaled and offset, and drawn on a layer of its own). Not for a check to
- * call: a check doesn't wait out a motion it started (D416).
+ * call: a check doesn't wait out a motion it started.
  */
 async function still(page: Page): Promise<void> {
   await until('nothing moving', () => page.evaluate(() => document.getAnimations()
@@ -586,7 +586,7 @@ async function still(page: Page): Promise<void> {
 }
 
 /**
- * Opens every unread Security email through the API: Mark all as read leaves Security (UX #4), so a
+ * Opens every unread Security email through the API: Mark all as read leaves Security, so a
  * check that wants an empty Inbox reads those first.
  */
 export async function readSecurity(setpoint: Setpoint): Promise<void> {

@@ -1,6 +1,5 @@
-// The single owner (harvested from v1's server/auth: owner store, claim, setup token, password
-// throttle, recovery codes and security transitions; SV-2's harvest notes say what each branch is
-// for). Setpoint has one owner, claimed once with a setup token printed by the CLI. Every security
+// The single owner: owner store, claim, setup token, password throttle, recovery codes and security
+// transitions. Setpoint has one owner, claimed once with a setup token printed by the CLI. Every security
 // change goes through one transition that moves the security generation, ending every session.
 import {randomBytes, timingSafeEqual} from 'node:crypto';
 import {MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH} from '@setpoint/shared';
@@ -15,10 +14,10 @@ import {hashSecret, SESSION_DAYS} from './sessions.ts';
 
 export type Owner = typeof t.owner.$inferSelect;
 
-/** bcrypt's cost; tests pass 4. v1 used 12, and its hashes carry over as they are. */
+/** bcrypt's cost; tests pass 4. Hashes made at another cost still check. */
 export const BCRYPT_COST = 12;
 export const SETUP_TOKEN_MINUTES = 60;
-/** The password budget: 10 attempts per 15 minutes, shared by every caller (v1). */
+/** The password budget: 10 attempts per 15 minutes, shared by every caller. */
 export const PASSWORD_WINDOW_MS = 15 * 60_000;
 export const PASSWORD_MAX_ATTEMPTS = 10;
 export const RECOVERY_CODE_COUNT = 8;
@@ -36,7 +35,7 @@ export const isAcceptableNewPassword = (value: unknown): value is string =>
 
 export const hashPassword = (password: string, cost = BCRYPT_COST) => bcrypt.hash(password, cost);
 
-/** False for anything but a string of a checkable length, before bcrypt runs (v1's policy). */
+/** False for anything but a string of a checkable length, before bcrypt runs. */
 export async function passwordMatches(owner: Owner, password: unknown): Promise<boolean> {
   if (typeof password !== 'string' || !password || password.length > MAX_PASSWORD_LENGTH) return false;
   return bcrypt.compare(password, owner.passwordHash);
@@ -60,7 +59,7 @@ export function issueSetupToken(store: Store): {token: string; expiresAt: string
   });
 }
 
-/** Whether a submitted setup token is the live one. Compared as hashes, in constant time (v1). */
+/** Whether a submitted setup token is the live one. Compared as hashes, in constant time. */
 function setupTokenMatches(store: Store, submitted: string): boolean {
   const live = store.db.select().from(t.setupTokens).where(gt(t.setupTokens.expiresAt, isoNow(store))).all();
   const digest = Buffer.from(hashSecret(submitted), 'hex');
@@ -138,7 +137,7 @@ export function reservePasswordAttempt(store: Store) {
   });
 }
 
-/** Strict mode needs a passkey after the password; without one registered, it can't be met (v1). */
+/** Strict mode needs a passkey after the password; without one registered, it can't be met. */
 export function passwordSignInOutcome(mode: AuthMode, passkeyCount: number): 'signed_in' | 'passkey_required' | 'misconfigured' {
   if (mode === 'password_or_passkey') return 'signed_in';
   return passkeyCount > 0 ? 'passkey_required' : 'misconfigured';
@@ -202,7 +201,7 @@ export async function recover(store: Store, code: string, newPassword: string, c
     if (!normaliseCode(code) || !spent) throw unauthorized('Recovery failed.', 'recovery_failed');
     store.db.update(t.owner).set({passwordHash, authMode: 'password_or_passkey'}).run();
     store.db.delete(t.passkeys).run();
-    // Paired iPhones too, as the phone may be what was lost (D276).
+    // Paired iPhones too, as the phone may be what was lost.
     store.db.delete(t.devices).run();
     store.db.delete(t.pairingCodes).run();
     replaceRecoveryCodes(store, codes);
@@ -213,8 +212,8 @@ export async function recover(store: Store, code: string, newPassword: string, c
 
 /**
  * Expired pending sign-ins, challenges, setup tokens and pairing codes, and sessions ended or idle for 30 days,
- * swept on each sign-in so the tables stay small (v1 swept expired sessions the same way: a cookie
- * that stops being sent never comes back to be deleted).
+ * swept on each sign-in so the tables stay small (a cookie that stops being sent never comes back to
+ * be deleted).
  */
 export function sweepExpiredAuth(store: Store) {
   const now = isoNow(store);

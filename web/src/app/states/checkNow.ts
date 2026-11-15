@@ -1,4 +1,4 @@
-// Check now (SV-25, D54), on Settings › Accounts' rows and, since the polish audit's states-08, on the
+// Check now, on Settings › Accounts' rows and on the
 // Inbox's and the calendar pane's stale and failing lines, where a problem is noticed.
 import type {HealthOut} from '@setpoint/shared';
 import {useEffect, useState} from 'react';

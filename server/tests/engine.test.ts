@@ -1,4 +1,4 @@
-// The sync engine, driven by a fake adapter through every health state (decision 31), and the
+// The sync engine, driven by a fake adapter through every health state, and the
 // command layer run through it: confirmed, retried, failed in place; and the dev provider, which
 // serves only dev sources.
 import {eq} from 'drizzle-orm';
@@ -159,7 +159,7 @@ describe('a fake adapter through the four health states', () => {
     expect(fake.calls.map(call => call.kind)).toEqual(['sweep', 'sync']);
   });
 
-  test('SV-251: a push while its sync is running syncs again once that one is done, since the running one may have read the provider before the change', async () => {
+  test('a push while its sync is running syncs again once that one is done, since the running one may have read the provider before the change', async () => {
     const w = world();
     const fake = fakeAdapter();
     const account = w.store.db.insert(t.accounts).values({provider: 'gmail', label: 'Work', address: 'user@work.example.org', colour: 'comf', icon: 'work', position: 0, createdAt: w.store.now().toISOString()}).returning().get();
@@ -304,7 +304,7 @@ describe('commands through the engine', () => {
     expect(state()).toMatchObject({state: 'failed', providerMessage: 'Requested entity was not found.'});
   });
 
-  test('a running engine sends a change on as it\'s made, not at its next tick (DESIGN.md #54)', async () => {
+  test('a running engine sends a change on as it\'s made, not at its next tick', async () => {
     const w = world({seed: true});
     const engine = new SyncEngine({store: w.store, adapters: new Adapters({}, devProvider())});
     // Ticks a minute apart: only the change itself can start its job in time.

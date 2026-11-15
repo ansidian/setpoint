@@ -1,5 +1,5 @@
 // Settings' select (parts.tsx › Select, on its Menu): the shared menu, not the browser's list, from
-// the pointer and the keyboard, its Esc going no further than the menu (S13, SV-25).
+// the pointer and the keyboard, its Esc going no further than the menu.
 import {useState} from 'react';
 import {expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -105,7 +105,7 @@ test('the chip is the board\'s, not the browser\'s list, its ring `edgeOn` while
 });
 
 
-test('align="left" opens the menu under the chip\'s left edge, the default under its right (SV-189)', async () => {
+test('align="left" opens the menu under the chip\'s left edge, the default under its right', async () => {
   await render(
     <div className="settings" style={{padding: 240}}>
       <Select value={10} options={OPTIONS} label="Left" align="left" onChange={() => {}} />

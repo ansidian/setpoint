@@ -3,8 +3,7 @@
 // tokens refreshed per source, and requests that turn Google's errors into ProviderErrors with
 // Google's own words. Every base URL is configurable so tests point them at a fake on 127.0.0.1.
 //
-// Harvested for Calendar from v1's `calendar-google-client` (getAuthorizedAccount) as for Gmail:
-// refresh five minutes before expiry, a missing expires_in counts as an hour, a new refresh token
+// For Calendar as for Gmail: refresh five minutes before expiry, a missing expires_in counts as an hour, a new refresh token
 // or scope in the answer is kept, and `invalid_grant` means the consent was revoked: needs reconnect.
 import {writeSourceCredentials} from '../../secrets/store.ts';
 import type {Store} from '../../store.ts';
@@ -26,8 +25,8 @@ export const GOOGLE_ENDPOINTS: GoogleEndpoints = {
 };
 
 /**
- * v1's combined consent: Gmail (read, labels, trash) and Calendar on one sign-in. The calendar list
- * is read and written: SV-20 writes each calendar's colour to it (D33).
+ * The combined consent: Gmail (read, labels, trash) and Calendar on one sign-in. The calendar list
+ * is read and written: Settings › Calendar writes each calendar's colour to it.
  */
 export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/gmail.modify',
@@ -35,7 +34,7 @@ export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.calendarlist',
 ];
 
-/** The OAuth client registered in Google Cloud (v2's callback is a second redirect URI on it). */
+/** The OAuth client registered in Google Cloud (Setpoint's callback is a redirect URI on it). */
 export interface GoogleClient {
   clientId: string;
   clientSecret: string;
@@ -45,7 +44,7 @@ export interface GoogleClient {
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
-// A token this close to its expiry is refreshed first (v1).
+// A token this close to its expiry is refreshed first.
 const REFRESH_LEAD_MS = 5 * 60_000;
 const DEFAULT_TOKEN_TTL_S = 3600;
 

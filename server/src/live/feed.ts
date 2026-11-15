@@ -1,7 +1,7 @@
-// The typed live events (BRIEF.md › Decided elsewhere): one stream of `mail`, `items`, `health`,
+// The typed live events: one stream of `mail`, `items`, `health`,
 // `news` and `jobs` events, each naming what changed. A write notes what it touched while its transaction runs,
 // and the event goes out only once the outermost transaction commits, so a refused write sends
-// nothing (darma's change feed). Events in one transaction merge into one per type.
+// nothing. Events in one transaction merge into one per type.
 import {randomBytes} from 'node:crypto';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import type {LiveEvent} from '@setpoint/shared';

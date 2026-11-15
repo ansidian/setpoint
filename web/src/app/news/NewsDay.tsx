@@ -1,9 +1,9 @@
-// News's pane with nothing open (SV-219, D466, DESIGN.md #332), in the Inbox's shape (InboxDay.tsx):
-// one block centred across the pane, a third of the way down. The mark; While you were away (#298), moved
+// News's pane with nothing open, in the Inbox's shape (InboxDay.tsx):
+// one block centred across the pane, a third of the way down. The mark; While you were away, moved
 // here from the top of All, its stories opening in the recap's modal and showing in `ink2` once
 // opened; the freshness line, with feeds failing every attempt for 6 hours; today's strip; and in the
 // foot over the keys, the quiet facts, led by any trouble's chip (sorting stopped, a whole section
-// stale; EmptyPane, #335). No count of new stories (D87).
+// stale; EmptyPane). No count of new stories.
 import type {NewsDayOut, StoryRowOut} from '@setpoint/shared';
 import {Fragment} from 'react';
 import {useResource} from '../../api/client.ts';
@@ -23,7 +23,7 @@ const KEYS: PaneKey[] = [
   {keys: ['Tab'], does: 'Section'},
 ];
 
-// What the pane reads, kept on screen while News is up (SV-222).
+// What the pane reads, kept on screen while News is up.
 export const PANE_PATHS = [NEWS_DAY_PATH];
 
 export function NewsDay({recap, rows, trouble, now, zone, openAt, onRecap, settle}: {

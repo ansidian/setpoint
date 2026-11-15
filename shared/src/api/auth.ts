@@ -6,7 +6,7 @@ import {z} from 'zod';
 import {AUTH_MODES, SESSION_METHODS} from '../enums.ts';
 import type {AuthMode, SessionMethod} from '../enums.ts';
 
-/** New passwords: at least 12 characters (v1's policy); any password checked is at most 1,024. */
+/** New passwords: at least 12 characters; any password checked is at most 1,024. */
 export const MIN_PASSWORD_LENGTH = 12;
 export const MAX_PASSWORD_LENGTH = 1024;
 const newPassword = z.string().min(MIN_PASSWORD_LENGTH, `At least ${MIN_PASSWORD_LENGTH} characters`).max(MAX_PASSWORD_LENGTH);
@@ -46,7 +46,7 @@ export const recoverInput = z.strictObject({recovery_code: z.string().min(1).max
 export interface MeOut {
   method: SessionMethod | 'device';
   time_zone: string;
-  // The server's clock: the dev server runs from the seed's moment (SEED_NOW), so ages match the brief.
+  // The server's clock: the dev server runs from the seed's moment (SEED_NOW), so ages match the sample data.
   now: string;
   // Security changes need the password confirmed in the last 10 minutes.
   recent_password: boolean;

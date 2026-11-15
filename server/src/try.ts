@@ -2,11 +2,11 @@
 // reload, proxying /api to the dev server on the next port (SETPOINT_PUBLIC_URL is Vite's, so
 // pairing links and sign-in name it); with --build, the web app built into data/dev/web (not
 // web/dist, which may be stale, and which a browser run in this checkout may be serving) and served
-// by the dev server itself, as prod serves it. It seeds data/dev with BRIEF.md's sample the first time, makes its owner with the password
-// "dev" (SV-206), starts the dev server on its own port, then prints how to sign in (SV-39) and a
-// link that pairs the iPhone app with it (SV-84). Sessions share it and may change its data.
+// by the dev server itself, as prod serves it. It seeds data/dev with the sample the first time, makes its owner with the password
+// "dev", starts the dev server on its own port, then prints how to sign in and a
+// link that pairs the iPhone app with it. Sessions share it and may change its data.
 //
-// From a git worktree (SV-212) it's that worktree's web app in front of setpoint-dev's API: only
+// From a git worktree it's that worktree's web app in front of setpoint-dev's API: only
 // its Vite, on the next free port from 7460, proxying to the API on 7451 and passing its own page's
 // changes on as setpoint-dev's page's, so sign-in works, the data is the shared one, and a cookie
 // from either port serves both (cookies don't keep to a port). The API is the main checkout's code;

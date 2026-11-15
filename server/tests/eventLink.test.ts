@@ -1,5 +1,5 @@
-// SV-179 (D439): an event's link for Open, read by the server into ItemOut's `link`: a web link in
-// its place (SV-77's rule, DESIGN.md #245), else its own URL (Google's source.url), else none.
+// An event's link for Open, read by the server into ItemOut's `link`: a web link in
+// its place, else its own URL (Google's source.url), else none.
 import {eventLink, webLink} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 
@@ -13,7 +13,7 @@ describe('an event\'s link', () => {
     ['a place without a link takes the URL', 'Hall B', null, 'https://conf.example.org/talks/keynote', 'https://conf.example.org/talks/keynote'],
     ['no place takes the URL, trimmed', null, null, '  https://conf.example.org/1  ', 'https://conf.example.org/1'],
     ['plain http counts', null, null, 'http://conf.example.org/1', 'http://conf.example.org/1'],
-    // A bare domain in the place, with a real top-level domain (shared/src/tlds.ts), opens as https (Andy, 2026-11-04).
+    // A bare domain in the place, with a real top-level domain (shared/src/tlds.ts), opens as https.
     ['a bare domain alone', 'stream.example.tv/live', null, null, 'https://stream.example.tv/live'],
     ['a bare domain among words', 'Watch at stream.example.tv/live', null, 'https://conf.example.org/1', 'https://stream.example.tv/live'],
     ['a bare domain with no path', 'Sign up at example.com', null, null, 'https://example.com'],

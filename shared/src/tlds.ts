@@ -1,6 +1,6 @@
-// The top-level domains a bare domain in a place may end in to count as a link ("example.tv/live",
-// SV-179, Andy 2026-11-04): the common generic ones and every country code. A typo or a name with a
-// dot in it ("St.Louis", "v2.0", "Room 3.14") ends in none of them.
+// The top-level domains a bare domain in a place may end in to count as a link ("example.tv/live"):
+// the common generic ones and every country code. A typo or a name with a dot in it ("St.Louis",
+// "v2.0", "Room 3.14") ends in none of them.
 //
 // Left out on purpose, as they read as file names more often than as sites: .zip and .mov (generic),
 // and .md, .py and .sh (Moldova, Paraguay, Saint Helena).

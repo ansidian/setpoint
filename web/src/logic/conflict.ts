@@ -1,7 +1,7 @@
-// Overlaps (DESIGN.md › Editor's conflict preview; boards 12b, 13 and 14): the editor's small
+// Overlaps (boards 12b, 13 and 14): the editor's small
 // timeline of the day ("Overlaps Study group · 1h 30m", or "No conflicts") and the agenda's line
 // under an event that starts during another ("Overlaps Study group until 8:30 PM"). Free events are
-// never a clash in either (shared/src/freeBusy.ts, SV-180).
+// never a clash in either (shared/src/freeBusy.ts).
 import type {ItemOut} from '@setpoint/shared';
 import {isFree} from '@setpoint/shared';
 import {clockTime, instantAt} from './format.ts';
@@ -22,7 +22,7 @@ export interface Overlap {
   end: number;
 }
 
-/** A timed event's span; null for all-day events, tasks, events without times and, taking no time, one with no end (SV-78). */
+/** A timed event's span; null for all-day events, tasks, events without times and, taking no time, one with no end. */
 export function spanOf(item: ItemOut): Span | null {
   if (item.kind !== 'event' || item.all_day || !item.starts_at || !item.ends_at) return null;
   const span = {start: Date.parse(item.starts_at), end: Date.parse(item.ends_at)};
@@ -32,7 +32,7 @@ export function spanOf(item: ItemOut): Span | null {
 /**
  * The busy timed events `span` shares time with (touching isn't overlapping), earliest first;
  * `except` is the event itself. Free events are left out, and a free `span` overlaps nothing, so a
- * conference's overlapping free sessions aren't clashes (SV-180, D440).
+ * conference's overlapping free sessions aren't clashes.
  */
 export function overlapsWith(span: Span, items: ItemOut[], except: string | null = null, free = false): Overlap[] {
   if (free || span.end <= span.start) return [];
@@ -99,7 +99,7 @@ export const minutesFrom = (date: string, at: number, timeZone: string) => (at -
  * The agenda's line under an event that starts while another is on (board 12b: Dinner with Sam at
  * 7 PM during Study group, 6:30 – 8:30 PM): "Overlaps Study group until 8:30 PM", until the
  * earlier of the two ends. The event that was on first says nothing, and a free event neither
- * says it nor is named (SV-180).
+ * says it nor is named.
  */
 export function agendaOverlap(item: ItemOut, dayItems: ItemOut[], timeZone: string): string | null {
   const span = isFree(item) ? null : spanOf(item);

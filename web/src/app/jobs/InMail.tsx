@@ -1,19 +1,19 @@
-// Jobs in mail (J7; DESIGN.md › Jobs › In mail; boards 37a–37c; D306): what Jobs draws in mail's
+// Jobs in mail (boards 37a–37c): what Jobs draws in mail's
 // slots (app/slots.tsx), filled from App.tsx, a wiring point, so mail never imports Jobs.
 //
 // - The reader's head: the JD chip on an email that belongs to an application ("Software Engineer I
 //   · Applied Oct 1 · In process"), opening its JD in a popover that grows from the chip: the head,
 //   What they want, the facts and both lists, and a foot with how it was found, Full posting and Open
 //   in Jobs. Esc, a click away or the chip closes it at once. Open in Jobs arrives with the
-//   application open, the pane simply there; Full posting arrives scrolled to it, unfolded (#271).
+//   application open, the pane simply there; Full posting arrives scrolled to it, unfolded.
 //   Or, on a job board's match email whose company matches applications, Applied before at 26 px
 //   where the chip sits.
 // - Each of the Inbox's rows: Applied before at 20 px after the subject, a Noise row's too.
 // Both badges open Jobs searched for the company, showing every application there.
 //
 // One request answers the rows the list shows, and one the email open (GET /api/jobs/mail); being
-// under /jobs, a `jobs` event refreshes both (logic/live.ts). Nothing here touches mail's counts
-// (D313). Desktop only (decision 49): on the phone neither slot draws, and nothing is asked.
+// under /jobs, a `jobs` event refreshes both (logic/live.ts). Nothing here touches mail's counts.
+// Desktop only: on the phone neither slot draws, and nothing is asked.
 import type {ApplicationOut, JobsMailApplicationOut, JobsMailMessageOut, JobsMailOut, JobsNavOut, MessageRowOut} from '@setpoint/shared';
 import {JOBS_MAIL_MAX} from '@setpoint/shared';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';

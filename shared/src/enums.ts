@@ -1,17 +1,17 @@
 // Setpoint's fixed sets: the contract shared by the server, its database schema and the web app.
-// Change them deliberately (BUILD-PLAN.md › Stack and layout). Words follow BRIEF.md › Vocabulary.
+// Change them deliberately. Words follow DESIGN.md › Vocabulary.
 
 /** How urgent triage thinks an email is. A message with no lane yet is Unsorted. */
 export const LANES = ['attention', 'fyi', 'noise'] as const;
 export type Lane = (typeof LANES)[number];
 
-/** What an email is; groups FYI. Career and People, not Work and Personal (decision 40). */
+/** What an email is; groups FYI. Career and People, not Work and Personal. */
 export const KINDS = ['deliveries', 'money', 'career', 'security', 'updates', 'people', 'other'] as const;
 export type Kind = (typeof KINDS)[number];
 
 /**
- * An email's type, extracted at triage and used by search chips (BRIEF.md › Triage). The brief's
- * "deadline or reminder" is two values here, so a search can ask for either.
+ * An email's type, extracted at triage and used by search chips. "Deadline or reminder" is two
+ * values here, so a search can ask for either.
  */
 export const MESSAGE_TYPES = [
   'confirmation', 'rejection', 'receipt', 'shipping', 'deadline', 'reminder',
@@ -19,7 +19,7 @@ export const MESSAGE_TYPES = [
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
-/** The Inbox's group order (DESIGN.md › The list); `pinned` and `unsorted` only when they have mail. */
+/** The Inbox's group order; `pinned` and `unsorted` only when they have mail. */
 export const INBOX_GROUPS = ['pinned', 'attention', 'unsorted', 'security', 'deliveries', 'money', 'career', 'people', 'updates', 'other', 'noise'] as const;
 export type InboxGroup = (typeof INBOX_GROUPS)[number];
 
@@ -30,19 +30,19 @@ export type AccountProvider = (typeof ACCOUNT_PROVIDERS)[number];
 export const CALENDAR_PROVIDERS = ['google', 'todoist'] as const;
 export type CalendarProvider = (typeof CALENDAR_PROVIDERS)[number];
 
-/** Anything on the calendar is an item: an event or a Todoist task (BRIEF.md › Decided elsewhere). */
+/** Anything on the calendar is an item: an event or a Todoist task. */
 export const ITEM_KINDS = ['event', 'task'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
 /**
  * An event's free/busy, as Google names it (its `transparency`): `transparent` is free time, which
- * the editor's conflict preview leaves out (SV-180, D440), and `opaque` busy, Google's default.
+ * the editor's conflict preview leaves out, and `opaque` busy, Google's default.
  */
 export const TRANSPARENCIES = ['opaque', 'transparent'] as const;
 export type Transparency = (typeof TRANSPARENCIES)[number];
 
 /**
- * What an .ics import leaves out of a file, each counted in the review (SV-178, SV-181, D438): a
+ * What an .ics import leaves out of a file, each counted in the review: a
  * cancelled event, a to-do or other non-event, an event with no start, an alarm after the start, at
  * a fixed time or past Google's 5 reminders and 4 weeks, an event's categories, a second copy of an
  * event, and a changed occurrence whose repeating event isn't in the file.
@@ -52,29 +52,29 @@ export const ICS_DROP_REASONS = [
 ] as const;
 export type IcsDropReason = (typeof ICS_DROP_REASONS)[number];
 
-/** A day's forecast, drawn as sunny, partly_cloudy_day, cloud and rainy (DESIGN.md › Month grid). */
+/** A day's forecast, drawn as sunny, partly_cloudy_day, cloud and rainy. */
 export const WEATHER_CONDITIONS = ['sun', 'partly_cloudy', 'cloud', 'rain'] as const;
 export type WeatherCondition = (typeof WEATHER_CONDITIONS)[number];
 
-/** darma's 11 swatches; accounts and calendars pick one (DESIGN.md › Colour). */
+/** The 11 swatches; accounts and calendars pick one (DESIGN.md › Colour). */
 export const COLOURS = ['ink2', 'ink3', 'cool', 'warm', 'caution', 'comf', 'good', 'sun', 'alert', 'violet', 'cyan'] as const;
 export type Colour = (typeof COLOURS)[number];
 
 /**
- * The swatches Settings offers an account or a calendar (DESIGN.md › Colour, #163): every one but
+ * The swatches Settings offers an account or a calendar (DESIGN.md › Colour): every one but
  * `caution` and `alert`, whose jobs are "needs you" and "danger and now". One picked before still
  * shows, so COLOURS keeps them.
  */
 export const SWATCH_COLOURS = ['ink2', 'ink3', 'cool', 'warm', 'comf', 'good', 'sun', 'violet', 'cyan'] as const satisfies readonly Colour[];
 
 /**
- * F6: the swatches an event can take for its own colour (the floating detail's Colour): the ones
+ * The swatches an event can take for its own colour (the floating detail's Colour): the ones
  * Google Calendar's eleven event colours fall on (server/src/domain/colours.ts maps them both ways).
  */
 export const EVENT_COLOURS = ['ink2', 'cool', 'warm', 'comf', 'good', 'sun', 'alert', 'violet', 'cyan'] as const satisfies readonly Colour[];
 export type EventColour = (typeof EVENT_COLOURS)[number];
 
-/** A source's health (decision 31). */
+/** A source's health. */
 export const HEALTH_STATES = ['healthy', 'stale', 'failing', 'needs_reconnect'] as const;
 export type HealthState = (typeof HEALTH_STATES)[number];
 
@@ -82,12 +82,12 @@ export type HealthState = (typeof HEALTH_STATES)[number];
 export const RECURRING_SCOPES = ['this', 'following', 'all'] as const;
 export type RecurringScope = (typeof RECURRING_SCOPES)[number];
 
-/** The typed live events, one stream (BRIEF.md › Decided elsewhere); `news` after 2.0 (N1), `jobs` after News (J1). */
+/** The typed live events, one stream; `news` after 2.0, `jobs` after News. */
 export const LIVE_EVENT_TYPES = ['mail', 'items', 'health', 'news', 'jobs'] as const;
 export type LiveEventType = (typeof LIVE_EVENT_TYPES)[number];
 
 /**
- * Every provider connection Setpoint keeps (BRIEF.md › Vocabulary: source). A mail account is a
+ * Every provider connection Setpoint keeps (DESIGN.md › Vocabulary: source). A mail account is a
  * source; so are Google Calendar (per Google account, on the same consent as Gmail), Todoist and
  * weather.
  */
@@ -99,13 +99,13 @@ export const SYNC_MODES = ['push', 'poll'] as const;
 export type SyncMode = (typeof SYNC_MODES)[number];
 
 /**
- * A change sent to a provider (BRIEF.md › Decided elsewhere: one command layer). `reverted` is
+ * A change sent to a provider, through one command layer. `reverted` is
  * Move back: the user abandoned a failed change, and the mirror shows the provider's own state again.
  */
 export const COMMAND_STATES = ['pending', 'confirmed', 'failed', 'reverted'] as const;
 export type CommandState = (typeof COMMAND_STATES)[number];
 
-/** What a command is about: one email, one calendar item, an account (Mark all as read), a calendar (its colour, SV-20) or a Todoist project (its colour, SV-25). */
+/** What a command is about: one email, one calendar item, an account (Mark all as read), a calendar (its colour) or a Todoist project (its colour). */
 export const COMMAND_TARGETS = ['message', 'item', 'account', 'calendar', 'project'] as const;
 export type CommandTarget = (typeof COMMAND_TARGETS)[number];
 
@@ -114,14 +114,14 @@ export const COMMAND_KINDS = [
   'open', 'mark_read', 'mark_unread', 'done', 'trash', 'untrash', 'pin', 'unpin', 'mark_all_read',
   // Calendar items.
   'item_create', 'item_update', 'item_delete', 'item_complete', 'item_reopen',
-  // A Google calendar's colour, written to the user's calendar list (SV-20, D33).
+  // A Google calendar's colour, written to the user's calendar list.
   'calendar_colour',
-  // A Todoist project's colour (SV-25, D54).
+  // A Todoist project's colour.
   'project_colour',
 ] as const;
 export type CommandKind = (typeof COMMAND_KINDS)[number];
 
-/** Owner sign-in: a password alone or a passkey alone, or strictly both (v1's two modes). */
+/** Owner sign-in: a password alone or a passkey alone, or strictly both. */
 export const AUTH_MODES = ['password_or_passkey', 'password_plus_passkey'] as const;
 export type AuthMode = (typeof AUTH_MODES)[number];
 
@@ -129,20 +129,19 @@ export type AuthMode = (typeof AUTH_MODES)[number];
 export const SESSION_METHODS = ['password', 'passkey', 'password_plus_passkey', 'recovery', 'claim'] as const;
 export type SessionMethod = (typeof SESSION_METHODS)[number];
 
-/** ntfy topics by kind, so iOS groups them and each can be muted (BRIEF.md › ntfy). */
+/** ntfy topics by kind, so iOS groups them and each can be muted. */
 export const NOTIFY_TOPICS = ['reminders', 'mail'] as const;
 export type NotifyTopic = (typeof NOTIFY_TOPICS)[number];
 
-/** What a notification is for (DESIGN.md › Settings › Notifications). */
+/** What a notification is for. */
 export const NOTIFICATION_KINDS = ['reminder', 'time_to_leave', 'reconnect', 'mail', 'test'] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 /**
- * Bring your own key: the model providers, and what each call was for (the AI usage ledger). N3 adds
- * News's own rows: each article read, grouping, stories written, and the hourly ranking (D90), which
- * asks no model since D421 and keeps its earlier calls. Jobs (J2, a wiring point) adds its three parts
- * (D315): each email read, finding JDs and reading JDs; the last two are J3's, named now so the
- * ledger's table is rebuilt once. Removing Jobs may leave them.
+ * Bring your own key: the model providers, and what each call was for (the AI usage ledger). News has
+ * its own rows: each article read, grouping, stories written, and the hourly ranking, which asks
+ * no model now and keeps its earlier calls. Jobs (a wiring point) adds its three parts: each email
+ * read, finding JDs and reading JDs, named together so the ledger's table is rebuilt once. Removing Jobs may leave them.
  */
 export const AI_PROVIDERS = ['anthropic', 'openai'] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
@@ -151,19 +150,19 @@ export type AiPurpose = (typeof AI_PURPOSES)[number];
 
 /**
  * Instance secrets, write-only through the API (Settings › AI, Calendar, Notifications). AirNow's key
- * (N2) is no longer read: News's air quality comes from AirNow's keyless file (DESIGN.md #97). It
+ * is no longer read: News's air quality comes from AirNow's keyless file. It
  * stays a name the secrets table allows, since dropping it would rebuild the table, and a stored one
  * does no harm.
  */
 export const SECRET_NAMES = ['anthropic_api_key', 'openai_api_key', 'places_api_key', 'ntfy_token', 'airnow_api_key'] as const;
 export type SecretName = (typeof SECRET_NAMES)[number];
 
-/** Search chips (BRIEF.md › Search): recognised words that filter exactly. */
+/** Search chips: recognised words that filter exactly. */
 export const SEARCH_CHIP_KINDS = ['organisation', 'type', 'date', 'account', 'kind'] as const;
 export type SearchChipKind = (typeof SEARCH_CHIP_KINDS)[number];
 
 /**
- * SV-138: a search with chips a suggestion made (D392). `kept` applies the chips given, with no model
+ * A search with chips a suggestion made. `kept` applies the chips given, with no model
  * call (accepting it, a later page, a chip removed); `left_out` lists what they left out ("6 more
  * emails match your words"). The model is reached only by POST /api/search/suggestion.
  */
@@ -171,7 +170,7 @@ export const SEARCH_READS = ['kept', 'left_out'] as const;
 export type SearchRead = (typeof SEARCH_READS)[number];
 
 /**
- * SV-138: why a suggestion has no reading in it: no Anthropic key, the model was too slow or failed,
+ * Why a suggestion has no reading in it: no Anthropic key, the model was too slow or failed,
  * its filters left nothing, or nothing in the search was there to read (quotes, "!" words or a date
  * alone).
  */
@@ -182,25 +181,25 @@ export type SearchReadingFallback = (typeof SEARCH_READING_FALLBACKS)[number];
 export const MATCH_FIELDS = ['organisation', 'type', 'date', 'account', 'kind', 'sender', 'subject', 'body'] as const;
 export type MatchField = (typeof MATCH_FIELDS)[number];
 
-/** SV-23: why a calendar search result matched: a chip, or free text in one of the item's fields. */
+/** Why a calendar search result matched: a chip, or free text in one of the item's fields. */
 export const CALENDAR_MATCH_FIELDS = ['calendar', 'date', 'title', 'place', 'address', 'attendees', 'project', 'labels'] as const;
 export type CalendarMatchField = (typeof CALENDAR_MATCH_FIELDS)[number];
 
-// ---- News (after 2.0; BRIEF.md › News, D85–D91) ----
+// ---- News (after 2.0) ----
 
-/** News's sections, in All's fixed order (D88): the user's area, launches, the labs, US events. */
+/** News's sections, in All's fixed order: the user's area, launches, the labs, US events. */
 export const NEWS_SECTIONS = ['local', 'tech', 'ai', 'general'] as const;
 export type NewsSection = (typeof NEWS_SECTIONS)[number];
 
 /**
- * A story's dot (D87): new until it's seen, updated when a new fact arrives after the user last saw it,
+ * A story's dot: new until it's seen, updated when a new fact arrives after the user last saw it,
  * and no dot once seen. Seen is per story, never per article.
  */
 export const STORY_STATES = ['new', 'updated', 'seen'] as const;
 export type StoryState = (typeof STORY_STATES)[number];
 
 /**
- * How a News source is read (D89, D91): an outlet's feed, official data (the hazard APIs), a page
+ * How a News source is read: an outlet's feed, official data (the hazard APIs), a page
  * read directly where there's no feed (Anthropic's news page), or discovery only (Google News
  * search for the area, which finds stories and is never read).
  */
@@ -208,9 +207,9 @@ export const NEWS_SOURCE_KINDS = ['feed', 'official_api', 'page_read', 'discover
 export type NewsSourceKind = (typeof NEWS_SOURCE_KINDS)[number];
 
 /**
- * Which N2 adapter reads a News source: RSS and Atom feeds, the hazard APIs (NWS alerts for the home
+ * Which adapter reads a News source: RSS and Atom feeds, the hazard APIs (NWS alerts for the home
  * location's zone, USGS, Cal Fire and AirNow by distance from it), Hacker News through Algolia, a
- * page read directly, and Google News search (discovery only). N5: Settings › News draws each
+ * page read directly, and Google News search (discovery only). Settings › News draws each
  * source's icon from it.
  */
 export const NEWS_ADAPTERS = ['feed', 'nws', 'usgs', 'cal_fire', 'airnow', 'hn_algolia', 'page_read', 'google_news'] as const;

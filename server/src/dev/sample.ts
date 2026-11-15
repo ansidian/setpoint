@@ -1,10 +1,9 @@
-// BRIEF.md › Sample data as rows, for building and testing against the real schema. It's invented:
+// The sample data as rows, for building and testing against the real schema. It's invented:
 // account addresses use example domains, and senders use `.example` domains except where a board
 // shows one (contosocoffee.example in 02, accounts.google.com in 03). Times are fixed relative to
-// SEED_NOW (Wed, Oct 7, 2026, 9:12 AM Pacific), so the brief's ages and counts hold: 3 attention not
-// Done, 11 unread FYI, 19 unread in all. Emails the brief only implies come from the boards
-// (design-export/boards/: 02, 03, 05, 06, 07, 08, 09, 10); where they differ, the brief and
-// DESIGN.md's overrides win. News's sample (round 3) is in src/dev/news.ts.
+// SEED_NOW (Wed, Oct 7, 2026, 9:12 AM Pacific), so its ages and counts hold: 3 attention not
+// Done, 11 unread FYI, 19 unread in all. Some emails come from the boards
+// (design-export/boards/: 02, 03, 05, 06, 07, 08, 09, 10). News's sample is in src/dev/news.ts.
 import {
   type AccountProvider, type Colour, type Kind, type Lane, type MessageType, type SecurityFacts, type SourceProvider, type WeatherCondition,
   SEED_NOW, SEED_TIME_ZONE, securityFactsSchema,
@@ -159,7 +158,7 @@ View job: https://indeed.example/viewjob?jk=5f2c80d1e3a7
 You're receiving this because of your job alert for software engineer.`;
 
 /**
- * Every email: the brief's Inbox, then what the boards add, newest first. Board 09's history (four
+ * Every email: the sample's Inbox, then what the boards add, newest first. Board 09's history (four
  * Northwind Engineering digests cleared unopened, which raise a real pattern prompt) lives in its
  * fixture (src/dev/fixtures/mailBoards.ts), so no other board shows a prompt.
  */
@@ -277,13 +276,13 @@ export const SAMPLE_EMAILS: SampleEmail[] = [
     subject: 'Your application for Data Engineer Intern',
     body: 'Thank you for applying to Northwind. Unfortunately, we won\'t be moving forward with your application for the Data Engineer Intern role.',
     unread: false, lane: 'fyi', kind: 'career', type: 'rejection'},
-  // Jobs (round 4): Indeed's match email for the role Jobs's Contoso Pharmaceuticals application is
+  // Jobs: Indeed's match email for the role Jobs's Contoso Pharmaceuticals application is
   // (board 37c's Applied before), read and in All only. Last, so the emails above keep their ids, and
   // dated before the application so it sits below the Inbox's first screen (board 37c dates it today).
   {account: 'Jobs', at: ['2026-09-15', '06:05'], from: ['Indeed', 'alert@indeed.example'], organisation: 'Indeed',
     subject: 'Associate Software Engineer @ Contoso Pharmaceuticals', summary: '$78,000–$92,000 · Hybrid', body: INDEED_MATCH,
     unread: false, lane: 'noise', type: 'newsletter'},
-  // SV-182: an interview confirmed with its invite attached (src/dev/icsFiles.ts has the file), for
+  // An interview confirmed with its invite attached (src/dev/icsFiles.ts has the file), for
   // Add to calendar on its .ics tile. Done and dated weeks back, so it's out of the lanes and below the
   // Inbox's first screen, as the boards have it; last, so the emails above keep their ids.
   {account: 'Jobs', at: ['2026-09-29', '10:30'], from: ['Trey Research Recruiting', 'recruiting@treyresearch.example'], organisation: 'Trey Research', via: 'Breezy',
@@ -297,19 +296,19 @@ const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'holidays' | 'todoist';
   {key: 'classes', name: 'Classes', provider: 'google', colour: 'cyan', account: 'Personal', accessRole: 'owner'},
   {key: 'jobs', name: 'Jobs', provider: 'google', colour: 'violet', account: 'Jobs', accessRole: 'owner'},
   {key: 'todoist', name: 'Todoist', provider: 'todoist', colour: null, account: null},
-  // SV-191: a subscribed holiday calendar, which Google lets the user only read. Last, so the others
+  // A subscribed holiday calendar, which Google lets the user only read. Last, so the others
   // keep the ids the iPhone app's recorded contract names; listed before Todoist all the same.
   {key: 'holidays', name: 'Holidays in United States', provider: 'google', colour: 'good', account: 'Personal', accessRole: 'reader'},
 ];
 
 type SampleItem = {calendar: (typeof CALENDARS)[number]['key']; title: string} & (
   | {kind: 'event'; date: string; start: string; end: string; recurrence?: string; place?: string; address?: string; attendees?: string[]; reminders?: number[]; leave?: true; url?: string; free?: true; uid?: string; description?: string}
-  // SV-272: a subtask names its parent by title and has no date of its own.
+  // A subtask names its parent by title and has no date of its own.
   | {kind: 'task'; due?: string; project: string; done?: [string, string]; description?: string; parent?: string}
   | {kind: 'day'; date: string}
 );
 
-/** October 2026's calendar (BRIEF.md › Sample data; boards 11, 12a, 12b, 14, 16). */
+/** October 2026's calendar (boards 11, 12a, 12b, 14, 16). */
 export const SAMPLE_ITEMS: SampleItem[] = [
   {calendar: 'personal', kind: 'event', title: 'Gym', date: '2026-08-31', start: '07:00', end: '08:00',
     recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR', reminders: [10]},
@@ -318,12 +317,12 @@ export const SAMPLE_ITEMS: SampleItem[] = [
   {calendar: 'personal', kind: 'event', title: 'Dinner with Sam', date: '2026-10-09', start: '19:00', end: '21:00',
     place: 'Blue Door', address: '2118 Sunset Blvd', attendees: ['Sam Lee'], reminders: [60], leave: true},
   {calendar: 'jobs', kind: 'event', title: 'Career fair', date: '2026-10-15', start: '10:00', end: '14:00',
-    // SV-179: the fair's own page, as Google's source.url, so its card has Open. SV-180: drop-in, so
+    // The fair's own page, as Google's source.url, so its card has Open. It's drop-in, so
     // it's marked free, and an event during it has no conflict.
     place: 'University Student Union', reminders: [10], url: 'https://careers.example.edu/fair/fall-2026', free: true,
-    // SV-181: as if imported from the fair's .ics, so a re-import finds it already on Jobs (will update).
+    // As if imported from the fair's .ics, so a re-import finds it already on Jobs (will update).
     uid: 'career-fair-fall-2026@careers.example.edu',
-    // SV-264: a long description as an .ics file's or an invite's comes: plain text with its own line
+    // A long description as an .ics file's or an invite's comes: plain text with its own line
     // breaks and a bare address.
     description: [
       'Fall 2026 Career Fair, open to all majors. Drop in any time between 10 and 2.',
@@ -336,24 +335,24 @@ export const SAMPLE_ITEMS: SampleItem[] = [
   {calendar: 'classes', kind: 'event', title: 'CS 101 lecture', date: '2026-08-25', start: '18:00', end: '19:15',
     recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=TU,TH;UNTIL=20261204T075959Z', reminders: [10]},
   {calendar: 'classes', kind: 'event', title: 'Study group', date: '2026-10-09', start: '18:30', end: '20:30', reminders: [10],
-    // SV-264: a description as Google Calendar's own editor writes one (lines ended by <br>, lists as they are).
+    // A description as Google Calendar's own editor writes one (lines ended by <br>, lists as they are).
     description: '<b>Midterm review</b>, library room 3B<br><i>Bring</i> last week\'s <u>problem set</u><br><ol><li>Recursion</li><li>Big O</li></ol><ul><li>Laptop</li><li>Snacks</li></ul><br><a href="https://classes.example.edu/cs101/midterm">Practice exam</a>'},
   {calendar: 'todoist', kind: 'task', title: 'CS 101 lab report', due: '2026-10-07', project: 'School'},
   {calendar: 'todoist', kind: 'task', title: 'Pay rent', due: '2026-10-07', project: 'Home'},
   {calendar: 'todoist', kind: 'task', title: 'Renew car registration', due: '2026-10-08', project: 'Home',
-    // SV-264: a description as Todoist's own editor writes one (Markdown, a blank line around a list).
+    // A description as Todoist's own editor writes one (Markdown, a blank line around a list).
     description: '**Due by Oct 31**, *online* is fastest\n\n1. Smog check\n2. Proof of insurance\n\n[Renew online](https://dmv.example.gov/renew)'},
   {calendar: 'todoist', kind: 'task', title: 'Return library books', due: '2026-10-05', project: 'Inbox', done: ['2026-10-05', '17:30']},
-  // SV-191: an all-day event on the read-only holiday calendar, after October's busy weeks.
+  // An all-day event on the read-only holiday calendar, after October's busy weeks.
   {calendar: 'holidays', kind: 'day', title: 'Veterans Day', date: '2026-11-11'},
-  // SV-272: a task's checklist, one of it done; last, so the items before keep their ids.
+  // A task's checklist, one of it done; last, so the items before keep their ids.
   {calendar: 'todoist', kind: 'task', title: 'Plot the timing data', project: 'School', parent: 'CS 101 lab report', done: ['2026-10-06', '20:15']},
   {calendar: 'todoist', kind: 'task', title: 'Write the analysis', project: 'School', parent: 'CS 101 lab report'},
   {calendar: 'todoist', kind: 'task', title: 'Proofread', project: 'School', parent: 'CS 101 lab report'},
   {calendar: 'todoist', kind: 'task', title: 'Submit on the portal', project: 'School', parent: 'CS 101 lab report'},
 ];
 
-/** Forecasts only where the brief draws them: sun on the 7th, clouds on the 8th, rain on the 13th. */
+/** Forecasts only on some days: sun on the 7th, clouds on the 8th, rain on the 13th. */
 export const SAMPLE_WEATHER: {date: string; condition: WeatherCondition; highF: number; lowF: number}[] = [
   {date: '2026-10-07', condition: 'sun', highF: 78, lowF: 61},
   {date: '2026-10-08', condition: 'cloud', highF: 72, lowF: 59},
@@ -379,7 +378,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
   const iso = ([date, time]: [string, string]) => zoned(date, time);
 
   db.transaction(tx => {
-    // The sample's own reminder defaults, as the boards draw them; a fresh install starts at None (D49).
+    // The sample's own reminder defaults, as the boards draw them; a fresh install starts at None.
     tx.insert(t.settings).values({section: 'reminders', value: {event_minutes_before: 10, task_time: '09:00'}, updatedAt: createdAt}).run();
     const accountIds = new Map<AccountLabel, number>();
     ACCOUNTS.forEach((account, position) => {
@@ -423,7 +422,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         receivedAt,
         unread: email.unread,
         lane: email.lane,
-        // Sorted as it arrived, so the Inbox's pane has today's sorting to count (SV-218).
+        // Sorted as it arrived, so the Inbox's pane has today's sorting to count.
         triagedAt: email.lane ? receivedAt : null,
         kind: email.kind ?? null,
         type: email.type ?? null,
@@ -441,7 +440,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
       });
     });
 
-    // SV-274: USPS's digests, out of the Inbox, with the days and scans the rail shows.
+    // USPS's digests, out of the Inbox, with the days and scans the rail shows.
     insertDevDigests(tx, accountIds.get('Personal')!);
 
     const calendarIds = new Map<string, number>();
@@ -477,11 +476,11 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
     });
 
     for (const day of SAMPLE_WEATHER) tx.insert(t.weatherDays).values({...day, fetchedAt: zoned('2026-10-07', '09:00')}).run();
-    // F6: the Todoist projects the tasks are in, for the editor's project picker, in colours the
-    // task rings take (SV-25): Inbox in Todoist's default charcoal, School near Classes' cyan.
+    // The Todoist projects the tasks are in, for the editor's project picker, in colours the
+    // task rings take: Inbox in Todoist's default charcoal, School near Classes' cyan.
     ([['Inbox', 'charcoal'], ['School', 'sky_blue'], ['Home', 'orange']] as const).forEach(([name, colour], position) =>
       tx.insert(t.todoistProjects).values({providerId: `seed-project-${position + 1}`, name, position, inbox: name === 'Inbox', colour}).run());
-    // F6b: Todoist's labels, for the editor's labels picker.
+    // Todoist's labels, for the editor's labels picker.
     ['errand', 'school', 'waiting'].forEach((name, position) => tx.insert(t.todoistLabels).values({providerId: `seed-label-${position + 1}`, name, position}).run());
   });
   const store = {sqlite, db, timeZone: SEED_TIME_ZONE, now: () => new Date(SEED_NOW), keyring: null};

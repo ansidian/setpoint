@@ -1,9 +1,9 @@
-// The model provider over plain HTTPS (bring your own key, BRIEF.md › Settings › AI): Anthropic's
-// Messages API, asked to answer through one forced tool. Triage uses it (B3); Alfred uses its
-// conversation form at the end (B4). The base URL is configurable so tests point it at a fake on
+// The model provider over plain HTTPS (bring your own key, set in Settings › AI): Anthropic's
+// Messages API, asked to answer through one forced tool. Triage uses it; Alfred uses its
+// conversation form at the end. The base URL is configurable so tests point it at a fake on
 // 127.0.0.1; no test or dev run reaches a real provider.
 //
-// Harvested from v1's `triage-model-client` (SV-4): the forced tool, thinking off on Anthropic
+// The forced tool, thinking off on Anthropic
 // (Sonnet 5 and Opus 5 think by default, which conflicts with a forced tool), the cacheable system
 // and tool prefix, a long wedge-breaker timeout, and usage read from every answer. Refusals become
 // ProviderErrors for the one retry policy: a refused key (401, 403) needs a new key, 429 waits
@@ -16,9 +16,9 @@
 // so they get `auto` and the system prompt's instruction to answer with the tool; Sonnet 5.5 refuses
 // `thinking: disabled` and turns thinking off with `between_tools` instead; Opus 5.5 and the Fable
 // and Mythos models can't turn thinking off at all, so it's left out. Haiku 5.5 and older models keep
-// v1's forced tool with thinking off.
+// the forced tool with thinking off.
 //
-// A call may also allow Claude's web search (Jobs's JD lookup, J3): the server tool goes beside the
+// A call may also allow Claude's web search (Jobs's JD lookup): the server tool goes beside the
 // answer's tool, the model chooses when to answer (`auto`), a turn the API pauses (`pause_turn`) is
 // sent back to go on, and the searches are counted for the ledger, which prices them.
 import type {AiProvider} from '@setpoint/shared';
@@ -76,7 +76,7 @@ export interface ModelClient {
 export interface ClientOptions {
   apiKey: string;
   baseUrl?: string;
-  // v1's 120 s: models legitimately run long; this breaks a wedged connection, it isn't a budget.
+  // 120 s: models legitimately run long; this breaks a wedged connection, it isn't a budget.
   timeoutMs?: number;
 }
 
@@ -202,7 +202,7 @@ export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeo
   };
 }
 
-// ---- Conversations with tools (B4: Alfred) ----
+// ---- Conversations with tools (Alfred) ----
 //
 // Alfred talks with a model over several turns: the model asks for tools, Setpoint runs them and
 // sends back their results, until it answers. Same key, endpoint, refusals and usage as

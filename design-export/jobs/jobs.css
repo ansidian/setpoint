@@ -75,7 +75,7 @@
 .sp .gh .ms { font-size: 14px; color: var(--ink3); }
 .sp .gh .lnk { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink3); }
 
-/* Needs you: one queue above the table. Its count is ink2, not caution: Jobs informs, never nags (D313). */
+/* Needs you: one queue above the table. Its count is ink2, not caution: Jobs informs, never nags. */
 .sp .jb-need { display: grid; grid-template-columns: 12px 18px minmax(0,1fr) auto; column-gap: 10px; row-gap: 7px; padding: 10px 16px 11px 12px; border-bottom: 1px solid var(--hair); color: var(--ink2); flex: none; position: relative; }
 .sp .jb-need.hov { background: var(--sub); }
 .sp .jb-need.cur { background: var(--sub2); }
@@ -308,8 +308,8 @@
 .sp .cell-demo .cap { font-size: 11.5px; color: var(--ink3); font-variant-numeric: tabular-nums; }
 .sp .spec-sec { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); margin-top: 6px; }
 
-/* ---------- Round 4's review (decisions 64–73) ---------- */
-/* A tracked application: Applied is its email's date (decision 69) */
+/* ---------- Round 4's review ---------- */
+/* A tracked application: Applied is its email's date */
 .sp .jb-first { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; }
 .sp .jb-first .ms { font-size: 16px; }
 /* A lookup under way: the shared spinner (900 ms a turn) and the JD's skeleton, breathing */

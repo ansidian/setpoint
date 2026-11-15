@@ -1,9 +1,9 @@
-// Triage's job worker on B1's engine: one job per new email (`triage:<id>`), run through the
+// Triage's job worker on the sync engine: one job per new email (`triage:<id>`), run through the
 // pipeline with the models Settings › AI chooses. Each model call is written to the AI usage ledger
 // with its tokens and cost, and to triage's health; a refusal fails the job by the one retry policy
 // and the email waits in Unsorted. Every few minutes, and as soon as triage recovers or its keys or
 // models change, Unsorted mail is queued again. New Attention and FYI mail is sent by ntfy once
-// sorted, each lane as Settings › Notifications allows (SV-96).
+// sorted, each lane as Settings › Notifications allows.
 import type {AiModelChoiceOut, AiPurpose} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -35,7 +35,7 @@ export interface TriageWorkerOptions {
   resortEveryMs?: number;
   // Emails triaged at once, so a burst of mail doesn't meet a rate limit all together.
   concurrency?: number;
-  // One model call's limit (v1's 120 s).
+  // One model call's limit (120 s by default).
   timeoutMs?: number;
   // Sends new Attention and FYI mail; none without it.
   notifier?: Notifier | null;

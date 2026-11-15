@@ -1,4 +1,4 @@
-// Triage's policy as tables (BUILD-PLAN.md › B3 › Done when): the protected class, FYI when unsure,
+// Triage's policy as tables: the protected class, FYI when unsure,
 // codes, escalation, rule matching and the rules-only history reading.
 import type {Lane, ProtectedReason, RuleMatch} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -43,7 +43,7 @@ describe('protectedFromText: the protected class in plain words', () => {
     ['Security incident', 'Rotate your keys and review logs for those services for unusual activity.', null],
     ['Fraud alert', 'An unauthorized charge of $812.00 was made on your card.', 'money_leaving'],
     ['Transfer notice', 'A transfer of $2,500.00 was sent from your checking account.', 'money_leaving'],
-    // Routine security mail stays out (BRIEF.md › Security mail: cheap to check, not protected).
+    // Routine security mail stays out: cheap to check, not protected.
     ['Security alert', 'A new sign-in to your Google Account on a MacBook Pro near Los Angeles.', null],
     ['Claude was granted access to your Google Account', '', null],
     ['You sent $42.00 to Sam Lee', 'You sent $42.00 USD to Sam Lee.', null],
@@ -56,11 +56,11 @@ describe('protectedFromText: the protected class in plain words', () => {
 
 describe('settle: the policy, in order', () => {
   test.each<[string, Partial<SettleInput>, {lane: Lane; protected?: boolean; code?: string | null; kind?: string | null; type?: string | null}]>([
-    // Unsure defaults to FYI, never Attention (decision 30).
+    // Unsure defaults to FYI, never Attention.
     ['nothing sure: FYI', {lane: null}, {lane: 'fyi', kind: 'other'}],
     ['nothing sure, with a reading: FYI with what was read', {lane: null, reading: reading({lane: 'attention', kind: 'career', confidence: 0.4})}, {lane: 'fyi', kind: 'career'}],
     ['a decided lane stands', {lane: 'attention', reading: reading({lane: 'attention', kind: 'career', type: null})}, {lane: 'attention', kind: 'career'}],
-    // Protected: always Attention, whatever a rule decided (decision 29).
+    // Protected: always Attention, whatever a rule decided.
     ['a protected email a rule sent to Noise is Attention', {lane: 'noise', textProtected: 'password_changed'}, {lane: 'attention', protected: true, kind: 'security', type: 'alert'}],
     ['a protected email a rule sent to FYI is Attention', {lane: 'fyi', kind: 'updates', textProtected: 'recovery_changed'}, {lane: 'attention', protected: true, kind: 'security'}],
     ['unsure but protected: Attention', {lane: null, textProtected: 'account_locked'}, {lane: 'attention', protected: true}],
@@ -76,7 +76,7 @@ describe('settle: the policy, in order', () => {
     ['Noise loses its kind', {lane: 'noise', reading: reading({kind: 'updates'})}, {lane: 'noise', kind: null}],
     ['incomplete evidence can\'t make it Noise', {lane: 'noise', incomplete: true}, {lane: 'fyi', kind: 'other'}],
     ['a rule\'s kind and type win', {lane: 'fyi', kind: 'money', type: 'statement', reading: reading()}, {lane: 'fyi', kind: 'money', type: 'statement'}],
-    // Backfilled history never enters Attention, protected or not (SV-4 D19).
+    // Backfilled history never enters Attention, protected or not.
     ['history: protected stays protected, in FYI', {lane: null, history: true, textProtected: 'password_changed'}, {lane: 'fyi', protected: true, kind: 'security', type: 'alert'}],
     ['history: a rule sending protected mail to Noise can\'t move it either', {lane: 'noise', history: true, textProtected: 'account_locked'}, {lane: 'fyi', protected: true, kind: 'security'}],
     ['history: money leaving is FYI · Money', {lane: 'fyi', history: true, textProtected: 'money_leaving'}, {lane: 'fyi', protected: true, kind: 'money'}],
@@ -129,7 +129,7 @@ const email = (changes: Partial<RuleEmail> = {}): RuleEmail => ({
   fromName: 'Woodgrove Bank', fromAddress: 'no-reply@alerts.woodgrovebank.example', subject: 'Your statement is ready', snippet: '', bodyText: 'Your statement is ready to view.', ...changes,
 });
 
-describe('matchesRule: v1\'s match shape', () => {
+describe('matchesRule: the match shape', () => {
   test.each<[string, RuleMatch, Partial<RuleEmail>, {organisation: string | null; type: null | 'newsletter'} | null, boolean]>([
     ['a domain matches its subdomains', {from_domains: ['woodgrovebank.example']}, {}, null, true],
     ['but not a lookalike', {from_domains: ['woodgrovebank.example']}, {fromAddress: 'x@notwoodgrovebank.example'}, null, false],
@@ -178,7 +178,7 @@ describe('ruleDecides: hard-risk mail is the strong model\'s unless the user nam
     expect(ruleDecides(rule(changes), hardRisk)).toBe(decides);
   });
 
-  test('hasHardRisk reads v1\'s words', () => {
+  test('hasHardRisk reads the hard-risk words', () => {
     expect(hasHardRisk(email({subject: 'Payment due Oct 21'}))).toBe(true);
     expect(hasHardRisk(email({bodyText: 'Your account is past due.'}))).toBe(true);
     expect(hasHardRisk(email())).toBe(false);

@@ -1,4 +1,4 @@
-// Mail's read queries over the message record (SV-2 decision D4): the Inbox's groups and counts,
+// Mail's read queries over the message record: the Inbox's groups and counts,
 // All by day, and one email. Every view is a query; nothing is copied per view. The rules for what
 // the Inbox shows and counts are src/domain/inbox.ts.
 import type {AllOut, CommandOut, GmailLinkOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
@@ -17,7 +17,7 @@ import type {Store} from '../store.ts';
 type MessageRow = typeof t.messages.$inferSelect;
 type Candidate = MessageRow & InboxCandidate & {command: CommandOut | null; attachmentCount: number};
 
-/** PDF, image and CSV open a preview (BRIEF.md › The reader). */
+/** PDF, image and CSV open a preview. */
 const PREVIEWABLE = /^(application\/pdf|image\/(png|jpeg|gif|webp)|text\/csv)$/;
 
 /** Each email's active command: its own, or the Mark all as read it's waiting on. */
@@ -36,7 +36,7 @@ function commandsByMessage(store: Store): Map<number, CommandOut> {
 function candidates(store: Store, accountId?: number): Candidate[] {
   const commands = commandsByMessage(store);
   const attachments = new Map(store.db.select({id: t.attachments.messageId, n: count()}).from(t.attachments).groupBy(t.attachments.messageId).all().map(row => [row.id, row.n]));
-  // SV-274: USPS's digest is out of the Inbox and its counts; its scans are the agenda rail's.
+  // USPS's digest is out of the Inbox and its counts; its scans are the agenda rail's.
   const shown = eq(t.messages.uspsDigest, false);
   return store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all().map(row => {
     const command = commands.get(row.id) ?? null;
@@ -76,7 +76,7 @@ export function mailCounts(store: Store): MailCountsOut {
 }
 
 /**
- * How the mail day is going (SV-218): today's counts since the user's midnight, and every email kept
+ * How the mail day is going: today's counts since the user's midnight, and every email kept
  * with its size (its text and HTML as stored, and its attachments as the provider gave their size)
  * and the oldest one's arrival.
  */
@@ -115,7 +115,7 @@ export function inbox(store: Store, accountId?: number): InboxOut {
 /** All: every email, Noise included, newest first, by local day; trashed mail and USPS's digest left out. */
 export function allMail(store: Store, input: {account_id?: number; before?: string; limit: number}): AllOut {
   const commands = commandsByMessage(store);
-  // SV-274: USPS's digest is the agenda rail's, out of All as it's out of the Inbox; search finds it.
+  // USPS's digest is the agenda rail's, out of All as it's out of the Inbox; search finds it.
   const shown = eq(t.messages.uspsDigest, false);
   let where = input.account_id ? and(shown, eq(t.messages.accountId, input.account_id)) : shown;
   if (input.before) {
@@ -179,11 +179,11 @@ export function messageDetail(store: Store, messageId: number): MessageOut {
   };
 }
 
-/** Open in Gmail's address for an email: its account and Gmail's message id (D554). */
+/** Open in Gmail's address for an email: its account and Gmail's message id. */
 export const gmailUrl = (address: string, providerId: string) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(address)}#all/${encodeURIComponent(providerId)}`;
 
 /**
- * SV-270 (D555): the email a Gmail address names, by its Gmail account's address (any case) and
+ * The email a Gmail address names, by its Gmail account's address (any case) and
  * Gmail's message id; null when Setpoint doesn't have it, or has only trashed it.
  */
 export function gmailLink(store: Store, address: string, providerId: string): GmailLinkOut {

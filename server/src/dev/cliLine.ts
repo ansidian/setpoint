@@ -1,4 +1,4 @@
-// The CLI line `npm run try` prints for its copy (SV-173). `npm run cli` runs in server/ (npm runs a
+// The CLI line `npm run try` prints for its copy. `npm run cli` runs in server/ (npm runs a
 // workspace's script there), so the data dir goes in whole: a relative one opens server/data/….
 import path from 'node:path';
 

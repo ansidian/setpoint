@@ -1,13 +1,13 @@
-// Jobs in Settings (J8; DESIGN.md › Jobs in Settings; boards 39a, 39b). Settings' shell and its AI page
+// Jobs in Settings (boards 39a, 39b). Settings' shell and its AI page
 // draw these through their wiring lines (server/src/jobs/README.md) and know nothing else of Jobs.
 //
 // - Settings › Jobs (39a): "62 applications" by the title; the one switch, which turns Jobs on (the
 //   history pass starts, and Jobs folds into the sidebar under News) or off; Reads, a select on each
-//   account for what Jobs reads there (#273, D383), a change while it's on starting the history pass
+//   account for what Jobs reads there, a change while it's on starting the history pass
 //   over what's new to it; and History: the pass's progress or when it finished, and
 //   From history's waiting items with Show, which opens Jobs with them unfolded.
-// - Settings › AI's Jobs group (39b, D315): its three models by name, not selects (override 26). Its
-//   spend shows once (D515), on Usage this month's Jobs row: its three parts and "no cap" (decision
+// - Settings › AI's Jobs group (39b): its three models by name, not selects. Its
+//   spend shows once, on Usage this month's Jobs row: its three parts and "no cap" (decision
 //   61), the reason in the line's tip; the label's total takes it in.
 // - Jobs off's Turn on (38c) opens Settings › Jobs with the switch focused, so turning it on is a
 //   choice made where the accounts it reads are listed.
@@ -123,8 +123,8 @@ export function JobsSettingsPage() {
 }
 
 /**
- * Settings › AI's Jobs group (39b): the models by name; this month's spend is Usage this month's
- * (D515). `label` names a model from Settings › AI's own answer; until that has come (null), the
+ * Settings › AI's Jobs group (39b): the models by name; this month's spend is Usage this month's.
+ * `label` names a model from Settings › AI's own answer; until that has come (null), the
  * group is its skeleton.
  */
 export function JobsAiGroup({label}: {label: ((model: string) => string) | null}) {
@@ -143,7 +143,7 @@ export function JobsAiGroup({label}: {label: ((model: string) => string) | null}
   );
 }
 
-/** Usage this month's Jobs row (39b), in its three parts and with no cap (D515); nothing until it's answered. */
+/** Usage this month's Jobs row (39b), in its three parts and with no cap; nothing until it's answered. */
 export function JobsUsageRow() {
   const {data: ai} = useResource<JobsAiOut>(AI_PATH);
   if (!ai) return null;

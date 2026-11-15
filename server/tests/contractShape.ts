@@ -1,4 +1,4 @@
-// SV-85: the rule the iPhone app's contract test applies. A fixture is a recorded response; its shape
+// The rule the iPhone app's contract test applies. A fixture is a recorded response; its shape
 // is what an app decoding it by hand relies on: the keys every object at a path has, and the JSON
 // kinds each path has taken (merged across an array's elements). A live response breaks an older
 // app when a key goes, or a path takes a kind the fixture never showed. A new key never does.

@@ -1,6 +1,6 @@
-// Jobs's store against an ephemeral database (J1): its own migrations beside the app's, an
+// Jobs's store against an ephemeral database: its own migrations beside the app's, an
 // application with its events and posting round-tripping to the detail, an event outliving its
-// email (decision 63), and the routes behind the session.
+// email, and the routes behind the session.
 import {applicationSchema} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {expect, test} from 'vitest';
@@ -66,7 +66,7 @@ test('an application with its events and posting round-trips to its detail', () 
   expect(() => applicationDetail(w.store, id + 1)).toThrow('No such application.');
 });
 
-test('an event keeps its copy after its email is gone, and only loses the link (decision 63)', () => {
+test('an event keeps its copy after its email is gone, and only loses the link', () => {
   const w = world({seed: true});
   const db = jobsDb(w.store.sqlite);
   const event = db.select().from(j.jobsEvents).where(eq(j.jobsEvents.subject, 'Interview availability for Software Engineer I')).get()!;

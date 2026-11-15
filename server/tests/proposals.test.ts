@@ -1,4 +1,4 @@
-// Proposals (BRIEF.md › The reader; DESIGN.md › Proposal; board 08): pre-filled from the email's
+// Proposals (board 08): pre-filled from the email's
 // subject, key date and the body line naming that date, each field marked when the email says it,
 // with the conflict line against the day's items. Nothing is created until Create.
 import {eq} from 'drizzle-orm';
@@ -38,7 +38,7 @@ describe('the pure rules', () => {
     expect(placeIn(line, organisation)).toBe(place);
   });
 
-  // SV-263: real mail spreads the date, the time and the address over lines; these bodies are in
+  // Real mail spreads the date, the time and the address over lines; these bodies are in
   // the shapes of an interview scheduler's, a maintenance notice's and a shop's emails.
   const LA = 'America/Los_Angeles';
   const read = (bodyText: string, keyDate: string) => {
@@ -82,11 +82,11 @@ describe('the pure rules', () => {
     ['a time with no zone is the user\'s own',
       'Dinner: Fri, Oct 9 · 7 PM · 2118 Sunset Blvd',
       '2026-10-09', {date: '2026-10-09', start: '19:00', end: null, place: '2118 Sunset Blvd'}],
-  ])('SV-263: %s', (_, body, keyDate, fields) => {
+  ])('%s', (_, body, keyDate, fields) => {
     expect(read(body, keyDate)).toEqual(fields);
   });
 
-  test('SV-263: what the lines around the date gave is marked "from the email"', () => {
+  test('what the lines around the date gave is marked "from the email"', () => {
     const email = {subject: 'Interview', organisation: null, keyDate: '2026-11-12', bodyText: 'In-person interview\n- Thursday, November 12\n- 9 am to 9:45 am PT\n\n500 Harbor Blvd, Fairview, CA 90000'};
     expect(fromEmail(email, proposalFields(email, LA), LA)).toEqual(['title', 'date', 'time', 'place']);
     const stream = {subject: 'Launch stream', organisation: null, keyDate: '2026-11-20', bodyText: 'Launch stream: Fri, Nov 20 · 1 am ET'};
@@ -116,8 +116,8 @@ describe('the pure rules', () => {
   test.each([
     ['a free event over it', [{...day[1]!, transparency: 'transparent' as const}], {free: true, label: 'Free that evening'}],
     ['a free one and a busy one', [{...day[1]!, title: 'Workshop', transparency: 'transparent' as const}, {...day[1]!, transparency: 'opaque' as const}], {free: false, label: 'Overlaps Study group · 1h 30m'}],
-  ])('SV-180: the conflict line leaves free events out: %s', (_, items, line) => expect(conflictLine(dinner, items)).toEqual(line));
-  test('SV-180: an all-day proposal leaves free events out too', () => {
+  ])('the conflict line leaves free events out: %s', (_, items, line) => expect(conflictLine(dinner, items)).toEqual(line));
+  test('an all-day proposal leaves free events out too', () => {
     expect(conflictLine({all_day: true, starts_at: null, ends_at: null, startHour: null}, [{...day[0]!, transparency: 'transparent'}, day[2]!])).toEqual({free: true, label: 'Free that day'});
   });
 
@@ -191,7 +191,7 @@ describe('proposals over the seed', () => {
     expect(allDay.conflict).toEqual({free: true, label: 'Free that day'});
   });
 
-  test('SV-263: each field is Alfred\'s when he gives one, else the invite\'s, else the text\'s', () => {
+  test('each field is Alfred\'s when he gives one, else the invite\'s, else the text\'s', () => {
     const w = world({seed: true});
     const exam = idOf(w, 'Final exam schedule · CS 101');
     const invite = {title: 'CS 101 final', all_day: false, starts_at: '2026-12-10T02:00:00.000Z', ends_at: '2026-12-12T02:00:00.000Z', start_date: null, end_date: null, place: 'Hall B'};
@@ -206,7 +206,7 @@ describe('proposals over the seed', () => {
     expect(proposeFromMessage(w.store, exam, 'event', {}, allDay)).toMatchObject({item: {title: 'CS 101 final exam', all_day: true, start_date: '2026-12-14', end_date: '2026-12-16', starts_at: null, place: 'Contoso University · Room 214'}, from_email: ['title', 'date', 'place']});
   });
 
-  test('SV-270 (D553–D555): the description\'s From: line links to the email in Gmail, as Open in Gmail does; another provider\'s has no link', async () => {
+  test('the description\'s From: line links to the email in Gmail, as Open in Gmail does; another provider\'s has no link', async () => {
     const w = world({seed: true});
     const c = await signedIn(w);
     const lease = idOf(w, 'Lease renewal terms');
@@ -216,7 +216,7 @@ describe('proposals over the seed', () => {
     expect(proposeFromMessage(w.store, idOf(w, 'Bill is ready'), 'task').source).toEqual({subject: 'Bill is ready', url: null});
   });
 
-  test('SV-270 (D555): a description\'s Gmail link is looked up by its account, in any case, and Gmail\'s id', async () => {
+  test('a description\'s Gmail link is looked up by its account, in any case, and Gmail\'s id', async () => {
     const w = world({seed: true});
     const c = await signedIn(w);
     const lease = idOf(w, 'Lease renewal terms');

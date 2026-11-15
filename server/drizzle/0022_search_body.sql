@@ -1,6 +1,6 @@
 ALTER TABLE `messages` ADD `search_body` text DEFAULT '' NOT NULL;--> statement-breakpoint
 ALTER TABLE `messages` ADD `search_terms` text;--> statement-breakpoint
--- Hand-written below this line (SV-135): Drizzle can't express FTS5 virtual tables or triggers, so
+-- Hand-written below this line: Drizzle can't express FTS5 virtual tables or triggers, so
 -- drizzle-kit generated only the statements above. If this migration is regenerated, append this
 -- block again unchanged. It replaces 0002_mail's `messages_fts`: the body it indexes is now
 -- `search_body`, and the summary and search terms join it. Both of those arrive after insert, so

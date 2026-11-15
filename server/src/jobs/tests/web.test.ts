@@ -1,4 +1,4 @@
-// The JD lookup's reads of the web (J3, Done when): each platform's invented fixture (Greenhouse's
+// The JD lookup's reads of the web: each platform's invented fixture (Greenhouse's
 // job board API, Lever's postings API, Ashby's posting API, each in its real shape) and the posting
 // pages parse into postings with their text as markdown, faked at the HTTP boundary (./fakeWeb.ts).
 // Every request names Setpoint in its User-Agent; a board or posting that isn't there is nothing, and
@@ -84,7 +84,7 @@ describe('the platforms\' public APIs', () => {
   });
 });
 
-describe('GovernmentJobs\' search (D389)', () => {
+describe('GovernmentJobs\' search', () => {
   const result = (title: string, employer: string, location: string | null, path: string) => ({title, employer, location, link: `${TEST_GOVERNMENT_JOBS}/jobs/${path}`, postedAt: null, requisitionId: null});
 
   test('its results parse: a title, an employer, a place and a link, each with no date until it\'s read', () => {
@@ -191,7 +191,7 @@ describe('a link', () => {
     expect(await readLink(fake.web, 'https://click.indeed.example/rc/clk?jk=7c1e9a24f0b3', signal)).toMatchObject({title: 'Full Stack Developer', site: 'Indeed'});
   });
 
-  // What a search candidate is, once opened (D388): gone is dropped; unreadable stays, since the user can open it in a browser.
+  // What a search candidate is, once opened: gone is dropped; unreadable stays, since the user can open it in a browser.
   const html = {'content-type': 'text/html'};
   test.each<[string, Parameters<Awaited<ReturnType<typeof fakeWeb>>['serve']>[1], 'gone' | 'unreadable']>([
     ['a 404', {status: 404, body: 'Not Found', headers: html}, 'gone'],

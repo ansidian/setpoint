@@ -1,5 +1,5 @@
-// One flat config for every workspace, with React's hook rules for web/ and the boundaries
-// BUILD-PLAN.md › Stack and layout asks the lint to enforce.
+// One flat config for every workspace, with React's hook rules for web/ and the boundaries the
+// lint enforces.
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import js from '@eslint/js';
@@ -13,7 +13,7 @@ const providerSdks = {
     'googleapis', '@googleapis/*', 'google-auth-library', '@google-cloud/*', '@googlemaps/*',
     'imapflow', 'imap', 'node-imap', 'mailparser', '@doist/*', '@anthropic-ai/*',
   ],
-  message: 'Provider SDKs belong in server/src/providers/ (BUILD-PLAN.md › Boundaries the lint enforces).',
+  message: 'Provider SDKs belong in server/src/providers/.',
 };
 // ntfy is notify()'s delivery: nothing outside server/src/notify/ knows about it.
 const ntfy = {
@@ -32,18 +32,18 @@ const serverCode = {
 };
 const network = ['fetch', 'EventSource', 'XMLHttpRequest', 'WebSocket'].map(name => ({
   name,
-  message: 'Only web/src/api/ talks to the server (BUILD-PLAN.md › Boundaries the lint enforces).',
+  message: 'Only web/src/api/ talks to the server.',
 }));
 const windowNetwork = ['window', 'globalThis', 'self'].flatMap(object => network.map(({name, message}) => ({object, property: name, message})));
 
-// The browser checks' own rules. A fixed pause says why on the line before it (SV-40): one that
-// waits for something to happen should wait for it (`until`, a waiting locator), as a pause long
-// enough on an idle machine is too short on a busy one; a "nothing happened" check keeps its pause
-// and says so. A bound shorter than the 5 s default
-// says why too (SV-49): "at once" is proven by holding the server's answer, not by a short limit,
-// which only adds a way for a slow machine to fail. A one-shot read of a computed style or box goes
-// through `rested` (nothing moving first) or polls with `until`, or says why on the line before it
-// (SV-75): an element mid-entrance, mid-fade or mid-slide measures as it passes, not where it rests.
+// The browser checks' own rules. A fixed pause says why on the line before it: one that waits for
+// something to happen should wait for it (`until`, a waiting locator), as a pause long enough on an
+// idle machine is too short on a busy one; a "nothing happened" check keeps its pause and says so.
+// A bound shorter than the 5 s default says why too: "at once" is proven by holding the server's
+// answer, not by a short limit, which only adds a way for a slow machine to fail. A one-shot read
+// of a computed style or box goes through `rested` (nothing moving first) or polls with `until`, or
+// says why on the line before it: an element mid-entrance, mid-fade or mid-slide measures as it
+// passes, not where it rests.
 // A named function that reads is a reader, and so is one that uses a reader: each use of one is a
 // read, checked where it's used. A read explained on the line before its own statement inside the
 // function (at rest already, or meant to catch motion) is settled there; a doc comment on the
@@ -67,7 +67,7 @@ const browserChecks = {
       meta: {
         type: 'problem',
         schema: [],
-        messages: {unexplained: 'Say why this pause on the line before it, or wait for what it waits for (`until`, a waiting locator) (SV-40).'},
+        messages: {unexplained: 'Say why this pause on the line before it, or wait for what it waits for (`until`, a waiting locator).'},
       },
       create(context) {
         return {
@@ -81,7 +81,7 @@ const browserChecks = {
       meta: {
         type: 'problem',
         schema: [],
-        messages: {unexplained: 'A bound under 5 s says why on the line before it; to show "at once", hold the server\'s answer and use the default bound (SV-49).'},
+        messages: {unexplained: 'A bound under 5 s says why on the line before it; to show "at once", hold the server\'s answer and use the default bound.'},
       },
       create(context) {
         const check = (node, bound) => {
@@ -99,7 +99,7 @@ const browserChecks = {
       meta: {
         type: 'problem',
         schema: [],
-        messages: {unrested: 'Read a computed style or box through `rested` (nothing moving first) or `until`, or say why on the line before it (SV-75).'},
+        messages: {unrested: 'Read a computed style or box through `rested` (nothing moving first) or `until`, or say why on the line before it.'},
       },
       create(context) {
         const {sourceCode} = context;
@@ -161,7 +161,7 @@ const browserChecks = {
   },
 };
 
-// Jobs (after News) is a module that can be removed whole (D303): nothing outside its three folders
+// Jobs (after News) is a module that can be removed whole: nothing outside its three folders
 // imports them but its wiring points, the files server/src/jobs/README.md lists. Relative imports are
 // resolved, so `../jobs/…` from mail is refused wherever it's written.
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -177,7 +177,7 @@ const moduleBoundary = {
       meta: {
         type: 'problem',
         schema: [],
-        messages: {outside: 'Only Jobs\'s wiring points import it (server/src/jobs/README.md); mail never imports Jobs (D303).'},
+        messages: {outside: 'Only Jobs\'s wiring points import it (server/src/jobs/README.md); mail never imports Jobs.'},
       },
       create(context) {
         const check = (node, source) => {
@@ -218,7 +218,7 @@ export default tseslint.config(
     languageOptions: {globals: globals.browser},
   },
   {
-    // Setpoint on job boards (SV-174): its scripts and tests run in Chromium, with the extension's APIs;
+    // Setpoint on job boards: its scripts and tests run in Chromium, with the extension's APIs;
     // its build and Vitest config run in Node.
     files: ['extension/src/**/*.ts', 'extension/tests/**/*.ts'],
     languageOptions: {globals: {...globals.browser, ...globals.webextensions}},

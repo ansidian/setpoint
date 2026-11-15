@@ -1,37 +1,35 @@
-// The editor's title as it's typed (DESIGN.md › Editor; board 13): "Dinner with Sam fri 7-9pm
+// The editor's title as it's typed (board 13): "Dinner with Sam fri 7-9pm
 // @Blue Door" is the title "Dinner with Sam", Fri, Oct 9 from 7 to 9 PM, at Blue Door, each parsed
-// part marked where it was typed. Rewritten from v1's `parseCalendarTitle` and its
-// `calendarTitleIntent` / `calendarRecurrenceClauseModel` through the harvest gate (darma SV-15):
-// v1 handed the dates to Chrono in a fixed Pacific zone; v2 reads the few phrases the editor needs
-// itself, as local days and minutes, so every mark has its exact place in the text.
+// part marked where it was typed. It reads the few phrases the editor needs itself, as local days
+// and minutes, so every mark has its exact place in the text.
 //
 // What it reads, anywhere in the title:
 // - a day: today, tonight, tomorrow (tmr, tmrw); a weekday (the next one, today counting; "next
 //   fri" the one after); "oct 12", "12 oct", "10/12", "10/12/26", "2026-10-12" (a month and day
-//   already past this year is next year's); "on" before any of them. Days counted from today (SV-113,
-//   D294): "in 3 days", "in 2 weeks", "in 1 month" (that month's last day when it's shorter); "next
+//   already past this year is next year's); "on" before any of them. Days counted from today:
+//   "in 3 days", "in 2 weeks", "in 1 month" (that month's last day when it's shorter); "next
 //   week", its Monday; "this weekend" or "weekend", the coming Saturday (today on one), "next weekend"
 //   the one after, an event's all day Saturday–Sunday with no time; "end of week", the coming Friday;
 //   "end of month", "eom", "end of next month", the month's last day.
 // - a time: "7pm", "7:30 pm", "19:00", "noon", "midnight", "at" before any of them; a range "7-9pm",
 //   "7pm - 9pm", "11-1pm", "from 9 to 5pm" (a bare hour is a time only with am/pm or minutes, so
 //   "Gym 7" stays a title); minutes with no colon with am/pm, "345am", "745p", "1230 pm", or in a
-//   range with am/pm at either end, "930-1030am" (SV-116; "Room 1245" and "pages 101-105" stay
+//   range with am/pm at either end, "930-1030am" ("Room 1245" and "pages 101-105" stay
 //   words); a lone a or p only against the digits, so "2 a day" stays words; No end, the end at the start, for the same time twice ("2pm to 2pm") or
-//   "no end" by a time ("2pm no end", "no end 2pm"; SV-108).
-// - an event's length after "for" (SV-111, D291, D292): "for 15 min", "for 1.5h", "for 1 hour 20mins",
+//   "no end" by a time ("2pm no end", "no end 2pm").
+// - an event's length after "for": "for 15 min", "for 1.5h", "for 1 hour 20mins",
 //   "for 1h30"; digits only, in min(s)/minute(s), h/hr(s)/hour(s), d/day(s) and week(s). It ends the
 //   event that long after its start; with no time typed, `length` alone says it, for the reader's
 //   default start, but a length in whole days or weeks is all day over them ("Trip fri for 3 days" is
-//   Fri–Sun, D298). The first of a length or an end wins ("2-3pm for 2h" keeps "for 2h" as words).
-// - an event's span of days (SV-111, D292), as the Date field takes them: "oct 23–25", "oct 23 to 25",
+//   Fri–Sun). The first of a length or an end wins ("2-3pm for 2h" keeps "for 2h" as words).
+// - an event's span of days, as the Date field takes them: "oct 23–25", "oct 23 to 25",
 //   "oct 30 – nov 2", "fri to sun", "fri through sun", "from fri to sun", the last day read from the
 //   first ("fri to mon" runs into next week); a backwards one stays words. With no time it's all day
 //   over its `days`; with a time at each end ("fri 7pm to sun 3pm") one event across them; with one
 //   time or range ("oct 23–25 9am–5pm") that time each day, repeating daily until the last day.
 //   A task's line keeps lengths and spans as words.
-// - reminders (SV-112, D293), after "remind", "remind me" or "reminder" and no other words: an offset
-//   ("1h before", "30 mins before", "2 hours after", "at start"; D291's units) or a moment ("sun 8pm",
+// - reminders, after "remind", "remind me" or "reminder" and no other words: an offset
+//   ("1h before", "30 mins before", "2 hours after", "at start", in minutes, hours, days or weeks) or a moment ("sun 8pm",
 //   "tomorrow 9am", "at 6pm" on the item's own day), several joined by "and" or commas ("remind 1 day
 //   and 10 mins before"). Read before the days and times, so "sun 8pm" there isn't the item's day.
 //   Given what the item counts from (`remind`), each phrase is checked against it: past 4 weeks
@@ -39,34 +37,34 @@
 //   no date) every such phrase does. "remind" and a day with no time stays words too.
 // - repeats: daily, weekly, monthly, yearly, annually, biweekly; every day / week / month / year;
 //   every 2 weeks; every other mon; every mon, wed and fri; every weekday / weekend; first mon of
-//   every month. After one, when it ends (SV-113, D294): "until <day>", any day above, as UNTIL; "6
+//   every month. After one, when it ends: "until <day>", any day above, as UNTIL; "6
 //   times" or "for 6 times" as COUNT (an event's only: Todoist documents no count); "for 2 weeks"
 //   (days, weeks, months, years) as UNTIL the day before the first occurrence plus that, the first then the
 //   item's day. Without a repeat before them they stay words, and "for 2 days" is a length.
 // - "@Blue Door": a place, up to the next time, day, repeat or calendar (two letters at least), or
 //   just its picked text once a Places suggestion was picked for it, a link up to the next space,
-//   or up to a comma, which goes with it (darma SV-27).
+//   or up to a comma, which goes with it.
 // - "#Home": a task's project, when the projects are given: the longest project name it starts with
-//   (any case), else up to the next phrase as a place does; a pick or a comma ends it too (SV-25).
+//   (any case), else up to the next phrase as a place does; a pick or a comma ends it too.
 // - "#school": an event's calendar, when the calendars are given: the longest text a calendar's name
-//   starts with (any case), the first such calendar; "#1 priority" names none and stays (SV-25 D57).
+//   starts with (any case), the first such calendar; "#1 priority" names none and stays.
 // - "cal Classes": a calendar, by one of the calendars' names.
 //
-// Editing an item's title reads only what the edit typed (SV-90): the words the title already had
+// Editing an item's title reads only what the edit typed: the words the title already had
 // stay title words.
 import {addDays, daysBetween} from './format.ts';
 
 export type MarkKind = 'when' | 'place' | 'calendar' | 'project' | 'reminder';
 
 /**
- * A reminder the line read (SV-112): minutes before the item's moment (negative after it), or a
+ * A reminder the line read: minutes before the item's moment (negative after it), or a
  * moment, a local day and minutes after its midnight, which becomes an offset once the item's moment
  * is known in its time zone (`lineOffsets` in reminders.ts).
  */
 export type ReminderRead = {minutes: number} | {date: string; time: number};
 
 /**
- * What the line's reminders count from when it reads no day or time of its own (SV-112): the item's
+ * What the line's reminders count from when it reads no day or time of its own: the item's
  * day, and the minutes after midnight its moment falls at (an event's start, the slot's else 9:00 AM;
  * an all-day event's 0; a task's due time, else Settings' task time or 9:00 AM). `kept` is how many
  * reminders the item keeps beside the line's (picked in the editor, or an edited item's own).
@@ -101,14 +99,14 @@ export interface ParsedTitle {
   recurrence: string | null;
   // A known project by its own name ("#home" is "Home"), else as typed.
   project: string | null;
-  // An all-day event's days, its first and last counting: a span's ("oct 23–25" is 3; SV-111), a
-  // weekend's 2, or a length's in whole days with no time ("for 3 days"; SV-113, D298); else null.
+  // An all-day event's days, its first and last counting: a span's ("oct 23–25" is 3), a
+  // weekend's 2, or a length's in whole days with no time ("for 3 days"); else null.
   days: number | null;
   // Minutes a "for" length read ("for 1.5h" is 90), the end already counting it when a start was
-  // read; with none, the event starts at the default start and lasts this long (SV-111). Null when
-  // a length in whole days made `days` instead (D298).
+  // read; with none, the event starts at the default start and lasts this long. Null when
+  // a length in whole days made `days` instead.
   length: number | null;
-  // The reminders the line read, in order, the same one once; null for none (SV-112).
+  // The reminders the line read, in order, the same one once; null for none.
   reminders: ReminderRead[] | null;
 }
 
@@ -119,17 +117,17 @@ const MONTH = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 // A phrase ends at a space, punctuation or the end.
 const END = '(?=$|[\\s,.;!?])';
-// am/pm, or a lone a or p only against the digits: "2 a day" isn't 2 AM (SV-116).
+// am/pm, or a lone a or p only against the digits: "2 a day" isn't 2 AM.
 const MERIDIEM = '(?:\\s*(?:am|pm)|[ap])(?![a-z])';
 // An hour, its minutes after a colon or with none ("345am"), and its am/pm. `compact` is what has to
 // follow minutes with no colon.
 const clockPattern = (compact: string) =>
   `(\\d{1,2})(?:(?::|(?=\\d{2}${compact}))(\\d{2}))?(?:\\s+(?=(?:am|pm)(?![a-z])))?(am|pm|a|p)?`;
-// A time on its own: minutes with no colon only with its own am/pm ("345a", "1230 pm"; SV-116).
+// A time on its own: minutes with no colon only with its own am/pm ("345a", "1230 pm").
 const TIME = clockPattern(MERIDIEM);
 // A range's end: one with no colon may take its am/pm from the other ("930-1030am"); range() refuses one on neither.
 const RANGE_TIME = clockPattern('(?!\\d)');
-// Days counted from today (SV-113, D294): "in 3 days", "next week", "this weekend", "end of month".
+// Days counted from today: "in 3 days", "next week", "this weekend", "end of month".
 const RELATIVE = 'in\\s+\\d{1,3}\\s*(?:days?|d|weeks?|months?)(?![a-z])|(?:(?:this|next)\\s+)?weekend(?![a-z])|next\\s+week(?![a-z])'
   + '|end\\s+of\\s+(?:the\\s+)?(?:week|month|next\\s+month)(?![a-z])|eom(?![a-z])';
 const ORDINALS: Record<string, number> = {first: 1, '1st': 1, second: 2, '2nd': 2, third: 3, '3rd': 3, fourth: 4, '4th': 4, last: -1};
@@ -169,7 +167,7 @@ const meridiemOf = (text: string | undefined) => (text ? (text[0]!.toLowerCase()
  * A range's two ends. An end missing its am/pm takes the first reading after the start ("9am-5" is
  * 5 PM); a start missing its own takes the last reading before the end ("7-9pm" is 7 PM, "11-1pm"
  * 11 AM). With am/pm on neither, both need minutes or a 24-hour hour ("9:00-10:30", "13-15"). The
- * same time twice ("2-2pm", "14:00–14:00") is No end, the end at the start (SV-78, SV-108).
+ * same time twice ("2-2pm", "14:00–14:00") is No end, the end at the start.
  */
 function range(match: RegExpExecArray): {start: number; end: number} | null {
   const [, h1, m1, a1, h2, m2, a2] = match;
@@ -209,22 +207,22 @@ interface State {
   weeklyNeedsDay: boolean;
   // The weekdays a repeat names (Monday 0), for its first day when no date is given.
   repeatDays: number[];
-  // An event's line reads lengths and spans; a task's doesn't (SV-111).
+  // An event's line reads lengths and spans; a task's doesn't.
   event: boolean;
   length: number | null;
   // A span's last day, when it's all day or repeats each day; a span across days with a time at
   // each end is just its date, start and end.
   last: string | null;
-  // What reminder phrases count from; null, and they stay words (SV-112).
+  // What reminder phrases count from; null, and they stay words.
   remind: ReminderBase | null;
   // Each reminder phrase read, where it starts; a moment's null day is the item's own.
   reminders: {start: number; reads: ({minutes: number} | {date: string | null; time: number})[]}[];
-  // A weekend read as the day: an event's is all day Saturday–Sunday with no time (SV-113).
+  // A weekend read as the day: an event's is all day Saturday–Sunday with no time.
   weekend: boolean;
   // A length only in whole days and weeks, where its phrase starts: with no time it's all day over
-  // them (D298), with one that time each day over them (Andy, 2026-11-05; SV-208).
+  // them, with one that time each day over them.
   span: {at: number; days: number} | null;
-  // When the repeat ends (SV-113), where its phrase starts: a last day, a count, or a length from
+  // When the repeat ends, where its phrase starts: a last day, a count, or a length from
   // the first occurrence.
   ending: {start: number; until?: string; count?: number; length?: {value: number; unit: 'd' | 'w' | 'm' | 'y'}} | null;
 }
@@ -282,7 +280,7 @@ const REPEATS: Matcher[] = [
   }},
 ];
 
-/** A time on its own; "no end" by it is No end (SV-108), unless a length came first (SV-111). */
+/** A time on its own; "no end" by it is No end, unless a length came first. */
 function single(m: RegExpExecArray, s: State): boolean {
   if (s.start !== null) return false;
   const noEnd = /no\s+end/i.test(m[0]);
@@ -300,26 +298,26 @@ function single(m: RegExpExecArray, s: State): boolean {
 const TIMES: Matcher[] = [
   {kind: 'when', pattern: sticky(`(?:(?:at|from)\\s+)?${RANGE_TIME}\\s*(?:-|–|to|until)\\s*${RANGE_TIME}${END}`), apply: (m, s) => {
     const found = range(m);
-    // A length read first wins over an end (SV-111).
+    // A length read first wins over an end.
     if (!found || s.start !== null || s.length !== null) return false;
     [s.start, s.end] = [found.start, found.end];
     return true;
   }},
-  // A time, with "no end" before or after it for No end (SV-108); without it, once a length is read.
+  // A time, with "no end" before or after it for No end; without it, once a length is read.
   {kind: 'when', pattern: sticky(`(?:no\\s+end\\s+)?(?:at\\s+)?(?:(noon|midnight)|${TIME})(?:\\s+no\\s+end)?${END}`), apply: single},
   {kind: 'when', pattern: sticky(`(?:at\\s+)?(?:(noon|midnight)|${TIME})${END}`), apply: single},
 ];
 
-// ---------- Lengths and spans (SV-111) ----------
+// ---------- Lengths and spans ----------
 
-// A length's units (D291): min(s)/minute(s), h/hr(s)/hour(s), d/day(s), week(s); no "wk".
+// A length's units: min(s)/minute(s), h/hr(s)/hour(s), d/day(s), week(s); no "wk".
 const UNIT = '(?:minutes?|mins?|hours?|hrs?|h|days?|d|weeks?)(?![a-z])';
 const NUMBER = '\\d+(?:\\.\\d+)?';
 const UNIT_MINUTES: Record<string, number> = {m: 1, h: 60, d: 1440, w: 10080};
 
 const LENGTH: Matcher = {
   kind: 'when', pattern: sticky(`for\\s+(${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?)${END}`), apply: (m, s) => {
-    // A task's line keeps it as words, and the first of a length or an end wins (D292); whole days
+    // A task's line keeps it as words, and the first of a length or an end wins; whole days
     // are how many days it runs, so a time's end leaves them be.
     if (!s.event || s.length !== null || s.span !== null) return false;
     const minutes = minutesIn(m[1]!);
@@ -356,7 +354,7 @@ const LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*:|${MERIDIEM}))`
 const SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::?\\d{2})?${MERIDIEM}|\\d{1,2}:\\d{2})`;
 
 /**
- * A span's last day, read from its first (D292): a weekday the next on or after it, a bare day in its
+ * A span's last day, read from its first: a weekday the next on or after it, a bare day in its
  * month, a month and day past it next year's when its month is earlier ("dec 30 – jan 2"). Null
  * when it's backwards: before the first, or a month and day earlier in the first's own month.
  */
@@ -397,10 +395,10 @@ const SPAN: Matcher = {
   },
 };
 
-// ---------- When a repeat ends (SV-113) ----------
+// ---------- When a repeat ends ----------
 
 /**
- * When a repeat ends (SV-113, D294), only once one is read; the first ending wins. Without a repeat
+ * When a repeat ends, only once one is read; the first ending wins. Without a repeat
  * "until …" and a count stay words, and "for N days/weeks" is left to the length.
  */
 function ending(s: State, start: number, found: Omit<NonNullable<State['ending']>, 'start'>, orLength = false): boolean | 'words' {
@@ -425,7 +423,7 @@ const ENDINGS: Matcher[] = [
   }},
 ];
 
-// ---------- Reminders (SV-112, D293) ----------
+// ---------- Reminders ----------
 
 const DURATION = `${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?`;
 // Between a phrase's reminders: "and", a comma, or both.
@@ -525,7 +523,7 @@ function addMonths(date: string, months: number): string {
 }
 
 /**
- * A day counted from today (D294): "in N days/weeks/months" today plus N; "next week" Monday of next
+ * A day counted from today: "in N days/weeks/months" today plus N; "next week" Monday of next
  * week; "this weekend" or "weekend" the coming Saturday, today on a Saturday, "next weekend" the one
  * after; "end of week" the coming Friday (this week's, but next week's at the weekend); "end of month"
  * and "eom" this month's last day, "end of next month" next month's. Null when it isn't one.
@@ -593,7 +591,7 @@ function matchAt(text: string, index: number, matchers: Matcher[], state: State,
   return null;
 }
 
-// Words a place stops before, as v1's did ("@Blue Door at 7pm").
+// Words a place stops before ("@Blue Door at 7pm").
 const BOUNDARY_WORDS = /^(?:at|on|from|to)$/i;
 
 /** Whether a phrase other than a place starts at `index` (a place stops there); `#` too while projects or calendars are read. */
@@ -608,7 +606,7 @@ export const PLACE_URL = /^(?:https?:\/\/|www\.)\S+?(?=[.,;!?]*(?:\s|$))/i;
 
 /**
  * The line once a suggestion is picked for its "@place" or "#name" (from `start`, its "@" or "#", to
- * `end`, a comma after it included): the name in full, then a space to go on typing (SV-29). A comma
+ * `end`, a comma after it included): the name in full, then a space to go on typing. A comma
  * typed after it stays; the caret goes past the space.
  */
 export function completeToken(text: string, start: number, end: number, name: string): {text: string; caret: number} {
@@ -620,9 +618,9 @@ export function completeToken(text: string, start: number, end: number, name: st
 }
 
 /**
- * A "#" or "@" just typed at the line's end, before the line reads it as a mark (SV-71): a lone "#",
+ * A "#" or "@" just typed at the line's end, before the line reads it as a mark: a lone "#",
  * or "@" with at most one letter (Places searches from two). Its field's menu opens on it, showing
- * every choice before anything is typed, as darma's does. `start` is the trigger's place; `query`
+ * every choice before anything is typed. `start` is the trigger's place; `query`
  * is what follows it.
  */
 export function bareToken(text: string, trigger: '#' | '@'): {start: number; query: string} | null {
@@ -635,7 +633,7 @@ export function bareToken(text: string, trigger: '#' | '@'): {start: number; que
 const TRAILING_CONNECTOR = /(?:\s+(?:on|at|from|to|for))+\s*$/i;
 
 /**
- * What an edit typed into a title (SV-90): `after` from where it first differs from `before` to
+ * What an edit typed into a title: `after` from where it first differs from `before` to
  * where the two agree again. A word the edit changed is typed whole ("Standup 9am" made "Standup
  * 10am" typed "10am"); a word it only typed beside isn't ("Call fri" made "Call fri 3pm" typed
  * " 3pm"). Empty when nothing changed, or when only spaces or whole words went.
@@ -658,21 +656,21 @@ export function typedSpan(before: string, after: string): {start: number; end: n
  * is what "#…" reads (a task's projects or an event's calendars): their names, in the list's order,
  * with the text a menu pick was made for.
  *
- * `edit` is an item's title as it was and its day, when the text is that title edited (SV-90): only
+ * `edit` is an item's title as it was and its day, when the text is that title edited: only
  * phrases wholly inside what the edit typed are read (`typedSpan`), and a repeat with no day of its
  * own counts from the item's day rather than today. With no phrase read the title is the text as
  * typed, spaces and all; phrases that leave no words keep the title as it was.
  *
  * A task's line (`hash` its projects) reads no lengths or spans of days; any other, an event's, does.
  *
- * `remind` is what the item's reminders count from when the line names no day or time (SV-112); with
+ * `remind` is what the item's reminders count from when the line names no day or time; with
  * none, reminder phrases stay words.
  */
 export function parseTitle(text: string, today: string, calendars: string[] = [], picked: string | null = null,
   hash: {kind: 'project' | 'calendar'; names: string[]; picked: string | null} | null = null,
   edit: {before: string; day: string} | null = null, remind: ReminderBase | null = null): ParsedTitle {
   const state = fresh(hash?.kind !== 'project', remind);
-  // Reminders before the days and times, so "remind sun 8pm" doesn't move the item (SV-112).
+  // Reminders before the days and times, so "remind sun 8pm" doesn't move the item.
   const phrases = [...calendarMatchers(calendars), ...REMINDERS, ...REPEATS, ...ENDINGS, ...TIMES, LENGTH, SPAN, ...DATES];
   let marks: Mark[] = [];
   // An edit's phrases start and end in what it typed: the text is read only to its end.
@@ -704,7 +702,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
       }
       let end = stopsAtPick ? from + pick.length : url ? from + url[0].length : known ? from + known.length
         : hash?.kind === 'calendar' && !place ? prefix : next < words.length ? words[next]! : line.length;
-      // A comma ends it, unless it's in the name picked for it (SV-29).
+      // A comma ends it, unless it's in the name picked for it.
       const comma = stopsAtPick ? -1 : line.slice(from, end).indexOf(',');
       if (comma >= 0) end = from + comma;
       const value = line.slice(from, end).trim();
@@ -729,7 +727,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   const first = edit?.day ?? today;
   if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map(index => (index - weekdayOf(first) + 7) % 7)));
   if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? first)]}`;
-  // The repeat's end (SV-113, D294), from its first occurrence, the item's day: "for N weeks" lasts that
+  // The repeat's end, from its first occurrence, the item's day: "for N weeks" lasts that
   // long, its last day the one before the first plus N, and pins the day it counts from; a last day
   // before the first stays words.
   const endWords = new Set<number>();
@@ -745,10 +743,10 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
     } else state.recurrence += `;COUNT=${count}`;
   }
   // A span with no time is all day over its days; with one time or a length, that each day until its
-  // last, the repeat typed or a daily one (SV-111, D292). A length in whole days is the same: with no
-  // time all day over them (D298), with one that time each day, a daily repeat ending on its last day
-  // (SV-208); beside a span of days of its own it stays words. An event's weekend with neither is
-  // Saturday–Sunday (D294).
+  // last, the repeat typed or a daily one. A length in whole days is the same: with no
+  // time all day over them, with one that time each day, a daily repeat ending on its last day;
+  // beside a span of days of its own it stays words. An event's weekend with neither is
+  // Saturday–Sunday.
   let days: number | null = null;
   if (state.span && (state.last || state.recurrence)) endWords.add(state.span.at);
   else if (state.span && state.start === null) days = state.span.days;
@@ -761,7 +759,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   else if (state.last) state.recurrence = `${state.recurrence ?? 'RRULE:FREQ=DAILY'};UNTIL=${compact(state.last)}`;
   else if (state.event && state.start === null && state.length === null && !state.span && state.weekend) days = 2;
   if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
-  // A reminder phrase the item can't take stays words (SV-112).
+  // A reminder phrase the item can't take stays words.
   const {reminders, words: remindWords} = resolveReminders(state, days);
   marks = marks.filter(mark => (mark.kind !== 'reminder' || !remindWords.has(mark.start)) && !endWords.has(mark.start));
 
@@ -793,7 +791,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
 /**
  * The line with its title words replaced by a Title typed by hand, its phrases kept in order after
  * it ("Coffee fri" titled "Coffee with Ana" reads "Coffee with Ana fri"), so the line and the Title
- * never disagree (UX #8).
+ * never disagree.
  */
 export function lineWithTitle(text: string, marks: Mark[], title: string): string {
   const rest = marks.map(mark => text.slice(mark.start, mark.end)).join(' ');
@@ -805,13 +803,13 @@ export function lineWithTitle(text: string, marks: Mark[], title: string): strin
 /** A typed day for the date field ("fri", "oct 12", "10/12"), or null. */
 export function parseDay(text: string, today: string): string | null {
   // "Fri, Oct 12" as the field shows it: the date, not the weekday. Read as a task's line, so a
-  // weekend is its Saturday rather than an event's two days (SV-113).
+  // weekend is its Saturday rather than an event's two days.
   const parsed = parseTitle(text.trim().replace(new RegExp(`^(?:${WEEKDAY}),?\\s+(?=\\S)`, 'i'), ''), today, [], null, {kind: 'project', names: [], picked: null});
   return parsed.title === '' && parsed.start === null && parsed.days === null && parsed.date ? parsed.date : null;
 }
 
 /**
- * A typed time for a time field ("7pm", "7:30 PM", "19:00", and SV-25's shorthand "3p", "330p",
+ * A typed time for a time field ("7pm", "7:30 PM", "19:00", and the shorthand "3p", "330p",
  * "2130"; "7" or "930" keep `meridiemFrom`'s half), or null.
  */
 export function parseClock(text: string, meridiemFrom: number | null = null): number | null {
@@ -842,7 +840,7 @@ export interface DraftContent {
 /**
  * Whether new drafts hold anything the user put there: a line, a title, a place, a field set by hand,
  * a reminder, repeat or project chosen, or a second draft. Such a draft leaves only by Create,
- * Cancel or Esc; E or New on another item doesn't replace it (2026-10-08, F6 choice 14).
+ * Cancel or Esc; E or New on another item doesn't replace it.
  */
 export function draftStarted(drafts: DraftContent[]): boolean {
   return drafts.length > 1 || drafts.some(draft => draft.text.trim() !== '' || draft.title.trim() !== '' || draft.place.trim() !== ''
@@ -857,7 +855,7 @@ export function parseEnd(text: string, start: number, end: number | null): numbe
   return found > start % 1440 ? found + Math.floor(start / 1440) * 1440 : found + 1440;
 }
 
-// ---------- An event's days (SV-29) ----------
+// ---------- An event's days ----------
 
 /**
  * The days an event runs past its first: an all-day one's `days` less one; a timed one's to its end
@@ -891,14 +889,14 @@ export interface When {
 }
 
 /**
- * An edited item's when, once its title's typed day and time are read (SV-90): a day moves it,
+ * An edited item's when, once its title's typed day and time are read: a day moves it,
  * keeping its time and length (an all-day event its days); a time moves its start on its own day,
  * the end keeping the length ("Work" 3:00 – 8:00 AM at 3:45a ends 8:45 AM); a range sets both ends.
  * An all-day event given a time ends an hour later on its last day, as Add a time makes it. A
  * task's time is its due time, with no end. With neither, it's as it was.
  *
  * An event's span of days (`days`) makes it all day over them, and a length with no time lasts that
- * long from its own start, an all-day one's 9:00 AM (SV-111).
+ * long from its own start, an all-day one's 9:00 AM.
  */
 export function editedWhen(item: When, read: {date: string | null; start: number | null; end: number | null; days?: number | null; length?: number | null}, kind: 'event' | 'task'): When {
   const date = read.date ?? item.date;
@@ -913,10 +911,10 @@ export function editedWhen(item: When, read: {date: string | null; start: number
   return {date, start: read.start, end: read.end ?? read.start + length, days: 1};
 }
 
-/** An event with no end (SV-78): Google needs one, so it ends as it starts. */
+/** An event with no end: Google needs one, so it ends as it starts. */
 export const NO_END = 'No end';
 
-/** The End list: No end (SV-78), then the 24 hours after `start` (SV-25) while the event ends on its first day or the next; on a later last day, that day's times. */
+/** The End list: No end, then the 24 hours after `start` while the event ends on its first day or the next; on a later last day, that day's times. */
 export function endChoices(start: number, end: number): {minutes: number; label: string}[] {
   const extra = extraDays(start, end, 1);
   const none = {minutes: start, label: NO_END};
@@ -962,7 +960,7 @@ export function durationLabel(minutes: number): string {
 }
 
 /**
- * A time field's list in 15-minute steps (SV-25): the day's for a start; for an end, the 24 hours
+ * A time field's list in 15-minute steps: the day's for a start; for an end, the 24 hours
  * after `start`, each with its length ("10:00 AM (1 hr)").
  */
 export function timeChoices(start: number | null = null): {minutes: number; label: string}[] {
@@ -986,8 +984,8 @@ const shortDay = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateStr
 
 /**
  * A rule as the repeat field says it: "Weekly on Mon, Wed, Fri", "Every 2 weeks on Mon", "Monthly on
- * the first Mon"; its end, as the line writes it, after it: a last day ("Daily, until Sun, Oct 25";
- * SV-111) or a count ("Daily, 6 times", "…, once"; SV-113).
+ * the first Mon"; its end, as the line writes it, after it: a last day ("Daily, until Sun, Oct 25")
+ * or a count ("Daily, 6 times", "…, once").
  */
 export function describeRule(rule: string | null, date: string): string {
   if (!rule) return 'Does not repeat';
@@ -1012,7 +1010,7 @@ function describeRepeat(rule: string, date: string): string {
     case 'WEEKLY': {
       const list = (days ?? RRULE_DAYS[weekdayOf(date)]!).split(',');
       if (interval === 1 && list.join(',') === 'MO,TU,WE,TH,FR') return 'Every weekday';
-      // One day is spelled out (SV-29); several stay short.
+      // One day is spelled out; several stay short.
       const names = list.length === 1 ? FULL_DAY_NAMES : DAY_NAMES;
       return `${every('Weekly', 'weeks')} on ${list.map(code => names[RRULE_DAYS.indexOf(code as (typeof RRULE_DAYS)[number])]).join(', ')}`;
     }
@@ -1036,12 +1034,12 @@ export function repeatChoices(date: string, current: string | null): {rule: stri
 }
 
 /**
- * A task's repeat as the field says it: Todoist's own words, capitalised, its days named as words
- * (SV-29): one spelled out ("Every Wednesday"), several capitalised as written ("Every Tue, Thu, Sat").
+ * A task's repeat as the field says it: Todoist's own words, capitalised, its days named as words:
+ * one spelled out ("Every Wednesday"), several capitalised as written ("Every Tue, Thu, Sat").
  */
 export function describeTaskRepeat(repeat: string | null): string {
   if (!repeat) return 'Does not repeat';
-  // A last day the line sent ("until 2026-12-15", SV-113) is said as an event's is.
+  // A last day the line sent ("until 2026-12-15") is said as an event's is.
   const until = /\s+until\s+(\d{4}-\d{2}-\d{2})$/i.exec(repeat);
   const words = until ? repeat.slice(0, until.index) : repeat;
   const days = new RegExp(`\\b(?:${WEEKDAY})\\b`, 'gi');
@@ -1054,7 +1052,7 @@ const ORDINAL_WORDS: Record<string, string> = {'1': '1st', '2': '2nd', '3': '3rd
 
 /**
  * A rule the line read, as a task's repeat in Todoist's words ("every mon, wed", "every other fri"), as
- * `taskRepeatChoices` words them; a last day as "until 2026-12-15", a form Todoist documents (SV-113).
+ * `taskRepeatChoices` words them; a last day as "until 2026-12-15", a form Todoist documents.
  * Todoist documents no count, so a rule with one has no words.
  */
 export function taskRepeat(rule: string | null): string | null {
@@ -1082,7 +1080,7 @@ function taskRepeatWords(parts: Map<string, string>): string | null {
 }
 
 /**
- * A Todoist task's repeat choices for its day, in Todoist's words (F6b): none, every day, every
+ * A Todoist task's repeat choices for its day, in Todoist's words: none, every day, every
  * <its weekday>, every weekday, every month, every year, and the task's own when it's another.
  */
 export function taskRepeatChoices(date: string, current: string | null): {repeat: string | null; label: string}[] {

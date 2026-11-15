@@ -1,6 +1,6 @@
-// The Todoist adapter against a fake Todoist on 127.0.0.1: the mirror (with v1's Z-suffix bug
-// fixed), changes through the command layer, a completed repeating task kept on its day (the
-// tombstone) whether completed here or in Todoist's app, revoked tokens, and OAuth at v1's path.
+// The Todoist adapter against a fake Todoist on 127.0.0.1: the mirror (a Z-suffixed time
+// read as an instant), changes through the command layer, a completed repeating task kept on its day (the
+// tombstone) whether completed here or in Todoist's app, revoked tokens, and OAuth at its registered path.
 import {calendarSearchInput, itemCreateInput, itemScopeInput, itemUpdateInput} from '@setpoint/shared';
 import {and, eq, isNull} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -21,7 +21,7 @@ import {client, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
 
 const ZONE = 'America/Los_Angeles';
-// SV-264: a description as Todoist's own editor writes one (read from a real task, 2026-11-10): Markdown, single
+// A description as Todoist's own editor writes one (read from a real task, 2026-11-10): Markdown, single
 // newlines between lines, a blank line around lists.
 const TODOIST_DESCRIPTION = '**Bring** the signed form\n*Room 204*\n\n1. *Check in*\n2. Badge\n\n- Laptop\n\n[https://example.com/visit](https://example.com/visit)';
 
@@ -29,7 +29,7 @@ describe('a Todoist due as a day and a time', () => {
   test.each([
     ['a day', {date: '2026-10-07'}, {dueDate: '2026-10-07', dueAt: null}],
     ['a floating time is wall-clock time in the user\'s zone', {date: '2026-01-15T19:00:00'}, {dueDate: '2026-01-15', dueAt: '2026-01-16T03:00:00.000Z'}],
-    // v1 read this as 3:00 AM on Jan 16 (56a59a4e), and still stored the UTC day.
+    // Not 3:00 AM on Jan 16, and not the UTC day.
     ['a fixed-zone time (Z) is an instant, on its local day', {date: '2026-01-16T03:00:00Z', timezone: 'America/New_York'}, {dueDate: '2026-01-15', dueAt: '2026-01-16T03:00:00.000Z'}],
     ['an offset is an instant too', {date: '2026-10-08T02:00:00+00:00'}, {dueDate: '2026-10-07', dueAt: '2026-10-08T02:00:00.000Z'}],
     ['across the DST change', {date: '2026-11-01T09:00:00'}, {dueDate: '2026-11-01', dueAt: '2026-11-01T17:00:00.000Z'}],
@@ -42,7 +42,7 @@ describe('a Todoist due as a day and a time', () => {
   });
 });
 
-describe('F6b: a repeat travels with its date (D16 revisited)', () => {
+describe('a repeat travels with its date', () => {
   // Todoist reads a bare date as the end of a task's repeat, so a repeating task's new date goes in
   // one due string with its repeat and time; a task with no repeat sends its day or instant.
   test.each([
@@ -51,7 +51,7 @@ describe('F6b: a repeat travels with its date (D16 revisited)', () => {
     ['a repeat starts on its day', {dueDate: '2026-10-09', dueAt: null, repeat: 'every wed'}, {due_string: 'every wed starting 2026-10-09'}],
     ['a repeat keeps its time, in the user\'s zone', {dueDate: '2026-10-09', dueAt: '2026-10-09T16:30:00.000Z', repeat: 'every wed'}, {due_string: 'every wed at 09:30 starting 2026-10-09'}],
     ['no repeat any more is a plain day', {dueDate: '2026-10-09', dueAt: null, repeat: null}, {due_date: '2026-10-09'}],
-    // SV-113: a repeat's last day goes after its first, as Todoist documents "everyday from 10 May until 20 May".
+    // A repeat's last day goes after its first, as Todoist documents "everyday from 10 May until 20 May".
     ['a repeat\'s last day after its first', {dueDate: '2026-10-12', dueAt: null, repeat: 'every mon until 2026-12-15'}, {due_string: 'every mon from 2026-10-12 until 2026-12-15'}],
     ['a repeat\'s last day, with its time', {dueDate: '2026-10-12', dueAt: '2026-10-12T16:30:00.000Z', repeat: 'every mon until 2026-12-15'}, {due_string: 'every mon at 09:30 from 2026-10-12 until 2026-12-15'}],
     ['Todoist\'s own "ending"', {dueDate: '2026-10-12', dueAt: null, repeat: 'every day ending aug 3'}, {due_string: 'every day from 2026-10-12 ending aug 3'}],
@@ -66,7 +66,7 @@ describe('F6b: a repeat travels with its date (D16 revisited)', () => {
     ['every day from oct 12', 'every day'],
     ['every! 3 days', 'every! 3 days'],
     ['every other fri @ 5pm', 'every other fri'],
-    // SV-113: the last day stays with the repeat, wherever Todoist keeps it.
+    // The last day stays with the repeat, wherever Todoist keeps it.
     ['every mon at 09:30 from 2026-10-12 until 2026-12-15', 'every mon until 2026-12-15'],
     ['every mon from 2026-10-12 until 2026-12-15', 'every mon until 2026-12-15'],
     ['everyday from 10 May until 20 May', 'everyday until 20 May'],
@@ -182,7 +182,7 @@ describe('changes through the command layer', () => {
     expect(tasks('2026-10-09')).toEqual(['○ CS 101 lab report']);
   });
 
-  test('SV-113: a repeat with a last day reaches Todoist after its first, and reads back with it, so a new date keeps it', async () => {
+  test('a repeat with a last day reaches Todoist after its first, and reads back with it, so a new date keeps it', async () => {
     const {w, todoist, run, command, calendarId, task, day} = await todoistWorld();
     await run();
     const created = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Water ferns', due_date: '2026-10-12', project: 'Home', repeat: 'every mon until 2026-12-15'}));
@@ -201,7 +201,7 @@ describe('changes through the command layer', () => {
     expect(day('2026-10-19').find(item => item.title === 'Water ferns')).toMatchObject({repeat: 'every mon until 2026-12-15'});
   });
 
-  test('SV-74: create with no date: Todoist gets its "no date", and once it confirms the task leaves the mirror, as an undated task isn\'t on the calendar', async () => {
+  test('create with no date: Todoist gets its "no date", and once it confirms the task leaves the mirror, as an undated task isn\'t on the calendar', async () => {
     const {w, todoist, run, command, calendarId} = await todoistWorld();
     await run();
     const created = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Learn guitar', project: 'Home'}));
@@ -216,7 +216,7 @@ describe('changes through the command layer', () => {
     expect(w.store.db.select().from(t.items).where(eq(t.items.title, 'Learn guitar')).get()).toBeUndefined();
   });
 
-  test('SV-109: a task\'s reminders are Setpoint\'s own: Todoist isn\'t asked, and its syncs keep them', async () => {
+  test('a task\'s reminders are Setpoint\'s own: Todoist isn\'t asked, and its syncs keep them', async () => {
     const {w, todoist, run, command, task} = await todoistWorld();
     await run();
     const before = todoist.requests.length;
@@ -230,7 +230,7 @@ describe('changes through the command layer', () => {
     expect(task('t-rent')).toMatchObject({title: 'Pay October rent', reminders: [60, -30]});
   });
 
-  test('create with a new project (SV-24, D50): Todoist makes the project first, the task goes in it, and the project list has it at once', async () => {
+  test('create with a new project: Todoist makes the project first, the task goes in it, and the project list has it at once', async () => {
     const {w, todoist, run, command, calendarId, tasks} = await todoistWorld();
     await run();
     const created = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Expense report', due_date: '2026-10-09', project: 'Work', create_project: true}));
@@ -256,7 +256,7 @@ describe('changes through the command layer', () => {
     expect(todoist.requests.find(request => request.method === 'POST' && request.path === '/api/v1/tasks')!.body).not.toHaveProperty('project_id');
   });
 
-  test('F6b: labels: mirrored with their tasks and as Todoist\'s list; written on create and change; events have none', async () => {
+  test('labels: mirrored with their tasks and as Todoist\'s list; written on create and change; events have none', async () => {
     const {w, todoist, run, command, calendarId, task, day} = await todoistWorld();
     await run();
     expect(todoistLabels(w.store)).toEqual([{id: 'l-errand', name: 'errand'}, {id: 'l-waiting', name: 'waiting'}]);
@@ -280,7 +280,7 @@ describe('changes through the command layer', () => {
     expect(() => createItem(w.store, itemCreateInput.parse({kind: 'event', calendar_id: personal.id, title: 'Lunch', starts_at: '2026-10-09T19:00:00.000Z', ends_at: '2026-10-09T20:00:00.000Z', labels: ['errand']}))).toThrow(/task's/);
   });
 
-  test('SV-264: a task\'s description is kept as Todoist\'s Markdown, an empty one is none; written on create and only when it changes; an empty string clears it', async () => {
+  test('a task\'s description is kept as Todoist\'s Markdown, an empty one is none; written on create and only when it changes; an empty string clears it', async () => {
     const {w, todoist, run, command, calendarId, task, day} = await todoistWorld();
     todoist.put({...todoist.task('t-rent')!, description: TODOIST_DESCRIPTION});
     todoist.put({...todoist.task('t-call')!, description: ''});
@@ -312,7 +312,7 @@ describe('changes through the command layer', () => {
     expect(task('t-rent').description).toBeNull();
   });
 
-  test('SV-264: a description change Todoist refuses is kept in place through a poll, and Todoist\'s own applies after Move back', async () => {
+  test('a description change Todoist refuses is kept in place through a poll, and Todoist\'s own applies after Move back', async () => {
     const {w, todoist, run, command, task} = await todoistWorld();
     todoist.put({...todoist.task('t-rent')!, description: TODOIST_DESCRIPTION});
     await run();
@@ -331,7 +331,7 @@ describe('changes through the command layer', () => {
     expect(task('t-rent').description).toBe('Changed in Todoist');
   });
 
-  test('F6b: a repeating task\'s date moves with its repeat in one due string, and lands where Todoist puts it', async () => {
+  test('a repeating task\'s date moves with its repeat in one due string, and lands where Todoist puts it', async () => {
     const {w, todoist, run, command, task, tasks, day} = await todoistWorld();
     await run();
     // Water plants (every wed, Oct 7) to Friday, Oct 9: Todoist starts the repeat there, so its next is Wed, Oct 14.
@@ -358,7 +358,7 @@ describe('changes through the command layer', () => {
     expect(() => updateItem(w.store, task('t-plants').id, itemUpdateInput.parse({changes: {due_date: '2026-10-21'}}))).toThrow(/didn't say how this task repeats/);
   });
 
-  test('F7: with no project, a task goes to Settings\' default project, which is a project\'s name as the editor shows it', async () => {
+  test('with no project, a task goes to Settings\' default project, which is a project\'s name as the editor shows it', async () => {
     const {w, todoist, run, calendarId} = await todoistWorld();
     await run();
     updateSettings(w.store, {todoist: {default_project: 'Home'}});
@@ -368,7 +368,7 @@ describe('changes through the command layer', () => {
     expect(sent.body).toMatchObject({content: 'Buy stamps', project_id: 'p-home'});
   });
 
-  test('SV-88: a task made with no project is in the one it goes to, Settings\' default else the Inbox, from the start rather than from a later sync', async () => {
+  test('a task made with no project is in the one it goes to, Settings\' default else the Inbox, from the start rather than from a later sync', async () => {
     const {w, todoist, run, command, calendarId, day} = await todoistWorld();
     await run();
     const project = (title: string) => day('2026-10-09').find(item => item.title === title)?.project;
@@ -413,7 +413,7 @@ describe('changes through the command layer', () => {
     const {w, todoist, run, command, task, tasks} = await todoistWorld();
     await run();
     const plants = task('t-plants');
-    // Only the occurrence Todoist has open can be completed (v1's 409).
+    // Only the occurrence Todoist has open can be completed.
     expect(() => completeItem(w.store, plants.id, true, '2026-10-14')).toThrow(/isn't open on 2026-10-14/);
     const done = completeItem(w.store, plants.id, true, '2026-10-07');
     // At once: done on Oct 7, pending.
@@ -435,11 +435,11 @@ describe('changes through the command layer', () => {
     await run();
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
     expect(() => completeItem(w.store, task('t-plants').id, true, '2026-10-07')).toThrow(/already done/);
-    // The task itself isn't reopened: its done occurrence is (SV-249).
+    // The task itself isn't reopened: its done occurrence is.
     expect(() => completeItem(w.store, task('t-plants').id, false)).toThrow(/from its done occurrence/);
   });
 
-  // SV-249 (D510): the toast's Undo and a done occurrence's Reopen. Todoist's reopen does nothing on
+  // The toast's Undo and a done occurrence's Reopen. Todoist's reopen does nothing on
   // a repeating task, so the undo is the Sync command Todoist's own Undo sends.
   async function doneOccurrenceWorld() {
     const world = await todoistWorld();
@@ -447,13 +447,13 @@ describe('changes through the command layer', () => {
     const plants = world.task('t-plants');
     completeItem(world.w.store, plants.id, true, '2026-10-07');
     // The close confirmed and no poll since, as when the toast's Undo is pressed: the poll after the
-    // undo reads the close and the undo together from the activity log (SV-251).
+    // undo reads the close and the undo together from the activity log.
     await world.run();
     const occurrences = () => world.w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, plants.id)).all();
     return {...world, plants, occurrences};
   }
 
-  test('SV-249: a repeating task\'s latest done occurrence reopens: Todoist puts the task back on its day with its repeat, and a poll leaves it so', async () => {
+  test('a repeating task\'s latest done occurrence reopens: Todoist puts the task back on its day with its repeat, and a poll leaves it so', async () => {
     const {w, todoist, run, command, task, tasks, day, plants, occurrences} = await doneOccurrenceWorld();
     expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
     expect(day('2026-10-07').find(item => item.title === 'Water plants')).toMatchObject({done: true, can_reopen: true});
@@ -486,7 +486,7 @@ describe('changes through the command layer', () => {
     expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
   });
 
-  test('SV-249: a reopen Todoist refuses fails in place with Todoist\'s words; Move back brings the done occurrence back', async () => {
+  test('a reopen Todoist refuses fails in place with Todoist\'s words; Move back brings the done occurrence back', async () => {
     const {w, todoist, run, command, task, tasks, occurrences} = await doneOccurrenceWorld();
     todoist.refuseCommand({error: 'Item not found', error_code: 22, error_tag: 'ITEM_NOT_FOUND', http_code: 404, error_extra: {}});
     const reopened = completeItem(w.store, occurrences()[0]!.id, false);
@@ -500,14 +500,14 @@ describe('changes through the command layer', () => {
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
     expect(occurrences().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
     expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
-    // The close's move to Oct 14 was skipped while the reopen held the task; the next poll applies it (SV-260).
+    // The close's move to Oct 14 was skipped while the reopen held the task; the next poll applies it.
     w.advance(5 * 60_000);
     await run();
     expect(task('t-plants').dueDate).toBe('2026-10-14');
     expect(occurrences().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
   });
 
-  test('SV-249: an older done occurrence is history and isn\'t reopened; the latest one is', async () => {
+  test('an older done occurrence is history and isn\'t reopened; the latest one is', async () => {
     const {w, run, task, day, plants, occurrences} = await doneOccurrenceWorld();
     w.advance(7 * 24 * 60 * 60_000);
     await run();
@@ -524,7 +524,7 @@ describe('changes through the command layer', () => {
     expect(task('t-plants').dueDate).toBe('2026-10-14');
   });
 
-  test('SV-249 with SV-251: a reopen after a poll has read the close is not brought back by the next poll either', async () => {
+  test('a reopen after a poll has read the close is not brought back by the next poll either', async () => {
     const {w, run, tasks, occurrences} = await doneOccurrenceWorld();
     w.advance(5 * 60_000);
     await run();
@@ -537,7 +537,7 @@ describe('changes through the command layer', () => {
     expect(occurrences()).toEqual([]);
   });
 
-  test('SV-251: a repeating task completed in Todoist\'s own app is kept done on its day, from its activity log; its completed list never names it', async () => {
+  test('a repeating task completed in Todoist\'s own app is kept done on its day, from its activity log; its completed list never names it', async () => {
     const {w, todoist, run, tasks, task} = await todoistWorld();
     await run();
     w.advance(10 * 60_000);
@@ -558,7 +558,7 @@ describe('changes through the command layer', () => {
     expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-plants').id)).all()).toHaveLength(1);
   });
 
-  test('SV-251: a timed occurrence is kept on its local day with its time; a one-off completed in the app is done from the completed list, once', async () => {
+  test('a timed occurrence is kept on its local day with its time; a one-off completed in the app is done from the completed list, once', async () => {
     const {w, todoist, run, tasks, task} = await todoistWorld();
     // 09:00 in Los Angeles, a floating time as Todoist sends it.
     todoist.put({id: 't-standup', content: 'Standup', project_id: 'inbox', due: {date: '2026-10-07T09:00:00', string: 'every day at 9am', is_recurring: true}, everyDays: 1});
@@ -575,7 +575,7 @@ describe('changes through the command layer', () => {
     expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-rent').id)).all()).toEqual([]);
   });
 
-  test('SV-251: a look at the activity log stays inside the week Todoist\'s Free plan keeps, every page read', async () => {
+  test('a look at the activity log stays inside the week Todoist\'s Free plan keeps, every page read', async () => {
     const {w, todoist, run, tasks, source} = await todoistWorld();
     const DAY = 86_400_000;
     // Completed in the app before Setpoint first looks: Oct 7's eight days before, past what
@@ -602,7 +602,7 @@ describe('changes through the command layer', () => {
     expect(sourceList(w.store).find(row => row.id === source.id)).toMatchObject({health: {state: 'healthy'}});
   });
 
-  test('SV-251: the log\'s fields are read in the camel case Todoist\'s own connector shows too', async () => {
+  test('the log\'s fields are read in the camel case Todoist\'s own connector shows too', async () => {
     const {w, todoist, run, tasks} = await todoistWorld();
     await run();
     todoist.completeInTodoist('t-plants');
@@ -612,7 +612,7 @@ describe('changes through the command layer', () => {
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
   });
 
-  test('SV-251: Undo on Todoist\'s pop-up puts the occurrence back open, whether the poll read the completion before it or with it', async () => {
+  test('Undo on Todoist\'s pop-up puts the occurrence back open, whether the poll read the completion before it or with it', async () => {
     const {w, todoist, engine, source, run, tasks, task} = await todoistWorld();
     await run();
     const oct7 = {date: '2026-10-07', string: 'every wed', is_recurring: true};
@@ -645,7 +645,7 @@ describe('changes through the command layer', () => {
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
   });
 
-  test('SV-251: with a later occurrence completed in Todoist\'s app, Reopen is offered on that one, not the one completed here', async () => {
+  test('with a later occurrence completed in Todoist\'s app, Reopen is offered on that one, not the one completed here', async () => {
     const {w, todoist, run, task, day, occurrences} = await doneOccurrenceWorld();
     w.advance(7 * 24 * 60 * 60_000);
     await run();
@@ -679,7 +679,7 @@ describe('changes through the command layer', () => {
     expect(command(renamed.id)).toMatchObject({state: 'failed', providerMessage: 'Content is too long (400 Bad Request)'});
   });
 
-  describe('SV-260: a change made in Todoist while a change of Setpoint\'s holds its task is applied once the hold ends', () => {
+  describe('a change made in Todoist while a change of Setpoint\'s holds its task is applied once the hold ends', () => {
     /** A rename Todoist refuses, failed in place: it holds the task until Try again or Move back. */
     async function heldWorld(providerId: string, put?: Parameters<Awaited<ReturnType<typeof fakeTodoist>>['put']>[0]) {
       const world = await todoistWorld();
@@ -749,7 +749,7 @@ describe('changes through the command layer', () => {
   });
 });
 
-describe('SV-25: a project\'s colour, written to Todoist', () => {
+describe('a project\'s colour, written to Todoist', () => {
   async function colourWorld() {
     const world = await todoistWorld();
     return {...world, colours: () => todoistProjects(world.w.store).map(project => [project.name, project.colour, project.command?.state ?? null])};
@@ -789,7 +789,7 @@ describe('SV-25: a project\'s colour, written to Todoist', () => {
     const world = await colourWorld();
     world.todoist.addProject({id: 'p-home', name: 'Home', child_order: 1, color: 'orange'});
     await world.run();
-    // A 400, not a 401 or 403: those mark the connection as needing reconnect, which stops its syncs (SV-266).
+    // A 400, not a 401 or 403: those mark the connection as needing reconnect, which stops its syncs.
     world.todoist.fault({method: 'POST', path: /\/projects\/p-home$/, response: {status: 400, body: {error: 'Invalid argument value', error_code: 400, http_code: 400}}});
     const picked = setProjectColour(world.w.store, 'p-home', 'grape');
     await world.run();
@@ -812,7 +812,7 @@ describe('SV-25: a project\'s colour, written to Todoist', () => {
     expect(world.todoist.project('p-home')!.color).toBe('grape');
   });
 
-  describe('SV-262: a colour changed in Todoist while a colour change of Setpoint\'s holds its project is applied once the hold ends', () => {
+  describe('a colour changed in Todoist while a colour change of Setpoint\'s holds its project is applied once the hold ends', () => {
     /** A colour Todoist refuses, failed in place: it holds the project until Try again or Change back. */
     async function heldColourWorld() {
       const world = await colourWorld();
@@ -869,7 +869,7 @@ describe('connecting Todoist', () => {
 
   const bindCookie = (headers: Headers) => headers.getSetCookie().find(line => line.startsWith('setpoint_todoist_bind='))!;
 
-  test('Connect, consent, and the callback at v1\'s path stores the token on a new Todoist source', async () => {
+  test('Connect, consent, and the callback at its registered path stores the token on a new Todoist source', async () => {
     const {w, todoist, c} = await connectWorld();
     const begun = await c.send('POST', '/api/todoist/connect');
     expect(begun.status).toBe(200);
@@ -944,7 +944,7 @@ async function checklistWorld({keys = true} = {}) {
   return {...world, rent, checklist};
 }
 
-describe('SV-272: a task\'s subtasks', () => {
+describe('a task\'s subtasks', () => {
   test('are mirrored with their task, in Todoist\'s order; one with no date is only in the checklist, one with a date is on its day too', async () => {
     const {tasks, checklist, day, w} = await checklistWorld();
     expect(checklist()).toEqual(['○ Write the cheque', '○ Find an envelope', '○ Buy a stamp']);
@@ -1065,7 +1065,7 @@ describe('SV-272: a task\'s subtasks', () => {
   });
 });
 
-describe('SV-273: a subtask added, dated and undated from Setpoint', () => {
+describe('a subtask added, dated and undated from Setpoint', () => {
   const subtask = (w: World, calendarId: number, parentId: number, title: string, fields: Record<string, unknown> = {}) =>
     createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId, title, parent_id: parentId, ...fields}));
 

@@ -11,7 +11,7 @@ import {writeSourceCredentials} from '../secrets/store.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 
-// The order new accounts take colours in (BRIEF.md's sample: warm, cool, comf, violet, …).
+// The order new accounts take colours in (warm, cool, comf, violet, …).
 const COLOUR_ORDER: Colour[] = ['warm', 'cool', 'comf', 'violet', 'sun', 'cyan', 'good', 'caution', 'alert', 'ink2', 'ink3'];
 
 export interface ConnectInput {

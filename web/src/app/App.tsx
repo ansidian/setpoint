@@ -1,8 +1,8 @@
-// The shell (DESIGN.md › Layout): the sidebar, then the page under its header, with the offline
+// The shell: the sidebar, then the page under its header, with the offline
 // pill over it while Setpoint's live stream is down, and the one toast (ToastPill.tsx) above it all,
 // Settings included. The keys that work everywhere: `1` Inbox, `2` Calendar, `3` News, `/` search,
 // ⌘K the palette, ⌘, Settings, ⌘J Light or Night, `4` Jobs (jobs/, a wiring point; off, its page says
-// so), and `` ` `` opening or folding the sidebar from 1100 px (sidebarRail.ts; D507). Settings is a modal
+// so), and `` ` `` opening or folding the sidebar from 1100 px (sidebarRail.ts). Settings is a modal
 // over the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
 // phone's shell (Phone.tsx) takes the sidebar's place, Calendar is the agenda, and Settings, ⌘K, News
 // and Jobs stay on the desktop (their addresses open the Inbox).
@@ -32,14 +32,14 @@ import {fillMailSlots} from './slots.tsx';
 import {showToast} from './toast.ts';
 import {ToastPill} from './ToastPill.tsx';
 
-// Jobs fills mail's slots (J7): the reader's JD chip and Applied before, before Setpoint first draws.
+// Jobs fills mail's slots: the reader's JD chip and Applied before, before Setpoint first draws.
 fillMailSlots(jobsMailSlots);
 
-/** `arrive`: it follows Setpoint's mark at the start, and fades in (#233). */
+/** `arrive`: it follows Setpoint's mark at the start, and fades in. */
 export function App({arrive = false}: {arrive?: boolean}) {
   const route = useRoute();
   const offline = useOfflineSince() !== null;
-  // From the moment the stream drops, before the pill: what would change something takes no pointer (states-05).
+  // From the moment the stream drops, before the pill: what would change something takes no pointer.
   const down = useDown();
   const phone = usePhone();
   const rail = useRail();
@@ -55,7 +55,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
     navigate(toInbox(), {replace: true});
   }, [settingsLink]);
 
-  // Below 640 px News and Jobs aren't in the navigation (D85, D303): their addresses open the Inbox.
+  // Below 640 px News and Jobs aren't in the navigation: their addresses open the Inbox.
   const phoneNews = phone && (route.page === 'news' || route.page === 'jobs');
   useEffect(() => {
     if (phoneNews) navigate(toInbox(), {replace: true});
@@ -68,20 +68,20 @@ export function App({arrive = false}: {arrive?: boolean}) {
         openSettings('accounts');
         return;
       }
-      // ⌘J switches Light and Night, from a field too; on System it does nothing (DESIGN.md #342).
+      // ⌘J switches Light and Night, from a field too; on System it does nothing.
       if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'j') {
         event.preventDefault();
         flipTheme();
         return;
       }
-      // ⌘F, like `/`, focuses the header's search (DESIGN.md › Search), even from another field,
+      // ⌘F, like `/`, focuses the header's search, even from another field,
       // selecting the query it holds so typing replaces it.
       if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'f') {
         if (selectSearch()) event.preventDefault();
         return;
       }
       if (isTyping(event) || event.defaultPrevented) return;
-      // 1 goes to the Inbox from another page; on it, U goes to the next unread email (D449).
+      // 1 goes to the Inbox from another page; on it, U goes to the next unread email.
       if (plainKey(event, '1') && currentRoute().page !== 'inbox') {
         event.preventDefault();
         navigate(toInbox());

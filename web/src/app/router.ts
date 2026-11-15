@@ -1,4 +1,4 @@
-// The address bar as the app's route (logic/route.ts has the paths), darma's way: history.pushState
+// The address bar as the app's route (logic/route.ts has the paths): history.pushState
 // and a store React reads with useSyncExternalStore.
 import {useSyncExternalStore} from 'react';
 import {parseRoute, routePath} from '../logic/route.ts';
@@ -32,7 +32,7 @@ export const useRoute = () => useSyncExternalStore(subscribe, currentRoute);
 
 /**
  * A calendar address that names no view keeps the one showing, and from another page takes the one
- * last used (DESIGN.md › Week view).
+ * last used.
  */
 function withView(route: Route): Route {
   if (route.page !== 'calendar' || route.view) return route;
@@ -42,7 +42,7 @@ function withView(route: Route): Route {
 }
 
 // An address opened from outside (a reload, an ntfy link) that names no view opens in the last one used.
-// An Inbox address from the account filter's time (?account=2) is the plain Inbox's (D476).
+// An Inbox address from the account filter's time (?account=2) is the plain Inbox's.
 {
   const first = currentRoute();
   if (first.page === 'calendar' && !first.view && rememberedMode() === 'week') {

@@ -1,11 +1,11 @@
-// Alfred's system prompt and tools (BRIEF.md › Alfred: its tools are the same queries and commands
-// the UI uses; it can't do anything the user can't, and anything it would create is a proposal).
+// Alfred's system prompt and tools. Its tools are the same queries and commands the UI uses; it
+// can't do anything the user can't, and anything it would create is a proposal.
 //
-// Harvested from v1's `alfred-prompt` and `alfred-tools` (SV-5): the date anchor in the owner's zone
+// The prompt holds the date anchor in the owner's zone
 // (the date only, so the cached prefix holds all day), "search before saying it isn't there", reading
 // an email before relying on a snippet, email text fenced as untrusted data, and the proposal rule that
-// the tool quotes the user's own message. v1's show_items and group_items (rows and breakdown cards) are
-// replaced by the one `answer` tool: the Answer card shows one or two lines and their source emails.
+// the tool quotes the user's own message. The one `answer` tool fills the Answer card: one or two
+// lines and their source emails.
 import type {ToolSpec} from '../providers/ai/index.ts';
 
 export const MAX_OUTPUT_TOKENS = 16_000;
@@ -86,7 +86,7 @@ export const ALFRED_TOOLS: ToolSpec[] = [
   },
 ];
 
-/** v1's trust fence: email text as data, with any closing tag inside it neutralised. */
+/** The trust fence: email text as data, with any closing tag inside it neutralised. */
 export function fenced(messageId: number, text: string): string {
   return `<email_content message_id="${messageId}">${text.replace(/<(\/?)email_content/gi, '&lt;$1email_content')}</email_content>`;
 }

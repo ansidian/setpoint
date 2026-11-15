@@ -1,4 +1,4 @@
-// Errors carry a stable code for the web app and an HTTP status for the API (darma's pattern).
+// Errors carry a stable code for the web app and an HTTP status for the API.
 import type {z} from 'zod';
 
 export class SetpointError extends Error {

@@ -1,4 +1,4 @@
-/* The editor in the right pane (DESIGN.md › Editor; boards 13 and 14). Values are the boards' own
+/* The editor in the right pane (boards 13 and 14). Values are the boards' own
    (`.field`, `.flabel`, `.qchip`, `.menu-i`, `.eg`, `.prow`, `.tl`, `.tok-d`, `.tok-p`) and
    setpoint.css's. */
 .editor { position: relative; }
@@ -27,19 +27,19 @@
 .editor .nl .nl-input { position: absolute; left: 12px; right: 40px; top: 0; width: calc(100% - 52px); height: 48px; color: transparent; caret-color: var(--ink); font-size: 16px; font-weight: 500; }
 .editor .nl .nl-input::placeholder { color: var(--ink3); }
 .editor .nl .nl-input::selection { color: transparent; background: color-mix(in oklch, var(--accent) 30%, transparent); }
-/* SV-56: a line longer than the field scrolls inside the input, and the marks move with it
+/* A line longer than the field scrolls inside the input, and the marks move with it
    (Editor.tsx's useMirror); a side cut short fades over 14 px, so the cut reads as more. */
 .editor .nl-text { display: inline-block; }
 .editor .nl-marks[data-clip-left] { mask-image: linear-gradient(to right, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-right] { mask-image: linear-gradient(to left, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-left][data-clip-right] { mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
-/* D290: a new item's title is the line's, so an email's title mark sits at its trailing edge, before
-   the ? (SV-114), the text stopping 8 px before it; a mark under the pointer, which a click makes
+/* A new item's title is the line's, so an email's title mark sits at its trailing edge, before
+   the ?, the text stopping 8 px before it; a mark under the pointer, which a click makes
    words, deepens. */
 .editor .nl.src .nl-marks { right: 62px; }
 .editor .nl.src .nl-input { right: 62px; width: calc(100% - 74px); }
 .editor .nl > .srcm { position: absolute; right: 40px; top: 0; bottom: 0; align-content: center; }
-/* SV-114 (D295): the ? at the line's trailing edge, 8 px in from it, and What the line reads under it,
+/* The ? at the line's trailing edge, 8 px in from it, and What the line reads under it,
    its right edge on the line's. */
 .editor .ed-line { position: relative; }
 .editor .line-ref { position: absolute; right: 28px; top: 0; height: 48px; display: grid; align-content: center; }
@@ -65,20 +65,20 @@
 .editor .tok-d, .editor .tok-p, .editor .tok-c, .editor .tok-j, .editor .tok-r { border-radius: 4px; padding: 0 2px; margin: 0 -2px; }
 .editor .tok-d { background: color-mix(in oklch, var(--cool) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--cool) 60%, transparent); }
 .editor .tok-p { background: color-mix(in oklch, var(--comf) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--comf) 60%, transparent); }
-/* A reminder phrase (SV-112): its own hue, not the when's, as it doesn't move the item. */
+/* A reminder phrase: its own hue, not the when's, as it doesn't move the item. */
 .editor .tok-r { background: color-mix(in oklch, var(--remind) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--remind) 60%, transparent); }
-.editor .tok-j { --c: var(--ink2); } /* a project's own colour comes inline (SV-56) */
+.editor .tok-j { --c: var(--ink2); } /* a project's own colour comes inline */
 .editor .tok-c, .editor .tok-j { background: color-mix(in oklch, var(--c) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--c) 60%, transparent); }
-/* A project's Todoist colour is clamped to the theme's band, as its task's ring is (#175). */
+/* A project's Todoist colour is clamped to the theme's band, as its task's ring is. */
 .editor .tok-j { --c-shown: oklch(from var(--c) clamp(var(--ringMin), l, var(--ringMax)) c h);
   background: color-mix(in oklch, var(--c-shown) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--c-shown) 60%, transparent); }
 
 .editor .eg { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 10px; row-gap: 8px; align-items: center; padding: 16px 20px 0; }
 .editor .eg > .icon { color: var(--ink3); justify-self: center; transition: color var(--dur-fast) var(--ease); }
-/* Each row's glyph is always in its mark's colour (SV-270): the day and time `cool`, the place
+/* Each row's glyph is always in its mark's colour: the day and time `cool`, the place
    `comf`, reminders `remind`, the calendar its colour and a task's project its Todoist colour; the
-   repeat, labels and description stay `ink3`, having no mark. Each word typed lands in its field
-   (polish audit calflows-06): a row the line filled pulses its glyph once as it lands; the mark
+   repeat, labels and description stay `ink3`, having no mark. Each word typed lands in its field:
+   a row the line filled pulses its glyph once as it lands; the mark
    still being typed, its menu open, is only a dashed underline, and a picked one brightens once as
    it lands; a field another's change moved flashes `cardOn` back to its own fill, and an End on a
    later day says "+1". */
@@ -103,11 +103,11 @@
 @keyframes side-flash { from { background-color: var(--cardOn); } }
 .editor .later { font-size: 11.5px; color: var(--ink3); align-self: flex-start; margin: 2px 0 0 -4px; }
 .editor .prow { display: flex; align-items: center; gap: 8px; min-width: 0; }
-/* The date and times shrink from these widths so the row and its × fit the column (SV-25). */
+/* The date and times shrink from these widths so the row and its × fit the column. */
 .editor .prow .pick-date { flex: 0 1 118px; min-width: 0; }
 .editor .prow .pick-time { flex: 0 1 84px; min-width: 0; }
 .editor .prow .pick-date > .field, .editor .prow .pick-time > .field { width: 100%; }
-/* SV-29: an event's days take the row, its times under them. */
+/* An event's days take the row, its times under them. */
 .editor .prow.days { flex-wrap: wrap; row-gap: 8px; }
 .editor .prow.days .pick-date { flex: 1 1 100%; }
 .editor .was { font-size: 12px; margin-top: -2px; }
@@ -116,7 +116,7 @@
 .editor .qchip .icon { color: var(--ink2); }
 .editor .qchip .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); }
 .editor .qchip .x:hover { background: var(--sub3); color: var(--ink); }
-/* SV-109: reminders wrap when a custom one runs long; a custom chip reopens its picker, its offset quiet. */
+/* Reminders wrap when a custom one runs long; a custom chip reopens its picker, its offset quiet. */
 .editor .prow.reminders { flex-wrap: wrap; row-gap: 6px; }
 .editor .qchip-open { display: inline-flex; align-items: center; gap: 6px; height: 100%; }
 .editor .custom-reminder .custom-date { display: contents; }
@@ -136,7 +136,7 @@
 :is(.editor, .prop) .place-name { color: var(--ink); }
 :is(.editor, .prop) .place-name b { font-weight: 600; }
 :is(.editor, .prop) .place-address { font-size: 12px; }
-/* A picked place's address, under the Place field (SV-27); why a project can't be sent (SV-25). */
+/* A picked place's address, under the Place field; why a project can't be sent. */
 .editor .eg > .place-address, .editor .eg > .field-note { padding: 0 10px; margin-top: -4px; font-size: 12px; }
 
 /* The conflict preview: a small timeline of the day. */
@@ -171,7 +171,7 @@
 /* ⌘Enter on a recurring event: the chooser takes the footer's place, and its Save is the only Save. */
 .editor .scope-pop { margin: auto 16px 16px; padding: 6px; flex: none; }
 
-/* Edit hands the item over from the floating detail (F5): the editor slides in 12 px. Opened any other
+/* Edit hands the item over from the floating detail: the editor slides in 12 px. Opened any other
    way (C, D, New), it slides in the same 12 px over a pane's 180 ms (styles.css › Overlays arrive). */
 @keyframes ed-in { from { opacity: 0; transform: translateX(var(--detail-editor-slide)); } }
 .editor.handed { animation: ed-in var(--detail-edit) var(--ease); }
@@ -179,12 +179,12 @@
 /* The scope chooser takes the footer's place, so it rises from there. */
 .editor .scope-pop { animation-name: pop-in-up; transform-origin: bottom left; }
 
-/* F6b: "from the email" marks (the proposal card's, board 08) on the fields an email gave, and its
+/* "From the email" marks (the proposal card's, board 08) on the fields an email gave, and its
    legend in the footer; the labels row's empty line. */
 .editor .srcm { color: var(--ink3); display: grid; flex: none; }
 .editor .prow .srcm { margin-left: auto; }
 .editor .ed-foot .legend { margin-left: auto; display: inline-flex; white-space: nowrap; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; min-width: 0; }
-/* In a narrow editor the legend gives way, its words cut short, inside the footer's padding (UX #23). */
+/* In a narrow editor the legend gives way, its words cut short, inside the footer's padding. */
 .editor .ed-foot .legend > span { overflow: hidden; text-overflow: ellipsis; }
 .editor .ed-foot .btn { flex: none; }
 .editor .prow .none { font-size: 12.5px; }
@@ -192,13 +192,13 @@
 /* The editor takes focus back after a menu pick (for ⌘Enter and Esc); it draws no ring for it. */
 .editor:focus { outline: none; }
 
-/* The pointer (DESIGN.md › Decided while building #12): fields take an `edgeHover` border. */
+/* The pointer: fields take an `edgeHover` border. */
 .editor .qchip .x { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 @media (hover: hover) {
   .editor .field:not(.focus, :focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
 }
 
-/* SV-208: the editor as an email's proposal card (search.css's `.prop` frame, board 08): the card's
+/* The editor as an email's proposal card (search.css's `.prop` frame, board 08): the card's
    head, its body in the card's padding with no scroll of its own, the conflict line in the date row
    in place of the timeline, and a footer with no rule over it. */
 .editor.card { display: block; animation: card-in var(--dur-medium) var(--ease); }
@@ -213,7 +213,7 @@
 .editor.card > .failed-line { padding: 12px 16px 0 46px; }
 .editor.card .ed-foot { border-top: 0; padding: 14px 16px 16px 46px; }
 
-/* SV-264 (D546): the Description field: one line while empty ("Add description"), growing with its
+/* The Description field: one line while empty ("Add description"), growing with its
    text to 8 lines and scrolling inside from there, its formatting bar under the text while it has
    focus, so the text doesn't move when it's clicked into. */
 .editor .eg > .icon.desc-glyph { align-self: start; margin-top: 8px; }
@@ -227,7 +227,7 @@
 .editor .desc-bar.linking input { min-width: 0; height: 26px; outline: none; color: var(--ink); }
 .editor .desc-bar.linking input::placeholder { color: var(--ink3); opacity: 1; }
 .editor .desc-note { padding: 0 10px 8px; font-size: 12px; }
-/* SV-270: a proposal's From: line keeps the "from the email" mark at the field's top end until it's changed. */
+/* A proposal's From: line keeps the "from the email" mark at the field's top end until it's changed. */
 .editor .desc-field.marked { position: relative; }
 .editor .desc-field.marked > .desc-edit { padding-right: 32px; }
 .editor .desc-field.marked > .srcm { position: absolute; top: 9px; right: 10px; }

@@ -1,8 +1,6 @@
-// The sidebar's Today block on mail pages (DESIGN.md › The Today block; BRIEF.md › The sidebar's
-// Today block): the next event ("2:30 PM  Dentist  in 5h") and the open tasks due today, a timed one
+// The sidebar's Today block on mail pages: the next event ("2:30 PM  Dentist  in 5h") and the open tasks due today, a timed one
 // with its time ("9:00 AM"), in one list by time with the untimed tasks after; then, under its own
-// Tomorrow label, tomorrow's events and its open tasks in the same order (DESIGN.md › Decided while
-// building #78, D460, D501). Confirmed data only, and nothing for an empty line.
+// Tomorrow label, tomorrow's events and its open tasks in the same order. Confirmed data only, and nothing for an empty line.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, localDate, startsIn} from './format.ts';
 
@@ -13,7 +11,7 @@ export interface TodayEvent {
   title: string;
   time: string;
   in: string;
-  // "in 12m" warms as it nears (polish audit shell-06): `soon` from 15 minutes before, `now` once under way.
+  // "in 12m" warms as it nears: `soon` from 15 minutes before, `now` once under way.
   urgency: 'soon' | 'now' | null;
   occurrence_start: string | null;
 }
@@ -30,9 +28,9 @@ export function urgency(startsAt: string, now: number): TodayEvent['urgency'] {
 export interface TodayTask {
   item: ItemOut;
   title: string;
-  // A timed task's time ("9:00 AM"), null for one due on a day alone (D501).
+  // A timed task's time ("9:00 AM"), null for one due on a day alone.
   time: string | null;
-  // Which label it's under: Today's, or Tomorrow's (D460).
+  // Which label it's under: Today's, or Tomorrow's.
   tomorrow: boolean;
 }
 
@@ -58,8 +56,7 @@ export interface Today {
 export const TODAY_TASKS = 3;
 
 /**
- * How long a completed task's line shows its done check before it folds away (DESIGN.md › The
- * Today block).
+ * How long a completed task's line shows its done check before it folds away.
  */
 export const DONE_MOMENT_MS = 360;
 
@@ -73,7 +70,7 @@ export function todayRange(now: number, timeZone: string): {from: string; to: st
 export const lineTime = (item: ItemOut): string | null => (item.kind === 'task' ? item.due_at : item.starts_at);
 
 /**
- * A day's lines in time order (D501): the timed ones by their time, an event before a task at the
+ * A day's lines in time order: the timed ones by their time, an event before a task at the
  * same time, then the untimed in the order given. A timed task whose time has passed sorts by it too,
  * so an open one stays at the top until it's completed.
  */
@@ -129,7 +126,7 @@ export function shownTomorrow<T>(lines: T[], open: boolean, isEvent: (line: T) =
   return {shown, more: `${rest.length} more ${rest.some(isEvent) ? '' : 'due '}tomorrow`};
 }
 
-/** The folded rail's one slot (D509): the next timed item today, its countdown and what else is left. */
+/** The folded rail's one slot: the next timed item today, its countdown and what else is left. */
 export interface NextUp {
   item: ItemOut;
   key: string;
@@ -144,7 +141,7 @@ export interface NextUp {
 }
 
 /**
- * Today's next timed item, an event or a task alike (D509): an event under way or still to start, or
+ * Today's next timed item, an event or a task alike: an event under way or still to start, or
  * a timed task still to come, the earliest first, an event before a task at the same time. A timed
  * task whose time has passed isn't next. None once nothing timed is left today; pending items don't count.
  */

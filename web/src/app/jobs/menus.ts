@@ -1,6 +1,6 @@
-// What Jobs's menus hold (DESIGN.md › Needs you, Corrections; boards 34a, 35a, 35b; #266–#268), built
+// What Jobs's menus hold (boards 34a, 35a, 35b), built
 // from the page's rows and the actions the page passes in, so More, a row's right-click and the
-// status chip draw from one list (#248). Pure: the page and the pane decide what each action does.
+// status chip draw from one list. Pure: the page and the pane decide what each action does.
 import type {ApplicationRowOut, JdCandidateOut, JobEventOut, JobStatus, NeedsYouItemOut} from '@setpoint/shared';
 import type {MenuEntry, MenuItem, MenuSpec} from './Menu.tsx';
 import {appliedWord, markLabel, markOf, STATUS_LABELS, titleOf} from './words.ts';
@@ -66,14 +66,14 @@ export function searchApplications(label: string, rows: ApplicationRowOut[], {ex
   };
 }
 
-/** A right-click on the table's headings (SV-246, D508): the widths back to where they start. */
+/** A right-click on the table's headings: the widths back to where they start. */
 export function headingMenu(on: {reset: () => void}): MenuSpec {
   return {label: 'Columns', width: 220, entries: [{kind: 'item', id: 'reset-widths', icon: 'undo', label: 'Reset column widths', run: on.reset}]};
 }
 
 /**
  * Assign to… (34a, 312 wide): the company's applications first under its name, then Another
- * application… and Not about a job. Each application offers its email beside it (D402).
+ * application… and Not about a job. Each application offers its email beside it.
  */
 export function assignMenu(item: NeedsYouItemOut, rows: ApplicationRowOut[], today: string, on: {assign: (row: ApplicationRowOut) => void; look: (row: ApplicationRowOut) => void; notAJob: () => void}): MenuSpec {
   const own = rows.filter(row => sameCompany(row.company, item.company)).sort(newestFirst);
@@ -92,10 +92,10 @@ export function assignMenu(item: NeedsYouItemOut, rows: ApplicationRowOut[], tod
 /** A candidate's second line: "New York, NY · Greenhouse". */
 export const candidateWhere = (candidate: JdCandidateOut) => [candidate.location, candidate.platform].filter(Boolean).join(' · ');
 
-/** What a candidate's line adds when opening it came back as nothing Jobs can read (SV-140). */
+/** What a candidate's line adds when opening it came back as nothing Jobs can read. */
 export const CANT_READ = 'Jobs can\'t read this one';
 
-/** From history's Choose… (#266): each candidate with its open_in_new, then None of these. */
+/** From history's Choose…: each candidate with its open_in_new, then None of these. */
 export function chooseMenu(candidates: JdCandidateOut[], on: {pick: (candidate: JdCandidateOut) => void; none: () => void}): MenuSpec {
   return {
     label: 'Choose the posting', width: 330,
@@ -112,7 +112,7 @@ export function chooseMenu(candidates: JdCandidateOut[], on: {pick: (candidate: 
 const STATUSES: JobStatus[] = ['applied', 'in_process', 'offer', 'rejected', 'withdrawn'];
 
 /**
- * Set status (#267, D365): the five in their colours, the current one checked; while it's set by
+ * Set status: the five in their colours, the current one checked; while it's set by
  * hand, Let emails decide ends it. Ghosted isn't one: it's a flag.
  */
 export function statusMenu(row: Pick<ApplicationRowOut, 'status' | 'status_set_by'>, on: {set: (status: JobStatus | null) => void}): MenuSpec {
@@ -140,9 +140,9 @@ export interface CorrectionActions {
 }
 
 /**
- * More's list (35b, 300 wide), which a row's right-click shares: Pin or Unpin `P` (SV-243), the two edits, Set status ›, Merge
+ * More's list (35b, 300 wide), which a row's right-click shares: Pin or Unpin `P`, the two edits, Set status ›, Merge
  * with… ›; Not this posting and Look up the JD again; then the two that remove it, each saying how
- * it differs (D321). Condensed (the Jobs pane's rows, SV-220) leaves out the JD's two.
+ * it differs. Condensed (the Jobs pane's rows) leaves out the JD's two.
  */
 export function moreEntries(row: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: CorrectionActions, condensed = false): MenuEntry[] {
   const saved = row.jd.state === 'found';
@@ -171,8 +171,8 @@ export function moreEntries(row: ApplicationRowOut, rows: ApplicationRowOut[], t
 export const moreMenu = (row: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: CorrectionActions): MenuSpec => ({label: 'More', width: 300, entries: moreEntries(row, rows, today, on)});
 
 /**
- * A row's right-click (#268, D366): Open ↵, Open posting O with a link, More's list, then Copy
- * company and role and Copy posting link. Condensed for the Jobs pane's rows (SV-220): no JD's two.
+ * A row's right-click: Open ↵, Open posting O with a link, More's list, then Copy
+ * company and role and Copy posting link. Condensed for the Jobs pane's rows: no JD's two.
  */
 export function rowMenu(row: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: CorrectionActions & {open: () => void; openPosting: () => void; copy: (text: string) => void}, condensed = false): MenuSpec {
   const link = row.jd.link;
@@ -191,7 +191,7 @@ export function rowMenu(row: ApplicationRowOut, rows: ApplicationRowOut[], today
 }
 
 /**
- * An event's ··· (35a, 220 wide): Open email while Gmail has it (#269), Move to… (the company's other
+ * An event's ··· (35a, 220 wide): Open email while Gmail has it, Move to… (the company's other
  * applications, then Another application…) and Not about this.
  */
 export function eventMenu(event: JobEventOut, application: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: {

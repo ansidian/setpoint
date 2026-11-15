@@ -1,4 +1,4 @@
-// Todoist's order keys (SV-272): a task's place among its siblings is a string, and siblings sort by
+// Todoist's order keys: a task's place among its siblings is a string, and siblings sort by
 // comparing them character by character ("a0" < "a0V" < "a1"). Moving one task writes one new key
 // that sorts between its new neighbours', so no other task changes. The keys seen in Todoist's API
 // reference ("a0", "a1V") are fractional indexes in base 62: a head letter saying how many digits

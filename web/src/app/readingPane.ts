@@ -1,6 +1,6 @@
-// The reading pane's width (2026-10-09): dragged from its left edge, kept by this browser
+// The reading pane's width: dragged from its left edge, kept by this browser
 // (localStorage, as the theme is), since how wide it should be depends on the screen. So it's
-// kept per screen (2026-11-14): an external display and the laptop's own each have theirs.
+// kept per screen: an external display and the laptop's own each have theirs.
 import {useSyncExternalStore} from 'react';
 import {paneWidth, paneWidths, READING_PANE, screenKey} from '../logic/reader.ts';
 

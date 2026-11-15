@@ -1,5 +1,4 @@
-// Mail's read queries and changes over the seed (BRIEF.md › Sample data; DESIGN.md › The list and
-// Interaction rules), with the dev provider confirming.
+// Mail's read queries and changes over the seed, with the dev provider confirming.
 import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -19,7 +18,7 @@ const unreadByLabel = (w: World) => {
 };
 
 describe('the Inbox over the seed', () => {
-  test('groups in DESIGN.md\'s order, with their counts', () => {
+  test('groups in INBOX_GROUPS\' order, with their counts', () => {
     const w = world({seed: true});
     const view = inbox(w.store);
     expect(view.groups.map(group => [group.group, group.count])).toEqual([
@@ -58,7 +57,7 @@ describe('the Inbox over the seed', () => {
   });
 });
 
-describe('read state, Done and the counts (decision 48)', () => {
+describe('read state, Done and the counts', () => {
   test('opening an unread email drops the unread counts, not the pill: 18 and Jobs 1', () => {
     const w = world({seed: true});
     const command = openMessage(w.store, idOf(w, 'Interview availability for Software Engineer I'))!;
@@ -157,14 +156,14 @@ describe('trash, failures and Mark all as read', () => {
     expect(messageDetail(w.store, id).command).toBeNull();
   });
 
-  test('Mark all as read: one command per account, every unread email outside Attention and Security, read at once (D84)', () => {
+  test('Mark all as read: one command per account, every unread email outside Attention and Security, read at once', () => {
     const w = world({seed: true});
     const commands = markAllRead(w.store);
     const labels = new Map(w.store.db.select().from(t.accounts).all().map(account => [account.id, account.label]));
     expect(commands.map(command => [labels.get(command.targetId), (command.payload.message_ids as number[]).length])).toEqual([
       ['Personal', 6], ['Business', 6], ['Jobs', 1], ['iCloud', 1],
     ]);
-    // Pending: read already, so a load before the provider confirms doesn't bring them back (SV-41).
+    // Pending: read already, so a load before the provider confirms doesn't bring them back.
     expect(mailCounts(w.store)).toMatchObject({attention: 3, unread: 5, unread_fyi: 3});
     expect(inbox(w.store).groups.map(group => group.group)).toEqual(['pinned', 'attention', 'security']);
     for (const command of commands) confirmCommand(w.store, command.id);
@@ -172,7 +171,7 @@ describe('trash, failures and Mark all as read', () => {
     expect(inbox(w.store).groups.map(group => group.group)).toEqual(['pinned', 'attention', 'security']);
   });
 
-  test('Mark all as read leaves Security unread: its codes and sign-in alerts stay in the Inbox (UX #4)', () => {
+  test('Mark all as read leaves Security unread: its codes and sign-in alerts stay in the Inbox', () => {
     const w = world({seed: true});
     const security = inbox(w.store).groups.find(group => group.group === 'security')!.rows.map(row => row.id);
     expect(security.length).toBeGreaterThan(0);

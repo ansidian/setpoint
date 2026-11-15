@@ -9,7 +9,7 @@ export const SETTINGS_PATH = '/settings';
 export interface SearchQuery {
   text: string;
   chips: SearchChip[];
-  // A suggestion's chips, kept or what they left out (D392).
+  // A suggestion's chips, kept or what they left out.
   read?: SearchRead;
   // With `read`: the words as typed, which rank and which the chips' "more" number counts from.
   typed?: string;
@@ -21,7 +21,7 @@ export const searchMail = ({text, chips, read, typed, page}: SearchQuery) =>
   sendJson<SearchOut>('POST', '/search', {text, chips, ...(read ? {read} : {}), ...(typed === undefined ? {} : {typed}), ...(page ?? {})});
 
 /**
- * A suggestion for the field's exact text (D392): the grammar's date alone without `model`, and with
+ * A suggestion for the field's exact text: the grammar's date alone without `model`, and with
  * it a reading too, the only way a search reaches a model. `signal` drops it once the text has moved on.
  */
 export const searchSuggestion = ({text, chips}: Pick<SearchQuery, 'text' | 'chips'>, model: boolean, signal: AbortSignal) =>
@@ -34,7 +34,7 @@ export const searchSuggestionLog = (id: number, event: 'shown' | 'accepted', sea
 /** The search log: a chip the user took off a search, so a wrong reading can be seen. */
 export const searchChipRemoved = (searchId: number, chip: SearchChip) => sendJson<void>('POST', '/search/chip-removed', {search_id: searchId, chip});
 
-/** SV-23: the calendar's search; a later page passes the last one's `next_offset`. Not logged. */
+/** The calendar's search; a later page passes the last one's `next_offset`. Not logged. */
 export const searchCalendar = ({text, chips, offset}: {text: string; chips: CalendarSearchChip[]; offset: number}) =>
   sendJson<CalendarSearchOut>('POST', '/calendar/search', {text, chips, ...(offset ? {offset} : {})});
 

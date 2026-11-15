@@ -1,4 +1,4 @@
-// Not a board: a free event during the CS 101 final's evening (SV-180). The registrar's email
+// Not a board: a free event during the CS 101 final's evening. The registrar's email
 // proposes the exam for Wed, Dec 9, 7 – 9 PM; Exam review drop-in, 7 – 8 PM that evening, is marked
 // free, so the proposal card's conflict line still reads "Free that evening".
 import {SEED_TIME_ZONE} from '@setpoint/shared';

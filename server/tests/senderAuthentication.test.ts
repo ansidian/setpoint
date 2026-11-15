@@ -1,5 +1,5 @@
-// Sender authentication, ported with v1's tests (SV-3 harvest note): only the receiver's own
-// verdict counts, and anything ambiguous is "unavailable", never a pass.
+// Sender authentication: only the receiver's own verdict counts, and anything ambiguous is
+// "unavailable", never a pass.
 import { describe, expect, it } from "vitest";
 import {
   evaluateGmailSenderAuthentication,
@@ -260,7 +260,7 @@ describe("the record's sender_authenticated", () => {
 });
 
 // Gmail names the DMARC record's domain in header.from, the parent for a subdomain sender, as on
-// every real USPS Informed Delivery digest (SV-274): those passed DMARC and were stored as failing.
+// every real USPS Informed Delivery digest: those passed DMARC and were stored as failing.
 describe("a Gmail DMARC result on the From domain's parent", () => {
   const evaluate = (from: string, dmarc: string) => evaluateGmailSenderAuthentication([
     { name: "From", value: from },

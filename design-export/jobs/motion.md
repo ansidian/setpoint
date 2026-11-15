@@ -18,7 +18,7 @@ Motion · the detail opening and collapsing
 
 [`boards/32b-a-narrow-window.html`](boards/32b-a-narrow-window.html)
 
-A narrow window (640–1099 px, decision 71) is still the desktop.
+A narrow window (640–1099 px) is still the desktop.
 
 - The rail: Jobs takes its slot after News, its Needs you count a 16 px neutral badge (sub4, ink), not the Inbox's caution one.
 - The detail lies over the table under the header, led by Back (arrow_back, "Back · Esc"); Esc, J / K and ↑ ↓ work as beside the table. It arrives 12 px from the right over 180 ms, as the reading pane's content does, and Back slides it off the same way.
@@ -58,13 +58,13 @@ Motion · a Needs you item resolving and leaving (as the Today block's task does
 - The last item leaving folds the whole band, header and all, over 180 ms. From history alone keeps a 36 px line.
 - Track this: the new application lands in the table at its date and settles in from sub2 over 900 ms (the arrival rule News uses).
 - From history: rows unfold 180 ms, chevron turns 90°.
-- Dismiss all (decision 70) is the same as ignoring each item, so those emails make nothing: the six rows fold away together (180 ms), then the line itself; toast "Dismissed 6 from history · Undo".
+- Dismiss all is the same as ignoring each item, so those emails make nothing: the six rows fold away together (180 ms), then the line itself; toast "Dismissed 6 from history · Undo".
 
 ## 34c · Track this, resolved: Wide World's detail, first seen in this email
 
 [`boards/34c-track-this-resolved.html`](boards/34c-track-this-resolved.html)
 
-Track this, resolved (decision 69)
+Track this, resolved
 
 - The item folds away as in 34b; the new application lands at the top of the table, at today's date (its email's), settling from sub2 over 900 ms, and opens.
 - Its Applied date is the email's, and the detail says "First seen in this email", since the real one is unknown; the timeline marks the event First seen.
@@ -91,7 +91,7 @@ Motion · More's corrections
 - Merged: the other row folds out of the table (180 ms); this timeline gains its emails, each settling in from sub2 over 900 ms. Toast: "Merged · Undo".
 - Not an application / Delete: the row folds away 180 ms, the pane closes (120 ms fade), toast with Undo for 6 s.
 - Not this posting: the JD section crossfades to "Is this the posting?" with the other candidates (120 / 120 ms), or to "No JD found" when there are none.
-- The two that remove it differ, and the menu says how: Not an application hides it and its emails never make one again; Delete forgets it, so a later email can make it again (decision 67).
+- The two that remove it differ, and the menu says how: Not an application hides it and its emails never make one again; Delete forgets it, so a later email can make it again.
 
 ## 36a · Search · humongous
 
@@ -153,7 +153,7 @@ Motion · lines
 
 - "5 emails not read yet" folds in (180 ms) when the AI stops answering and out when it's back, showing a good check for 1.2 s first, as mail's health lines do.
 - Ghosted and a status set by hand are drawn, not animated: Ghosted appears when the 30 days pass, on the next draw.
-- A status set by hand (Alpine's Withdrawn) gives way only to an email that sets a status: an assessment, interview, offer or rejection. Quiet emails never undo it (decision 68). No JD found offers Look it up by hand; Jobs never retries on its own (decision 66).
+- A status set by hand (Alpine's Withdrawn) gives way only to an email that sets a status: an assessment, interview, offer or rejection. Quiet emails never undo it. No JD found offers Look it up by hand; Jobs never retries on its own.
 
 ## 38c · States · Jobs off
 

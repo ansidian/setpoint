@@ -1,12 +1,12 @@
-// Undo for Jobs's answers and corrections (J6; DESIGN.md › Corrections: "each says what it did in the
-// toast, with Undo for 6 seconds"). Before it changes anything, a correction takes a snapshot of every
+// Undo for Jobs's answers and corrections: each says what it did in the toast, with Undo for 6
+// seconds. Before it changes anything, a correction takes a snapshot of every
 // row it may touch: its applications with their events, JD, candidates, hand-set fields, aliases and
 // turned-down postings, the Needs you items and the emails' read records and blocks; afterwards it
 // says what it made. Undo puts those rows back exactly as they were, with their ids, and takes away
 // what it made, so a merge, a delete or a block comes back whole. The toast offers only the latest,
 // and a snapshot is kept a day.
 //
-// A JD's reading is the one thing written meanwhile that no correction makes (SV-170): a pasted JD
+// A JD's reading is the one thing written meanwhile that no correction makes: a pasted JD
 // read since the snapshot keeps that reading through Undo, and one put back unread is read again.
 import {eq, inArray, lt, or} from 'drizzle-orm';
 import {isoNow, noteLive, transaction} from '../store.ts';
@@ -147,7 +147,7 @@ export function undoCorrection(store: Store, token: number): {applications: numb
 type Posting = typeof j.jobsPostings.$inferSelect;
 
 /**
- * The JDs as the snapshot has them, each still there taking the reading it has now (SV-170). A
+ * The JDs as the snapshot has them, each still there taking the reading it has now. A
  * location the user has set no reading changes, so it goes back to what it was; otherwise it's the
  * reading's.
  */

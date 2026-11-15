@@ -1,11 +1,11 @@
-// BRIEF.md › Sample data › Jobs (round 4) as rows (J1), on the seed's clock (Wed Oct 7, 2026, 9:12
-// AM Pacific): the table's 17 applications and 45 more, invented, so the numbers come out as the
-// brief's (62; Applied 31 with 18 Ghosted, In process 3, Offer 1, Rejected 25, Withdrawn 2; 3, 5, 4,
+// Jobs's sample data as rows, on the seed's clock (Wed Oct 7, 2026, 9:12
+// AM Pacific): the table's 17 applications and 45 more, invented, so the numbers come out
+// right (62 in all; Applied 31 with 18 Ghosted, In process 3, Offer 1, Rejected 25, Withdrawn 2; 3, 5, 4,
 // 6, 2, 4, 7, 5, 3, 6, 8 and 3 a week), Needs you's three items and From history's six (boards 34a,
 // 34b), Northwind's detail (32, 33) and the JDs the table names. Every company is one of Microsoft's
 // fictional ones and every link an example domain.
 //
-// Events and Needs you items keep their own copies (decision 63), so the emails they name needn't
+// Events and Needs you items keep their own copies, so the emails they name needn't
 // be in mail: only the Northwind and Fabrikam emails are the Inbox's own, linked by message id. Run
 // from the app's seed (src/dev/sample.ts, a wiring point) after mail's sample is in.
 import type Database from 'better-sqlite3';
@@ -55,7 +55,7 @@ interface SeedCandidate {
   location: string;
   platform: string;
   link: string;
-  // Opened and came back as nothing Jobs can read (SV-140).
+  // Opened and came back as nothing Jobs can read.
   unreadable?: true;
 }
 
@@ -66,9 +66,9 @@ interface SeedApplication {
   platform: string;
   account?: Account;
   events: SeedEvent[];
-  // Set by hand (D322): Alpine Ski House's Withdrawn on Sep 10.
+  // Set by hand: Alpine Ski House's Withdrawn on Sep 10.
   byHand?: {status: JobStatus; at: [string, string]};
-  // `picked`: the user picked the first, and Jobs couldn't read it (SV-132, SV-140).
+  // `picked`: the user picked the first, and Jobs couldn't read it.
   jd: SeedPosting | {candidates: SeedCandidate[]; picked?: true} | 'not_found' | null;
   reappliedFrom?: string;
 }
@@ -251,7 +251,7 @@ function posting(company: string, title: string, options: {
 const applied = (date: string, time: string, company: string, subject = `Thank you for applying to ${company}`): SeedEvent => ({at: [date, time], kind: 'applied', subject, sender: company});
 const rejected = (date: string, time: string, company: string, subject = 'Update on your application'): SeedEvent => ({at: [date, time], kind: 'rejection', subject, sender: company});
 
-/** The table (BRIEF.md › Sample data › Jobs), newest first. */
+/** The table, newest first. */
 const TABLE: SeedApplication[] = [
   {company: 'Fabrikam', title: 'Data Analyst', platform: 'Workday',
     events: [{at: ['10-07', '02:14'], kind: 'applied', subject: 'Application received', sender: 'Fabrikam Recruiting', mail: true}],
@@ -325,7 +325,7 @@ const TABLE: SeedApplication[] = [
 ];
 
 /**
- * The 45 the table leaves out (D319), each [company, title, platform, applied, rejected or withdrawn
+ * The 45 the table leaves out, each [company, title, platform, applied, rejected or withdrawn
  * by hand]. Mostly Ghosted or Rejected; six still at Applied inside 30 days, so 18 of Applied's 31
  * are Ghosted. Wingtip Toys' two, Adventure Works' and Margie's Travel's are the ones From history
  * names. The Phone Company's Support Engineer is a pick Jobs couldn't read, below the table's fold.
@@ -415,7 +415,7 @@ function olderApplication([company, title, platform, appliedOn, end]: Older, ind
     company, title, platform,
     events,
     ...(end && 'withdrawn' in end ? {byHand: {status: 'withdrawn' as const, at: [end.withdrawn, '20:00'] as [string, string]}} : {}),
-    // Closed before Jobs looked: none (D311); From history's two wait as candidates; the rest found.
+    // Closed before Jobs looked: none; From history's two wait as candidates; the rest found.
     jd: failedPick && failedPick.title === title ? {candidates: [failedPick], picked: true} : OLDER_CANDIDATES[company] && !end ? {candidates: OLDER_CANDIDATES[company]} : closedBeforeSeptember ? null
       : posting(company, title, {source, platform: source === 'search' ? null : platform, link: `https://${host}/${slug(title)}-${1000 + index}`, location, workplace, salary}),
   };
@@ -459,7 +459,7 @@ const NEEDS_YOU: SeedNeedsYou[] = [
 /**
  * The Indeed match email (mail's sample) and the Inbox's two older Northwind rejections: read, making
  * nothing. The match email is kept as the reader keeps one (its event, company and role), so mail
- * shows Applied before on it (J7, board 37c).
+ * shows Applied before on it (board 37c).
  */
 const IGNORED_MAIL: {subject: string; at: [string, string]; match?: {company: string; title: string}}[] = [
   {subject: 'Associate Software Engineer @ Contoso Pharmaceuticals', at: ['09-15', '06:05'], match: {company: 'Contoso Pharmaceuticals', title: 'Associate Software Engineer'}},
@@ -495,7 +495,7 @@ function jobsUsage(from: string): (typeof t.aiUsage.$inferInsert)[] {
 }
 
 /**
- * Loads Jobs's sample, turned on and reading Jobs and Business (D310). Mail's sample must be in first.
+ * Loads Jobs's sample, turned on and reading Jobs and Business. Mail's sample must be in first.
  * `usage` adds Jobs's AI usage this month, as mail's sample does its own (board 39b).
  */
 export function seedJobs({sqlite, db: mailDb, usage = false}: {sqlite: Database.Database; db: Store['db']; usage?: boolean}) {
@@ -515,7 +515,7 @@ export function seedJobs({sqlite, db: mailDb, usage = false}: {sqlite: Database.
       accounts: [{account_id: accounts.get('Jobs')!, reads: 'every'}, {account_id: accounts.get('Business')!, reads: 'career'}],
     }).run();
     // The history pass ran when Jobs was turned on and finished at 8:14 PM (board 39a), over the 330
-    // emails the brief counts in the Jobs account since May; the sample keeps only what it made.
+    // emails the Jobs account holds since May; the sample keeps only what it made.
     db.insert(j.jobsHistory).values({id: 1, state: 'done', before: turnedOn, startedAt: turnedOn, total: 330, read: 330, finishedAt: at('10-01', '20:14')}).run();
 
     // Oldest first, so a re-application's earlier one is there to link to.

@@ -1,7 +1,7 @@
-// The history pass (J4), against an ephemeral database holding a recorded invented history
+// The history pass, against an ephemeral database holding a recorded invented history
 // (./history.ts) in three accounts, with Anthropic (Haiku for each email, the JD's check and reading,
 // Sonnet's search) and the hiring platforms (./fakeWeb.ts) faked at the HTTP boundary. Jobs is turned
-// on through its route. The Done-when list: the history makes the expected applications, updates
+// on through its route. What it covers: the history makes the expected applications, updates
 // finding the confirmations read before them, closed ones without JDs, old silent ones Ghosted and
 // the unsure in From history; a pass stopped halfway goes on after a restart, reading and charging
 // nothing twice; a second turn-on reads nothing; the progress counts; Dismiss all and its Undo.
@@ -38,7 +38,7 @@ const companyOf = (request: FakeRequest) => /^Company: (.*)$/m.exec(request.inpu
 
 /**
  * What the pass reads: every email in Jobs; in Business, Career (City Power & Light's, the backfill's
- * rejection) and the backfill's confirmation and its hiring platform's interview (D355).
+ * rejection) and the backfill's confirmation and its hiring platform's interview.
  */
 const READ = HISTORY_EMAILS.filter(email => email.jobs !== null);
 const NEVER_READ = HISTORY_EMAILS.filter(email => email.jobs === null).map(email => email.key);
@@ -169,7 +169,7 @@ async function runPass(s: Setup) {
   return settings;
 }
 
-describe('a recorded history (Done when)', () => {
+describe('a recorded history', () => {
   test('makes the expected applications: updates find their confirmations, closed ones get no JD, old silent ones are Ghosted, the unsure go to From history', async () => {
     const s = await setup();
     const started = await s.turn(true, {accounts: s.reads});
@@ -206,7 +206,7 @@ describe('a recorded history (Done when)', () => {
     expect(timeline(2)).toEqual([['applied', s.ids.get('coho-applied')], ['assessment', s.ids.get('coho-assessment')], ['rejection', s.ids.get('coho-rejected')]]);
     expect(s.ids.get('coho-rejected')!).toBeLessThan(s.ids.get('coho-applied')!);
     expect(timeline(1).map(([kind]) => kind)).toEqual(['applied', 'rejection']);
-    // Business's backfilled confirmation, typed Other by the rules, found its rejection (D355).
+    // Business's backfilled confirmation, typed Other by the rules, found its rejection.
     expect(timeline(4)).toEqual([['applied', s.ids.get('school-applied')], ['rejection', s.ids.get('school-rejected')]]);
     expect(timeline(7).map(([kind]) => kind)).toEqual(['applied', 'verification', 'form', 'rejection']);
     expect(timeline(8).map(([kind]) => kind)).toEqual(['match', 'applied']);
@@ -242,7 +242,7 @@ describe('a recorded history (Done when)', () => {
     expect(looked.some(job => closed.includes(job.key))).toBe(false);
     expect(looked.every(job => job.createdAt >= page.history.finished_at!)).toBe(true);
 
-    // Each email read once, through J2's reader; never the mail Jobs mustn't read.
+    // Each email read once, through the live reader's read; never the mail Jobs mustn't read.
     expect(s.answered.sort()).toEqual(READ.map(email => email.subject).sort());
     expect(s.ledger('jobs_emails')).toHaveLength(READ.length);
     for (const key of NEVER_READ) expect(s.read(key)).toBeUndefined();
@@ -279,7 +279,7 @@ describe('a recorded history (Done when)', () => {
 });
 
 
-describe('durable, with its progress (Done when)', () => {
+describe('durable, with its progress', () => {
   test('a pass stopped halfway goes on from there after a restart, reading and charging nothing twice; its counts are right throughout', async () => {
     const s = await setup();
     const progress = () => liveEvents(s.w).flatMap(event => (event.type === 'jobs' && event.history ? [event.history] : []));
@@ -452,7 +452,7 @@ describe('turning Jobs on and off (Settings › Jobs)', () => {
   });
 });
 
-describe('Dismiss all and its Undo (D324)', () => {
+describe('Dismiss all and its Undo', () => {
   test('clears From history, the same as ignoring each item, and Undo brings back what it dismissed', async () => {
     const s = await setup();
     await runPass(s);

@@ -1,4 +1,4 @@
-// Settings' row pattern (DESIGN.md › Settings): a page's head, sections with their uppercase label,
+// Settings' row pattern: a page's head, sections with their uppercase label,
 // `sub` groups of rows 52 px or more, 34 × 20 switches, selects, steppers and small menus. Every
 // page is built from these, the drawn ones (boards 17, 18a, 18b) and the rest alike.
 import {cloneElement, useCallback, useEffect, useRef, useState} from 'react';
@@ -14,7 +14,7 @@ import {closeSettings} from './store.ts';
 
 /**
  * A Settings page: its head, then its sections, or, when one of its `loads` failed with nothing to
- * show, why, with Try again (states-06, #228). `note` follows the title ("62 applications", 39a);
+ * show, why, with Try again. `note` follows the title ("62 applications", 39a);
  * `actions` sit at the head's end.
  */
 export function Page({title, note, actions, loads = [], children}: {title: string; note?: ReactNode; actions?: ReactNode; loads?: Load[]; children: ReactNode}) {
@@ -60,11 +60,11 @@ export function Switch({on, label, disabled, onChange}: {on: boolean; label: str
 /**
  * The board's select (a 30 px chip with a chevron): it opens the same small menu as a row's options,
  * its choices as items with a check on the current one, never the browser's own list. A choice with a
- * `colour` leads with its dot, as the editor's Calendar menu does; `align` is the menu's (SV-189).
+ * `colour` leads with its dot, as the editor's Calendar menu does; `align` is the menu's.
  */
 export function Select<T extends string | number>({value, options, label, align, onChange}: {value: T; options: {value: T; label: string; disabled?: boolean; colour?: Colour | null; detail?: string | null}[]; label: string; align?: 'left' | 'right'; onChange: (value: T) => void}) {
   const picked = options.find(option => option.value === value);
-  // An option's detail (SV-191: a calendar's account, when its name appears twice) follows it in `ink3`.
+  // An option's detail (a calendar's account, when its name appears twice) follows it in `ink3`.
   const detail = (option: {detail?: string | null}) => option.detail && <span className="ink3 detail">{option.detail}</span>;
   const shown = picked ? <>{picked.label}{detail(picked)}</> : String(value);
   return (
@@ -131,7 +131,7 @@ export function Menu({button, label, align = 'right', className, children}: {but
         all[at < 0 ? (step > 0 ? 0 : all.length - 1) : (at + step + all.length) % all.length]?.focus();
       }
     }}>
-      {/* The button, already named, says whether its menu is open (axe's aria-allowed-attr, SV-99). */}
+      {/* The button, already named, says whether its menu is open (axe's aria-allowed-attr). */}
       <span onClick={event => setOpen(open ? false : event.detail === 0 ? 'keys' : 'pointer')} role="presentation">{cloneElement(button, {'aria-expanded': !!open, 'aria-haspopup': 'menu'})}</span>
       {open && <div ref={placeMenu} className={['pop menu', align === 'left' && 'left', className].filter(Boolean).join(' ')} role="menu" aria-label={label}>{children(close)}</div>}
     </span>
@@ -149,14 +149,14 @@ export const escapeCancels = (cancel: () => void) => (event: KeyboardEvent) => {
 
 /**
  * How a source's row syncs ("Gmail · Push", "Every 15 min"). Its tip repeats its words, as the row's
- * name and line do, so it shows only while they're cut (SV-253).
+ * name and line do, so it shows only while they're cut.
  */
 export function Prov({text}: {text: string}) {
   return <span className="prov" data-tip={text} data-tip-quick>{text}</span>;
 }
 
 /**
- * What a source's state leads with (the polish audit's settings-01, under states-04's tones): a 7 px
+ * What a source's state leads with: a 7 px
  * `good` dot when checked, `history` in `ink3` when checks stopped, `warning` in `caution` when
  * failing, `sync_problem` when it needs sign-in; the shared spinner while Check now runs.
  */
@@ -178,7 +178,7 @@ export function HealthGlyph({kind, checking = false}: {kind: HealthKind; checkin
 
 /**
  * A line under a section saying how a change went: its refusal, or what happened. A failure leads
- * with `error` in `alert`, and a test that worked with `check` in `good` (the polish audit's states-11).
+ * with `error` in `alert`, and a test that worked with `check` in `good`.
  */
 export function Line({text, tone}: {text: string | null; tone?: LineTone}) {
   if (!text) return null;
@@ -233,7 +233,7 @@ const TOPS = [110, 140, 96, 128, 150, 118];
 const LINES = [230, 190, 214, 170, 250, 204];
 
 /**
- * A group's rows while its answers load (states-01, settings-05), in place of what the page would
+ * A group's rows while its answers load, in place of what the page would
  * otherwise say for nothing ("Not connected", "No rules yet"): `count` rows of `sub3` bars, a title
  * over its line (one line with `one`), and the control's place at the end; `tile` leads each with
  * the 30 px icon tile (Accounts, News).

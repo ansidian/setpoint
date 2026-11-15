@@ -1,4 +1,4 @@
-// Jobs reading mail as it runs (J2), against an ephemeral database holding the seed's mail, with
+// Jobs reading mail as it runs, against an ephemeral database holding the seed's mail, with
 // triage and Haiku faked at the HTTP boundary (tests/fakeModels.ts): the hook from triage, a recorded
 // set of invented emails making the expected applications, events and Needs you items, read once and
 // never again, the ledger, the AI down and back, a key missing, a missed nudge, a status set by hand,
@@ -108,7 +108,7 @@ async function setup({key = true, hook = true}: {key?: boolean; hook?: boolean} 
   return {w, store, db, fake, reader, triage, engine, drain, deliver, arrive, ids, jobsRequests, applications, eventsOf, read, readJob, accountId};
 }
 
-describe('a recorded set of invented emails (Done when)', () => {
+describe('a recorded set of invented emails', () => {
   test('makes the expected applications, events and Needs you items, and a second pass reads nothing', async () => {
     const s = await setup();
     await s.arrive(...RECORDED_EMAILS.map(email => email.key));
@@ -293,7 +293,7 @@ describe('the hook', () => {
 });
 
 describe('what the reader sees', () => {
-  test('an HTML-only email reaches the model with its words, not an empty body (SV-128)', async () => {
+  test('an HTML-only email reaches the model with its words, not an empty body', async () => {
     const {store, drain, jobsRequests, accountId} = await setup();
     const email = RECORDED_EMAILS.find(each => each.key === 'fabrikam-applied')!;
     upsertMessages(store, accountId(email.account), [{
@@ -389,11 +389,11 @@ describe('the AI down (When things break)', () => {
 });
 
 describe('statuses and corrections that stick', () => {
-  test('a status set by hand gives way only to an email that sets one (decision 68)', async () => {
+  test('a status set by hand gives way only to an email that sets one', async () => {
     const s = await setup();
     await s.arrive('fabrikam-applied');
     const [application] = s.applications();
-    // The user sets Offer by hand on Oct 9, news that came by phone (J6's correction, by hand here).
+    // The user sets Offer by hand on Oct 9, news that came by phone (a correction, by hand here).
     s.db.update(j.jobsApplications).set({status: 'offer', statusSetBy: 'user', statusSetAt: '2026-10-09T16:00:00.000Z'}).where(eq(j.jobsApplications.id, application!.id)).run();
     s.db.insert(j.jobsHandSet).values({applicationId: application!.id, field: 'status', setAt: '2026-10-09T16:00:00.000Z'}).run();
 
@@ -422,11 +422,11 @@ describe('statuses and corrections that stick', () => {
     expect(s.db.select().from(j.jobsHandSet).all()).toHaveLength(1);
   });
 
-  test('an email of an application marked Not an application never makes one again (D321)', async () => {
+  test('an email of an application marked Not an application never makes one again', async () => {
     const s = await setup();
     await s.arrive('woodgrove-applied');
     const [application] = s.applications();
-    // Not an application (J6): its emails blocked, the application hidden; here it's gone.
+    // Not an application: its emails blocked, the application hidden; here it's gone.
     s.db.insert(j.jobsBlockedEmails).values({messageId: s.ids.get('woodgrove-applied')!, blockedAt: '2026-10-15T16:00:00.000Z'}).run();
     s.db.delete(j.jobsApplications).where(eq(j.jobsApplications.id, application!.id)).run();
     // Its later confirmation, the same company and role from another email, makes nothing.
@@ -438,7 +438,7 @@ describe('statuses and corrections that stick', () => {
   });
 });
 
-describe('passive (decision 59)', () => {
+describe('passive', () => {
   test('reading changes nothing in mail and sends nothing but the jobs event', async () => {
     const s = await setup();
     s.store.db.update(j.jobsSettings).set({enabled: false}).run();

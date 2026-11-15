@@ -1,4 +1,4 @@
-// The Jobs table's column widths (SV-246, D508): kept by this browser (localStorage, as the reading
+// The Jobs table's column widths: kept by this browser (localStorage, as the reading
 // pane's are), since how wide they should be depends on the screen. One place any row of the table
 // reads them from, through the variables `.jb-col` carries.
 import type {CSSProperties} from 'react';

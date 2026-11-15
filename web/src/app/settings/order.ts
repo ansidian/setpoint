@@ -1,5 +1,5 @@
-// Reordering by drag, live (DESIGN.md › Decided while building #14): while a row is dragged the
-// others make room as it passes, easing over 180 ms, as darma's lists do; letting go saves the order
+// Reordering by drag, live: while a row is dragged the
+// others make room as it passes, easing over 180 ms; letting go saves the order
 // shown, and letting go elsewhere eases everything back. ↑ ↓ on a handle slide the rows the same way.
 import {useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, DragEvent, RefObject} from 'react';

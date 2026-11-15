@@ -8,7 +8,7 @@ import type {Toast} from './toast.ts';
 
 const TONE_GLYPHS = {done: 'check', gone: 'delete', failed: 'error', pinned: 'keep'} as const;
 
-// A swipe (D506): past this far, let go, and the toast goes; short of it, it snaps back.
+// A swipe: past this far, let go, and the toast goes; short of it, it snaps back.
 const SWIPE_PX = 72;
 // A press moves this far before it's a drag, so a click on its button stays a click.
 const DRAG_PX = 4;
@@ -30,7 +30,7 @@ export function ToastPill() {
 /**
  * It leads with its tone's glyph, and a line with an action shows its time draining as a hairline.
  * Swiped left or right, by a drag or two fingers on a trackpad, it follows and fades, and goes once
- * past SWIPE_PX (D506); there's no ×, and no hint that it swipes.
+ * past SWIPE_PX; there's no ×, and no hint that it swipes.
  */
 function Pill({toast}: {toast: Toast}) {
   const {action, tone} = toast;
@@ -92,7 +92,7 @@ function Pill({toast}: {toast: Toast}) {
    * past SWIPE_PX it goes, short of it (or cancelled) it snaps back.
    */
   const press = (down: ReactPointerEvent) => {
-    // The phone's toast doesn't swipe (D275 keeps it as it is).
+    // The phone's toast doesn't swipe (the phone's layout is frozen).
     if (down.button !== 0 || toast.leaving || phone) return;
     const pointer = down.pointerId;
     const from = down.clientX;

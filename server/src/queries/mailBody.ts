@@ -1,6 +1,5 @@
-// An email's HTML body as its own page, and an attachment's bytes, for the reader (DESIGN.md › The
-// reader). The body page carries its own policy, so the sandboxed frame that loads it by `src`
-// doesn't inherit the app's: remote images load (https only) when the remote-content rule allows
+// An email's HTML body as its own page, and an attachment's bytes, for the reader. The body page
+// carries its own policy, so the sandboxed frame that loads it by `src` doesn't inherit the app's: remote images load (https only) when the remote-content rule allows
 // it, or when the user pressed Show; otherwise they're placeholders and nothing leaves the page.
 import {and, eq} from 'drizzle-orm';
 import {mailSourceId} from '../commands/mail.ts';
@@ -19,8 +18,8 @@ export interface BodyPage {
 }
 
 /**
- * The body page, with images when `images` says so, or, when it's null, when the rule allows them
- * (DESIGN.md › The reader › Images), for the web's frame or the iPhone app's, which runs no script.
+ * The body page, with images when `images` says so, or, when it's null, when the rule allows them,
+ * for the web's frame or the iPhone app's, which runs no script.
  */
 export function messageBody(store: Store, messageId: number, images: boolean | null, frame: EmailFrame = 'web'): BodyPage {
   const message = messageDetail(store, messageId);

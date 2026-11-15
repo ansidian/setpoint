@@ -8,24 +8,24 @@
 //        place, calendar, recurrence, project, days, length, reminders}
 //     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
 //     (days: an event's all-day days, first and last counting, else null: a span's, a weekend's 2
-//      ("this weekend" with no time), or a length's in whole days with no time ("fri for 3 days",
-//      D298); length: minutes a "for" length read, else null, the end already counting it when a
+//      ("this weekend" with no time), or a length's in whole days with no time ("fri for 3 days");
+//      length: minutes a "for" length read, else null, the end already counting it when a
 //      start was read, and with none the event starts at the default start, the slot's else 9:00 AM;
-//      null when it made days instead; SV-111, SV-113)
+//      null when it made days instead)
 //     (recurrence: an RFC 5545 rule, its end the line read after it, a date-only UNTIL=YYYYMMDD
 //      (the last local day) or, an event's only, COUNT=N; a task's goes to Todoist as words, its
-//      UNTIL as "until YYYY-MM-DD" after the repeat, a form Todoist documents; SV-113, D294)
+//      UNTIL as "until YYYY-MM-DD" after the repeat, a form Todoist documents)
 //     (remind: what the item's reminders count from when the line names no day or time: its day, and
 //      its moment in minutes after midnight (an event's start, the slot's else 9:00 AM, an all-day
 //      one's 0; a task's due time, else Settings' task time, 9:00 AM at None; an edited item's own),
 //      and kept, how many reminders it keeps beside the line's. Null or left out (a task with no
-//      date): "remind …" phrases stay words. SV-112)
+//      date): "remind …" phrases stay words.)
 //     (reminders: what "remind", "remind me" or "reminder" phrases read, in order, the same one once,
 //      else null: [{minutes}] before the item's moment, negative after it, or [{date: "YYYY-MM-DD",
 //      time}] a moment, which the app turns into minutes from the item's moment in its time zone.
 //      A phrase with one past 4 weeks either side, or one past 10 with kept, stays words. On a new
 //      item they replace Settings' default, beside reminders picked by hand; on an edited item they
-//      add to its own. SV-112, D293)
+//      add to its own.)
 //   bareToken({text, trigger: "#"|"@"}) → {start, query} | null
 //   completeToken({text, start, end, name}) → {text, caret}
 //   lineWithTitle({text, marks, title}) → string
@@ -132,7 +132,7 @@ var SetpointCompose = (function(exports) {
 	* A range's two ends. An end missing its am/pm takes the first reading after the start ("9am-5" is
 	* 5 PM); a start missing its own takes the last reading before the end ("7-9pm" is 7 PM, "11-1pm"
 	* 11 AM). With am/pm on neither, both need minutes or a 24-hour hour ("9:00-10:30", "13-15"). The
-	* same time twice ("2-2pm", "14:00–14:00") is No end, the end at the start (SV-78, SV-108).
+	* same time twice ("2-2pm", "14:00–14:00") is No end, the end at the start.
 	*/
 	function range(match) {
 		const [, h1, m1, a1, h2, m2, a2] = match;
@@ -252,7 +252,7 @@ var SetpointCompose = (function(exports) {
 			}
 		}
 	];
-	/** A time on its own; "no end" by it is No end (SV-108), unless a length came first (SV-111). */
+	/** A time on its own; "no end" by it is No end, unless a length came first. */
 	function single(m, s) {
 		if (s.start !== null) return false;
 		const noEnd = /no\s+end/i.test(m[0]);
@@ -330,7 +330,7 @@ var SetpointCompose = (function(exports) {
 	var LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*:|${MERIDIEM}))`;
 	var SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::?\\d{2})?${MERIDIEM}|\\d{1,2}:\\d{2})`;
 	/**
-	* A span's last day, read from its first (D292): a weekday the next on or after it, a bare day in its
+	* A span's last day, read from its first: a weekday the next on or after it, a bare day in its
 	* month, a month and day past it next year's when its month is earlier ("dec 30 – jan 2"). Null
 	* when it's backwards: before the first, or a month and day earlier in the first's own month.
 	*/
@@ -371,7 +371,7 @@ var SetpointCompose = (function(exports) {
 		}
 	};
 	/**
-	* When a repeat ends (SV-113, D294), only once one is read; the first ending wins. Without a repeat
+	* When a repeat ends, only once one is read; the first ending wins. Without a repeat
 	* "until …" and a count stay words, and "for N days/weeks" is left to the length.
 	*/
 	function ending(s, start, found, orLength = false) {
@@ -523,7 +523,7 @@ var SetpointCompose = (function(exports) {
 		return day(year, month, Number(date.slice(8))) ?? lastOfMonth(year, month);
 	}
 	/**
-	* A day counted from today (D294): "in N days/weeks/months" today plus N; "next week" Monday of next
+	* A day counted from today: "in N days/weeks/months" today plus N; "next week" Monday of next
 	* week; "this weekend" or "weekend" the coming Saturday, today on a Saturday, "next weekend" the one
 	* after; "end of week" the coming Friday (this week's, but next week's at the weekend); "end of month"
 	* and "eom" this month's last day, "end of next month" next month's. Null when it isn't one.
@@ -627,7 +627,7 @@ var SetpointCompose = (function(exports) {
 	var PLACE_URL = /^(?:https?:\/\/|www\.)\S+?(?=[.,;!?]*(?:\s|$))/i;
 	/**
 	* The line once a suggestion is picked for its "@place" or "#name" (from `start`, its "@" or "#", to
-	* `end`, a comma after it included): the name in full, then a space to go on typing (SV-29). A comma
+	* `end`, a comma after it included): the name in full, then a space to go on typing. A comma
 	* typed after it stays; the caret goes past the space.
 	*/
 	function completeToken$1(text, start, end, name) {
@@ -641,9 +641,9 @@ var SetpointCompose = (function(exports) {
 		};
 	}
 	/**
-	* A "#" or "@" just typed at the line's end, before the line reads it as a mark (SV-71): a lone "#",
+	* A "#" or "@" just typed at the line's end, before the line reads it as a mark: a lone "#",
 	* or "@" with at most one letter (Places searches from two). Its field's menu opens on it, showing
-	* every choice before anything is typed, as darma's does. `start` is the trigger's place; `query`
+	* every choice before anything is typed. `start` is the trigger's place; `query`
 	* is what follows it.
 	*/
 	function bareToken$1(text, trigger) {
@@ -657,7 +657,7 @@ var SetpointCompose = (function(exports) {
 	}
 	var TRAILING_CONNECTOR = /(?:\s+(?:on|at|from|to|for))+\s*$/i;
 	/**
-	* What an edit typed into a title (SV-90): `after` from where it first differs from `before` to
+	* What an edit typed into a title: `after` from where it first differs from `before` to
 	* where the two agree again. A word the edit changed is typed whole ("Standup 9am" made "Standup
 	* 10am" typed "10am"); a word it only typed beside isn't ("Call fri" made "Call fri 3pm" typed
 	* " 3pm"). Empty when nothing changed, or when only spaces or whole words went.
@@ -682,14 +682,14 @@ var SetpointCompose = (function(exports) {
 	* is what "#…" reads (a task's projects or an event's calendars): their names, in the list's order,
 	* with the text a menu pick was made for.
 	*
-	* `edit` is an item's title as it was and its day, when the text is that title edited (SV-90): only
+	* `edit` is an item's title as it was and its day, when the text is that title edited: only
 	* phrases wholly inside what the edit typed are read (`typedSpan`), and a repeat with no day of its
 	* own counts from the item's day rather than today. With no phrase read the title is the text as
 	* typed, spaces and all; phrases that leave no words keep the title as it was.
 	*
 	* A task's line (`hash` its projects) reads no lengths or spans of days; any other, an event's, does.
 	*
-	* `remind` is what the item's reminders count from when the line names no day or time (SV-112); with
+	* `remind` is what the item's reminders count from when the line names no day or time; with
 	* none, reminder phrases stay words.
 	*/
 	function parseTitle$1(text, today, calendars = [], picked = null, hash = null, edit = null, remind = null) {
@@ -814,7 +814,7 @@ var SetpointCompose = (function(exports) {
 	/**
 	* The line with its title words replaced by a Title typed by hand, its phrases kept in order after
 	* it ("Coffee fri" titled "Coffee with Ana" reads "Coffee with Ana fri"), so the line and the Title
-	* never disagree (UX #8).
+	* never disagree.
 	*/
 	function lineWithTitle$1(text, marks, title) {
 		const rest = marks.map((mark) => text.slice(mark.start, mark.end)).join(" ");
@@ -832,7 +832,7 @@ var SetpointCompose = (function(exports) {
 		return parsed.title === "" && parsed.start === null && parsed.days === null && parsed.date ? parsed.date : null;
 	}
 	/**
-	* A typed time for a time field ("7pm", "7:30 PM", "19:00", and SV-25's shorthand "3p", "330p",
+	* A typed time for a time field ("7pm", "7:30 PM", "19:00", and the shorthand "3p", "330p",
 	* "2130"; "7" or "930" keep `meridiemFrom`'s half), or null.
 	*/
 	function parseClock(text, meridiemFrom = null) {
@@ -851,14 +851,14 @@ var SetpointCompose = (function(exports) {
 		return parsed.title === "" && parsed.start !== null && parsed.end === null ? parsed.start : null;
 	}
 	/**
-	* An edited item's when, once its title's typed day and time are read (SV-90): a day moves it,
+	* An edited item's when, once its title's typed day and time are read: a day moves it,
 	* keeping its time and length (an all-day event its days); a time moves its start on its own day,
 	* the end keeping the length ("Work" 3:00 – 8:00 AM at 3:45a ends 8:45 AM); a range sets both ends.
 	* An all-day event given a time ends an hour later on its last day, as Add a time makes it. A
 	* task's time is its due time, with no end. With neither, it's as it was.
 	*
 	* An event's span of days (`days`) makes it all day over them, and a length with no time lasts that
-	* long from its own start, an all-day one's 9:00 AM (SV-111).
+	* long from its own start, an all-day one's 9:00 AM.
 	*/
 	function editedWhen$1(item, read, kind) {
 		const date = read.date ?? item.date;
@@ -911,7 +911,7 @@ var SetpointCompose = (function(exports) {
 	}
 	/**
 	* An edited item's when once its typed day and time are read (its `date`, `start`, `end`, and an
-	* event's `days` and `length` from parseTitle, SV-111; without the last two, as before).
+	* event's `days` and `length` from parseTitle, the last two optional).
 	*/
 	function editedWhen(input) {
 		return editedWhen$1(input.item, input.read, input.kind);

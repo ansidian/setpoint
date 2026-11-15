@@ -61,7 +61,7 @@ test.each([
   expect(startsIn(at, now)).toBe(expected);
 });
 
-// What's left of an event under way (polish audit calpanes-01), whole minutes rounded up; `now` is 9:12 AM.
+// What's left of an event under way, whole minutes rounded up; `now` is 9:12 AM.
 test.each([
   ['ends at 9:57 AM', '2026-10-07T16:57:00.000Z', '45m left'],
   ['ends at 10:32 AM', '2026-10-07T17:32:00.000Z', '1h 20m left'],
@@ -76,7 +76,7 @@ test.each([
   ['the code, 11 minutes left', '2026-10-07T16:23:00.000Z', now, 'Expires in 11 min'],
   ['a few seconds later, still 11', '2026-10-07T16:23:00.000Z', now + 5_000, 'Expires in 11 min'],
   ['rounded up', '2026-10-07T16:13:30.000Z', now, 'Expires in 2 min'],
-  // The last minute counts down in seconds (inbox-11), rounded up.
+  // The last minute counts down in seconds, rounded up.
   ['a minute left', '2026-10-07T16:13:00.000Z', now, 'Expires in 60 sec'],
   ['42 seconds left', '2026-10-07T16:12:42.000Z', now, 'Expires in 42 sec'],
   ['part of a second left', '2026-10-07T16:12:00.400Z', now, 'Expires in 1 sec'],
@@ -85,7 +85,7 @@ test.each([
   expect(expiresIn(at, at_now)).toBe(expected);
 });
 
-// A rule's waiting trash beside auto_delete (SV-237): min, h or d, rounded up, never below a minute.
+// A rule's waiting trash beside auto_delete: min, h or d, rounded up, never below a minute.
 test.each([
   ['14 minutes', '2026-10-07T16:26:00.000Z', '14 min'],
   ['part of a minute', '2026-10-07T16:12:20.000Z', '1 min'],

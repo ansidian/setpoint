@@ -1,5 +1,4 @@
-// Jobs reads mail into applications, events and Needs you (J2; BRIEF.md › Jobs › Where it reads,
-// What makes an application, Statuses; decisions 50, 51, 55, 56, 59, 61, 67, 68).
+// Jobs reads mail into applications, events and Needs you.
 //
 // - The hook: triage tells the server when it has sorted an email (TriageWorker's `onSorted`, wired in
 //   server.ts), and the server nudges this worker. A nudge only queues the one durable `jobs_read`
@@ -7,14 +6,14 @@
 //   nothing, and every five minutes it looks again anyway.
 // - What it reads: emails triage has sorted in the accounts Jobs lists (all of the Jobs account, only
 //   Career elsewhere), received since Jobs was turned on, not in jobs_emails_read, oldest first, one
-//   at a time, so a confirmation is read before its update. Older mail is J4's history pass
+//   at a time, so a confirmation is read before its update. Older mail is the history pass's
 //   (./history.ts), which this worker reads the same way, keyed `jobs_history`, with its own window
 //   and `fromHistory`.
 // - Each email is read once by Haiku 5.5 (./prompt.ts), written to the ledger as Jobs's "emails", and
 //   never charged for again. The rules (./rules.ts planEmail) decide what it does.
 // - The AI down: the job fails by the one retry policy and the emails wait, counted on the page; a
 //   missing or refused key waits for Settings › AI. They're read once it's back.
-// - Passive (decision 59): every change sends the `jobs` live event, and nothing else: no
+// - Passive: every change sends the `jobs` live event, and nothing else: no
 //   notification, nothing added to mail, nothing in the calendar.
 import type {JobEventKind} from '@setpoint/shared';
 import {and, eq, isNotNull} from 'drizzle-orm';
@@ -48,7 +47,7 @@ export const JOBS_READ_KEY = 'jobs_read';
 export type AskJobs = (email: JobsEmail) => Promise<EmailReading | null>;
 
 export interface ReadOptions {
-  // The history pass (J4): what it's unsure of goes to From history (decision 57), and the
+  // The history pass: what it's unsure of goes to From history, and the
   // applications it makes wait for its end for their JD.
   fromHistory?: boolean;
 }
@@ -128,8 +127,8 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
           company: plan.company, title: reading!.title ?? '', titleKey: key ?? '', requisitionId: role.requisitionId,
           platform: platformOf(email, plan.company), accountId: email.accountId, appliedAt: at, status: 'applied', statusSetBy: 'email', statusSetAt: at,
           reappliedFromId: plan.reappliedFrom, companyUnknown: plan.companyUnknown,
-          // J3's seam: its JD lookup is due (decision 54); the history pass's waits for its end,
-          // when only the ones still open are looked up (decision 57).
+          // Its JD lookup is due; the history pass's waits for its end,
+          // when only the ones still open are looked up.
           jdLookup: fromHistory ? 'none' : 'looking', jdLookupAt: fromHistory ? null : now, createdAt: now, updatedAt: now,
         }).returning({id: j.jobsApplications.id}).get();
         addEvent(row.id, 'applied', {at, sender, subject: email.subject, line: reading!.line, messageId: email.id});
@@ -147,7 +146,7 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
             ...unpinOnClose(db.select({status: j.jobsApplications.status}).from(j.jobsApplications).where(eq(j.jobsApplications.id, plan.applicationId)).get()!, plan.status),
             step: plan.status === 'in_process' ? reading!.line ?? email.summary : null, stepAt: plan.status === 'in_process' ? at : null,
           });
-          // An email that sets a status wins over one set by hand (decision 68, D322): stick.ts's one exception.
+          // An email that sets a status wins over one set by hand: stick.ts's one exception.
           emailSetsStatus(store, plan.applicationId);
         }
         db.update(j.jobsApplications).set(changes).where(eq(j.jobsApplications.id, plan.applicationId)).run();
@@ -210,7 +209,7 @@ export interface JobsReaderOptions {
   rescanEveryMs?: number;
   // One model call's limit.
   timeoutMs?: number;
-  // The web the JD lookup reads (J3): production's platforms and posting pages, a fake in tests. A
+  // The web the JD lookup reads: production's platforms and posting pages, a fake in tests. A
   // dev run has none, so it never reaches a real host: its lookups stay `looking` and aren't run.
   web?: JobsWeb;
 }
@@ -284,7 +283,7 @@ export class JobsReader implements JobWorker {
       return;
     }
     finishJob(store, job.id);
-    // A confirmation just read wants its JD while the posting is up (decision 54).
+    // A confirmation just read wants its JD while the posting is up.
     this.queueLookups();
     // An email sorted while this job was finishing found it still running: look once more, leaving
     // what was passed over to the rescan.
@@ -319,7 +318,7 @@ export class JobsReader implements JobWorker {
 
   /**
    * One application's JD lookup: done, or failed by the one retry policy (never "No JD found"). Once
-   * its application is no longer `looking` (stopped to paste the posting, pasted, Undo; SV-170), its
+   * its application is no longer `looking` (stopped to paste the posting, pasted, Undo), its
    * calls are aborted, since nothing it finds would be kept, and it's done.
    */
   private async lookUp(job: Job, signal: AbortSignal) {
@@ -343,7 +342,7 @@ export class JobsReader implements JobWorker {
     }
   }
 
-  /** One pasted posting's reading (SV-140): done, or failed by the one retry policy, its JD saved either way. It needs no web. */
+  /** One pasted posting's reading: done, or failed by the one retry policy, its JD saved either way. It needs no web. */
   private async readPasted(job: Job, signal: AbortSignal) {
     const store = this.store;
     const postingId = Number(job.key.slice(PASTED_KEY_PREFIX.length));

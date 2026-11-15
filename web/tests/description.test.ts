@@ -1,6 +1,6 @@
-// SV-264 (D547): a description read from its provider's format into the short list of formats the
+// A description read from its provider's format into the short list of formats the
 // screen draws, and written back as that provider's own editor writes one. The two long fixtures
-// are the shapes read from a real Google event and Todoist task (2026-11-10), with invented text.
+// are the shapes read from a real Google event and Todoist task, with invented text.
 import {describe, expect, test} from 'vitest';
 import {fitting, gmailLinkOf, isEmpty, plainText, readDescription, readHtml, readInline, readMarkdown, safeHref, sameDescription, sourceLine, withLinks, writeDescription, writeHtml, writeMarkdown} from '../src/logic/description.ts';
 import type {Block, Item, List, Mark, Run} from '../src/logic/description.ts';
@@ -92,7 +92,7 @@ describe('Google\'s HTML', () => {
   });
 });
 
-// SV-268: a list nests as Google Calendar's editor writes it (read from a real event, 2026-11-10,
+// A list nests as Google Calendar's editor writes it (read from a real event, 2026-11-10,
 // with invented text), and as the browser's own indent leaves it in the editor's field.
 describe('nested lists', () => {
   const NESTED = '<ul><li><b>Length</b>: one hour</li><li><b>Parking</b>:<ul><li>On the street</li><li>The lot behind</li></ul></li><li>Bring a pen</li></ul>';
@@ -239,7 +239,7 @@ describe('either format', () => {
   });
 });
 
-describe('SV-270: a proposal\'s From: line', () => {
+describe('a proposal\'s From: line', () => {
   const GMAIL = 'https://mail.google.com/mail/?authuser=user%40example.com#all/18c2f0a9b1d3e4f5';
   const subject = '[Action] 50% *off* <now> & more_';
 

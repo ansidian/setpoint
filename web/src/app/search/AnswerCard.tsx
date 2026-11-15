@@ -1,12 +1,12 @@
-// Alfred's Answer card (DESIGN.md › Alfred's Answer card; board 07): one or two lines with their bold
+// Alfred's Answer card (board 07): one or two lines with their bold
 // runs, the sources (rows that open in the reading pane), each follow-up turn below the last, and a
 // follow-up field. "Couldn't find that in your mail" says what it searched; a failure shows the
 // server's words and puts the question back in the field. With no key, the card says so as it opens,
 // and "Settings › AI" in any of its lines opens Settings there. Answers aren't streamed, so while a
 // question waits the card shows Alfred's trail: each step done (the search it ran, the email it
 // read) above what it's doing now, which shimmers, and the answer's place held by two bars, the
-// follow-up field dimmed until the answer is in, when the trail folds away and the answer fades up
-// (search-04, #236). A long list of sources shows its first five and Show all. Proposals in an answer show as the
+// follow-up field dimmed until the answer is in, when the trail folds away and the answer fades up.
+// A long list of sources shows its first five and Show all. Proposals in an answer show as the
 // proposal card.
 import type {AccountOut, AiOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';

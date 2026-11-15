@@ -4,11 +4,11 @@ import type {Transparency} from './enums.ts';
 
 /**
  * A free event (Google's transparency `transparent`) is never a clash: it overlaps nothing, and
- * nothing overlaps it (SV-180, D440 and its extension). A task, or an item with no transparency, is busy.
+ * nothing overlaps it. A task, or an item with no transparency, is busy.
  */
 export const isFree = (item: {transparency?: Transparency | null}) => item.transparency === 'transparent';
 
-// ---- A proposal's conflict line (DESIGN.md › Proposal, board 08) ----
+// ---- A proposal's conflict line (board 08) ----
 
 export interface DayItem {
   title: string;
@@ -16,7 +16,7 @@ export interface DayItem {
   all_day: boolean;
   starts_at: string | null;
   ends_at: string | null;
-  // SV-180: a free event (Google's `transparent`) is never a clash.
+  // A free event (Google's `transparent`) is never a clash.
   transparency?: Transparency | null;
 }
 
@@ -33,7 +33,7 @@ const more = (count: number) => (count > 0 ? ` and ${count} more` : '');
  * Board 08's line for an event: "Free that evening" or "Overlaps Study group · 1h 30m" (the time the
  * two share). A timed event is checked against the day's timed events; an all-day one against any.
  * `startHour` is the proposal's local start hour, for morning, afternoon or evening. Free events
- * are left out (SV-180).
+ * are left out.
  */
 export function proposalConflict(proposal: {all_day: boolean; starts_at: string | null; ends_at: string | null; startHour: number | null}, items: DayItem[]): {free: boolean; label: string} {
   const events = items.filter(item => item.kind === 'event' && !isFree(item));

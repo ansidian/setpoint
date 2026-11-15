@@ -1,4 +1,4 @@
-// The JD lookup's pure rules (J3), as tables: links that are postings, the platforms and board
+// The JD lookup's pure rules, as tables: links that are postings, the platforms and board
 // names to try, a board's postings that could be the role, what the model's verdicts make
 // (confident, unsure with three at most, none), how a lookup ends (a failure is retried, never "No JD
 // found"), which failures are misses, when web search runs, and how much of a salary or a location
@@ -189,7 +189,7 @@ describe('matching a board\'s postings', () => {
   });
 });
 
-describe('GovernmentJobs (D389)', () => {
+describe('GovernmentJobs', () => {
   test.each<[string, string | null, string[], boolean]>([
     ['triage named it', 'GovernmentJobs', [], true],
     ['with a space', 'Government Jobs', [], true],
@@ -294,7 +294,7 @@ describe('how a lookup ends', () => {
   });
 });
 
-describe('what a reading keeps of a salary and a location (SV-129)', () => {
+describe('what a reading keeps of a salary and a location', () => {
   const PAY = '$3,900.00 - $6,500.00 per month (grades A, B, C, D, E, F; varies by grade, by office and by bargaining unit)';
   const PLACES = 'Fresno, Sacramento, Oakland, Riverside, San Diego, Santa Rosa, Redding, Bakersfield, Stockton, Modesto, Visalia, San Bernardino, Eureka and Salinas, CA';
 

@@ -1,4 +1,4 @@
-// SV-274 (D564): the agenda rail's USPS mail. One row of thumbnails, all one size, as many as fit the
+// The agenda rail's USPS mail. One row of thumbnails, all one size, as many as fit the
 // rail's width and never wrapping: when there are more scans than fit, the last tile is "+3" for the
 // rest, and opens the viewer at the first of them. The viewer steps through the day's scans and
 // stops at the ends.

@@ -1,4 +1,4 @@
-// Placement as tables (DESIGN.md › The floating detail › Placement, #348): right of an item in the
+// Placement as tables: right of an item in the
 // grid's left half, left of one in its right half, 8 px off it, inside the month grid, whatever is
 // around it. The month is October 2026 on the seed as boards 12a and 12b draw it; the boards' own
 // counts ("right 5, left 3, above 4 and it doesn't fit, below 6") still check each side's candidate.
@@ -105,7 +105,7 @@ describe('a dragged card is dropped inside the grid, up to its edges', () => {
     ['off the bottom', {left: 300, top: 900}, {left: 300, top: 994 - 252}],
   ])('%s', (_, position, expected) => expect(clampInto(position, CARD(252), GRID, 0)).toEqual(expected));
 
-  test('the same drop clamps differently as the grid narrows (v1\'s live-rect rule)', () => {
+  test('the same drop clamps differently as the grid narrows', () => {
     expect(clampInto({left: 1000, top: 300}, CARD(252), GRID, 0).left).toBe(749);
     expect(clampInto({left: 1000, top: 300}, CARD(252), {...GRID, width: 900}, 0).left).toBe(620);
   });
@@ -115,7 +115,7 @@ describe('a dragged card is dropped inside the grid, up to its edges', () => {
   });
 });
 
-// A right-pane row's card (#322): 8 px left of the row, over the grid, its top level with the row's.
+// A right-pane row's card: 8 px left of the row, over the grid, its top level with the row's.
 describe('beside a right-pane row', () => {
   const DETAIL = {width: 360, height: 200};
   const row = (top: number): Rect => ({left: 1029, top, width: 300, height: 56});
@@ -128,7 +128,7 @@ describe('beside a right-pane row', () => {
   });
 });
 
-// An item in the open "+N" popover (#324): beside the popover, right then left, level with the item.
+// An item in the open "+N" popover: beside the popover, right then left, level with the item.
 describe('beside the "+N" popover', () => {
   const DETAIL = {width: 360, height: 200};
   const popover = (left: number): Rect => ({left, top: 400, width: 280, height: 300});

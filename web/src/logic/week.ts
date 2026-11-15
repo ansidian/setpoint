@@ -1,4 +1,4 @@
-// The week view's rules (DESIGN.md › Week view; board 16): the shown week (Sunday first, #52) and its
+// The week view's rules (board 16): the shown week (Sunday first) and its
 // title, which items go in the all-day row and how its bars and tasks stack before "+N", the timed
 // blocks of each day (an event crossing midnight in both days) and their lanes, the opening scroll,
 // and what a drag makes of a pointer: 15-minute steps for a create, a move or a resize. Local days
@@ -265,7 +265,7 @@ export function blockBox(start: number, end: number): {top: number; height: numb
 export const isShort = (start: number, end: number) => end - start < tokens.shortMinutes;
 
 /**
- * Where the hours open (DESIGN.md › Week view › Opening scroll): this week puts now about a third
+ * Where the hours open: this week puts now about a third
  * down; another week an hour before its first timed item, else 7 AM.
  */
 export function openingScroll(start: string, today: string, now: number, list: Segment[], timeZone: string, height: number): number {
@@ -315,7 +315,7 @@ export function startInWeek(item: ItemOut, start: string, timeZone: string): num
 
 export type Edge = 'start' | 'end';
 
-/** Whether a timed block offers its top edge too (DESIGN.md › Week view › Resize): only from 30 minutes. */
+/** Whether a timed block offers its top edge too: only from 30 minutes. */
 export const offersTop = (segment: Segment) => !segment.continued && segment.end - segment.start >= tokens.topEdgeFromMinutes;
 
 /**

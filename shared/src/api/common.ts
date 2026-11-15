@@ -14,7 +14,7 @@ export const localDate = z.iso.date();
 export const id = z.int().positive();
 
 /**
- * A source's health (decision 31; DESIGN.md › Health and states). `as_of` is the last successful
+ * A source's health. `as_of` is the last successful
  * check, for "Personal, as of 9:14 PM"; `reason` is the provider's error while failing.
  */
 export interface HealthOut {

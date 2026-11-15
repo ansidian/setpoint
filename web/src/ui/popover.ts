@@ -1,6 +1,6 @@
 // A menu hanging under its button opens upward instead when it would run past the bottom of what
-// clips or scrolls it (Settings' page, the editor's pane) and there's more room above (darma SV-21),
-// and lines up with its anchor's right edge when it would run past the right (SV-29: the End list).
+// clips or scrolls it (Settings' page, the editor's pane) and there's more room above,
+// and lines up with its anchor's right edge when it would run past the right (the End list).
 import {useCallback, useEffect, useRef} from 'react';
 import {opensUp} from '../logic/contextMenu.ts';
 
@@ -21,7 +21,7 @@ function room(element: HTMLElement): {top: number; bottom: number; right: number
 }
 
 // Menus already placed. An inline ref runs again on every draw, and placing again replays the
-// entrance, so a menu open while its page draws (the editor's line on a hover) flickered (SV-209).
+// entrance, so a menu open while its page draws (the editor's line on a hover) flickered.
 const placed = new WeakSet<HTMLElement>();
 
 /**
@@ -44,7 +44,7 @@ export function placeMenu(menu: HTMLElement | null) {
 
 /**
  * An open menu's ref, as `placeMenu`, that also closes it on a press outside it and the button that
- * opens it (their shared parent), so a menu never needs its own pick or Esc to go away (SV-24).
+ * opens it (their shared parent), so a menu never needs its own pick or Esc to go away.
  */
 export function useMenuRef(open: unknown, close: () => void): (menu: HTMLElement | null) => void {
   const menu = useRef<HTMLElement | null>(null);

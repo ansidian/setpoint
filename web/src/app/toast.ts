@@ -1,11 +1,11 @@
-// The app's one toast (DESIGN.md › Interaction rules: Trash offers Undo for 6 seconds, as v1 does,
+// The app's one toast (DESIGN.md › Interaction rules: Trash offers Undo for 6 seconds,
 // in the export's `.toast`, a 40 px pill at the bottom centre of the main area, 24 px up, as on the
-// phone, D506), drawn once by App.tsx above every page and Settings. Any page shows a line with showToast("Added to
+// phone), drawn once by App.tsx above every page and Settings. Any page shows a line with showToast("Added to
 // Classes"), an error with showToast(error.message, null, 'failed'), or a line with its action:
 // showToast("Moved to Trash", {label: 'Undo', run}) or {label: 'Try again', run}. One at a time: a new
 // one replaces the last, whose action is then gone. A failed change says what failed and why with
 // toastFailure("Couldn't pin it"). A line leads with its tone's glyph (logic/toast.ts) and stays 6
-// seconds (a failure 8), the pointer resting on it or not (D506); swiping it away ends it sooner.
+// seconds (a failure 8), the pointer resting on it or not; swiping it away ends it sooner.
 // Going, it stays drawn for motion.fast to fade out, unless a new one takes its place. A caller that
 // holds something back until the toast goes (Calendar's delete) passes `onGone`, run once however it
 // goes: its time ended, swiped away, replaced, or its action run.
@@ -78,7 +78,7 @@ export function showToast(text: string, action: ToastAction | null = null, tone:
 }
 
 /**
- * A failed change's line, its parts joined by a comma (DESIGN.md › Decided while building #25), in
+ * A failed change's line, its parts joined by a comma, in
  * the server's or the provider's words: "Couldn't reorder rules, Can’t reach Setpoint".
  */
 export const failureLine = (what: string, error: unknown) => `${what}, ${error instanceof ApiFailure ? error.message : 'Setpoint couldn\'t send it.'}`;

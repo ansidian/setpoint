@@ -1,18 +1,18 @@
-// The Jobs page (DESIGN.md › Jobs; boards 32, 32b, 33, 36a, 36b, 40): the header (Jobs, the status
-// filter with its counts, Per week, Search jobs `/`), Needs you above the table (read-only until J6),
+// The Jobs page (boards 32, 32b, 33, 36a, 36b, 40): the header (Jobs, the status
+// filter with its counts, Per week, Search jobs `/`), Needs you above the table,
 // the table and the application's detail where the reading pane sits. Search (`/` or a click) turns the
 // header into Search: its results replace the table's rows as the user types, company or role first,
 // then a match only in a JD's text with its line; Needs you folds away while a query is in.
 //
-// J6: Needs you's answers and the corrections, each with its toast and Undo (act.ts); a row's
-// right-click opens its actions at the pointer (#268), and More's Edit company and Edit title (or the
+// Needs you's answers and the corrections, each with its toast and Undo (act.ts); a row's
+// right-click opens its actions at the pointer, and More's Edit company and Edit title (or the
 // right-click's) open the application with that field in edit.
 //
-// A Needs you item's subject opens its email where the detail sits (D401, ItemEmail.tsx), and an
-// application in its Assign to… opens that application's first email there (D402). Held here rather
+// A Needs you item's subject opens its email where the detail sits (ItemEmail.tsx), and an
+// application in its Assign to… opens that application's first email there. Held here rather
 // than in the address: it's a look at an email, and nothing comes back to it on a reload.
 //
-// The Pinned shelf (SV-243, D504) sits under the headings, newest pin first under every filter and
+// The Pinned shelf sits under the headings, newest pin first under every filter and
 // sort; search replaces it with the table, a pinned application found among the results.
 //
 // Keys: `J` / `K` move through Needs you's items, the shelf's rows and then the table's (with an application open,
@@ -21,13 +21,13 @@
 // the detail or the email (in a narrow window, Back), then clears the query, then leaves search. `4` is
 // the shell's (App.tsx).
 //
-// J8's states (States.tsx; 38a–38c): the AI down and the history pass's lines at the top of the column,
+// The states (States.tsx; 38a–38c): the AI down and the history pass's lines at the top of the column,
 // and Jobs off's one line, its header "Jobs" alone. Settings › Jobs's Show arrives at
 // /jobs/from-history, From history unfolded.
 //
-// From mail (J7): an application open as the page mounts (Open in Jobs, Full posting, a reload)
+// From mail: an application open as the page mounts (Open in Jobs, Full posting, a reload)
 // arrives with its pane simply there, no slide; /jobs/12/posting arrives scrolled to its full posting
-// and unfolded (#271); /jobs?q=… arrives searched, the query in the field (Applied before). The
+// and unfolded; /jobs?q=… arrives searched, the query in the field (Applied before). The
 // address then drops what it carried, so a reload or Back doesn't do it again.
 //
 // Live: a `jobs` event refreshes what's on screen (logic/live.ts). An application that lands takes its
@@ -113,7 +113,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
   const [cursor, setCursor] = useState<string | null>(null);
 
-  // Search (36a, 36b): its own state, never mail's (D316).
+  // Search (36a, 36b): its own state, never mail's.
   const [searching, setSearching] = useState(Boolean(route.q));
   const [query, setQuery] = useState(route.q ?? '');
   // Searched from mail: the field shows the query, without taking focus, so J / K and Esc are the page's.
@@ -151,7 +151,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
     requestAnimationFrame(() => scroller.current?.scrollTo({top: tableScroll.current}));
   };
 
-  // Arrivals and moves (#131, 38a), from one answer to the next.
+  // Arrivals and moves (board 38a), from one answer to the next.
   const [seen, setSeen] = useState<{page: JobsPageOut | undefined; landed: Set<number>; moved: Set<number>}>({page, landed: new Set(), moved: new Set()});
   if (page && page !== seen.page) {
     const {landed, moved} = changes(seen.page, page);
@@ -207,9 +207,9 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const [reading, setReading] = useState<{item: number; message: number; history: boolean; travel: Travel | null; of: string | null} | null>(null);
   if (reading && page && (open !== null || ![...page.needs_you, ...page.from_history].some(item => item.id === reading.item))) setReading(null);
   const email = useHold(reading, compact ? motion.medium : motion.fast);
-  // The pane beside the table (SV-217): the application, else an item's email, else empty.
+  // The pane beside the table: the application, else an item's email, else empty.
   const pane = useEmptyPane(open !== null || email.shown !== null, PANE_PATHS);
-  // The AI down folds into the empty pane's foot (#335) as well as its line over the table.
+  // The AI down folds into the empty pane's foot as well as its line over the table.
   const down = page ? readingLine(page.reading, page.history, now, zone) : null;
   const paneTrouble: PaneTrouble[] = down
     ? [{text: down, glyph: 'warning', ...(page?.reading.retrying ? {} : {fix: {label: 'Settings › AI', run: () => openSettings('ai')}})}]
@@ -280,7 +280,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const posting = useRef<FullPostingHandle>(null);
   const postingLink = () => document.querySelector<HTMLAnchorElement>('.jb-pane .rd-tools a[data-hint="o"]')?.href ?? null;
 
-  /** Pin or Unpin (SV-243): `P`, the menus, the detail's tool and the shelf's Unpin. */
+  /** Pin or Unpin: `P`, the menus, the detail's tool and the shelf's Unpin. */
   const togglePin = (row: ApplicationRowOut) => void act(() => setPinned(row.id, row.pinned_at === null), row.pinned_at === null
     ? {done: 'Pinned', tone: 'pinned', failed: 'Couldn\'t pin it'}
     : {done: 'Unpinned', failed: 'Couldn\'t unpin it'});
@@ -341,7 +341,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  // ---- J6: the corrections, each said in the toast with its Undo ----
+  // ---- The corrections, each said in the toast with its Undo ----
   const [editing, setEditing] = useState<{id: number; field: 'company' | 'title'} | null>(null);
   // Another application opened: no field in edit.
   if (editing && editing.id !== open) setEditing(null);
@@ -399,7 +399,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
       ? act(() => pickCandidate(open, candidate.id), pickWords(candidate, company))
       : act(() => noneOfThese(open), {done: `None of these for ${company}`, failed: 'Couldn\'t turn them down'}));
   };
-  // A row's right-click (#248, #268): its actions at the pointer; the cursor moves to it, and it doesn't open.
+  // A row's right-click: its actions at the pointer; the cursor moves to it, and it doesn't open.
   const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;
   const onRowMenu = (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>, condensed = false) => {
     if (!takesContextMenu(event, event.currentTarget)) return;
@@ -417,7 +417,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
     });
   };
 
-  // The headings' right-click (D508): Reset column widths, at the pointer, as a row's menu opens.
+  // The headings' right-click: Reset column widths, at the pointer, as a row's menu opens.
   const onHeadingMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!takesContextMenu(event, event.currentTarget)) return;
     event.preventDefault();
@@ -508,7 +508,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   );
 }
 
-/** Until the page's first answer: the table's header and rows in their shapes (#225). */
+/** Until the page's first answer: the table's header and rows in their shapes. */
 function TableSkeleton() {
   const widths = [118, 96, 132, 104, 88, 124, 110, 92, 128, 100];
   return (

@@ -1,5 +1,5 @@
-// Passing runs recorded by the content they ran on (SV-83, D274), so a release runs only what hasn't
-// already passed on its exact content (release.ts). Each check is keyed on what it reads (SV-193):
+// Passing runs recorded by the content they ran on, so a release runs only what hasn't
+// already passed on its exact content (release.ts). Each check is keyed on what it reads:
 // INPUTS names whole directories, less what that check never reads, so a boards-only commit leaves
 // npm test and the browser checks passed, a docs-only one leaves everything passed, and a new file
 // under a directory a check reads counts without being listed. The browser checks are kept per spec

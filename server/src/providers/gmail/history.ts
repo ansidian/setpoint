@@ -1,4 +1,4 @@
-// Reading Gmail's history records (harvested from v1's gmailHistoryProjection, see SV-3): which
+// Reading Gmail's history records: which
 // messages arrived in the inbox, and which changed in a way the mirror shows (read, trash, inbox,
 // spam, deleted). The mirror then reads each changed message's current labels rather than
 // replaying events in order, so a burst of changes settles on Gmail's state, not on the last event.
@@ -8,7 +8,7 @@ import type {GmailHistoryEvent, GmailHistoryRecord} from './api.ts';
 // Labels whose change the mirror shows.
 const WATCHED = ['UNREAD', 'TRASH', 'INBOX', 'SPAM'];
 
-/** An event's labels: its own list, or else the message's (v1: Gmail sends either). */
+/** An event's labels: its own list, or else the message's (Gmail sends either). */
 const eventLabels = (event: GmailHistoryEvent) => event.labelIds ?? event.message?.labelIds ?? [];
 
 export interface HistoryChanges {

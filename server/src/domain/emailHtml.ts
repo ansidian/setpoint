@@ -1,8 +1,7 @@
-// An HTML email made safe to show (DESIGN.md › The reader: a sandboxed frame, 600 px, radius 14 on
-// white), served as its own page by GET /api/mail/messages/:id/body with its own policy. The frame
-// is sandboxed without scripts or an origin of its own, and the page's policy allows no scripts;
-// this also strips what an email must never do there: scripts, frames, plugins, base and meta tags
-// (a meta refresh would navigate the frame), stylesheets from elsewhere, forms' targets, event
+// An HTML email made safe to show (a sandboxed frame, 600 px, radius 14 on white), served as its
+// own page by GET /api/mail/messages/:id/body with its own policy. The frame is sandboxed without
+// scripts or an origin of its own, and the page's policy allows no scripts; this also strips what an
+// email must never do there: scripts, frames, plugins, base and meta tags (a meta refresh would navigate the frame), stylesheets from elsewhere, forms' targets, event
 // handlers and javascript: links. Media rules that ask the window's height are answered as a tall
 // window would (the frame's height is the page's own). While remote content is hidden, images become
 // board 02's hatched placeholders with their alt text (or the hidden-image glyph), as tall as their
@@ -21,7 +20,7 @@ import {parseDocument} from 'htmlparser2';
 export const FRAME_STYLE = 'html, body { margin: 0; padding: 0; background: #ffffff; } body { font: 13px/1.35 Helvetica, Arial, sans-serif; color: #1d1f22; -webkit-font-smoothing: antialiased; overflow-wrap: break-word; } img { max-width: 100%; }';
 
 /**
- * The page's own box, after the email's styles (SV-228): the frame is as tall as its page, so a page
+ * The page's own box, after the email's styles: the frame is as tall as its page, so a page
  * sized to the window (`height: 100vh`, a flexed and centred body) would be sized to the frame and
  * never grow. `:root` outranks the `html` and `body` an email's styles name, and the body's own
  * attributes don't reach the page.
@@ -46,7 +45,7 @@ const HIDE_IMAGE = "M820 -747.69V-316.15Q820 -301.15 810.58 -293.65Q801.15 -286.
 const GLYPH_GREY = '#a3a6ab';
 
 /**
- * A placeholder's height when the image gives none (polish audit reader-10): a quarter of its width,
+ * A placeholder's height when the image gives none: a quarter of its width,
  * 56 to 160, so a mailing service's 602-wide picture keeps 150 px of the newsletter's shape (a small one
  * stays square); with no size at all and no words, a 56 px band the width of its line.
  */
@@ -88,7 +87,7 @@ const DOCUMENT_TAGS = new Set(['html', 'head', 'body']);
 
 /**
  * All of the email, as a browser would show it: an email can be whole documents one after the other,
- * each with its own head and body (a bank's notice is three, SV-127), and everything in them is the
+ * each with its own head and body (a bank's notice is three), and everything in them is the
  * email, as is anything around them.
  */
 const shown = (nodes: ChildNode[]): ChildNode[] => nodes.flatMap(node => {
@@ -97,7 +96,7 @@ const shown = (nodes: ChildNode[]): ChildNode[] => nodes.flatMap(node => {
 });
 
 /**
- * A media rule's conditions on the window's height, read as a tall window would answer them (SV-228):
+ * A media rule's conditions on the window's height, read as a tall window would answer them:
  * the frame is as tall as its page, so asking the frame could flip the email's layout as the frame grows
  * and flip it back as it shrinks. Width and the device's own size are the frame's to answer.
  */
@@ -160,9 +159,9 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
  * reach into, so the page tells the reader how tall it is, as it lays out and as each image loads.
  * The page never scrolls itself (only the reading pane does), and an email wider than the frame is
  * zoomed down to fit it. The height counts to a marker after the email, or to the lowest of the
- * body's own boxes when one sits out of the flow (SV-228), in the frame's own pixels whichever way
+ * body's own boxes when one sits out of the flow, in the frame's own pixels whichever way
  * the browser reports a zoomed box.
- * A key pressed with the email clicked into is passed on to the reader too (SV-149), unless a field
+ * A key pressed with the email clicked into is passed on to the reader too, unless a field
  * of the email's own takes it. The page keeps its own defaults, so selecting and copying still work;
  * only ⌘F, ⌘K and ⌘, are kept from the browser, as Setpoint keeps them everywhere else.
  */

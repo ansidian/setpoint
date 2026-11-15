@@ -1,11 +1,11 @@
-// The phone's own rules (DESIGN.md › Phone; board 21): the read-only agenda of today and the next 7
+// The phone's own rules (board 21): the read-only agenda of today and the next 7
 // days with its empty days collapsed.
 import type {ItemOut} from '@setpoint/shared';
 import {dayTitle, isPast, timeRange} from './calendar.ts';
 import {addDays, clockTime, daysBetween} from './format.ts';
 
 /**
- * How the phone's reader changes (#139): an email opened from the list slides in over it, and closing it
+ * How the phone's reader changes: an email opened from the list slides in over it, and closing it
  * slides back; going from one email to another, and the desktop's reader beside the list, don't slide.
  */
 export function phoneSlide(phone: boolean, from: number | null, to: number | null): 'in' | 'back' | null {
@@ -45,7 +45,7 @@ export type AgendaSection =
   | {kind: 'empty'; from: string; to: string; title: string; today: boolean};
 
 /**
- * Where today's now-line goes among its lines (#138): before the first timed event not yet over,
+ * Where today's now-line goes among its lines: before the first timed event not yet over,
  * else after the last timed event, before the tasks. All-day events lead the day and tasks end it,
  * so neither places it; a day without a timed event has none.
  */

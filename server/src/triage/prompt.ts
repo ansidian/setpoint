@@ -1,16 +1,14 @@
-// What triage asks a model and how it reads the answer (BRIEF.md › Triage). v1's
-// `triage-model-client` tool schema (harvested, SV-4) asked for a lane, a category, urgency, a
-// badge, a summary, an action, a deadline and a confidence; v2's asks for what the record keeps:
-// lane, kind, organisation (and the platform it came via), type, key date, summary, security facts,
-// the protected class and a confidence. The answer is read leniently field by field: a field that
-// doesn't fit is dropped, and only a missing or unknown lane makes the whole answer unusable
+// What triage asks a model and how it reads the answer. The tool schema asks for what the record
+// keeps: lane, kind, organisation (and the platform it came via), type, key date, summary, security
+// facts, the protected class and a confidence. The answer is read leniently field by field: a field
+// that doesn't fit is dropped, and only a missing or unknown lane makes the whole answer unusable
 // (unsure, so FYI unless the strong model is sure).
 import {KINDS, LANES, MESSAGE_TYPES, PROTECTED_REASONS, securityFactsSchema} from '@setpoint/shared';
 import type {Kind, Lane, MessageType, ProtectedReason, SecurityFacts} from '@setpoint/shared';
 import type {Reading} from '../domain/triagePolicy.ts';
 import type {ToolSpec} from '../providers/ai/index.ts';
 
-/** v1's evidence bound: a longer body is cut, and what was cut can't make the email Noise. */
+/** The evidence bound: a longer body is cut, and what was cut can't make the email Noise. */
 export const EVIDENCE_LIMIT = 20_000;
 
 export const MAX_OUTPUT_TOKENS = 1400;
@@ -110,7 +108,7 @@ const text = (value: unknown, max: number): string | null => {
 const oneOf = <T extends string>(values: readonly T[], value: unknown): T | null =>
   typeof value === 'string' && (values as readonly string[]).includes(value) ? value as T : null;
 
-/** v1's normaliser: older lane names map to Attention. */
+/** The normaliser: older lane names map to Attention. */
 function laneOf(value: unknown): Lane | null {
   if (value === 'needs_attention' || value === 'actionable') return 'attention';
   return oneOf(LANES, value);

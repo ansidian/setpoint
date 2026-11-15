@@ -1,7 +1,7 @@
-// The sidebar's Today block on mail pages (DESIGN.md › The Today block, Decided while building #78):
+// The sidebar's Today block on mail pages:
 // "Dentist" over "2:30 PM · in 5h" and the open tasks due today, a timed one over its time ("9:00 AM"),
-// in one list by time with the untimed tasks after (D501); under a Tomorrow label of its own (D460,
-// none when nothing's on), tomorrow's events and open tasks in the same order, the first two and "3
+// in one list by time with the untimed tasks after; under a Tomorrow label of its own
+// (none when nothing's on), tomorrow's events and open tasks in the same order, the first two and "3
 // more due tomorrow" when there are more than three. Today's lines never fold.
 // A line opens the floating detail's card beside the sidebar instead of leaving the page: Edit (E)
 // goes to Calendar's editor, a task completes there or from its ring, an item that isn't a repeating
@@ -10,8 +10,8 @@
 // "in 12m" warms to `caution` from 15 minutes before and `alert` once under way. A completed task
 // shows its done check for a moment (the one completion moment, `ring-done`, which the calendar's pane
 // and card share), then its line folds away as the mail list's rows do (app/fold.ts), and Undo folds
-// it back, a repeating task's too, reopening the occurrence it completed (SV-249, D510).
-// Folded to the rail (D509), it's one slot instead: a clock over the time until today's next timed
+// it back, a repeating task's too, reopening the occurrence it completed.
+// Folded to the rail, it's one slot instead: a clock over the time until today's next timed
 // item, event or task alike, named in its tooltip with what else is left, opening the same card;
 // nothing once no timed item is left today.
 import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
@@ -87,8 +87,8 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     for (const {line, at} of [...ticked.values()].sort((a, b) => a.at - b.at)) listed.splice(Math.min(at, listed.length), 0, {...line, done: true});
     return listed;
   }, [today, ticked]);
-  // Tomorrow's lines fold to two and "N more" (D460), counted in time order with the untimed tasks
-  // last, as Today's (D501).
+  // Tomorrow's lines fold to two and "N more", counted in time order with the untimed tasks
+  // last, as Today's.
   const {shown: tomorrowShown, more} = useMemo(() => shownTomorrow<TomorrowLine>(byTime([
     ...today.tomorrowEvents.map(event => ({event})),
     ...tasks.filter(task => task.tomorrow).map(task => ({task})),
@@ -113,7 +113,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     );
   }
   if (!today.event && !folded.length && !tomorrowEvents.length) return null;
-  // Each day's events and tasks in one list by time, untimed tasks last (D501); a task folding away
+  // Each day's events and tasks in one list by time, untimed tasks last; a task folding away
   // keeps the place its time gives it.
   type Folded = (typeof folded)[number];
   type Line = {event: TodayEvent | TomorrowEvent} | {task: Folded};
@@ -156,7 +156,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     }
     hide(task);
     void completeItem(task.id, true, task.recurring ? task.due_date : null)
-      // SV-249 (D510): a repeating task's Undo reopens the done occurrence the completion made.
+      // A repeating task's Undo reopens the done occurrence the completion made.
       .then(done => showToast(`Completed ${task.title}`, {
         label: 'Undo',
         run: () => void completeItem(task.recurring ? done.target_id : task.id, false).catch(toastFailure(`Couldn't reopen ${task.title}`)),
@@ -175,7 +175,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
 
   const actionsFor = (item: ItemOut): DetailActions => ({
     complete,
-    // SV-272: a subtask's check says so with Undo, as its task's does.
+    // A subtask's check says so with Undo, as its task's does.
     completeSubtask: subtask => void completeItem(subtask.id, !subtask.done)
       .then(done => showToast(`${subtask.done ? 'Reopened' : 'Completed'} ${subtask.title}`, {
         label: 'Undo',
@@ -185,7 +185,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     settleSubtask: (subtask, how) => void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id)
       .catch(toastFailure(how === 'retry' ? `Couldn't try ${subtask.title} again` : `Couldn't undo ${subtask.title}`)),
     reorderSubtasks: (task, ids) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`)),
-    // SV-273 (D566): added here as on Calendar; editing one and its menu are Calendar's, through Open.
+    // Added here as on Calendar; editing one and its menu are Calendar's, through Open.
     addSubtask: (task, title) => createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure(`Couldn't add ${title}`)),
     open: one => navigate(itemRoute(one)),
     // A repeating event asks which of its events go; Calendar asks that.
@@ -198,11 +198,11 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     setOpenKey(key => (key === item.key ? null : item.key));
   };
   const lineClass = (item: ItemOut) => (item.key === openKey ? 'today-row on' : 'today-row');
-  // A right-click (DESIGN.md #248): the card's actions at the pointer, in place of the card, so an open one goes.
+  // A right-click: the card's actions at the pointer, in place of the card, so an open one goes.
   const lineMenu = (item: ItemOut) => (event: MouseEvent<HTMLElement>) => {
     const offers = actionsFor(item);
     const open = {id: 'open', label: 'Open in Calendar', icon: 'calendar_month', run: () => navigate(itemRoute(item))} satisfies MenuAction;
-    // A read-only event leaves out what it can't do, saying why (D447).
+    // A read-only event leaves out what it can't do, saying why.
     const reason = {id: 'read-only', label: readOnlyReason(calendars?.find(calendar => calendar.id === item.calendar_id)), icon: 'lock', note: true, run: () => {}} satisfies MenuAction;
     const opened = openContextMenu(event, event.currentTarget, item.read_only ? [reason, open] : [
       {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', run: () => navigate(itemRoute(item, true))},
@@ -214,8 +214,8 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   };
 
   // An event's line leads with its calendar's bar (or its own colour's), as calendar chips and the
-  // agenda draw it, where tasks have rings (shell-06); its title on the whole width, then when, neither
-  // wrapping (SV-210).
+  // agenda draw it, where tasks have rings; its title on the whole width, then when, neither
+  // wrapping.
   // Today's is the next event (`next`); tomorrow's aren't.
   const eventLine = (item: ItemOut, key: string, title: string, when: ReactNode, next = false) => (
     <a key={key} className={`${lineClass(item)} event${next ? ' next' : ''}`} data-key={key} href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={lineMenu(item)}
@@ -243,8 +243,8 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
           }}>
           {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
         </button>
-        {/* The title wraps to two lines, as the event's (SV-210), over a timed task's time alone (D501);
-            the label says its day (D460). */}
+        {/* The title wraps to two lines, as the event's, over a timed task's time alone;
+            the label says its day. */}
         <span className="lines">
           <span className="ell title" data-tip={title}>{title}</span>
           {time && <span className="when"><span className="t num">{time}</span></span>}

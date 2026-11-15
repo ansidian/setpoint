@@ -1,4 +1,4 @@
-// The shared tooltip (DESIGN.md › Decided while building #299): resting the mouse on an element with
+// The shared tooltip: resting the mouse on an element with
 // `data-tip` shows its words under it, describing it while it shows, and moving off or a press
 // puts it away. The reader's sender, "to you" and time are its first: the sender's address, the
 // account's, and the full timestamp.
@@ -58,7 +58,7 @@ test('the reader\'s sender and "to you" show their addresses in the tooltip, und
   }
 });
 
-test('a row whose summary stands in for its subject shows the subject under those words, not the row\'s middle, at the wide screen\'s zoom too (SV-203)', async () => {
+test('a row whose summary stands in for its subject shows the subject under those words, not the row\'s middle, at the wide screen\'s zoom too', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');

@@ -32,7 +32,7 @@ describe('⌘K', () => {
   ] as const)('the cursor at %i moved %i among %i lands on %i', (cursor, delta, count, at) => expect(stepCursor(cursor, delta, count)).toBe(at));
 });
 
-// shell-13: the word prefixes a query matched, marked in its label.
+// The word prefixes a query matched, marked in its label.
 test.each([
   ['News', 'ne', [[0, 2]]],
   ['New event', 'new ev', [[0, 3], [4, 6]]],

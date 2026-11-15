@@ -1,6 +1,6 @@
 // Google Calendar push: a watch channel per calendar, renewed a day before it runs out, and the
-// notifications Google sends to POST /api/calendar/push. Harvested from v1's `calendar-push-channels`
-// (see SV-6), keeping its protocol rules:
+// notifications Google sends to POST /api/calendar/push. Its protocol
+// rules:
 // - a channel's token is 32 random bytes, kept only as a SHA-256 hash, checked in constant time;
 // - each header must come once, printable and short; the state is sync, exists or not_exists, and a
 //   `sync` is always message 1;
@@ -11,7 +11,7 @@
 //   a callback address that changed re-registers;
 // - a calendar Google can't watch (400 pushNotSupportedForRequestedResource: holidays) is
 //   remembered for the channel's lifetime and synced by the sweep instead.
-// v1 gated all this on production; v2 watches whenever Setpoint has a public https address.
+// Setpoint watches whenever it has a public https address.
 import {createHash, randomBytes, randomUUID, timingSafeEqual} from 'node:crypto';
 import {and, eq, inArray, lt, ne} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';
@@ -24,7 +24,7 @@ import {accountCalendars} from './sync.ts';
 
 const DAY = 86_400_000;
 export const WATCH_TTL_MS = 7 * DAY;
-// Renewed when less than this is left (v1's one day).
+// Renewed when less than this is left: one day.
 export const RENEW_LEAD_MS = DAY;
 // A registration that never finished is abandoned after this.
 export const REGISTRATION_TIMEOUT_MS = 10 * 60_000;

@@ -1,13 +1,13 @@
-// F7's fixtures (SV decision D3): health states and Settings' contents the seed doesn't have, for
+// Health states and Settings' contents the seed doesn't have, for
 // boards 17, 18a, 18b and 19a and the states' browser checks. Registered in index.ts.
 //
 //   needs-reconnect  17, 19a: Business's Gmail refused its credentials ("Business needs sign-in")
 //   stale-personal   17: Personal's checks stopped at 9:14 PM yesterday
 //   stale-icloud     19a: iCloud's checks stopped at 8:40 AM
 //   failing-work     the states' checks: Work's last check failed ("Gmail answered 503")
-//   stale-todoist    19b (SV-20): Todoist's checks stopped at 8:40 AM ("Todoist, as of 8:40 AM")
-//   failing-weather  the calendar's checks (SV-20): Weather's last check failed at 9:00 AM
-//   todoist-off      Settings' checks (SV-255): Todoist isn't connected, a source with no token
+//   stale-todoist    19b: Todoist's checks stopped at 8:40 AM ("Todoist, as of 8:40 AM")
+//   failing-weather  the calendar's checks: Weather's last check failed at 9:00 AM
+//   todoist-off      Settings' checks: Todoist isn't connected, a source with no token
 //   checked          17: the other sources last checked as the board says (Calendar and Todoist
 //                    9:10 AM, Weather 9:00 AM)
 //   triage-down      19a: triage down since 9:09 AM, with two emails waiting in Unsorted
@@ -66,10 +66,10 @@ const calendarSource = (db: Db, provider: 'todoist' | 'weather') => {
   return source;
 };
 
-// SV-20: the calendar's own lines.
+// The calendar's own lines.
 export const staleTodoist = ({db}: OpenDatabase) => staleSource(db, calendarSource(db, 'todoist'), zoned('2026-10-07', '08:40'));
 
-// SV-255: the seed's Todoist is a dev source, which counts as connected; this one is neither dev nor
+// The seed's Todoist is a dev source, which counts as connected; this one is neither dev nor
 // holding a token, as before Todoist is first connected.
 export function todoistOff({db}: OpenDatabase) {
   db.update(t.sources).set({dev: false, credentials: null}).where(eq(t.sources.id, calendarSource(db, 'todoist').id)).run();

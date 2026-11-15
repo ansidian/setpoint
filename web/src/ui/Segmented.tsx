@@ -1,4 +1,4 @@
-// The one segmented control (DESIGN.md › Decided while building #317, SV-211): Month | Week, Event |
+// The one segmented control: Month | Week, Event |
 // Task, News's views, Jobs's status filter and Code expiry draw it. It owns the markup, the sliding
 // thumb (seg.ts) and, where a page turns it on, Tab and Shift-Tab stepping its segments from anywhere
 // on the page, wrapping at the ends, with "Tab · ⇧Tab" as its tooltip.
@@ -18,7 +18,7 @@ const GROUP_ROLE = {pressed: 'group', radio: 'radiogroup', tab: 'tablist'} as co
 /**
  * Whether a key steps a page's segmented control, and which way: Tab or Shift-Tab, but not in a text
  * field, not with a popover, menu, dialog or the editor open, and not inside a form or dialog, where
- * Tab is the browser's (D454).
+ * Tab is the browser's.
  */
 export function tabStep(event: KeyboardEvent): 1 | -1 | null {
   if (event.key !== 'Tab' || event.metaKey || event.ctrlKey || event.altKey || event.isComposing) return null;

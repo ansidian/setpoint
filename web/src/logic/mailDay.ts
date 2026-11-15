@@ -1,4 +1,4 @@
-// The Inbox's empty pane (SV-218, D465): how the mail day is going, as its lines say it. After "·", a
+// The Inbox's empty pane: how the mail day is going, as its lines say it. After "·", a
 // list takes commas (the error-copy rule).
 import type {MailDayOut} from '@setpoint/shared';
 import {fileSize} from './reader.ts';

@@ -1,5 +1,5 @@
-// The verification-code detector (harvested from v1, SV-4): one exact code or none, from the
-// families v1's production sampling found, and none from the look-alikes it learned to refuse.
+// The verification-code detector: one exact code or none, from the families real mail uses, and
+// none from the look-alikes it learned to refuse.
 import {describe, expect, test} from 'vitest';
 import {detectVerificationCode, normalizeCodeText} from '../src/domain/verificationCode.ts';
 
@@ -62,7 +62,7 @@ describe('detectVerificationCode refuses look-alikes', () => {
   });
 });
 
-describe('detectVerificationCode reads code emails the strict pass misses (SV-68)', () => {
+describe('detectVerificationCode reads code emails the strict pass misses', () => {
   // Modelled on code emails the strict pass missed in production, wording invented. The second pass
   // is Android's rule (AOSP NotificationOtpDetectionHelper): a context word within 50 characters, in
   // the code's sentence or the one before; it runs only when the subject says it's a code email.

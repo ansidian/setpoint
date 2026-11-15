@@ -1,4 +1,4 @@
-// Loads BRIEF.md's sample data into an empty database, for building and checking the app, with
+// Loads the sample data into an empty database, for building and checking the app, with
 // News from data/news-snapshot/, real news taken once from prod, when the checkout has one
 // (src/dev/newsSnapshot.ts).
 //

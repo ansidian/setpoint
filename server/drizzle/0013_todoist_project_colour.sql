@@ -1,4 +1,4 @@
--- Hand-edited (SV-25), as 0009 was: the commands table's rebuild keeps pending commands' jobs aside
+-- Hand-edited, as 0009 was: the commands table's rebuild keeps pending commands' jobs aside
 -- (jobs.command_id ON DELETE CASCADE, and PRAGMA foreign_keys=OFF does nothing in the migrator's
 -- transaction), and todoist_projects' rebuild copies only the columns it had, its new id numbered
 -- as it goes. If this migration is regenerated, make both edits again.

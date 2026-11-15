@@ -1,4 +1,4 @@
-// SV-114 (D295): "What the line reads" (shared/compose/reference.json) can't drift from the parser.
+// "What the line reads" (shared/compose/reference.json) can't drift from the parser.
 // Each example runs through the iPhone's parseTitle (composeApp.ts, what compose.js is built from) on
 // the seed's Wed, Oct 7, 2026, with its kept phrase hidden as the editor hides it, and what it read is
 // said in the editor's own words (the Date and time fields, Repeat, Reminders, Place, Calendar,

@@ -1,4 +1,4 @@
-// What the chip says and does (SV-174), as a table: the pane always says something, a card only for
+// What the chip says and does, as a table: the pane always says something, a card only for
 // an application. jobs.test.tsx holds the standing to mail's Applied before words.
 import type {JobsMailApplicationOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';

@@ -1,4 +1,4 @@
-// SV-272 (D558): a task's subtasks. In the floating detail they're a checklist under "Subtasks 1/4",
+// A task's subtasks. In the floating detail they're a checklist under "Subtasks 1/4",
 // a column in from the header: each ring completes or reopens its subtask alone, never the task; the
 // handle in that column moves it a place with ↑ ↓ (dragging is Settings' live order, order.ts), the
 // rows showing the new order at once. Without actions (the phone) the rings are marks and nothing
@@ -147,7 +147,7 @@ test('on the grid the task\'s chip ends in the count, on its one line, as tall a
   expect(title.scrollWidth).toBeGreaterThan(title.clientWidth);
 });
 
-// ---------- SV-273: adding, a dated one's date, opening one and its menu ----------
+// ---------- Adding, a dated one's date, opening one and its menu ----------
 
 /** The card's actions with adding: an add settles when `settle` is called, so the row waits meanwhile. */
 function adding() {
@@ -209,7 +209,7 @@ test('a task with none shows the add row alone where the header would be', async
   await expect.element(field()).toHaveFocus();
 });
 
-test('a subtask\'s own card has no add row, and no Copy (D569); Clone stays', async () => {
+test('a subtask\'s own card has no add row, and no Copy; Clone stays', async () => {
   await card(task({key: '23', id: 23, title: 'Proofread', subtasks: [], parent_id: 7}), {...adding(), clone: vi.fn(), copy: vi.fn()});
   await expect.element(page.getByText('School')).toBeVisible();
   expect(document.querySelector('.subtask.add')).toBeNull();

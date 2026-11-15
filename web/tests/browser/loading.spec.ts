@@ -1,6 +1,5 @@
-// Loading in the browser (the polish audit's loading slice, SV-61; DESIGN.md › Motion › Loading and
-// Decided while building #225–#236): each page's skeleton while its data is held at the server's
-// door, never a false empty; a load that fails says so in place with Try again; Setpoint starting
+// Loading in the browser (DESIGN.md › Motion): each page's skeleton while its data is held at the
+// server's door, never a false empty; a load that fails says so in place with Try again; Setpoint starting
 // shows its mark; the reader and the story pane draw their heads from their rows at once; search
 // shows a skeleton, then its results. Every check holds the answer it's about, so "while it loads"
 // is as long as the check needs, and releases it to see the rows replace the skeleton.
@@ -32,14 +31,14 @@ async function hold(page: Page, pattern: RegExp): Promise<() => Promise<void>> {
 /** Goes to an address without waiting for its data (the harness's goto waits for it, which a held answer never gives). */
 const visit = (page: Page, url: string) => page.mainFrame().goto(url).then(() => {});
 
-/** Waits until a skeleton has come in after its delay; its fade in is by eye (D416). */
+/** Waits until a skeleton has come in after its delay; its fade in is by eye. */
 async function shown(page: Page, kind: string) {
   const found = page.locator(`[data-skeleton="${kind}"]`).first();
   await found.waitFor();
   return found;
 }
 
-test('Inbox loading: a skeleton, never an empty list, until the rows replace it (states-03, inbox-13)', async () => {
+test('Inbox loading: a skeleton, never an empty list, until the rows replace it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -59,7 +58,7 @@ test('Inbox loading: a skeleton, never an empty list, until the rows replace it 
   }
 });
 
-test('the Inbox waits for both its answers: with the days\' held, its skeleton stays, never half a list (#243)', async () => {
+test('the Inbox waits for both its answers: with the days\' held, its skeleton stays, never half a list', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -80,12 +79,12 @@ test('the Inbox waits for both its answers: with the days\' held, its skeleton s
   }
 });
 
-// Settings' own answers: every page's (settings-05 loads them all as Settings opens).
+// Settings' own answers: every page's (Settings loads them all as it opens).
 const SETTINGS_PATHS = /^\/api\/(accounts|sources|calendars|todoist\/projects|settings|mail\/rules|mail\/trusted-domains|notifications\/status|secrets|ai|security|news\/sources)$/;
-// What a page says only once it knows (states-01): each would be false of the seed while it loads.
+// What a page says only once it knows: each would be false of the seed while it loads.
 const FALSE_EMPTIES = ['Not connected', 'Connect Todoist', 'Not set', 'No rules yet', 'None yet', '0 domains', 'Nothing in Attention', '—', 'No sources', 'No home set'];
 
-test('Settings loading: each page draws its groups\' skeleton rows, never a default as a fact, until its answers come (states-01, settings-05)', async () => {
+test('Settings loading: each page draws its groups\' skeleton rows, never a default as a fact, until its answers come', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -113,13 +112,13 @@ test('Settings loading: each page draws its groups\' skeleton rows, never a defa
   }
 });
 
-test('Settings opening loads every page\'s answers, so the next page shows at once (settings-05)', async () => {
+test('Settings opening loads every page\'s answers, so the next page shows at once', async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    // The rules aren't among them: the Inbox has them already, for Add to rule (SV-160).
+    // The rules aren't among them: the Inbox has them already, for Add to rule.
     const asked = ['/api/mail/trusted-domains', '/api/security', '/api/ai', '/api/news/sources']
       .map(path => page.waitForResponse(response => new URL(response.url()).pathname === path));
     await page.keyboard.press('Meta+,');
@@ -137,7 +136,7 @@ test('Settings opening loads every page\'s answers, so the next page shows at on
   }
 });
 
-test('Calendar loading: the right pane and Calendars draw skeletons, never "Nothing planned" or "No events", and the grid no fake chips (states-01, calpanes-03)', async () => {
+test('Calendar loading: the right pane and Calendars draw skeletons, never "Nothing planned" or "No events", and the grid no fake chips', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -170,7 +169,7 @@ async function failWhile(page: Page, pattern: RegExp, failing: () => boolean) {
     : route.continue()));
 }
 
-test('a load that fails says so in place, and Try again loads it (states-06)', async () => {
+test('a load that fails says so in place, and Try again loads it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -191,7 +190,7 @@ test('a load that fails says so in place, and Try again loads it (states-06)', a
   }
 });
 
-test('the reader\'s body, Calendar\'s day, News and a Settings page each say in place when they couldn\'t load (states-06)', async () => {
+test('the reader\'s body, Calendar\'s day, News and a Settings page each say in place when they couldn\'t load', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -221,7 +220,7 @@ test('the reader\'s body, Calendar\'s day, News and a Settings page each say in 
   }
 });
 
-test('the reader draws the email\'s head from its row at once, and only its body waits, a skeleton (reader-01)', async () => {
+test('the reader draws the email\'s head from its row at once, and only its body waits, a skeleton', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -256,7 +255,7 @@ test('the reader draws the email\'s head from its row at once, and only its body
   }
 });
 
-test('on the phone, a tapped email opens at once from its row, its body a skeleton until it comes (phone-04)', async () => {
+test('on the phone, a tapped email opens at once from its row, its body a skeleton until it comes', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('iphone');
@@ -275,7 +274,7 @@ test('on the phone, a tapped email opens at once from its row, its body a skelet
   }
 });
 
-test('News loading: its list\'s skeleton, never "Nothing new", until the stories replace it (news-03)', async () => {
+test('News loading: its list\'s skeleton, never "Nothing new", until the stories replace it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -293,7 +292,7 @@ test('News loading: its list\'s skeleton, never "Nothing new", until the stories
   }
 });
 
-test('a story opens at once from its row: sections, headline and meta; its summary and sources a skeleton (news-05)', async () => {
+test('a story opens at once from its row: sections, headline and meta; its summary and sources a skeleton', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -320,7 +319,7 @@ test('a story opens at once from its row: sections, headline and meta; its summa
   }
 });
 
-test('Setpoint starting shows its mark and clears what browsers used to keep; then the sidebar\'s Today is a skeleton until it comes (states-09, shell-10)', async () => {
+test('Setpoint starting shows its mark and clears what browsers used to keep; then the sidebar\'s Today is a skeleton until it comes', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -342,7 +341,7 @@ test('Setpoint starting shows its mark and clears what browsers used to keep; th
     const skeleton = await rested(() => today.locator('.sk-line').first().evaluate(height));
     await release();
     await page.locator('aside.sb .today-row.next').waitFor();
-    // The event's two lines (SV-210) come in where the skeleton's first stood, as tall.
+    // The event's two lines come in where the skeleton's first stood, as tall.
     assert.equal(await rested(() => page.locator('aside.sb .today-row.next').evaluate(height)), skeleton);
     // Today's items are in (nothing is held now).
     await setpoint.idle();
@@ -353,7 +352,7 @@ test('Setpoint starting shows its mark and clears what browsers used to keep; th
   }
 });
 
-test('a search on its way shows the results\' skeleton in the Inbox\'s place until they come, and a refinement keeps them, dimmed (search-03)', async () => {
+test('a search on its way shows the results\' skeleton in the Inbox\'s place until they come, and a refinement keeps them, dimmed', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');

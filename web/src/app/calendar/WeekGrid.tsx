@@ -1,4 +1,4 @@
-// The week view (DESIGN.md › Week view; board 16, Sunday first): the day heads and the all-day row
+// The week view (board 16, Sunday first): the day heads and the all-day row
 // held at the top while 24 hours scroll under them, each day's events as blocks in lanes, today's
 // now-line, and the selected day's column in `sub`. A drag over empty hours makes a new event's range
 // (over the all-day row, its days), a drag on a block moves it in 15-minute steps to any day (a bar or
@@ -66,13 +66,13 @@ export interface WeekGridProps {
   onCreate: (date: string, slot: Slot) => void;
   // A block moved or resized: the change, the day it was on and the day it's on now.
   onChange: (item: ItemOut, changes: ItemChanges, from: string, to: string, kind: 'move' | 'resize') => void;
-  // A right-click on empty hours (#248): the day and the 15-minute step under the pointer.
+  // A right-click on empty hours: the day and the 15-minute step under the pointer.
   onSlotMenu?: (event: ReactMouseEvent<HTMLElement>, date: string, minutes: number) => void;
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   overlays?: ReactNode;
-  // SV-190: a file dragged over the section, which takes its drop (FileDrop.tsx).
+  // A file dragged over the section, which takes its drop (FileDrop.tsx).
   fileDrop?: FileDropBinding;
-  // Arriving from Month: it zooms in from this height in the section, the selected week's row there (polish audit grids-09).
+  // Arriving from Month: it zooms in from this height in the section, the selected week's row there.
   enter?: number | null;
   onEntered?: () => void;
 }
@@ -153,7 +153,7 @@ export function WeekGrid(props: WeekGridProps) {
 
   // ---------- Scrolling ----------
   const hoursHeight = () => (scroller.current?.clientHeight ?? 0) - (top.current?.offsetHeight ?? 0);
-  // The hours open where DESIGN.md says on the first paint and whenever the week is shown afresh; paging keeps them.
+  // The hours open where openingScroll says on the first paint and whenever the week is shown afresh; paging keeps them.
   useLayoutEffect(() => {
     const element = scroller.current;
     if (!element) return;
@@ -383,7 +383,7 @@ export function WeekGrid(props: WeekGridProps) {
     press.current = {kind: 'create', area, date, minutes: Math.max(0, Math.min(DAY, at.minutes)), x: event.clientX, y: event.clientY, week};
   };
 
-  // Where a press on empty hours would start (polish audit grids-07): the 15-minute step under the
+  // Where a press on empty hours would start: the 15-minute step under the
   // pointer, as a 30-minute slot holding + and its time; gone over a block, off the hours, on a press.
   const [hovered, setHovered] = useState<{date: string; minutes: number; shown: boolean} | null>(null);
   const hoverSlot = (date: string, event: ReactPointerEvent<HTMLElement>) => {
@@ -411,7 +411,7 @@ export function WeekGrid(props: WeekGridProps) {
   const lines = allDay.lines;
   const allDayHeight = 2 * tokens.allDayPadPx + lines * tokens.linePx + (lines - 1) * tokens.lineGapPx;
   const columnClass = (date: string) => [isWeekend(date) && 'wk-weekend', date === selectedDay && 'wk-sel'].filter(Boolean).join(' ');
-  // The day a move would land on takes the item's colour (polish audit calflows-09).
+  // The day a move would land on takes the item's colour.
   const dropDay = drag && drag.press.kind === 'move' && drag.changes && drag.to !== drag.press.from ? drag.to : null;
   const dropColour = drag && drag.press.kind === 'move' ? (drag.press.item.kind === 'task' ? 'var(--ink3)' : colourVar(drag.press.item.colour ?? calendars.get(drag.press.item.calendar_id)?.colour ?? 'cool')) : undefined;
   const popoverItems = popover ? byDay.get(popover) ?? [] : [];
@@ -421,7 +421,7 @@ export function WeekGrid(props: WeekGridProps) {
     <section className={`cal-week${drag ? ` dragging ${drag.press.kind}` : ''}`} aria-label="Week" ref={section} data-cal-section {...fileDrop?.handlers} data-file-drop={fileDrop?.over ?? undefined} data-enter={enter === null ? undefined : 'in'}
       style={enter === null ? undefined : {'--zoom-y': `${enter}px`} as CSSProperties}
       onAnimationEnd={event => event.target === event.currentTarget && onEntered?.()}>
-      {/* Focusable, so the hours scroll from the keyboard too (axe's scrollable-region-focusable, SV-99). */}
+      {/* Focusable, so the hours scroll from the keyboard too (axe's scrollable-region-focusable). */}
       <div className="wk-scroll" ref={scroller} onWheel={onWheel} data-cal-scroll tabIndex={0} aria-label="Hours">
         <div className="wk-grid" data-cal-grid>
           <div className="wk-top" ref={top}>
@@ -493,7 +493,7 @@ export function WeekGrid(props: WeekGridProps) {
               {todayColumn >= 0 && <span className="wk-gut now num" style={{top: nowTop - 7}}>{clockTime(now, timeZone)}</span>}
             </div>
             <div className="wk-cols" ref={cols} data-dir={slide} key={`cols:${week}`}>
-              {/* Now, faintly across the week, under today's own line (polish audit grids-08). */}
+              {/* Now, faintly across the week, under today's own line. */}
               {todayColumn >= 0 && <div className="wk-nowx" style={{top: nowTop}} aria-hidden="true" />}
               {days.map((date, column) => (
                 <div key={date} className={`wk-col ${columnClass(date)}${date === dropDay ? ' drop' : ''}`} data-date={date} onClick={event => clickSlot(date, event)}

@@ -1,4 +1,4 @@
-// Where a right-click's menu opens (DESIGN.md #248): from the pointer, down and to the right, as
+// Where a right-click's menu opens: from the pointer, down and to the right, as
 // the system's do; one that would run past the right opens to the pointer's left instead, one that
 // would run past the bottom opens upward, and either way it stays 8 px inside the window.
 
@@ -25,7 +25,7 @@ export function placeMenuAt(point: {x: number; y: number}, size: {width: number;
 }
 
 /**
- * Whether a menu hanging under its anchor opens upward instead (ui/popover.ts › placeMenu, darma SV-21):
+ * Whether a menu hanging under its anchor opens upward instead (ui/popover.ts › placeMenu):
  * when its foot would run past what can show it and there's more room above the anchor than below.
  */
 export function opensUp(bottom: number, anchor: {top: number; bottom: number}, room: {top: number; bottom: number}): boolean {

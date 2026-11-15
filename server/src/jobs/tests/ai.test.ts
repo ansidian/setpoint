@@ -1,4 +1,4 @@
-// Settings › AI's Jobs group (J8, board 39b, D315) through GET /api/jobs/ai:
+// Settings › AI's Jobs group (board 39b) through GET /api/jobs/ai:
 // whether its models can run, and this month's spend from the ledger in its three parts, counting only
 // Jobs's calls since local midnight on the 1st.
 import type {AiPurpose} from '@setpoint/shared';

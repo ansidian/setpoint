@@ -1,18 +1,17 @@
-// Jobs (J5, J6; DESIGN.md › Jobs, boards 32–36, 38b) against the seed's sample (BRIEF.md › Sample
-// data › Jobs): the shell's item and `4`, the two numbers and the table, Needs you with From history
+// Jobs (boards 32–36, 38b) against the seed's sample: the shell's item and `4`, the two numbers and the table, Needs you with From history
 // unfolding, an application's detail, J / K, the full posting, Look it up on Trey Research, search
-// (humongous, kubernetes by its JD, wide world loosely), the status filter, Role's width (SV-141), a narrow window at 1024,
+// (humongous, kubernetes by its JD, wide world loosely), the status filter, Role's width, a narrow window at 1024,
 // Esc's order, an event opening its email and one whose email is gone, and a `jobs` event landing a
-// row. J6: each Needs you kind answered (a pick, None of these, Assign to…, Not about a job,
+// row. Each Needs you kind answered (a pick, None of these, Assign to…, Not about a job,
 // Track this, Choose…, Dismiss all) and each correction (the title, the company, Set status and
 // Let emails decide, Merge with…, Move to…, Not about this, Not an application, Delete, Not this
 // posting, a row's and an event's right-click), each with its toast and Undo, reaching the server.
-// SV-140: a pick Jobs can't read, and Paste the posting after a failed pick and after No JD found.
-// SV-170: Paste the posting while it's looked up stops the lookup, and the JD's location set in place.
-// SV-243: the Pinned shelf, by P, a right-click, More and the detail's tool, under every filter and
+// A pick Jobs can't read, and Paste the posting after a failed pick and after No JD found.
+// Paste the posting while it's looked up stops the lookup, and the JD's location set in place.
+// The Pinned shelf, by P, a right-click, More and the detail's tool, under every filter and
 // sort, J / K through it, Unpin, a close taking a pin off and Undo putting it back.
-// D401: an item's email opening where the detail sits, and Esc leaving the item unanswered. D402: an
-// application's email opening from Assign to…, the menu staying beside it. SV-220: the empty pane's
+// An item's email opening where the detail sits, and Esc leaving the item unanswered. An
+// application's email opening from Assign to…, the menu staying beside it. The empty pane's
 // recent movement, a hand move landing in it, its row's condensed menu and a row opening its detail.
 // Per week's chart, the status control, the posting's unfolding, the menus' keys, the candidate
 // picker and the title's field are the component tests' (web/tests/components/jobs.test.tsx); what
@@ -63,10 +62,10 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    // The shell: Jobs under News, its count the Needs you count (D313).
+    // The shell: Jobs under News, its count the Needs you count.
     assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     const item = page.locator('aside.sb .nav.jobs');
-    // The full sidebar names it in its own words, so it has no tip; the rail's has (SV-171).
+    // The full sidebar names it in its own words, so it has no tip; the rail's has.
     assert.equal(await item.getAttribute('data-tip'), null);
 
     await page.keyboard.press('4');
@@ -75,7 +74,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     assert.equal(await page.title(), 'Jobs');
     assert.equal(await page.locator('aside.sb .nav.on').textContent(), 'Jobs3');
 
-    // The two numbers (D314): the status filter's counts, and Per week with this week outlined (D318).
+    // The two numbers: the status filter's counts, and Per week with this week outlined.
     assert.equal(await page.locator('.hd .hd-title').textContent(), 'Jobs');
     assert.deepEqual(await page.locator('.hd .jb-status button').allTextContents(), ['All62', 'Applied31', 'In process3', 'Offer1', 'Rejected25', 'Withdrawn2']);
     assert.equal(await page.locator('.jb-week .bars > i').count(), 12);
@@ -94,7 +93,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     assert.deepEqual(await page.locator('.jb-need .jb-cand').allTextContents(), ['Junior Developer · New York, NY · Greenhouse', 'Junior Developer, Digital · Remote · LinkedIn', 'None of these']);
     assert.deepEqual(await page.locator('.jb-need .acts .btn').allTextContents(), ['Assign to…', 'Not about a job', 'Track this', 'Not about a job']);
 
-    // From history, folded until a click (D311).
+    // From history, folded until a click.
     const fold = page.locator('.jb-fold-t');
     assert.equal(await fold.textContent(), 'From history 6,what the history pass wasn\'t sure of');
     assert.equal(await fold.getAttribute('aria-expanded'), 'false');
@@ -105,7 +104,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     assert.deepEqual(await page.locator('.jb-hist .acts .btn.out').allTextContents(), ['Assign to…', 'Assign to…', 'Choose…', 'Track this', 'Track this', 'Choose…']);
     assert.equal(await page.locator('.jb-fold .btn').textContent(), 'Dismiss all');
 
-    // The table: every application, newest first by Applied (D314), its status with Ghosted and the step (D309).
+    // The table: every application, newest first by Applied, its status with Ghosted and the step.
     assert.equal(await rows(page).count(), 62);
     assert.deepEqual((await companies(page)).slice(0, 6), ['Fabrikam', 'Relecloud', 'Lucerne Publishing', 'Tailspin Toys', 'Trey Research', 'Northwind Talent']);
     assert.deepEqual(await page.locator('.jb-th .h').allTextContents(), ['Company', 'Role', 'Applied', 'Status', 'JD']);
@@ -117,7 +116,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     const alpine = row(page, await applicationId(setpoint, 'Alpine Ski House', 'Web Developer'));
     assert.equal(await alpine.locator('.st .by').getAttribute('data-tip'), 'Set by you on Sep 10, only an email that sets a status changes it');
     // The JD column: a glyph, how it was found or where it stands in its tip; nothing for a closed one
-    // from history (D311).
+    // from history.
     const jd = async (company: string, title: string) => {
       const cell = row(page, await applicationId(setpoint, company, title)).locator('.jd');
       return [await cell.locator('.icon').count(), await cell.getAttribute('data-tip')];
@@ -159,7 +158,7 @@ test('an application opens where the reading pane sits: its head, its JD, its ti
     assert.equal(await page.title(), 'Software Engineer I · Northwind Talent');
     assert.match(await row(page, northwind).getAttribute('class') ?? '', /\bopen\b/);
 
-    // The head, then the JD first (D307).
+    // The head, then the JD first.
     const pane = page.locator('.jb-pane');
     assert.equal(await pane.locator('.jb-co').textContent(), 'Northwind Talent· via GreenhouseJobs· Applied Oct 1');
     assert.equal(await pane.locator('.rd-subj').textContent(), 'Software Engineer I');
@@ -168,7 +167,7 @@ test('an application opens where the reading pane sits: its head, its JD, its ti
     assert.deepEqual(await pane.locator('.jb-body > .jb-facts > *').allTextContents(), ['Irvine, CA', 'Hybrid, 3 days', '$95,000–$115,000']);
     assert.deepEqual(await pane.locator('.jb-lists .jb-label').allTextContents(), ['Must-haves 4', 'Nice-to-haves 3']);
     assert.equal(await pane.locator('.jb-src').textContent(), 'Full postingFound on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
-    // The timeline, oldest first (D317); then Applied before at the company (D306).
+    // The timeline, oldest first; then Applied before at the company.
     assert.deepEqual(await pane.locator('.jb-ev').allTextContents(), [
       'Oct 1AppliedThank you for applying to Northwind Talent', 'Oct 1Verify your email, no longer in Gmail', 'TodayInterviewInterview availability for Software Engineer I',
     ]);
@@ -288,7 +287,7 @@ test('search (36a, 36b): humongous gives both applications, kubernetes Woodgrove
     assert.equal(await page.locator('.jb-tr.two .snip').textContent(), 'Full posting “…our services run on Kubernetes across two regions, so you’ll pick it up from day one…”');
     assert.deepEqual(await page.locator('.jb-tr.two .snip mark.hl').allTextContents(), ['Kubernetes']);
 
-    // Loose on company names (decision 62).
+    // Loose on company names.
     await page.getByRole('textbox', {name: 'Search jobs'}).fill('wide world');
     await until('Wide World Importers', () => companies(page), found => found.join() === 'Wide World Importers');
     assert.deepEqual(await page.locator('.jb-scroll .jb-tr .co mark.hl').allTextContents(), ['Wide', 'World']);
@@ -317,7 +316,7 @@ test('the status filter: In process shows its three, and All all 62; Tab and Shi
     await until('Withdrawn alone', () => rows(page).count(), count => count === 2);
     await page.locator('.jb-status button', {hasText: 'All'}).click();
     await until('every application', () => rows(page).count(), count => count === 62);
-    // SV-211: Tab and Shift-Tab step the filter from anywhere on the page (the wrap is
+    // Tab and Shift-Tab step the filter from anywhere on the page (the wrap is
     // components/segmented.test.tsx's).
     assert.equal(await page.locator('.jb-status').getAttribute('data-tip'), 'Tab · ⇧Tab');
     await page.keyboard.press('Tab');
@@ -331,7 +330,7 @@ test('the status filter: In process shows its three, and All all 62; Tab and Shi
   }
 });
 
-test('a failed pick (SV-132, SV-140): it says so and Open posting opens it; Paste the posting saves the JD, Undo takes it away, and Full posting shows it', async () => {
+test('a failed pick: it says so and Open posting opens it; Paste the posting saves the JD, Undo takes it away, and Full posting shows it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -411,7 +410,7 @@ test('a failed pick (SV-132, SV-140): it says so and Open posting opens it; Past
   }
 });
 
-test('a candidate Jobs can\'t read says so, and picked it keeps the link rather than say a JD was saved (SV-140)', async () => {
+test('a candidate Jobs can\'t read says so, and picked it keeps the link rather than say a JD was saved', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -430,7 +429,7 @@ test('a candidate Jobs can\'t read says so, and picked it keeps the link rather 
   }
 });
 
-test('No JD found (SV-140): Paste the posting beside Look it up; a posting with no link has no Open posting', async () => {
+test('No JD found: Paste the posting beside Look it up; a posting with no link has no Open posting', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -455,7 +454,7 @@ test('No JD found (SV-140): Paste the posting beside Look it up; a posting with 
   }
 });
 
-test('Paste the posting while it\'s looked up (SV-170): the lookup stops, Esc leaves it stopped, and the JD pasted takes a location, with Undo', async () => {
+test('Paste the posting while it\'s looked up: the lookup stops, Esc leaves it stopped, and the JD pasted takes a location, with Undo', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -510,7 +509,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
     const pane = page.locator('.jb-pane');
     await pane.locator('.jb-nojd').waitFor();
     assert.equal(await pane.locator('.jb-nojd').textContent(), 'No JD found · Breezy and a web search had nothing for it on Oct 1Look it upPaste the posting');
-    // No posting link: no Open posting, Pin the one tool (SV-243).
+    // No posting link: no Open posting, Pin the one tool.
     assert.deepEqual(await pane.locator('.rd-tools .tool').allTextContents(), ['PinP']);
     await pane.getByRole('button', {name: 'Look it up'}).click();
     await pane.locator('.jb-src.looking').waitFor();
@@ -525,7 +524,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
   }
 });
 
-test('an event opens its email in the mail reader; one whose email is gone says so, opens nothing and its ··· has no Open email (#269)', async () => {
+test('an event opens its email in the mail reader; one whose email is gone says so, opens nothing and its ··· has no Open email', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -558,7 +557,7 @@ test('an event opens its email in the mail reader; one whose email is gone says 
   }
 });
 
-test('SV-220: the empty pane lists recent movement, one row per application newest first; a row opens its detail, and its right-click is the table\'s menu without the JD\'s two', async () => {
+test('the empty pane lists recent movement, one row per application newest first; a row opens its detail, and its right-click is the table\'s menu without the JD\'s two', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -596,7 +595,7 @@ test('SV-220: the empty pane lists recent movement, one row per application newe
   }
 });
 
-test('SV-141: two lines hold a long note whole; past two it ends in an ellipsis with the whole note on hover, and J reaches it', async () => {
+test('two lines hold a long note whole; past two it ends in an ellipsis with the whole note on hover, and J reaches it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const northwind = await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I');
@@ -627,7 +626,7 @@ test('a narrow window, at 1024 (32b): Jobs in the rail, the header holding its n
     const page = await setpoint.page({width, height});
     const [northwind, humongous] = [await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I'), await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II, Claims')];
     await page.goto(`${setpoint.base}/jobs`);
-    // The rail's slot after News (D325).
+    // The rail's slot after News.
     assert.deepEqual(await page.locator('.sb .nav').evaluateAll(links => links.map(link => link.getAttribute('data-tip'))), ['Inbox', 'Calendar', 'News', 'Jobs · 3 need you', 'Settings · ⌘,']);
     // The header: both numbers stay, and nothing spills out.
     assert.equal(await page.locator('.jb-status').isVisible(), true);
@@ -670,7 +669,7 @@ test('a `jobs` event: an application that lands takes its place, and a row an em
   }
 });
 
-test('the phone has no Jobs: its address opens the Inbox, and its tabs don\'t name it (decision 49)', async () => {
+test('the phone has no Jobs: its address opens the Inbox, and its tabs don\'t name it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('iphone');
@@ -685,7 +684,7 @@ test('the phone has no Jobs: its address opens the Inbox, and its tabs don\'t na
   }
 });
 
-// ---- J6: Needs you's answers (34a–34c, #266) ----
+// ---- Needs you's answers (34a–34c) ----
 
 const need = (page: Page, text: string) => page.locator('.jb-need[data-key]', {hasText: text});
 const toast = (page: Page) => page.locator('.toast:not(.leaving)');
@@ -776,7 +775,7 @@ test('an update to assign (34a): Assign to… lists Humongous\'s two, a pick mov
   }
 });
 
-// The seed's items have no email in mail's sample: these stand in as theirs (D401), the first two
+// The seed's items have no email in mail's sample: these stand in as theirs, the first two
 // unread, the last from history.
 const ITEM_EMAILS = `
   UPDATE jobs_needs_you SET message_id = (SELECT id FROM messages WHERE subject = 'Application received') WHERE subject = 'Thank you for your interest in the Software Engineer II role';
@@ -788,7 +787,7 @@ const itemEmail = (page: Page) => page.getByRole('region', {name: 'Email', exact
 const itemSubject = (page: Page, text: string) => page.locator('.jb-band').getByRole('button', {name: text});
 const unreadInbox = async (setpoint: Setpoint) => (await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread;
 
-test('D401: an item\'s subject opens its email where the detail sits, the email alone, unread as it was; Esc leaves the item unanswered with the cursor on it, and a JD has no email to open', async () => {
+test('an item\'s subject opens its email where the detail sits, the email alone, unread as it was; Esc leaves the item unanswered with the cursor on it, and a JD has no email to open', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     jobsChange(setpoint, ITEM_EMAILS);
@@ -810,7 +809,7 @@ test('D401: an item\'s subject opens its email where the detail sits, the email 
     // The email alone: none of the reader's tools or actions, and nothing of Jobs's chip.
     assert.deepEqual(await itemEmail(page).locator('.rd-tools button:visible').evaluateAll(all => all.map(one => one.textContent || one.getAttribute('aria-label'))), ['Open in Inbox', 'Previous email', 'Next email']);
     assert.equal(await itemEmail(page).locator('.rd-acts, .jb-chip, .jb-badge').count(), 0);
-    // Reading it changes nothing in mail: it stays unread, here and in the Inbox's counts (D313).
+    // Reading it changes nothing in mail: it stays unread, here and in the Inbox's counts.
     await setpoint.idle();
     assert.equal((await setpoint.api<MessageOut>('GET', `/mail/messages/${update!.message_id!}`)).unread, true);
     assert.equal(await unreadInbox(setpoint), unread);
@@ -850,7 +849,7 @@ test('D401: an item\'s subject opens its email where the detail sits, the email 
   }
 });
 
-test('D401: with the email open Assign to… works beside it: Esc takes the menu first, a subject pressed closes a menu, J / K step through the items\' emails, and answering closes it, Undo leaving it closed', async () => {
+test('with the email open Assign to… works beside it: Esc takes the menu first, a subject pressed closes a menu, J / K step through the items\' emails, and answering closes it, Undo leaving it closed', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     jobsChange(setpoint, ITEM_EMAILS);
@@ -918,7 +917,7 @@ test('D401: with the email open Assign to… works beside it: Esc takes the menu
   }
 });
 
-test('D401: From history\'s subject opens its email too, J / K staying among From history\'s; in a narrow window the email lies over the table and Back leaves the item unanswered', async () => {
+test('From history\'s subject opens its email too, J / K staying among From history\'s; in a narrow window the email lies over the table and Back leaves the item unanswered', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     jobsChange(setpoint, ITEM_EMAILS);
@@ -948,7 +947,7 @@ test('D401: From history\'s subject opens its email too, J / K staying among Fro
   }
 });
 
-test('D402: an application in Assign to… opens its first email beside the menu, which stays through a press and a scroll in the pane; Esc takes the menu, a subject shows the item\'s own, and picking closes it', async () => {
+test('an application in Assign to… opens its first email beside the menu, which stays through a press and a scroll in the pane; Esc takes the menu, a subject shows the item\'s own, and picking closes it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     jobsChange(setpoint, ITEM_EMAILS);
@@ -1031,7 +1030,7 @@ test('an answer refused leaves the item for good: the fold it had coming doesn\'
   }
 });
 
-test('Track this (34c, decision 69): the application lands at its email\'s date, opens with First seen and its JD looked up, In process, and the numbers move', async () => {
+test('Track this (34c): the application lands at its email\'s date, opens with First seen and its JD looked up, In process, and the numbers move', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1062,7 +1061,7 @@ test('Track this (34c, decision 69): the application lands at its email\'s date,
   }
 });
 
-test('From history (D364): Choose… is a menu of the candidates, each opening its posting, a pick folding the row; Assign to… and Track this on rows too', async () => {
+test('From history: Choose… is a menu of the candidates, each opening its posting, a pick folding the row; Assign to… and Track this on rows too', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1101,7 +1100,7 @@ test('From history (D364): Choose… is a menu of the candidates, each opening i
   }
 });
 
-// ---- J6: the corrections (35a, 35b, #267, #268) ----
+// ---- The corrections (35a, 35b) ----
 
 test('the title in place (35a): a click puts it in a field, Esc keeps it, Enter saves it; the company from More; each with Undo', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
@@ -1144,7 +1143,7 @@ test('the title in place (35a): a click puts it in a field, Esc keeps it, Enter 
   }
 });
 
-test('Set status (#267): the chip\'s menu, a pick changing it and marking the row set by hand; Let emails decide hands it back', async () => {
+test('Set status: the chip\'s menu, a pick changing it and marking the row set by hand; Let emails decide hands it back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1305,7 +1304,7 @@ test('Not an application, Delete and Not this posting (35b): the row folds away 
 const shelf = (page: Page) => page.locator('.jb-scroll .jb-tr.shelf[data-application] .co').allTextContents();
 const table = (page: Page) => page.locator('.jb-scroll .jb-tr:not(.shelf)[data-application] .co').allTextContents();
 
-test('SV-243: P pins the row under the cursor onto the shelf under the headings, newest first, under every filter and sort and not in the table; J goes through it; Unpin', async () => {
+test('P pins the row under the cursor onto the shelf under the headings, newest first, under every filter and sort and not in the table; J goes through it; Unpin', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1368,7 +1367,7 @@ test('SV-243: P pins the row under the cursor onto the shelf under the headings,
   }
 });
 
-test('SV-243: Pin from a right-click, the detail\'s tool, More and P with it open; Set to Rejected takes it off the shelf and Undo brings it back (D505)', async () => {
+test('Pin from a right-click, the detail\'s tool, More and P with it open; Set to Rejected takes it off the shelf and Undo brings it back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1413,7 +1412,7 @@ test('SV-243: Pin from a right-click, the detail\'s tool, More and P with it ope
   }
 });
 
-test('a row\'s right-click (#268): its actions at the pointer, the cursor on it and nothing opened; Copy company and role; Edit title opens it with the field', async () => {
+test('a row\'s right-click: its actions at the pointer, the cursor on it and nothing opened; Copy company and role; Edit title opens it with the field', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');

@@ -1,14 +1,14 @@
-// An application's detail (DESIGN.md › The application's detail; boards 32, 32b, 33, 34c, 38b): where
+// An application's detail (boards 32, 32b, 33, 34c, 38b): where
 // the reading pane sits, and as wide. Its tools (Back in a narrow window, Open posting `O`, or Open
 // email while a JD with no link is looked up; previous and next); its head (the company, "via" its
 // platform, the account and Applied; the title; the status and its latest step; "First seen in this
-// email"); then the JD first (D307): what they want, the facts, both lists and the full posting one
+// email"); then the JD first: what they want, the facts, both lists and the full posting one
 // step away, or where the JD stands (looking, No JD found with Look it up, candidates in Needs you);
 // the timeline, each event opening its email; Applied before at the company, and its other
-// applications. At not_found, Paste the posting (SV-140): the main action after a pick Jobs couldn't
+// applications. At not_found, Paste the posting: the main action after a pick Jobs couldn't
 // read, beside Look it up otherwise; a JD pasted shows what Haiku has read of it so far. While it's
-// looked up, Paste the posting stops the lookup and opens the area (SV-170). The JD's location is
-// added or changed in place (SV-170). J6's corrections (35a, 35b, #267–#269): More after the tools, the title edited in
+// looked up, Paste the posting stops the lookup and opens the area. The JD's location is
+// added or changed in place. The corrections (boards 35a, 35b): More after the tools, the title edited in
 // place (and the company, from More), the status chip's Set status, Not this posting's candidates
 // offered where the JD was, and each event's ··· (Open email, Move to…, Not about this), also on a
 // right-click. An event whose email Gmail no longer has keeps its line and opens nothing.
@@ -54,7 +54,7 @@ export interface DetailProps {
   leaving: boolean;
   // Arrived from mail (Open in Jobs, Full posting), or open as the page mounted: no slide (37b).
   arrived?: boolean;
-  // Arrived from the JD popover's Full posting: the posting unfolded, scrolled to (#271).
+  // Arrived from the JD popover's Full posting: the posting unfolded, scrolled to.
   unfolded?: boolean;
   canStep: {previous: boolean; next: boolean};
   onStep: (delta: 1 | -1) => void;
@@ -63,7 +63,7 @@ export interface DetailProps {
   onEmail: (messageId: number) => void;
   // The page's Esc asks the pane first: an unfolded posting folds back.
   postingRef: RefObject<FullPostingHandle | null>;
-  // J6: every application, for the menus; the corrections; the field being edited, from More or a
+  // Every application, for the menus; the corrections; the field being edited, from More or a
   // row's right-click; and an event's Move to… and Not about this, and a candidate picked.
   rows: ApplicationRowOut[];
   corrections: (row: ApplicationRowOut) => CorrectionActions;
@@ -198,7 +198,7 @@ function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSa
       )}
       {editing && <div className="jb-hint">Enter to save, Esc to cancel</div>}
       <div className="jb-stat">
-        {/* One click on the chip sets the status by hand (D309, #267). Its tip is only Ghosted, which its label doesn't say (SV-171). */}
+        {/* One click on the chip sets the status by hand. Its tip is only Ghosted, which its label doesn't say. */}
         <button type="button" className="jb-stchip" data-tip={row.ghosted && row.status === 'applied' ? markLabel(row) : undefined} aria-haspopup="menu" aria-expanded={chipOpen} onClick={event => onChip(event.currentTarget)}>
           <span key={mark} className={chip.changed ? 'swap changed' : 'swap'}><i className={`sd ${mark}`} />{STATUS_LABELS[row.status]}</span>
           <Icon name={chipOpen ? 'expand_less' : 'expand_more'} size={16} />
@@ -211,7 +211,7 @@ function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSa
   );
 }
 
-/** The JD first (D307): its summary, facts, lists and the full posting; or where it stands without one. */
+/** The JD first: its summary, facts, lists and the full posting; or where it stands without one. */
 function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
   detail: ApplicationOut;
   timeZone: string;
@@ -228,7 +228,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
     setAsking(true);
     void lookUp(detail.id).catch(toastFailure('Couldn\'t look it up')).finally(() => setAsking(false));
   };
-  // Paste the posting while it's looked up (SV-170): the area opens at once, and the lookup stops.
+  // Paste the posting while it's looked up: the area opens at once, and the lookup stops.
   const pasteInstead = () => {
     setPasting(true);
     void stopLookup(detail.id).catch((error: unknown) => {
@@ -236,7 +236,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
       toastFailure('Couldn\'t stop the lookup')(error);
     });
   };
-  // The location in place (SV-170): shown at once, then saved, with Undo; empty takes it away.
+  // The location in place: shown at once, then saved, with Undo; empty takes it away.
   const place = (value: string) => {
     setPlacing(false);
     const location = value || null;
@@ -290,8 +290,8 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
       </div>
     );
   }
-  // No JD found (D320), or never looked up (a closed application from history, D311): each says so
-  // under the section's label, with Look it up where it can run. A lookup stopped to paste (SV-170)
+  // No JD found, or never looked up (a closed application from history): each says so
+  // under the section's label, with Look it up where it can run. A lookup stopped to paste
   // reads as stopped from the click, so the area isn't drawn again when the server answers.
   const stoppedHere = detail.jd.state === 'looking';
   const jd = stoppedHere ? {...detail.jd, state: 'not_found' as const, stopped: true} : detail.jd;
@@ -302,7 +302,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
       : {icon: 'remove' as const, lead: 'Not looked up', rest: detail.status === 'rejected' || detail.status === 'withdrawn' ? 'it was closed before Jobs read it' : 'Jobs hasn\'t looked for it yet'};
   const notFound = jd.state === 'not_found';
   // After a pick Jobs couldn't read, the text is what's left, so Paste leads and Look it up steps back;
-  // with nothing found, another look still costs the user less (SV-140). Stopped, the user chose to paste.
+  // with nothing found, another look still costs the user less. Stopped, the user chose to paste.
   const pasteFirst = notFound && (jd.link !== null || jd.stopped);
   const lookUpButton = (
     <button className={`btn ${notFound && !pasteFirst ? 'out' : 'quiet'} sm`} type="button" disabled={asking} onClick={lookItUp}><Icon name="search" size={16} />Look it up</button>
@@ -333,7 +333,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
 
 const WORKPLACES = {on_site: 'On-site', hybrid: 'Hybrid', remote: 'Remote'} as const;
 
-/** The location in place (SV-170), in the detail only. */
+/** The location in place, in the detail only. */
 interface LocationEdit {
   editing: boolean;
   today: string;
@@ -344,9 +344,9 @@ interface LocationEdit {
 }
 
 /**
- * The JD's facts (D307): where, the setting, the salary or "Salary not stated". Mail's popover shows
+ * The JD's facts: where, the setting, the salary or "Salary not stated". Mail's popover shows
  * them too. In the detail the location is edited in place, or added ("Add location"), and before the
- * JD is read the line holds only that (SV-170).
+ * JD is read the line holds only that.
  */
 export function JdFacts({posting, location, reading = true}: {posting: PostingOut; location?: LocationEdit; reading?: boolean}) {
   const place = posting.workplace ? `${WORKPLACES[posting.workplace]}${posting.workplace_detail ? `, ${posting.workplace_detail}` : ''}` : null;
@@ -391,12 +391,12 @@ export function JdLists({posting}: {posting: PostingOut}) {
 
 const EVENT_FOLDS: FoldRules<JobEventOut> = {folds: () => true, arrives: () => true};
 
-/** Whose email Gmail no longer has (D317, #269): its line stays, and it opens nothing. */
+/** Whose email Gmail no longer has: its line stays, and it opens nothing. */
 const GONE_TIP = 'Gmail no longer has this email, so Jobs keeps only its line';
 
 /**
- * The timeline (D317), oldest first: each event opens its email, and one whose email is gone keeps
- * its line and says so (#269). Its ··· (on hover, or a right-click) holds Open email, Move to… and Not
+ * The timeline, oldest first: each event opens its email, and one whose email is gone keeps
+ * its line and says so. Its ··· (on hover, or a right-click) holds Open email, Move to… and Not
  * about this; one moved or taken off folds out (180 ms), one a merge brings settles from sub2 (900 ms).
  */
 function Timeline({events, timeZone, today, onEmail, menuOpen, onMenu}: {
@@ -472,7 +472,7 @@ function Timeline({events, timeZone, today, onEmail, menuOpen, onMenu}: {
   );
 }
 
-/** Applied before at the company (D306), or its other applications: one card each, opening it. */
+/** Applied before at the company, or its other applications: one card each, opening it. */
 function Related({label, icon, links, today, onOpen}: {label: string; icon: 'history' | 'work'; links: ApplicationLinkOut[]; today: string; onOpen: (id: number) => void}) {
   return (
     <div>

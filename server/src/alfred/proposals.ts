@@ -1,7 +1,8 @@
-// Proposals from an email (BRIEF.md › The reader; DESIGN.md › Proposal): Add to calendar and Add as
+// Proposals from an email: Add to calendar and Add as
 // task, and Alfred's propose tool, all build one here. A proposal is the item POST /api/items would
 // create, pre-filled, with the fields the email gave marked and, for an event, the conflict line
-// against that day's items. Nothing is created: Create sends the item through B5's create command.
+// against that day's items. Nothing is created: Create sends the item through the calendar's create
+// command.
 //
 // The calendar is where similar items already live: the Google calendar whose items share the most
 // words with the title ("CS 101 final exam" goes where "CS 101 lecture" is: Classes), else the
@@ -9,7 +10,7 @@
 // the project whose tasks share the most words with it, else Settings' default project.
 //
 // An email with an invite (a text/calendar attachment, as a scheduler sends) takes its title, time, end and
-// place from the invite rather than its subject and text (SV-263, D543): the file states them exactly. The
+// place from the invite rather than its subject and text: the file states them exactly. The
 // invite is read through the account's adapter, so it's the one step here that can wait on a
 // provider; whatever goes wrong there leaves the text's proposal.
 import type {ItemKind, ProposalField, ProposalOut} from '@setpoint/shared';
@@ -44,7 +45,7 @@ function bestByWords<K>(title: string, candidates: {key: K; titles: string[]}[])
   return best?.key ?? null;
 }
 
-/** The Google calendar for a new event: where similar items live, else the account's first, else the first (N3: News's keynotes have no account). */
+/** The Google calendar for a new event: where similar items live, else the account's first, else the first (News's keynotes have no account). */
 export function calendarFor(store: Store, title: string, accountId: number | null): number | null {
   const calendars = store.db.select().from(t.calendars).where(eq(t.calendars.provider, 'google')).orderBy(asc(t.calendars.position)).all();
   if (!calendars.length) return null;
@@ -144,7 +145,7 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
   // What the invite gave is the email's too.
   const marks = new Set([...fromEmail(email, fields, zone), ...invited]);
   const from_email = MARK_ORDER.filter(mark => marks.has(mark));
-  // D553–D555: the description's "From:" line, linking to the email in Gmail (plain text for another provider's).
+  // The description's "From:" line, linking to the email in Gmail (plain text for another provider's).
   const account = store.db.select({provider: t.accounts.provider, address: t.accounts.address}).from(t.accounts).where(eq(t.accounts.id, message.accountId)).get();
   const source = {subject: message.subject, url: account?.provider === 'gmail' ? gmailUrl(account.address, message.providerId) : null};
 

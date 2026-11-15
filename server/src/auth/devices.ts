@@ -1,4 +1,4 @@
-// Paired iPhones (SV-84, D276). The phone reaches Setpoint only over a private network, where native
+// Paired iPhones. The phone reaches Setpoint only over a private network, where native
 // passkeys can't work, so a signed-in browser pairs it: Settings › Security shows a one-time code
 // (five minutes, one at a time) in a QR code and a setpoint://pair link, and the app exchanges it at
 // POST /api/auth/pair for a device token it sends as a bearer header. Codes and tokens are 256
@@ -83,7 +83,7 @@ const present = (row: Device): DeviceOut => ({id: row.id, name: row.name, paired
 export const listDevices = (store: Store): DeviceOut[] =>
   store.db.select().from(t.devices).orderBy(desc(t.devices.createdAt), desc(t.devices.id)).all().map(present);
 
-/** Whether any iPhone is paired: notifications then open the app (SV-87). */
+/** Whether any iPhone is paired: notifications then open the app. */
 export const hasPairedDevice = (store: Store): boolean =>
   store.db.select({id: t.devices.id}).from(t.devices).limit(1).get() !== undefined;
 

@@ -1,5 +1,5 @@
 // One email's RFC 822 source, parsed for the message record: Gmail's `format=raw` and IMAP's
-// BODY[] go through the same parser (mailparser, as v1's reader did), so charsets, transfer
+// BODY[] go through the same parser (mailparser), so charsets, transfer
 // encodings and HTML-only mail decode the same way for both providers.
 import {convert} from 'html-to-text';
 import type {HtmlToTextOptions} from 'html-to-text';
@@ -12,7 +12,7 @@ import type {ReadDigest, Scan} from '../domain/mailpieces.ts';
 import type {AttachmentBytes} from '../sync/adapter.ts';
 import type {FetchedAttachment, FetchedMessage, ProviderState} from '../sync/mailMirror.ts';
 
-// What the record and its index keep of a body (v1's evidence limit); the reader shows the HTML.
+// What the record and its index keep of a body; the reader shows the HTML.
 export const BODY_TEXT_MAX_CHARS = 20_000;
 export const BODY_HTML_MAX_CHARS = 2_000_000;
 const SNIPPET_CHARS = 140;
@@ -35,7 +35,7 @@ export interface ParsedEmail {
   attachments: FetchedAttachment[];
 }
 
-/** An inline part (a cid: image in the HTML) isn't an attachment the user would open (v1's rule). */
+/** An inline part (a cid: image in the HTML) isn't an attachment the user would open. */
 function isInline(attachment: ParsedMailAttachment): boolean {
   const disposition = String(attachment.contentDisposition ?? '').trim().toLowerCase();
   if (disposition === 'attachment') return false;
@@ -46,7 +46,7 @@ const squash = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 // mailparser's own conversion of HTML-only mail (its nesting limit), except that an image leaves
 // only its alt text: html-to-text's default writes its address too, and an embedded `data:` image's
-// address can fill the whole stored text (SV-250).
+// address can fill the whole stored text.
 const HTML_TEXT_OPTIONS: HtmlToTextOptions = {
   limits: {maxDepth: 1000},
   formatters: {
@@ -77,7 +77,7 @@ function storedText(text: string): {text: string; snippet: string} {
 }
 
 /**
- * v1's fallback for a message the parser can't take: the header block read line by line and the
+ * The fallback for a message the parser can't take: the header block read line by line and the
  * rest kept as text, so one malformed email still lands in the record rather than stopping sync.
  */
 function naiveParse(source: Buffer): ParsedMail {
@@ -194,7 +194,7 @@ export async function fetchedMessage(provider: MailProvider, source: Buffer, met
 }
 
 /**
- * The mailpieces in a USPS digest's source (SV-274, src/domain/mailpieces.ts): how many it says are
+ * The mailpieces in a USPS digest's source (src/domain/mailpieces.ts): how many it says are
  * coming, and the scans its HTML shows for them, in order, mailers' campaigns and ads left out.
  */
 export async function readDigest(source: Buffer): Promise<ReadDigest> {
@@ -214,7 +214,7 @@ export async function readDigest(source: Buffer): Promise<ReadDigest> {
     if (!part?.content?.length || !KEPT_TYPES.has(mimeType)) continue;
     scans.push({mimeType: mimeType === 'image/jpg' ? 'image/jpeg' : mimeType, content: part.content});
   }
-  // The stated count includes the mailers' campaigns, which aren't pieces in the mail (D572).
+  // The stated count includes the mailers' campaigns, which aren't pieces in the mail.
   const stated = statedPieces(`${parsed.text ?? ''}\n${html.replace(/<[^>]+>/g, ' ')}`);
   return {pieces: stated === null ? null : Math.max(0, stated - campaignCount(html)), scans};
 }

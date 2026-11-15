@@ -1,5 +1,5 @@
-// The proposal card (DESIGN.md › Proposal; board 08): an event or task pre-filled from the email, as
-// Calendar's editor draws it (SV-208): the parsed line with the email's title in it as words, the
+// The proposal card (board 08): an event or task pre-filled from the email, as
+// Calendar's editor draws it: the parsed line with the email's title in it as words, the
 // date and times, place, calendar or project, labels, reminders and repeat, each field the email
 // gave marked "from the email", and the conflict line, worked out again as the day and time change.
 // Nothing is created until the user presses Create, which sends the draft through the command layer:
@@ -54,7 +54,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
     if (command.state === 'failed') setFailed(failedLine(command.provider, command.provider_message));
     else {
       if (input.create_project) void refresh(TODOIST_PROJECTS_PATH);
-      // The card closing is the answer: a create says nothing (DESIGN #247).
+      // The card closing is the answer: a create says nothing.
       close();
     }
   }

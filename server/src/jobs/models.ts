@@ -1,8 +1,8 @@
-// Jobs's models and cost (decision 61, D315): Claude Haiku 5.5 reads each email (J2); J3 adds Sonnet
-// 5.5 with web search to find a JD and Haiku again to read it. They run on the Anthropic key in
+// Jobs's models and cost: Claude Haiku 5.5 reads each email; Sonnet 5.5 with web search finds a
+// JD and Haiku again reads it. They run on the Anthropic key in
 // Settings › AI, with no cap. Each call goes in the AI usage ledger as Jobs, in its part:
-// `jobs_emails` here, `jobs_finding_jds` and `jobs_reading_jds` in J3. Settings › AI's Jobs group
-// reads them back (J8, board 39b): the three models by name, and this month's spend in its parts.
+// `jobs_emails` for the emails, `jobs_finding_jds` and `jobs_reading_jds` for the JDs. Settings › AI's Jobs group
+// reads them back (board 39b): the three models by name, and this month's spend in its parts.
 import type {AiPurpose, JobsAiOut, JobsUsageOut} from '@setpoint/shared';
 import {and, count, gte, inArray, sum} from 'drizzle-orm';
 import * as t from '../db/schema.ts';

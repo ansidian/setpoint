@@ -1,17 +1,17 @@
-// The right-click menu (DESIGN.md › Decided while building #248, following darma's DA-14 D13): a
+// The right-click menu: a
 // right-click on an email, a calendar item or empty day, a story, an attachment or a sidebar row opens
 // that thing's actions at the pointer, the ones it already has elsewhere (More, the floating detail,
 // ⌘K, its keys) with their key hints, plus Copy items. It's the reader's More menu (`.pop.menu`),
 // kept on screen (logic/contextMenu.ts). Its cursor starts on the first item; ↑ ↓ move it, Enter
 // runs it, an item's key runs that item, and Esc, a press elsewhere, a scroll or the window
-// resizing close it. An event's colours are swatches in the menu itself (#325). An item with a panel shows it in its place, at the same spot,
+// resizing close it. An event's colours are swatches in the menu itself. An item with a panel shows it in its place, at the same spot,
 // and one with items (Add to rule) shows them there, as a list of its own with the same keys. A
 // disabled item is drawn in a fainter ink without its key hint, and a note (a read-only event's
-// reason, D447) is a quiet line the cursor passes over.
+// reason) is a quiet line the cursor passes over.
 //
 // The browser keeps its own menu on a link or field inside the thing, on selected text, inside an
 // email's body (its frame never reaches here), and with ⌥ held. A right-click that closes an open
-// popover, this menu included, opens neither (darma D1). The phone has none.
+// popover, this menu included, opens neither. The phone has none.
 import type {KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import {useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore} from 'react';
 import {placeMenuAt} from '../logic/contextMenu.ts';
@@ -29,16 +29,16 @@ export interface MenuAction {
   // More words ⌘K finds it by, where it's offered there too.
   keywords?: string;
   run: () => void;
-  // Destructive: `alert` under the pointer (#169).
+  // Destructive: `alert` under the pointer.
   danger?: boolean;
   disabled?: boolean;
-  // A quiet line saying something, not an action: never picked, the cursor passing over it (D447).
+  // A quiet line saying something, not an action: never picked, the cursor passing over it.
   note?: boolean;
   // Items of different groups have a hairline between them.
   group?: string;
   // Picked, it shows this in its place, at the same spot, rather than running.
   panel?: (close: () => void) => ReactNode;
-  // Drawn in the menu as it is, not a row to pick (an event's colour swatches, #325); the cursor passes over it.
+  // Drawn in the menu as it is, not a row to pick (an event's colour swatches); the cursor passes over it.
   inline?: (close: () => void) => ReactNode;
   // Picked, these take the menu's place, at the same spot, rather than it running (Add to rule's rules).
   items?: MenuAction[];
@@ -94,8 +94,8 @@ export function openContextMenu(event: ReactMouseEvent, owner: Element, actions:
 }
 
 /**
- * Copy items: the text onto the clipboard, saying what it took ("Copied pat@contoso.example", #40), or
- * that it couldn't (#109). `copied` runs once the clipboard has it.
+ * Copy items: the text onto the clipboard, saying what it took ("Copied pat@contoso.example"), or
+ * that it couldn't. `copied` runs once the clipboard has it.
  */
 export function copyText(text: string, said = text, copied?: () => void) {
   const writing = navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error('No clipboard'));
@@ -106,7 +106,7 @@ export function copyText(text: string, said = text, copied?: () => void) {
 }
 
 // A right-click (or a Ctrl-click) pressed while a popover is open only closes it: its menu, and the
-// browser's, stay shut (darma D1). Read on the press, before the popover's own press closes it.
+// browser's, stay shut. Read on the press, before the popover's own press closes it.
 let swallow = false;
 if (typeof document !== 'undefined') {
   document.addEventListener('pointerdown', event => {

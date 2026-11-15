@@ -1,8 +1,8 @@
 // Places autocomplete for the editor's place field, Places API (New), with the editor's session
-// token so one editing session is billed as one. Harvested from v1's `google-places` (see SV-6):
+// token so one editing session is billed as one.
 // "a&b auto" becomes "a & b auto" (Google missed the exact business otherwise), results
 // are restricted to 12 km around Home, widened to 24 km (still a restriction, merged, first pass
-// first: v1 291f8e8c) when that finds fewer than five, ranked by distance, US only. The key is
+// first) when that finds fewer than five, ranked by distance, US only. The key is
 // Settings' Places key (also Time to Leave's routes).
 import type {Home, PlaceOut, PlaceSuggestionOut} from '@setpoint/shared';
 import {requestJson} from '../http.ts';
@@ -67,7 +67,7 @@ export async function placeSuggestions(options: PlacesOptions, key: string, quer
 }
 
 /**
- * F7: one place's name, address and coordinates (Place Details, Places API (New)), for Home in
+ * One place's name, address and coordinates (Place Details, Places API (New)), for Home in
  * Settings › Calendar; the session token closes the autocomplete session it came from. Throws a
  * ProviderError with Google's words.
  */

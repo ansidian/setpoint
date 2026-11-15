@@ -1,4 +1,4 @@
-// Appearance (DESIGN.md › Settings, ⌘K): System, Light or Night, kept per browser. System follows
+// Appearance (Settings and ⌘K): System, Light or Night, kept per browser. System follows
 // the browser's light or dark preference.
 import type {Theme} from '../tokens.ts';
 

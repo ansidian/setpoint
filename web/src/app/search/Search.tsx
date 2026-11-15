@@ -1,4 +1,4 @@
-// Search (DESIGN.md › Search; board 06): the header's field with its chips, and the results that
+// Search (board 06): the header's field with its chips, and the results that
 // replace the list: Alfred's Answer card above them, the results line, each result with why it
 // matched and its matches highlighted, the fold over those that only mention the search, the line of
 // what a suggestion's chips left out, the suggestion itself in the results line, and the no-results
@@ -43,7 +43,7 @@ interface SearchFieldProps<R> {
   // Mail's ⌘Enter, Ask Alfred.
   onAsk?: () => void;
   onEnter: (first: R) => void;
-  // SV-23: the calendar's field ("Search calendar"), where ↓ goes to the first result as Enter does,
+  // The calendar's field ("Search calendar"), where ↓ goes to the first result as Enter does,
   // and Esc closes what's on top (the floating detail, then the search).
   label?: string;
   arrowDown?: boolean;
@@ -56,7 +56,7 @@ let selectWhole: (() => void) | null = null;
 
 /**
  * `/` or ⌘F: focuses the header's field and selects its whole query, chips too, so what's typed next
- * replaces it (SV-25). False with no field on screen.
+ * replaces it. False with no field on screen.
  */
 export function selectSearch() {
   selectWhole?.();
@@ -86,7 +86,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   const [whole, setWhole] = useState(false);
   // The phone has no Esc: a search there is left by its clear button, where the hint would be.
   const phone = usePhone();
-  // While the field has focus, / types a slash and Esc is the way out, so the hint says Esc (#172).
+  // While the field has focus, / types a slash and Esc is the way out, so the hint says Esc.
   const [focused, setFocused] = useState(false);
   useEffect(() => {
     const select = () => {
@@ -137,7 +137,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   };
   return (
     <label ref={field} className={['search', search.active && 'active', search.pending && 'pending'].filter(Boolean).join(' ')} htmlFor={inputId}>
-      {/* While a search is on its way, once it's taken a moment, its glyph turns (search-03, #235). */}
+      {/* While a search is on its way, once it's taken a moment, its glyph turns. */}
       <span className="glass">
         {search.pending && <span className="spin"><Icon name="progress_activity" size={16} /></span>}
         <Icon name="search" size={16} />
@@ -172,7 +172,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
 
 /**
  * "No emails match", then each chip and the words as the same chips the field draws, each knocked off
- * by its × (search-13); a Not chip keeps its "Not" label.
+ * by its ×; a Not chip keeps its "Not" label.
  */
 export function NoResults({lead, search, children}: {lead: string; search: Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, unknown>, 'chips' | 'text' | 'removeChip' | 'clearText'>; children?: ReactNode}) {
   return (
@@ -199,7 +199,7 @@ export interface ResultsProps {
   sections: {about: SearchResultOut[]; more: number; mentions: SearchResultOut[]; leftOut: {more: number; rows: SearchResultOut[]}};
   cursor: string | null;
   openId: number | null;
-  // The emails selected (#249), drawn as the open one is.
+  // The emails selected, drawn as the open one is.
   selected?: ReadonlySet<number>;
   accounts: Map<number, AccountOut>;
   now: number;
@@ -207,7 +207,7 @@ export interface ResultsProps {
   // Alfred's Answer card, above the results.
   card: ReactNode;
   onPoint: (key: string) => void;
-  // A click on a result, with its modifiers: ⌘ or Ctrl and ⇧ select (#249), a plain one opens.
+  // A click on a result, with its modifiers: ⌘ or Ctrl and ⇧ select, a plain one opens.
   onOpen: (id: number, key: string, event: MouseEvent) => void;
   onAsk: () => void;
 }
@@ -215,7 +215,7 @@ export interface ResultsProps {
 const resultKey = (id: number) => `all:${id}`;
 
 /**
- * What the search could narrow to (D392), at the end of the results line, a place that's already
+ * What the search could narrow to, at the end of the results line, a place that's already
  * there, so nothing moves as it comes and goes. Its press leaves the keys in the field. Tab is said
  * only while the field has them (search.css).
  */
@@ -253,7 +253,7 @@ export function SearchResults(props: ResultsProps) {
   const indexed = out?.indexing ? `${Math.round(out.indexing.progress * 1000) / 10}%` : null;
   const parts = queryParts(search.chips, search.text);
   // It shows once the first answer is in (InboxPage keeps the list until then), and fades in; a
-  // refinement on its way dims what it replaces, once it's taken a moment (search-03, #235).
+  // refinement on its way dims what it replaces, once it's taken a moment.
   return (
     <section className={search.pending ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
       {card}
@@ -265,7 +265,7 @@ export function SearchResults(props: ResultsProps) {
           <span className="kbd">⌘Enter</span>
         </button>
       )}
-      {/* The first backfill: the shared spinner, the words, and its progress along the line's foot (states-15, search-12). */}
+      {/* The first backfill: the shared spinner, the words, and its progress along the line's foot. */}
       {indexing && (
         <div className="bar muted progress indexing" style={{'--done': indexed} as CSSProperties}>
           <span className="spin"><Icon name="progress_activity" size={16} /></span>
@@ -295,7 +295,7 @@ export function SearchResults(props: ResultsProps) {
 }
 
 type Part = {kind: 'fold'; open: boolean} | {kind: 'row'; result: SearchResultOut};
-// Its rows open and close as a group's do (#198); a page arriving under it just comes.
+// Its rows open and close as a group's do; a page arriving under it just comes.
 const foldRules = (line: string): FoldRules<Part> => ({
   folds: () => true,
   arrives: () => true,
@@ -327,7 +327,7 @@ function Folding({line: lineKey, rows, open, toggle, words, ...props}: FoldingPr
   const shown = useFold(entries, FOLD_RULES[lineKey], FOLD_HOLD_MS);
   const delays = foldDelays(shown, entry => (entry.item.kind === 'row' ? lineKey : null));
   const line = useRef<HTMLButtonElement>(null);
-  // Opened at the foot of the list, its rows come into view once they're in (#70); a search that
+  // Opened at the foot of the list, its rows come into view once they're in; a search that
   // starts open leaves the list where it is.
   const wasOpen = useRef(open);
   useEffect(() => {
@@ -372,7 +372,7 @@ function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, o
       </div>
       <div className="l2"><Marked parts={fieldSegments(result, 'subject')} /></div>
       {result.excerpt && <div className="l3"><Marked parts={fieldSegments(result, 'excerpt')} /></div>}
-      {/* Only what the row doesn't already show (search-11); none left, no line. */}
+      {/* Only what the row doesn't already show; none left, no line. */}
       {reasons.length > 0 && (
         <div className="why">
           {reasons.map((reason, index) => {

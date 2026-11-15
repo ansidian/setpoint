@@ -1,7 +1,7 @@
-// A browser's session (adapted from darma's sessions and v1's middleware/auth.ts; SV-2's harvest
-// notes). The cookie holds 256 random bits; only their SHA-256 is stored, so a copy of the database
-// signs no one in. A session lasts 30 days from its last use, and only while the owner's security
-// generation is the one it was made under: a security change ends every session at once.
+// A browser's session. The cookie holds 256 random bits; only their SHA-256 is stored, so a copy of
+// the database signs no one in. A session lasts 30 days from its last use, and only while the
+// owner's security generation is the one it was made under: a security change ends every session at
+// once.
 import {createHash, randomBytes} from 'node:crypto';
 import type {SessionMethod} from '@setpoint/shared';
 import {and, eq, isNull} from 'drizzle-orm';
@@ -11,7 +11,7 @@ import type {Store} from '../store.ts';
 
 export const SESSION_DAYS = 30;
 const SESSION_MS = SESSION_DAYS * 24 * 60 * 60_000;
-/** Security changes need the password given in the last 10 minutes (v1's step-up window). */
+/** Security changes need the password given in the last 10 minutes (the step-up window). */
 export const RECENT_PASSWORD_MS = 10 * 60_000;
 // base64url of 32 bytes.
 export const SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;

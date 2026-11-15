@@ -1,4 +1,4 @@
-// Per week (DESIGN.md › Jobs › Shell; D314, D318): the last 12 weeks oldest first as bars, the busiest
+// Per week: the last 12 weeks oldest first as bars, the busiest
 // 20 px and the rest in proportion, a week with none a stub; this week's an outline, since it isn't
 // over; then "3 this week". A bar under the pointer turns ink and names its week in a tip. It has no
 // press: it's information.

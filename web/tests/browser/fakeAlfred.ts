@@ -116,7 +116,7 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = fal
 const LEASE = 'When does my lease renewal need to be signed?';
 
 /**
- * Board 07's Alfred, as BRIEF.md › Sample data has it: the lease question searches, reads the
+ * Board 07's Alfred: the lease question searches, reads the
  * renewal terms and answers "By Oct 31, 2026, per Parkside's Sep 30 email."; the follow-up "what's
  * the new rent?" answers from the email the thread read: "$2,140 a month, up from $2,060."
  */

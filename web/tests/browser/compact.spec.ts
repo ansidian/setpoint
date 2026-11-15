@@ -1,11 +1,11 @@
-// The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; Decided while building #140): an
+// The compact tier, 640 to 1099 px: an
 // iPad or a half-width window. At 640 and 1099: the sidebar a rail (icons named in their
 // tooltips, the red unread badge on Inbox), an email or a story covering the list with Back
 // (and Esc, J and K, at 640), the header whole, nothing scrolling sideways; Calendar's grid taking
 // the width with the editor and search over it and its sources' health atop it; ⌘K keeping the
-// rail's lost filters; the day's pane brought over the grid by its header button (D183), and the
-// empty pane over Inbox, News and Jobs by theirs (SV-217). At 1100 the panes beside return, the empty
-// one with nothing open, and the rail opens to the full sidebar by `` ` `` (D507).
+// rail's lost filters; the day's pane brought over the grid by its header button, and the
+// empty pane over Inbox, News and Jobs by theirs. At 1100 the panes beside return, the empty
+// one with nothing open, and the rail opens to the full sidebar by `` ` ``.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
@@ -32,7 +32,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; at 11
       const page = await setpoint.page({width, height: HEIGHT});
       await page.goto(`${setpoint.base}/inbox`);
       await page.locator('.list .row').first().waitFor();
-      // The rail: Inbox, Calendar, News, Jobs and Settings, named in their tooltips; of Today, only the next-up slot (D509).
+      // The rail: Inbox, Calendar, News, Jobs and Settings, named in their tooltips; of Today, only the next-up slot.
       assert.deepEqual(await page.locator('.sb .nav').evaluateAll(links => links.map(link => link.getAttribute('data-tip'))), ['Inbox', 'Calendar', 'News', 'Jobs · 3 need you', 'Settings · ⌘,'], `${width}: the rail's items`);
       assert.equal(await page.locator('.sb .today-row:not(.next), .sb .sb-sec:not(.next-up), .sb .sb-name').count(), 0);
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: the Inbox's header`);
@@ -74,14 +74,14 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; at 11
       await page.close();
     }
 
-    // At 1100 the pane beside the list is back; the sidebar starts as the rail and `` ` `` opens it (D507).
+    // At 1100 the pane beside the list is back; the sidebar starts as the rail and `` ` `` opens it.
     const wide = await setpoint.page({width: 1100, height: HEIGHT});
     await wide.goto(`${setpoint.base}/inbox`);
     await wide.locator('.list .row').first().waitFor();
     await wide.locator('.sb.rail').waitFor();
     await wide.keyboard.press('`');
     await wide.locator('.sb .sb-name').waitFor();
-    // The empty pane is there with nothing open (SV-217); no button.
+    // The empty pane is there with nothing open; no button.
     assert.equal(await wide.locator('section.pane.idle').count(), 1);
     assert.equal(await wide.locator('.hd .pane-open').count(), 0);
     await wide.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
@@ -95,7 +95,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; at 11
   }
 });
 
-test('SV-217: in the compact tier the empty pane comes over the list only from the header\'s button, on Inbox, News and Jobs; it again, Esc or an item opening puts it away', async () => {
+test('in the compact tier the empty pane comes over the list only from the header\'s button, on Inbox, News and Jobs; it again, Esc or an item opening puts it away', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const width = 1099;
@@ -147,7 +147,7 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       assert.match((await page.locator('.cal-health .rp-health').textContent())!, /^Todoist, as of /);
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: Calendar's header`);
       // The editor lies over the grid, which keeps its width; where the pane lies and its shadow are by
-      // eye (D417).
+      // eye.
       await page.keyboard.press('c');
       const editor = page.locator('.rpane.editor');
       await editor.waitFor();
@@ -196,7 +196,7 @@ test('⌘K shows or hides each calendar, as the rows the rail leaves out did', a
   }
 });
 
-test('the day\'s pane comes over the grid from its header button, lit while open: another day picked shows there, Esc closes it, the editor takes its place; closed on every load; none on the desktop (D183)', async () => {
+test('the day\'s pane comes over the grid from its header button, lit while open: another day picked shows there, Esc closes it, the editor takes its place; closed on every load; none on the desktop', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: 820, height: HEIGHT});
@@ -246,7 +246,7 @@ test('the day\'s pane comes over the grid from its header button, lit while open
   }
 });
 
-test('SV-273: in the compact tier a subtask opened from the card makes the card glide clear of the editor; Esc closes the editor first, the card going back, then the card', async () => {
+test('in the compact tier a subtask opened from the card makes the card glide clear of the editor; Esc closes the editor first, the card going back, then the card', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: 1000, height: HEIGHT});

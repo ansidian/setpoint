@@ -1,10 +1,10 @@
-// News's sorting end to end (N3), on the sync engine against an ephemeral database, with the models
+// News's sorting end to end, on the sync engine against an ephemeral database, with the models
 // faked on 127.0.0.1 (Haiku and Sonnet answering as the Messages API does). A recorded set of
 // invented articles, across outlets and sections, groups and ranks as expected: wire copies count
 // once, a developing story gains facts (a hazard's revisions among them) and is rewritten only when
-// they're headline news (D427), a repeat changes nothing, noise never becomes a story, a metered-only story never shows, a Google
+// they're headline news, a repeat changes nothing, noise never becomes a story, a metered-only story never shows, a Google
 // News one shows its headline alone, a keynote confirmed by a second outlet goes to Upcoming, the
-// order follows the importance each story is judged as it's written (D421), and the hour re-scores
+// order follows the importance each story is judged as it's written, and the hour re-scores
 // without asking a model. Then the cost and the cap, Unsorted while the AI is down or has no key,
 // the first run and the recap, search and Add to calendar.
 import {newsPageSchema, newsSearchSchema, newsSectionOutSchema, newsStatusSchema, newsUnsortedSchema, recapSchema, SEED_NOW, storySchema} from '@setpoint/shared';
@@ -43,7 +43,7 @@ const HOME = {label: 'Home', address: '100 Example St', lat: 34.05, lng: -118.25
 const PNG = Buffer.from('89504e470d0a1a0a', 'hex');
 const AP = 'COLUMBUS, Ohio (AP) — Four people were killed and two were wounded when a gunman opened fire inside a warehouse on the city\'s east side early Tuesday, police said. The suspect fled before officers arrived, and a search continued through the morning.';
 
-// ---- The sources: real outlets' names, invented events (BRIEF.md › Sample: News) ----
+// ---- The sources: real outlets' names, invented events ----
 
 const SOURCES: Record<string, Partial<NewsSourceSpec> & Pick<NewsSourceSpec, 'name' | 'section'>> = {
   ktla: {name: 'KTLA', section: 'local', summaryOnly: true},
@@ -142,7 +142,7 @@ const THIRD: Recorded[] = [
   {source: 'nbcla', headline: 'Freeway ramp closures begin tonight', published: 0.85, subject: 'local', sections: ['local'], facts: ['Overnight ramp closures begin tonight'], importance: 50},
 ];
 
-// The same flood from two stations a few hours apart (the polish audit's extra-09, invented): their
+// The same flood from two stations a few hours apart (invented): their
 // headlines give the same count and place, but their facts are worded apart, so they share too few
 // words to meet as candidates.
 const FLOOD: Recorded[] = [
@@ -157,12 +157,12 @@ const FLOOD: Recorded[] = [
     join: 'fabrikam falls', newFacts: ['A shelter at the community center took in residents from riverside homes'], changesHeadline: false},
 ];
 
-// Then the flood's news (D427): the creek crests and roads reopen.
+// Then the flood's news: the creek crests and roads reopen.
 const FLOOD_NEWS: Recorded = {source: 'fox11', headline: 'Fabrikam Falls creek crests as 2 of 8 closed roads reopen', published: 1, subject: 'local', sections: ['local'], importance: 70,
   facts: ['The creek crested before dawn', 'Two of the eight closed roads reopened'], join: 'fabrikam falls', newFacts: ['The creek crested before dawn', 'Two of the eight closed roads reopened'],
   changesHeadline: true};
 
-// A street fair Haiku rates under the write gate (D452), then another outlet's copy of the same wire
+// A street fair Haiku rates under the write gate, then another outlet's copy of the same wire
 // text that it rates over it.
 const FAIR_TEXT = 'Main Street will close downtown from Friday night through Sunday for the annual fall street fair, city officials said Wednesday. Buses will detour along Second Avenue, and parking garages on the street will stay open with entrances from the side streets.';
 const FAIR: Recorded = {source: 'abc7', headline: 'Fall street fair closes Main Street downtown this weekend', published: 1, text: FAIR_TEXT, subject: 'local', sections: ['local'],
@@ -296,7 +296,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     await s.drain();
     expect(newsStatus(w.store)).toEqual({unsorted: 0, down: null, first_run: null});
 
-    // Noise never becomes a story (D88).
+    // Noise never becomes a story.
     expect(['Dodgers clinch the division', 'Poll: voters split on the mayor\'s race', 'The best AirPods deals this week', 'Show HN: a sourdough starter tracker']
       .map(headline => [s.article(headline).noise, s.storyOf(headline)])).toEqual([['sports', null], ['politics_argument', null], ['deal', null], ['off_subject', null]]);
     // The subject wins over politics: OpenAI's testimony is AI's.
@@ -324,16 +324,16 @@ describe('a recorded set of articles groups and ranks as expected', () => {
       headline: 'Water main break floods an intersection in Example Park', one_line: null, summary: null,
       lead: {outlet: 'LAist', more: 0}, sources: [{outlet: 'LAist', discovery: true}],
     });
-    // A story under the bar never shows; rated under the write gate, it's never written either (D452).
+    // A story under the bar never shows; rated under the write gate, it's never written either.
     const library = s.storyOf('Library branch extends weekend hours')!;
     expect(s.story(library)).toMatchObject({writtenAt: null, belowGate: true, needsWriting: false, headline: 'Library branch extends weekend hours'});
     expect(s.story(library).score).toBeLessThan(35);
 
     expect(headlines(w, 'local')).toEqual(['Brush fire near the 210 burns 150 acres', 'Water main break floods an intersection in Example Park']);
     // Each story is judged as it's written, so the order follows Sonnet's judgement at once, not Haiku's
-    // reading of the articles (D421): Haiku put the Pixel Watch over Apple's event, and Anthropic's
+    // reading of the articles: Haiku put the Pixel Watch over Apple's event, and Anthropic's
     // release level with the shooting.
-    // Anthropic's release is in AI and General; All shows it once, in AI's block, its subject's (D102).
+    // Anthropic's release is in AI and General; All shows it once, in AI's block, its subject's.
     expect(headlines(w, 'general')).toEqual(['Four killed in a warehouse shooting in Ohio']);
     expect(listed(w, 'general')).toEqual(['Four killed in a warehouse shooting in Ohio', 'Anthropic releases Claude Haiku 5.5']);
     expect(headlines(w, 'tech')).toEqual(['Apple sends invites for an Oct 20 event', 'Pixel Watch 5 goes on sale with two-day battery life']);
@@ -383,7 +383,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     expect(storyDetail(w.store, fire).lead.more).toBe(4);
     expect(writes().slice(8)).toEqual(['ramp']);
 
-    // The hour is up: every story is scored again by the formula, and no model is asked (D421).
+    // The hour is up: every story is scored again by the formula, and no model is asked.
     const asked = s.fake.requests.length;
     w.advance(20 * MINUTE);
     await s.drain();
@@ -434,7 +434,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
   });
 });
 
-describe('the write gate (D452)', () => {
+describe('the write gate', () => {
   test('a story Haiku rates under 40 isn\'t written and shows only under its section\'s Also reported, never in All or the recap', async () => {
     const s = await sortWorld();
     const {w} = s;
@@ -487,7 +487,7 @@ describe('the write gate (D452)', () => {
   });
 });
 
-describe('the same event, worded apart (the polish audit\'s extra-09)', () => {
+describe('the same event, worded apart', () => {
   test('two headlines a day apart with the same count and place meet as candidates, and the model joins them', async () => {
     const s = await sortWorld();
     s.deliver(FLOOD);
@@ -499,7 +499,7 @@ describe('the same event, worded apart (the polish audit\'s extra-09)', () => {
   });
 });
 
-describe('a story is rewritten only on headline news (D427)', () => {
+describe('a story is rewritten only on headline news', () => {
   test('facts that only add detail join the story and show as new without a rewrite; headline news rewrites it, from the story as it stands', async () => {
     const s = await sortWorld();
     const {w} = s;
@@ -536,7 +536,7 @@ describe('a story is rewritten only on headline news (D427)', () => {
   });
 });
 
-describe('cost and the cap (D90)', () => {
+describe('cost and the cap', () => {
   test('past the monthly cap, stories are written and judged by Haiku and nothing asks Sonnet; Settings › AI says so, with this month\'s usage by part', async () => {
     const s = await sortWorld();
     const {w} = s;
@@ -558,7 +558,7 @@ describe('cost and the cap (D90)', () => {
     s.deliver([FIRST.find(article => article.source === 'anthropic')!]);
     await s.drain();
     expect(s.calls('submit_news_story').map(request => request.model)).toEqual(['claude-sonnet-5-5', 'claude-haiku-5-5']);
-    // Nor does the hour's re-score: no model at all (D421).
+    // Nor does the hour's re-score: no model at all.
     w.advance(HOUR);
     await s.drain();
     expect(s.fake.requests.filter(request => request.model === 'claude-sonnet-5-5')).toHaveLength(1);
@@ -573,7 +573,7 @@ describe('cost and the cap (D90)', () => {
   });
 });
 
-describe('Unsorted while the AI is down (BRIEF.md › When things break)', () => {
+describe('Unsorted while the AI is down', () => {
   test('articles wait with the provider\'s words and when it began, and are sorted once it\'s back; nothing vanishes', async () => {
     const s = await sortWorld();
     const {w, fake} = s;
@@ -655,7 +655,7 @@ describe('the seed\'s stand-ins', () => {
   });
 });
 
-describe('the routes N4 and N5 use', () => {
+describe('the routes the News page uses', () => {
   test('status, Show headlines, search, and Add to calendar on an Upcoming keynote', async () => {
     const s = await sortWorld();
     const {w} = s;
@@ -680,7 +680,7 @@ describe('the routes N4 and N5 use', () => {
         start_date: null, end_date: null, due_date: null, due_at: null, time_zone: 'America/Los_Angeles', place: null, project: null,
       },
       conflict: {free: true, label: 'Free that morning'},
-      // SV-270 (D553): its description's From: line names the story and links to it in Setpoint.
+      // Its description's From: line names the story and links to it in Setpoint.
       source: {subject: headline, url: `http://localhost/news/story/${upcoming.story_id}`},
     });
     expect((await api.send('POST', '/api/news/events/999/proposal')).status).toBe(404);

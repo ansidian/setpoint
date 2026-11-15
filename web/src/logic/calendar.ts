@@ -1,7 +1,7 @@
-// The month grid's and the day agenda's rules (DESIGN.md › Calendar): weeks as rows that scroll
+// The month grid's and the day agenda's rules: weeks as rows that scroll
 // through months, which items a day cell fits before "+N", the chips' times, past and dimmed items,
 // the agenda's lines and the now-line, the mini-month, and where the "+N" popover hangs. Local
-// days are `YYYY-MM-DD` in the owner's zone; weeks start on Sunday (SV-29).
+// days are `YYYY-MM-DD` in the owner's zone; weeks start on Sunday.
 import type {CalendarOut, ItemOut, SubtaskOut, WeatherCondition, WeatherDayOut} from '@setpoint/shared';
 import {layout, monthPaging} from '../tokens.ts';
 import {addDays, clockTime, daysBetween, localDate, startsIn, timeLeft} from './format.ts';
@@ -53,7 +53,7 @@ export function monthAtScroll(scrollTop: number, height: number, rowHeight: numb
 }
 
 /**
- * Where paging's glide sets out from (DESIGN.md › Month grid › Paging, polish audit grids-04): where
+ * Where paging's glide sets out from: where
  * the grid is, or, when the month is more than `farRows` away, `leadRows` short of it on the side
  * it's coming from, so Today from a year away still glides in from that side.
  */
@@ -79,7 +79,7 @@ export function rowsInView(scrollTop: number, height: number, rowHeight: number 
 
 /** Whether a week's row, its top at `weekTop`, is wholly out of a viewport scrolled to `scrollTop`:
  * only then does showing a day in it move the grid. A week partly in view (the half-shown bottom
- * row) stays where it is (SV-239). */
+ * row) stays where it is. */
 export function weekOutOfView(weekTop: number, scrollTop: number, height: number, rowHeight: number = layout.monthRow): boolean {
   return weekTop + rowHeight <= scrollTop || weekTop >= scrollTop + height;
 }
@@ -101,23 +101,23 @@ export interface MiniDay {
   today: boolean;
   // The selected day, unless it's today (today's disc says it), a range or a week is shown: a `sub3` disc.
   selected: boolean;
-  // The week view's shown week, one band, and its first and last days (polish audit calpanes-05).
+  // The week view's shown week, one band, and its first and last days.
   inWeek: boolean;
   weekStart: boolean;
   weekEnd: boolean;
-  // SV-29: in the range an event's Date picks, and its first and last days.
+  // In the range an event's Date picks, and its first and last days.
   inRange: boolean;
   rangeStart: boolean;
   rangeEnd: boolean;
 }
 
-/** The mini-month always draws six weeks, the next month's days after its own, so it never changes height (polish audit calpanes-05). */
+/** The mini-month always draws six weeks, the next month's days after its own, so it never changes height. */
 export const MINI_WEEKS = 6;
 
 /**
- * The mini-month (DESIGN.md › Sidebar on Calendar): today a disc, the selected day a `sub3` disc, no
- * other marks; an event's Date shows its `range` as a band instead (SV-29); the week view marks its
- * shown `week` as one band (calpanes-05). Six weeks, whatever the month.
+ * The mini-month: today a disc, the selected day a `sub3` disc, no
+ * other marks; an event's Date shows its `range` as a band instead; the week view marks its
+ * shown `week` as one band. Six weeks, whatever the month.
  */
 export function miniMonth(month: string, today: string, selected: string | null, range: {from: string; to: string} | null = null, week: string | null = null): MiniDay[][] {
   const inWeek = (date: string) => !range && week !== null && date >= week && daysBetween(week, date) < 7;
@@ -131,9 +131,9 @@ export function miniMonth(month: string, today: string, selected: string | null,
 }
 
 /**
- * A day picked in an event's Date (SV-29), as the first click or the next: the first starts it on
+ * A day picked in an event's Date, as the first click or the next: the first starts it on
  * that day alone; the next ends it there, or, before the first, starts it there and ends it on the
- * first (#103).
+ * first.
  */
 export function rangePick(phase: 'start' | 'end', from: string, day: string): {from: string; to: string; done: boolean} {
   if (phase === 'start') return {from: day, to: day, done: false};
@@ -155,7 +155,7 @@ export function dayHead(date: string): DayHead {
 }
 
 /**
- * Where a day cell draws its month's boundary, as v1 traces it: its top edge when the day above is
+ * Where a day cell draws its month's boundary: its top edge when the day above is
  * in another month, its left edge when the day before is (never at Sunday's grid edge). Each shared
  * edge is drawn once, by the later month's cell, and stronger when either side is today's month.
  */
@@ -180,7 +180,7 @@ export const isWeekend = (date: string) => weekday(date) % 6 === 0;
 export const CELL = {padTop: 6, padBottom: 4, border: 1, head: layout.dayHead, gap: 3, chip: layout.calendarChip, more: 18} as const;
 
 /**
- * How many of a day's items its cell shows, and how many fold into "+N" (DESIGN.md › Overflow):
+ * How many of a day's items its cell shows, and how many fold into "+N":
  * all of them when they fit, else as many as fit above the "+N" line.
  */
 export function fitDay(count: number, rowHeight: number = layout.monthRow): {shown: number; more: number} {
@@ -205,7 +205,7 @@ export function itemDays(item: ItemOut, timeZone: string): string[] {
   return item.starts_at ? [localDate(item.starts_at, timeZone)] : [];
 }
 
-/** Within a day: all-day events, then timed events by start, then tasks (DESIGN.md › Month grid). */
+/** Within a day: all-day events, then timed events by start, then tasks. */
 function dayOrder(a: ItemOut, b: ItemOut): number {
   const rank = (item: ItemOut) => (item.kind === 'task' ? 2 : item.all_day ? 0 : 1);
   return rank(a) - rank(b) || (a.starts_at ?? '').localeCompare(b.starts_at ?? '') || a.title.localeCompare(b.title) || a.key.localeCompare(b.key);
@@ -233,15 +233,15 @@ export function itemsByDay(items: ItemOut[], calendars: CalendarOut[] | undefine
 }
 
 /**
- * A day's items with a dragged item's slot where it would land, in the grid's order (polish audit
- * calflows-09): the slot is `item` as it would be on that day, keyed `slot:`.
+ * A day's items with a dragged item's slot where it would land, in the grid's order:
+ * the slot is `item` as it would be on that day, keyed `slot:`.
  */
 export function withSlot(items: ItemOut[], item: ItemOut): ItemOut[] {
   return [...items.filter(one => one.key !== item.key), {...item, key: `slot:${item.key}`}].sort(dayOrder);
 }
 
 /**
- * How many of a day's items the calendars toggled off hide, so an empty day can say so rather than "No events" (SV-56).
+ * How many of a day's items the calendars toggled off hide, so an empty day can say so rather than "No events".
  * A calendar not listed doesn't count: Show all doesn't bring it back.
  */
 export function hiddenOn(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, timeZone: string): number {
@@ -267,7 +267,7 @@ export function chipTime(item: ItemOut, timeZone: string): string | null {
 export function timeRange(item: ItemOut, timeZone: string): string {
   if (item.all_day || !item.starts_at || !item.ends_at) return 'All day';
   const start = clockTime(item.starts_at, timeZone);
-  // SV-78: an event with no end ends as it starts, and says its start alone.
+  // An event with no end ends as it starts, and says its start alone.
   if (Date.parse(item.ends_at) === Date.parse(item.starts_at)) return start;
   const end = clockTime(item.ends_at, timeZone);
   const [startTime, startHalf] = start.split(' ');
@@ -276,7 +276,7 @@ export function timeRange(item: ItemOut, timeZone: string): string {
 }
 
 /**
- * SV-273 (D567): a dated subtask's date after its title: its weekday within the coming week, "Fri";
+ * A dated subtask's date after its title: its weekday within the coming week, "Fri";
  * its month and day further off or past, "Nov 24"; its time after either, "Fri 3:00 PM". Null undated.
  */
 export function subtaskDue(subtask: Pick<SubtaskOut, 'due_date' | 'due_at'>, today: string, timeZone: string): string | null {
@@ -324,7 +324,7 @@ export function tasksHeading(date: string, today: string): string {
   return `Tasks · due ${new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', timeZone: 'UTC'})}`;
 }
 
-/** Where an event is, on its own line under the time's (#125): the place's name or street, or a call's host. */
+/** Where an event is, on its own line under the time's: the place's name or street, or a call's host. */
 export interface AgendaPlace {
   text: string;
   // A link (a call): videocam and its host; otherwise location_on.
@@ -335,11 +335,11 @@ export interface AgendaEvent {
   item: ItemOut;
   // "7:00 AM", or "All day".
   when: string;
-  // "7:00 – 8:00 AM · Personal": the time and always the calendar (#125).
+  // "7:00 – 8:00 AM · Personal": the time and always the calendar.
   line: string;
   place: AgendaPlace | null;
   past: boolean;
-  // Today's next event, lifted out of the list (polish audit calpanes-01): "in 5h" before it starts,
+  // Today's next event, lifted out of the list: "in 5h" before it starts,
   // and once under way `ongoing`, with what's left ("45m left") and how far in it is (0–1).
   next: boolean;
   startsIn: string | null;
@@ -352,11 +352,11 @@ export interface Agenda {
   events: AgendaEvent[];
   tasks: ItemOut[];
   // Where the now-line goes among the events (before events[index]): after what has ended, so an
-  // event under way is the one at it, and carries it in its row (#321); null on other days.
+  // event under way is the one at it, and carries it in its row; null on other days.
   nowAt: number | null;
 }
 
-/** An event's place line (#125): a link's host ("zoom.us"), else the place's name or the street of its address. */
+/** An event's place line: a link's host ("zoom.us"), else the place's name or the street of its address. */
 export function agendaPlace(item: Pick<ItemOut, 'place' | 'address'>): AgendaPlace | null {
   const link = placeLink(item);
   if (link?.only) return {text: link.host, video: true};
@@ -365,10 +365,10 @@ export function agendaPlace(item: Pick<ItemOut, 'place' | 'address'>): AgendaPla
 }
 
 /**
- * The selected day's agenda (DESIGN.md › Right pane): its events with their times and lines, the
- * now-line after what has ended (today only), so one under way carries it (#321), the next event today
- * lifted with "in 5h" or, under way, "45m left" (polish audit calpanes-01), then its tasks, the timed
- * ones by their time and the untimed after, a done one keeping its place (D502).
+ * The selected day's agenda: its events with their times and lines, the
+ * now-line after what has ended (today only), so one under way carries it, the next event today
+ * lifted with "in 5h" or, under way, "45m left", then its tasks, the timed
+ * ones by their time and the untimed after, a done one keeping its place.
  */
 export function agenda(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, now: number, timeZone: string): Agenda {
   const names = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.name]));
@@ -433,7 +433,7 @@ export const itemKey = (id: number, at: string | null) => (at ? `${id}@${at}` : 
 // ---------- Calendars by name ----------
 
 /**
- * SV-191: a calendar's name as a list shows it (the sidebar's Calendars, Into, the editor's Calendar
+ * A calendar's name as a list shows it (the sidebar's Calendars, Into, the editor's Calendar
  * menu). A name that appears more than once in `all` (one holiday calendar subscribed from two Google
  * accounts) carries its account's label, shown after it in `ink3`; a name that appears once doesn't.
  */

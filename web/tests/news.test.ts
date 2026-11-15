@@ -1,7 +1,7 @@
-// News's rules as tables (DESIGN.md › News; D87): the meta copy and ages against the seed's moment
+// News's rules as tables: the meta copy and ages against the seed's moment
 // (Wed, Oct 7, 2026, 9:12 AM Pacific; the user last looked Mon at 10:40 PM), the held order and what the
-// pill counts, the recap held for the visit and where it shows (#298), seen timing, the cursor, and
-// Upcoming's line; N5's states, Settings › News and Settings › AI's News group.
+// pill counts, the recap held for the visit and where it shows, seen timing, the cursor, and
+// Upcoming's line; the states, Settings › News and Settings › AI's News group.
 import type {NewsPageOut, NewsSection, RecapOut, StoryRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -28,7 +28,7 @@ function story(fields: Partial<StoryRowOut> = {}): StoryRowOut {
 }
 const lead = (outlet_short: string, more: number, published_at = '2026-10-07T15:02:00.000Z') => ({...story().lead, outlet_short, more, published_at});
 
-describe('a hazard\'s glyph where the photo would go (#121)', () => {
+describe('a hazard\'s glyph where the photo would go', () => {
   const image = {thumb: {id: 1, url: '/api/news/images/1', width: 144, height: 96}, large: null, outlet: 'KTLA'};
   test.each([
     ['NWS without a photo', 'nws', null, 'thunderstorm'],
@@ -126,7 +126,7 @@ describe('the held order and the pill', () => {
     expect(waiting(held, latest, rows)).toEqual(expected);
   });
 
-  // The rows N brings onto the list settle in from sub2 (the polish audit's news-06): whatever the held
+  // The rows N brings onto the list settle in from sub2: whatever the held
   // order didn't show, seen or not; not a row re-ranked among those shown, nor one leaving.
   test.each([
     ['nothing changed', held, []],
@@ -169,7 +169,7 @@ describe('the held order and the pill', () => {
   test.each([
     [5, 5, 0],
     [6, 4, 2],
-  ])('New since you looked with %i facts shows %i, folding %i (news-12)', (count, shown, folded) => {
+  ])('New since you looked with %i facts shows %i, folding %i', (count, shown, folded) => {
     const fold = foldFacts(numbers(count));
     expect([fold.shown.length, fold.folded.length]).toEqual([shown, folded]);
     expect([...fold.shown, ...fold.folded]).toEqual(numbers(count));
@@ -180,7 +180,7 @@ describe('the held order and the pill', () => {
   });
 });
 
-describe('While you were away (#298): held for the visit, so nothing slides in', () => {
+describe('While you were away: held for the visit, so nothing slides in', () => {
   const recapOf = (since: string | null, ids: number[]): RecapOut => ({
     since, stories: ids.map(id => ({...story({id}), section: 'local' as const, expired_at: '2026-10-06T16:00:00.000Z'})),
   });
@@ -210,14 +210,14 @@ describe('While you were away (#298): held for the visit, so nothing slides in',
 
   test.each<[string, boolean, boolean, boolean]>([
     ['drawn on All with nothing open: on screen', true, false, true],
-    ['drawn beside a story opened from a link: not yet, so the visit doesn\'t use it up (D419)', true, true, false],
+    ['drawn beside a story opened from a link: not yet, so the visit doesn\'t use it up', true, true, false],
     ['not drawn', false, false, false],
   ])('on screen: %s', (_name, drawn, storyOpen, expected) => {
     expect(recapOnScreen(drawn, storyOpen)).toBe(expected);
   });
 });
 
-describe('the visit\'s dots (#95): they stay for the visit, go when opened, and come back with a new fact', () => {
+describe('the visit\'s dots: they stay for the visit, go when opened, and come back with a new fact', () => {
   const NOW = '2026-10-07T16:12:00.000Z';
   const fire = {id: 1, state: 'updated' as const, last_new_fact_at: '2026-10-07T15:40:00.000Z', seen_at: LAST_LOOK};
   const flag = {id: 2, state: 'new' as const, last_new_fact_at: '2026-10-07T13:12:00.000Z', seen_at: null};
@@ -326,7 +326,7 @@ describe('the cursor', () => {
   });
 });
 
-// ---- N5 ----
+// ---- States, Settings › News and AI's News group ----
 
 const since = (time: string) => `2026-10-07T${time}:00.000Z`;
 const down = (cause: 'unreachable' | 'rate_limited' | 'refused' | 'no_key', retrying = cause === 'unreachable' || cause === 'rate_limited') =>
@@ -352,7 +352,7 @@ describe('the first run\'s line (29b), a section\'s line, and a section with not
     expect(firstRunLine({first_run: {sorted: 186, total: 312}})).toBe('Sorting the last 48 hours · 186 of 312 articles, showing what’s sorted so far');
     expect(firstRunLine({first_run: {sorted: 0, total: 1}})).toBe('Sorting the last 48 hours · 0 of 1 article, showing what’s sorted so far');
     expect(firstRunLine({first_run: null})).toBeNull();
-    // How far it has come, for the line's foot (news-13).
+    // How far it has come, for the line's foot.
     expect([firstRunShare({sorted: 186, total: 312}), firstRunShare({sorted: 0, total: 0}), firstRunShare({sorted: 5, total: 4})]).toEqual([186 / 312, 0, 1]);
   });
 
@@ -365,11 +365,10 @@ describe('the first run\'s line (29b), a section\'s line, and a section with not
     expect(sectionLine(section, health, now, zone)).toEqual(expected);
   });
 
-  // The rule (DESIGN.md › The list, States): a story stays 48 hours after its last new fact, so a
+  // The rule: a story stays 48 hours after its last new fact, so a
   // section with none has had nothing new for 48 hours; the first run is still sorting it. In All, a
   // block can be empty while its section isn't: its stories show in other blocks, as their main
-  // section's (#96), so nothing new isn't true (the polish audit's extra-08); the block isn't drawn
-  // (D451).
+  // section's, so nothing new isn't true; the block isn't drawn.
   test.each([
     ['stories, seen or not: they show', 'tech', 3, 0, false, null],
     ['none (the board): nothing new for 48 hours, since Mon', 'tech', 0, 0, false, 'Nothing new in Tech since Mon'],
@@ -444,7 +443,7 @@ describe('Settings › AI\'s News group (30b)', () => {
   });
 });
 
-describe('Tab and Shift-Tab (SV-207, D454)', () => {
+describe('Tab and Shift-Tab', () => {
   const page = {blocks: [{section: 'ai', stories: [{id: 7}]}]} as unknown as NewsPageOut;
   test.each<[string, NewsView, NewsSection[], NewsPageOut | null, boolean]>([
     ['a section the story is in keeps it', 'general', ['ai', 'general'], page, true],

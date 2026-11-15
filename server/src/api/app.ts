@@ -1,5 +1,5 @@
 // The HTTP app: the JSON API under /api, the live stream at /api/events and, when built, the web
-// app's files, from one origin (darma's api/app.ts, for one owner). Routes and their shapes are in
+// app's files, from one origin, for one owner. Routes and their shapes are in
 // `@setpoint/shared` (src/api/*.ts there lists them).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -103,7 +103,7 @@ export interface MailConnectors {
   } | null;
 }
 
-/** v1's registered callback, kept so the Google client's redirect URI still matches. */
+/** The callback the Google client has registered, kept so its redirect URI still matches. */
 export const GMAIL_CALLBACK_PATH = '/api/ea/accounts/gmail/callback';
 
 export interface AppOptions {
@@ -118,28 +118,28 @@ export interface AppOptions {
   keepAliveMs?: number;
   bcryptCost?: number;
   connectors?: MailConnectors;
-  // B5's providers as the API reaches them (tests: fakes on 127.0.0.1).
+  // The providers as the API reaches them (tests: fakes on 127.0.0.1).
   providers?: {
     // Google Calendar's base URL, which a push notification's resource URI must name.
     calendarApi?: string;
     places?: PlacesOptions;
     todoistOAuth?: TodoistOAuthOptions;
   };
-  // B3: told when AI keys or model choices change, so Unsorted mail is tried again at once.
+  // Triage, told when AI keys or model choices change, so Unsorted mail is tried again at once.
   triage?: Pick<TriageWorker, 'configurationChanged'> | null;
-  // B4: Alfred's model endpoints (tests: a fake on 127.0.0.1).
+  // Alfred's model endpoints (tests: a fake on 127.0.0.1).
   alfred?: AlfredOptions;
-  // SV-138: the search reading's, likewise.
+  // The search reading's, likewise.
   reading?: Omit<SearchReaderOptions, 'store'>;
-  // N1: where News's image copies are (the data directory's news-images/).
+  // Where News's image copies are (the data directory's news-images/).
   news?: NewsApiOptions;
-  // N3: told when the AI keys or settings change, so articles waiting Unsorted are sorted at once.
+  // News sorting, told when the AI keys or settings change, so articles waiting Unsorted are sorted at once.
   newsSort?: Pick<NewsSortWorker, 'configurationChanged'> | null;
   // A removable module's routes (Jobs, from server.ts), mounted under /api behind the session after
   // the app's own, so the app never names the module.
   routes?: Hono[];
   // A removable module's routes that check their own bearer token (Jobs's check for the browser
-  // extension, SV-173), mounted under /api before the session, as Home Assistant's status is.
+  // extension), mounted under /api before the session, as Home Assistant's status is.
   tokenRoutes?: Hono[];
 }
 
@@ -159,7 +159,7 @@ async function body(c: Context): Promise<unknown> {
 
 const errorBody = (code: string, message: string, details?: unknown): ApiError => ({error: {code, message, ...(details === undefined ? {} : {details})}});
 
-/** The web app's policy (darma's): its own scripts, no framing, styles inline, images from its own origin. */
+/** The web app's policy: its own scripts, no framing, styles inline, images from its own origin. */
 const WEB_POLICY = [
   "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:", "font-src 'self'",
   "frame-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
@@ -201,7 +201,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     }
   });
 
-  // SV-181: an .ics file is read up to twice the most an import takes, so one over it is refused in
+  // An .ics file is read up to twice the most an import takes, so one over it is refused in
   // readIcs's words ("over 2 MB") rather than by the body limit.
   const normalLimit = bodyLimit({maxSize: 1024 * 1024});
   const fileLimit = bodyLimit({maxSize: 2 * ICS_MAX_BYTES});
@@ -281,7 +281,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json({recovery_codes: codes} satisfies RecoveryCodesOut);
   });
 
-  // The iPhone app's side of pairing (SV-84): the code from Settings › Security's QR for a device
+  // The iPhone app's side of pairing: the code from Settings › Security's QR for a device
   // token. The code is the proof, and the app sends no Origin, so there is no origin check; a wrong
   // code spends no password attempt, since it's 256 random bits and lives five minutes.
   app.post('/api/auth/pair', async c => {
@@ -322,7 +322,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     }
   });
 
-  // ---- Providers calling back: no session (B5) ----
+  // ---- Providers calling back: no session ----
 
   // Google Calendar's watch notifications: bodyless, authenticated by the channel's token. The sync
   // is queued durably before Google hears 204; if it can't be, Google hears 503 and sends again.
@@ -381,7 +381,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     }
   });
 
-  // ---- Home Assistant: its own bearer token, not the session (B6) ----
+  // ---- Home Assistant: its own bearer token, not the session ----
 
   // Mail's state for mantel's chip, read-only: the counts, up to three attention emails and the
   // sources needing reconnect (`@setpoint/shared`'s status.ts documents what the HA integration
@@ -515,7 +515,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.body(null, 204);
   });
   // Add iPhone mints a token that never idles out, so it needs the recent password; withdrawing the
-  // code and Revoke only take access away, so they don't (D276). None of them is a security
+  // code and Revoke only take access away, so they don't. None of them is a security
   // transition: sessions carry on.
   app.post('/api/security/pairing', c => {
     recentPassword(c);
@@ -558,7 +558,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     c.header('Referrer-Policy', 'no-referrer');
     return c.html(page.html);
   });
-  // SV-274: a day's USPS mail for the agenda rail, and a scan's picture (a scan never changes).
+  // A day's USPS mail for the agenda rail, and a scan's picture (a scan never changes).
   app.get('/api/mail/mailpieces', c => c.json(mailpieces(store, parse(mailpiecesInput, c.req.query()).day)));
   app.get('/api/mail/mailpieces/scans/:id', c => {
     const scan = mailScan(store, id(c.req.param('id')));
@@ -585,7 +585,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     c.header('X-Content-Type-Options', 'nosniff');
     return c.body(new Uint8Array(file.content));
   });
-  // SV-182: an email's .ics read for the same review as a file from Calendar (D441), from the
+  // An email's .ics read for the same review as a file from Calendar, from the
   // attachment's bytes on the server, nothing uploaded from the browser.
   app.post('/api/mail/messages/:id/attachments/:attachment/ics', async c => {
     const file = await fetchAttachment(c.req.param('id'), c.req.param('attachment'));
@@ -614,7 +614,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json({commands: markAllRead(store, input.account_id).map(presentCommand)} satisfies MarkAllReadOut);
   });
   app.get('/api/mail/indexing', c => c.json(indexing(store)));
-  // B3: triage's health, pattern prompts, rules and Settings › AI (src/api/triage.ts).
+  // Triage's health, pattern prompts, rules and Settings › AI (src/api/triage.ts).
   app.route('/api', triageApi(store));
   app.get('/api/mail/trusted-domains', c => c.json(trustedDomains(store)));
   app.post('/api/mail/trusted-domains', async c => {
@@ -628,7 +628,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json(trustedDomains(store));
   });
 
-  // ---- Search (B4), Alfred and proposals (B4), and Places (B5) ----
+  // ---- Search, Alfred and proposals, and Places ----
 
   app.post('/api/search', async c => c.json(await searchReader.search(parse(searchInput, await body(c)))));
   app.post('/api/search/suggestion', async c => c.json(await searchReader.suggest(parse(searchSuggestionInput, await body(c)))));
@@ -651,7 +651,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.post('/api/alfred/ask', async c => c.json(await askAlfred(store, parse(askInput, await body(c)), {...alfred, engine})));
   app.get('/api/alfred/conversations/:id', c => c.json(conversation(store, id(c.req.param('id')))));
   app.get('/api/alfred/asks/:askId', c => c.json({step: alfredStep(store, c.req.param('askId'))}));
-  // SV-71: the places events have used, before anything is typed. Before /api/places/:place_id.
+  // The places events have used, before anything is typed. Before /api/places/:place_id.
   app.get('/api/places/recent', c => c.json(recentPlaceList(store)));
   app.get('/api/places', async c => {
     const input = parse(placesInput, c.req.query());
@@ -667,7 +667,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     }
   });
 
-  // F7: one place with its coordinates, for Home in Settings › Calendar; the dev runs' invented places likewise.
+  // One place with its coordinates, for Home in Settings › Calendar; the dev runs' invented places likewise.
   app.get('/api/places/:place_id', async c => {
     const input = parse(placeInput, c.req.query());
     const placeId = parse(z.string().min(1).max(300), c.req.param('place_id'));
@@ -686,7 +686,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     }
   });
 
-  // ---- Todoist (B5) ----
+  // ---- Todoist ----
 
   app.post('/api/todoist/connect', c => {
     let begun;
@@ -700,7 +700,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json({url: begun.url} satisfies TodoistConnectOut);
   });
   app.get('/api/todoist/projects', c => c.json(todoistProjects(store)));
-  // SV-25: a project's colour is a command to Todoist; the project answers with it pending.
+  // A project's colour is a command to Todoist; the project answers with it pending.
   app.patch('/api/todoist/projects/:id', async c => {
     const providerId = c.req.param('id');
     setProjectColour(store, providerId, parse(todoistProjectUpdateInput, await body(c)).colour);
@@ -714,7 +714,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     const range = parse(itemsRangeInput, c.req.query());
     return c.json(itemsInRange(store, range.from, range.to));
   });
-  // SV-23: calendar search.
+  // Calendar search.
   app.post('/api/calendar/search', async c => c.json(searchCalendar(store, parse(calendarSearchInput, await body(c)))));
   app.get('/api/items/:id', c => c.json(itemDetail(store, id(c.req.param('id')))));
   app.post('/api/items', async c => c.json(presentCommand(createItem(store, parse(itemCreateInput, await body(c)))), 201));
@@ -725,7 +725,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json(presentCommand(completeItem(store, id(c.req.param('id')), input.done, input.occurrence_date)));
   });
   app.put('/api/items/:id/subtasks/order', async c => c.json(presentCommand(reorderSubtasks(store, id(c.req.param('id')), parse(subtaskOrderInput, await body(c)).subtask_ids))));
-  // SV-181: an .ics file's events, read for review (its bytes as the body), then imported one at a time.
+  // An .ics file's events, read for review (its bytes as the body), then imported one at a time.
   app.post(ICS_READ_PATH, async c => c.json(readImport(store, new Uint8Array(await c.req.arrayBuffer()))));
   app.post('/api/calendar/import', async c => c.json(presentCommand(importEvent(store, parse(icsImportInput, await body(c)))), 201));
   app.get('/api/calendars', c => c.json(calendarList(store)));
@@ -736,7 +736,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
       setCalendarShown(store, calendarId, {visible: input.visible, listed: input.listed});
       noteLive(store, {type: 'items', items: [], calendars: [calendarId], commands: []});
     }
-    // SV-20: a colour is a command to Google; the calendar answers with it pending.
+    // A colour is a command to Google; the calendar answers with it pending.
     if (input.colour !== undefined) setCalendarColour(store, calendarId, input.colour);
     return c.json(calendarList(store).find(calendar => calendar.id === calendarId)!);
   });
@@ -745,7 +745,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json(weatherDays(store, range.from, range.to, getSettings(store).calendar.weather));
   });
 
-  // ---- News (after 2.0, N1): its pages, Settings › News and stories seen (src/api/news.ts) ----
+  // ---- News: its pages, Settings › News and stories seen (src/api/news.ts) ----
 
   app.route('/api', newsApi(store, {...news, origin}));
 

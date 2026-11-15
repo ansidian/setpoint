@@ -1,13 +1,12 @@
-// Setpoint's design tokens, defined once for Night and Light. They mirror DESIGN.md › Tokens, which
-// names where they leave design-export/styles/setpoint.css (its Overrides), so change the two
-// together; nothing checks they agree (D482). applyTokens() publishes the
+// Setpoint's design tokens, defined once for Night and Light. They mirror DESIGN.md › Tokens and
+// design-export/styles/setpoint.css, so change the two together; nothing checks they agree. applyTokens() publishes the
 // theme-free ones as CSS custom properties (`--r-card`, `--dur-fast`, `--sidebar`, `--a-business`…), applyTheme() a
 // theme's colours, shadows and tints, under the export's names (`--page`, `--shadow-pop`, `--evtint`).
 import type {Colour} from '@setpoint/shared';
 
 export type Theme = 'night' | 'light';
 
-/** Night. Keys are DESIGN.md's token names; `panel`, `ink3` and `cyan` are the polish audit's (override 31). */
+/** Night. Keys are DESIGN.md's token names; `panel`, `ink3` and `cyan` depart from the export's. */
 export const colour = {
   page: '#050506',
   panel: '#0b0c0e',
@@ -28,7 +27,7 @@ export const colour = {
   sub: 'rgba(255,255,255,.055)',
   sub2: 'rgba(255,255,255,.09)',
   sub3: 'rgba(255,255,255,.13)',
-  // A ghost button pressed: one step past its hover's `sub3` (polish audit motion-02).
+  // A ghost button pressed: one step past its hover's `sub3`.
   sub4: 'rgba(255,255,255,.17)',
   stripe: 'rgba(255,255,255,.045)',
   scrim: 'rgba(0,0,0,.72)',
@@ -41,37 +40,37 @@ export const colour = {
   sun: 'oklch(0.86 0.16 92)',
   violet: 'oklch(0.8 0.11 300)',
   cyan: 'oklch(0.86 0.11 182)',
-  // "You are here" (#163): cool's values, named for its job so recolouring Personal never moves it.
+  // "You are here": cool's values, named for its job so recolouring Personal never moves it.
   accent: 'oklch(0.8 0.11 235)',
-  // The current page in a nav, a raised chip with an inset hairline, never mistaken for hover's `sub` (#166).
+  // The current page in a nav, a raised chip with an inset hairline, never mistaken for hover's `sub`.
   navOn: 'rgba(255,255,255,.10)',
   navOnEdge: 'rgba(255,255,255,.07)',
-  // The HTML email frame's ring (#171): none in Night, a hairline in Light, where white meets the page.
+  // The HTML email frame's ring: none in Night, a hairline in Light, where white meets the page.
   mailEdge: 'transparent',
-  // Search's match highlight (#172): Night's 26% `sun` mix; Light's own, a real highlighter.
+  // Search's match highlight: Night's 26% `sun` mix; Light's own, a real highlighter.
   hl: 'color-mix(in oklch, var(--sun) 26%, transparent)',
-  // A focused field's border, at least as strong as hover's `edgeHover` (#172).
+  // A focused field's border, at least as strong as hover's `edgeHover`.
   edgeFocus: 'rgba(255,255,255,.2)',
-  // The forecast's sun on the grids and in the right pane (#174): Night's `sun`, Light's a deeper amber.
+  // The forecast's sun on the grids and in the right pane: Night's `sun`, Light's a deeper amber.
   sunGlyph: 'var(--sun)',
-  // A switch that's on (#176): a `good` track and its knob, so on reads as healthy, never as a button.
+  // A switch that's on: a `good` track and its knob, so on reads as healthy, never as a button.
   switchOn: 'color-mix(in oklch, var(--good) 58%, var(--modal))',
   switchKnobOn: 'var(--ink)',
-  // The month's weekends and the days outside the shown month, and the week's weekend columns (#160).
+  // The month's weekends and the days outside the shown month, and the week's weekend columns.
   dayOff: 'rgba(255,255,255,.02)',
   dayOut: 'rgba(255,255,255,.035)',
-  // The line's reminder phrase (#258): a hue of its own, so it doesn't read as moving the item.
+  // The line's reminder phrase: a hue of its own, so it doesn't read as moving the item.
   remind: 'oklch(0.8 0.11 345)',
-  // Jobs's In process (#264): a cobalt of its own, deeper than `accent` so it never reads as the open row's bar.
+  // Jobs's In process: a cobalt of its own, deeper than `accent` so it never reads as the open row's bar.
   inProcess: 'oklch(0.7 0.15 258)',
-  // FYI's kinds, one hue each at one lightness and chroma, clear of caution, alert and sun (#340).
+  // FYI's kinds, one hue each at one lightness and chroma, clear of caution, alert and sun.
   kindDeliveries: 'oklch(0.78 0.12 70)',
   kindMoney: 'oklch(0.78 0.12 140)',
   kindUpdates: 'oklch(0.78 0.12 190)',
   kindSecurity: 'oklch(0.78 0.12 250)',
   kindCareer: 'oklch(0.78 0.12 300)',
   kindPeople: 'oklch(0.78 0.12 345)',
-  // Other's kind and the Noise fold: low-chroma taupe and slate, coloured but quieter than the six (#344).
+  // Other's kind and the Noise fold: low-chroma taupe and slate, coloured but quieter than the six.
   kindOther: 'oklch(0.74 0.05 65)',
   kindNoise: 'oklch(0.74 0.05 250)',
 } as const;
@@ -79,8 +78,8 @@ export const colour = {
 export type ColourToken = keyof typeof colour;
 
 /**
- * Light: darma's Light tokens (decision 45), with `page` #f6f6f4 (DESIGN.md override 5) and the polish
- * audit's own (override 31): a deeper `ink2`, a white `cardOn`, a greener `cyan` and a stronger calendar tint.
+ * Light, with `page` #f6f6f4, a deeper `ink2`, a white `cardOn`, a greener `cyan` and a stronger
+ * calendar tint than the export's.
  */
 export const lightColour: Record<ColourToken, string> = {
   page: '#f6f6f4',
@@ -156,39 +155,39 @@ export const calendarColour = {personal: 'cool', classes: 'cyan', jobs: 'violet'
 
 /** Calendar chips' tint (`--evtint`). */
 export const evtint = {night: 16, light: 14} as const;
-/** What a calendar chip lays over itself under the pointer, in its own colour (`--evhover`, polish audit grids-05). */
+/** What a calendar chip lays over itself under the pointer, in its own colour (`--evhover`). */
 export const evhover = {night: 18, light: 14} as const;
-/** Where a chip's tint starts as its change lands, settling back to `--evtint` (`--evland`, polish audit calflows-02). */
+/** Where a chip's tint starts as its change lands, settling back to `--evtint` (`--evland`). */
 export const evland = {night: 34, light: 26} as const;
 /**
  * Coloured text on its own tint (calendar chips, week blocks, the editor's timeline) caps its
- * lightness at `--tintL` (#159): Light's hues are tuned for text on the page and wash out on a tint;
+ * lightness at `--tintL`: Light's hues are tuned for text on the page and wash out on a tint;
  * Night's aren't capped.
  */
 export const tintL = {night: 1, light: 0.43} as const;
-/** Attention's band: `caution` mixed into its `panel` at this share (#167); 8% reads salmon in Light. */
+/** Attention's band: `caution` mixed into its `panel` at this share; 8% reads salmon in Light. */
 export const attTint = {night: 8, light: 6} as const;
-/** The Inbox's empty pane's glow (SV-218, #331): the mark's colours mixed in at this share at its heart; Light's darker colours need more to show on its page. */
+/** The Inbox's empty pane's glow: the mark's colours mixed in at this share at its heart; Light's darker colours need more to show on its page. */
 export const paneGlow = {night: 10, light: 18} as const;
 /** FYI's cell in that pane's strip: `cool` mixed into `panel` at this share, faint enough not to read as `accent`. */
 export const fyiWash = {night: 4, light: 9} as const;
 /**
- * Small coloured text keeps this share of its colour, the rest `ink` (SV-220's audit): Light's green, blue,
+ * Small coloured text keeps this share of its colour, the rest `ink`: Light's green, blue,
  * orange, red and yellow sit near 4.5:1 on its page and fall under it on a hovered, cursor or open row, so
  * there they lean toward `ink`. Night keeps all of it. `washTint` is for text on its own colour's wash (Copied).
  */
 export const textTint = {night: 100, light: 80} as const;
 export const washTint = {night: 100, light: 70} as const;
-/** The HTML email frame's brightness (#171): Night takes the glare off its white, Light leaves it. */
+/** The HTML email frame's brightness: Night takes the glare off its white, Light leaves it. */
 export const mailDim = {night: 0.95, light: 1} as const;
 /**
- * Todoist's colours, which aren't theme-tuned, clamped to the calendar tokens' lightness band (#175):
+ * Todoist's colours, which aren't theme-tuned, clamped to the calendar tokens' lightness band:
  * a task's ring (and its project's mark in the editor's line) keeps Todoist's hue and chroma at a
  * lightness of at least `ringMin` and at most `ringMax`.
  */
 export const ringL = {night: {min: 0.72, max: 1}, light: {min: 0, max: 0.55}} as const;
 
-/** darma's scrollbar (mantel's thin dark one). */
+/** The thin dark scrollbar (mantel's). */
 export const scrollbar = {size: 10, thumb: 'rgba(255,255,255,.16)', lightThumb: 'rgba(29,30,33,.22)', inset: 3} as const;
 
 export const font = {
@@ -201,13 +200,13 @@ export const font = {
 export const radius = {pill: 999, modal: 26, popover: 18, card: 14, bar: 12, row: 10, segment: 8, chip: 6, hint: 5} as const;
 
 /**
- * mantel's timings; a press going in (its release takes `fast`, polish audit motion-02); a lifted
+ * mantel's timings; a press going in (its release takes `fast`); a lifted
  * calendar chip's tilt and scale.
  */
 export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04} as const;
 
 /**
- * A segmented control's thumb (#317): a damped spring (ratio .8) over `ms`, 95% of the way there by
+ * A segmented control's thumb: a damped spring (ratio .8) over `ms`, 95% of the way there by
  * about 125 ms and 1.5% past it before it settles. The label it lands on takes `ink` over `inkMs`
  * after `inkDelayMs`, as the thumb arrives; the one it leaves lets go at once.
  */
@@ -219,7 +218,7 @@ export const thumb = {
 } as const;
 
 /**
- * Loading (DESIGN.md › Motion, Decided while building #225): a skeleton's bars are `sub2` on the
+ * Loading (DESIGN.md › Motion): a skeleton's bars are `sub2` on the
  * page and `sub3` inside a `sub` group (Settings, cards); a skeleton appears only after `delayMs`,
  * so a fast answer never flashes one, fades in over motion.medium, then breathes, every bar in
  * phase, its opacity down to `breatheLow` and back over `breatheMs`. What replaces it fades in over
@@ -227,7 +226,7 @@ export const thumb = {
  */
 export const skeleton = {fill: 'sub2', fillOnSub: 'sub3', delayMs: 200, breatheMs: 1600, breatheLow: 0.45, breatheEase: 'cubic-bezier(.4,0,.6,1)'} as const;
 
-/** The floating detail's glide (design-export/motion/glide.json; DESIGN.md › The glide). */
+/** The floating detail's glide (design-export/motion/glide.json). */
 export const glide = {
   easing: 'cubic-bezier(.22,1.3,.36,1)',
   // About 3% of travel, on position only.
@@ -238,8 +237,8 @@ export const glide = {
   stepPx: 400,
   capMs: 380,
   heightMs: 220,
-  // The contents crossfade, overlapping by 50 ms, so the card never travels blank (DESIGN.md override
-  // 30, polish audit calflows-12); glide.json still says 0–90 out and 90–220 in.
+  // The contents crossfade, overlapping by 50 ms, so the card never travels blank;
+  // glide.json still says 0–90 out and 90–220 in.
   oldContentOutMs: 120,
   newContentInFromMs: 70,
   newContentInToMs: 220,
@@ -251,7 +250,7 @@ export const glide = {
   closeScale: 0.98,
   editMs: 220,
   editorSlidePx: 12,
-  // The build's, where glide.json gives no figure (F5, reviewed by eye): how far the card
+  // The build's, where glide.json gives no figure (reviewed by eye): how far the card
   // shrinks as it hands over to the editor, and how long a retarget's carried velocity lasts
   // (its time constant) before the new glide alone moves the card.
   editScale: 0.9,
@@ -262,21 +261,21 @@ export const glide = {
 export const placement = {gapPx: 8, sides: ['right', 'left', 'above', 'below']} as const;
 
 /**
- * Dragging a chip (DESIGN.md › Drag; board 15): how far a press moves before it lifts, and where the
+ * Dragging a chip (board 15): how far a press moves before it lifts, and where the
  * tooltip naming the day and time sits from the lifted chip's top left (board 15: 18 right, 30 down).
  */
 export const drag = {thresholdPx: 4, tipOffset: {left: 18, top: 30}} as const;
 
 /**
- * The shared tooltip (DESIGN.md #299): how long the pointer rests before it shows, quick on what it
+ * The shared tooltip: how long the pointer rests before it shows, quick on what it
  * reveals where you've stopped to read (`data-tip-quick`) and patient elsewhere, on controls and on what
- * the mouse passes over (SV-171); how far it sits from what it names, and how close it may come to the
+ * the mouse passes over; how far it sits from what it names, and how close it may come to the
  * window's edges.
  */
 export const tip = {quickMs: 80, patientMs: 500, gapPx: 6, marginPx: 8} as const;
 
 /**
- * The week view (DESIGN.md › Week view; board 16): the hour grid's measures, the all-day row's lines,
+ * The week view (board 16): the hour grid's measures, the all-day row's lines,
  * the steps a drag snaps to, and the paging slide.
  */
 export const week = {
@@ -311,7 +310,7 @@ export const week = {
 } as const;
 
 /**
- * The month grid's paging (DESIGN.md › Month grid › Paging; polish audit grids-04): P, N and Today
+ * The month grid's paging: P, N and Today
  * glide the grid over `slow`; more than `farRows` away it first jumps to `leadRows` short of the
  * month, on the side it comes from, and glides those. The header's title swaps as it goes, rising
  * (or falling, or sliding with the week) `titleShiftPx` over `fast`.
@@ -319,20 +318,20 @@ export const week = {
 export const monthPaging = {glideMs: motion.slow, farRows: 10, leadRows: 5, titleShiftPx: 6, titleMs: motion.fast} as const;
 
 /**
- * News (DESIGN.md › News › Keys and behaviour): how long a row stays fully on screen before its story
- * is seen; and how long a story N brings onto the list takes to settle in (DESIGN.md › Motion, #131).
+ * News: how long a row stays fully on screen before its story
+ * is seen; and how long a story N brings onto the list takes to settle in (DESIGN.md › Motion).
  */
 export const news = {seenAfterMs: 1000, landedMs: 900} as const;
 
-/** Fixed sizes in px (DESIGN.md › Layout and the export's Key measurements). */
+/** Fixed sizes in px. */
 export const layout = {
   sidebar: 248,
-  // The sidebar in the compact tier (DESIGN.md › Layout › Compact).
+  // The sidebar in the compact tier.
   rail: 56,
   header: 56,
   readingPane: 680,
   rightPane: 400,
-  // 360, wider than board 12a's 280, so a long title wraps to fewer lines (#308, override 43).
+  // 360, wider than board 12a's 280, so a long title wraps to fewer lines.
   floatingDetail: 360,
   monthRow: 176,
   weekdayRow: 30,
@@ -347,14 +346,14 @@ export const layout = {
   miniDay: 26,
   mailSearch: 380,
   attachment: 280,
-  // The board's .cmdk (DESIGN.md: about 637).
+  // The board's .cmdk (about 637).
   palette: 640,
 } as const;
 
 /**
  * The design target, the phone layout's breakpoint, the compact tier's (the rail always, panes over
- * what they'd squeeze), the width below which the sidebar starts as the rail (D507), and the page's
- * zoom steps (1.075 from 1440 px for a MacBook, darma's 1.25 from 2200). CSS media queries spell
+ * what they'd squeeze), the width below which the sidebar starts as the rail, and the page's
+ * zoom steps (1.075 from 1440 px for a MacBook, 1.25 from 2200). CSS media queries spell
  * them out; Phone.tsx's hooks and sidebarRail.ts read the breakpoints from here.
  */
 export const viewport = {target: {width: 1677, height: 1050}, phoneBelow: 640, compactBelow: 1100, railBelow: 1600, zoom: [{from: 1440, zoom: 1.075}, {from: 2200, zoom: 1.25}]} as const;

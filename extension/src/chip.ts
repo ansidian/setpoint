@@ -1,4 +1,4 @@
-// The chip on a board's page (SV-174, DESIGN.md › Decided while building #301, D434, D435). Each is
+// The chip on a board's page. Each is
 // in its own shadow root, so the board's styles don't reach it. Its colours are Setpoint's (good while
 // this role's application is open and alert once it's closed, as Jobs's Offer and Rejected, an amber
 // for another role, alert for a failure, violet for focus) mixed with the page's own text colour, so

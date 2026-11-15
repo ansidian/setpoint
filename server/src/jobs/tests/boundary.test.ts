@@ -1,4 +1,4 @@
-// The module boundary's lint rule (D303): the repository's own eslint.config.js refuses an import of
+// The module boundary's lint rule: the repository's own eslint.config.js refuses an import of
 // Jobs from mail (or anywhere outside Jobs's folders), and lets Jobs's wiring points and Jobs itself
 // through.
 import {fileURLToPath} from 'node:url';

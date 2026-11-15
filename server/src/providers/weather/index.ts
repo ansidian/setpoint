@@ -1,9 +1,8 @@
-// Weather: day forecasts at Home for the grid and the right pane, from Pirate Weather (v1's
-// provider, Dark Sky's format), polled every 30 minutes as its own source. Adapted from v1's
-// `platform/weather` (see SV-6): the key is read on each check (a new key takes at once), a failed
-// check fails rather than passing old forecasts off as fresh (v1 17489089), the provider's
-// timezone decides each day, and the key never appears in an error (it's in the URL's path).
-// v2 keeps the days only: Dark Sky's daytime high and overnight low, and four conditions.
+// Weather: day forecasts at Home for the grid and the right pane, from Pirate Weather (Dark Sky's
+// format), polled every 30 minutes as its own source: the key is read on each check (a new key
+// takes at once), a failed check fails rather than passing old forecasts off as fresh, the
+// provider's timezone decides each day, and the key never appears in an error (it's in the URL's
+// path). It keeps the days only: Dark Sky's daytime high and overnight low, and four conditions.
 import type {WeatherCondition} from '@setpoint/shared';
 import {and, gte} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';
@@ -19,7 +18,7 @@ import type {HttpOptions} from '../http.ts';
 export const PIRATE_WEATHER_API = 'https://api.pirateweather.net';
 export const WEATHER_TIMEOUT_MS = 10_000;
 
-/** Dark Sky's icons as the four conditions the grid draws; anything unknown is cloud, not sun (v1 said sun). */
+/** Dark Sky's icons as the four conditions the grid draws; anything unknown is cloud, not sun. */
 export function conditionOf(icon: string | undefined): WeatherCondition {
   switch (icon) {
     case 'clear-day':

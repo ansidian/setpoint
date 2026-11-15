@@ -4,7 +4,7 @@ ALTER TABLE `messages` ADD `archived_at` text;--> statement-breakpoint
 ALTER TABLE `messages` ADD `backfill` integer DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE `messages` ADD `trash_ref` text;--> statement-breakpoint
 CREATE INDEX `messages_rfc822` ON `messages` (`account_id`,`rfc822_id`);--> statement-breakpoint
--- Hand-written below this line (B2): Drizzle can't express FTS5 virtual tables or triggers, so
+-- Hand-written below this line: Drizzle can't express FTS5 virtual tables or triggers, so
 -- drizzle-kit generated only the statements above. If this migration is regenerated, append this
 -- block again unchanged. `messages_fts` is an external-content FTS5 index over the message record
 -- (sender, organisation, subject, body) whose rowid is messages.id; the triggers keep it in step

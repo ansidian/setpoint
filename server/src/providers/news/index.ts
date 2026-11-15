@@ -1,4 +1,4 @@
-// News's adapters (N2), one per NEWS_ADAPTERS key, and the reader of new articles, for
+// News's adapters, one per NEWS_ADAPTERS key, and the reader of new articles, for
 // src/news/worker.ts. Each reads its own source's address (a feed, a page, an API's base), so tests
 // point a source at a fake on 127.0.0.1 and pass `privateHosts`; production never reaches a private
 // host. Every request sends the worker's honest, named User-Agent.

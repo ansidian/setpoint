@@ -1,4 +1,4 @@
-// What the import review says of each of a file's events before anything is sent (SV-181, D437):
+// What the import review says of each of a file's events before anything is sent:
 // whether it's already over, so it starts unticked. Pure: the caller gives it now and the user's zone.
 import {occurrenceDates, parseRule} from './recurrence.ts';
 import {addDays, localDay} from './time.ts';

@@ -1,10 +1,10 @@
 // Google Calendar into the mirror: the calendar list, then each calendar's events from its sync
-// token (or a full read), applied in one transaction per calendar. Harvested from v1's mirror sync
-// (see SV-6): no orderBy (or no sync token comes back), the token from the last page, a 410 means a
+// token (or a full read), applied in one transaction per calendar:
+// no orderBy (or no sync token comes back), the token from the last page, a 410 means a
 // full read, deleted events come too (showDeleted), and holiday calendars, whose tokens Google
 // refuses straight away, are re-read whole at most once a day instead.
 //
-// v2 reads series and their exceptions (singleEvents off) rather than v1's expanded instances, so
+// It reads series and their exceptions (singleEvents off) rather than expanded instances, so
 // the mirror holds one recurring item and expands it itself; a series it can't expand (EXDATE, an
 // all-day series, an unusual rule) takes Google's instances as rows (`expanded`). Rows a pending or
 // failed change holds are left alone.
@@ -32,7 +32,7 @@ export const FULL_SYNC_EVERY_MS = DAY;
 
 type CalendarRow = typeof t.calendars.$inferSelect;
 
-/** Calendars the user shows in Google (v1: selected, not hidden or deleted). */
+/** Calendars the user shows in Google: selected, not hidden or deleted. */
 export const listedCalendar = (entry: GoogleCalendarEntry) => entry.selected !== false && entry.hidden !== true && entry.deleted !== true;
 
 /** The calendar list into `calendars`: new ones added, names, colours and roles kept current, removed ones dropped. */
@@ -45,12 +45,12 @@ export function applyCalendarList(store: Store, source: SourceRow, entries: Goog
     const kept: CalendarRow[] = [];
     const heldCalendars = new Set(activeCommands(store, 'calendar').map(row => row.targetId));
     listed.forEach((entry, index) => {
-      // A rename of the user's own wins over the calendar's name (v1 had these the other way round).
+      // A rename of the user's own wins over the calendar's name.
       const name = entry.summaryOverride || entry.summary || entry.id;
       const found = existing.find(row => row.providerId === entry.id);
-      // A colour change waiting for Google, or failed in place, keeps the colour picked (SV-20).
+      // A colour change waiting for Google, or failed in place, keeps the colour picked.
       const colour = found && heldCalendars.has(found.id) ? found.colour : swatchFor(entry.backgroundColor);
-      // SV-191: the user's role on it, which says whether its events can change (calendarWritable).
+      // The user's role on it, which says whether its events can change (calendarWritable).
       const accessRole = entry.accessRole ?? null;
       if (found) {
         if (found.name !== name || found.colour !== colour || found.accessRole !== accessRole) touched.push(found.id);
@@ -144,7 +144,7 @@ export async function syncCalendar(store: Store, api: GoogleCalendarApi, source:
   }
   applyEvents(store, calendar, {
     full: fullRead, items: page.items, zone, defaults: page.defaultReminders, instances,
-    // Holiday calendars' tokens are refused at once (v1): never kept, re-read daily.
+    // Holiday calendars' tokens are refused at once: never kept, re-read daily.
     cursor: {token: holiday ? null : page.nextSyncToken, fullAt: fullRead ? now.toISOString() : cursor.fullAt},
   }, source);
 }
@@ -168,7 +168,7 @@ function applyEvents(store: Store, calendar: CalendarRow, fetched: Fetched, sour
       if (found) {
         seen.add(found.id);
         if (held.has(found.id)) return found;
-        // A sync from Google keeps Setpoint's after-reminders (D287).
+        // A sync from Google keeps Setpoint's after-reminders.
         const set = values.reminders ? {...values, reminders: withOwnAfter(values.reminders, found)} : values;
         const updated = store.db.update(t.items).set(set).where(eq(t.items.id, found.id)).returning().get()!;
         if (JSON.stringify({...found}) !== JSON.stringify({...updated})) touched.add(found.id);

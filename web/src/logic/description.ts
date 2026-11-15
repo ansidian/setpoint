@@ -1,10 +1,10 @@
-// An item's description (SV-264, D547). Each provider keeps its own format, a Google event HTML
+// An item's description. Each provider keeps its own format, a Google event HTML
 // and a Todoist task Markdown, and Setpoint stores what it was given. Here both are read into one
 // short list of formats, which is all the screen ever draws (as elements, never as the provider's
 // markup, so nothing in a description can run or load anything), and written back in the shapes the
 // providers' own editors write (read from a real event and task, 2026-11-10):
 //   Google   <b>, <i>, <u>, lines ended by <br> with no paragraphs, <ol><li>, <ul><li> (a nested
-//            list inside its <li>, SV-268), <a href>
+//            list inside its <li>), <a href>
 //   Todoist  **bold**, *italic*, "1." and "-" lists with a blank line around them (nested by indent),
 //            single newlines between lines, [text](url)
 // Pure: no DOM, so the same reader takes the editor's own markup (`literal`).
@@ -19,7 +19,7 @@ export interface Run {
   href: string | null;
 }
 
-/** A list item: its line, and the list nested under it, as Google Calendar's editor writes one (SV-268). */
+/** A list item: its line, and the list nested under it, as Google Calendar's editor writes one. */
 export interface Item {
   runs: Run[];
   sub?: List;
@@ -102,7 +102,7 @@ export function tidy(blocks: Block[]): Block[] {
   return out;
 }
 
-/** Whether two descriptions show the same: what decides if a save sends one (D547). */
+/** Whether two descriptions show the same: what decides if a save sends one. */
 export const sameDescription = (a: Block[], b: Block[]) => JSON.stringify(tidy(a)) === JSON.stringify(tidy(b));
 
 export const isEmpty = (blocks: Block[]) => tidy(blocks).length === 0;
@@ -657,7 +657,7 @@ export function withLinks(run: Run): Run[] {
 }
 
 /**
- * SV-270 (D553): a proposal's description, one line naming where it came from, "From: *subject*",
+ * A proposal's description, one line naming where it came from, "From: *subject*",
  * the subject a link to it when it has an address (an email's in Gmail, a story's in Setpoint).
  */
 export function sourceLine(source: {subject: string; url: string | null}): Block[] {
@@ -667,7 +667,7 @@ export function sourceLine(source: {subject: string; url: string | null}): Block
 }
 
 /**
- * SV-270 (D555): the account and Gmail message id in a link of the form Open in Gmail writes,
+ * The account and Gmail message id in a link of the form Open in Gmail writes,
  * https://mail.google.com/mail/?authuser=<account>#all/<message id>; null for any other address,
  * Gmail's own address-bar links (#inbox/FMfcg…) among them, which name a different id.
  */

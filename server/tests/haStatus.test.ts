@@ -1,6 +1,6 @@
-// Home Assistant's status endpoint over the API on the seed (B6; BRIEF.md › The mail chip in mantel):
-// the chip's numbers are the sidebar's, opening never drops attention, Done and archiving do, a
-// source needing reconnect is never all clear, and only Home Assistant's own token reads it.
+// Home Assistant's status endpoint over the API on the seed: the chip's numbers are the sidebar's,
+// opening never drops attention, Done and archiving do, a source needing reconnect is never all clear, and only Home Assistant's own token
+// reads it.
 import {haStatusSchema, SEED_NOW} from '@setpoint/shared';
 import {and, eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -92,7 +92,7 @@ describe('the counts follow the Inbox', () => {
     expect(got.attention_emails.map(email => email.id)).not.toContain(recovery);
   });
 
-  test('mail archived at its provider drops out (D14)', async () => {
+  test('mail archived at its provider drops out', async () => {
     const {w, status} = await setup();
     const interview = idOf(w, 'Interview availability for Software Engineer I');
     const statement = idOf(w, 'Statement ready');
@@ -124,7 +124,7 @@ describe('needs reconnect', () => {
     const {w, owner, status} = await setup();
     for (const email of (await status()).attention_emails) await owner.send('POST', `/api/mail/messages/${email.id}/done`, {body: {done: true}});
     for (const command of markAllRead(w.store)) confirmCommand(w.store, command.id);
-    // Mark all as read leaves Security (UX #4); those are read one by one.
+    // Mark all as read leaves Security; those are read one by one.
     const security = w.store.db.select().from(t.messages).where(and(eq(t.messages.kind, 'security'), eq(t.messages.unread, true))).all();
     for (const message of security) confirmCommand(w.store, setRead(w.store, message.id, false).id);
     expect(await status()).toMatchObject({attention: 0, unread_fyi: 0, attention_emails: [], needs_reconnect: [], all_clear: true});

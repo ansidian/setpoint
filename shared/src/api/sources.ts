@@ -1,5 +1,5 @@
 // Settings › Accounts and the other settings pages: accounts, sources and their health, settings,
-// write-only secrets and notifications (DESIGN.md › Settings; BRIEF.md › Health and states).
+// write-only secrets and notifications.
 //
 //   GET   /api/accounts                          AccountOut[]
 //   PATCH /api/accounts/:id     AccountUpdateInput   AccountOut
@@ -9,7 +9,7 @@
 //   POST  /api/sources/:id/check                 204 (check now)
 //   POST  /api/accounts/gmail/authorize   GmailAuthorizeInput  GmailAuthorizeOut (Connect Gmail / Reconnect)
 //   GET   /api/ea/accounts/gmail/callback?code=&state=   302 to /settings/accounts?connected=<id> or ?error=<code>
-//         (Google's redirect, outside the session: the signed state is its proof; the path is v1's,
+//         (Google's redirect, outside the session: the signed state is its proof; the path is
 //         kept so the Google client's registration still matches)
 //   POST  /api/accounts/icloud            ICloudConnectInput   AccountOut (201; Connect iCloud)
 //   GET   /api/settings                          Settings
@@ -68,7 +68,7 @@ export interface SourceOut {
 
 /**
  * New or renewed credentials for a source, write-only. iCloud takes an app password, Google and
- * Todoist the result of their OAuth consent (B2, B5), weather an API key if its provider needs one.
+ * Todoist the result of their OAuth consent, weather an API key if its provider needs one.
  */
 export const credentialsInput = z.discriminatedUnion('kind', [
   z.strictObject({kind: z.literal('app_password'), username: z.string().min(1).max(320), password: z.string().min(1).max(200)}),

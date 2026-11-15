@@ -4,7 +4,7 @@
 #
 #   git archive --format=tar HEAD | docker build -t setpoint:$(git rev-parse --short HEAD) -
 #
-# OPERATIONS.md has the variables, the volume, the CLI and the import from v1.
+# OPERATIONS.md has the variables, the volume and the CLI.
 ARG NODE_VERSION=24.19.0
 
 # The web app, built with every workspace's dev dependencies (Vite, TypeScript).
@@ -18,7 +18,7 @@ RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY shared shared
 COPY web web
 # web's typecheck covers its tests, and jobs.test.tsx holds the LinkedIn extension's chip words to
-# Jobs's (SV-174), so the one extension file it reads comes too.
+# Jobs's, so the one extension file it reads comes too.
 COPY extension/src/words.ts extension/src/words.ts
 RUN npm run build -w web
 

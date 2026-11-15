@@ -1,7 +1,7 @@
-// The Inbox's pane with nothing open (SV-218, D465, DESIGN.md #331): how the mail day is going, as one
+// The Inbox's pane with nothing open: how the mail day is going, as one
 // block centred in the pane. The mark; what needs the user ("3 need you, 1 overdue", or All caught up);
 // today's strip (Done, and what triage sorted to FYI and to Noise); and, in the foot over the keys,
-// the quiet facts in `ink3`, led by any trouble's chip, each with its fix (EmptyPane, #335).
+// the quiet facts in `ink3`, led by any trouble's chip, each with its fix (EmptyPane).
 import type {MailDayOut, TriageStatusOut} from '@setpoint/shared';
 import {timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
@@ -16,7 +16,7 @@ import type {PaneKey, PaneTrouble} from './EmptyPane.tsx';
 import {openSettings} from './settings/store.ts';
 import {reconnectFrom} from './states/States.tsx';
 
-// What the pane reads, kept on screen while the Inbox is up (SV-222).
+// What the pane reads, kept on screen while the Inbox is up.
 export const PANE_PATHS = [DAY_PATH, TRIAGE_PATH];
 
 const KEYS: PaneKey[] = [

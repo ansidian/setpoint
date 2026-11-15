@@ -1,4 +1,4 @@
-// Where Jobs's reading of mail stands (J2): what it reads (on, the accounts it lists, mail received
+// Where Jobs's reading of mail stands: what it reads (on, the accounts it lists, mail received
 // since it was turned on), and its health, kept as triage's is (src/triage/health.ts): down while its
 // last model call failed or there was no key to call with, as of its last success. Emails wait while
 // it's down, counted for the page ("5 emails not read yet, Anthropic unreachable since 8:52 AM,
@@ -14,7 +14,7 @@ import {NO_JOBS_KEY} from './models.ts';
 import type {ReadWindow} from './mail.ts';
 import * as j from './schema.ts';
 
-/** What Jobs reads as mail arrives: null while it's off. Mail from before it was turned on is J4's. */
+/** What Jobs reads as mail arrives: null while it's off. Mail from before it was turned on is the history pass's. */
 export function readWindow(store: Store): ReadWindow | null {
   const settings = jobsDb(store.sqlite).select().from(j.jobsSettings).get();
   if (!settings?.enabled) return null;
@@ -57,7 +57,7 @@ export function recordReadFailure(store: Store, kind: ProviderErrorKind, reason:
   });
 }
 
-/** What the page words (J8): no key, the key refused, rate limited, or unreachable (the rest). */
+/** What the page words: no key, the key refused, rate limited, or unreachable (the rest). */
 function causeOf(health: Row): JobReadingCause {
   if (health.lastError === NO_JOBS_KEY) return 'no_key';
   if (health.lastErrorKind === 'auth') return 'refused';

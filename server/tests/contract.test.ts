@@ -1,10 +1,10 @@
-// SV-85: the iPhone app's contract. The app (setpoint-ios) decodes these responses with hand-written
+// The iPhone app's contract. The app (setpoint-ios) decodes these responses with hand-written
 // Codable types, and an installed build stays older than the server, so what it reads is recorded
 // from the seed into shared/contract/ and every run checks the API still answers in a way that build
 // can decode: no key gone or renamed, no new kind at a path, no status changed, and no enum value it
 // doesn't know. A new key passes. `npm run contract:record` re-records, deliberately,
 // and its index lists what each fixture can't speak for. setpoint-ios copies the folder in at a
-// pinned setpoint-v2 commit, and its decoding tests read the same files.
+// pinned commit of this repository, and its decoding tests read the same files.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -84,7 +84,7 @@ function phone(app: {request: (url: string, init: RequestInit) => Response | Pro
   const send = async (method: string, url: string, body?: unknown) => {
     const response = await app.request(url, {
       method,
-      // A string is a file's text (SV-181's .ics read), sent as it is.
+      // A string is a file's text (an .ics read), sent as it is.
       headers: {...(body === undefined ? {} : {'content-type': typeof body === 'string' ? 'text/calendar' : 'application/json'}), ...(token ? {authorization: `Bearer ${token}`} : {})},
       ...(body === undefined ? {} : {body: typeof body === 'string' ? body : JSON.stringify(body)}),
     });
@@ -132,7 +132,7 @@ async function pairedPhone(w: World, options: Partial<AppOptions> = {}, recorded
 
 /**
  * News's states the seed itself doesn't hold, from the board fixtures layered on it (src/dev/fixtures/
- * newsStates.ts, D3), each in a seeded world of its own so the rest stays as the seed has it.
+ * newsStates.ts), each in a seeded world of its own so the rest stays as the seed has it.
  */
 const NEWS_STATES = [
   {fixture: 'news-ai-down', name: 'news-status-unsorted', type: 'NewsStatusOut', route: '/api/news/status', path: '/api/news/status'},
@@ -162,7 +162,7 @@ async function recordAll() {
   await app.record('accounts', 'AccountOut[]', 'GET', '/api/accounts', '/api/accounts');
   await app.record('calendars', 'CalendarOut[]', 'GET', '/api/calendars', '/api/calendars');
   await app.record('sources', 'SourceOut[]', 'GET', '/api/sources', '/api/sources');
-  // A task ring takes its Todoist project's colour (D54).
+  // A task ring takes its Todoist project's colour.
   await app.record('todoist-projects', 'TodoistProjectOut[]', 'GET', '/api/todoist/projects', '/api/todoist/projects');
 
   // The live stream, open while the changes below are made: they send its mail and items events.
@@ -249,7 +249,7 @@ async function recordAll() {
   await app.record('error-message-not-found', 'ApiError', 'GET', '/api/mail/messages/:id', '/api/mail/messages/9999');
   await app.record('error-item-not-found', 'ApiError', 'GET', '/api/items/:id', '/api/items/9999');
 
-  // SV-94: the editor, after the lists so they stay as the seed has them. Every request body below is
+  // The editor, after the lists so they stay as the seed has them. Every request body below is
   // one the server took, and the app tests its encoder against them. What the editor reads first: places
   // (the seed's invented ones, never Google's), the places events have used, Todoist's labels and Settings
   // (Time to Leave's switch and buffer, the default reminder).
@@ -294,7 +294,7 @@ async function recordAll() {
   await app.record('error-item-when', 'ApiError', 'POST', '/api/items', '/api/items', {kind: 'event', calendar_id: 1, title: 'Lunch', starts_at: '2026-10-09T19:00:00.000Z'});
   await app.record('error-item-nothing-to-change', 'ApiError', 'PATCH', '/api/items/:id', '/api/items/2', {changes: {}});
 
-  // SV-104: News. All, with the recap and the Missed strip it feeds the app (D424), a hazard's lead (Local's Red Flag Warning) and Tech's block
+  // News. All, with the recap and the Missed strip it feeds the app, a hazard's lead (Local's Red Flag Warning) and Tech's block
   // holding Upcoming (the Apple event); a section with more than its block shows, and Tech's with Upcoming.
   const page = await app.record('news', 'NewsPageOut', 'GET', '/api/news', '/api/news') as NewsPageOut;
   await app.record('news-section', 'NewsSectionOut', 'GET', '/api/news/sections/:section', '/api/news/sections/local');
@@ -306,7 +306,7 @@ async function recordAll() {
   await app.record('news-article', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/2');
   await app.record('news-article-summary-only', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/1');
   await app.record('news-article-discovery', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/42');
-  // Catch up: the recap's 8, all from Tuesday (D424).
+  // Catch up: the recap's 8, all from Tuesday.
   await app.record('news-missed', 'MissedOut', 'GET', '/api/news/missed', '/api/news/missed');
   // Sorting as the seed has it: nothing waiting, no first run.
   await app.record('news-status', 'NewsStatusOut', 'GET', '/api/news/status', '/api/news/status');
@@ -316,7 +316,7 @@ async function recordAll() {
   await app.record('news-image', 'image bytes', 'GET', '/api/news/images/:id', '/api/news/images/2', undefined, ['cache-control', 'content-security-policy', 'x-content-type-options']);
   // Upcoming's Add to calendar: the event it would create, nothing created yet.
   await app.record('news-proposal', 'NewsProposalOut', 'POST', '/api/news/events/:id/proposal', '/api/news/events/1/proposal');
-  // While you were away (SV-163, #298), for the app's own recap: News on screen with the recap's stories
+  // While you were away, for the app's own recap: News on screen with the recap's stories
   // shown, which fixes it; Done puts it away, with what Undo puts back; Undo sends that back, so the
   // recap is as it was for what follows.
   await app.record('news-here', '(no body)', 'POST', '/api/news/here', '/api/news/here', {recap: page.recap!.stories.map(story => story.id)});
@@ -325,11 +325,11 @@ async function recordAll() {
   // Last, as it changes their dots: the new story and the updated one seen.
   await app.record('news-seen', 'NewsSeenOut', 'POST', '/api/news/seen', '/api/news/seen', {story_ids: [18, 1]});
 
-  // SV-181: an .ics file read for review (the invented conference schedule), then its keynote imported.
+  // An .ics file read for review (the invented conference schedule), then its keynote imported.
   const read = await app.record('calendar-import-read', 'IcsReadOut', 'POST', '/api/calendar/import/read', '/api/calendar/import/read', crlf(CONFERENCE_SCHEDULE)) as IcsReadOut;
   const {past: _past, existing: _existing, ...keynote} = read.events[0]!;
   await app.record('calendar-import', 'CommandOut', 'POST', '/api/calendar/import', '/api/calendar/import', {calendar_id: 1, event: keynote});
-  // SV-182: the seed's interview invite, read from its email for the same review.
+  // The seed's interview invite, read from its email for the same review.
   const invite = w.store.sqlite.prepare('SELECT message_id AS message, id FROM attachments WHERE filename = ?').get('invite.ics') as {message: number; id: number};
   await app.record('mail-attachment-ics', 'IcsReadOut', 'POST', '/api/mail/messages/:id/attachments/:attachment/ics', `/api/mail/messages/${invite.message}/attachments/${invite.id}/ics`);
 
@@ -372,7 +372,7 @@ const blind = (body: unknown) => {
 };
 
 function write({responses, events}: Awaited<ReturnType<typeof recordAll>>) {
-  // Only what this records: the folder holds other files the app copies in too (compose/, SV-95).
+  // Only what this records: the folder holds other files the app copies in too (compose/).
   for (const owned of ['responses', 'events', 'index.json', 'enums.json']) fs.rmSync(fixture(owned), {recursive: true, force: true});
   const index: Index = {
     about: 'The API responses and live events the iPhone app reads, recorded from the seed at SEED_NOW by server/tests/contract.test.ts (npm run contract:record). Each file is the body as sent. npm test fails when the server stops answering in a way an app built against these can decode.',
@@ -437,7 +437,7 @@ describe('the iPhone app\'s contract', () => {
     write(await recordAll());
   });
 
-  // SV-104: the app's image loader sends the device's bearer token, never the web's cookie.
+  // The app's image loader sends the device's bearer token, never the web's cookie.
   test('a News image answers a paired iPhone\'s bearer token as it answers the web\'s cookie', async () => {
     const imagesDir = newsImages();
     const w = world({seed: true, newsImagesDir: imagesDir});

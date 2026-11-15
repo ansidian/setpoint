@@ -1,4 +1,4 @@
-// Web pages read for News (N2): an article's readable text and its og:image, and the posts a page
+// Web pages read for News: an article's readable text and its og:image, and the posts a page
 // read lists where a lab has no feed (Anthropic's news page and Mistral's, as a list of links to
 // posts; the Claude release notes, as dated sections of one page). Pure: HTML in, text and posts
 // out. No outlet's layout is assumed beyond what most pages share, so a page that changes keeps
@@ -39,11 +39,11 @@ const NOISE_WORDS = new Set([
 // A paragraph that is the page talking about itself, not the article.
 const NOISE_TEXT = /^(advertisement|sponsored|sign up|subscribe|read more|related:|click here|share this|copyright|©|all rights reserved|follow us|this story has been updated)/i;
 // The outlet asking the reader to become a member, as a public broadcaster does before its story and
-// after it: the ask itself, not a story about giving or a station's funding (the polish audit's extra-10).
+// after it: the ask itself, not a story about giving or a station's funding.
 const APPEAL = /\b(?:please become a (?:\w+ )?member|become a (?:\w+ )?member today|increase your (?:existing )?membership|100% (?:community|listener|reader|member)[- ](?:funded|supported))\b/i;
 
 // A utility class with a value or a variant ("scroll-m-(--nav-height)", "lg:pt-4") isn't the
-// element's name, so its words don't count: Mistral's post list once read as navigation (SV-224).
+// element's name, so its words don't count: Mistral's post list once read as navigation.
 const isUtility = (token: string) => /[()[\]:/]/.test(token);
 const words = (element: Element) => [...(attr(element, 'class') ?? '').split(/\s+/).filter(token => !isUtility(token)), attr(element, 'id') ?? '']
   .join(' ').toLowerCase().split(/[^a-z]+/).filter(Boolean);
@@ -126,7 +126,7 @@ const HEADLINE_MAX = 150;
 const SENTENCE_END = /[.…:]["'”’)\]]*$/u;
 
 /**
- * Whether a page's text blocks hold any prose (SV-166). The outlet's list of other stories, which is
+ * Whether a page's text blocks hold any prose. The outlet's list of other stories, which is
  * all a video page gives (its other videos' headlines, a programme's episodes, the latest stories with
  * their times), is lines no longer than a headline that don't end as a sentence does. An article has
  * at least one block that does, or that runs longer than a headline.

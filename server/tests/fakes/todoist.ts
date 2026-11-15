@@ -2,12 +2,12 @@
 // completed-tasks list, the activity log, the task endpoints, a project's update (its colour), and
 // OAuth's token exchange. Repeating tasks move on when closed, as Todoist's do, and the closed
 // occurrence is only in the activity log (a `completed` event naming its day), never in the
-// completed list, which lists only tasks really checked (SV-251, seen on the user's Todoist). A due
+// completed list, which lists only tasks really checked (seen on the user's Todoist). A due
 // change, an undo's included, is an `updated` event with the new due; the log has no `uncompleted`
 // for an undo, and its `completed` event stays. Event dates are Todoist's UTC instants, a day's due
 // its local end (23:59:59), in the user's zone (Los Angeles here). The Sync
 // endpoint takes `item_update_date_complete` with `is_forward: 0`, the undo of a repeating task's
-// completion (SV-249), and `reopen` does nothing on a task that isn't checked, as Todoist's doesn't. Errors are
+// completion, and `reopen` does nothing on a task that isn't checked, as Todoist's doesn't. Errors are
 // Todoist's: 401 for a token it didn't issue (or revoked), 400 for a sync token it doesn't know,
 // 404 for a task that isn't there.
 import type {TodoistLabel, TodoistProject, TodoistTask} from '../../src/providers/todoist/api.ts';
@@ -56,7 +56,7 @@ export async function fakeTodoist() {
   let activityIds = 5000;
   const requestIds: string[] = [];
   const refusals: Record<string, unknown>[] = [];
-  // SV-273: the next task creates Todoist refuses, by title.
+  // The next task creates Todoist refuses, by title.
   const refusedCreates = new Set<string>();
   let clock = () => new Date();
 
@@ -99,9 +99,9 @@ export async function fakeTodoist() {
   };
   const dueFrom = (body: Record<string, unknown>, recurring: TodoistTask['due']) => {
     // Enough of Todoist's due words for a repeat: "every <weekday>[ at HH:MM] starting YYYY-MM-DD"
-    // (or "from YYYY-MM-DD until …", SV-113) lands on that weekday on or after the start, as Todoist's
+    // (or "from YYYY-MM-DD until …") lands on that weekday on or after the start, as Todoist's
     // does; other repeats on the start.
-    // "no date" takes the date off, as Todoist's does (SV-74).
+    // "no date" takes the date off, as Todoist's does.
     if (body.due_string === 'no date') return null;
     if (typeof body.due_string === 'string') {
       const words = body.due_string;
@@ -125,7 +125,7 @@ export async function fakeTodoist() {
       const task = tasks.get(String(args.id));
       const refused = refusals.shift();
       if (refused) status[uuid] = refused;
-      // SV-272: a task's new order key, and the older command that sets each sibling's place.
+      // A task's new order key, and the older command that sets each sibling's place.
       else if (type === 'item_update' && typeof args.order_key === 'string' && task && !task.is_deleted) {
         save({...task, order_key: args.order_key});
         status[uuid] = 'ok';
@@ -206,7 +206,7 @@ export async function fakeTodoist() {
       const body = request.body as Record<string, unknown>;
       if (!body.content) return todoistError(400, 'Required argument is missing', 'ARGUMENT_MISSING');
       if (refusedCreates.delete(String(body.content))) return todoistError(403, 'Insufficient permissions', 'FORBIDDEN');
-      // A subtask goes in its task's project, after its last sibling (SV-273), as Todoist puts it.
+      // A subtask goes in its task's project, after its last sibling, as Todoist puts it.
       const parent = typeof body.parent_id === 'string' ? tasks.get(body.parent_id) : undefined;
       if (body.parent_id !== undefined && !parent) return todoistError(404, 'Parent task not found', 'NOT_FOUND');
       const siblings = parent ? [...tasks.values()].filter(task => task.parent_id === parent.id && !task.is_deleted) : [];
@@ -237,7 +237,7 @@ export async function fakeTodoist() {
         return {status: 204};
       }
       if (match[2] === 'reopen') {
-        // Nothing to reopen: Todoist answers 204 and changes nothing (SV-249's live test).
+        // Nothing to reopen: Todoist answers 204 and changes nothing (as the live API does).
         if (task.checked) save({...task, checked: false});
         return {status: 204};
       }
@@ -303,7 +303,7 @@ export async function fakeTodoist() {
       logDueChange(task, save({...task, due}));
     },
     activities: () => [...activities],
-    /** Todoist's own connector's form of the log: the same fields camel-cased (SV-251). */
+    /** Todoist's own connector's form of the log: the same fields camel-cased. */
     camelCaseLog() {
       for (const event of activities) event.extra_data = Object.fromEntries(Object.entries(event.extra_data).map(([key, value]) => [key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase()), value]));
     },

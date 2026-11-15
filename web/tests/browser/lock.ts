@@ -1,4 +1,4 @@
-// One browser run at a time on this machine (SV-39): other sessions run the checks too, and two runs
+// One browser run at a time on this machine: other sessions run the checks too, and two runs
 // side by side slow each other into failing. The lock is a file in /tmp, not the session's own
 // temp directory, so every session sees it; a lock whose process has gone is taken over. Every way
 // in takes it: `npm run test:browser` (run.ts) before its build, a `node --test` with the global

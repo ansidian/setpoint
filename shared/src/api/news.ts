@@ -1,6 +1,6 @@
 // News (after 2.0): All's blocks, a section, a story and its sources, an article, the recap, Upcoming
-// and Settings › News (BRIEF.md › News; DESIGN.md › News, boards 25–31; darma D85–D92). Outputs
-// are Zod schemas as well as types, so tests and the seed check the shapes the page draws from.
+// and Settings › News (boards 25–31). Outputs are Zod schemas as well as types, so tests and the
+// seed check the shapes the page draws from.
 //
 //   GET  /api/news                         NewsPageOut (All: the blocks in their fixed order, the recap)
 //   GET  /api/news/sections/:section       NewsSectionOut (that section's full list, biggest first, then Also reported)
@@ -8,17 +8,17 @@
 //   GET  /api/news/articles/:id            ArticleOut (a source opened in the pane); a metered article is 404
 //   GET  /api/news/missed                  MissedOut (the iPhone app's Catch up: the recap's stories by day)
 //   GET  /api/news/sources                 NewsSourcesOut (Settings › News)
-//   GET  /api/news/day                     NewsDayOut (News's empty pane: freshness, today, the quiet facts; SV-219)
+//   GET  /api/news/day                     NewsDayOut (News's empty pane: freshness, today, the quiet facts)
 //   GET  /api/news/images/:id              Setpoint's own copy of an image (outlets never see the user's browsing)
 //   POST /api/news/seen      {story_ids}   NewsSeenOut (a row on screen for about a second, or opened)
 //
-// While you were away (#298, D418–D426), the recap's state, kept so a reload or another tab agrees:
+// While you were away, the recap's state, kept so a reload or another tab agrees:
 //
 //   POST /api/news/here      {recap}       204 (News on screen; `recap` the recap's stories once it's on screen)
 //   POST /api/news/recap/done              RecapDoneOut (Done: put away at once, with what Undo puts back)
 //   POST /api/news/recap/undo  RecapUndoOut  204 (Done's Undo)
 //
-// N3 adds sorting's side (BRIEF.md › Models and cost, When things break; DESIGN.md › States):
+// Sorting's side:
 //
 //   GET  /api/news/status                  NewsStatusOut (the Unsorted line and the first run's line)
 //   GET  /api/news/unsorted                NewsUnsortedOut (Show headlines: the raw headlines with their links)
@@ -28,8 +28,8 @@
 // Settings › AI's News group (models, the cap, this month and its usage) rides on GET /api/ai (AiOut).
 //
 // Ages are instants; the page words them (DESIGN.md › Copy). A story's order is its stored score,
-// biggest first (N3 ranks); a story under the bar never shows. Dots follow D87: there are no counts
-// and no "mark all seen".
+// biggest first; a story under the bar never shows. Dots stand alone: there are no counts and no
+// "mark all seen".
 import {z} from 'zod';
 import {AI_PROVIDERS, HEALTH_STATES, NEWS_ADAPTERS, NEWS_HAZARDS, NEWS_SECTIONS, NEWS_SOURCE_ICONS, NEWS_SOURCE_KINDS, STORY_STATES} from '../enums.ts';
 import {id, instant, localDate} from './common.ts';
@@ -62,7 +62,7 @@ export type StoryImageOut = z.infer<typeof storyImageSchema>;
 /**
  * The leading outlet and how many more cover the story: "KTLA +4", "NBC LA +2". `published_at` is the
  * leading outlet's article, the row's age ("1h", "Yesterday"). A metered paper counts toward ranking
- * but never here (D89).
+ * but never here.
  */
 export const storyLeadSchema = z.strictObject({
   article_id: id,
@@ -80,7 +80,7 @@ export type StoryLeadOut = z.infer<typeof storyLeadSchema>;
 /** One story in a list: All's blocks, a section, the recap. */
 export const storyRowSchema = z.strictObject({
   id,
-  // Written by the model, plain and neutral (D86).
+  // Written by the model, plain and neutral.
   headline: z.string(),
   one_line: z.string().nullable(),
   // In NEWS_SECTIONS order; a story can sit in more than one, its seen state shared.
@@ -116,7 +116,7 @@ export type UpcomingOut = z.infer<typeof upcomingSchema>;
 
 /**
  * A section's line when the whole section is stale or failing ("Local, as of 9:14 PM"); null while
- * any of its sources is fine. One failing feed shows only in Settings › News (DESIGN.md › States).
+ * any of its sources is fine. One failing feed shows only in Settings › News.
  */
 export const sectionHealthSchema = z.strictObject({
   state: z.enum(['stale', 'failing']),
@@ -134,10 +134,10 @@ export const newsBlockSchema = z.strictObject({
 });
 export type NewsBlockOut = z.infer<typeof newsBlockSchema>;
 
-/** The recap holds at most 2 per section (D429). */
+/** The recap holds at most 2 per section. */
 const RECAP_MAX = NEWS_SECTIONS.length * 2;
 
-/** A story in the recap: its row names its section ("General · NPR +9 · Tue"), its main one (D102). */
+/** A story in the recap: its row names its section ("General · NPR +9 · Tue"), its main one. */
 export const recapStorySchema = storyRowSchema.extend({
   section: newsSectionSchema,
   expired_at: instant,
@@ -145,8 +145,8 @@ export const recapStorySchema = storyRowSchema.extend({
 export type RecapStoryOut = z.infer<typeof recapStorySchema>;
 
 /**
- * While you were away (#298): each section's biggest stories that left the page unseen since the last
- * recap was put away, up to 2 per section (D429), grouped in the blocks' order. `since` is when that
+ * While you were away: each section's biggest stories that left the page unseen since the last
+ * recap was put away, up to 2 per section, grouped in the blocks' order. `since` is when that
  * was ("since Fri 6:10 PM"); before any was, the user's last look before the first of them left, or
  * null if they never looked. Fixed once it's on screen, until it's put away.
  */
@@ -157,7 +157,7 @@ export const recapSchema = z.strictObject({
 export type RecapOut = z.infer<typeof recapSchema>;
 
 /**
- * The iPhone app's Missed strip at the top of All (D424), fed the recap until setpoint-ios has its own:
+ * The iPhone app's Missed strip at the top of All, fed the recap until setpoint-ios has its own:
  * "11 stories you missed since Mon".
  */
 export const missedStripSchema = z.strictObject({
@@ -176,7 +176,7 @@ export type NewsPageOut = z.infer<typeof newsPageSchema>;
 
 /** A section's full list (the segmented control, or "N more"), biggest first. */
 /**
- * Also reported (D452): a story in a section that was never written, as Haiku rated it under the
+ * Also reported: a story in a section that was never written, as Haiku rated it under the
  * write gate, as its lead article's headline, outlet and age, linking to that article.
  */
 export const alsoReportedSchema = z.strictObject({
@@ -270,7 +270,7 @@ export const missedDaySchema = z.strictObject({
 export type MissedDayOut = z.infer<typeof missedDaySchema>;
 
 /**
- * The iPhone app's Catch up (board 28, D424): the recap's stories by the day they left the page, newest
+ * The iPhone app's Catch up (board 28): the recap's stories by the day they left the page, newest
  * day first, biggest first within a day. Fixed as the recap is, so nothing slides in as they're seen.
  */
 export const missedSchema = z.strictObject({
@@ -301,13 +301,13 @@ export const newsSourceSchema = z.strictObject({
   name: z.string(),
   section: newsSectionSchema,
   kind: z.enum(NEWS_SOURCE_KINDS),
-  // N5: which adapter reads it, for its icon tile (the hazard APIs each have their own).
+  // Which adapter reads it, for its icon tile (the hazard APIs each have their own).
   adapter: z.enum(NEWS_ADAPTERS),
-  // N5: the icon its list names for its tile ("live_tv" for a TV station); null takes the adapter's.
+  // The icon its list names for its tile ("live_tv" for a TV station); null takes the adapter's.
   icon: z.enum(NEWS_SOURCE_ICONS).nullable(),
   reads: z.string(),
   interval_seconds: z.int().positive(),
-  // From the data directory's local list (D91) rather than the built-in one.
+  // From the data directory's local list rather than the built-in one.
   local: z.boolean(),
   health: newsSourceHealthSchema.nullable(),
 });
@@ -325,8 +325,8 @@ export const newsSourcesSchema = z.strictObject({
 export type NewsSourcesOut = z.infer<typeof newsSourcesSchema>;
 
 /**
- * News's pane with nothing open (SV-219, D466), under the recap. Not in the iPhone app's contract.
- * Today is since the user's midnight, the month since midnight on the 1st. No count of new stories (D87).
+ * News's pane with nothing open, under the recap. Not in the iPhone app's contract.
+ * Today is since the user's midnight, the month since midnight on the 1st. No count of new stories.
  */
 export interface NewsDayOut {
   // The page's last hourly ranking ("Updated 8:40 AM"), and the next one due ("next around 9:40"); null before the first.
@@ -344,13 +344,13 @@ export interface NewsDayOut {
   ai_this_month_usd: number;
 }
 
-/** Stories seen: a row fully on screen for about a second, or opened (D87). */
+/** Stories seen: a row fully on screen for about a second, or opened. */
 export const newsSeenInput = z.strictObject({story_ids: z.array(id).min(1).max(500)});
 export type NewsSeenInput = z.infer<typeof newsSeenInput>;
 export const newsSeenSchema = z.strictObject({stories: z.array(storyRowSchema)});
 export type NewsSeenOut = z.infer<typeof newsSeenSchema>;
 
-/** News on screen; `recap` the recap's stories once it's on screen, which fixes it (#298). */
+/** News on screen; `recap` the recap's stories once it's on screen, which fixes it. */
 export const newsHereInput = z.strictObject({recap: z.array(id).min(1).max(RECAP_MAX).nullable()});
 export type NewsHereInput = z.infer<typeof newsHereInput>;
 
@@ -364,10 +364,10 @@ export type RecapUndoOut = z.infer<typeof recapUndoSchema>;
 export const recapDoneSchema = z.strictObject({undo: recapUndoSchema});
 export type RecapDoneOut = z.infer<typeof recapDoneSchema>;
 
-// ---- N3: sorting's state, Unsorted, the first run, search and Add to calendar ----
+// ---- Sorting's state, Unsorted, the first run, search and Add to calendar ----
 
 /**
- * Why sorting is stopped (DESIGN.md › States, 29a): "12 articles not sorted yet, Anthropic unreachable
+ * Why sorting is stopped (board 29a): "12 articles not sorted yet, Anthropic unreachable
  * since 8:52 AM, retrying". `cause` is what the page words: no key in Settings › AI, the provider
  * unreachable (a timeout, a 5xx, overloaded), rate limited, or the key refused. `since` is when this
  * spell began; `reason` is the provider's own words; `retrying` while the one retry policy will ask
@@ -387,7 +387,7 @@ export type NewsSortDownOut = z.infer<typeof newsSortDownSchema>;
  * The lines above the list. `unsorted` counts the articles waiting to be sorted (never a metered
  * paper's); the Unsorted line shows while `down` says why they wait. `first_run` is the first fill's
  * progress, "Sorting the last 48 hours · 186 of 312 articles, showing what's sorted so far", and is
- * null once it's done (DESIGN.md › States, 29b).
+ * null once it's done (board 29b).
  */
 export const newsStatusSchema = z.strictObject({
   unsorted: z.int().nonnegative(),
@@ -417,7 +417,7 @@ export const newsUnsortedSchema = z.strictObject({
 export type NewsUnsortedOut = z.infer<typeof newsUnsortedSchema>;
 
 /**
- * Search news (D91): every word, as a prefix, in a story's headline, one line, summary or sources (an
+ * Search news: every word, as a prefix, in a story's headline, one line, summary or sources (an
  * outlet's name or its own headline), over the last 90 days, expired stories included. Newest first.
  */
 export const newsSearchInput = z.strictObject({

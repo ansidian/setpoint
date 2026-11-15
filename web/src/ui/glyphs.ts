@@ -150,7 +150,7 @@ export const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-/** Todoist's glyphs: the open ring and darma's filled disc with the check knocked out. */
+/** Todoist's glyphs: the open ring and the filled disc with the check knocked out. */
 export const TASK_GLYPHS = {
   viewBox: "0 0 16 16",
   open: "<circle cx=\"8\" cy=\"8\" r=\"6.75\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/>",

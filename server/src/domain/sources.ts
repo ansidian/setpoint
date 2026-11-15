@@ -1,5 +1,5 @@
-// What each provider is, how it's shown and how often it's checked by default (DESIGN.md ›
-// Settings › Accounts: "Gmail · Push", "iCloud · IMAP every 2 min", "Polling every 5 min",
+// What each provider is, how it's shown and how often it's checked by default (Settings ›
+// Accounts: "Gmail · Push", "iCloud · IMAP every 2 min", "Polling every 5 min",
 // "Every 30 min"). A push source's interval is the sweep behind its push.
 import type {SourceProvider, SyncMode} from '@setpoint/shared';
 

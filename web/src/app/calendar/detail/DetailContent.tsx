@@ -1,16 +1,16 @@
-// What the floating detail shows of an item (board 12a; DESIGN.md › The floating detail): the
+// What the floating detail shows of an item (board 12a): the
 // colour dot and title, the date and time, the place and its address (a link alone as `videocam` and
-// its host, and any link with Open, SV-77), the event's own link when its place has none (`link` and
-// its host, with Open, SV-179), Time to Leave (in `caution`
-// once it's time to go and gone once the event starts, as in the day agenda, SV-56), attendees, a
-// recurring event's repeat (#126), reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
+// its host, and any link with Open), the event's own link when its place has none (`link` and
+// its host, with Open), Time to Leave (in `caution`
+// once it's time to go and gone once the event starts, as in the day agenda), attendees, a
+// recurring event's repeat, reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions: Clone, Copy (⌘V pastes on the
 // selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
-// Delete; a Todoist task's ring completes it, its done check reopening it (SV-25, D55; SV-242, D503), a repeating task's only from its latest done occurrence (SV-249, D510). Google's own kinds
-// of event take none of them. Off Calendar (the Today block's card, #78) a page offers the ones it
+// Delete; a Todoist task's ring completes it, its done check reopening it, a repeating task's only from its latest done occurrence. Google's own kinds
+// of event take none of them. Off Calendar (the Today block's card) a page offers the ones it
 // can carry out and Open in Calendar; the others aren't drawn. A read-only event (a calendar the user
 // can only read, or one of Google's own kinds) says so on its calendar's line, `lock` and "Read-only ·
 // ‹calendar›" with the reason as its tip, and leaves out what it can't do, the row going with nothing
-// left (D447, amending #306).
+// left.
 import type {CalendarOut, EventColour, ItemOut, Settings, SubtaskOut} from '@setpoint/shared';
 import {EVENT_COLOURS} from '@setpoint/shared';
 import {useMemo, useState} from 'react';
@@ -35,13 +35,13 @@ import type {DetailTarget} from './motion.ts';
 /** The card's icon actions, carried out by the Calendar page, or the ones another page offers. */
 export interface DetailActions {
   complete: (task: ItemOut) => void;
-  // SV-272: checks or reopens one of a task's subtasks; the task itself stays as it is (D558).
+  // Checks or reopens one of a task's subtasks; the task itself stays as it is.
   completeSubtask?: (subtask: SubtaskOut) => void;
-  // SV-272: a subtask's failed check, tried again or undone.
+  // A subtask's failed check, tried again or undone.
   settleSubtask?: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
-  // SV-272: a task's subtasks in a new order, every one's id.
+  // A task's subtasks in a new order, every one's id.
   reorderSubtasks?: (task: ItemOut, ids: number[]) => Promise<unknown>;
-  // SV-273: a new subtask at the end of the checklist (D566), one in the editor (D567), and one's menu (D569).
+  // A new subtask at the end of the checklist, one in the editor, and one's menu.
   addSubtask?: (task: ItemOut, title: string) => Promise<unknown>;
   openSubtask?: (subtask: SubtaskOut) => void;
   subtaskMenu?: (event: ReactMouseEvent<HTMLElement>, subtask: SubtaskOut) => void;
@@ -61,7 +61,7 @@ interface DetailContentProps {
   onEdit: () => void;
 }
 
-/** Why a read-only item can't change (SV-191): its calendar is read-only, else it's one of Google's own kinds of event. */
+/** Why a read-only item can't change: its calendar is read-only, else it's one of Google's own kinds of event. */
 export function readOnlyReason(calendar: CalendarOut | undefined): string {
   return calendar?.writable === false ? 'This calendar is read-only' : 'Google doesn\'t let this kind of event change';
 }
@@ -70,7 +70,7 @@ function Fact({icon, className, style, children}: {icon: IconName; className?: s
   return <div className={className ? `fact ${className}` : 'fact'} style={style}><Icon name={icon} size={17} />{children}</div>;
 }
 
-/** Open (SV-77): the place's link in a new tab, as `O` does on Calendar. */
+/** Open: the place's link in a new tab, as `O` does on Calendar. */
 function OpenLink({url}: {url: string}) {
   return (
     <a className="btn ghost sm fd-open" href={url} target="_blank" rel="noopener noreferrer" data-hint="o" data-tip={`Open ${url} · O`}>
@@ -86,36 +86,36 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const colour = {'--c': colourVar(item.colour ?? calendar?.colour ?? (item.kind === 'task' ? undefined : 'cool'))} as CSSProperties;
   const fixed = item.read_only || !actions;
   const act = (run: (one: ItemOut) => void) => () => !fixed && run(item);
-  // Without actions (the phone) every one is drawn, unavailable; a read-only item leaves them out (D447).
-  // SV-273 (D569): a subtask has no Copy, whose paste would make a task of its own.
+  // Without actions (the phone) every one is drawn, unavailable; a read-only item leaves them out.
+  // A subtask has no Copy, whose paste would make a task of its own.
   const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !item.read_only && !(action === 'copy' && item.parent_id !== null) && (!actions || !!actions[action]);
   const complete = item.kind === 'task';
   const acts = !item.read_only || (complete && !actions) || !!actions?.open;
   const leave = leaveBy(item, timeZone, now);
   const attendees = attendeesLine(item.attendees);
-  // A dated task without a time counts its reminders from Settings' task time (D288), read only for one.
+  // A dated task without a time counts its reminders from Settings' task time, read only for one.
   const {data: settings} = useResource<Settings>(item.kind === 'task' && !item.due_at && item.reminders.length ? SETTINGS_PATH : null);
   const reminders = reminderLines(item.reminders, reminderAnchor(item, settings?.reminders.task_time ?? null, timeZone), timeZone);
   const place = placeLines(item.place, item.address);
   const link = item.kind === 'event' ? placeLink(item) : null;
-  // SV-179 (D439): with no link in its place, the event's own (Google's source.url) has a line of its own.
+  // With no link in its place, the event's own (Google's source.url) has a line of its own.
   const own = link ? null : openLink(item);
   const repeat = repeatLine(item, timeZone);
-  // SV-264 (D546): the description, formatted, after who's coming.
+  // The description, formatted, after who's coming.
   const description = useMemo(() => readDescription(formatOf(item.kind), item.description).blocks, [item.kind, item.description]);
-  // A task's card is drawn as the task is on the grid (polish audit calflows-10, shell-15): its ring in
+  // A task's card is drawn as the task is on the grid: its ring in
   // its project's colour, struck through once done, at .5 with the spinner while Todoist hasn't
   // confirmed, and Complete landing its done check as everywhere else (done.ts).
   const ring = useRingColour();
   const pending = item.command?.state === 'pending';
   const justDone = useJustDone(item.kind === 'task' ? [item] : []);
-  // SV-273: subtasks are added to a task Todoist has, of its own (the checklist is one level), and
+  // Subtasks are added to a task Todoist has, of its own (the checklist is one level), and
   // not to a repeating task's done occurrence, a row of its own.
   const addSubtask = item.kind === 'task' && !item.read_only && item.id > 0 && item.parent_id === null && !(item.recurring && item.done)
     && item.command?.kind !== 'item_create' ? actions?.addSubtask : undefined;
   const markClass = `fd-mark${pending ? ' pending' : ''}${justDone.has(item.key) ? ' just-done' : ''}`;
-  // SV-242 (D503): with actions, a task's ring completes it, and its done check reopens it, as the
-  // Today block's lines and the day pane's rows do (#175). Without them (the phone) it's a mark.
+  // With actions, a task's ring completes it, and its done check reopens it, as the
+  // Today block's lines and the day pane's rows do. Without them (the phone) it's a mark.
   const stuck = !!item.command || (item.done && !item.can_reopen);
   const mark = complete && actions ? (
     <button className={`${markClass} check`} type="button" aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled={fixed || stuck || undefined}
@@ -159,7 +159,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}
         {attendees && <Fact icon="group"><span>{attendees}</span></Fact>}
         {description.length > 0 && <Fact icon="notes" className="description"><DescriptionFold key={item.key} blocks={description} /></Fact>}
-        {/* SV-273 (D566): a task with none shows the add row alone where the header would be. */}
+        {/* A task with none shows the add row alone where the header would be. */}
         {(item.subtasks.length > 0 || addSubtask) && (
           <div className="fd-subtasks">
             {item.subtasks.length > 0 && <Fact icon="subtask"><span><span className="v">Subtasks</span> <span className="ink3 num">{subtaskCount(item)}</span></span></Fact>}
@@ -192,7 +192,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
           </button>
         )}
         <span className="grow" />
-        {/* The phone's card (no actions) keeps its footer Complete, unavailable, as before D503 (D275). */}
+        {/* The phone's card (no actions) keeps a footer Complete, unavailable. */}
         {complete && !actions && (
           <button className={item.done ? 'ibtn sm' : 'ibtn sm affirm'} aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled
             data-tip={item.command ? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}>
@@ -221,8 +221,8 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
 
 /**
  * Colour's swatches: the calendar's own colour, then the ones Google's event colours fall on, the
- * item's ticked. The card's Colour shows them under its actions, the right-click menu's in its place
- * (#248), where a selection's have no calendar of their own and nothing ticked (`item` null).
+ * item's ticked. The card's Colour shows them under its actions, the right-click menu's in its place,
+ * where a selection's have no calendar of their own and nothing ticked (`item` null).
  */
 export function ColourPanel({item, calendar, disabled = false, onPick}: {item: ItemOut | null; calendar: CalendarOut | undefined; disabled?: boolean; onPick: (colour: EventColour | null) => void}) {
   const own = item ? `${calendar?.name ?? 'Calendar'}'s colour` : 'Each one\'s calendar\'s colour';

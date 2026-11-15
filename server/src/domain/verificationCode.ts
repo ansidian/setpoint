@@ -1,14 +1,12 @@
-// Verification codes (BRIEF.md › Security mail: "codes are temporary"): one exact code found in an
-// email's subject, snippet or body, or none. Harvested from v1's `verification-code-detector`
-// (SV-4's harvest note): conservative and context-bound, because v1's production sampling found
-// that matching "code" broadly catches programming and news mail, order numbers, phone numbers and
-// prices. A code is returned only when exactly one candidate scores highest; anything ambiguous is
-// no code. When that strict pass finds none and the subject says it's a code email, a second pass
-// applies Android's rule (SV-68, from AOSP's NotificationOtpDetectionHelper, Apache-2.0): a context
+// Verification codes (codes are temporary): one exact code found in an email's subject, snippet or
+// body, or none. Conservative and context-bound, because matching "code" broadly
+// catches programming and news mail, order numbers, phone numbers and prices. A code is returned
+// only when exactly one candidate scores highest; anything ambiguous is no code. When that strict pass finds none and the subject says it's a code email, a second pass
+// applies Android's rule (from AOSP's NotificationOtpDetectionHelper, Apache-2.0): a context
 // word within 50 characters of the code, in its sentence or the one before, with any words between;
 // again exactly one code or none. Both read the HTML part's text as well as the text part, since
 // some senders put the code only in the HTML. The row leaves the Inbox after Settings › Mail's code
-// expiry (15 minutes by default), counted from the email's arrival; v1 used a fixed 30.
+// expiry (15 minutes by default), counted from the email's arrival.
 //
 // Pure: no I/O, and nothing here logs a code or its surroundings.
 
@@ -51,7 +49,7 @@ interface Scored {
 const NAMED_ENTITIES: Record<string, string> = {amp: '&', apos: '\'', gt: '>', lt: '<', nbsp: ' ', quot: '"'};
 
 // Phrases that say "this is a code": strong ones always count; the bare word "code" counts only
-// when the subject already has a strong one (v1: "Your code is 482913" in a code email's body).
+// when the subject already has a strong one ("Your code is 482913" in a code email's body).
 const STRONG_MARKER_SOURCE = [
   String.raw`(?:verification|security|authentication|confirmation|login|sign[\s-]?in|one[\s-]?time)\s+(?:code|passcode|pin|password)`,
   String.raw`(?:otp|passcode|pin(?:\s+code)?)`,
@@ -60,7 +58,7 @@ const STRONG_MARKER_SOURCE = [
 const STRONG_MARKER = new RegExp(`\\b(?:${STRONG_MARKER_SOURCE})\\b`, 'i');
 const STRONG_MARKER_EXACT = new RegExp(`^(?:${STRONG_MARKER_SOURCE})$`, 'i');
 // "Confirmation code" also heads payment receipts and offers ("Confirmation Code: 7351902"), so it
-// counts in an email only when the subject says it's a code email (SV-68; Android dropped
+// counts in an email only when the subject says it's a code email (Android dropped
 // "confirmation" for the same reason).
 const CONFIRMATION_MARKER = /^confirmation\s/i;
 
@@ -107,7 +105,7 @@ function htmlText(html: string | null | undefined): string {
   return normalizeCodeText(stripTags(body)).slice(0, HTML_TEXT_LIMIT);
 }
 
-/** A strict ISO 8601 UTC instant that round-trips (v1 refused anything else rather than guess). */
+/** A strict ISO 8601 UTC instant that round-trips; anything else is refused rather than guessed. */
 function validInstant(value: unknown): Date | null {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return null;
   const parsed = new Date(value);

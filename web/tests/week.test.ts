@@ -1,4 +1,4 @@
-// The week view's rules as tables (DESIGN.md › Week view): the week and its title, the all-day row's
+// The week view's rules as tables: the week and its title, the all-day row's
 // bars, tasks and "+N", each day's blocks and lanes, the opening scroll, and what a drag makes of a
 // pointer (create, move, resize), with the lines the toast and assistive tech read.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
@@ -31,7 +31,7 @@ const task = (title: string, due: string, fields: Partial<ItemOut> = {}) => item
 describe('the week', () => {
   test.each([
     ['2026-10-04', '2026-10-04'], ['2026-10-07', '2026-10-04'], ['2026-10-10', '2026-10-04'], ['2026-10-11', '2026-10-11'], ['2026-01-01', '2025-12-28'],
-  ])('%s is in the week starting Sunday %s (#52)', (date, start) => expect(weekStart(date)).toBe(start));
+  ])('%s is in the week starting Sunday %s', (date, start) => expect(weekStart(date)).toBe(start));
 
   test('its days run Sunday to Saturday', () => expect(weekDays(WEEK)).toEqual(['2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10']));
 

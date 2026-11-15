@@ -1,4 +1,4 @@
-// SV-270 (D555, D556): a description's Gmail link, in the form Open in Gmail writes, opens the email in
+// A description's Gmail link, in the form Open in Gmail writes, opens the email in
 // Setpoint's reader when Setpoint has it, its tooltip saying so; otherwise, and for every other
 // link, it opens in a new tab as ever. Which email a link names is asked once and kept (api/client.ts).
 import type {GmailLinkOut} from '@setpoint/shared';

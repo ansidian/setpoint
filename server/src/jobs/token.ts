@@ -1,4 +1,4 @@
-// The browser extension's bearer token for POST /api/jobs/check (SV-173), as Home Assistant's is
+// The browser extension's bearer token for POST /api/jobs/check, as Home Assistant's is
 // (../auth/haToken.ts): apart from the owner's session, it reads that one endpoint and nothing else.
 // There is one token at a time. The CLI issues it (`npm run cli -- jobs-token`, which also rotates:
 // the old one stops working) and revokes it (`jobs-token --revoke`). Only its SHA-256 is kept, the

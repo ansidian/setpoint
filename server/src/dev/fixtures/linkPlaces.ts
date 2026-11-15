@@ -1,4 +1,4 @@
-// Not a board: the floating detail's place line with a link in it (SV-76, SV-77). Study group's
+// Not a board: the floating detail's place line with a link in it. Study group's
 // location is a room and a long call link, which has to wrap inside the card rather than run out of
 // it; Career fair's is a link alone, drawn as its host with Open.
 import {eq} from 'drizzle-orm';

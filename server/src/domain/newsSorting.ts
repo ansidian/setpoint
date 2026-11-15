@@ -1,5 +1,4 @@
-// News's sorting rules (N3; BRIEF.md › News › What it covers, Stories, Ranking, Models and cost;
-// D86–D91): the rules that map a source to a likely section, the noise and politics policy
+// News's sorting rules: the rules that map a source to a likely section, the noise and politics policy
 // as applied to the model's reading of an article, wire copy, candidate matching and how a grouping
 // answer is applied (new facts versus repeats, and which rewrite the story), what a story's writer is
 // sent, the ranking formula and the bar, the monthly cap, keynote confirmation, and
@@ -52,8 +51,8 @@ export function sourceRule(source: {section: NewsSection; adapter: string; kind:
 // ---- … then the model's reading, then the policy ----
 
 /**
- * What an article is, as the model reads it. `event` is news in BRIEF's sense (something happened or
- * takes effect); every other kind is something D88 leaves out, `politics_argument` (campaigns, polls,
+ * What an article is, as the model reads it. `event` is news (something happened or takes effect);
+ * every other kind is left out, `politics_argument` (campaigns, polls,
  * reactions, hearings, bills being debated) unless its subject wins.
  */
 export const ARTICLE_KINDS = [
@@ -107,7 +106,7 @@ const inOrder = (sections: Iterable<NewsSection>) => {
 };
 
 /**
- * The policy (D88), applied to the model's reading:
+ * The policy, applied to the model's reading:
  * - Official hazard data is Local and always kept.
  * - Sports, entertainment, opinion, sponsored posts, deals and forecasts are never news; nor is what a
  *   section leaves out (lifestyle and listings, rumors and reviews and buying guides, tutorials and
@@ -151,8 +150,8 @@ export function wireKey(text: string | null | undefined): string | null {
 }
 
 /**
- * How many outlets cover a story, identical wire copy counting once (D86: AP text republished by ABC
- * and PBS is one outlet). Outlets that ran the same text are one; a metered paper counts (D89).
+ * How many outlets cover a story, identical wire copy counting once (AP text republished by ABC
+ * and PBS is one outlet). Outlets that ran the same text are one; a metered paper counts.
  */
 export function outletCount(articles: readonly {outlet: string; wireKey: string | null}[]): number {
   const parent = new Map<string, string>();
@@ -187,7 +186,7 @@ export function significantWords(...texts: (string | null | undefined)[]): Set<s
 }
 
 /**
- * A hazard's incident: the revision of its page N2 made it (Cal Fire's acres and containment, AirNow's
+ * A hazard's incident: the revision of its page ingest made it (Cal Fire's acres and containment, AirNow's
  * day and category) without the revision, so each revision joins the same story. Null for anything
  * else, which only the model can group.
  */
@@ -257,7 +256,7 @@ export const STORY_SOURCES_SHOWN = 10;
  * A story as it stands now: its latest facts (given oldest first, as the timeline) and its latest
  * sources by publication. A long story's whole past once made it share enough place words with any
  * local article to be its candidate, and the model, shown hundreds of facts, sometimes joined one,
- * whose facts kept the story on the page for good (SV-164). New facts are still checked against the
+ * whose facts kept the story on the page for good. New facts are still checked against the
  * whole timeline (freshFacts).
  */
 export function storyWindow<F, S extends {publishedAt: string}>(facts: readonly F[], sources: readonly S[]): {facts: F[]; sources: S[]} {
@@ -268,7 +267,7 @@ export function storyWindow<F, S extends {publishedAt: string}>(facts: readonly 
 }
 
 /**
- * What a story's writer is sent (D427): its window, with its current lead and image kept in view so a
+ * What a story's writer is sent: its window, with its current lead and image kept in view so a
  * rewrite can keep them, its sources newest first. A long story's whole past once went to every
  * rewrite, up to 60k tokens a write; its headline and summary carry that past instead.
  */
@@ -369,8 +368,8 @@ export function freshFacts(facts: readonly string[], existing: readonly string[]
  * The model's grouping answer, applied: the story it names, only if it was one of the candidates
  * (else the article starts its own story), and the facts it says the article brings, less those the
  * timeline already has. No fact left is a repeat: "Suspect arrested" is a new fact; a fifth outlet
- * repeating the first four isn't (D86). New facts rewrite the story only when the model says they
- * change its headline or one line (D427): detail joins the timeline and shows as new, and the next
+ * repeating the first four isn't. New facts rewrite the story only when the model says they
+ * change its headline or one line: detail joins the timeline and shows as new, and the next
  * rewrite takes it in. An answer that doesn't say rewrites, as before.
  */
 export function applyGrouping(answer: {storyId: number | null; newFacts: string[]; changesHeadline: boolean | null}, candidateIds: readonly number[], existingFacts: readonly string[]): {storyId: number | null; newFacts: string[]; rewrite: boolean} {
@@ -398,7 +397,7 @@ export function factTime(publishedAt: string, fetchedAt: string, seenAt: string 
   return seenAt !== null && at <= seenAt && fetchedAt > seenAt ? fetchedAt : at;
 }
 
-// ---- Ranking (D86) ----
+// ---- Ranking ----
 
 /** A story under this never shows: noise is cut before, and the bar leaves a day at roughly 30–50 stories. */
 export const STORY_BAR = 35;
@@ -408,7 +407,7 @@ const CLOSE_FULL_KM = 5;
 const CLOSE_NONE_KM = 80;
 
 export interface RankSignals {
-  // The model's judgement, 0–100: Haiku's per article, then the story writer's (D421).
+  // The model's judgement, 0–100: Haiku's per article, then the story writer's.
   importance: number;
   // Outlets, wire copy once.
   outlets: number;
@@ -422,7 +421,7 @@ export interface RankSignals {
 }
 
 /**
- * "Biggest" (D86), 0–100: how much it matters (70), how many outlets cover it (10: one is nothing
+ * "Biggest", 0–100: how much it matters (70), how many outlets cover it (10: one is nothing
  * extra, eight or more is all), how recent its last new fact is (8, gone over 48 hours), how fast it's
  * growing (4: three more articles in six hours), and for Local how close it is (8, full within 5 km
  * and none past 80; a story elsewhere, or one whose place isn't known, gets half). A one-outlet story
@@ -452,12 +451,12 @@ export function rankOrder<S extends {id: number; score: number; lastNewFactAt: s
   return [...stories].sort((a, b) => b.score - a.score || b.lastNewFactAt.localeCompare(a.lastNewFactAt) || b.id - a.id);
 }
 
-// ---- Models and cost (D90) ----
+// ---- Models and cost ----
 
 /**
  * A story isn't written (no model call) while it never has been and its importance, the highest of its
- * articles' Haiku readings, is under this (D452): it shows only under its section's Also reported. An
- * article that lifts it to the gate gets it written as a new story is. Rewrites are unchanged (D427).
+ * articles' Haiku readings, is under this: it shows only under its section's Also reported. An
+ * article that lifts it to the gate gets it written as a new story is. Rewrites are unchanged.
  */
 export const WRITE_GATE = 40;
 
@@ -479,7 +478,7 @@ export function monthStart(now: string, timeZone: string): string {
 /** How often every story on the page is scored again by the formula, as recency moves with the clock. */
 export const RANK_EVERY_MS = HOUR;
 
-// ---- Upcoming (BRIEF.md › The page) ----
+// ---- Upcoming ----
 
 export interface KeynoteClaim extends KeynoteNote {
   outlet: string;
@@ -520,7 +519,7 @@ export function confirmKeynote(claims: readonly KeynoteClaim[], timeZone: string
   return null;
 }
 
-// ---- Search (D91) ----
+// ---- Search ----
 
 /** The words of a search, folded. */
 export const searchWords = (query: string) => [...new Set(wordsOf(query))];

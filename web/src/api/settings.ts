@@ -93,7 +93,7 @@ export async function createRule(input: RuleInput): Promise<RuleOut> {
   return rule;
 }
 
-/** Deletes a rule; `waiting` answers for its waiting trashes, if it has any (D495). */
+/** Deletes a rule; `waiting` answers for its waiting trashes, if it has any. */
 export async function deleteRule(id: number, waiting?: RuleWaiting): Promise<void> {
   updateCached<RuleOut[]>(RULES_PATH, list => list.filter(rule => rule.id !== id));
   try {
@@ -103,7 +103,7 @@ export async function deleteRule(id: number, waiting?: RuleWaiting): Promise<voi
   }
 }
 
-/** Turns a rule on or off; turning it off, `waiting` answers for its waiting trashes, if it has any (D495). */
+/** Turns a rule on or off; turning it off, `waiting` answers for its waiting trashes, if it has any. */
 export async function setRuleEnabled(id: number, enabled: boolean, waiting?: RuleWaiting): Promise<void> {
   updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, enabled, ...(waiting === 'cancel' ? {trashes_waiting: 0} : {})} : rule)));
   try {
@@ -113,7 +113,7 @@ export async function setRuleEnabled(id: number, enabled: boolean, waiting?: Rul
   }
 }
 
-/** A rule's new match: Add to rule's sender added (SV-160), or its Undo. */
+/** A rule's new match: Add to rule's sender added, or its Undo. */
 export async function setRuleMatch(id: number, match: RuleMatch): Promise<void> {
   updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, match} : rule)));
   try {
@@ -221,7 +221,7 @@ export async function deletePasskey(id: number): Promise<void> {
   }
 }
 
-// ---- Paired iPhones (SV-84): Add iPhone needs the recent password; Cancel and Revoke don't ----
+// ---- Paired iPhones: Add iPhone needs the recent password; Cancel and Revoke don't ----
 
 /** A one-time pairing code for the QR, five minutes, replacing any earlier one. */
 export const startPairing = () => sendJson<PairingOut>('POST', '/security/pairing');

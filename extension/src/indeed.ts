@@ -1,4 +1,4 @@
-// What Setpoint on job boards reads on Indeed's job pages (SV-202). Indeed's class names are
+// What Setpoint on job boards reads on Indeed's job pages. Indeed's class names are
 // generated, so it reads its test ids and job keys (README.md › What it reads on Indeed):
 //
 // - The job pane, one header on a search, the home feed and a job's own page: its title in

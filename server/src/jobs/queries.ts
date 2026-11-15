@@ -1,6 +1,6 @@
-// Jobs's reads (J1): the page (its two numbers, Needs you, From history, the rows, and J4's history
-// pass) and an application's detail, shaped as `@setpoint/shared`'s jobs/api.ts; J5's search and
-// the shell's item; J7's emails for mail's slots. Ghosted comes from the clock here, never from a stored status (rules.ts).
+// Jobs's reads: the page (its two numbers, Needs you, From history, the rows, and the history
+// pass) and an application's detail, shaped as `@setpoint/shared`'s jobs/api.ts; search and
+// the shell's item; the emails for mail's slots. Ghosted comes from the clock here, never from a stored status (rules.ts).
 import type {
   ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsCheckOut, JobsMailApplicationOut, JobMoveOut, JobsMovementOut, JobsMailMessageOut, JobsMailOut, JobsNavOut,
   JobsPageOut, JobsSearchOut, NeedsYouItemOut, PostingOut,
@@ -24,7 +24,7 @@ import {knownApplications} from './stick.ts';
 type Application = typeof j.jobsApplications.$inferSelect;
 type Candidate = typeof j.jobsJdCandidates.$inferSelect;
 
-/** Jobs is on (off until the user turns it on, D310). */
+/** Jobs is on (off until the user turns it on). */
 export function jobsEnabled(store: Store): boolean {
   return jobsDb(store.sqlite).select({enabled: j.jobsSettings.enabled}).from(j.jobsSettings).get()?.enabled ?? false;
 }
@@ -58,7 +58,7 @@ function loadRows(store: Store) {
     return {
       state: application.jdLookup, source: null, platform: null, found_at: null,
       candidates: application.jdLookup === 'candidates' ? (candidates.get(application.id)?.length ?? 0) : 0, looked_at: application.jdLookupAt, link: unread?.link ?? null,
-      // Stopped by the user (SV-170); any lookup or answer since clears it.
+      // Stopped by the user; any lookup or answer since clears it.
       stopped: application.jdLookup === 'not_found' && application.jdLookupStoppedAt !== null,
     };
   };
@@ -143,7 +143,7 @@ export function applicationDetail(store: Store, id: number): ApplicationOut {
   };
 }
 
-/** GET /api/jobs/search?q=…: company or role first, then a match only in a JD's text, with its line (D316). */
+/** GET /api/jobs/search?q=…: company or role first, then a match only in a JD's text, with its line. */
 export function jobsSearch(store: Store, q: string): JobsSearchOut {
   const {applications, byId, postings, rowOf} = loadRows(store);
   const found = searchApplications(applications.map(application => ({
@@ -166,10 +166,10 @@ export function jobsNav(store: Store): JobsNavOut {
 
 /**
  * GET /api/jobs/mail?messages=…: what mail's slots draw for these emails, in one request for a page
- * of rows (J7, D306): the application each belongs to, for the reader's JD chip, and Applied before on
+ * of rows: the application each belongs to, for the reader's JD chip, and Applied before on
  * a job board's match email whose company matches applications, the most recent of them named. Only
  * the emails with something are listed, and none while Jobs is off. Nothing here writes, so mail's
- * counts never change (D313).
+ * counts never change.
  */
 export function jobsInMail(store: Store, messageIds: number[]): JobsMailOut {
   if (!messageIds.length || !jobsEnabled(store)) return {messages: []};
@@ -208,7 +208,7 @@ export function jobsInMail(store: Store, messageIds: number[]): JobsMailOut {
 }
 
 /**
- * POST /api/jobs/check (SV-173): postings' applications for the browser extension, each its role's and
+ * POST /api/jobs/check: postings' applications for the browser extension, each its role's and
  * the company's others (rules.ts `checkPosting`), as mail's badge has an application, in the order
  * asked. Nothing while Jobs is off. Nothing here writes.
  */
@@ -229,16 +229,16 @@ export function jobsCheck(store: Store, postings: {company: string; title: strin
   };
 }
 
-/** How many applications the pane's recent movement lists (D467). */
+/** How many applications the pane's recent movement lists. */
 export const MOVES_SHOWN = 8;
 
 /**
- * GET /api/jobs/movement (SV-220, D467, D470): each application's latest status change, newest first, the
+ * GET /api/jobs/movement: each application's latest status change, newest first, the
  * last MOVES_SHOWN. Its emails, oldest first, change it when one sets a status it didn't have (the first
  * from nothing, a new application); a status set by hand changes it from what its emails had set before
  * (it keeps no history, so only the latest hand move shows); and turning Ghosted, at the start of the day
  * 30 days after its last email of any kind, changes it from Applied. Nothing here writes, and there are
- * no counts (D314).
+ * no counts.
  */
 export function jobsMovement(store: Store): JobsMovementOut {
   const db = jobsDb(store.sqlite);

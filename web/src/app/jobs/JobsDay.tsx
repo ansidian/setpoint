@@ -1,10 +1,10 @@
-// Jobs's pane with nothing open (SV-220, D467, DESIGN.md #336), in the Inbox's and News's shape
+// Jobs's pane with nothing open, in the Inbox's and News's shape
 // (InboxDay.tsx, NewsDay.tsx): one block centred across the pane, a third of the way down. The mark;
 // Recent movement as a neutral band over one row per application, its latest status change newest first
-// ("Applied → Rejected": an email that set it, turning Ghosted, a status set by hand; D470), each opening
+// ("Applied → Rejected": an email that set it, turning Ghosted, a status set by hand), each opening
 // its detail, its right-click the table's menu condensed; and in the
-// foot over the keys, the quiet line naming what Jobs reads, led by any trouble's chip (EmptyPane, #335).
-// No counts (D314), and nothing asks anything of the user (D313).
+// foot over the keys, the quiet line naming what Jobs reads, led by any trouble's chip (EmptyPane).
+// No counts, and nothing asks anything of the user.
 import type {JobMoveOut, JobsMovementOut} from '@setpoint/shared';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {useResource} from '../../api/client.ts';
@@ -21,7 +21,7 @@ const KEYS: PaneKey[] = [
   {keys: ['/'], does: 'Search'},
 ];
 
-// What the pane reads, kept on screen while Jobs is up (SV-222).
+// What the pane reads, kept on screen while Jobs is up.
 export const PANE_PATHS = [MOVEMENT_PATH];
 
 export function JobsDay({trouble, timeZone, today, onOpen, onMenu, settle}: {

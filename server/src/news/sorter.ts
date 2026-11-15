@@ -1,5 +1,4 @@
-// News's sorting (N3; BRIEF.md › News › What it covers, Stories, Ranking, Models and cost): what
-// arrives Unsorted becomes stories, in batches, so the page fills as it goes.
+// News's sorting: what arrives Unsorted becomes stories, in batches, so the page fills as it goes.
 //
 // 1. Each article (Claude Haiku 5.5): the rules map its source to a likely section, the model reads it
 //    (sections, kind and subject, key facts, importance, place, a keynote), and the policy settles
@@ -10,12 +9,12 @@
 //    same count and place) and Haiku confirms whether it's the same event, what facts it brings, and
 //    whether they change the story's headline or one line. No match starts a story.
 // 3. New stories, and stories whose new facts are headline news, are written (Claude Sonnet 5.5,
-//    Haiku past the cap) from their window (D427): the neutral headline, the one line, the summary,
-//    the lead article, the best image and how much the story matters, which becomes its importance
-//    (D421). Facts that only add detail join the timeline and show as new, and wait for the next
+//    Haiku past the cap) from their window: the neutral headline, the one line, the summary,
+//    the lead article, the best image and how much the story matters, which becomes its importance.
+//   Facts that only add detail join the timeline and show as new, and wait for the next
 //    rewrite; a fifth outlet repeating the first four rewrites nothing and moves no judgement. A
 //    new story whose articles Haiku rates under the write gate (40) isn't written until one lifts it
-//    there, and meanwhile shows only under its section's Also reported (D452). A
+//    there, and meanwhile shows only under its section's Also reported. A
 //    story covered only by a metered paper is never written (it never shows); one only Google News
 //    found shows its headline and link, unwritten, and keeps the importance Haiku read in its
 //    articles.
@@ -153,7 +152,7 @@ function matchable(live: LiveStory, sources: Map<number, SourceRow>): MatchableS
 
 /**
  * Joins an article to a story: its sections, any new facts (which move the story's last new fact, and
- * rewrite it when `rewrite` says they're headline news, D427), its outlets and importance.
+ * rewrite it when `rewrite` says they're headline news), its outlets and importance.
  */
 function joinStory(store: Store, live: LiveStory, article: ArticleRow, notes: ArticleNotes, facts: string[], rewrite: boolean) {
   const now = isoNow(store);
@@ -166,11 +165,11 @@ function joinStory(store: Store, live: LiveStory, article: ArticleRow, notes: Ar
     const values: Partial<StoryRow> = {
       outlets: outletCount([...live.articles, article]),
       // Once the story's writer has judged it, an article moves its importance only through the
-      // rewrite its new facts bring (D421).
+      // rewrite its new facts bring.
       importance,
       firstReportedAt: article.publishedAt < live.story.firstReportedAt ? article.publishedAt : live.story.firstReportedAt,
     };
-    // A story waiting under the write gate is written once an article lifts it to the gate (D452).
+    // A story waiting under the write gate is written once an article lifts it to the gate.
     if (belowWriteGate(live.story) && !belowWriteGate({...live.story, importance})) values.needsWriting = true;
     if (facts.length) {
       const at = factTime(article.publishedAt, article.fetchedAt, live.story.seenAt);
@@ -250,7 +249,7 @@ export async function groupArticle(ctx: SortContext, articleId: number, sources:
 
 // ---- 3. Stories ----
 
-/** Writes a story's headline, one line and summary from its window's notes (D427), with its lead and image. */
+/** Writes a story's headline, one line and summary from its window's notes, with its lead and image. */
 export async function writeStory(ctx: SortContext, storyId: number) {
   const {store} = ctx;
   const story = store.db.select().from(t.newsStories).where(eq(t.newsStories.id, storyId)).get();
@@ -258,12 +257,12 @@ export async function writeStory(ctx: SortContext, storyId: number) {
   const done = (values: Partial<StoryRow>) => store.db.update(t.newsStories).set({...values, needsWriting: false}).where(eq(t.newsStories.id, storyId)).run();
   const articles = store.db.select({article: t.newsArticles}).from(t.newsStoryArticles).innerJoin(t.newsArticles, eq(t.newsArticles.id, t.newsStoryArticles.articleId))
     .where(eq(t.newsStoryArticles.storyId, storyId)).all().map(row => row.article);
-  // A metered paper is never shown or read (D89): a story it alone covers never shows, so isn't written.
+  // A metered paper is never shown or read: a story it alone covers never shows, so isn't written.
   const listed = articles.filter(article => !article.metered).sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.id - b.id);
   if (!listed.length) return done({});
-  // Rated under the write gate and never written: it waits, unwritten, under Also reported (D452).
+  // Rated under the write gate and never written: it waits, unwritten, under Also reported.
   if (belowWriteGate(story)) return done({belowGate: true});
-  // Only Google News found it: its headline and link, with no text (BRIEF.md › Sources).
+  // Only Google News found it: its headline and link, with no text.
   if (listed.every(article => article.discovery)) return done({headline: listed[0]!.headline, oneLine: null, summary: null, leadArticleId: listed[0]!.id, writtenAt: isoNow(store), belowGate: false});
   const sections = store.db.select().from(t.newsStorySections).where(eq(t.newsStorySections.storyId, storyId)).orderBy(asc(t.newsStorySections.position)).all().map(row => row.section);
   const facts = store.db.select({at: t.newsFacts.at, text: t.newsFacts.text}).from(t.newsFacts).where(eq(t.newsFacts.storyId, storyId)).orderBy(asc(t.newsFacts.at), asc(t.newsFacts.id)).all();
@@ -405,7 +404,7 @@ export async function sortPending(ctx: SortContext, batch = SORT_BATCH): Promise
 
 // ---- The hour ----
 
-/** Scores every story on the page again by the formula, as recency moves with the clock (D421). Returns those whose score changed. */
+/** Scores every story on the page again by the formula, as recency moves with the clock. Returns those whose score changed. */
 export function rescoreStories(store: Store): number[] {
   const live = liveStories(store, sourcesById(store));
   const changed = live.flatMap(({story}) => (scoreStory(store, story.id)?.changed ? [story.id] : []));

@@ -1,7 +1,7 @@
 // The mail mirror: what the Gmail and iCloud adapters write to the message record. Providers own
 // the email and its read, trash and inbox state; Setpoint owns what triage derives (lane, kind,
 // organisation, …), Done, pins and when the user opened it, and the mirror never touches those. New
-// mail arrives Unsorted (lane null) with a triage job; backfilled history is sorted at once (B3).
+// mail arrives Unsorted (lane null) with a triage job; backfilled history is sorted at once.
 //
 // A message whose own change is still waiting for its provider (or failed, held in place) keeps
 // the state the command layer gave it: a sync that read the provider just before the change
@@ -18,7 +18,7 @@ import type {Store} from '../store.ts';
 import {triageIntake} from '../triage/intake.ts';
 import {enqueueJob} from './jobs.ts';
 
-/** SV-274: the job that reads a USPS digest's scans from its source. */
+/** The job that reads a USPS digest's scans from its source. */
 export const mailpiecesKey = (messageId: number) => `mailpieces:${messageId}`;
 
 type MessageRow = typeof t.messages.$inferSelect;
@@ -95,7 +95,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
     const busy = messagesWithActiveCommands(store);
     const inserted: number[] = [];
     const updated: number[] = [];
-    // SV-274: new digests, inserted but kept from triage.
+    // New digests, inserted but kept from triage.
     const digests: number[] = [];
     for (const message of fetched) {
       let row = find(store, accountId, message.providerId);
@@ -107,7 +107,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
         fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText, searchBody: searchBody(message.bodyText), bodyHtml: message.bodyHtml,
         receivedAt: message.receivedAt, senderAuth: message.senderAuth, senderAuthenticated: senderAuthenticated(message.senderAuth),
       };
-      // SV-274: USPS's daily digest goes to the agenda rail, not the Inbox: sorted as it arrives
+      // USPS's daily digest goes to the agenda rail, not the Inbox: sorted as it arrives
       // (never triaged, so never notified), and its scans read from its source by a job.
       const digest = isDigest({...fields, senderAuthenticated: fields.senderAuthenticated});
       if (!row) {
@@ -123,7 +123,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
         continue;
       }
       const state = busy.has(row.id) ? {} : stateColumns(message, row, now);
-      // A fetch that lacks an identity or a verdict never erases a stored one (v1's COALESCE).
+      // A fetch that lacks an identity or a verdict never erases a stored one.
       const kept = {rfc822Id: message.rfc822Id ?? row.rfc822Id, senderAuth: message.senderAuth ?? row.senderAuth,
         senderAuthenticated: message.senderAuth ? fields.senderAuthenticated : row.senderAuthenticated};
       store.db.update(t.messages).set({...fields, ...kept, ...state, ...(digest ? {uspsDigest: true} : {})}).where(eq(t.messages.id, row.id)).run();
@@ -136,7 +136,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
       }
       updated.push(row.id);
     }
-    // B3: new mail is queued for triage; backfilled history is sorted now by the rules-only pass.
+    // New mail is queued for triage; backfilled history is sorted now by the rules-only pass.
     triageIntake(store, inserted, options.backfill ?? false);
     noteLive(store, {type: 'mail', messages: [...inserted, ...digests, ...updated], accounts: [accountId], commands: []});
     return {inserted: [...inserted, ...digests], updated};

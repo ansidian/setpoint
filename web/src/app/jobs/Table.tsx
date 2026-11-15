@@ -1,11 +1,11 @@
-// The table (DESIGN.md › The table; boards 32, 34a, 36a, 36b; D309, D314): a header row whose labels
+// The table (boards 32, 34a, 36a, 36b): a header row whose labels
 // sort it (newest first by Applied, by default; a second click flips it), and a 36 px row per
-// application, 54 when its status's note wraps (SV-141): company, role, Applied, the status with its
+// application, 54 when its status's note wraps: company, role, Applied, the status with its
 // mark and step, and how its JD was found as a glyph, named in its tip. They're the columns beside the
-// detail, which is always there (SV-217). Closed and Ghosted rows step down a shade. Search's rows
+// detail, which is always there. Closed and Ghosted rows step down a shade. Search's rows
 // highlight what matched, and a match only in a JD's text adds the line it matched under its row. A row a correction takes away
 // (Merge with…'s other, Not an application, Delete) folds out over 180 ms, and folds back on Undo; a
-// right-click opens its actions at the pointer (#268).
+// right-click opens its actions at the pointer.
 import type {ApplicationRowOut} from '@setpoint/shared';
 import type {KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent} from 'react';
 import {useMemo, useRef, useState} from 'react';
@@ -89,7 +89,7 @@ function measure(header: HTMLElement, column: SizedColumn): {cells: number[]; he
 /**
  * A sizing column's edge in the header row, the reading pane's (PaneEdge): dragged, or ← → by 16 px
  * when focused, and its grip under the pointer. A double-click fits the column to its longest content
- * among the rows the table has, its heading and sort arrow included (D508). Widths go from what's
+ * among the rows the table has, its heading and sort arrow included. Widths go from what's
  * drawn, not what's kept, so a column the window has squeezed moves from where it is.
  */
 function ColumnEdge({column}: {column: SizedColumn}) {
@@ -145,7 +145,7 @@ function ColumnEdge({column}: {column: SizedColumn}) {
 export interface RowState {
   cursor: boolean;
   open: boolean;
-  // Landed (an arrival) or moved on by an email: it settles from sub2 (#131, 38a).
+  // Landed (an arrival) or moved on by an email: it settles from sub2 (board 38a).
   landed: boolean;
   moved: boolean;
 }
@@ -163,7 +163,7 @@ export function Row({row, state, query, line, now, timeZone, today, fold = null,
   onPoint: (key: string) => void;
   onClick: (id: number) => void;
   onMenu?: (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>) => void;
-  // On the Pinned shelf: Unpin over its end under the pointer, as the Inbox's shelf (SV-243).
+  // On the Pinned shelf: Unpin over its end under the pointer, as the Inbox's shelf.
   onUnpin?: (row: ApplicationRowOut) => void;
 }) {
   const key = rowKey(row.id);
@@ -213,7 +213,7 @@ type Part = {kind: 'label'} | {kind: 'end'} | {kind: 'row'; row: ApplicationRowO
 const shelfKey = (id: number) => `p:${id}`;
 
 /**
- * The table's rows under the Pinned shelf (SV-243, D504, #355), as one list that folds as the Inbox's
+ * The table's rows under the Pinned shelf, as one list that folds as the Inbox's
  * does: under the headings "Pinned" with its pin, the pinned rows as the table's own (its columns and
  * widths), a divider, then the rest; nothing of the shelf with nothing pinned. A shelf row has its own
  * key, so Pin folds the row out of the table and onto the shelf, where it lands holding `sub3`

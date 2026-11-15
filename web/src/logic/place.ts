@@ -1,5 +1,5 @@
 // Where an item is, as the floating detail, the failed card, the agenda and search lines show it
-// (DESIGN.md › The floating detail, board 12a): the place, then its address in full. Google keeps one
+// (board 12a): the place, then its address in full. Google keeps one
 // location line, so an event placed at a street address comes back as the address alone
 // (server/src/providers/gcal/normalize.ts).
 
@@ -23,12 +23,12 @@ export const placeName = (item: {place: string | null; address: string | null}) 
 import {placeLink, webLink} from '@setpoint/shared';
 import type {ItemOut} from '@setpoint/shared';
 
-// SV-77's link in the place lives in shared/, where the server reads an event's link with it (SV-179).
+// The link in the place lives in shared/, where the server reads an event's link with it.
 export {placeLink};
 export type {PlaceLink} from '@setpoint/shared';
 
 /**
- * What the card's Open, `O` and the right-click menu open (D439): the place's link as it stands here,
+ * What the card's Open, `O` and the right-click menu open: the place's link as it stands here,
  * so a place changed and still waiting for Google has it at once, else the server's `link` (the
  * event's own URL). An event's only; null for a task.
  */

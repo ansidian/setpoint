@@ -1,5 +1,5 @@
-// Health is "the last check succeeded", against a threshold from the source's own schedule
-// (decision 31): twice the interval plus a grace.
+// Health is "the last check succeeded", against a threshold from the source's own schedule:
+// twice the interval plus a grace.
 import {describe, expect, test} from 'vitest';
 import {deriveHealth, staleAfterMs} from '../src/domain/health.ts';
 import type {HealthInput} from '../src/domain/health.ts';

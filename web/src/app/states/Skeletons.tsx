@@ -1,4 +1,4 @@
-// Each page's skeleton (DESIGN.md › Decided while building #225): the rows it will show, in their
+// Each page's skeleton: the rows it will show, in their
 // real geometry (loading.css mirrors each row's own rule, its class named beside it), so what loads
 // replaces them where they stand. Their own classes, never the rows': nothing that looks for a row
 // finds a skeleton. Widths follow a fixed rhythm, so a skeleton looks the same every time.
@@ -34,7 +34,7 @@ function Row({index, all = false}: {index: number; all?: boolean}) {
   );
 }
 
-/** The Inbox's list loading: a day under its heading, its lanes' labels and rows; `more` is the next page's (states-03, inbox-13). */
+/** The Inbox's list loading: a day under its heading, its lanes' labels and rows; `more` is the next page's. */
 export function AllSkeleton({more = false, first = !more}: {more?: boolean; first?: boolean}) {
   const days = more ? [[3]] : [[2, 5], [6]];
   const rows = numbered(days.flat());
@@ -59,7 +59,7 @@ export function AllSkeleton({more = false, first = !more}: {more?: boolean; firs
   );
 }
 
-// The sidebar's rows until they come: account labels, and Today's lines (shell-10).
+// The sidebar's rows until they come: account labels, and Today's lines.
 /** Today's lines (.today-row): the next event's time and title, then tasks behind their rings. */
 export function TodaySkeleton({lines}: {lines: number}) {
   return (
@@ -104,7 +104,7 @@ export function BodySkeleton({attachment = false}: {attachment?: boolean}) {
 const AGENDA_TITLES = ['48%', '40%', '60%'];
 const AGENDA_LINES = ['36%', '28%', '44%'];
 
-/** The right pane's day while its items load (calpanes-03): three agenda rows (.ag-item). */
+/** The right pane's day while its items load: three agenda rows (.ag-item). */
 export function AgendaSkeleton() {
   return (
     <Sk kind="agenda" className="sk-agenda">
@@ -162,7 +162,7 @@ function StoryRow({index}: {index: number}) {
   );
 }
 
-/** News's list on its first answer (news-03): All's blocks under their headers, or a section's list. */
+/** News's list on its first answer: All's blocks under their headers, or a section's list. */
 export function NewsSkeleton({blocks}: {blocks: boolean}) {
   const shelves = blocks ? [3, 3] : [6];
   const rows = numbered(shelves);
@@ -179,7 +179,7 @@ export function NewsSkeleton({blocks}: {blocks: boolean}) {
   );
 }
 
-/** The story pane's summary and sources while the story loads (news-05), its head drawn from its row. */
+/** The story pane's summary and sources while the story loads, its head drawn from its row. */
 export function StoryBodySkeleton() {
   return (
     <Sk kind="story" className="sk-story">
@@ -195,7 +195,7 @@ export function StoryBodySkeleton() {
 }
 
 /**
- * Search's results before the first answer (search-03): rows shaped as results (.arow). `immediate`:
+ * Search's results before the first answer: rows shaped as results (.arow). `immediate`:
  * shown after its own wait (the list it replaces stayed meanwhile), so at once.
  */
 export function SearchSkeleton({immediate = false}: {immediate?: boolean}) {

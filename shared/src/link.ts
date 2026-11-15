@@ -1,19 +1,19 @@
 import {isLinkTld} from './tlds.ts';
 
 // An event's link, read the same by the server (ItemOut's `link`) and the web app (the place line's
-// look): DESIGN.md #245 for a link in the place (SV-77), and D439 for the event's own URL (SV-179).
+// look): a link in the place first, then the event's own URL.
 
-/** A link in an item's place (SV-77): where it goes, its host, and whether it's all the place says. */
+/** A link in an item's place: where it goes, its host, and whether it's all the place says. */
 export interface PlaceLink {
   url: string;
   // "zoom.us", without a leading "www.".
   host: string;
-  // The place is the link alone: drawn as `videocam` and the host (#125) rather than as written.
+  // The place is the link alone: drawn as `videocam` and the host rather than as written.
   only: boolean;
 }
 
 // A web link in the words, without punctuation after it ("…/j/1)." ends at "1"): one with its
-// scheme or "www.", or a bare domain ("example.tv/live", SV-179) that starts a word, so an email
+// scheme or "www.", or a bare domain ("example.tv/live") that starts a word, so an email
 // address's domain isn't one, its top-level domain captured for isLinkTld.
 const LINK = /(?:(?:https?:\/\/|www\.)[^\s<>"]+?|(?<![\w@.\-/:])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+([a-z]{2,})(?:[/?#][^\s<>"]*?)?)(?=[.,;:!?)\]]*(?:\s|$))/gi;
 
@@ -53,7 +53,7 @@ export function webLink(url: string | null): {url: string; host: string} | null 
 }
 
 /**
- * The event's link, for Open (D439): the place's link, else its own URL (Google's `source.url`, an
+ * The event's link, for Open: the place's link, else its own URL (Google's `source.url`, an
  * .ics file's URL line), else none. Only http and https count. A bare domain in the place counts
  * when its top-level domain is real (tlds.ts) and opens as https; the event's own URL needs its scheme.
  */

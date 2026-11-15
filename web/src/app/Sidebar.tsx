@@ -1,13 +1,13 @@
-// The sidebar (DESIGN.md › Layout › Shell): the mark and Setpoint; Inbox with the red unread badge
-// (SV-221, D471), its only count, and no account rows under it (D476); Calendar; News, with no count ever
-// (D87); Jobs while it's on (jobs/, a wiring point); the page's section (Today on mail pages and News, the mini-month and Calendars on Calendar);
+// The sidebar: the mark and Setpoint; Inbox with the red unread badge,
+// its only count, and no account rows under it; Calendar; News, with no count ever;
+// Jobs while it's on (jobs/, a wiring point); the page's section (Today on mail pages and News, the mini-month and Calendars on Calendar);
 // Settings pinned to the bottom.
 //
-// Folded it's a 56 px rail (#140): the mark, then Inbox, Calendar, News, Jobs and Settings as icons, each
+// Folded it's a 56 px rail: the mark, then Inbox, Calendar, News, Jobs and Settings as icons, each
 // named in its tooltip, with the unread badge on Inbox. The page's section gives way to the next-up slot
-// (TodayBlock's, D509); ⌘K still toggles calendars. Always the rail from 640 to 1099 px (the compact tier); from 1100 it starts as the rail
-// below 1600 px, and `` ` `` or a click on its edge opens and folds it, kept by this browser (sidebarRail.ts;
-// D507); the pointer resting on the rail brings the whole sidebar out over the page until it leaves.
+// (TodayBlock's); ⌘K still toggles calendars. Always the rail from 640 to 1099 px (the compact tier); from 1100 it starts as the rail
+// below 1600 px, and `` ` `` or a click on its edge opens and folds it, kept by this browser (sidebarRail.ts);
+// the pointer resting on the rail brings the whole sidebar out over the page until it leaves.
 import type {MailCountsOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from 'react';
@@ -46,7 +46,7 @@ function Link({to, className, style, tip, onContextMenu, children}: {
 }
 
 /**
- * Mark all as read from Inbox's right-click (DESIGN.md #248): the Inbox page's own, with its Undo,
+ * Mark all as read from Inbox's right-click: the Inbox page's own, with its Undo,
  * while it shows; otherwise as ⌘K's is.
  */
 function markAllReadNow(): () => void {
@@ -63,10 +63,10 @@ const PEEK_CLOSE_MS = 100;
 const PEEK_PARTS = '.sb, .sb-edge, .today-card, .pop';
 
 /**
- * The rail brought out by the pointer (from 1100 px, D507): a mouse resting on it for 200 ms shows the
+ * The rail brought out by the pointer (from 1100 px): a mouse resting on it for 200 ms shows the
  * whole sidebar over the page, and 100 ms anywhere else, or out of the window, folds it back, once
  * no Today card is open from it. On the rail's next-up slot, or with its card open, it stays the rail,
- * so the slot can be clicked (D509).
+ * so the slot can be clicked.
  */
 function usePeek(enabled: boolean) {
   const [peek, setPeek] = useState(false);

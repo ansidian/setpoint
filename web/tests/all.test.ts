@@ -1,8 +1,8 @@
-// The one list's rules (DESIGN.md › All, Copy) as tables: days at midnight Pacific, their headings,
-// clock times, each day's lanes with the kind where an FYI run starts and its Noise folded (#48),
-// pinned email on the shelf rather than its day (D105), Attention above the days and unread mail in
-// its day (SV-199, D449), each row's text (codes, security facts, protected mail), and the views'
-// parts with Unread's hold (SV-221).
+// The one list's rules (DESIGN.md › Copy) as tables: days at midnight Pacific, their headings,
+// clock times, each day's lanes with the kind where an FYI run starts and its Noise folded,
+// pinned email on the shelf rather than its day, Attention above the days and unread mail in
+// its day, each row's text (codes, security facts, protected mail), and the views'
+// parts with Unread's hold.
 import type {MessageRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -57,7 +57,7 @@ describe('groupByDay', () => {
     expect(groupByDay([one, two], zone)[0]!.rows.map(item => item.id)).toEqual([21, 20]);
   });
 
-  test('a pinned email leaves its day for the shelf, and a day left empty goes (D105)', () => {
+  test('a pinned email leaves its day for the shelf, and a day left empty goes', () => {
     const lease = row({id: 30, received_at: '2026-10-06T20:00:00.000Z', pinned: true});
     const ups = row({id: 31, received_at: '2026-10-07T16:00:00.000Z'});
     expect(groupByDay([lease, ups], zone).map(day => [day.date, day.rows.map(item => item.id)])).toEqual([['2026-10-07', [31]]]);
@@ -152,7 +152,7 @@ describe('allRowLine', () => {
     ['a protected email keeps its subject, in alert, with the fact\'s details',
       row({organisation: 'Google', subject: 'Your recovery email was changed', protected: true, lane: 'attention', fact: 'Recovery email changed · Windows · Chrome · Phoenix, AZ'}),
       {from: 'Google', subject: 'Your recovery email was changed', code: null, summary: 'Windows · Chrome · Phoenix, AZ', alert: true, title: null}],
-    ['the summary in the subject\'s place, then the platform; the subject is the tooltip (as the Inbox, #35)',
+    ['the summary in the subject\'s place, then the platform; the subject is the tooltip (as the Inbox)',
       row({organisation: 'Fabrikam', from_name: 'Fabrikam Recruiting', subject: 'Application received', summary: 'Data Analyst', via: 'Workday'}),
       {from: 'Fabrikam', subject: 'Data Analyst', code: null, summary: 'via Workday', alert: false, title: 'Application received'}],
     ['a protected email with a summary keeps its subject',
@@ -167,7 +167,7 @@ describe('allRowLine', () => {
   });
 });
 
-describe('SV-199: Attention, the shelf, then the days, unread mail in its day', () => {
+describe('Attention, the shelf, then the days, unread mail in its day', () => {
   const interview = row({organisation: 'Northwind', lane: 'attention', kind: null, received_at: '2026-10-07T16:00:00.000Z'});
   const recovery = row({organisation: 'Google', lane: 'attention', kind: null, unread: false, received_at: '2026-10-06T16:00:00.000Z'});
   const handled = row({organisation: 'Fabrikam', lane: 'attention', kind: null, unread: false, done: true, received_at: '2026-10-05T16:00:00.000Z'});
@@ -216,7 +216,7 @@ describe('U: the next unread email', () => {
   });
 });
 
-describe('SV-221: the views', () => {
+describe('the views', () => {
   const interview = row({organisation: 'Northwind', lane: 'attention', kind: null, received_at: '2026-10-07T16:00:00.000Z'});
   const recovery = row({organisation: 'Google', lane: 'attention', kind: null, unread: false, received_at: '2026-10-06T16:00:00.000Z'});
   const parcel = row({organisation: 'Consolidated', kind: 'deliveries', received_at: '2026-10-07T15:00:00.000Z'});
@@ -237,7 +237,7 @@ describe('SV-221: the views', () => {
   test.each([
     ['All: Attention, the shelf, then the days with their Noise folded', 'all', ['Northwind', 'Google'], ['Woodgrove', 'Parkside'], [
       ['2026-10-07', [['FYI', ['Consolidated']]], 1], ['2026-10-06', [['FYI', ['Proseware']]], 1]], true],
-    ['Unread: its Attention, then its days, a pinned one in its place and Noise in full (D472)', 'unread', ['Northwind', 'Woodgrove'], [], [
+    ['Unread: its Attention, then its days, a pinned one in its place and Noise in full', 'unread', ['Northwind', 'Woodgrove'], [], [
       ['2026-10-07', [['FYI', ['Consolidated']], ['Noise', ['Contoso Coffee']]], null], ['2026-09-01', [['FYI', ['Litware']]], null]], true],
     ['Attention: every Attention email not Done, a pinned one too, newest first', 'attention', ['Northwind', 'Woodgrove', 'Google'], [], [], false],
     ['FYI: its mail by day, read or not, the Inbox\'s older unread included', 'fyi', [], [], [

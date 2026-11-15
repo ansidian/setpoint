@@ -1,4 +1,4 @@
-// News's empty pane's words as tables (SV-219, D466): the freshness line, feeds failing, today's strip and the quiet facts.
+// News's empty pane's words as tables: the freshness line, feeds failing, today's strip and the quiet facts.
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {failingLine, freshnessLine, newsKeptLine, newsTiles, wholeDollars} from '../src/logic/newsDay.ts';

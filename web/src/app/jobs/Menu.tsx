@@ -1,4 +1,4 @@
-// Jobs's menus (DESIGN.md › Needs you, Corrections; boards 34a, 35a, 35b; #266–#268): Assign to…,
+// Jobs's menus (boards 34a, 35a, 35b): Assign to…,
 // Choose…, More, the status chip's Set status, an event's ···, a row's right-click, and their
 // submenus (Set status ›, Merge with… ›, Move to… ›). Each is the reader's menu (`.pop`, `.menu-i`)
 // growing over 180 ms from its anchor's corner: under a button from its bottom-left corner, More and
@@ -11,7 +11,7 @@
 // left of its item at its height (to the right where there's no room), and under the pointer as it
 // rests on its item. A press outside, a scroll, the window resizing or losing focus closes it all.
 //
-// Assign to…'s applications each offer their email beside them (D402): `→` or the 26 px button opens it
+// Assign to…'s applications each offer their email beside them: `→` or the 26 px button opens it
 // in the pane and the menu stays, so one can be read, then the next, before picking. A press in that
 // pane (data-keeps-menu) leaves the menu open, and with the focus gone there, Esc still takes the menu.
 // It's drawn in the page's main landmark, beside the page, so a band or a pane that clips can't cut it.

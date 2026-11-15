@@ -1,4 +1,4 @@
-// Where new mail meets triage (BRIEF.md › Triage: every new email is triaged once). The mail mirror
+// Where new mail meets triage: every new email is triaged once. The mail mirror
 // hands over the emails it inserted: new mail gets a durable triage job on the engine (retried by the
 // one policy while models are down, Unsorted meanwhile); backfilled history is sorted at once by the
 // rules-only pass, so a year of history never waits in Unsorted or costs a model call. Unsorted
@@ -32,8 +32,8 @@ export function triageEmailOf(store: Store, message: MessageRow): TriageEmail {
  * Writes triage's decision to the record, once: only while the email is still Unsorted (a second
  * job for it, or a late answer, changes nothing). Returns whether it was written. The deciding
  * written rule's actions go with it, in the same transaction, on new mail that arrived since the
- * rule was saved and isn't protected (DESIGN.md #347, D493). New mail sorted with a code row, while
- * the code is still live, is due for the trash at its expiry (SV-252); a rule's earlier delay wins.
+ * rule was saved and isn't protected. New mail sorted with a code row, while
+ * the code is still live, is due for the trash at its expiry; a rule's earlier delay wins.
  * If the email already has a change of its own waiting, the actions can't queue: the whole decision
  * is refused and the job retries.
  */

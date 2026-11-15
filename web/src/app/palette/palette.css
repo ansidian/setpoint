@@ -8,13 +8,13 @@
 .palette .cmdk-in input::placeholder { color: var(--ink3); opacity: 1; }
 .palette .cmdk-list { padding: 4px 8px 8px; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
 .palette .cmdk-label { height: 30px; display: flex; align-items: flex-end; padding: 0 12px 6px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
-/* Its items take the app's one menu item's 32 px and 10 px (styles.css, DESIGN.md › Decided while building #149). */
+/* Its items take the app's one menu item's 32 px and 10 px (styles.css). */
 .palette .item { width: 100%; height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: var(--r-row); color: var(--ink2); text-align: left; }
 .palette .item .icon { color: var(--ink3); }
 .palette .item.cur { background: var(--sub2); color: var(--ink); }
 .palette .item.cur .icon { color: var(--ink); }
 .palette .item .kbd, .palette .item .tick { margin-left: auto; }
-/* What was typed, marked where it matched a word's start (shell-13): `ink` at 600 with no fill, so it
+/* What was typed, marked where it matched a word's start: `ink` at 600 with no fill, so it
    stands out of an `ink2` row and the cursor's `ink` row carries it by weight. */
 .palette .item mark { background: none; color: var(--ink); font-weight: 600; }
 .palette .item .tick .icon { color: inherit; }
@@ -24,5 +24,5 @@
 .palette { animation: pal-in var(--dur-medium) var(--ease); }
 .palette-scrim { animation: scrim-in var(--dur-medium) var(--ease); }
 @keyframes pal-in { from { opacity: 0; transform: translateX(-50%) translateY(-6px); } }
-/* The pointer takes the cursor (a `sub2` fill), over 120 ms (DESIGN.md › Decided while building #12). */
+/* The pointer takes the cursor (a `sub2` fill), over 120 ms. */
 .palette .item { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }

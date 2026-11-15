@@ -1,5 +1,5 @@
 // Not a board: forecasts for the seed's empty weekend, Sat, Oct 10 and Sun, Oct 11, so the phone
-// checks see an empty day keep its own line to show its weather (DESIGN.md #83).
+// checks see an empty day keep its own line to show its weather.
 import * as t from '../../db/schema.ts';
 import type {OpenDatabase} from '../../db/open.ts';
 import {zoned} from '../sample.ts';

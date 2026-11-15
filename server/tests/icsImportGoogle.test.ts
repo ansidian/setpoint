@@ -1,5 +1,5 @@
-// SV-181: an .ics file read for review, then imported into a Google calendar by events.import,
-// against the fake Google (D436–D438). The files are SV-178's invented ones.
+// An .ics file read for review, then imported into a Google calendar by events.import,
+// against the fake Google. The files are invented.
 import {icsImportInput} from '@setpoint/shared';
 import type {IcsEventOut, IcsReadOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -20,7 +20,7 @@ const sendable = (event: IcsEventOut) => {
 const importInput = (calendarId: number, event: IcsEventOut, extra: Record<string, unknown> = {}) =>
   icsImportInput.parse({calendar_id: calendarId, event: {...sendable(event), ...extra}});
 
-describe('SV-181: reading a file for review', () => {
+describe('reading a file for review', () => {
   test('the route reads the file\'s bytes into drafts in start order, with what it leaves out; a bad file is one line', async () => {
     const w = world();
     const c = await signedIn(w);
@@ -56,16 +56,16 @@ describe('SV-181: reading a file for review', () => {
   });
 });
 
-describe('SV-181: importing into Google', () => {
+describe('importing into Google', () => {
   test('one event: events.import with its iCalUID, description, source.url, free/busy and only the file\'s reminders', async () => {
     const {w, google, run, calendar, command, day} = await calendarWorld();
     await run();
-    // Settings › Notifications' default never applies to an import (D438).
+    // Settings › Notifications' default never applies to an import.
     updateSettings(w.store, {reminders: {event_minutes_before: 10, task_time: null}});
     const keynote = readImport(w.store, crlf(CONFERENCE_SCHEDULE)).events[0]!;
     const asked = importEvent(w.store, importInput(calendar(PERSONAL).id, keynote));
     expect(asked).toMatchObject({kind: 'item_create', state: 'pending'});
-    // SV-264: the file's description shows on the event at once, before Google answers.
+    // The file's description shows on the event at once, before Google answers.
     expect(day('2026-11-12').find(item => item.title === 'Opening keynote')).toMatchObject({command: {state: 'pending'}, transparency: 'transparent', link: 'https://devcon.example.com/sessions/101', description: 'Opening keynote, a session at Northwind DevCon.'});
     await run();
     expect(command(asked.id).state).toBe('confirmed');

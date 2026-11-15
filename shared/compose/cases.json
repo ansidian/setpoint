@@ -1,5 +1,5 @@
 {
-  "about": "What shared/compose/compose.js (SetpointCompose) returns for each input, recorded by web/tests/composeBundle.test.ts (npm run compose:record) from web/src/logic/compose.ts. Today is the seed's Wed, Oct 7, 2026; the calendars are its Google calendars and the projects its Todoist projects; an edited item (SV-90) is on Wed, Oct 14. The iPhone app runs every case through its JavaScriptCore copy of the bundle and expects the same output.",
+  "about": "What shared/compose/compose.js (SetpointCompose) returns for each input, recorded by web/tests/composeBundle.test.ts (npm run compose:record) from web/src/logic/compose.ts. Today is the seed's Wed, Oct 7, 2026; the calendars are its Google calendars and the projects its Todoist projects; an edited item is on Wed, Oct 14. The iPhone app runs every case through its JavaScriptCore copy of the bundle and expects the same output.",
   "cases": [
     {
       "fn": "parseTitle",

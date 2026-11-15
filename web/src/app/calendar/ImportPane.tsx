@@ -1,4 +1,4 @@
-// SV-181: an .ics file's review in the right pane (D437), in place of the day's agenda as the editor
+// An .ics file's review in the right pane, in place of the day's agenda as the editor
 // and search take it. The file's name and its count; one calendar picker (the user's Google
 // calendars) and "N already on <calendar> (will update)"; a row per event with its checkbox (in the
 // chosen calendar's colour, as the sidebar's), title, day and time, and "repeats", "past" or "will
@@ -18,7 +18,7 @@ import type {ImportReview} from './importRun.ts';
 
 interface ImportPaneProps {
   review: ImportReview;
-  // The Google calendars an import can go into: those the user can write to (SV-191).
+  // The Google calendars an import can go into: those the user can write to.
   calendars: CalendarOut[];
   // The one picked until the user picks another.
   fallback: number | null;

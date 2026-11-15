@@ -1,4 +1,4 @@
-// Indeed's readers against trimmed Indeed pages (SV-202): the job pane, the list's cards, and what a
+// Indeed's readers against trimmed Indeed pages: the job pane, the list's cards, and what a
 // page expects to read, which the toolbar's badge goes by. In Chromium, as Indeed's page is.
 import {beforeEach, describe, expect, test} from 'vitest';
 import {expects, jobKeyOf, readCards, readPage, readPane} from '../src/indeed.ts';

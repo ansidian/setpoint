@@ -1,4 +1,4 @@
-// The sidebar's rail (logic/sidebar.ts; D507, SV-245): folded or open by the window's width, until
+// The sidebar's rail (logic/sidebar.ts): folded or open by the window's width, until
 // `` ` `` or a click on its edge chooses, which this browser keeps (localStorage, as the reading pane's
 // width is). It follows the window across 1100 and 1600 px as it's resized.
 import {useSyncExternalStore} from 'react';

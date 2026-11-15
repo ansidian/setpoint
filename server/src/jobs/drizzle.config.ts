@@ -1,4 +1,4 @@
-// Jobs's migrations (J1), apart from the app's: from server/,
+// Jobs's migrations, apart from the app's: from server/,
 //   npx drizzle-kit generate --config src/jobs/drizzle.config.ts --name <name>
 import {defineConfig} from 'drizzle-kit';
 

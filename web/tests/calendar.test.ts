@@ -1,4 +1,4 @@
-// The month grid's and the day agenda's rules as tables (DESIGN.md › Calendar): weeks and months,
+// The month grid's and the day agenda's rules as tables: weeks and months,
 // scrolling, which items fit before "+N", chip times and spans, past items, the agenda with its
 // now-line, the mini-month, and where the "+N" popover hangs.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
@@ -36,7 +36,7 @@ const calendars: CalendarOut[] = [
 describe('weeks and months', () => {
   test.each([
     ['2026-10-04', 0], ['2026-10-05', 1], ['2026-10-07', 3], ['2026-10-10', 6], ['2026-10-11', 0], ['2026-11-01', 0],
-  ])('%s is weekday %i (Sunday 0, SV-29)', (date, day) => expect(weekday(date)).toBe(day));
+  ])('%s is weekday %i (Sunday 0)', (date, day) => expect(weekday(date)).toBe(day));
 
   test('a week index and its days agree', () => {
     const week = weekIndex('2026-10-07');
@@ -90,7 +90,7 @@ describe('scrolling through months', () => {
   ])('%s', (_name, scrollTop, height, [first, last]) => expect(rowsInView(scrollTop, height, ROW)).toEqual({first, last}));
 });
 
-describe('whether showing a day moves the grid (SV-239)', () => {
+describe('whether showing a day moves the grid', () => {
   // The grid scrolled to row 10, 600 px tall: rows 10 to 12 whole, then row 13's top 72 px.
   const at = 10 * ROW;
   test.each([
@@ -103,7 +103,7 @@ describe('whether showing a day moves the grid (SV-239)', () => {
   ] as const)('%s', (_name, weekTop, moves) => expect(weekOutOfView(weekTop, at, 600, ROW)).toBe(moves));
 });
 
-describe('paging glides (polish audit grids-04)', () => {
+describe('paging glides', () => {
   const top = (month: string) => monthTopRow(month) * ROW;
   test.each([
     ['N from October: from where the grid is', top('2026-10'), top('2026-11'), top('2026-10')],
@@ -151,7 +151,7 @@ describe('items on days', () => {
     expect(titles(calendars.map(cal => (cal.name === 'Classes' ? {...cal, listed: false} : cal)))).toEqual(['Fall break', 'Gym', 'Dentist', 'CS 101 lab report', 'Pay rent']);
   });
 
-  // SV-56: what the calendars toggled off hide on a day, so an empty day can say so rather than "No events".
+  // What the calendars toggled off hide on a day, so an empty day can say so rather than "No events".
   test.each<[string, string[], string, number]>([
     ['every calendar on', [], '2026-10-07', 0],
     ['Personal and Todoist off: Gym, Dentist and two tasks', ['Personal', 'Todoist'], '2026-10-07', 4],
@@ -192,7 +192,7 @@ describe('items on days', () => {
     ['noon', event('Lunch with Jo', '2026-10-17', '12:30', '13:30'), '12:30 PM', '12:30 – 1:30 PM'],
     ['across noon', event('Career fair', '2026-10-15', '10:00', '14:00'), '10 AM', '10:00 AM – 2:00 PM'],
     ['all day', item({all_day: true, start_date: '2026-10-07', end_date: '2026-10-08'}), null, 'All day'],
-    ['no end, its start alone (SV-78)', event('Call Mom', '2026-10-07', '15:00', '15:00'), '3 PM', '3:00 PM'],
+    ['no end, its start alone', event('Call Mom', '2026-10-07', '15:00', '15:00'), '3 PM', '3:00 PM'],
   ])('%s: chip %s, span %s', (_name, one, chip, span) => {
     expect(chipTime(one, zone)).toBe(chip);
     expect(timeRange(one, zone)).toBe(span);
@@ -208,14 +208,14 @@ describe('the right pane', () => {
     const day = agenda('2026-10-07', [gym, dentist, ...tasks], calendars, now, zone);
     expect(day.events.map(one => [one.when, one.item.title, one.line, one.place, one.past, one.startsIn])).toEqual([
       ['7:00 AM', 'Gym', '7:00 – 8:00 AM · Personal', null, true, null],
-      // The line always names the calendar; the place has its own line (#125).
+      // The line always names the calendar; the place has its own line.
       ['2:30 PM', 'Dentist', '2:30 – 3:30 PM · Personal', {text: 'Smile Dental', video: false}, false, 'in 5h'],
     ]);
     expect(day.nowAt).toBe(1);
     expect(day.tasks.map(one => one.title)).toEqual(['CS 101 lab report', 'Pay rent']);
   });
 
-  // D502: the Tasks section by time, the untimed last in the grid's order, a done one keeping its place.
+  // The Tasks section by time, the untimed last in the grid's order, a done one keeping its place.
   test('the tasks in time order, the untimed last', () => {
     const timed = (title: string, time: string, fields: Partial<ItemOut> = {}) => task(title, '2026-10-07', {all_day: false, due_at: at('2026-10-07', time), ...fields});
     const day = agenda('2026-10-07', [...tasks, timed('Submit timesheet', '17:00'), timed('Call the bank', '08:00', {done: true}), timed('Pick up prescription', '12:00')], calendars, now, zone);
@@ -227,7 +227,7 @@ describe('the right pane', () => {
     expect(agenda('2026-10-07', [lunch], calendars, now, zone).events.map(one => [one.line, one.place])).toEqual([['12:00 – 1:00 PM · Personal', {text: '1420 Elm St', video: false}]]);
   });
 
-  // A place that's a link is a call: videocam and its host (#125).
+  // A place that's a link is a call: videocam and its host.
   test.each([
     ['a Zoom link', 'https://zoom.us/j/81234567890?pwd=abc', {text: 'zoom.us', video: true}],
     ['a Meet link', 'https://meet.google.com/abc-defg-hij', {text: 'meet.google.com', video: true}],
@@ -237,7 +237,7 @@ describe('the right pane', () => {
     expect(agenda('2026-10-07', [event('Standup', '2026-10-07', '10:00', '10:15', {place})], calendars, now, zone).events[0]!.place).toEqual(shown);
   });
 
-  // The next event is lifted (polish audit calpanes-01): "in 1h" before it, and under way it sits
+  // The next event is lifted: "in 1h" before it, and under way it sits
   // under the now-line with what's left and how far in it is.
   test.each([
     ['before anything: the now-line first, Gym next', Date.parse(at('2026-10-07', '06:00')), 0, ['Gym', 'in 1h', false, null, null]],
@@ -280,7 +280,7 @@ describe('the right pane', () => {
     [{date: '2026-10-13', condition: 'rain', high_f: 64.4, low_f: 55}, 'rainy', 'rain', 'Rain · 64° / 55°'],
   ] as const)('%o', (day, icon, tone, line) => {
     const temps = line.split(' · ')[1]!;
-    // The high and the low apart, so the grid can lead with the high (#174).
+    // The high and the low apart, so the grid can lead with the high.
     expect(weatherOf(day)).toEqual({icon, tone, temps, high: temps.split(' / ')[0], low: temps.split(' / ')[1], line});
   });
 
@@ -313,7 +313,7 @@ describe('the mini-month', () => {
     expect(miniMonth('2026-10', '2026-10-07', null).length).toBe(6);
   });
 
-  // Polish audit calpanes-05: never 5 rows one month and 6 the next.
+  // Never 5 rows one month and 6 the next.
   test.each([['2026-10', 5], ['2027-01', 6], ['2026-02', 4]])('%s: its %d weeks, drawn as six', (month, own) => {
     expect(monthWeeks(month).length).toBe(own);
     expect(miniMonth(month, '2026-10-07', null).length).toBe(6);
@@ -323,7 +323,7 @@ describe('the mini-month', () => {
     expect(marks('2026-10', '2026-10-07', '2026-10-17')).toContain('17 selected');
   });
 
-  test('SV-29: a range is a band from its first day to its last, the selection left unmarked', () => {
+  test('a range is a band from its first day to its last, the selection left unmarked', () => {
     const band = miniMonth('2026-10', '2026-10-07', '2026-10-13', {from: '2026-10-13', to: '2026-10-17'}).flat()
       .filter(day => day.inRange).map(day => `${day.day}${day.rangeStart ? ' first' : ''}${day.rangeEnd ? ' last' : ''}${day.selected ? ' selected' : ''}`);
     expect(band).toEqual(['13 first', '14', '15', '16', '17 last']);
@@ -340,7 +340,7 @@ describe('the mini-month', () => {
   });
 });
 
-describe('a dragged item\'s slot (polish audit calflows-09)', () => {
+describe('a dragged item\'s slot', () => {
   const gym = event('Gym', '2026-10-08', '07:00', '08:00');
   const lecture = event('CS 101 lecture', '2026-10-08', '18:00', '19:30');
   const rent = task('Pay rent', '2026-10-08');
@@ -367,12 +367,12 @@ describe('the "+N" popover', () => {
   ])('%s', (_name, anchor, height, expected) => expect(hangFrom(anchor, {width: 280, height}, grid)).toEqual(expected));
 });
 
-describe('SV-29: picking an event\'s days in one month', () => {
+describe('picking an event\'s days in one month', () => {
   test.each([
     ['the first click starts it, one day', 'start', '2026-10-08', '2026-10-13', {from: '2026-10-13', to: '2026-10-13', done: false}],
     ['the next, on or after it, ends it', 'end', '2026-10-13', '2026-10-23', {from: '2026-10-13', to: '2026-10-23', done: true}],
     ['the same day again: one day', 'end', '2026-10-13', '2026-10-13', {from: '2026-10-13', to: '2026-10-13', done: true}],
-    ['a day before the first starts it there and ends it on the first (#103)', 'end', '2026-10-13', '2026-10-06', {from: '2026-10-06', to: '2026-10-13', done: true}],
+    ['a day before the first starts it there and ends it on the first', 'end', '2026-10-13', '2026-10-06', {from: '2026-10-06', to: '2026-10-13', done: true}],
   ] as const)('%s', (_, phase, from, day, picked) => expect(rangePick(phase, from, day)).toEqual(picked));
 });
 
@@ -387,7 +387,7 @@ describe('the done moment: a task ticked off where it\'s drawn plays it, nothing
   ])('%s', (_name, before, tasks, played) => expect(playsDone(before, tasks)).toEqual(played));
 });
 
-describe('SV-191: a calendar\'s name in a list', () => {
+describe('a calendar\'s name in a list', () => {
   const accounts = [{id: 1, label: 'Personal'}, {id: 2, label: 'Jobs'}];
   const cal = (name: string, account_id: number | null) => ({name, account_id});
   const holidays = cal('Holidays in United States', 2);
@@ -401,7 +401,7 @@ describe('SV-191: a calendar\'s name in a list', () => {
   ])('%s', (_, calendar, all, label) => expect(calendarLabel(calendar, all, accounts)).toEqual(label));
 });
 
-describe('SV-273 (D567): a dated subtask\'s date in its checklist row', () => {
+describe('a dated subtask\'s date in its checklist row', () => {
   test.each([
     // Its weekday within the coming week, today's included; its month and day further off or past.
     ['2026-10-07', null, 'Wed'],

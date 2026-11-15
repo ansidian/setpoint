@@ -1,12 +1,12 @@
-// Jobs's widgets (J5, J6; DESIGN.md › Jobs): Per week's chart, the status filter and the full posting
-// unfolding in place (board 33); J6's menus with their keys and submenus, the candidate picker and the
-// title's field (boards 34a, 35a, 35b); J7's JD chip with its popover and Applied before, as mail's
-// slots draw them (boards 37a–37c); and J8's words, as tables: the history pass's and the AI down's
+// Jobs's widgets: Per week's chart, the status filter and the full posting
+// unfolding in place (board 33); the menus with their keys and submenus, the candidate picker and the
+// title's field (boards 34a, 35a, 35b); the JD chip with its popover and Applied before, as mail's
+// slots draw them (boards 37a–37c); and the states' and Settings' words, as tables: the history pass's and the AI down's
 // lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b); a JD's long facts
-// wrapping in their boxes (SV-129); the area that takes a pasted posting and a candidate Jobs can't
-// read (SV-140); an item's subject, which opens its email (D401); Setpoint on LinkedIn's chip saying an
-// application's standing as mail does (SV-174); the empty pane's rows of recent movement and their words,
-// and a row's menu condensed for them (SV-220, D470). What they do with the props and the pointer or keys they're
+// wrapping in their boxes; the area that takes a pasted posting and a candidate Jobs can't
+// read; an item's subject, which opens its email; Setpoint on LinkedIn's chip saying an
+// application's standing as mail does; the empty pane's rows of recent movement and their words,
+// and a row's menu condensed for them. What they do with the props and the pointer or keys they're
 // given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
 // This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
@@ -47,7 +47,7 @@ import {applyTheme} from '../../src/tokens.ts';
 const ZONE = 'America/Los_Angeles';
 const TODAY = '2026-10-07';
 
-// The seed's 12 weeks (D318): 3 5 4 6 2 4 7 5 3 6 8, and 3 so far this week; one emptied to show its stub.
+// The seed's 12 weeks: 3 5 4 6 2 4 7 5 3 6 8, and 3 so far this week; one emptied to show its stub.
 const COUNTS = [3, 5, 4, 6, 0, 4, 7, 5, 3, 6, 8, 3];
 const WEEKS: JobWeekOut[] = COUNTS.map((count, index) => {
   const start = new Date(Date.parse('2026-07-19T12:00:00Z') + index * 7 * 86_400_000).toISOString().slice(0, 10);
@@ -182,7 +182,7 @@ test('Collapse folds it back to its row and the pane back to where it was; Space
   await expect.element(page.getByRole('group', {name: 'Full posting'})).toBeInTheDocument();
 });
 
-// ---- J6's menus (34a, 35a, 35b): ↑ ↓, Enter, Esc, and submenus ----
+// ---- The menus (34a, 35a, 35b): ↑ ↓, Enter, Esc, and submenus ----
 
 /** A button that opens `spec` under it, as Assign to… and More do, with what reaches the page past it. */
 function Opener({spec, onKey}: {spec: MenuSpec; onKey: (key: string) => void}) {
@@ -349,7 +349,7 @@ test('the candidates are radios, the last None of these; ↑ ↓ choose and Ente
 
 const UNREADABLE: JdCandidateOut = {id: 3, title: 'Junior Developer', location: 'New York, NY', platform: 'Glassdoor', link: 'https://www.glassdoor.example/job-listing/2291', unreadable: true};
 
-test('a candidate Jobs can\'t read says so, however long its title, and its arrow still opens it (SV-140)', async () => {
+test('a candidate Jobs can\'t read says so, however long its title, and its arrow still opens it', async () => {
   const long = {...UNREADABLE, title: 'Junior Developer, Reading Apps and the Services Behind Them, New York or Remote'};
   await render(<div style={{width: 420}}><CandidatePicker candidates={[CANDIDATES[0]!, long]} active={false} picked={null} onPick={() => {}} onNone={() => {}} /></div>);
   const group = page.getByRole('radiogroup', {name: 'Is this the posting?'});
@@ -363,12 +363,12 @@ test('a candidate Jobs can\'t read says so, however long its title, and its arro
   await expect.element(group.getByRole('link', {name: `Look at ${long.title}`})).toHaveAttribute('href', UNREADABLE.link);
 });
 
-test('a pick\'s toast says "Link kept" of a candidate Jobs can\'t read, never "JD saved" (SV-140)', () => {
+test('a pick\'s toast says "Link kept" of a candidate Jobs can\'t read, never "JD saved"', () => {
   expect(pickWords(UNREADABLE, 'Lucerne Publishing')).toEqual({done: 'Link kept for Lucerne Publishing', failed: 'Couldn\'t keep the link'});
   expect(pickWords(CANDIDATES[0]!, 'Lucerne Publishing')).toEqual({done: 'JD saved for Lucerne Publishing', failed: 'Couldn\'t save the JD'});
 });
 
-test('Choose… says the same of a candidate Jobs can\'t read, its arrow still there (SV-140)', () => {
+test('Choose… says the same of a candidate Jobs can\'t read, its arrow still there', () => {
   const entries = chooseMenu([CANDIDATES[0]!, UNREADABLE], {pick: () => {}, none: () => {}}).entries;
   expect(entries.map(entry => (entry.kind === 'item' ? [entry.sub, entry.peek] : entry.kind))).toEqual([
     ['New York, NY · Greenhouse', CANDIDATES[0]!.link],
@@ -387,7 +387,7 @@ test('while its item has the page\'s cursor, ↑ ↓ and Enter reach it from the
   expect(onNone).toHaveBeenCalledTimes(1);
 });
 
-// ---- Paste the posting (SV-140) ----
+// ---- Paste the posting ----
 
 test('the area takes the focus as it opens; ⌘Enter saves what\'s typed and Esc cancels, each going no further', async () => {
   const onSave = vi.fn(() => Promise.resolve());
@@ -485,7 +485,7 @@ test('what it has read shows as any JD\'s does', async () => {
   expect([PASTED, {...PASTED, nice_to_haves: ['Python']}, {...PASTED, salary: '$70,000'}].map(hasReading)).toEqual([false, true, true]);
 });
 
-// ---- The location in place (SV-170) ----
+// ---- The location in place ----
 
 /** The detail's facts, the location editable as Jd holds it. */
 function Facts({posting, reading = true, onSave = () => {}}: {posting: PostingOut; reading?: boolean; onSave?: (value: string) => void}) {
@@ -558,7 +558,7 @@ test('an empty or unchanged title saves nothing', async () => {
   expect([onSave.mock.calls.length, onCancel.mock.calls.length]).toEqual([0, 1]);
 });
 
-// ---- In mail (J7, boards 37a–37c): the JD chip, its popover, and Applied before ----
+// ---- In mail (boards 37a–37c): the JD chip, its popover, and Applied before ----
 
 const NORTHWIND: JobsMailApplicationOut = {id: 7, company: 'Northwind Talent', title: 'Software Engineer I', applied_on: '2026-10-01', status: 'in_process', status_on: '2026-10-07', ghosted: false};
 
@@ -751,7 +751,7 @@ test('Applied before (37c): on the row and in the reader, each with its tip; a c
   }
 });
 
-// ---- J8's words (38a, 38b, 39a, 39b) ----
+// ---- The states' and Settings' words (38a, 38b, 39a, 39b) ----
 
 const NOW = Date.parse('2026-10-07T16:12:00.000Z');
 const HEALTHY: JobsReadingOut = {waiting: 0, state: 'healthy', since: null, reason: null, cause: null, retrying: false};
@@ -784,7 +784,7 @@ test('the history pass\'s line (38a): its counts in place and how far it has com
   expect([fromHistorySetting(6), fromHistorySetting(0)]).toEqual(['6 waiting in Needs you, what the pass wasn\'t sure of', 'None waiting in Needs you']);
 });
 
-test('Reads (#273, D383): an account changed in place, added at the end, or taken out by Off', () => {
+test('Reads: an account changed in place, added at the end, or taken out by Off', () => {
   const listed = [{account_id: 4, reads: 'every' as const}, {account_id: 1, reads: 'career' as const}];
   expect(readsWith(listed, 1, 'every')).toEqual([{account_id: 4, reads: 'every'}, {account_id: 1, reads: 'every'}]);
   expect(readsWith(listed, 2, 'career')).toEqual([...listed, {account_id: 2, reads: 'career'}]);
@@ -803,7 +803,7 @@ function needsYou(items: NeedsYouItemOut[], history: NeedsYouItemOut[], reading:
     unfoldHistory={1} reading={reading === null ? null : {item: reading, of: null}} onPoint={() => {}} onOpen={() => {}} onRead={onRead} onLook={() => {}} />);
 }
 
-test('D401: a subject with an email is a button that says so, on an item and on a From history row; one with no email isn\'t', async () => {
+test('a subject with an email is a button that says so, on an item and on a From history row; one with no email isn\'t', async () => {
   const onRead = vi.fn();
   const gone = {...ITEM, id: 2, subject: 'Its email is gone', message_id: null};
   const jd = {...ITEM, id: 3, kind: 'jd_to_confirm' as const, title: 'Junior Developer', subject: null, message_id: null};
@@ -818,7 +818,7 @@ test('D401: a subject with an email is a button that says so, on an item and on 
   expect(page.getByRole('button', {name: /Humongous Insurance · Junior Developer/}).elements()).toHaveLength(0);
 });
 
-test('D401: the item whose email is open shows as pressed, its fill the open row\'s, and its line of actions stays', async () => {
+test('the item whose email is open shows as pressed, its fill the open row\'s, and its line of actions stays', async () => {
   await needsYou([ITEM, {...ITEM, id: 2, subject: 'Another'}], [], 1, () => {});
   const open = page.getByRole('button', {name: 'Thank you for your interest'});
   await expect.element(open).toHaveAttribute('aria-pressed', 'true');
@@ -828,7 +828,7 @@ test('D401: the item whose email is open shows as pressed, its fill the open row
   expect(page.getByRole('button', {name: 'Assign to…'}).elements()).toHaveLength(2);
 });
 
-test('D401: a long subject stays inside its line', async () => {
+test('a long subject stays inside its line', async () => {
   const long = {...ITEM, subject: 'A subject long enough to need an ellipsis '.repeat(4)};
   await needsYou([long], [], null, () => {});
   const line = page.getByText(/^A subject long enough/);
@@ -839,7 +839,7 @@ test('D401: a long subject stays inside its line', async () => {
   expect(subject.getBoundingClientRect().right).toBeLessThanOrEqual(box.right);
 });
 
-test('D402: an application\'s email button, and → on it, run its look and leave the menu open; Enter still picks it', async () => {
+test('an application\'s email button, and → on it, run its look and leave the menu open; Enter still picks it', async () => {
   const look = vi.fn();
   const run = vi.fn();
   const spec: MenuSpec = {label: 'Assign to', width: 312, entries: [
@@ -864,7 +864,7 @@ test('D402: an application\'s email button, and → on it, run its look and leav
   anchor.remove();
 });
 
-test('D402: a press in what keeps the menu leaves it open, and Esc with the focus there closes it before the page sees the key', async () => {
+test('a press in what keeps the menu leaves it open, and Esc with the focus there closes it before the page sees the key', async () => {
   const beside = document.body.appendChild(document.createElement('div'));
   beside.dataset.keepsMenu = '';
   beside.textContent = 'The email';
@@ -885,7 +885,7 @@ test('D402: a press in what keeps the menu leaves it open, and Esc with the focu
   anchor.remove();
 });
 
-test('SV-174: Setpoint on LinkedIn\'s chip says an application\'s standing, and steps a closed one down, as mail\'s Applied before does', () => {
+test('Setpoint on LinkedIn\'s chip says an application\'s standing, and steps a closed one down, as mail\'s Applied before does', () => {
   const today = '2026-11-03';
   const applications: Pick<JobsMailApplicationOut, 'applied_on' | 'status' | 'status_on' | 'ghosted'>[] = [
     {applied_on: '2026-10-28', status: 'applied', status_on: '2026-10-28', ghosted: false},
@@ -902,9 +902,9 @@ test('SV-174: Setpoint on LinkedIn\'s chip says an application\'s standing, and 
   }
 });
 
-// ---- The empty pane's recent movement (SV-220, D467, D470) ----
+// ---- The empty pane's recent movement ----
 
-test('SV-220: a move\'s sides are the table\'s labels and marks, Ghosted its own', () => {
+test('a move\'s sides are the table\'s labels and marks, Ghosted its own', () => {
   expect((['applied', 'in_process', 'offer', 'rejected', 'withdrawn', 'ghosted'] as const).map(moveSide)).toEqual([
     {label: 'Applied', mark: 'applied'}, {label: 'In process', mark: 'proc'}, {label: 'Offer', mark: 'offer'}, {label: 'Rejected', mark: 'rej'},
     {label: 'Withdrawn', mark: 'wd'}, {label: 'Ghosted', mark: 'ghost'},
@@ -918,11 +918,11 @@ test.each([
   ['2026-10-02T17:00:00.000Z', 'Fri'],
   ['2026-09-30T17:00:00.000Z', 'Sep 30'],
   ['2025-12-12T17:00:00.000Z', 'Dec 12, 2025'],
-])('SV-220: a move at %s is dated %s', (at, word) => {
+])('a move at %s is dated %s', (at, word) => {
   expect(moveDay(at, ZONE, TODAY)).toBe(word);
 });
 
-test('SV-220: the quiet line names the accounts Jobs reads and its earliest month, never a number of applications (D314)', () => {
+test('the quiet line names the accounts Jobs reads and its earliest month, never a number of applications', () => {
   expect(movementFoot(['Jobs', 'Personal'], '2026-03-02T09:00:00.000Z', ZONE)).toBe('Reading Jobs and Personal, since Mar 2026');
   expect(movementFoot(['Jobs', 'Personal', 'Work'], null, ZONE)).toBe('Reading Jobs, Personal and Work');
   expect(movementFoot(['Jobs'], '2026-03-01T03:00:00.000Z', ZONE)).toBe('Reading Jobs, since Feb 2026');
@@ -931,7 +931,7 @@ test('SV-220: the quiet line names the accounts Jobs reads and its earliest mont
 
 const MOVE: JobMoveOut = {application_id: 7, company: 'Northwind Talent', title: 'Software Engineer I', from: 'applied', to: 'rejected', by_hand: false, at: '2026-10-06T17:00:00.000Z'};
 
-test('SV-220: a row reads the company, "Applied → Rejected", the day and the role; a press opens it and a right-click asks for the menu', async () => {
+test('a row reads the company, "Applied → Rejected", the day and the role; a press opens it and a right-click asks for the menu', async () => {
   const onOpen = vi.fn();
   const onMenu = vi.fn((event: {preventDefault: () => void}) => event.preventDefault());
   const moves: JobMoveOut[] = [MOVE, {...MOVE, application_id: 8, company: 'Contoso', to: 'ghosted'}, {...MOVE, application_id: 9, company: 'Fabrikam', from: null, to: 'applied'},
@@ -953,7 +953,7 @@ test('SV-220: a row reads the company, "Applied → Rejected", the day and the r
   expect(onMenu).toHaveBeenCalledOnce();
 });
 
-test('SV-220: the menu a pane row gets is the table row\'s without Not this posting and Look up the JD again', () => {
+test('the menu a pane row gets is the table row\'s without Not this posting and Look up the JD again', () => {
   const row = detailOf(null);
   const on = {
     pin: () => {}, editCompany: () => {}, editTitle: () => {}, setStatus: () => {}, merge: () => {}, notThisPosting: () => {}, lookUpAgain: () => {}, notAnApplication: () => {}, remove: () => {},
@@ -965,7 +965,7 @@ test('SV-220: the menu a pane row gets is the table row\'s without Not this post
   expect(ids(rowMenu(row, [row], TODAY, on, true))).toEqual(full.filter((id, index) => !['not-this-posting', 'look-up'].includes(id) && index !== full.indexOf('look-up') + 1));
 });
 
-test('SV-220: every status a row can name reads at 4.5:1 on the list\'s panel, in Night and in Light (the sweep caught Light\'s Offer)', async () => {
+test('every status a row can name reads at 4.5:1 on the list\'s panel, in Night and in Light (the sweep caught Light\'s Offer)', async () => {
   const sides = (['applied', 'in_process', 'offer', 'rejected', 'withdrawn', 'ghosted'] as const);
   const moving = still();
   await render(<div style={{background: 'var(--panel)'}}><ol className="nd-list">{sides.map((to, index) => <li key={to}><MoveRow move={{...MOVE, application_id: index + 1, from: null, to}} timeZone={ZONE} today={TODAY} onOpen={() => {}} onMenu={() => {}} /></li>)}</ol></div>);
@@ -981,7 +981,7 @@ test('SV-220: every status a row can name reads at 4.5:1 on the list\'s panel, i
   }
 });
 
-test('SV-220: the table\'s Offer reads at 4.5:1 on an open row, in Night and in Light', async () => {
+test('the table\'s Offer reads at 4.5:1 on an open row, in Night and in Light', async () => {
   const moving = still();
   await render(<div style={{background: 'var(--page)'}}><div style={{background: 'var(--sub3)'}}><span className="st"><span className="sl offer" data-text>Offer</span></span></div></div>);
   try {
@@ -995,7 +995,7 @@ test('SV-220: the table\'s Offer reads at 4.5:1 on an open row, in Night and in 
   }
 });
 
-// ---- The Pinned shelf (SV-243, D504, #355): what's on it and in what order, and what's left to the table ----
+// ---- The Pinned shelf: what's on it and in what order, and what's left to the table ----
 
 /** A row as the table reads it: its company, applied day, status and pin; the rest doesn't matter here. */
 const shelfRow = (id: number, company: string, applied: string, status: JobStatus, pinned: string | null = null) => ({

@@ -1,4 +1,4 @@
-// A posting's full text cleaned to readable markdown (J3, decision 53, D307): its own words, never
+// A posting's full text cleaned to readable markdown: its own words, never
 // rewritten, with its headings, paragraphs and lists, and nothing of the page around it. Pure: HTML
 // or plain text in, markdown out, tested as a table (tests/markdown.test.ts).
 //
@@ -190,7 +190,7 @@ const NUMBERED = /^(\d+)[.)]\s+(.*)$/;
 /**
  * Plain text (a platform's plain description, a page with no markup worth keeping) as markdown:
  * bullets as `- ` items, a short line standing alone before others as a heading, blank lines between
- * paragraphs. Cut at `limit`, as a page is; what the user pasted is refused rather than cut (SV-140).
+ * paragraphs. Cut at `limit`, as a page is; what the user pasted is refused rather than cut.
  */
 export function plainToMarkdown(text: string, limit = MAX_POSTING_CHARS): string {
   const blocks: Block[] = [];

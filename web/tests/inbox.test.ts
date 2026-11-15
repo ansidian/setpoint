@@ -1,4 +1,4 @@
-// The Inbox's rules (DESIGN.md › The list, Interaction rules) as tables over a small Inbox shaped
+// The Inbox's rules (DESIGN.md › Interaction rules) as tables over a small Inbox shaped
 // like the seed's: held rows, each row's line, the cursor, and the counts' at-once changes (opening
 // drops unread; only Done drops the pill).
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
@@ -100,7 +100,7 @@ describe('Pin, Mark all as read and Mark unread show at once', () => {
     expect(after.groups.filter(item => item.group === 'pinned').map(item => item.rows.map(one => one.id))).toEqual([[30, 27]]);
     expect(after.groups.filter(item => item.group !== 'pinned').some(item => item.rows.some(one => one.id === old.id))).toBe(false);
   });
-  test('Mark all as read: Attention and Security stay as they are, the rest reads and leaves, and the counts drop by each (UX #4)', () => {
+  test('Mark all as read: Attention and Security stay as they are, the rest reads and leaves, and the counts drop by each', () => {
     const after = inboxAfterMarkAllRead(inbox);
     expect(shape(after)).toEqual([
       ['pinned', [[27, false, true]]], ['attention', [[2, true, false], [5, true, false], [22, false, false]]], ['security', [[1, true, false], [3, true, false]]],
@@ -231,7 +231,7 @@ describe('counts follow at once', () => {
 });
 
 test.each([
-  ['the seed\'s morning: unread outside Attention and Security (UX #4)', groups, [6, 11, 12, 4]],
+  ['the seed\'s morning: unread outside Attention and Security', groups, [6, 11, 12, 4]],
   ['a pinned security email stays unread', [group('pinned', [{...signIn, pinned: true}]), group('security', [{...signIn, pinned: true}])], []],
   ['a pinned unread email once, shelf and group', [group('pinned', [{...ups, pinned: true}]), group('deliveries', [{...ups, pinned: true}])], [6]],
   ['attention mail Done is read too', [group('attention', [{...northwind, done: true}, google])], [5]],
@@ -240,7 +240,7 @@ test.each([
   expect(markAllReadIds(list)).toEqual(expected);
 });
 
-// The days keep read FYI mail, so Undo's unread shows there before the Inbox's groups have it (D449).
+// The days keep read FYI mail, so Undo's unread shows there before the Inbox's groups have it.
 test.each([
   ['a day\'s unread FYI email the groups no longer hold', [group('attention', [google])], [ups, signIn, {...exams, unread: false}], [ups.id]],
   ['one in both, once', [group('deliveries', [ups])], [ups], [ups.id]],
@@ -249,10 +249,10 @@ test.each([
   expect(markAllReadIds(list, shown)).toEqual(expected);
 });
 
-// All's rows take it at once too, so a Security row in its day keeps its dot (#243).
+// All's rows take it at once too, so a Security row in its day keeps its dot.
 test.each([
   ['an unread delivery', ups, true],
-  ['a Security alert stays unread (UX #4)', signIn, false],
+  ['a Security alert stays unread', signIn, false],
   ['unread Attention waits on Done', northwind, false],
   ['Attention mail Done is read', {...northwind, done: true}, true],
   ['already read', {...ups, unread: false}, false],
@@ -355,7 +355,7 @@ describe('the account column', () => {
   });
 });
 
-describe('a pin out of the shelf\'s sight says so (inbox-09)', () => {
+describe('a pin out of the shelf\'s sight says so', () => {
   // The list's box runs 100 to 600; each place is a row's top and bottom.
   const box = {top: 100, bottom: 600};
   test.each([

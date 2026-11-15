@@ -1,14 +1,12 @@
-// Connecting Todoist: OAuth with the callback at /api/ea/accounts/todoist/callback (v1's path, so
-// the app's registration in Todoist's console still matches). Harvested from v1's `todoist-oauth`
-// (see SV-6), keeping its security core:
+// Connecting Todoist: OAuth with the callback at /api/ea/accounts/todoist/callback (the path
+// the app's registration in Todoist's console names). Its security core:
 // - the state is 32 random bytes, stored as a hash, single use (deleted when read, even if refused)
 //   and good for ten minutes;
 // - the state is bound to the browser that started it by an HttpOnly cookie scoped to the callback
 //   path, whose hash is kept with it and compared in constant time before any token exchange (CSRF
 //   and login fixation);
 // - nothing is stored unless the exchange succeeds, and a failure says nothing more than that.
-// v1's staged app credentials and personal tokens aren't ported: the app's id and secret come from
-// configuration, and the token is the source's key (Todoist's tokens don't expire).
+// The app's id and secret come from configuration, and the token is the source's key (Todoist's tokens don't expire).
 import {createHash, randomBytes, timingSafeEqual} from 'node:crypto';
 import {and, eq, isNull, lt} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';

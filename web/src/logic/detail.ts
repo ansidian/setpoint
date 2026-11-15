@@ -1,13 +1,13 @@
-// The floating detail's lines (DESIGN.md › The floating detail; boards 12a and 12b): the date and
+// The floating detail's lines (boards 12a and 12b): the date and
 // time, Time to Leave, attendees and reminders, worded as the boards word them. Time to Leave reads
-// the same in the day agenda (DESIGN.md › Right pane), and in both it turns `caution` when it's
-// time to go and is gone once the event has started (SV-56).
+// the same in the day agenda, and in both it turns `caution` when it's
+// time to go and is gone once the event has started.
 import type {ItemOut} from '@setpoint/shared';
 import {timeRange, dayTitle} from './calendar.ts';
 import {describeRule} from './compose.ts';
 import {addDays, clockTime, localDate} from './format.ts';
 
-/** A recurring event's repeat, as the editor's repeat field words it: "Weekly on Mon, Wed, Fri" (#126); null for any other item. */
+/** A recurring event's repeat, as the editor's repeat field words it: "Weekly on Mon, Wed, Fri"; null for any other item. */
 export function repeatLine(item: Pick<ItemOut, 'kind' | 'recurrence' | 'all_day' | 'starts_at' | 'start_date'>, timeZone: string): string | null {
   if (item.kind !== 'event' || !item.recurrence) return null;
   const day = item.all_day ? item.start_date : item.starts_at && localDate(item.starts_at, timeZone);
@@ -41,7 +41,7 @@ export function travelTime(minutes: number): string {
   return rest ? `${hours} hr ${rest} min` : `${hours} hr`;
 }
 
-/** How long before its "Leave by" Time to Leave turns `caution` (SV-56). */
+/** How long before its "Leave by" Time to Leave turns `caution`. */
 export const LEAVE_DUE_MINUTES = 15;
 
 /**

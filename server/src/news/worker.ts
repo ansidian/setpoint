@@ -1,11 +1,11 @@
-// News's job worker on the sync engine (N1): each News source is read on its own interval (feeds
-// every 15 minutes, hazards every 5) as a durable `news:<id>` job through its adapter (N2 builds
-// them), and each read is the source's heartbeat. Its health rides on `news` events and shows only in
-// Settings › News: the engine's `health` events, the health pill, Settings › Accounts and mantel's
-// status never see News sources. A source with no adapter yet, or whose adapter isn't ready (no home
-// location, no key), isn't read, and has no health until it is. After a read, its new articles are
-// read too (N2): their pages' text and their images' copies; then they're sorted (N3, a `news_sort`
-// job, src/news/sortWorker.ts). Every minute it also runs the expiry:
+// News's job worker on the sync engine: each News source is read on its own interval (feeds every
+// 15 minutes, hazards every 5) as a durable `news:<id>` job through its adapter, and each read is the
+// source's heartbeat. Its health rides on `news` events and shows only in Settings › News: the
+// engine's `health` events, the health pill, Settings › Accounts and mantel's status never see News
+// sources. A source with no adapter yet, or whose adapter isn't ready (no home location, no key),
+// isn't read, and has no health until it is. After a read, its new articles are read too: their
+// pages' text and their images' copies; then they're sorted (a `news_sort` job,
+// src/news/sortWorker.ts). Every minute it also runs the expiry:
 // stories leave the page 48 h after their last new fact, and the archive goes after 90 days, with
 // their image copies.
 import {and, eq, inArray, isNull} from 'drizzle-orm';
@@ -23,7 +23,7 @@ import {sortAfterFetch} from './sortWorker.ts';
 import {activeNewsSources} from './sources.ts';
 import {expireNews, newsSourceHealth, recordNewsCheck, storeArticleReading, storeArticles} from './store.ts';
 
-/** Every request names Setpoint honestly (BRIEF.md › Sources). */
+/** Every request names Setpoint honestly. */
 export const NEWS_USER_AGENT = 'Setpoint/2 (a personal news reader; self-hosted)';
 
 /** New articles read at once, per source: polite to the outlets, quick enough for a first run. */
@@ -32,7 +32,7 @@ const READ_AT_ONCE = 3;
 export interface NewsWorkerOptions {
   store: Store;
   adapters?: NewsAdapters;
-  // Reads each new article's page and copies its image (N2); none leaves articles on their feed summaries.
+  // Reads each new article's page and copies its image; none leaves articles on their feed summaries.
   reader?: NewsArticleReader | null;
   // The data directory's news-images/ (src/news/images.ts); null leaves files alone.
   imagesDir?: string | null;
@@ -66,7 +66,7 @@ export class NewsWorker implements JobWorker {
     this.expireEveryMs = expireEveryMs;
   }
 
-  /** The adapter that reads a source, when it's ready to (N2); never one for the seed's stand-ins. */
+  /** The adapter that reads a source, when it's ready to; never one for the seed's stand-ins. */
   adapterFor(source: NewsSourceRow): NewsAdapter | null {
     const adapter = source.dev ? null : this.adapters[source.adapter] ?? null;
     return adapter && (adapter.ready?.(this.store, source) ?? true) ? adapter : null;
@@ -116,7 +116,7 @@ export class NewsWorker implements JobWorker {
         if (result.cursor !== null) this.store.db.update(t.newsSources).set({cursor: result.cursor}).where(eq(t.newsSources.id, source.id)).run();
         recordNewsCheck(this.store, source.id, null);
         finishJob(this.store, job.id);
-        // Settings › News's article count; the stories change once N3 sorts them.
+        // Settings › News's article count; the stories change once sorting groups them.
         if (ids.length) noteLive(this.store, {type: 'news', stories: [], sections: [], sources: [source.id]});
         return ids;
       });
@@ -131,7 +131,7 @@ export class NewsWorker implements JobWorker {
     // The source's check is done and recorded; reading its articles never changes its health.
     if (added.length) {
       await this.readArticles(added, signal);
-      // Sorted once their pages are read, so the model reads their text (N3).
+      // Sorted once their pages are read, so the model reads their text.
       if (!signal.aborted) sortAfterFetch(this.store);
     }
   }

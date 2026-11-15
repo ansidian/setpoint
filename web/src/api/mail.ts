@@ -1,5 +1,5 @@
 // Mail's resources and changes (shared/src/api/mail.ts has the routes). Every change shows at once
-// on screen, counts included (DESIGN.md › Interaction rules), then the server's answer takes over:
+// on screen, counts included, then the server's answer takes over:
 // opening, Done, Pin, Mark read or unread and Mark all as read here; Trash in the Inbox page. Read
 // state, Trash and Mark all as read are commands the provider confirms, by the live stream.
 import type {AllOut, CommandOut, InboxOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
@@ -9,10 +9,10 @@ import {afterPending, ApiFailure, cachedPaths, getCached, holdLoads, loadingOf, 
 
 export const INBOX_PATH = '/mail/inbox';
 export const COUNTS_PATH = '/mail/counts';
-// How the mail day is going: the Inbox's empty pane (SV-218).
+// How the mail day is going: the Inbox's empty pane.
 export const DAY_PATH = '/mail/day';
 export const messagePath = (id: number) => `/mail/messages/${id}`;
-/** SV-270 (D555): which email, if any, a description's Gmail link names. */
+/** Which email, if any, a description's Gmail link names. */
 export const gmailLinkPath = (account: string, id: string) => `/mail/gmail-link?account=${encodeURIComponent(account)}&id=${encodeURIComponent(id)}`;
 export const ACCOUNTS_PATH = '/accounts';
 
@@ -21,8 +21,8 @@ export const ALL_PAGE = 100;
 export const allPath = (before: string | null = null) =>
   `/mail/all?limit=${ALL_PAGE}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
 
-// B3's pattern prompts (logic/inbox.ts › PatternPrompt is the part of its shape the web reads).
-// Where B3 isn't there the route answers 404, and the Inbox shows no prompt.
+// Triage's pattern prompts (logic/inbox.ts › PatternPrompt is the part of its shape the web reads).
+// Where triage isn't there the route answers 404, and the Inbox shows no prompt.
 export const PROMPTS_PATH = '/mail/prompts';
 
 /** Triage's health, for the Unsorted group's "Triage is down, as of 9:09 AM". */
@@ -101,7 +101,7 @@ function updateMessage(id: number, change: Partial<MessageOut>): number {
 }
 
 // What a change to an email shows at once in. A load asked while the change is on its way can be
-// answered from before the server has it, so these hold their answers until it's in (SV-150).
+// answered from before the server has it, so these hold their answers until it's in.
 const MAIL_LOADS = ['/mail/inbox', '/mail/all', COUNTS_PATH, DAY_PATH];
 
 /** Sends a change with the lists and counts held; the release loads them again. */
@@ -115,7 +115,7 @@ async function change<T>(send: () => Promise<T>): Promise<T> {
 }
 
 /**
- * One change to several emails (a selection's, DESIGN.md #249): each its own command, as for one email,
+ * One change to several emails (a selection's): each its own command, as for one email,
  * sent together, with the lists' and counts' answers held until the last is in, so one landing
  * between them doesn't bring back for a moment what the others did at once; one email's goes as it
  * always has. Each one's outcome.
@@ -151,7 +151,7 @@ export function setDone(id: number, done = true): Promise<MessageOut> {
     for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterDone(inbox, id));
     updateCached<MailCountsOut>(COUNTS_PATH, counts => countsAfterDone(counts, found.row, found.attention));
   }
-  // All keeps Done mail, so its row and the reader show the change at once (SV-69).
+  // All keeps Done mail, so its row and the reader show the change at once.
   updateAllRows(row => (row.id === id ? {...row, done} : row));
   const mark = updateMessage(id, {done});
   return change(async () => {
@@ -161,7 +161,7 @@ export function setDone(id: number, done = true): Promise<MessageOut> {
   });
 }
 
-// SV-80: each email's pin changes go one at a time. Two sent together (P, then P again before the
+// Each email's pin changes go one at a time. Two sent together (P, then P again before the
 // first is answered) can reach the server in either order and leave it pinned while the screen
 // says unpinned, so a change made while one is on its way only updates what's wanted, and that is
 // sent once the one in flight is answered, if it differs. The last asked is what the server keeps,
@@ -242,7 +242,7 @@ export async function trustDomain(domain: string, messageId: number): Promise<Tr
   }
 }
 
-/** A pattern prompt's Yes (a learned rule) or No; B3 answers with the prompts that remain. */
+/** A pattern prompt's Yes (a learned rule) or No; triage answers with the prompts that remain. */
 export async function answerPrompt(id: number, yes: boolean): Promise<void> {
   try {
     const remaining = await sendJson<PatternPrompt[] | undefined>('POST', `${PROMPTS_PATH}/${id}`, {answer: yes ? 'yes' : 'no'});
@@ -284,5 +284,5 @@ export function markAllRead(): Promise<MarkAllReadOut> {
   return change(() => sendJson<MarkAllReadOut>('POST', '/mail/mark-all-read', {}));
 }
 
-/** SV-274: a day's USPS mail for the agenda rail (src/logic/mailpieces.ts). */
+/** A day's USPS mail for the agenda rail (src/logic/mailpieces.ts). */
 export const mailpiecesPath = (day: string) => `/mail/mailpieces?day=${day}`;

@@ -1,9 +1,9 @@
-// Health and states in the browser (F7; DESIGN.md › Health and states): board 19a built and checked
+// Health and states in the browser: board 19a built and checked
 // (fixtures needs-reconnect, stale-icloud and triage-down, the stream cut), then the flows: offline
 // dims the page and refuses changes, Retry now tries again and the stream's return clears it, the
 // reconnect bar opens Settings › Accounts, a failing account's line says why, and the first
-// backfill's indexing line holds in search; SV-20 adds the calendar's own stale and failing lines.
-// The polish audit's states-02: Setpoint unreachable at launch shows the mark and the pill, not the
+// backfill's indexing line holds in search; then the calendar's own stale and failing lines.
+// Setpoint unreachable at launch shows the mark and the pill, not the
 // sign-in card, and asks again until it answers.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
@@ -31,7 +31,7 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     await page.locator('.today-row').first().waitFor();
     await network(page, false);
     await page.locator('.offline-pill', {hasText: 'Offline, as of 9:12 AM, retrying'}).waitFor();
-    // Retry now carries refresh, as every Try again does (#123).
+    // Retry now carries refresh, as every Try again does.
     assert.deepEqual(await glyph(page.locator('.offline-pill .retry .icon')), [ICONS.refresh, '16']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -39,7 +39,7 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
   }
 });
 
-test('offline: changes are refused at once, not queued; after 2 s the pill shows and the page dims, still readable (states-05); Retry now tries again, and the stream\'s return clears it', async () => {
+test('offline: changes are refused at once, not queued; after 2 s the pill shows and the page dims, still readable; Retry now tries again, and the stream\'s return clears it', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -115,7 +115,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
   }
 });
 
-test('Setpoint unreachable at launch: the mark and the offline pill, not the sign-in card; it asks again until Setpoint answers (states-02)', async () => {
+test('Setpoint unreachable at launch: the mark and the offline pill, not the sign-in card; it asks again until Setpoint answers', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -178,7 +178,7 @@ test('a failing account says why in caution', async () => {
     assert.equal(await line.locator('.num').getAttribute('data-tip'), 'Work, as of 9:06 AM, Gmail answered 503.');
     assert.equal(await page.locator('.hbar.caution').count(), 0);
 
-    // The fix is on the line (states-08): it checks Work's own source, reading "Checking…" until the check lands.
+    // The fix is on the line: it checks Work's own source, reading "Checking…" until the check lands.
     const button = line.getByRole('button', {name: 'Check now'});
     const work = (await setpoint.api<AccountOut[]>('GET', '/accounts')).find(account => account.label === 'Work')!;
     let release = () => {};
@@ -202,7 +202,7 @@ test('a failing account says why in caution', async () => {
   }
 });
 
-test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, atop the right pane in order; the Inbox keeps its own', async () => {
+test('the calendar\'s own sources, Todoist stale and Weather failing, atop the right pane in order; the Inbox keeps its own', async () => {
   const setpoint = await startSetpoint({fixtures: ['stale-todoist', 'failing-weather'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -212,7 +212,7 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     await until('both lines', () => lines.count(), count => count === 2);
     assert.deepEqual(await lines.locator('.num').allTextContents(), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
     assert.deepEqual(await lines.evaluateAll(all => all.map(line => line.className)), ['rp-health stale', 'rp-health failing']);
-    // Each line carries Check now (states-08), whole after its words.
+    // Each line carries Check now, whole after its words.
     assert.deepEqual(await lines.locator('.check-now').allTextContents(), ['Check now', 'Check now']);
     // A failing line shows the provider's words in full, wrapping rather than cutting them off; each line's title holds it too.
     assert.equal(await lines.nth(1).locator('.num').evaluate(text => text.scrollWidth <= text.clientWidth && text.scrollHeight <= text.clientHeight), true);
@@ -246,7 +246,7 @@ const recordArrivals = (page: Page, selector: string) => page.addInitScript(watc
 }, selector);
 const arrivals = (page: Page) => page.evaluate(() => (window as unknown as {arrivals: string[]}).arrivals);
 
-test('Check now clears a failing line: its source healthy again, it goes (the polish audit\'s states-13)', async () => {
+test('Check now clears a failing line: its source healthy again, it goes', async () => {
   const setpoint = await startSetpoint({fixtures: ['failing-work'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -261,7 +261,7 @@ test('Check now clears a failing line: its source healthy again, it goes (the po
   }
 });
 
-test('a blip offline, under the 2 s grace (a laptop waking, a Wi-Fi handoff), never shows the pill or dims the page (states-05)', async () => {
+test('a blip offline, under the 2 s grace (a laptop waking, a Wi-Fi handoff), never shows the pill or dims the page', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');

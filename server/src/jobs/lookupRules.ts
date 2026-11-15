@@ -1,4 +1,4 @@
-// The JD lookup's pure rules (J3; BRIEF.md › Jobs › The JD; decisions 53, 54, 61, 66), tested as
+// The JD lookup's pure rules, tested as
 // tables (tests/lookupRules.test.ts): which links in an email are postings and on which platform,
 // which hiring platforms and board names to try, when GovernmentJobs' search runs and which of its
 // results are the employer's, which of a board's postings could be the role, what the model's
@@ -8,8 +8,8 @@ import type {ProviderError} from '../sync/errors.ts';
 import {companyKey, requisitionKey, titleKey} from './rules.ts';
 
 /**
- * The hiring platforms whose public job APIs Jobs reads, board by board (decision 54). GovernmentJobs
- * isn't one: it has no API, and is read through its site-wide search (D389).
+ * The hiring platforms whose public job APIs Jobs reads, board by board. GovernmentJobs
+ * isn't one: it has no API, and is read through its site-wide search.
  */
 export const JOB_PLATFORMS = ['greenhouse', 'lever', 'ashby'] as const;
 export type JobPlatform = (typeof JOB_PLATFORMS)[number];
@@ -222,7 +222,7 @@ export const POSTED_AFTER_APPLYING_DAYS = 2;
 const words = (key: string) => key.split(' ').filter(Boolean);
 
 /**
- * How well a board's posting fits the application (decision 54's company, title and date; the
+ * How well a board's posting fits the application (its company, title and date; the
  * model weighs location): 3 its requisition ID, 2 its normalised title, 1 a title whose words hold
  * the other's ("Junior Developer" and "Junior Developer, Digital"), 0 not at all. A posting published
  * after the application can't be it.
@@ -284,7 +284,7 @@ export type Verdict = 'match' | 'maybe' | 'no';
 export type StepOutcome<T> = {is: 'confident'; posting: T} | {is: 'unsure'; candidates: T[]} | {is: 'none'};
 
 /**
- * What the model's verdicts make (decision 54): exactly one match is confident; otherwise the
+ * What the model's verdicts make: exactly one match is confident; otherwise the
  * matches and maybes, in order and at most three, are unsure; nothing is none.
  */
 export function outcomeOf<T>(judged: {candidate: T; verdict: Verdict}[], limit = 3): StepOutcome<T> {
@@ -296,13 +296,12 @@ export function outcomeOf<T>(judged: {candidate: T; verdict: Verdict}[], limit =
 
 /**
  * Whether a source's failure is a miss (it said no: a 404, a 403, a posting taken down) or a failure
- * to retry (the network, a timeout, a 5xx, a 429): a lookup that failed is never "No JD found"
- * (BRIEF.md › When things break).
+ * to retry (the network, a timeout, a 5xx, a 429): a lookup that failed is never "No JD found".
  */
 export const isMiss = (error: ProviderError) => error.kind === 'permanent';
 
 /**
- * How a lookup ends, from what its sources gave in order (decision 54): the first confident posting
+ * How a lookup ends, from what its sources gave in order: the first confident posting
  * is saved; a source that failed means the lookup failed, to be retried, never "No JD found"; then
  * the unsure candidates, at most three, wait in Needs you; with nothing at all, "No JD found".
  */
@@ -317,7 +316,7 @@ export function lookupEnd<T>(steps: (StepOutcome<T> | {is: 'failed'; error: Prov
 }
 
 /**
- * Whether the next source runs (decision 54): the platforms run while nothing is confident; web
+ * Whether the next source runs: the platforms run while nothing is confident; web
  * search, which costs, only when the email's link and the platforms cleanly missed: nothing
  * confident, nothing unsure, nothing failed.
  */

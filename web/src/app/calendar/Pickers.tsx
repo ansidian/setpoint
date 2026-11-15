@@ -1,4 +1,4 @@
-// The fields the editor and the proposal card share (SV-25, D54), each typeable: Project, with its
+// The fields the editor and the proposal card share, each typeable: Project, with its
 // menu of Todoist's projects and New project; the date, with a month to pick from; a time, with its
 // list in 15-minute steps. Each draws in its host's `.field` and `.menu` styles. The mini month is
 // the sidebar's too.
@@ -22,17 +22,17 @@ export interface ProjectOption {
   colour?: TodoistColour | null;
 }
 
-/** SV-191: a calendar's name, with its account's label after it in `ink3` when calendarLabel gives one. */
+/** A calendar's name, with its account's label after it in `ink3` when calendarLabel gives one. */
 export const CalendarName = ({label}: {label: {name: string; account: string | null}}) =>
   <>{label.name}{label.account && <span className="ink3 detail">{label.account}</span>}</>;
 
-/** A project's dot in its own colour (SV-29), as a calendar's in the Calendar menu, clamped per theme as its tasks' rings (#175). */
+/** A project's dot in its own colour, as a calendar's in the Calendar menu, clamped per theme as its tasks' rings. */
 export const ProjectDot = ({colour}: {colour: TodoistColour | null | undefined}) =>
   <span className="dot sm todoist" style={{'--c': colour ? TODOIST_COLOURS[colour] : 'var(--ink3)'} as CSSProperties} />;
 
 /**
  * A menu that keeps focus in its field: ↑/↓ move `cur`, a click picks; ↵ marks the one Enter picks,
- * and a check the project the field holds (polish audit calflows-08).
+ * and a check the project the field holds.
  */
 export function ProjectMenu({choices, projects, cur, value = null, onPick}: {choices: ProjectChoice[]; projects: ProjectOption[]; cur: number; value?: string | null; onPick: (choice: ProjectChoice) => void}) {
   return (
@@ -54,7 +54,7 @@ export const stepCursor = (key: string, cur: number, count: number) =>
   (key === 'ArrowDown' || key === 'ArrowUp' ? (cur + (key === 'ArrowDown' ? 1 : -1) + count) % count : null);
 
 /**
- * Project (SV-25): what's typed, its menu the projects holding it and New project for a name none
+ * Project: what's typed, its menu the projects holding it and New project for a name none
  * has; a picked new one shows tagged New and isn't offered again. `line` is the editor's line typing
  * a #project: the menu shows for it, moved by the line's keys.
  */
@@ -86,7 +86,7 @@ export function ProjectField({value, isNew, projects, placeholder, className = '
     else if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) pick(choices[cur]!);
     else if (event.key === 'Escape') setOpen(null);
     else if (event.key === 'Tab' && !event.shiftKey) {
-      // Tab picks too (SV-29), and goes on to the next field.
+      // Tab picks too, and goes on to the next field.
       pick(choices[cur]!);
       return;
     } else return;
@@ -116,10 +116,10 @@ export function ProjectField({value, isNew, projects, placeholder, className = '
 const HEADS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
- * The mini month (DESIGN.md › Sidebar on Calendar): ‹ › step it, a day picks; `cursor` is the one
- * Enter picks. An event's Date shows its days as a band (`range`, SV-29), following the pointer; the
+ * The mini month: ‹ › step it, a day picks; `cursor` is the one
+ * Enter picks. An event's Date shows its days as a band (`range`), following the pointer; the
  * week view's shown week is one band too, and stepping slides the days in from the side they come
- * from (polish audit calpanes-05). The date picker marks its `value` most strongly (calflows-08).
+ * from. The date picker marks its `value` most strongly.
  */
 export function MiniMonth({month, today, value, cursor = null, range = null, week = null, headClass = '', onMonth, onPick, onHover}: {
   month: string;
@@ -177,7 +177,7 @@ function pickerKeys(event: ReactKeyboardEvent, open: boolean, typed: boolean, st
   event.stopPropagation();
 }
 
-/** An event's days in its Date field (SV-29): its last day, what typing reads, and a pick of both. */
+/** An event's days in its Date field: its last day, what typing reads, and a pick of both. */
 export interface DateRange {
   to: string;
   read: (text: string) => {from: string; to: string | null} | null;
@@ -185,10 +185,10 @@ export interface DateRange {
 }
 
 /**
- * A day field (SV-25): it takes typing, read when it's left or on Enter (what doesn't read goes
+ * A day field: it takes typing, read when it's left or on Enter (what doesn't read goes
  * back), and focusing it opens the month under it until typing starts. ↑/↓ move a week, Enter
- * picks, Esc closes. With a `range` (an event's, SV-29) the month picks one end, then the other,
- * either side of it (#103), the days between a band that follows the pointer; a lone day typed
+ * picks, Esc closes. With a `range` (an event's) the month picks one end, then the other,
+ * either side of it, the days between a band that follows the pointer; a lone day typed
  * keeps the length.
  */
 export function DateField({className, label, value, shown, placeholder, today, read, onValue, range, onClear}: {
@@ -202,7 +202,7 @@ export function DateField({className, label, value, shown, placeholder, today, r
   read: (text: string) => string | null;
   onValue: (date: string) => void;
   range?: DateRange;
-  // An × in the field takes the day off (SV-74: a new task's due date); none without it.
+  // An × in the field takes the day off (a new task's due date); none without it.
   onClear?: () => void;
 }) {
   const [text, setText] = useState<string | null>(null);
@@ -210,7 +210,7 @@ export function DateField({className, label, value, shown, placeholder, today, r
   const [open, setOpen] = useState<{month: string; cursor: string; phase: 'start' | 'end'; hover: string | null} | null>(null);
   const at = (cursor: string) => ({month: monthOf(cursor), cursor, phase: 'start' as const, hover: null});
   const pick = (date: string) => {
-    // An empty day (an email that gave none, SV-24) starts a range as a set one does (Andy, 2026-11-05).
+    // An empty day (an email that gave none) starts a range as a set one does.
     if (range && open) {
       const next = rangePick(open.phase, value ?? date, date);
       range.onRange(next.from, next.to);
@@ -278,14 +278,14 @@ export function DateField({className, label, value, shown, placeholder, today, r
 }
 
 /**
- * A time field (SV-25): it takes typing as `read` does ("3p", "930a"), and focusing it opens its list
+ * A time field: it takes typing as `read` does ("3p", "930a"), and focusing it opens its list
  * (`choices`), scrolled to its value, until typing starts. ↑/↓ move, Enter picks, Esc closes.
  */
 export function TimeField({className, label, value, blank, choices, read, onValue}: {
   className: string;
   label: string;
   value: number;
-  // What the field reads in `ink3` in place of its time, as the Date field's "No date": SV-78's No end.
+  // What the field reads in `ink3` in place of its time, as the Date field's "No date": the end's No end.
   blank?: string;
   choices: {minutes: number; label: string}[];
   read: (text: string) => number | null;

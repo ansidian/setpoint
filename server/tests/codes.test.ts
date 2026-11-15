@@ -1,4 +1,4 @@
-// Reading sorted mail again for its code (SV-68): what would change, applying it, and the code
+// Reading sorted mail again for its code: what would change, applying it, and the code
 // emails still without a code. Unsorted mail is left for triage.
 import {eq} from 'drizzle-orm';
 import {expect, test} from 'vitest';

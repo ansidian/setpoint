@@ -1,7 +1,7 @@
 // Time to Leave as boards 11, 12a and 12b draw it: "Leave by 2:05 PM · 18 min" for Dentist and
-// "Leave by 6:35 PM · 21 min" for Dinner with Sam. Live routes from Home make these (B5); the dev
+// "Leave by 6:35 PM · 21 min" for Dinner with Sam. Live routes from Home make these; the dev
 // seed has no Home and reaches no provider, so this fixture writes the estimates the scheduler
-// would have kept (SV decision D3).
+// would have kept.
 import {and, eq} from 'drizzle-orm';
 import type {OpenDatabase} from '../../db/open.ts';
 import * as t from '../../db/schema.ts';

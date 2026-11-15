@@ -1,4 +1,4 @@
-// Jobs's states and Settings (J8; DESIGN.md › Jobs › States, Jobs in Settings; boards 38a–38c, 39a,
+// Jobs's states and Settings (boards 38a–38c, 39a,
 // 39b) against the seed: the history pass's line, an application landing at its date's place and
 // the line's last words folding it away (38a); the AI
 // down, saying so and, once it's back, folding out (38b); Jobs off, its header alone, no
@@ -193,7 +193,7 @@ test('board 39a: Settings › Jobs: its count, the switch, Reads as a select on 
     assert.equal(await main.getByRole('switch', {name: 'Jobs'}).getAttribute('aria-checked'), 'true');
     assert.deepEqual(await main.locator('.set-label').allTextContents(), ['Reads', 'History']);
 
-    // Reads (D310, #273, D383): what Jobs reads first, then the rest in the sidebar's order, each a select.
+    // Reads: what Jobs reads first, then the rest in the sidebar's order, each a select.
     const readsShown = () => main.locator('.jb-reads .set-row').evaluateAll(rows => rows.map(row => [row.querySelector('.acc')!.textContent, row.querySelector('.select')!.textContent]));
     assert.deepEqual(await readsShown(), [
       ['Jobs', 'Every email'], ['Business', 'Career mail only'], ['Personal', 'Off'], ['Work', 'Off'], ['iCloud', 'Off'],
@@ -226,7 +226,7 @@ test('board 39a: Settings › Jobs: its count, the switch, Reads as a select on 
   }
 });
 
-test('board 39b: Settings › AI\'s Jobs group: three models by name, its spend only on Usage this month\'s line (D515)', async () => {
+test('board 39b: Settings › AI\'s Jobs group: three models by name, its spend only on Usage this month\'s line', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -234,13 +234,13 @@ test('board 39b: Settings › AI\'s Jobs group: three models by name, its spend 
     const main = settings.getByRole('region', {name: 'AI'});
     const jobs = main.locator('.set-sec', {has: page.locator('.set-label', {hasText: /^Jobs$/})});
     await jobs.locator('.set-row').first().waitFor();
-    // Names, not selects (override 26); no key yet, so each says one is needed, as News's do.
+    // Names, not selects; no key yet, so each says one is needed, as News's do.
     assert.deepEqual(await jobs.locator('.set-row').evaluateAll(rows => rows.map(row => [row.querySelector('.t')!.textContent, row.querySelector('.s')!.textContent, row.lastElementChild!.textContent])), [
       ['Each email', 'Role title, requisition ID, the event, the match, needs a key', 'Claude Haiku 5.5'],
       ['Finding the JD', 'When the email\'s link and the platforms miss, needs a key', 'Claude Sonnet 5.5 with web search'],
       ['Reading the JD', 'Summary, must-haves and nice-to-haves, salary and setting, needs a key', 'Claude Haiku 5.5'],
     ]);
-    // No cap, so no meter and nothing to choose; the spend shows once, on Usage this month's Jobs line (D515).
+    // No cap, so no meter and nothing to choose; the spend shows once, on Usage this month's Jobs line.
     assert.equal(await jobs.locator('.meter, .select, [role="meter"]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

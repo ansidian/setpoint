@@ -1,4 +1,4 @@
-// The reader's rules (DESIGN.md › The reader; BRIEF.md › Security mail) as tables: the sender's
+// The reader's rules as tables: the sender's
 // line, the actions offered, the facts card, which remote images load, attachments and CSV.
 import type {MessageOut, RemoteContentOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
@@ -48,7 +48,7 @@ describe('senderLine', () => {
       {text: 'example.com', tone: 'ink3'}],
     ['the platform alone', {from_name: 'Fabrikam', organisation: 'Fabrikam', via: 'Workday', remote_content: remote()},
       {text: 'via Workday', tone: 'ink2'}],
-    // From the email's row while the email itself loads (reader-01): the domain waits for it.
+    // From the email's row while the email itself loads: the domain waits for it.
     ['from its row: the organisation and platform', {from_name: 'Priya Raman', organisation: 'Northwind Talent', via: 'Greenhouse'},
       {text: 'Northwind Talent · via Greenhouse', tone: 'ink2'}],
     ['from its row, the organisation the sender: nothing until its domain is known', {from_name: 'Google', organisation: 'Google', via: null}, null],
@@ -157,7 +157,7 @@ describe('attachments', () => {
     expect(previewKind(file)).toBe(kind);
   });
 
-  // Each card's type tile (#122): by its name's extension, else its MIME type, else other.
+  // Each card's type tile: by its name's extension, else its MIME type, else other.
   test.each([
     ['a PDF by its MIME type alone', 'statement', 'application/pdf', 'pdf'],
     ['a Numbers file', 'Trip.numbers', 'application/octet-stream', 'sheet'],

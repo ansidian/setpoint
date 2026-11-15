@@ -1,23 +1,22 @@
-// Corrections (J6; BRIEF.md › Jobs › Corrections; DESIGN.md › Corrections; decisions 58, 67, 68; D322,
-// D365): clicks on an application that stick. Each runs in one transaction, keeps what it touched for
+// Corrections: clicks on an application that stick. Each runs in one transaction, keeps what it touched for
 // its toast's Undo (./undo.ts) and sends the `jobs` live event. What keeps each from being undone by a
 // later email, re-run or lookup is ./stick.ts.
 //
 // - The company and title in place: set by hand, and kept; the application still answers to its old
-//   name, so a later email naming that finds it. The JD's location too (SV-170): no reading writes it again.
-// - Set status (D365): set by hand, until an email that sets one comes (D322). Let emails decide hands
+//   name, so a later email naming that finds it. The JD's location too: no reading writes it again.
+// - Set status: set by hand, until an email that sets one comes. Let emails decide hands
 //   it back to what the emails make it.
 // - Merge with…: the other application comes into this one, its emails and all, and goes; this one
 //   answers to its company and role from then on.
 // - An event's Move to… takes its email to another application (which answers to its role from then
 //   on); Not about this takes it off, back into Needs you.
-// - Not an application: gone, its emails blocked with its company and role (decision 67). Delete:
+// - Not an application: gone, its emails blocked with its company and role. Delete:
 //   gone, so a later email can make it again.
 // - Not this posting: the JD goes and its link is turned down; the other candidates are offered again,
 //   or it's No JD found.
-// - Paste the posting: the user's copy is the JD, read afterwards (SV-140).
-// - Pin and Unpin (SV-243, D504): on the table's Pinned shelf or off it. A pin goes when the status
-//   becomes Rejected or Withdrawn, by hand or by an email (D505), and Undo brings it back with the status.
+// - Paste the posting: the user's copy is the JD, read afterwards.
+// - Pin and Unpin: on the table's Pinned shelf or off it. A pin goes when the status
+//   becomes Rejected or Withdrawn, by hand or by an email, and Undo brings it back with the status.
 // A merge, a move or an event taken off settles the status from the emails again, unless the user set it.
 import {isQuietJobEvent, MAX_PASTED_CHARS, PASTED_TOO_LONG, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
 import type {JobEventKind, JobHandField, JobStatus, JobsEdit} from '@setpoint/shared';
@@ -73,13 +72,13 @@ export function corrected(store: Store, scope: UndoScope, change: (now: string) 
   });
 }
 
-/** Marks a field set by hand, as of now (decision 58). */
+/** Marks a field set by hand, as of now. */
 export function markByHand(store: Store, applicationId: number, field: JobHandField, now: string) {
   jobsDb(store.sqlite).insert(j.jobsHandSet).values({applicationId, field, setAt: now})
     .onConflictDoUpdate({target: [j.jobsHandSet.applicationId, j.jobsHandSet.field], set: {setAt: now}}).run();
 }
 
-/** The status the application's emails make it, written, unless the user set it (D322). */
+/** The status the application's emails make it, written, unless the user set it. */
 export function settleStatus(store: Store, applicationId: number, now: string) {
   if (setByHand(store, applicationId, 'status')) return;
   writeEmailsStatus(store, applicationId, now);
@@ -95,7 +94,7 @@ function writeEmailsStatus(store: Store, applicationId: number, now: string) {
 
 /**
  * An email has just come to this application by the user's hand (Assign to…, Move to…, a merge): one
- * that sets a status no older than the status there takes over, as it would have on arrival (D322);
+ * that sets a status no older than the status there takes over, as it would have on arrival;
  * then the status is what the emails make it, unless the user still holds it.
  */
 export function takeEmail(store: Store, applicationId: number, kind: JobEventKind, at: string, now: string) {
@@ -129,7 +128,7 @@ export function editApplication(store: Store, id: number, edit: JobsEdit): Chang
   });
 }
 
-/** POST /api/jobs/applications/:id/status: set by hand (D322), or null, Let emails decide (D365). */
+/** POST /api/jobs/applications/:id/status: set by hand, or null, Let emails decide. */
 export function setStatus(store: Store, id: number, status: JobStatus | null): Change {
   return corrected(store, {applications: [id]}, now => {
     const db = jobsDb(store.sqlite);
@@ -149,7 +148,7 @@ export function setStatus(store: Store, id: number, status: JobStatus | null): C
   });
 }
 
-/** POST /api/jobs/applications/:id/pin: Pin or Unpin (SV-243); pinning again keeps its place on the shelf. */
+/** POST /api/jobs/applications/:id/pin: Pin or Unpin; pinning again keeps its place on the shelf. */
 export function setPinned(store: Store, id: number, pinned: boolean): Change {
   return corrected(store, {applications: [id]}, now => {
     const application = applicationOf(store, id);
@@ -185,7 +184,7 @@ export function mergeApplications(store: Store, id: number, otherId: number): Ch
     // A re-application of the other is now one of this, unless it's this one.
     db.update(j.jobsApplications).set({reappliedFromId: id}).where(eq(j.jobsApplications.reappliedFromId, otherId)).run();
     if (application.reappliedFromId === otherId || application.reappliedFromId === id) db.update(j.jobsApplications).set({reappliedFromId: null}).where(eq(j.jobsApplications.id, id)).run();
-    // Pinned if either was, from the earlier pin (D505).
+    // Pinned if either was, from the earlier pin.
     const pins = [application.pinnedAt, other.pinnedAt].filter((at): at is string => at !== null).sort();
     if (pins[0] !== application.pinnedAt) db.update(j.jobsApplications).set({pinnedAt: pins[0] ?? null}).where(eq(j.jobsApplications.id, id)).run();
     // Applied is the earlier of the two.
@@ -243,7 +242,7 @@ export function notAboutThis(store: Store, eventId: number): Change {
   });
 }
 
-/** POST /api/jobs/applications/:id/not-an-application: gone, and its emails, company and role blocked (decision 67). */
+/** POST /api/jobs/applications/:id/not-an-application: gone, and its emails, company and role blocked. */
 export function notAnApplication(store: Store, id: number): Change {
   return corrected(store, {applications: [id]}, now => {
     const db = jobsDb(store.sqlite);
@@ -261,7 +260,7 @@ export function notAnApplication(store: Store, id: number): Change {
   });
 }
 
-/** DELETE /api/jobs/applications/:id: forgotten, so a later email can make it again (decision 67). */
+/** DELETE /api/jobs/applications/:id: forgotten, so a later email can make it again. */
 export function deleteApplication(store: Store, id: number): Change {
   return corrected(store, {applications: [id]}, () => {
     applicationOf(store, id);
@@ -320,7 +319,7 @@ export function pastePosting(store: Store, id: number, pasted: string): Change {
 export const openJdItems = (store: Store, applicationId: number) => jobsDb(store.sqlite).select({id: j.jobsNeedsYou.id}).from(j.jobsNeedsYou)
   .where(and(eq(j.jobsNeedsYou.applicationId, applicationId), eq(j.jobsNeedsYou.kind, 'jd_to_confirm'), isNull(j.jobsNeedsYou.resolvedAt))).all().map(row => row.id);
 
-/** The status an email to track starts its application at: an interview or an assessment In process, an offer Offer (decision 69). */
+/** The status an email to track starts its application at: an interview or an assessment In process, an offer Offer. */
 export const trackedStatus = (kind: JobEventKind | null): JobStatus => {
   const status = kind && !isQuietJobEvent(kind) ? STATUS_OF_JOB_EVENT[kind as keyof typeof STATUS_OF_JOB_EVENT] : null;
   return status === 'offer' ? 'offer' : 'in_process';

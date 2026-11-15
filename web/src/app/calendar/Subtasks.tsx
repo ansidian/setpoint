@@ -1,4 +1,4 @@
-// A task's subtasks as a checklist (SV-272, D558), in the floating detail and under the task's row in
+// A task's subtasks as a checklist, in the floating detail and under the task's row in
 // the day pane: each a ring that completes it alone, struck through once done, at .5 while Todoist
 // hasn't confirmed. They sit a column in from the task, and that column holds each one's handle,
 // shown under the pointer: dragging it reorders them, live as Settings' lists do (order.ts), and
@@ -6,9 +6,9 @@
 // does: the row says so in `alert`, Todoist's words as its tip, with Try again and Undo. Without the
 // actions (the phone) the rings are marks.
 //
-// SV-273: a dated subtask's date follows its title in `ink3`, with the bell when it has reminders
-// (D567); its title opens it in the editor, and a right-click its menu (D569). The last row adds one
-// (D566): "Add subtask", a field in place once clicked, where Enter adds what's typed at the end, at
+// A dated subtask's date follows its title in `ink3`, with the bell when it has reminders;
+// its title opens it in the editor, and a right-click its menu. The last row adds one:
+// "Add subtask", a field in place once clicked, where Enter adds what's typed at the end, at
 // .5 until the server has it, and the field clears for the next; Esc, or leaving it empty, puts the
 // row back, and leaving it with text adds that first.
 import type {ItemOut, SubtaskOut} from '@setpoint/shared';
@@ -30,9 +30,9 @@ interface SubtasksProps {
   onSettle?: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
   // Every subtask's id in the new order; settles once the server has it, or refused it.
   onReorder?: (task: ItemOut, ids: number[]) => Promise<unknown>;
-  // SV-273: a new subtask at the end; settles once the server has it, or refused it.
+  // A new subtask at the end; settles once the server has it, or refused it.
   onAdd?: (task: ItemOut, title: string) => Promise<unknown>;
-  // SV-273: the subtask in the editor, and its right-click menu.
+  // The subtask in the editor, and its right-click menu.
   onOpen?: (subtask: SubtaskOut) => void;
   onMenu?: (event: ReactMouseEvent<HTMLElement>, subtask: SubtaskOut) => void;
 }
@@ -123,7 +123,7 @@ function Due({text, bell}: {text: string; bell: boolean}) {
   return <span className="due ink3 num">{text}{bell && <Icon name="notifications" size={12} />}</span>;
 }
 
-/** The checklist's last row (D566): "Add subtask", a field in its place while adding. */
+/** The checklist's last row: "Add subtask", a field in its place while adding. */
 function AddSubtask({onAdd}: {onAdd: (title: string) => void}) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');

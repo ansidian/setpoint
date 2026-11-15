@@ -1,7 +1,6 @@
-// Upcoming's Add to calendar (N3; BRIEF.md › The page: "Add to calendar opens a proposal, as from an
-// email"): the keynote as the event POST /api/items would create, pre-filled from the news, with its
-// calendar chosen as an email's is and the conflict line against that day. Nothing is created: Create
-// sends the item through B5's create command, as an email's proposal does.
+// Upcoming's Add to calendar opens a proposal, as from an email: the keynote as the event POST
+// /api/items would create, pre-filled from the news, with its calendar chosen as an email's is and
+// the conflict line against that day. Nothing is created: Create sends the item through the calendar's create command, as an email's proposal does.
 import type {NewsProposalOut, ProposalField} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {calendarFor} from '../alfred/proposals.ts';
@@ -14,7 +13,7 @@ import type {Store} from '../store.ts';
 
 const HOUR = 60 * 60_000;
 
-/** `origin` is Setpoint's public URL, which the description's link to the story is made absolute on (SV-270). */
+/** `origin` is Setpoint's public URL, which the description's link to the story is made absolute on. */
 export function proposeFromNewsEvent(store: Store, eventId: number, origin: string): NewsProposalOut {
   const event = store.db.select().from(t.newsEvents).where(eq(t.newsEvents.id, eventId)).get();
   if (!event) throw notFound('No such keynote.');
@@ -34,7 +33,7 @@ export function proposeFromNewsEvent(store: Store, eventId: number, origin: stri
     },
     conflict: conflictLine({all_day: event.allDay, starts_at: startsAt, ends_at: endsAt, startHour: startsAt ? Number(localTime(startsAt, zone).slice(0, 2)) : null},
       itemsInRange(store, date, dayAfter(date)).items),
-    // D553: the description's "From:" line names the story and links to it in Setpoint.
+    // The description's "From:" line names the story and links to it in Setpoint.
     source: {subject: story?.headline ?? event.name, url: new URL(`/news/story/${event.storyId}`, origin).href},
   };
 }

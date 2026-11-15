@@ -1,4 +1,4 @@
-// Reminders' anchors and words as tables (darma SV-109, D287–D289): what an item's reminders count
+// Reminders' anchors and words as tables: what an item's reminders count
 // from, a preset's words, any other offset as its moment with the offset quiet beside it, the order
 // they're shown in, and the 4 weeks either side.
 import type {ItemOut} from '@setpoint/shared';
@@ -70,7 +70,7 @@ describe('4 weeks either side', () => {
   ])('%i min', (minutes, problem) => expect(customProblem(minutes)).toBe(problem));
 });
 
-describe('SV-112: the line\'s reminders (D293)', () => {
+describe('the line\'s reminders', () => {
   const anchor = ms('2026-10-27', '14:00');
   test('an offset is itself; a moment is its offset from the item\'s moment', () => {
     expect(lineOffsets([{minutes: 60}, {date: '2026-10-25', time: 20 * 60}, {date: '2026-10-27', time: 16 * 60}], anchor, zone)).toEqual([60, 2520, -120]);

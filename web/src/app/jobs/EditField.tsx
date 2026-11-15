@@ -1,4 +1,4 @@
-// The title, the company or the JD's location, edited in place (DESIGN.md › Corrections; board 35a; SV-170).
+// The title, the company or the JD's location, edited in place (board 35a).
 import {useEffect, useRef, useState} from 'react';
 
 /**

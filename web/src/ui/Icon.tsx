@@ -4,8 +4,8 @@ import type {CSSProperties} from 'react';
 import {ICON_VIEWBOX, ICONS, type IconName, TASK_GLYPHS} from './glyphs.ts';
 
 /**
- * An icon in currentColor; `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk, DESIGN.md #173);
- * `className` and `style` add to its own (the editor's rows echoing the line's marks, polish audit calflows-06).
+ * An icon in currentColor; `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk);
+ * `className` and `style` add to its own (the editor's rows echoing the line's marks).
  */
 export function Icon({name, size = 18, alfred = false, className, style}: {name: IconName; size?: number; alfred?: boolean; className?: string; style?: CSSProperties}) {
   return (
@@ -16,7 +16,7 @@ export function Icon({name, size = 18, alfred = false, className, style}: {name:
 }
 
 /**
- * Alfred's one mark (#173): auto_awesome in a gradient from `cool` to `violet`, two of Day stack's
+ * Alfred's one mark: auto_awesome in a gradient from `cool` to `violet`, two of Day stack's
  * own colours, bottom left to top right. Drawn once, out of sight, for every `alfred` icon to fill from.
  */
 export function AlfredInk() {
@@ -40,10 +40,10 @@ export function TaskGlyph({done, size = 13}: {done: boolean; size?: number}) {
   );
 }
 
-/** Day stack (decision 44, #87): three calendar chips, the middle one lifted, in the theme's own
+/** Day stack: three calendar chips, the middle one lifted, in the theme's own
  * `cool`, `caution` and `violet`, which stay put when an account or calendar is recoloured.
- * web/public/favicon.svg draws the same chips on darma's tile. `settle` lets each chip settle into
- * place once as it's drawn (All caught up, states-10). */
+ * web/public/favicon.svg draws the same chips on a tile. `settle` lets each chip settle into
+ * place once as it's drawn (All caught up). */
 export function Mark({size = 18, settle = false}: {size?: number; settle?: boolean}) {
   return (
     <svg className={settle ? 'mark settle' : 'mark'} width={size} height={size} viewBox="0 0 22 22" aria-hidden="true">

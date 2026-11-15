@@ -34,7 +34,7 @@ describe('what never reaches the frame', () => {
 });
 
 describe('what a browser would show', () => {
-  // A browser folds an email's documents into one body; the reader's page holds what's in all of them (SV-127).
+  // A browser folds an email's documents into one body; the reader's page holds what's in all of them.
   test.each([
     ['one document', '<!doctype html><html><head><title>T</title></head><body><p>One</p></body></html>', '<p>One</p>'],
     ['a fragment', '<p>One</p> <p>Two</p>', '<p>One</p> <p>Two</p>'],
@@ -57,7 +57,7 @@ describe('what a browser would show', () => {
 describe('what the frame\'s own height can\'t change', () => {
   // The frame is as tall as its page, so a rule that asks how tall the window is would ask the frame,
   // and could flip as the frame grows (a notice flipped from landscape to portrait at 600 px
-  // and back, forever): such rules read as they would in a tall window (SV-228).
+  // and back, forever): such rules read as they would in a tall window.
   test.each([
     ['landscape never holds', '@media screen and (max-width: 767px) and (orientation: landscape) { .t { width: 360px; } }', '@media screen and (max-width: 767px) and (max-width: 0px) { .t { width: 360px; } }'],
     ['portrait always does', '@media (orientation:portrait) { .t { width: 100%; } }', '@media (min-width: 0px) { .t { width: 100%; } }'],
@@ -75,7 +75,7 @@ describe('remote content', () => {
     ['an image becomes its placeholder, with its alt text and size', '<img src="https://cdn.example/hero.jpg" alt="Hero image" width="600" height="130" style="display: block">',
       /^<span style="background: repeating-linear-gradient\(135deg, #eceef0 0 3px, #f6f7f8 3px 8px\);.* width: 600px; height: 130px; display: block; display: grid;" data-hidden-image>Hero image<\/span>$/],
     ['an inline image keeps flowing inline', '<img src="https://cdn.example/a.png" alt="A">', /display: inline-grid;" data-hidden-image>A<\/span>$/],
-    // reader-10: a blank hatch still says "picture", with the hide_image glyph at its centre.
+    // A blank hatch still says "picture", with the hide_image glyph at its centre.
     ['an image with no alt shows the hidden-image glyph', '<img src="https://cdn.example/a.png" width="40" height="40">',
       /width: 40px; height: 40px; display: inline-grid;" data-hidden-image><svg width="20" height="20" viewBox="0 -960 960 960" fill="#a3a6ab" aria-hidden="true"><path d="M820 -747\.69[^"]*"\/><\/svg><\/span>$/],
     // A mailing service's image gives only its width: a quarter of it as its height, 56 to 160, over its
@@ -123,7 +123,7 @@ describe('remote content', () => {
     expect(page).toMatch(/<style>p \{ margin: 0; \}<\/style><style>[^<]*<\/style><\/head><body><p>Hi<\/p><script>/);
   });
 
-  test('the page\'s own box comes last, after the email\'s styles, so an email can\'t size it to the window (SV-228)', () => {
+  test('the page\'s own box comes last, after the email\'s styles, so an email can\'t size it to the window', () => {
     const page = emailPage({styles: ['html, body { height: 100vh !important; display: inline-flex !important; }'], body: '<p>Hi</p>'});
     expect(page).toContain(`<style>html, body { height: 100vh !important; display: inline-flex !important; }</style><style>${PAGE_BOX}</style></head>`);
     expect(emailPage({styles: [], body: '<p>Hi</p>'}, 'app')).toContain(`<style>${PAGE_BOX}</style></head>`);

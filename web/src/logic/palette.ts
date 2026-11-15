@@ -1,5 +1,5 @@
-// ⌘K's list (DESIGN.md › ⌘K; board 20): commands, not search. With nothing typed it shows This
-// email (on an open email) or Selected emails (#249), Go to and Appearance; typing finds every command, the ones that only
+// ⌘K's list (board 20): commands, not search. With nothing typed it shows This
+// email (on an open email) or Selected emails, Go to and Appearance; typing finds every command, the ones that only
 // have a key too (New event, New task, Mark all as read, Sign out), in the same section order.
 
 export const PALETTE_SECTIONS = ['email', 'selection', 'goto', 'appearance', 'more'] as const;
@@ -23,7 +23,7 @@ export function matches(command: Matchable, query: string): boolean {
 }
 
 /**
- * Where what's typed matched a command's label (polish audit shell-13): the start of each of its words
+ * Where what's typed matched a command's label: the start of each of its words
  * that a typed word begins, as long as that typed word, so ⌘K can mark it. A match in its keywords
  * only ("dark" for Night) marks nothing.
  */

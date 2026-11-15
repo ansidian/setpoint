@@ -1,4 +1,4 @@
-// A JD to confirm's candidates (DESIGN.md › Needs you; board 34a): in Needs you, and in the detail
+// A JD to confirm's candidates (board 34a): in Needs you, and in the detail
 // where Not this posting offers the other candidates (35b).
 import type {JdCandidateOut} from '@setpoint/shared';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
@@ -11,7 +11,7 @@ import {candidateWhere, CANT_READ} from './menus.ts';
  * A JD's candidates (34a): a group of radios, the last None of these, each candidate's arrow opening
  * its posting without picking it. ↑ ↓ choose and Enter picks, in the group or, while its item has the
  * page's cursor (`active`), from the page. Picked, the group takes `good` and the row its check. One
- * Jobs can't read says so after its line, which gives way to it (SV-140).
+ * Jobs can't read says so after its line, which gives way to it.
  */
 export function CandidatePicker({candidates, active, picked, onPick, onNone}: {
   candidates: JdCandidateOut[];

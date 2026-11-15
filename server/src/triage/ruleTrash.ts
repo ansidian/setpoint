@@ -1,4 +1,4 @@
-// A written rule's delayed trash (DESIGN.md #347, D494), run the way the reminders are: a pass every
+// A written rule's delayed trash, run the way the reminders are: a pass every
 // minute. Each pass:
 // 1. tries again every delayed trash the provider refused, which failed in place;
 // 2. trashes each email whose due time has come, unless it's pinned or protected, through the

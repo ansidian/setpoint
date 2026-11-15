@@ -1,13 +1,13 @@
-// The Inbox, days first (SV-199, D449; DESIGN.md › The list; board 05): Attention, the Pinned shelf,
+// The Inbox, days first (board 05): Attention, the Pinned shelf,
 // then every email, Noise included, newest first, under day headings, Today first. Unread mail stays
-// in its day, drawn unread. The Inbox's views draw their part of it here too (SV-221). Each day's rows go by
-// lane, the kind once as a subheading where an FYI run starts (#237), its Noise folded to one line
-// that opens in place (#48). Attention and the shelf are bands with ages, the pattern prompt under Attention, and Unpin under the pointer on the
-// shelf; an email in either leaves its day meanwhile (D105). Today's rows show ages, earlier days'
+// in its day, drawn unread. The Inbox's views draw their part of it here too. Each day's rows go by
+// lane, the kind once as a subheading where an FYI run starts, its Noise folded to one line
+// that opens in place. Attention and the shelf are bands with ages, the pattern prompt under Attention, and Unpin under the pointer on the
+// shelf; an email in either leaves its day meanwhile. Today's rows show ages, earlier days'
 // clock times. A live code has Copy and its countdown wherever it is. Pages load as the list nears its
 // end. What shows comes from logic/all.ts; actions are the page's. A trashed row folds out and Undo
 // folds it back in (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles
-// quiet with a Done tag (SV-69). Each row has mail's slot after its subject (slots.tsx), which another
+// quiet with a Done tag. Each row has mail's slot after its subject (slots.tsx), which another
 // module may fill.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
@@ -43,7 +43,7 @@ type Part = {kind: 'band'; band: Band; count: number} | {kind: 'day'; date: stri
   | {kind: 'kh'; group: InboxGroup} | {kind: 'noise'; date: string; count: number; preview: string; open: boolean}
   | {kind: 'row'; row: MessageRowOut; group: InboxGroup | null; shelf: boolean; aged: boolean; noise: string | null}
   | {kind: 'prompt'; prompt: PatternPrompt};
-// Every row folds, and a Noise line opens like a drawer, its rows folding in (inbox-14).
+// Every row folds, and a Noise line opens like a drawer, its rows folding in.
 const RULES: FoldRules<Part> = {
   folds: () => true,
   arrives: () => true,
@@ -60,20 +60,20 @@ const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry
 
 export function AllList({attention, days, shelf, lanes = true, fill = false, empty = null, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
   onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onCodeCopied}: {
-  // Attention's rows, every Attention email not yet Done (D449).
+  // Attention's rows, every Attention email not yet Done.
   attention: MessageRowOut[];
   days: DayView[];
-  // Whether the days name their lanes: not in a view that is one lane (FYI, Noise, SV-221).
+  // Whether the days name their lanes: not in a view that is one lane (FYI, Noise).
   lanes?: boolean;
   // Whether a list too short to scroll asks for the next page itself, as a filtered view can be.
   fill?: boolean;
-  // A view with nothing in it says so (SV-221).
+  // A view with nothing in it says so.
   empty?: ReactNode;
   // The Pinned shelf's rows, newest pin first.
   shelf: MessageRowOut[];
   cursor: string | null;
   openId: number | null;
-  // The emails selected (#249), drawn as the open one is.
+  // The emails selected, drawn as the open one is.
   selected?: ReadonlySet<number>;
   accounts: Map<number, AccountOut>;
   now: number;
@@ -83,18 +83,18 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   loading: ReactNode;
   arrived: boolean;
   more: boolean;
-  // A search's first answer on its way: the list stays, dimmed, until it comes (#235).
+  // A search's first answer on its way: the list stays, dimmed, until it comes.
   dimmed?: boolean;
   // The pattern prompt under Attention.
   prompt?: PatternPrompt | null;
   onPoint: (key: string) => void;
-  // A click on a row, with its modifiers: ⌘ or Ctrl and ⇧ select (#249), a plain one opens.
+  // A click on a row, with its modifiers: ⌘ or Ctrl and ⇧ select, a plain one opens.
   onOpen: (id: number, key: string, event: MouseEvent) => void;
   onToggleNoise: (date: string) => void;
   onNearEnd: () => void;
   onUnpin: (id: number) => void;
   onAnswer?: (prompt: PatternPrompt, yes: boolean) => void;
-  // A code row's Copy, once the clipboard has it: it reads the email (#295).
+  // A code row's Copy, once the clipboard has it: it reads the email.
   onCodeCopied?: (id: number) => void;
 }) {
   const today = localDate(now, timeZone);
@@ -112,11 +112,11 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
     // Triage's note while it's down sits on the newest Unsorted lane, where the mail it couldn't sort is.
     const noted = days.find(day => day.lanes.some(lane => lane.lane === 'unsorted'))?.date ?? null;
     const dayParts = (day: DayView): Entry<Part>[] => {
-      // Today's rows show ages, as Attention's and the shelf's do; an earlier day's, clock times (D449).
+      // Today's rows show ages, as Attention's and the shelf's do; an earlier day's, clock times.
       const aged = day.date === today;
       return [
         ...day.lanes.flatMap(lane => [
-          // Attention counts what still needs the user, as Attention's segment does (SV-69).
+          // Attention counts what still needs the user, as Attention's segment does.
           ...(lanes ? [{key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', date: day.date, lane: lane.lane, label: lane.label,
             count: lane.lane === 'attention' ? lane.rows.filter(({row}) => !row.done).length : lane.rows.length, note: lane.lane === 'unsorted' && day.date === noted}} satisfies Entry<Part>] : []),
           ...lane.rows.flatMap(({row, kind}) => [
@@ -200,7 +200,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
               data-key={folded ? key : undefined} onMouseMove={folded ? () => key !== cursor && onPoint(key) : undefined} onClick={leaving ? undefined : () => onToggleNoise(item.date)}>
               <span className="gi"><Icon name={GROUP_GLYPHS.noise} size={14} /></span>Noise <span className="n">{item.count}</span>
               <span className="preview">{item.preview}</span>
-              {/* One chevron, turned to point right while it's folded (inbox-14). */}
+              {/* One chevron, turned to point right while it's folded. */}
               <span className="chev"><Icon name="expand_more" /></span>
             </div>
           );
@@ -210,7 +210,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         const line = allRowLine(row);
         const account = accounts.get(row.account_id);
         const tick = ticked.has(row.id);
-        // Attention's dot and ring are `caution` (#167), and Noise recedes (#168), wherever they are.
+        // Attention's dot and ring are `caution`, and Noise recedes, wherever they are.
         const classes = ['row', item.shelf && 'shelf', row.lane === 'attention' && 'att', row.lane === 'noise' && 'noise', row.unread && 'unread', row.done && 'done', tick && 'ticked', !leaving && cursor === key && 'cur', !leaving && openId === row.id && 'open', !leaving && selected.has(row.id) && 'sel', showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`]
           .filter(Boolean).join(' ');
         const unpin = (event: MouseEvent) => {
@@ -222,17 +222,17 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
             <span className="from">{line.from}</span>
-            {/* A live code has Copy and its countdown wherever it is (D449); once it's expired the code is inside the subject. */}
+            {/* A live code has Copy and its countdown wherever it is; once it's expired the code is inside the subject. */}
             {row.code && !codeExpired(row, now) ? <CodeLine code={row.code} onCopied={() => onCodeCopied?.(row.id)} /> : (
               <span className="subj">
-                {/* The subject a summary stands in for, under the words it replaces rather than the whole row's middle (SV-203). */}
+                {/* The subject a summary stands in for, under the words it replaces rather than the whole row's middle. */}
                 <b className={line.alert ? 'alertsubj' : undefined} data-tip={line.title ?? undefined}>
                   {line.code ? <>{line.code.before}<span className="code">{line.code.value}</span>{line.code.after}</> : line.subject}
                 </b>
                 {line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}
               </span>
             )}
-            {/* A rule's waiting trash, auto_delete and "4 h" before the account; a live code keeps its own countdown (DESIGN.md #347). */}
+            {/* A rule's waiting trash, auto_delete and "4 h" before the account; a live code keeps its own countdown. */}
             {row.trash_due_at && !row.pinned && !(row.code && !codeExpired(row, now)) && (
               <span className="trash-in num" data-tip={`Trash in ${trashLeft(row.trash_due_at, now)}`} aria-label={`Trash in ${trashLeft(row.trash_due_at, now)}`}>
                 <Icon name="auto_delete" size={14} />{trashLeft(row.trash_due_at, now)}

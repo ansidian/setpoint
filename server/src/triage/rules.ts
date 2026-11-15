@@ -1,9 +1,8 @@
 // Triage's rules as it applies them: the user's written rules in their order, then learned rules, then the
-// shipped defaults (defaultRules.json). The defaults keep v1's `preflight-rules.json` structure
-// (key, priority, match, lane, reason; harvested, SV-4) with v1's generic rules only: the user's own v1
-// rules, which name their senders, came over once at cutover as written rules (D412). v1's loader
-// refused a broken catalogue at start rather than let a bad pattern quietly stop matching; so does
-// this one.
+// shipped defaults (defaultRules.json). Each default has a key, priority, match, lane and reason,
+// and only generic rules are shipped: rules that name their senders are the user's written ones.
+// The loader refuses a broken catalogue at start rather than let a bad pattern quietly stop
+// matching.
 import fs from 'node:fs';
 import {KINDS, LANES, MESSAGE_TYPES, ruleMatchSchema} from '@setpoint/shared';
 import {asc, desc, eq} from 'drizzle-orm';
@@ -53,7 +52,7 @@ type RuleRow = typeof t.triageRules.$inferSelect;
 
 export const ruleOf = (row: RuleRow): Rule => ({
   id: row.id, key: `${row.origin}:${row.id}`, source: row.origin, match: row.match, lane: row.lane, kind: row.kind, type: null,
-  // Only a written rule acts (D486); learned rules only sort.
+  // Only a written rule acts; learned rules only sort.
   actions: row.origin === 'written' && (row.markRead || row.trash !== 'never')
     ? {markRead: row.markRead, trash: row.trash, since: row.changedAt ?? row.createdAt} : null,
 });

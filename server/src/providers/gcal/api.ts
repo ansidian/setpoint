@@ -1,8 +1,7 @@
-// Google Calendar's REST API (v3) over plain fetch, for one Google account. Harvested from v1's
-// `calendar-google-client` (googleCalendarFetch): a bearer token per call, a 30-second limit, and
-// Google's error envelope read for its own words and reason. v2 shows those words as they are
-// ("The requested event was modified by another client. (409 Conflict)"), where v1 swapped in its
-// own; and v1's 403 lumping (auth and rate limits alike) is split by reason.
+// Google Calendar's REST API (v3) over plain fetch, for one Google account: a bearer
+// token per call, a 30-second limit, and Google's error envelope read for its own words and reason.
+// Those words are shown as they are ("The requested event was modified by another client. (409
+// Conflict)"), and a 403 is split by reason (auth or rate limit).
 import type {AdapterContext} from '../../sync/adapter.ts';
 import {ProviderError} from '../../sync/errors.ts';
 import type {GoogleTokens} from '../google/auth.ts';
@@ -12,7 +11,7 @@ import type {HttpOptions, Refusal} from '../http.ts';
 export const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 export const CALENDAR_TIMEOUT_MS = 30_000;
 
-// null clears a field in a patch: Google merges start and end into what they were (SV-117).
+// null clears a field in a patch: Google merges start and end into what they were.
 export type EventTime = {dateTime?: string | null; date?: string | null; timeZone?: string | null};
 
 /** The parts of Google's Event resource Setpoint reads and writes. */
@@ -21,7 +20,7 @@ export interface GoogleEvent {
   status?: 'confirmed' | 'tentative' | 'cancelled';
   etag?: string;
   summary?: string;
-  // SV-264: HTML, as Google's own editor writes it; null in a patch deletes it (Google's patch semantics).
+  // HTML, as Google's own editor writes it; null in a patch deletes it (Google's patch semantics).
   description?: string | null;
   location?: string;
   start?: EventTime;
@@ -33,16 +32,16 @@ export interface GoogleEvent {
   reminders?: {useDefault?: boolean; overrides?: {method?: string; minutes?: number}[]};
   eventType?: string;
   updated?: string;
-  // "1" … "11", Google's event colours (F6).
+  // "1" … "11", Google's event colours.
   colorId?: string | null;
-  // SV-179: where the event came from (an .ics file's URL line); its url is the event's link when the location has none.
+  // Where the event came from (an .ics file's URL line); its url is the event's link when the location has none.
   source?: {url?: string; title?: string};
-  // SV-180: free/busy; Google leaves it out for busy ("opaque", its default).
+  // Free/busy; Google leaves it out for busy ("opaque", its default).
   transparency?: 'opaque' | 'transparent';
-  // SV-181: the RFC 5545 UID an .ics import writes by (events.import), and the file's SEQUENCE.
+  // The RFC 5545 UID an .ics import writes by (events.import), and the file's SEQUENCE.
   iCalUID?: string;
   sequence?: number;
-  // SV-31: Setpoint's own flags (normalize.ts's LEAVE_PROPERTY).
+  // Setpoint's own flags (normalize.ts's LEAVE_PROPERTY).
   extendedProperties?: {private?: Record<string, string>; shared?: Record<string, string>};
 }
 
@@ -152,7 +151,7 @@ export class GoogleCalendarApi {
   /**
    * One sync of a calendar's events, every page: incremental from `syncToken`, or a full read from
    * `timeMin`. Masters and their exceptions (singleEvents off), deleted ones included. No orderBy:
-   * Google leaves out nextSyncToken when it's set (v1, 47e21fd7).
+   * Google leaves out nextSyncToken when it's set.
    */
   async events(calendarId: string, from: {syncToken: string} | {timeMin: string}): Promise<{items: GoogleEvent[]; nextSyncToken: string | null; defaultReminders: number[]; timeZone: string | null}> {
     const items: GoogleEvent[] = [];
@@ -191,7 +190,7 @@ export class GoogleCalendarApi {
   }
 
   /**
-   * SV-20: the user's own colour for a calendar (their calendar list entry, not the calendar), as RGB:
+   * The user's own colour for a calendar (their calendar list entry, not the calendar), as RGB:
    * Google keeps the colour as given and sets its nearest colorId itself. Needs the
    * calendar.calendarlist scope.
    */
@@ -208,8 +207,8 @@ export class GoogleCalendarApi {
   }
 
   /**
-   * SV-181: events.import, a private copy of an .ics event keyed on its iCalUID: one the calendar
-   * already has is updated in place, rather than a second made, and no invitation is sent (D436).
+   * Events.import, a private copy of an .ics event keyed on its iCalUID: one the calendar
+   * already has is updated in place, rather than a second made, and no invitation is sent.
    * An exception to a series is imported with the series' iCalUID and its originalStartTime.
    */
   importEvent(calendarId: string, body: Partial<GoogleEvent> & {iCalUID: string}): Promise<GoogleEvent> {

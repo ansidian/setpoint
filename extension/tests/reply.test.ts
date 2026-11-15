@@ -1,4 +1,4 @@
-// The service worker's answer (SV-174): Setpoint's checked against jobsCheckSchema, so an answer
+// The service worker's answer: Setpoint's checked against jobsCheckSchema, so an answer
 // this build can't read says so on the pane rather than drawing wrong chips.
 import {expect, test} from 'vitest';
 import {replyOf} from '../src/reply.ts';

@@ -18,8 +18,7 @@ export interface Config {
   // it's the passkeys' relying party and the base of ntfy's click links.
   publicUrl: string | null;
   // SETPOINT_WEBHOOK_ORIGIN: the https origin Google Calendar's watch channels are told to post to,
-  // when it isn't the public URL's (v1's EA_WEBHOOK_ORIGIN: pages on a private name, webhooks on a
-  // public one). Null uses the public URL, if that's https.
+  // when it isn't the public URL's (pages on a private name, webhooks on a public one). Null uses the public URL, if that's https.
   webhookOrigin: string | null;
   production: boolean;
   // `seed` runs the clock from the seed's moment (SEED_NOW) onwards, for `npm run dev`; `frozen`
@@ -35,7 +34,7 @@ export interface Config {
   // The one Google OAuth client, for Connect Gmail's consent, which Google Calendar rides too
   // (SETPOINT_GOOGLE_CLIENT_ID and _SECRET); null leaves Gmail and Calendar unconnectable.
   google: {clientId: string; clientSecret: string} | null;
-  // Gmail push: the topic users.watch publishes to, v2's own pull subscription on it, and the
+  // Gmail push: the topic users.watch publishes to, Setpoint's own pull subscription on it, and the
   // service account that pulls (SETPOINT_GMAIL_PUBSUB_TOPIC, _SUBSCRIPTION and
   // SETPOINT_GOOGLE_SERVICE_ACCOUNT_FILE). Null polls Gmail every 2 minutes instead.
   gmailPubSub: {topic: string; subscription: string; serviceAccountFile: string} | null;

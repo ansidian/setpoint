@@ -1,4 +1,4 @@
-// The floating detail's motion (DESIGN.md › The floating detail and The glide; board 12c): one card
+// The floating detail's motion (board 12c): one card
 // that opens from its item, glides to the next one (FLIP translate on its own curve, the overshoot
 // clamped at the grid's edges, retargeting mid-glide from its position and velocity), swaps its
 // content and height as it goes, lifts and follows a drag, and closes or hands over to the editor.
@@ -15,7 +15,7 @@ import {CAL_ITEMS, findItem, heightOf, pointIn, rectIn} from '../geometry.ts';
 
 /**
  * What the card shows: an item, the day it was picked on, and its calendar; `pane` when it was
- * clicked in the right pane, where the card then sits beside that row (#322).
+ * clicked in the right pane, where the card then sits beside that row.
  */
 export interface DetailTarget {
   item: ItemOut;
@@ -120,7 +120,7 @@ export class DetailMotion {
     const section = this.section;
     if (!section) return null;
     const item = `[data-key="${CSS.escape(target.item.key)}"]`;
-    // Its row in the right pane when picked there (#322); its chip in the day's open "+N" popover;
+    // Its row in the right pane when picked there; its chip in the day's open "+N" popover;
     // else the chip on the day it was picked, an item folded into "+N" anchoring on its "+N".
     return (target.pane ? document.querySelector<HTMLElement>(`.rpane ${item}`) : null)
       ?? section.querySelector<HTMLElement>(`.daypop[data-date="${target.date}"] ${item}`)
@@ -137,7 +137,7 @@ export class DetailMotion {
     if (!section || !scroller || !element) return null;
     this.scrollTop = scroller.scrollTop;
     const grid = rectIn(scroller, section);
-    // SV-273: clear of the compact tier's editor as far as the card fits; a narrower grid keeps it inside.
+    // Clear of the compact tier's editor as far as the card fits; a narrower grid keeps it inside.
     this.bounds = {...grid, width: Math.max(Math.min(grid.width, this.size.width + 2 * EDGE_MARGIN), grid.width - this.room)};
     // The open "+N" popover counts as one thing not to cover, its own chips with it.
     const popover = section.querySelector('.daypop');
@@ -454,7 +454,7 @@ export class DetailMotion {
     if (this.onPane && this.anchored && !this.drag && this.snapshot.phase === 'rest') this.onResize();
   }
 
-  // ---------- Room for the editor (SV-273) ----------
+  // ---------- Room for the editor ----------
 
   // Px at the grid's right edge kept clear, and where the card was before it moved to make room.
   private room = 0;

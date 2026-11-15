@@ -1,10 +1,10 @@
-/* News (DESIGN.md › News; boards 25–28, design-export/news/news.css). */
+/* News (boards 25–28, design-export/news/news.css). */
 
-/* The list's column: the lines above it (N5), then the pill over the scrolling list. */
+/* The list's column: the lines above it, then the pill over the scrolling list. */
 .nw-list { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; container-type: inline-size; }
 .nw-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
 .nw-body > .list { flex: 1 1 auto; min-height: 0; }
-/* The pill drops in 8 px as it fades in over 180 ms, and under the pointer its ring and arrow deepen (#131). */
+/* The pill drops in 8 px as it fades in over 180 ms, and under the pointer its ring and arrow deepen. */
 .nw-pill { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); color: var(--ink); font-size: 12.5px; font-weight: 500; white-space: nowrap; z-index: 3;
   transition: box-shadow var(--dur-fast) var(--ease); animation: nw-pill-in var(--dur-medium) var(--ease); }
 @keyframes nw-pill-in { from { opacity: 0; transform: translate(-50%, -8px); } }
@@ -16,12 +16,12 @@
 .nw-pill .upd { color: color-mix(in oklch, var(--accent) var(--textTint), var(--ink)); }
 
 .nw-sec { height: 32px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
-/* Each section's glyph before its name (#120), the recap's `history`: ink3, its optical edge on the list's 24 px line. */
+/* Each section's glyph before its name, the recap's `history`: ink3, its optical edge on the list's 24 px line. */
 .nw-sec > .icon { color: var(--ink3); margin-left: -2px; }
 .nw-sec.first { border-top: 0; }
 .nw-sec .day { text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink3); margin-left: auto; }
 
-/* News's empty pane (SV-219, #332), in the Inbox's shape (styles.css › .mail-day): While you were away
+/* News's empty pane, in the Inbox's shape (styles.css › .mail-day): While you were away
    under the mark as a neutral band ("since Fri 6:10 PM" in `ink3`) over its stories in a `hair` box on
    `panel`, each headline in `ink` until opened, then `ink2`; the freshness line, its failing feeds a quiet
    `ink3` link to Settings › News; then today's strip. The block scrolls when the recap is long. */
@@ -36,7 +36,7 @@
 .nd-failing { color: var(--ink3); font-size: 12.5px; }
 @media (hover: hover) { .nd-failing:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; } }
 
-/* The recap's story panel (SV-219, #332), and in a narrow window its modal in Settings's frame, scrim
+/* The recap's story panel, and in a narrow window its modal in Settings's frame, scrim
    and rise; either holds the story pane's content in a centred column, with "3 of 8" in its head. */
 .nw-modal-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; animation: scrim-in var(--dur-slow) var(--ease); }
 .nw-modal { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--settingsWidth); height: var(--settingsHeight); max-width: calc(100% - 32px); max-height: calc(100% - 32px);
@@ -52,14 +52,14 @@
 .nd-row.on { background: var(--sub2); }
 .nw-modal > .rd-scroll > * { width: min(100%, 656px); }
 
-/* N5's states (DESIGN.md › States; boards 29a, 29b): the Unsorted line in `caution` with Show headlines, the
+/* The states (boards 29a, 29b): the Unsorted line in `caution` with Show headlines, the
    first run's muted line, a whole section's line under its header, and a section with nothing to show. */
 .nw-state, .nw-line { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; font-size: 12.5px; border-bottom: 1px solid var(--hair); min-width: 0; }
 .nw-state.failing, .nw-line.failing { color: var(--caution); }
 .nw-state.muted, .nw-line.stale { color: var(--ink3); }
 .nw-state .lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-/* The first run's spinner turns as every spinner does (DESIGN.md #54), placed by the line's flex; a
-   section still being sorted turns the same (news-13). */
+/* The first run's spinner turns as every spinner does, placed by the line's flex; a
+   section still being sorted turns the same. */
 .nw-state .spin, .nw-empty .spin { margin-left: 0; vertical-align: 0; color: inherit; }
 .nw-empty { height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; color: var(--ink3); flex: none; }
 /* Show headlines: what waits Unsorted, each its outlet's link. */
@@ -67,11 +67,11 @@
 .nw-raw .hl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nw-raw > .icon { color: var(--ink3); }
 .nw-raw:hover { background: var(--sub); color: var(--ink); }
-/* Also reported (D452): a quiet label, then the unwritten stories as one-line rows. */
+/* Also reported: a quiet label, then the unwritten stories as one-line rows. */
 .nw-also { display: flex; flex-direction: column; flex: none; }
 /* Its headlines line up with the stories' above, past the dot's gutter. */
 .nw-also .nw-raw { padding-left: 36px; }
-/* The keyboard's cursor on one, as on a story row (SV-207). */
+/* The keyboard's cursor on one, as on a story row. */
 .nw-also .nw-raw.cur { background: var(--sub2); color: var(--ink); }
 .nw-also-hd { display: flex; align-items: center; height: 32px; padding: 0 16px 0 24px; color: var(--ink3); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--hair); }
 
@@ -80,23 +80,23 @@
 .nd::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: transparent; transition: transform var(--dur-medium) var(--ease), background-color var(--dur-fast) var(--ease); }
 .new > .nd::before { background: var(--ink); }
 .upd > .nd::before { background: var(--accent); }
-/* Opened (or seen, from the next visit), the dot shrinks out in its colour over 180 ms rather than vanishing (#131). */
+/* Opened (or seen, from the next visit), the dot shrinks out in its colour over 180 ms rather than vanishing. */
 .seen > .nd::before { transform: scale(0); transition: transform var(--dur-medium) var(--ease), background-color 0s linear var(--dur-medium); }
 /* A headline turning from new's ink to seen's eases as a fill does. */
 .nw-row .hl, .nw-lead .hl { transition: color var(--dur-fast) var(--ease); }
-/* A story N brings onto the list settles in from sub2 over 900 ms: the one longer motion, kept for arrivals (#131). */
+/* A story N brings onto the list settles in from sub2 over 900 ms: the one longer motion, kept for arrivals. */
 .nw-row.landed, .nw-lead.landed { animation: nw-landed var(--news-landed) var(--ease); }
 @keyframes nw-landed { from { background: var(--sub2); } }
 
 /* Setpoint's copies, cropped to fill; a story without one leaves its place empty. While one loads its
    box holds a skeleton's fill, breathing (`sub2`, Light `sub3` to show on the page), and the image fades
-   in over it; a hairline edge keeps a white image off the Light page (#230). */
+   in over it; a hairline edge keeps a white image off the Light page. */
 .nw-ph { display: block; position: relative; overflow: hidden; flex: none; background: var(--skel); animation: sk-breathe var(--skel-breathe) var(--skel-ease) var(--skel-delay) infinite; }
 :root[data-theme="light"] .nw-ph { background: var(--skel-on-sub); }
 .nw-ph.done { background: none; animation: none; }
 .nw-img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; opacity: 0; transition: opacity var(--dur-medium) var(--ease); outline: 1px solid var(--edge); outline-offset: -1px; }
 .nw-img.in { opacity: 1; }
-/* The story pane's: the row's thumbnail, blurred, until the large copy is in (#232). */
+/* The story pane's: the row's thumbnail, blurred, until the large copy is in. */
 .nw-blur { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(6px); transform: scale(1.04); }
 .nw-ph > .nw-img { position: relative; }
 
@@ -109,7 +109,7 @@
 .nw-lead .nd { height: 22px; }
 .nw-lead .txt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .nw-lead .hl { font-size: 16px; line-height: 1.35; font-weight: 500; color: var(--ink); letter-spacing: -.005em; }
-/* Seen, a lead keeps its ink and drops to 400: new and seen differ by weight and the dot, and a lead never ranks below a row (#127). */
+/* Seen, a lead keeps its ink and drops to 400: new and seen differ by weight and the dot, and a lead never ranks below a row. */
 .nw-lead.seen .hl { color: var(--ink); font-weight: 400; }
 .nw-lead .sm { color: var(--ink3); font-size: 13px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .nw-lead .nw-meta { margin-top: auto; }
@@ -124,7 +124,7 @@
 .nw-row.new .hl, .nw-row.upd .hl { color: var(--ink); font-weight: 500; }
 .nw-row .sm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
 .nw-row .nw-ph { width: 72px; height: 48px; border-radius: 8px; }
-/* A hazard source's story without a photo: its hazard's glyph in a caution tile where the photo would go (#121). */
+/* A hazard source's story without a photo: its hazard's glyph in a caution tile where the photo would go. */
 .nw-hz { width: 72px; height: 48px; border-radius: 8px; display: grid; place-items: center; color: var(--caution); background: color-mix(in oklch, var(--caution) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--caution) 22%, transparent); }
 /* A lead without one: the glyph inline before the headline, not a large empty tile. */
 .nw-lead .hl .hz { display: inline-grid; vertical-align: -3px; margin-right: 8px; color: var(--caution); }
@@ -140,7 +140,7 @@
 .nw-up .what { color: var(--ink); font-weight: 500; }
 .nw-up .lab { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 
-/* Upcoming's row opens the story that announced it (SV-50): a popover under its name, the story as
+/* Upcoming's row opens the story that announced it: a popover under its name, the story as
    a row's headline, line and meta, which opens it. */
 .nw-up { position: relative; }
 .nw-up:hover, .nw-up.on { background: var(--sub); }
@@ -154,7 +154,7 @@
 .nw-up-wait { height: 64px; display: grid; place-items: center; color: var(--ink3); }
 
 /* A list 1000 px or wider (a wide window with a narrow pane): the lead grows, so the biggest story
-   looks big rather than sparse (#127). Narrower lists keep 232 × 130. */
+   looks big rather than sparse. Narrower lists keep 232 × 130. */
 @container (min-width: 1000px) {
   .nw-lead { grid-template-columns: 12px 320px minmax(0, 1fr); column-gap: 18px; padding: 16px 16px 16px 12px; }
   .nw-lead .nw-ph { width: 320px; height: 180px; }
@@ -163,7 +163,7 @@
   .nw-lead .sm { font-size: 13.5px; line-height: 1.5; -webkit-line-clamp: 3; max-width: 680px; }
 }
 
-/* A list the story pane leaves under 600 px (D104): Upcoming drops its label and outlet, its name · date
+/* A list the story pane leaves under 600 px: Upcoming drops its label and outlet, its name · date
    cut short, and a lead's image shrinks so its headline keeps some width. */
 @container (max-width: 599px) {
   .nw-up .lab, .nw-up .nw-meta { display: none; }
@@ -171,8 +171,8 @@
   .nw-lead .nw-ph { width: 160px; height: 90px; }
 }
 
-/* A list under 480 px (a story open at 1280, D104's 420 px): a row's headline wraps to two lines and its
-   summary goes, so every row says what it's about; rows keep their height (#128). */
+/* A list under 480 px (a story open at 1280, 420 px): a row's headline wraps to two lines and its
+   summary goes, so every row says what it's about; rows keep their height. */
 @container (max-width: 479px) {
   .nw-row { align-items: start; }
   .nw-row .nd { height: 18px; }
@@ -181,7 +181,7 @@
 }
 
 
-/* The story pane. A story's or an article's content eases in as it's opened or stepped to (news-05, #232). */
+/* The story pane. A story's or an article's content eases in as it's opened or stepped to. */
 .st-swap { display: flex; flex-direction: column; flex: none; animation: st-in var(--dur-medium) var(--ease); }
 @keyframes st-in { from { opacity: 0; transform: translateY(4px); } }
 .st-head { padding: 18px 28px 14px; display: flex; flex-direction: column; gap: 10px; flex: none; }
@@ -194,14 +194,14 @@
 .st-img .nw-ph { width: 100%; height: 100%; }
 .st-img .cap { position: absolute; left: 10px; bottom: 9px; font-size: 11px; color: var(--ink2); background: color-mix(in srgb, var(--page) 72%, transparent); padding: 2px 8px; border-radius: 999px; }
 .st-body { padding: 18px 28px 24px; display: flex; flex-direction: column; gap: 18px; }
-/* The pane's body is one column at the reading measure, however wide the pane is dragged (#98). */
+/* The pane's body is one column at the reading measure, however wide the pane is dragged. */
 .st-head > *, .st-body > *, .ar-head > *, .ar-body > * { max-width: 600px; box-sizing: border-box; }
 .st-new { border-radius: 14px; background: color-mix(in oklch, var(--accent) 8%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 24%, transparent); padding: 12px 16px 13px; display: flex; flex-direction: column; gap: 8px; }
 .st-new .lab { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: oklch(from var(--accent) min(l, var(--tintL)) c h); }
 .st-new .it { display: flex; gap: 12px; color: var(--ink); line-height: 1.45; }
 .st-new .it .t { width: 60px; flex: none; color: var(--ink2); font-variant-numeric: tabular-nums; font-size: 12.5px; padding-top: 1px; }
 /* Past four facts the rest fold behind "6 more", level with the facts' text; opening it grows the card over
-   180 ms (a grid row from 0fr to 1fr) and turns the chevron (#130). */
+   180 ms (a grid row from 0fr to 1fr) and turns the chevron. */
 .st-more { display: grid; grid-template-rows: 0fr; margin-top: -8px; transition: grid-template-rows var(--dur-medium) var(--ease); }
 .st-more.open { grid-template-rows: 1fr; }
 .st-more > .in { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
@@ -235,7 +235,7 @@
 .ar-body { padding: 4px 28px 28px; display: flex; flex-direction: column; gap: 16px; }
 .st-img + .ar-body { padding-top: 20px; }
 /* An article reads at a reader app's size, about 79 characters a line in the 600 px column, and in Night a
-   touch softer than ink, so a long read doesn't glare (#129). */
+   touch softer than ink, so a long read doesn't glare. */
 .ar-text { color: var(--ink); font-size: 16px; line-height: 1.65; letter-spacing: -.003em; max-width: 600px; user-select: text; -webkit-user-select: text; }
 :root[data-theme="night"] .ar-text { color: color-mix(in oklch, var(--ink) 90%, var(--ink2)); }
 .ar-text p { margin: 0 0 16px; }
@@ -244,8 +244,7 @@
 .ar-body .st-label { margin-top: 8px; }
 .ar-body .src-list { max-width: 600px; }
 
-/* Every control answers the pointer over 120 ms, as the mail list's rows do (DESIGN.md › Decided
-   while building #12, #151); rows are controls, so the arrow, never the text cursor. */
+/* Every control answers the pointer over 120 ms, as the mail list's rows do; rows are controls, so the arrow, never the text cursor. */
 .nw-row, .nw-lead, .nw-up, .nw-up-story, .nw-raw, .src-row { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .nw-row, .nw-lead, .nw-up { cursor: default; }
 

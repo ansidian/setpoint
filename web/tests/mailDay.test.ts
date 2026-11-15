@@ -1,4 +1,4 @@
-// The Inbox's empty pane's words as tables (SV-218, D465): the headline, today's strip and the quiet facts.
+// The Inbox's empty pane's words as tables: the headline, today's strip and the quiet facts.
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {keptLine, needLine, todayTiles} from '../src/logic/mailDay.ts';

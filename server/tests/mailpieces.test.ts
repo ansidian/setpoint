@@ -1,4 +1,4 @@
-// SV-274 (D564): USPS Informed Delivery's digest. Its rules as tables; its scans read from an
+// USPS Informed Delivery's digest. Its rules as tables; its scans read from an
 // invented digest's source (src/dev/digest.ts), ads left out; the mirror keeping it out of triage,
 // the Inbox, All and Mark all as read; the worker keeping each day's scans 30 days, fetching the
 // source through a stand-in for the adapter; and the routes the agenda rail reads.
@@ -60,7 +60,7 @@ describe('the digest\'s rules', () => {
     expect(statedPieces(text)).toBe(expected);
   });
 
-  test('the mailpieces\' scans in order, each once: never a mailer\'s campaign (D572), ride-along ads, logos or pixels', () => {
+  test('the mailpieces\' scans in order, each once: never a mailer\'s campaign, ride-along ads, logos or pixels', () => {
     const html = [
       '<img id="email-tracking-href-id" height="0" width="0" src="https://informeddelivery.example/pixel">',
       '<img src="https://www.usps.example/logo.png" alt="USPS Logo">',
@@ -78,7 +78,7 @@ describe('the digest\'s rules', () => {
 });
 
 describe('reading a digest\'s source', () => {
-  test('the scans alone, in order: a mailer\'s campaign is neither kept nor counted, nor its ride-along ad (D572)', async () => {
+  test('the scans alone, in order: a mailer\'s campaign is neither kept nor counted, nor its ride-along ad', async () => {
     const digest = await readDigest(devDigestSource({day: '2026-10-03', scans: 3, campaigns: 1, seed: 5}));
     expect(digest.pieces).toBe(3);
     expect(digest.scans).toHaveLength(3);
@@ -157,7 +157,7 @@ describe('the worker', () => {
     w.events.length = 0;
     await runDue();
     const digest = digestOf(id)!;
-    // Two scans; the source's campaign is neither kept nor counted (D572).
+    // Two scans; the source's campaign is neither kept nor counted.
     expect(digest).toMatchObject({day: '2026-10-08', pieces: 2});
     expect(scansOf(digest.id).map(scan => scan.position)).toEqual([0, 1]);
     expect(jobOf(id).state).toBe('done');
@@ -275,7 +275,8 @@ describe('migration 0041', () => {
   });
 });
 
-// 0042 drops the days kept before D572 so the worker reads them again without campaigns.
+// 0042 drops the days kept while campaigns counted as pieces, so the worker reads them again
+// without them.
 describe('migration 0042', () => {
   test('the kept days go, with their scans, and every digest is queued to be read again', async () => {
     const w = world({seed: true});

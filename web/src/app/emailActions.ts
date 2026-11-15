@@ -1,10 +1,10 @@
 // An email's actions, one list for ⌘K's This email (board 20), the reader's More (its proposals on
-// Security and Noise mail) and the right-click menu on its row (DESIGN.md #248), so they can't
-// drift. ⌘K's order: Done H (Attention mail not yet Done, #93), Trash E, Pin or Unpin P, Open in
+// Security and Noise mail) and the right-click menu on its row, so they can't
+// drift. ⌘K's order: Done H (Attention mail not yet Done), Trash E, Pin or Unpin P, Open in
 // Gmail O (Gmail's mail), Add to calendar, Add as task, Ask about this email, Add to rule, Mark
 // unread ⇧U. The menu leads with Open ↵, offers Mark read on an unread row in Mark unread's place,
 // and ends with its Copy items: the sender's address and a code row's code, whose copy reads the
-// email (#295).
+// email.
 import type {ItemKind, MessageRowOut, RuleOut} from '@setpoint/shared';
 import {setRuleMatch} from '../api/settings.ts';
 import {readerActions} from '../logic/reader.ts';
@@ -67,7 +67,7 @@ export interface SelectionHandlers {
 }
 
 /**
- * A selection's actions (DESIGN.md #249), for its right-click menu and ⌘K, as its pane's tools: Done H
+ * A selection's actions, for its right-click menu and ⌘K, as its pane's tools: Done H
  * for the emails that can be ("Done 2" when not all of them), Trash E, Pin or Unpin P, Mark read or
  * Mark unread ⇧U, Clear selection. Nothing that's one email's only.
  */
@@ -85,7 +85,7 @@ export function selectionActions(rows: MessageRowOut[], on: SelectionHandlers, w
 }
 
 /**
- * Add to rule (SV-160): New rule from the sender, which opens Settings › Mail's Add rule filled in
+ * Add to rule: New rule from the sender, which opens Settings › Mail's Add rule filled in
  * with it and where the email is now, then each written rule the sender can join, which it then
  * matches too. The email itself stays where it is: a rule sorts new mail. In the menu they're a list
  * in its place; ⌘K, which has no such list, offers each as a command of its own.

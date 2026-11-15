@@ -1,10 +1,10 @@
-// What the JD lookup asks the models (J3; decisions 53, 54, 61, D315), and how it reads their
+// What the JD lookup asks the models, and how it reads their
 // answers, leniently, as Jobs reads an email's (./prompt.ts):
 // - Haiku 5.5 checks the candidates the email's link or a platform found against the application
 //   (company, normalised title, location, date): each is the posting, might be, or isn't.
 // - Sonnet 5.5 with Claude's web search, only when those miss, searches and judges what it finds
 //   itself, as the same three verdicts. Haiku then checks the pages of those it wasn't sure of, which
-//   can only drop one (D388).
+//   can only drop one.
 // - Haiku 5.5 reads the saved JD: location and setting, salary if stated, must-haves, nice-to-haves
 //   and the three-line what-they-want summary.
 import type {JobWorkplace} from '@setpoint/shared';

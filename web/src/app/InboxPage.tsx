@@ -1,30 +1,30 @@
-// The Inbox page: the header, the list (days first since SV-199: Attention, the Pinned shelf, then
+// The Inbox page: the header, the list (days first: Attention, the Pinned shelf, then
 // every email by day, Today first) and the reading pane, with mail's keys (DESIGN.md › Interaction
 // rules). An email turns read only when opened, by a click or Enter (or Mark all as read); moving the
 // cursor, scrolling and opening a Noise line never read anything. Unread mail sits in its day, so
-// reading one never moves it (D449).
+// reading one never moves it.
 // The keyboard cursor is a `sub2` fill that J and K move and the pointer takes (with an email open,
 // J and K open the next and previous one instead); Enter opens; H Done,
 // E Trash (each with Undo in the toast, and ⌘Z), P Pin, O Open in Gmail, ⇧I Mark all as read, ⇧U Mark unread, U to the
-// next unread email; Esc closes the reader. Done or Trash on the open email opens the next one (2026-10-07).
+// next unread email; Esc closes the reader. Done or Trash on the open email opens the next one.
 //
-// ⌘ or Ctrl-click and ⇧-click select several emails (DESIGN.md #249): the reading pane shows the
+// ⌘ or Ctrl-click and ⇧-click select several emails: the reading pane shows the
 // selection (SelectionPane), and H, E, P, ⇧U, a selected row's right-click and ⌘K act on all of it,
 // each email's change its own command, with one toast and one Undo. A plain click or Enter ends it and
 // opens the email; Esc ends it first.
 //
-// Search (DESIGN.md › Search): while the header's field holds a search, its results replace the list
+// Search: while the header's field holds a search, its results replace the list
 // and the header reads "Search"; the reading pane, J, K and Enter work the same, and each open is
 // logged with its position. ⌘Enter asks Alfred, whose Answer card sits above the results. Esc closes
 // the reader, then the card, then the search.
 //
-// Views (SV-221, D471): All | Unread | Attention | FYI | Noise in the header's segmented control, Tab
+// Views: All | Unread | Attention | FYI | Noise in the header's segmented control, Tab
 // and Shift-Tab stepping them. Unread's segment has the red unread badge and Attention's its count;
 // an email read in Unread stays there, drawn read, until the user leaves the view. Mark all as read
 // follows the view, and Attention has none. An empty view says so, with Show All.
 //
-// On the phone (DESIGN.md › Phone; board 21) the header is the mark, Inbox and its counts and Mark
-// all as read (the account filter went with D476), with a plain search field under it (no chips, no Alfred).
+// On the phone (board 21) the header is the mark, Inbox and its counts and Mark
+// all as read (no account filter), with a plain search field under it (no chips, no Alfred).
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -113,7 +113,7 @@ function refusals(ids: number[], outcomes: PromiseSettledResult<unknown>[]): {id
 let slides = 0;
 
 /**
- * The phone's push and back (#139): the reader slides in over the list, which moves a little under it,
+ * The phone's push and back: the reader slides in over the list, which moves a little under it,
  * and slides back off it, as one 260 ms view transition (phone.css draws it, by the direction on the
  * root). Only the app's own opens and closes slide: the browser's Back (popstate) doesn't, as Safari's
  * edge swipe animates it already. Without the API it's the cut it was; which way is phoneSlide's.
@@ -147,7 +147,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const accountWidth = useAccountColumn(accountList);
   const phone = usePhone();
   const compact = useCompact();
-  // The phone has the one list (D275).
+  // The phone has the one list.
   const view: InboxView = phone ? 'all' : route.view ?? 'all';
   const inboxLoad = {path: INBOX_PATH, ...useResource<InboxOut>(INBOX_PATH)};
   const inbox = inboxLoad.data;
@@ -161,7 +161,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const alfred = useAlfred();
   const searching = search.active || alfred.open;
   // A search's first answer on its way: the list stays, dimmed, then gives way to the results'
-  // skeleton once it's taken a moment (search-03, #235).
+  // skeleton once it's taken a moment.
   const firstWait = search.active && search.out === null && search.error === null && !alfred.open;
   const waitedLong = useAfter(firstWait, skeleton.delayMs);
 
@@ -179,16 +179,16 @@ export function InboxPage({route}: {route: InboxRoute}) {
     if (next && !befores.includes(next)) setBefores([...befores, next]);
   };
 
-  // The pattern prompt (B3's; none until its route exists), and the ones answered here.
+  // The pattern prompt (triage's; none while its route answers 404), and the ones answered here.
   const {data: prompts} = useResource<PatternPrompt[]>(PROMPTS_PATH);
-  // Add to rule's rules to join, in the row's menu (SV-160).
+  // Add to rule's rules to join, in the row's menu.
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
   const [answered, setAnswered] = useState<ReadonlySet<number>>(new Set());
   const prompt = visiblePrompt(prompts, answered);
 
   // A code's row leaves at its expiry, before the server's next answer says so.
   const groups = useMemo(() => (inbox ? withoutExpiredCodes(withoutEmails(inbox.groups, trashing), now) : null), [inbox, trashing, now]);
-  // Nothing holds a row in place any more (D449): the list is the server's, with each action's
+  // Nothing holds a row in place any more: the list is the server's, with each action's
   // change shown at once, and Undo's rows until the server's list has them again.
   const [kept, setKept] = useState<Kept>({groups: null, held: []});
   let current = kept;
@@ -202,7 +202,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   if (nextCode !== codeMoment) setCodeMoment(nextCode);
   const takeOut = (ids: number[]) => setKept(state => ({...state, held: state.held.filter(one => !ids.includes(one.row.id))}));
   const inboxGroups = useMemo(() => withHeld(groups ?? [], held), [groups, held]);
-  // Unread's rows for this visit to it (SV-221): one read here stays, drawn read, until the view changes.
+  // Unread's rows for this visit to it: one read here stays, drawn read, until the view changes.
   const holding = view === 'unread' && ready;
   const [unreadHold, setUnreadHold] = useState<{holding: boolean; rows: ReadonlyMap<number, MessageRowOut>}>({holding: false, rows: new Map()});
   const latestRows = useMemo(() => new Map([...allRows, ...inboxGroups.flatMap(group => group.rows)].map(row => [row.id, row])), [allRows, inboxGroups]);
@@ -211,7 +211,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // The same map while its rows stay the same, so the list isn't worked out again for nothing.
   const unreadRows = unreadHold.holding === holding && sameHold(next, unreadHold.rows) ? unreadHold.rows : next;
   if (unreadRows !== unreadHold.rows || unreadHold.holding !== holding) setUnreadHold({holding, rows: unreadRows});
-  // The list: what the view shows (D449, D105, SV-221).
+  // The list: what the view shows.
   const shown = useMemo(() => (ready ? viewList(view, {groups: inboxGroups, rows: allRows, unread: [...unreadRows.values()]}, zone, noiseOpen) : null),
     [ready, view, inboxGroups, allRows, unreadRows, zone, noiseOpen]);
   const attention = useMemo(() => shown?.attention ?? [], [shown]);
@@ -223,14 +223,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // Unread's badge: every unread email; Attention's count, what's in it not Done.
   const unreadHere = counts?.unread ?? 0;
   const attentionHere = useMemo(() => attentionRows(inboxGroups, false).length, [inboxGroups]);
-  // FYI's or Noise's Mark all as read: that view's unread mail, as Mark all as read reads it (SV-221).
+  // FYI's or Noise's Mark all as read: that view's unread mail, as Mark all as read reads it.
   const viewReadIds = useMemo(() => (view === 'fyi' || view === 'noise'
     ? [...new Set([...inboxGroups.flatMap(group => group.rows), ...allRows].filter(row => row.lane === view && markAllReads(row)).map(row => row.id))]
     : []), [view, inboxGroups, allRows]);
-  // Whether Mark all as read has anything to read (UX #16), in this view.
+  // Whether Mark all as read has anything to read, in this view.
   const markable = view === 'attention' ? false : view === 'fyi' || view === 'noise' ? viewReadIds.length > 0 : markAllReadIds(inboxGroups, allRows).length > 0;
   const markScope = view === 'fyi' || view === 'noise' ? `Mark ${VIEW_LABELS[view]} as read` : 'Mark all as read';
-  // Results in Trash leave the search's list until Undo (UX #9).
+  // Results in Trash leave the search's list until Undo.
   const sections = useMemo(() => ({...resultSections(search.results, search.out, search.mentions, trashing), leftOut: leftOutSection(search.results, search.out, search.leftOut, trashing)}),
     [search.results, search.out, search.mentions, search.leftOut, trashing]);
   const stops = useMemo(() => (searching ? searchStops(sections) : dayStops(dayViews, shelf, attention)),
@@ -244,7 +244,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     setTrack({stops, cursor});
   }
   const setCursor = (key: string | null) => setTrack(current => ({...current, cursor: key}));
-  // The emails ⌘ or Ctrl-click and ⇧-click selected this visit (#249): those still in the list, in its
+  // The emails ⌘ or Ctrl-click and ⇧-click selected this visit: those still in the list, in its
   // order. None on the phone.
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
   const selected = useMemo(() => (phone ? [] : inListOrder(selection.ids, stops)), [phone, selection.ids, stops]);
@@ -252,7 +252,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const clearSelection = () => setSelection(NO_SELECTION);
 
   const open = route.open;
-  // The way the user last stepped to an email (reader-03).
+  // The way the user last stepped to an email.
   const [travelled, setTravelled] = useState<{id: number; travel: Travel} | null>(null);
 
   // An email the address opens (a deep link, a reload, Back) is opened: read, as a click would.
@@ -282,7 +282,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   /**
    * Opens an email. `travel` is the way the user stepped to it (J, K, the arrows, Done or Trash moving
-   * on), so the reader's swap comes from that side (reader-03); a click has none.
+   * on), so the reader's swap comes from that side; a click has none.
    */
   function openEmail(id: number, key?: string, travel: Travel | null = null) {
     if (selected.length) clearSelection();
@@ -300,7 +300,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   }
 
   /**
-   * A click on a row (#249): with ⌘ or Ctrl it joins the selection or leaves it (the first one taking the
+   * A click on a row: with ⌘ or Ctrl it joins the selection or leaves it (the first one taking the
    * open email, whose reader gives way), with ⇧ every email from the last one clicked to it joins; a
    * plain click ends the selection and opens it. Selecting opens and reads nothing.
    */
@@ -339,12 +339,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // An email's row, from the open email or the list it's in (the Inbox's, a day's, Unread's or search's).
   const rowOf = (id: number): MessageRowOut | undefined => (openMessageData?.id === id ? openMessageData : undefined)
     ?? latestRows.get(id) ?? unreadRows.get(id) ?? search.listed.filter(result => !trashing.has(result.id)).find(row => row.id === id);
-  // The open email's subject, from its row until the email itself is in (#229).
+  // The open email's subject, from its row until the email itself is in.
   const subject = open !== null ? rowOf(open)?.subject ?? null : null;
   useEffect(() => {
     document.title = tabTitle({page: 'inbox', unread: counts?.unread ?? 0, subject});
   }, [counts?.unread, subject]);
-  // Done (H) only on Attention mail not yet Done (#93).
+  // Done (H) only on Attention mail not yet Done.
   const doneable = (id: number) => {
     const row = rowOf(id);
     return row !== undefined && readerActions(row).done;
@@ -360,12 +360,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
   function leave(ids: number[], beat: Beat, change: (id: number) => Promise<unknown>, toast: string, undo: (id: number) => () => Promise<unknown>,
     failed: (n: number) => string, undoFailed: (n: number) => string) {
     const wasOpen = open !== null && ids.includes(open) ? open : null;
-    // Their rows beat before they fold: ticked off, or thrown away (inbox-05).
+    // Their rows beat before they fold: ticked off, or thrown away.
     for (const id of ids) beats.set(id, beat);
     const places = withHeld(groups ?? [], held).flatMap(group => group.rows.flatMap((row, index) => (ids.includes(row.id) ? [{group: group.group, index, row}] : [])));
     if (wasOpen !== null) {
       // The phone goes back to the list, where the toast is: the next email isn't in view there, so
-      // opening it would be a jump into an email the user didn't pick (UX #12).
+      // opening it would be a jump into an email the user didn't pick.
       const next = phone ? null : nextAfterLeaving(stops, cursor, wasOpen);
       // The next one down the list: the reader swaps as J does.
       if (next !== null) openEmail(next, undefined, 'next');
@@ -399,7 +399,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   }
 
   // What each action does to emails `ids`: one email for H, E, P and the rest on `target` or a row's
-  // right-click menu (DESIGN.md #248), every selected one for a selection's (#249).
+  // right-click menu, every selected one for a selection's.
   const on = {
     done: (ids: number[]) => {
       const can = ids.filter(doneable);
@@ -428,12 +428,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
       const rows = ids.flatMap(id => rowOf(id) ?? []);
       const pinning = rows.some(row => !row.pinned);
       const changing = rows.filter(row => row.pinned !== pinning).map(row => row.id);
-      // Out of the shelf's sight, a pin says where it went, with Undo (inbox-09).
+      // Out of the shelf's sight, a pin says where it went, with Undo.
       const unseen = pinning && !phone && !shelfInView();
       void changeEach(changing, id => setPinned(id, pinning)).then(outcomes => {
         const refused = refusals(changing, outcomes);
         if (refused.length) toastFailure(pinning ? counted(refused.length, 'Couldn\'t pin it', n => `Couldn't pin ${n}`) : counted(refused.length, 'Couldn\'t unpin it', n => `Couldn't unpin ${n}`))(refused[0]!.error);
-        // Only those still pinned once the last P is in: a pin taken back before it was answered says nothing (SV-80).
+        // Only those still pinned once the last P is in: a pin taken back before it was answered says nothing.
         const pinned = changing.filter((_, at) => {
           const outcome = outcomes[at]!;
           return outcome.status === 'fulfilled' && outcome.value.pinned;
@@ -458,7 +458,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         }, () => tab?.close());
       }
     },
-    // ⇧U or ⌘K: the emails unread again; an open one's reader closes, so it stays unread (UX #11).
+    // ⇧U or ⌘K: the emails unread again; an open one's reader closes, so it stays unread.
     markUnread: (ids: number[]) => {
       if (open !== null && ids.includes(open)) close();
       void changeEach(ids, id => markUnread(id)).then(outcomes => {
@@ -467,7 +467,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       });
     },
     // The unread ones of `ids` read, in place: they stay where they are and Attention's count doesn't
-    // move. A copied code's email reads so, with nothing to say (#295). The ids read.
+    // move. A copied code's email reads so, with nothing to say. The ids read.
     read: (ids: number[]) => {
       const unread = ids.filter(id => rowOf(id)?.unread ?? true);
       if (!unread.length) return unread;
@@ -478,7 +478,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       });
       return unread;
     },
-    // The menu's Mark read on unread rows, as Mark all as read is for them (#248): read in place, and
+    // The menu's Mark read on unread rows, as Mark all as read is for them: read in place, and
     // Undo or ⌘Z marks them unread again.
     markRead: (ids: number[]) => {
       const unread = on.read(ids);
@@ -500,7 +500,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     },
   };
 
-  // The selection's actions (#249), for its pane, its right-click menu, its keys and ⌘K. Done and Trash
+  // The selection's actions, for its pane, its right-click menu, its keys and ⌘K. Done and Trash
   // end it; Pin and the read changes keep it.
   const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
   const forSelection: SelectionHandlers = {
@@ -530,9 +530,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (next !== null) openEmail(next, undefined, delta > 0 ? 'next' : 'prev');
     },
     markUnread: () => (onSelection ? forSelection.markUnread() : target !== null && on.markUnread([target])),
-    // The open email's code copied: read, quietly (#295).
+    // The open email's code copied: read, quietly.
     codeCopied: () => open !== null && on.read([open]),
-    // U: the cursor to the next unread email below it, from the top again past the last (D449),
+    // U: the cursor to the next unread email below it, from the top again past the last,
     // wherever the list is scrolled.
     toUnread: () => {
       const key = nextUnread(stops, cursor, unreadShown);
@@ -540,8 +540,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       setCursor(key);
       requestAnimationFrame(() => document.querySelector(`[data-key="${key}"]`)?.scrollIntoView({block: 'nearest'}));
     },
-    // "Marked 12 as read · Undo": Undo marks those same emails unread. Every row stays where it is (D449).
-    // In FYI or Noise only that view's mail (SV-221); Attention has none.
+    // "Marked 12 as read · Undo": Undo marks those same emails unread. Every row stays where it is.
+    // In FYI or Noise only that view's mail; Attention has none.
     markAllRead: () => {
       if (view === 'attention') return;
       if (view === 'fyi' || view === 'noise') {
@@ -551,8 +551,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       const ids = markAllReadIds(withHeld(groups ?? [], held), allRows);
       void markAllRead().catch(toastFailure('Couldn\'t mark all as read'));
       if (!ids.length) return;
-      // Undo, from the toast or ⌘Z as Done's and Trash's are (UX #17), marks those same emails unread,
-      // at once, before the server's list has them (SV-37).
+      // Undo, from the toast or ⌘Z as Done's and Trash's are, marks those same emails unread,
+      // at once, before the server's list has them.
       let toast = 0;
       const back = () => {
         const at = undos.indexOf(back);
@@ -567,7 +567,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     close,
   };
 
-  // The pane beside the list (SV-217): the open email, else the selection, else empty.
+  // The pane beside the list: the open email, else the selection, else empty.
   const showsSelection = open === null && selected.length > 0 && !compact;
   const pane = useEmptyPane(open !== null || showsSelection, PANE_PATHS);
 
@@ -587,7 +587,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         return;
       }
       // With an email open, J and K open the next and previous one (as the reader's arrows do), so
-      // the highlight and what H, E and P act on are always the same email (UX #2).
+      // the highlight and what H, E and P act on are always the same email.
       const move = (delta: 1 | -1) => run(() => {
         if (open !== null) {
           actions.step(delta);
@@ -611,7 +611,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
       else if (plainKey(event, 'i', {shift: true}) && view !== 'attention') run(actions.markAllRead, 'shift+i');
       else if (plainKey(event, 'u', {shift: true})) run(actions.markUnread);
-      // U goes to the next unread email (D449); 1, the Inbox's key elsewhere, goes back to All from a
+      // U goes to the next unread email; 1, the Inbox's key elsewhere, goes back to All from a
       // search, another view or on the phone.
       else if (plainKey(event, 'u') && !searching) run(actions.toUnread);
       else if (plainKey(event, '1') && (searching || phone || view !== 'all')) run(() => navigate(toInbox()));
@@ -633,15 +633,15 @@ export function InboxPage({route}: {route: InboxRoute}) {
   });
 
   // ⌘K's Mark all as read is this page's while it's on screen, as ⇧I is (the palette's own is for other pages).
-  // A selection's are too, under its count, while its pane is up (#249).
+  // A selection's are too, under its count, while its pane is up.
   useCommands(() => ({...(onSelection ? {context: {label: counted(selected.length, '1 email selected', n => `${n} emails selected`), colour: 'ink3' as const}} : {}), commands: [
     ...(onSelection ? selectionActions(selectedRows, forSelection, 'palette').map(action => ({...action, section: 'selection' as const})) : []),
     ...(searching || !unreadShown.size ? [] : [{id: 'to-unread', section: 'more', label: 'Go to next unread', icon: 'mark_email_unread', hint: 'U', keywords: 'unread new', run: actions.toUnread} satisfies Command]),
-    // In FYI or Noise it reads that view's mail only, so the sidebar's Mark all as read isn't this one (SV-221).
+    // In FYI or Noise it reads that view's mail only, so the sidebar's Mark all as read isn't this one.
     ...(view === 'attention' ? [] : [{id: view === 'fyi' || view === 'noise' ? 'mark-view-read' : 'mark-all-read', section: 'more', label: markScope, icon: 'mark_email_read', hint: '⇧I', run: actions.markAllRead} satisfies Command]),
   ]}));
 
-  // Until the list's first answers: its skeleton, or why they didn't come (DESIGN.md #225, #228).
+  // Until the list's first answers: its skeleton, or why they didn't come.
   const allLoad = {path: allPath(), data: allPages[0], error: allError};
   const listFailed = useLoadFailed([inboxLoad, allLoad]);
   const listArrived = useArrival(ready);
@@ -651,7 +651,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'));
 
   /**
-   * A right-click (DESIGN.md #248): on an email's row (Attention, the shelf, a day, search's results or
+   * A right-click: on an email's row (Attention, the shelf, a day, search's results or
    * Alfred's sources) its actions, the cursor moving there and nothing opening. Add to calendar, Add as
    * task and Ask open the email with their card.
    */
@@ -662,7 +662,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     const row = rowOf(id);
     if (!element || !row) return;
     const key = element.dataset.key ?? stopOf(stops, id)?.key ?? null;
-    // On a selected row, the selection's (#249); on any other, its own, the selection kept.
+    // On a selected row, the selection's; on any other, its own, the selection kept.
     if (selected.includes(id)) {
       if (openContextMenu(event, element, selectionActions(selectedRows, forSelection, 'menu')) && key && stops.some(stop => stop.key === key)) setCursor(key);
       return;
@@ -697,7 +697,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         <h1 className="hd-title">{searching ? 'Search' : 'Inbox'}</h1>
         {phone && !searching && counts && counts.attention > 0 && <span className="apill num" data-tip="Attention, not Done">{counts.attention}</span>}
         {phone && !searching && counts && counts.unread > 0 && <span className="ph-count num">{counts.unread}</span>}
-        {/* The views, Unread's with the red unread badge and Attention's with its count (SV-221, D471). */}
+        {/* The views, Unread's with the red unread badge and Attention's with its count. */}
         {!phone && !searching && (
           <Segmented className="ib-views" label="Views" value={view} onChange={switchView} onTab={switchView} segments={INBOX_VIEWS.map(one => ({value: one, label: <>
             {VIEW_LABELS[one]}
@@ -714,7 +714,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         )}
         {phone && (
           <>
-            {/* Not while searching: it would read the hidden Inbox's mail, not the results (#141). */}
+            {/* Not while searching: it would read the hidden Inbox's mail, not the results. */}
             {!searching && <button className="ibtn ph-icon" type="button" aria-label="Mark all as read" onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
           </>
         )}
@@ -729,8 +729,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
             card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onAsk={askAlfred} />
         ) : (
-          // Until both answers are in, its skeleton, or why they didn't come (#225, #228); rows not
-          // shown before don't fold in then. A view starts afresh, at its top (SV-221).
+          // Until both answers are in, its skeleton, or why they didn't come; rows not
+          // shown before don't fold in then. A view starts afresh, at its top.
           <AllList key={view} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
             empty={view !== 'all' && shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before)
               ? <EmptyView view={view} newest={(view === 'attention' ? allRows.find(row => row.lane === 'attention') : allRows[0])?.received_at ?? null} onAll={() => switchView('all')} /> : null}

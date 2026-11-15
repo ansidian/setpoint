@@ -98,12 +98,12 @@ describe('a Google calendar\'s colour as a swatch', () => {
   ])('%s → %s', (hex, swatch) => {
     expect(swatchFor(hex)).toBe(swatch);
   });
-  // SV-20: the colour Setpoint writes for a calendar reads back as the swatch picked, case aside.
+  // The colour Setpoint writes for a calendar reads back as the swatch picked, case aside.
   test.each(COLOURS.map(swatch => [swatch, CALENDAR_HEX[swatch]]))('%s writes %s, which reads back as it', (swatch, hex) => {
     expect(swatchFor(hex)).toBe(swatch);
     expect(swatchFor(hex.toUpperCase())).toBe(swatch);
   });
-  // What an earlier build wrote, before the swatch moved (Night ink3, SV-58 and D400): calendars
+  // What an earlier build wrote, before the swatch moved (Night ink3): calendars
   // already carrying it still read back as it.
   test.each([['#707277', 'ink3'], ['#7d7f84', 'ink3'], ['#57d4d4', 'cyan']])('%s, written before, still reads back as %s', (hex, swatch) => {
     expect(swatchFor(hex)).toBe(swatch);
@@ -113,7 +113,7 @@ describe('a Google calendar\'s colour as a swatch', () => {
   });
 });
 
-describe('F6: an event\'s own colour, Google\'s colorId both ways', () => {
+describe('an event\'s own colour, Google\'s colorId both ways', () => {
   test.each([
     ['1', 'violet'], ['2', 'comf'], ['3', 'violet'], ['4', 'alert'], ['5', 'sun'], ['6', 'warm'], ['7', 'cyan'], ['8', 'ink2'], ['9', 'cool'], ['10', 'good'], ['11', 'alert'],
     [null, null], ['', null], ['12', null],

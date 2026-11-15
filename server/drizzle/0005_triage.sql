@@ -95,7 +95,7 @@ ALTER TABLE `messages` ADD `triage_rule_id` integer REFERENCES triage_rules(id) 
 ALTER TABLE `messages` ADD `triaged_at` text;--> statement-breakpoint
 ALTER TABLE `messages` ADD `extracted_at` text;--> statement-breakpoint
 CREATE INDEX `messages_triage_rule` ON `messages` (`triage_rule_id`);
--- Hand-edited (B3), two drizzle-kit faults, nothing else: the jobs copy selected `message_id` from the
+-- Hand-edited, two drizzle-kit faults, nothing else: the jobs copy selected `message_id` from the
 -- old `jobs`, which has no such column (now NULL); and the added `messages.triage_rule_id` lost its
 -- ON DELETE SET NULL (restored, so deleting a rule keeps the emails it sorted). If this migration is
 -- regenerated, make both edits again. Adding columns to `messages` keeps the table, so the FTS

@@ -1,4 +1,4 @@
-// One completion moment (polish audit calpanes-08, calflows-10; the Today block's, #106): a task
+// One completion moment, the Today block's: a task
 // ticked off where it's drawn plays its done check in, as the Today block's line does, for
 // DONE_MOMENT_MS. A task already done when first drawn, or reopened, plays nothing.
 import {useEffect, useState} from 'react';

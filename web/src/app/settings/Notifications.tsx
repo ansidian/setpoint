@@ -1,6 +1,6 @@
 // Settings › Notifications (board 18b): ntfy's state with Send test, its Server and Token, the topics in
 // mono with their switches, the reminder defaults and Alerts (Reconnect alerts, once per source),
-// every group labelled. Time to Leave's group is on Calendar, under Home (D513).
+// every group labelled. Time to Leave's group is on Calendar, under Home.
 import type {NotifyStatusOut, SecretOut, Settings} from '@setpoint/shared';
 import {useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -15,10 +15,10 @@ import {useNow} from '../clock.ts';
 import {SecretRow} from './Ai.tsx';
 import {Line, Page, Row, Section, Select, SkeletonRows, Switch, useAttempt, useFlash} from './parts.tsx';
 
-// How long Send test's check stays after a test went, and the Server field's after a save (settings-07).
+// How long Send test's check stays after a test went, and the Server field's after a save.
 const SENT_MS = 2000;
 const SAVED_MS = 1500;
-// A reminder default's None in its menu (D49).
+// A reminder default's None in its menu.
 const NONE = '';
 
 export function NotificationsPage() {
@@ -31,11 +31,11 @@ export function NotificationsPage() {
   const now = useNow();
   const save = useAttempt();
   const test = useAttempt();
-  // A test that went: Send test's glyph is `check` in `good` for 2 s (settings-07).
+  // A test that went: Send test's glyph is `check` in `good` for 2 s.
   const [sent, flashSent] = useFlash(SENT_MS);
   // The server saved: a `check` at the field's end, fading in, then out after 1.5 s.
   const [serverSaved, flashServerSaved] = useFlash(SAVED_MS + motion.medium);
-  // Until its answers come, its groups' skeleton: nothing said about ntfy that isn't known (states-01).
+  // Until its answers come, its groups' skeleton: nothing said about ntfy that isn't known.
   if (!settings || !secrets) {
     return (
       <Page title="Notifications" loads={[settingsLoad, statusLoad, secretsLoad]}>
@@ -49,13 +49,13 @@ export function NotificationsPage() {
   const change = (patch: Parameters<typeof patchSettings>[0]) => void save.attempt(() => patchSettings(patch));
 
   // What the switches need before they can do anything: a server for ntfy's topics. Without it a
-  // switch shows off and can't be turned on, and says what's missing (UX #13).
+  // switch shows off and can't be turned on, and says what's missing.
   const noServer = !ntfy.ntfy_server;
-  // ntfy failing is a source struggling: `caution`, as every failing source is (states-04).
+  // ntfy failing is a source struggling: `caution`, as every failing source is.
   const state = !status ? null : !status.configured ? {dot: 'okdot off', text: 'Not set up'}
     : status.last_error ? {dot: 'okdot warn', text: `Failing, ${status.last_error}`}
       : {dot: 'okdot', text: status.last_sent_at ? `Connected · last sent ${asOf(status.last_sent_at, now, timeZone())}` : 'Connected · nothing sent yet'};
-  // Send test answers clearly (states-11, settings-07): anything but sent is a failure, in `alert`.
+  // Send test answers clearly: anything but sent is a failure, in `alert`.
   const sendTest = () => void test.attempt(sendTestNotification, out => {
     if (out.state !== 'sent') throw new Error(`Not sent, ${out.error ?? out.state}`);
     flashSent();
@@ -90,7 +90,7 @@ export function NotificationsPage() {
           <Row title={ntfy.topics.mail} sub={noServer ? 'Set a server first' : ntfy.attention_mail ? 'Attention mail' : 'Attention mail, off for now'} mono>
             <Switch on={ntfy.attention_mail && !noServer} disabled={noServer} label={ntfy.topics.mail} onChange={on => change({notifications: {attention_mail: on}})} />
           </Row>
-          {/* Like its siblings, it says what's missing without a server; with one, no second line (D517). */}
+          {/* Like its siblings, it says what's missing without a server; with one, no second line. */}
           <Row title="FYI mail" sub={noServer ? 'Set a server first' : undefined}>
             <Switch on={ntfy.fyi_mail && !noServer} disabled={noServer} label="FYI mail" onChange={on => change({notifications: {fyi_mail: on}})} />
           </Row>

@@ -1,4 +1,4 @@
-// SV-23: calendar search (DESIGN.md › Decided while building #24). The rules as tables: the calendar
+// Calendar search. The rules as tables: the calendar
 // and date chips, free text over each field, Upcoming then Past, and a recurring event as one row
 // (its next occurrence, its last once ended) with a changed occurrence on its own only when the
 // change is what matched. Then the search over the seed and its route.

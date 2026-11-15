@@ -1,4 +1,4 @@
-// SV-182: the dev provider's .ics attachments, by file name, so `npm run dev`, `npm run try` and the
+// The dev provider's .ics attachments, by file name, so `npm run dev`, `npm run try` and the
 // browser checks read a real invitation through Add to calendar. Invented, as every sample is
 // (example domains, Microsoft's fictional companies); any other .ics name serves its name as text,
 // which the import can't read.
@@ -44,7 +44,7 @@ const SCHEDULE = crlf([
   'END:VCALENDAR',
 ]);
 
-/** A file that only cancels an event: nothing to import (D436, D444). */
+/** A file that only cancels an event: nothing to import. */
 const CANCELLED = crlf([
   ...header('CANCEL'),
   'BEGIN:VEVENT', 'UID:interview-trey-5c21e8@jobs.example.com', 'DTSTAMP:20261008T120000Z', 'SEQUENCE:1', 'STATUS:CANCELLED',

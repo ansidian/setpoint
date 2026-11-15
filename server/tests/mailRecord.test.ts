@@ -1,4 +1,4 @@
-// The message record as the adapters write it (B2): the mirror (new mail Unsorted, provider state
+// The message record as the adapters write it: the mirror (new mail Unsorted, provider state
 // kept, derived fields untouched, a waiting change never reverted), the full-text index kept in
 // step by triggers, the remote-content rule, MIME parsing and the backfill's progress.
 import {SEED_NOW} from '@setpoint/shared';
@@ -53,7 +53,7 @@ describe('the mirror', () => {
     expect(row(w, id!).pinnedAt).not.toBeNull();
   });
 
-  test('a refetch without a Message-ID or a verdict keeps the stored ones (v1)', () => {
+  test('a refetch without a Message-ID or a verdict keeps the stored ones', () => {
     const w = world({seed: true});
     const business = accountId(w, 'Business');
     const verdict = {version: 1, status: 'pass', provider: 'gmail', source: 'gmail_authentication_results', headerFromDomain: 'contosocoffee.example', dkim: [], spf: null, dmarc: null, evaluatedAt: SEED_NOW} satisfies SenderAuthentication;
@@ -123,7 +123,7 @@ describe('the full-text index', () => {
   });
 });
 
-describe('remote content (decision 25)', () => {
+describe('remote content', () => {
   test.each<[RemoteContentInput, boolean, string]>([
     [{trusted: true, senderAuthenticated: false, lane: 'noise'}, true, 'trusted'],
     [{trusted: false, senderAuthenticated: true, lane: 'fyi'}, true, 'authenticated'],
@@ -142,7 +142,7 @@ describe('remote content (decision 25)', () => {
     ['mail.foo.co.uk', 'foo.co.uk'],
     ['someone.github.io', 'someone.github.io'],
     ['192.168.1.20', '192.168.1.20'],
-  ])('"Always show" from %s trusts %s (D28)', (domain, trusted) => {
+  ])('"Always show" from %s trusts %s', (domain, trusted) => {
     expect(trustDomainOf(domain)).toBe(trusted);
   });
 
@@ -185,7 +185,7 @@ describe('MIME parsing', () => {
     expect(email.fromName).toBe('');
   });
 
-  test('an HTML-only email\'s embedded image leaves its alt text, never its data address (SV-250)', async () => {
+  test('an HTML-only email\'s embedded image leaves its alt text, never its data address', async () => {
     const image = 'iVBORw0KGgo'.padEnd(32_000, 'A');
     const email = await parseEmail(Buffer.from([
       'From: hr@contosocounty.example', 'Subject: Application status', 'Date: Mon, 09 Nov 2026 23:28:00 +0000', 'Content-Type: text/html; charset=utf-8', '',

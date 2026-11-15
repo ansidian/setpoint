@@ -1,5 +1,5 @@
-// News's empty pane (SV-219, D466): its freshness, today's strip and the quiet facts, as their lines
-// say them. No count of new stories (D87). After "·", a list takes commas (the error-copy rule).
+// News's empty pane: its freshness, today's strip and the quiet facts, as their lines
+// say them. No count of new stories. After "·", a list takes commas (the error-copy rule).
 import type {NewsDayOut} from '@setpoint/shared';
 import {clockTime} from './format.ts';
 

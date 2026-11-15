@@ -1,6 +1,6 @@
-// RSS 2.0, RSS 1.0 (RDF) and Atom feeds as items (N2): each item's link, headline, summary, byline,
+// RSS 2.0, RSS 1.0 (RDF) and Atom feeds as items: each item's link, headline, summary, byline,
 // date and best image, from Media RSS (media:content, media:group, media:thumbnail), an enclosure, or
-// failing those the first image in its HTML (v1's order, from its news-poller's normalizeFeedItem).
+// failing those the first image in its HTML.
 // Google News search is RSS too, with each item's outlet in <source>. Pure: a string in, items out.
 import type {Element} from 'domhandler';
 import {getAttributeValue, isTag, textContent} from 'domutils';
@@ -64,7 +64,7 @@ function mediaImages(element: Element, tag: 'media:content' | 'media:thumbnail',
     .map(media => media.url);
 }
 
-/** The first <img> in an item's HTML, when it's absolute http(s) (v1: feeds that only inline their images). */
+/** The first <img> in an item's HTML, when it's absolute http(s) (for feeds that only inline their images). */
 function firstInlineImage(html: string, base: string): string | null {
   if (!html.includes('<img')) return null;
   const document = parseDocument(html);

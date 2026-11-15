@@ -1,12 +1,12 @@
-// Triage's policy (BRIEF.md › Triage and Security mail; decisions 4, 10, 16, 29, 30): pure rules
+// Triage's policy: pure rules
 // that turn what the rules and models said into the record's lane, kind, organisation, type, key
 // date, summary, security facts, protection and code.
 //
-// - Unsure defaults to FYI, never Attention (decision 30): a model below the confidence floor, or a
+// - Unsure defaults to FYI, never Attention: a model below the confidence floor, or a
 //   reading that didn't parse, decides nothing.
-// - The protected class always goes to Attention and nothing moves it (decision 29): settle()
+// - The protected class always goes to Attention and nothing moves it: settle()
 //   applies it after every rule and model, and it can't be configured.
-// - Backfilled history never enters Attention, protected or not (SV-4 D19): only mail that
+// - Backfilled history never enters Attention, protected or not: only mail that
 //   arrives after an account's first sync can be Attention. Protected history keeps `protected` and
 //   sits in FYI, where no rule can move it either.
 // - A verification code is never Attention: it sits in Security with its code until it expires.
@@ -15,7 +15,7 @@
 import type {Kind, Lane, MessageType, ProtectedReason, SecurityFacts} from '@setpoint/shared';
 import type {DetectedCode} from './verificationCode.ts';
 
-/** v1's floor: a cheap answer less sure than this goes to the strong model; a strong one is unsure. */
+/** The floor: a cheap answer less sure than this goes to the strong model; a strong one is unsure. */
 export const CONFIDENCE_FLOOR = 0.72;
 
 /** What a model (or the rules-only history pass) read in an email, normalised. */
@@ -38,8 +38,8 @@ export const isSure = (reading: Reading | null): reading is Reading =>
 
 /**
  * Why the cheap model's reading goes to the strong model, or null to accept it: it didn't parse,
- * it's unsure, it says Attention (the lane that costs the user, so it's checked; v1 escalated only its
- * risk categories and precision fell, decision 30), or it claims the protected class.
+ * it's unsure, it says Attention (the lane that costs the user, so it's checked; escalating only risk
+ * categories lets precision fall), or it claims the protected class.
  */
 export function escalation(cheap: Reading | null): 'malformed' | 'unsure' | 'attention' | 'protected' | null {
   if (!cheap) return 'malformed';
@@ -79,7 +79,7 @@ export function protectedFromText(subject: string, body: string): ProtectedReaso
 // ---- Settling a decision ----
 
 export interface SettleInput {
-  // The lane a rule or a sure model decided; null when nothing was sure (FYI, decision 30).
+  // The lane a rule or a sure model decided; null when nothing was sure (FYI).
   lane: Lane | null;
   // A rule's kind and type, which win over the reading's.
   kind?: Kind | null;
@@ -89,8 +89,8 @@ export interface SettleInput {
   code: DetectedCode | null;
   // From protectedFromText.
   textProtected: ProtectedReason | null;
-  // The body was cut short for the model: what it couldn't see can't make it Noise (v1's rule that
-  // incomplete evidence can't establish an email needs nothing).
+  // The body was cut short for the model: what it couldn't see can't make it Noise (incomplete
+  // evidence can't establish an email needs nothing).
   incomplete?: boolean;
   // Backfilled history: never Attention.
   history?: boolean;
@@ -176,7 +176,7 @@ const GENERIC_NAME_SUFFIX = /\s+(?:team|support|notifications?|alerts?|no-?reply
 const VIA = /\s+(?:via|through)\s+(.+)$/i;
 
 const localPart = (address: string) => address.slice(0, address.indexOf('@') < 0 ? address.length : address.indexOf('@')).toLowerCase();
-/** v1's bulk-sender signal: a no-reply style address. */
+/** The bulk-sender signal: a no-reply style address. */
 export const isBulkSender = (address: string) => {
   const local = localPart(address);
   return BULK_LOCALPARTS.some(prefix => local === prefix || local.startsWith(`${prefix}.`) || local.startsWith(`${prefix}-`) || local.startsWith(`${prefix}+`));
@@ -241,8 +241,8 @@ const KIND_OF_TYPE: Partial<Record<MessageType, Kind>> = {
 
 /**
  * A reading without a model, for backfilled history: organisation from the sender, type from the
- * words, and Noise only for bulk mail with an unsubscribe footer and no important subject (v1's
- * no-model scorer's signals, made stricter: history is read, not triaged into a queue).
+ * words, and Noise only for bulk mail with an unsubscribe footer and no important subject (strict,
+ * as history is read, not triaged into a queue).
  */
 export function historyReading(email: {fromName: string; fromAddress: string; subject: string; bodyText: string}): Reading {
   const {organisation, via} = organisationFromSender(email.fromName, email.fromAddress);

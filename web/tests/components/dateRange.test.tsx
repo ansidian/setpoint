@@ -1,6 +1,6 @@
-// An event's days in its Date field (Pickers.tsx › DateField with a range, SV-29): one sheet, a
-// first click and then a last, either side of it (#103), the band between following the pointer
-// (#104; its fills are by eye, D477), and typed too. The editor's own fields and its save stay in editor.spec.ts.
+// An event's days in its Date field (Pickers.tsx › DateField with a range): one sheet, a
+// first click and then a last, either side of it, the band between following the pointer
+// (its fills are by eye), and typed too. The editor's own fields and its save stay in editor.spec.ts.
 import {useState} from 'react';
 import {expect, test} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -82,7 +82,7 @@ test('from the keys: ↓ moves the cursor a week, Enter picks the first day, Esc
   await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
 });
 
-test('an empty field (an email that gave no day, SV-24) picks a first day and then a last, as a set one does', async () => {
+test('an empty field (an email that gave no day) picks a first day and then a last, as a set one does', async () => {
   await render(<Days from={null} to={TODAY} />);
   await field.click();
   await expect.element(sheet('first')).toBeVisible();

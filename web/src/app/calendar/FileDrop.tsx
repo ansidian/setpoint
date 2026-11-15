@@ -1,4 +1,4 @@
-// SV-190: a file dragged over the month or week grid (DESIGN.md #305). The grid's section takes the
+// A file dragged over the month or week grid. The grid's section takes the
 // drop and lights while one is over it (`data-file-drop`, calendar.css), its pill at the centre
 // saying whether it will import; the right pane takes none.
 import {useEffect, useRef, useState} from 'react';

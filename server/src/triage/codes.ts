@@ -1,4 +1,4 @@
-// Reading sorted mail again for its verification code (SV-68). Triage stores the code it finds once,
+// Reading sorted mail again for its verification code. Triage stores the code it finds once,
 // so mail sorted before the detector improved keeps what the older one found. This lists what reading
 // again would change and, with apply, writes it; it also lists the emails triage typed as code
 // emails that still have no code, the detector's likely misses. Unsorted mail is left alone: it gets
@@ -43,7 +43,7 @@ export function rereadCodes(store: Store, {apply}: {apply: boolean}): CodeReport
       const email = {id: row.id, fromAddress: row.fromAddress, subject: row.subject};
       if ((found?.code ?? null) !== row.code) {
         report.changes.push({...email, before: row.code, after: found?.code ?? null});
-        // No code any more: not a code row, so not the code's trash either (SV-252).
+        // No code any more: not a code row, so not the code's trash either.
         const untrash = !found && row.codeTrash ? {codeTrash: false, ...(row.trashDueAt === row.codeExpiresAt ? {trashDueAt: null} : {})} : {};
         writes.push(() => store.db.update(t.messages).set({code: found?.code ?? null, codeExpiresAt: found?.expiresAt ?? null, ...untrash})
           .where(and(eq(t.messages.id, row.id), isNotNull(t.messages.lane))).run());

@@ -1,17 +1,17 @@
-// The month grid (DESIGN.md › Month grid): the weekday row, then weeks as 176 px rows that scroll
+// The month grid: the weekday row, then weeks as 176 px rows that scroll
 // without end through months. Only the rows in view (and two each side) are drawn, placed by their
-// week, so a row's top is always `row × 176` inside the track: the geometry F5 and F6 place cards
-// and drags by. Days outside the month the grid shows take `panel` at 60%, weekends 40%, the
+// week, so a row's top is always `row × 176` inside the track: the geometry cards and drags are
+// placed by. Days outside the month the grid shows take `panel` at 60%, weekends 40%, the
 // selected day `sub`. What doesn't fit a cell folds into "+N", whose popover lists the day.
-// F6 (DESIGN.md › Drag; board 15): a chip pressed and moved lifts (tilt −1.5°, scale 1.04, the
+// Board 15: a chip pressed and moved lifts (tilt −1.5°, scale 1.04, the
 // popover shadow) and follows the pointer, its place becomes a dashed ghost, the day under it is
 // marked and a tooltip names the day and time; letting go on another day drops it there.
-// F6b: a drag held near the grid's top or bottom edge scrolls it (faster nearer the edge), and an
+// A drag held near the grid's top or bottom edge scrolls it (faster nearer the edge), and an
 // item in the "+N" popover drags out of it onto another day.
-// Polish audit calflows-09, motion-15: the lift eases in; the day under a drag takes the item's colour
+// The lift eases in; the day under a drag takes the item's colour
 // and shows the slot it would land in; on the drop the chip settles from where it was lifted into
 // its place.
-// Polish audit grids-04: paging and Today glide the grid to their month over 260 ms (from five rows
+// Paging and Today glide the grid to their month over 260 ms (from five rows
 // short when it's further than ten), a new page mid-glide going on from where it is; the wheel, a
 // touch or a press stops it.
 import type {CalendarOut, ItemOut, WeatherDayOut} from '@setpoint/shared';
@@ -62,15 +62,15 @@ export interface MonthGridProps {
   onPopover: (date: string | null) => void;
   // A chip dropped on another day.
   onDrop: (item: ItemOut, from: string, to: string) => void;
-  // A day's + : a new event on it (polish audit grids-06).
+  // A day's + : a new event on it.
   onNew: (date: string) => void;
-  // F5's floating detail, drawn in the month section over the grid and placed by its geometry.
+  // The floating detail, drawn in the month section over the grid and placed by its geometry.
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   // Overlays anchored to items (the drop prompt, the failed card), drawn in the month section.
   overlays?: ReactNode;
-  // SV-190: a file dragged over the section, which takes its drop (FileDrop.tsx).
+  // A file dragged over the section, which takes its drop (FileDrop.tsx).
   fileDrop?: FileDropBinding;
-  // Arriving from Week: it settles out around this height in the section, the selected week's row (polish audit grids-09).
+  // Arriving from Week: it settles out around this height in the section, the selected week's row.
   enter?: number | null;
   onEntered?: () => void;
 }
@@ -122,7 +122,7 @@ export function MonthGrid(props: MonthGridProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Paging's glide (polish audit grids-04): the frame it's on and the scroll it's going to.
+  // Paging's glide: the frame it's on and the scroll it's going to.
   const gliding = useRef<{frame: number; to: number} | null>(null);
   const stopGlide = () => {
     if (!gliding.current) return;
@@ -171,7 +171,7 @@ export function MonthGrid(props: MonthGridProps) {
       } else glideTo(element, to, scroll.how === 'today' ? pulseToday : undefined);
     } else {
       // A day in view where a glide is going stays put (Today's day, as it lands), its week partly
-      // in view included (SV-239).
+      // in view included.
       const at = gliding.current?.to ?? element.scrollTop;
       if (weekOutOfView((weekIndex(scroll.date) - FIRST_WEEK) * ROW, at, element.clientHeight, ROW)) {
         stopGlide();
@@ -290,7 +290,7 @@ export function MonthGrid(props: MonthGridProps) {
     measure();
   };
 
-  // Dropped, the chip settles from its lift into its place (polish audit calflows-09, motion-15): its
+  // Dropped, the chip settles from its lift into its place: its
   // tilt, scale and shadow ease out on the glide's curve over 180 ms, from where the lift was.
   useLayoutEffect(() => {
     const landing = settling.current;
@@ -316,7 +316,7 @@ export function MonthGrid(props: MonthGridProps) {
   });
 
   const cellLooks = drag ? new Map([...looks, [drag.item.key, 'ghost' as const]]) : looks;
-  // The slot the drag would land in, on the day under it (polish audit calflows-09).
+  // The slot the drag would land in, on the day under it.
   const slotFor = (date: string) => {
     if (!drag || drag.to !== date || drag.to === drag.from) return null;
     const changes = dropChange(drag.item, date, timeZone);
@@ -408,7 +408,7 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items: own, 
     <div className={className} data-date={date} onClick={() => onSelectDay(date)} style={dropping ? {'--dc': liftedColour} as CSSProperties : undefined}>
       <div className="dhead">
         <span className={`dn${date === today ? ' today' : ''}${head.monthStart ? ' month' : ''}`}>{head.label}</span>
-        {/* Under the pointer a day offers + to make an event on it (polish audit grids-06); a click on the day only selects it. */}
+        {/* Under the pointer a day offers + to make an event on it; a click on the day only selects it. */}
         <button type="button" className="dadd" aria-label={`New event on ${dayTitle(date)}`} data-tip="New event · C"
           onPointerDown={event => event.stopPropagation()}
           onClick={event => {
@@ -438,7 +438,7 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items: own, 
 }
 
 /**
- * What "+N" folds, without words (DESIGN.md › Month grid › Overflow): up to three 6 px dots, an event's
+ * What "+N" folds, without words: up to three 6 px dots, an event's
  * filled in its colour, a task's a ring in its project's.
  */
 function FoldedDots({items, calendars}: {items: ItemOut[]; calendars: Map<number, CalendarOut>}) {

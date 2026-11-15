@@ -1,4 +1,4 @@
-// The board a page is on, by its host (SV-202): each board's readers read only its own pages.
+// The board a page is on, by its host: each board's readers read only its own pages.
 import {expect, test} from 'vitest';
 import {boardOf} from '../src/boards.ts';
 

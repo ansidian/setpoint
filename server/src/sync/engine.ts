@@ -1,9 +1,9 @@
-// The sync engine (BRIEF.md › Decided elsewhere: one engine with provider adapters). Each tick it
+// The sync engine: one engine with provider adapters. Each tick it
 // schedules every source's checks from its own interval (a poll's sync, or the sweep behind a
 // push, plus push renewals), runs due jobs (checks and commands) through their adapters, records
 // each check as the source's heartbeat, and sends a `health` event when a source's state changes.
 // A source that needs reconnecting isn't checked until new credentials arrive, and notifies once.
-// Work that isn't a source's (B3's triage) runs through a JobWorker: the engine claims its jobs
+// Work that isn't a source's (triage, say) runs through a JobWorker: the engine claims its jobs
 // with the rest and hands them over; the worker finishes or fails each by the same retry policy.
 import type {HealthState} from '@setpoint/shared';
 import {and, eq} from 'drizzle-orm';
@@ -64,7 +64,7 @@ export class SyncEngine {
     void this.tick();
     this.timer = setInterval(() => void this.tick(), everyMs);
     this.timer.unref();
-    // A change made in Setpoint goes to its provider at once, not at the next tick (DESIGN.md #54), so a
+    // A change made in Setpoint goes to its provider at once, not at the next tick, so a
     // quick provider confirms before the grid's spinner shows.
     this.unsubscribe = this.store.live?.subscribe(event => {
       if (event.type === 'live' && 'commands' in event.event && event.event.commands.length) this.runSoon();
@@ -132,7 +132,7 @@ export class SyncEngine {
     return this.timed(adapter.attachment(this.context(source), message, attachmentId));
   }
 
-  /** SV-274: an email's source from its source's adapter, as `attachment` fetches one. */
+  /** An email's source from its source's adapter, as `attachment` fetches one. */
   async emailSource(sourceId: number, message: {providerId: string}): Promise<Buffer | null> {
     const source = this.store.db.select().from(t.sources).where(eq(t.sources.id, sourceId)).get();
     const adapter = source ? this.adapters.adapterFor(source) : null;
@@ -264,7 +264,7 @@ export class SyncEngine {
   }
 
   /**
-   * "Business needs sign-in": one ntfy notification per reconnect (DESIGN.md › Health and states).
+   * "Business needs sign-in": one ntfy notification per reconnect.
    * An account's sources share one sign-in (Gmail and Calendar, one Google consent), so only the
    * first of them to need reconnecting alerts; the one sign-in fixes them all.
    */

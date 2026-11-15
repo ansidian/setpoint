@@ -19,7 +19,7 @@ describe('missing', () => {
   });
 });
 
-// Which checks read a file, so which a commit changing only it runs again (SV-193).
+// Which checks read a file, so which a commit changing only it runs again.
 describe('reads', () => {
   const CHECKS: Check[] = ['unit', 'image', 'browser'];
   it.each([

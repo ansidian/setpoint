@@ -1,6 +1,5 @@
-// A source's health (decision 31; BRIEF.md › Health and states). Healthy means the last check
-// succeeded, not that data changed: a quiet night with no new mail is healthy. v1 measured time since
-// the last change, flagged quiet mirrors as stale and kept lengthening thresholds.
+// A source's health. Healthy means the last check
+// succeeded, not that data changed: a quiet night with no new mail is healthy.
 //
 // Each source has a heartbeat (its poll, or the sweep behind a push), and the threshold comes from
 // that schedule: twice the interval plus a grace.

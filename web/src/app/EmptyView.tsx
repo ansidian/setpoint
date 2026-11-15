@@ -1,5 +1,5 @@
-// An empty Inbox view (SV-226): a line-drawn spot illustration of its own, drawn in once on arrival,
-// over a headline, one quiet line and Show All. No mark and no glow: they're the empty pane's (#331, #335).
+// An empty Inbox view: a line-drawn spot illustration of its own, drawn in once on arrival,
+// over a headline, one quiet line and Show All. No mark and no glow: they're the empty pane's.
 import {timeZone} from '../api/auth.ts';
 import {EMPTY_HEADLINES, quietLine} from '../logic/emptyView.ts';
 import type {EmptyInboxView} from '../logic/emptyView.ts';

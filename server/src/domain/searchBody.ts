@@ -1,4 +1,4 @@
-// What search indexes of an email's body (SV-135): `body_text` without its links and footers. Most of
+// What search indexes of an email's body: `body_text` without its links and footers. Most of
 // what's in a marketing email's text is tracking links, so a word in a URL's path or query matched
 // as if the email had said it. A link leaves its domain behind as a word, once per email: a sender
 // can be findable only through the site its links go to. `body_text` itself stays as it is, since

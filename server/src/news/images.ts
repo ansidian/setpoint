@@ -1,7 +1,7 @@
-// Setpoint's own copies of News images (DESIGN.md › The list: Thumbnails): each a file in the data
+// Setpoint's own copies of News images: each a file in the data
 // directory's news-images/, recorded in `news_images` with its size, and served from
 // /api/news/images/:id so outlets never see the user's browsing and blocking hotlinks can't break it.
-// N2 fetches and resizes; this keeps the copies, and the expiry deletes them with their story (the
+// Ingest fetches and resizes; this keeps the copies, and the expiry deletes them with their story (the
 // archive keeps the story's thumbnail).
 import fs from 'node:fs';
 import path from 'node:path';

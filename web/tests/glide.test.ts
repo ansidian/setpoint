@@ -1,5 +1,5 @@
-// The glide as tables (DESIGN.md › The glide; board 12c): the overshoot clamped at the grid's edges
-// (decision 47, override 1), and where the card starts, how it moves and where it rests.
+// The glide as tables (board 12c): the overshoot clamped at the grid's edges,
+// and where the card starts, how it moves and where it rests.
 import {describe, expect, test} from 'vitest';
 import type {Rect} from '../src/logic/calendar.ts';
 import {edgeOvershoot, GLIDE_PEAK, glidePosition, glideSegment, glideVelocity, roomPast} from '../src/logic/glide.ts';
@@ -7,7 +7,7 @@ import {edgeOvershoot, GLIDE_PEAK, glidePosition, glideSegment, glideVelocity, r
 const GRID: Rect = {left: 0, top: 30, width: 1029, height: 964};
 const CARD = {width: 280, height: 280};
 
-describe('the overshoot clamps at the grid\'s edges (decision 47): near one it shrinks to the room left', () => {
+describe('the overshoot clamps at the grid\'s edges: near one it shrinks to the room left', () => {
   test.each([
     ['plenty of room: the full 3%', 724, 100, 21.66],
     ['12b: 13 px left before the right pane', 724, 13, 13],

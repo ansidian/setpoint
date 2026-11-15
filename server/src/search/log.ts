@@ -1,8 +1,7 @@
-// The search log (BRIEF.md › Search: "Searches and the position of the opened result are logged, so
-// ranking can be measured against real searches rather than made-up ones"): each search's text, its
-// chips, the ids it returned in order, each result opened with its position, and since SV-138 each
-// chip taken off it, so wrong readings can be seen. Since D392, each suggestion offered, with whether
-// it was shown and accepted, so suggestions can be judged.
+// The search log, so ranking can be measured against real searches rather than made-up ones: each
+// search's text, its chips, the ids it returned in order, each result opened with its position, and
+// each chip taken off it, so wrong readings can be seen. Each suggestion offered, with whether it
+// was shown and accepted, so suggestions can be judged.
 //
 // The field searches as the user types, so a search that only extends or trims the one before it, within
 // a few seconds and with nothing opened from it, replaces that row rather than adding one: the log

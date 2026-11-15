@@ -1,4 +1,4 @@
-// The state lines' folds as a table (the polish audit's states-13): which lines fold in, which fold
+// The state lines' folds as a table: which lines fold in, which fold
 // out, which show their last words first, and where the going ones stay.
 import {describe, expect, test} from 'vitest';
 import {lineMovesOn, nextLines} from '../src/logic/stateLines.ts';

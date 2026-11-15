@@ -46,7 +46,7 @@ export function renderGlyphs(): string {
     '',
     'export type IconName = keyof typeof ICONS;',
     '',
-    '/** Todoist\'s glyphs: the open ring and darma\'s filled disc with the check knocked out. */',
+    '/** Todoist\'s glyphs: the open ring and the filled disc with the check knocked out. */',
     `export const TASK_GLYPHS = ${JSON.stringify({viewBox: open.viewBox, open: open.body, done: done.body}, null, 2).replace(/"(\w+)":/g, '$1:')} as const;`,
     '',
   ].join('\n');

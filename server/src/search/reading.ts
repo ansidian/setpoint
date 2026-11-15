@@ -1,4 +1,4 @@
-// The server's reading of a whole search, offered as a suggestion (D386, D392, SV-138, SV-142). Typing
+// The server's reading of a whole search, offered as a suggestion. Typing
 // never comes here: only POST /api/search/suggestion does, which the web asks on a pause in typing.
 // Results are the words' results whatever it finds. Only accepting one filters, and that asks nothing.
 //
@@ -10,7 +10,7 @@
 //   the grammar as always, and stay in force whatever the model says.
 // - Its chips are checked against the mail: only organisations that exist, and only words that were
 //   typed left as keywords. An organisation chip covers names that start with it, and a type chip
-//   matches the classified type, or the type's word in the subject, summary or terms (D386).
+//   matches the classified type, or the type's word in the subject, summary or terms.
 // - A suggestion is offered only if it hides a real share of the word results and leaves a row:
 //   see SUGGESTION_HIDES. Filters that leave nothing are dropped, leaving any date the grammar found.
 // - The answer counts what the words find and the chips don't, the "more" line, and `left_out` lists it.
@@ -42,7 +42,7 @@ import {answerSearch, chipVocabulary, matchSearch, organisationsFor, searchMail}
 import type {SearchMatches, SearchRequest} from './search.ts';
 
 // How long a suggestion waits for the model, and how long the call may go on behind it. The model took
-// about 0.85 s typically and 1.8 s at worst in SV-133's and SV-138's runs, nothing on screen waits for
+// about 0.85 s typically and 1.8 s at worst in measured runs, nothing on screen waits for
 // it, and a slower answer isn't lost: it's held for the next pause on those words.
 export const READING_WAIT_MS = 2000;
 const READING_CALL_MS = 15_000;

@@ -1,12 +1,12 @@
-// Settings in the browser (F7; DESIGN.md › Settings): board 17 built and checked, then each page
+// Settings in the browser: board 17 built and checked, then each page
 // saving: the modal itself (⌘,, Esc, not in the address bar, a link straight to a page, Reconnect), Accounts
 // (colour, rename, order, Connect Gmail's "not configured", Connect iCloud's form), Mail (a rule, Undo
 // on a learned rule, a domain, code expiry), Notifications (Send test to a fake ntfy on 127.0.0.1,
-// switches, defaults), Calendar (a calendar hidden, Home, weather, and SV-20's colours written to
-// Google, waiting, refused, tried again and changed back), Todoist (SV-25's project colours, the same
+// switches, defaults), Calendar (a calendar hidden, Home, weather, and calendar colours written to
+// Google, waiting, refused, tried again and changed back), Todoist (project colours, the same
 // way, and the task rings that take them), AI (a key set write-only, a model), Appearance, and
-// Security's recovery codes and paired iPhones (SV-84). The passkey ceremony is in passkey.spec.ts.
-// N5 adds boards 30a and 30b: Settings › News (sources by section, read-only, no key row: #97) and AI's
+// Security's recovery codes and paired iPhones. The passkey ceremony is in passkey.spec.ts.
+// Boards 30a and 30b: Settings › News (sources by section, read-only, no key row) and AI's
 // News group (its models, the cap, this month and its usage), and the cap reached.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -78,7 +78,7 @@ test('each source says its state: checked, stopped as of when, failing in the pr
     await account('Work').locator('.state').getByText('Gmail answered 503.').waitFor();
     // A failing row is marked, as a row needing sign-in is.
     assert.deepEqual(await page.locator('.settings .set-row.warn[data-account]').evaluateAll(rows => rows.map(row => row.textContent!.match(/^(Business|Work)/)?.[0])), ['Business', 'Work']);
-    // Todoist's row in Sources, its connection's only place (D514), and Settings › News with the seed's FOX 11 failing.
+    // Todoist's row in Sources, its connection's only place, and Settings › News with the seed's FOX 11 failing.
     await page.locator('.settings [data-source="todoist"] .state.stale').getByText('Checks stopped, as of 8:40 AM').waitFor();
     await page.locator('.settings .set-nav .nav', {hasText: 'News'}).click();
     await page.locator('.settings .news-src.warn', {hasText: 'FOX 11'}).waitFor();
@@ -106,7 +106,7 @@ test('board 30a: Settings › News, after Calendar, its warning glyph while FOX 
     await openAt(page, setpoint.base, 'news');
     const fox = page.locator('.settings .news-src', {hasText: 'FOX 11'});
     await fox.waitFor();
-    // The nav's three groups (D512): Accounts · Mail, Calendar, News, Jobs (J8; its page is
+    // The nav's three groups: Accounts · Mail, Calendar, News, Jobs (its page is
     // jobsStates.spec.ts's) · Notifications, AI, Appearance, Security, a gap before each group's first.
     assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Mail', 'Calendar', 'News', 'Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Sign out']);
     assert.deepEqual(await page.locator('.settings .set-nav .nav.gap').allTextContents(), ['Mail', 'Notifications']);
@@ -118,7 +118,7 @@ test('board 30a: Settings › News, after Calendar, its warning glyph while FOX 
     }
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'News');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn').count(), 1, 'News carries the warning glyph');
-    // The head's counts, then one group per section with its count, and no Keys group (#97).
+    // The head's counts, then one group per section with its count, and no Keys group.
     const sources = await setpoint.api<NewsSourcesOut>('GET', '/news/sources');
     assert.equal(await page.locator('.settings .set-head .head-note').textContent(), `${sources.articles_today} articles today · ${sources.stories_on_page} stories`);
     assert.deepEqual(await page.locator('.settings .set-label').allTextContents(),
@@ -145,13 +145,13 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     const amount = page.locator('.settings .amount');
     await amount.waitFor();
     assert.equal(await amount.textContent(), '$18.40 of $40');
-    // Jobs's group follows News's (J8; its own check is jobsStates.spec.ts's).
+    // Jobs's group follows News's (its own check is jobsStates.spec.ts's).
     assert.deepEqual(await page.locator('.settings .set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['Keys', 'Mail', 'News', 'Jobs', 'Usage this month']);
     const news = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: /^News$/})});
     assert.deepEqual(await news.locator('.set-row .t').allTextContents(), ['Articles and grouping', 'Stories and ranking', 'Monthly cap', 'This month']);
     assert.deepEqual(await news.locator('.val').allTextContents(), ['Claude Haiku 5.5', 'Claude Sonnet 5.5']);
     assert.equal(await news.getByRole('button', {name: 'Monthly cap', exact: true}).textContent(), '$40');
-    // How far the meter fills is capMeter's, a table in news.test.ts; its width on screen is by eye (D417).
+    // How far the meter fills is capMeter's, a table in news.test.ts; its width on screen is by eye.
     const meter = news.locator('.meter');
 
     // Usage this month: Triage, Search terms, Search reading, Alfred, News and Jobs, News and Jobs in their parts.
@@ -200,7 +200,7 @@ test('at the cap, This month says so; a higher cap takes it back', async () => {
   }
 });
 
-// A long page keeping its title, × and a section's label in place as it scrolls is CSS, by eye (D416).
+// A long page keeping its title, × and a section's label in place as it scrolls is CSS, by eye.
 test('the modal: ⌘, and the sidebar open it over the page, not in the address bar; Esc closes; the bar\'s Reconnect goes straight to Google for its one Gmail account', async () => {
   const setpoint = await startSetpoint({fixtures: ['needs-reconnect'], clock: 'frozen'});
   try {
@@ -215,7 +215,7 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     const currentFill = async () => current.evaluate(nav => [nav.textContent, document.activeElement === nav]);
     await until('Accounts marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Accounts', true]));
     // ↓ in the nav changes page; keys inside never reach the page (2 would go to Calendar, J would move a cursor).
-    // ↓ from Accounts is Mail, the middle group's first (D512).
+    // ↓ from Accounts is Mail, the middle group's first.
     await page.keyboard.press('ArrowDown');
     await page.locator('.settings .set-title', {hasText: 'Mail'}).waitFor();
     await until('Mail marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Mail', true]));
@@ -234,7 +234,7 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     await page.goto(`${setpoint.base}/settings/accounts?error=access_denied`);
     await page.locator('.settings .set-title', {hasText: 'Accounts'}).waitFor();
     await page.locator('.toast', {hasText: 'Gmail couldn’t be connected, access denied'}).waitFor();
-    // The toast sits above Settings and its scrim, not under them (SV-25).
+    // The toast sits above Settings and its scrim, not under them.
     assert.equal(await rested(() => page.locator('.toast').evaluate(toast => {
       const box = toast.getBoundingClientRect();
       return toast.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
@@ -242,7 +242,7 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     await page.keyboard.press('Escape');
 
     // The bar's Reconnect goes straight to Google's sign-in for the one Gmail account needing it, not
-    // to Settings first (the polish audit's states-08). Google stands in as an address back here.
+    // to Settings first. Google stands in as an address back here.
     await page.goto(`${setpoint.base}/inbox`);
     const business = (await setpoint.api<AccountOut[]>('GET', '/accounts')).find(account => account.label === 'Business')!;
     await page.route('**/api/accounts/gmail/authorize', route => route.fulfill({json: {url: `${setpoint.base}/inbox?consented`}}));
@@ -309,7 +309,7 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
 
     await page.getByRole('button', {name: 'Add rule'}).click();
     await page.locator('.settings input[name="from"]').fill('alerts.contoso.example');
-    // SV-235 (D487): "and…" adds a filter, which then leaves the menu.
+    // "and…" adds a filter, which then leaves the menu.
     await page.getByRole('button', {name: 'and…'}).click();
     await page.getByRole('menuitem', {name: 'Subject doesn’t contain'}).click();
     await page.getByRole('textbox', {name: 'Subject doesn’t contain'}).fill('digest');
@@ -317,14 +317,14 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
     assert.deepEqual(await page.getByRole('menuitem').allTextContents(), ['Subject contains', 'Sender name contains', 'Sender name doesn’t contain', 'Body contains', 'Body doesn’t contain']);
     await page.keyboard.press('Escape');
     await choose(page, 'Send to', 'FYI · Security');
-    // Its actions under Send to (SV-236): Mark read's switch, and Trash's six presets (SV-237).
+    // Its actions under Send to: Mark read's switch, and Trash's six presets.
     await page.getByRole('switch', {name: 'Mark read'}).click();
     assert.deepEqual(await page.getByRole('radiogroup', {name: 'Trash'}).getByRole('radio').allTextContents(), ['Never', 'Now', '15 min', '1 hour', '1 day', '1 week']);
     await page.getByRole('radio', {name: '1 day'}).click();
     await page.getByRole('button', {name: 'Add', exact: true}).click();
     await settled('the new rule', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && rule.match.subject_excludes?.[0] === 'digest' && rule.kind === 'security' && rule.mark_read && rule.trash === '1d'));
     await page.locator('.settings .rule', {hasText: 'FYI · Security, mark read, trash after 1 day'}).waitFor();
-    // A rule's menu turns it off with toggle_off and back on with toggle_on (#123).
+    // A rule's menu turns it off with toggle_off and back on with toggle_on.
     const added = page.locator('.settings .set-row', {hasText: 'alerts.contoso.example'});
     await added.getByRole('button', {name: 'Rule options'}).click();
     const turnOff = page.getByRole('menuitem', {name: 'Turn off'});
@@ -345,7 +345,7 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
     assert.deepEqual(await page.locator('.settings .dom').allTextContents(), ['woodgrovebank.example']);
     await page.getByRole('button', {name: 'Remove woodgrovebank.example'}).click();
     await settled('untrusted', () => setpoint.api<TrustedDomainOut[]>('GET', '/mail/trusted-domains'), list => list.length === 77);
-    // SV-25 (D54): nothing matching is one line, nothing cut off.
+    // Nothing matching is one line, nothing cut off.
     const empty = page.locator('.settings .set-row', {hasText: 'No domain matches'});
     assert.ok(await rested(() => empty.evaluate(row => row.scrollWidth <= row.clientWidth)), 'the line isn\'t cut off');
 
@@ -357,7 +357,7 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
   }
 });
 
-test('SV-238 (D495): Turn off or Delete on a rule with trashes waiting asks, Cancel them first; Esc leaves the rule as it was, ↵ cancels them, Let them run keeps them', async () => {
+test('Turn off or Delete on a rule with trashes waiting asks, Cancel them first; Esc leaves the rule as it was, ↵ cancels them, Let them run keeps them', async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
   try {
     const rules = () => setpoint.api<RuleOut[]>('GET', '/mail/rules');
@@ -416,7 +416,7 @@ test('SV-238 (D495): Turn off or Delete on a rule with trashes waiting asks, Can
   }
 });
 
-test('S11 (SV-25, D54): Esc in an inline form (Add rule, Connect iCloud, Change password, Add passkey) cancels the form first, as Rename does, and Settings stays open', async () => {
+test('Esc in an inline form (Add rule, Connect iCloud, Change password, Add passkey) cancels the form first, as Rename does, and Settings stays open', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -450,7 +450,7 @@ test('S11 (SV-25, D54): Esc in an inline form (Add rule, Connect iCloud, Change 
   }
 });
 
-test('S8 (SV-25, D54): a domain the server won\'t untrust says so in the toast; Check now reads Checking… on its row, then the result, or why it couldn\'t', async () => {
+test('a domain the server won\'t untrust says so in the toast; Check now reads Checking… on its row, then the result, or why it couldn\'t', async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules']});
   try {
     const page = await setpoint.page('target');
@@ -491,7 +491,7 @@ test('S8 (SV-25, D54): a domain the server won\'t untrust says so in the toast; 
   }
 });
 
-test('S12 (SV-25, D54): "No rules yet · Add rule" has Add rule as a button, reached by Tab, opening the form', async () => {
+test('"No rules yet · Add rule" has Add rule as a button, reached by Tab, opening the form', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -523,7 +523,7 @@ async function fakeNtfy() {
   return {url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, published, close: () => new Promise(resolve => server.close(resolve))};
 }
 
-test('Notifications: the server and its token, Send test reaching a fake ntfy, the switches and the defaults; Time to Leave is on Calendar (D513)', async () => {
+test('Notifications: the server and its token, Send test reaching a fake ntfy, the switches and the defaults; Time to Leave is on Calendar', async () => {
   const ntfy = await fakeNtfy();
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -532,13 +532,13 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
     const settings = () => setpoint.api<Settings>('GET', '/settings');
     await page.locator('.settings .set-label', {hasText: 'Not set up'}).waitFor();
     // With no server, the topics' switches can't work: off and disabled, saying what's missing, and no
-    // Send test (UX #13). Time to Leave's group isn't here: it's on Calendar (D513).
+    // Send test. Time to Leave's group isn't here: it's on Calendar.
     for (const name of ['setpoint-reminders', 'setpoint-mail', 'FYI mail', 'Reconnect alerts']) {
       const toggle = page.getByRole('switch', {name});
       assert.deepEqual([await toggle.isDisabled(), await toggle.getAttribute('aria-checked')], [true, 'false'], name);
     }
     assert.equal(await page.locator('.settings .set-row', {hasText: 'setpoint-reminders'}).locator('.s').textContent(), 'Set a server first');
-    // FYI mail says so too; with a server it has no second line (D517).
+    // FYI mail says so too; with a server it has no second line.
     const fyi = page.locator('.settings .set-row', {has: page.getByRole('switch', {name: 'FYI mail'})});
     assert.equal(await fyi.locator('.s').textContent(), 'Set a server first');
     assert.equal(await page.getByRole('button', {name: 'Send test'}).count(), 0);
@@ -574,7 +574,7 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
     await choose(page, 'Event reminders', '30 min before');
     await choose(page, 'Task reminders', '8:00 AM on the due day');
     await settled('defaults', settings, value => value.reminders.event_minutes_before === 30 && value.reminders.task_time === '08:00');
-    // Each default offers None (D49).
+    // Each default offers None.
     await choose(page, 'Event reminders', 'None');
     await choose(page, 'Task reminders', 'None');
     await settled('reminder defaults at None', settings, value => value.reminders.event_minutes_before === null && value.reminders.task_time === null);
@@ -585,7 +585,7 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
   }
 });
 
-test('Send test (the polish audit\'s states-11, settings-07): it shows it\'s sending, a failure says so in words, a test that went says so, and the Server field says it saved', async () => {
+test('Send test: it shows it\'s sending, a failure says so in words, a test that went says so, and the Server field says it saved', async () => {
   const ntfy = await fakeNtfy();
   // A server nothing answers at: a port just closed.
   const closed = http.createServer();
@@ -640,7 +640,7 @@ test('Send test (the polish audit\'s states-11, settings-07): it shows it\'s sen
   }
 });
 
-test('Calendar and Appearance: a calendar unlisted, Home set with its coordinates, Time to Leave waiting for Home then on with its buffer (D513), Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
+test('Calendar and Appearance: a calendar unlisted, Home set with its coordinates, Time to Leave waiting for Home then on with its buffer, Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -648,9 +648,9 @@ test('Calendar and Appearance: a calendar unlisted, Home set with its coordinate
     const settings = () => setpoint.api<Settings>('GET', '/settings');
     // Every group has its label.
     await page.getByRole('switch', {name: 'Show Classes'}).waitFor();
-    // Time to Leave's group is here, under Home (D513), and Todoist's projects and default project are a section (D514).
+    // Time to Leave's group is here, under Home, and Todoist's projects and default project are a section.
     assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Home', 'Time to Leave', 'Todoist', 'Weather and places']);
-    // Without Home, Time to Leave can't work: off and disabled, saying what's missing (UX #13).
+    // Without Home, Time to Leave can't work: off and disabled, saying what's missing.
     const leave = page.getByRole('switch', {name: 'Time to Leave'});
     const leaveRow = page.locator('.settings .set-row', {has: leave});
     assert.deepEqual([await leave.isDisabled(), await leave.getAttribute('aria-checked')], [true, 'false']);
@@ -698,7 +698,7 @@ test('Calendar and Appearance: a calendar unlisted, Home set with its coordinate
   }
 });
 
-test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at .5 with its spinner, then shows on the calendar; one Google refuses stays with its words until Try again or Change back', async () => {
+test('a calendar\'s colour, picked from the swatches, waits for Google at .5 with its spinner, then shows on the calendar; one Google refuses stays with its words until Try again or Change back', async () => {
   const provider = providerHold();
   const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_PROVIDER_HOLD: provider.file}});
   try {
@@ -710,7 +710,7 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     assert.equal(await page.locator('.settings [data-calendar]', {hasText: 'Todoist'}).locator('.sw').count(), 0);
 
     await personal.getByRole('button', {name: 'Personal colour'}).click();
-    // Nine of darma's swatches: caution and alert keep their jobs (#163).
+    // Nine swatches: caution and alert keep their jobs.
     assert.deepEqual(await page.locator('.settings .swatches .sw').evaluateAll(swatches => swatches.map(swatch => swatch.getAttribute('aria-label'))),
       ['ink2', 'ink3', 'cool', 'warm', 'comf', 'good', 'sun', 'violet', 'cyan']);
     await page.locator('.settings .swatches .sw[aria-label="violet"]').click();
@@ -752,7 +752,7 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
   }
 });
 
-test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for Todoist at .5 with its spinner, then rings its tasks; one Todoist refuses stays with its words until Try again or Change back', async () => {
+test('a Todoist project\'s colour, picked from Todoist\'s 20, waits for Todoist at .5 with its spinner, then rings its tasks; one Todoist refuses stays with its words until Try again or Change back', async () => {
   const provider = providerHold();
   const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_PROVIDER_HOLD: provider.file}});
   try {
@@ -795,7 +795,7 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     const ring = (selector: string, title: string) => page.locator(selector, {hasText: title}).locator('.ring').evaluate(el => getComputedStyle(el).borderTopColor);
-    // Todoist's teal (#148fad) and sky blue (#319dc0), their lightness clamped to the theme's band (#175).
+    // Todoist's teal (#148fad) and sky blue (#319dc0), their lightness clamped to the theme's band.
     const teal = await computed(page, 'color', 'oklch(from #148fad clamp(var(--ringMin), l, var(--ringMax)) c h)');
     const sky = await rested(() => computed(page, 'color', 'oklch(from #319dc0 clamp(var(--ringMin), l, var(--ringMax)) c h)'));
     // A ring can still be easing its colour in (the agenda's does), so each is read once it's there.
@@ -823,9 +823,9 @@ test('AI: a key set write-only and removed, and each model changed at will', asy
     await anthropic.locator('.s', {hasText: 'Claude models · Set'}).waitFor();
     assert.equal(await page.locator('.settings').evaluate(modal => modal.textContent?.includes('sk-ant-fake-browser-check')), false, 'the key never shows');
 
-    // Defaults per D25 and D26 with the Anthropic key: Sonnet, Opus, Haiku, Opus.
+    // The defaults with the Anthropic key: Sonnet, Opus, Haiku, Opus.
     const ai = await setpoint.api<AiOut>('GET', '/ai');
-    // Default names its model, and every model on offer is Claude's and can be picked with the key (UX #14).
+    // Default names its model, and every model on offer is Claude's and can be picked with the key.
     // The Triage model menu's choices, opened and closed again.
     const choices = async () => {
       await page.locator('.settings').getByRole('button', {name: 'Triage model', exact: true}).click();
@@ -856,7 +856,7 @@ test('AI: a key set write-only and removed, and each model changed at will', asy
 
     await anthropic.getByRole('button', {name: 'Remove'}).click();
     await settled('removed', secrets, list => list.find(secret => secret.name === 'anthropic_api_key')?.set === false);
-    // With no key, each model waits for it (UX #14).
+    // With no key, each model waits for it.
     await until('every model waits for the key', async () => (await choices()).slice(1), models => models.length > 0 && models.every(model => model.disabled && model.text?.endsWith(', no key')));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -875,8 +875,8 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
     assert.equal(await page.locator('.settings').getByRole('button', {name: 'Sign out'}).count(), 1);
     assert.equal(await page.locator('.settings .set-label').getByRole('button', {name: 'Add passkey'}).locator('svg').count(), 1);
     // No passkeys is an empty line, as Mail's "No rules yet · Add rule" is, not a passkey named "None yet";
-    // the recovery row is titled, its count its value (the polish audit's settings-11).
-    // Passkeys' own, not iPhones' (#250).
+    // the recovery row is titled, its count its value.
+    // Passkeys' own, not iPhones'.
     const none = page.locator('.settings .set-row', {hasText: 'Add passkey'});
     assert.equal(await none.locator('.set-empty').textContent(), 'None yet · Add passkey');
     const recovery = page.locator('.settings .set-row', {hasText: '8 left'});
@@ -896,7 +896,7 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
   }
 });
 
-test('Security › iPhones: Add iPhone shows the QR and its link, the phone pairing closes it and lists the phone; Esc withdraws a code, Revoke ends a token (#250)', async () => {
+test('Security › iPhones: Add iPhone shows the QR and its link, the phone pairing closes it and lists the phone; Esc withdraws a code, Revoke ends a token', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -971,7 +971,7 @@ test('Security: a load that reaches the server just after a change there ended t
     // Only once its page asks for it: Settings' early loads go through.
     let armed = false;
     let asked = 0;
-    // Not the rules, which the Inbox under Settings has already, for Add to rule (SV-160).
+    // Not the rules, which the Inbox under Settings has already, for Add to rule.
     await page.route('**/api/mail/trusted-domains', async route => {
       if (!armed) return route.continue();
       asked += 1;
@@ -1085,8 +1085,8 @@ test('menus: Sources\' last row (Weather · Check now), the last account\'s and 
 });
 
 // The modal at 820 wide (the window less its 16 px each side), where the Trash control ran past the group,
-// and at 608, the narrowest the desktop layout makes it (a 640 px window), where the form is one column (SV-256).
-for (const width of [852, 640]) test(`SV-253 (F3, D518), SV-256: Add rule in a ${width} px window stays inside its group with a filter and every Trash choice, and Settings doesn't scroll sideways`, async () => {
+// and at 608, the narrowest the desktop layout makes it (a 640 px window), where the form is one column.
+for (const width of [852, 640]) test(`Add rule in a ${width} px window stays inside its group with a filter and every Trash choice, and Settings doesn't scroll sideways`, async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width, height: 760});
@@ -1116,9 +1116,9 @@ for (const width of [852, 640]) test(`SV-253 (F3, D518), SV-256: Add rule in a $
   }
 });
 
-// A rule's sentence where the modal is narrow (SV-257, #368): at 820 it's two lines and nothing in it is
+// A rule's sentence where the modal is narrow: at 820 it's two lines and nothing in it is
 // cut (before, its sender was "From wingtip…" with no tip); at 608 what's still cut shows the whole of it.
-for (const width of [852, 640]) test(`SV-257 (#368): in a ${width} px window ${width === 852 ? 'no mail rule\'s words are cut' : 'a mail rule\'s cut words show in its tip'}`, async () => {
+for (const width of [852, 640]) test(`in a ${width} px window ${width === 852 ? 'no mail rule\'s words are cut' : 'a mail rule\'s cut words show in its tip'}`, async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
   try {
     await setpoint.api('POST', '/mail/rules', {match: {from_domains: ['shipment-tracking.wingtiptoys.example']}, lane: 'fyi', kind: 'deliveries', mark_read: true, trash: '1d'});
@@ -1147,7 +1147,7 @@ for (const width of [852, 640]) test(`SV-257 (#368): in a ${width} px window ${w
   }
 });
 
-test('SV-255 (D514): Todoist not connected says so on Accounts with Connect Todoist, which says why it can\'t here, and on Calendar with a way to Accounts', async () => {
+test('Todoist not connected says so on Accounts with Connect Todoist, which says why it can\'t here, and on Calendar with a way to Accounts', async () => {
   const setpoint = await startSetpoint({fixtures: ['todoist-off'], clock: 'frozen'});
   try {
     const page = await setpoint.page({width: 1280, height: 800});
@@ -1175,7 +1175,7 @@ test('SV-255 (D514): Todoist not connected says so on Accounts with Connect Todo
   }
 });
 
-test('SV-258: in a 640 px window, the narrowest the desktop layout allows, no Settings page scrolls sideways or runs a row past its group', async () => {
+test('in a 640 px window, the narrowest the desktop layout allows, no Settings page scrolls sideways or runs a row past its group', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: 640, height: 760});
@@ -1210,7 +1210,7 @@ const columns = (page: Page) => page.locator('.settings .set-group').evaluateAll
   })))
   .filter(rows => rows.length > 1));
 
-test('SV-253 (F1, F2): a group\'s rows share their sync and state columns as the modal narrows, and a name, address, line or state cut short shows its words in a tip', async () => {
+test('a group\'s rows share their sync and state columns as the modal narrows, and a name, address, line or state cut short shows its words in a tip', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     // The modal at 992 and 820 wide (the window less its 16 px each side), where the columns give way.

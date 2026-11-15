@@ -1,10 +1,10 @@
-// USPS Informed Delivery's daily digest (SV-274, D564): which email is one, the day it's for, and the
+// USPS Informed Delivery's daily digest: which email is one, the day it's for, and the
 // mailpieces' pictures in it. The digest's HTML shows each mailpiece arriving as an image whose
 // source is one of the email's inline parts ("cid:1037161434-038.jpg"):
 // - a scan, `id="mailpiece-image-src-id"`, the one kind kept.
 // - a mailer's campaign, `id="campaign-representative-image-src-id"`: the mailer's own artwork, which
-//   the digest counts in "You have 6 mailpiece(s)". It isn't a piece that comes in the mail (Andy,
-//   D572), so it's neither kept nor counted, and neither is its ride-along ad,
+//   the digest counts in "You have 6 mailpiece(s)". It isn't a piece that comes in the mail, so
+//   it's neither kept nor counted, and neither is its ride-along ad,
 //   `id="campaign-ridealong-image-src-id"`. Packages, the USPS logo, share buttons and tracking pixels aren't
 // mailpieces either. A digest can say more pieces are coming than it has pictures for ("one or more
 // mailpieces for which we do not currently have an image"); one saying 0 is "No mail today".
@@ -60,7 +60,7 @@ function sourcesOf(html: string, wanted: string): string[] {
 /** The `cid:` sources of the mailpieces' scans in the digest's HTML, in order, each once. */
 export const pieceSources = (html: string) => sourcesOf(html, SCAN_ID);
 
-/** How many mailers' campaigns the digest shows, which its stated count includes (D572). */
+/** How many mailers' campaigns the digest shows, which its stated count includes. */
 export const campaignCount = (html: string) => sourcesOf(html, CAMPAIGN_ID).length;
 
 export interface Scan {

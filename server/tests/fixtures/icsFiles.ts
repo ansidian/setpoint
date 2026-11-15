@@ -1,4 +1,4 @@
-// Invented .ics files for readIcs (SV-178), shaped like the ones an import meets: a job board's
+// Invented .ics files for readIcs, shaped like the ones an import meets: a job board's
 // interview invite, a conference's published schedule, Outlook's and Apple's exports. Every name,
 // address and link is made up (example domains, Microsoft's fictional companies). Lines are kept
 // as arrays so each test picks its line ending; folded lines start with a space or a tab.

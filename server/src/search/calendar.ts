@@ -1,6 +1,6 @@
-// SV-23: calendar search (DESIGN.md › Decided while building #24): POST /api/calendar/search reads the
+// Calendar search: POST /api/calendar/search reads the
 // items and calendars, and src/domain/calendarSearch.ts finds and orders the hits. Not logged: the
-// search log is mail's (no search log for the calendar, D48).
+// search log is mail's (no search log for the calendar).
 import type {CalendarSearchChip, CalendarSearchOut, calendarSearchInput} from '@setpoint/shared';
 import type {z} from 'zod';
 import * as t from '../db/schema.ts';

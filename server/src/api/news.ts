@@ -1,9 +1,9 @@
 // News's routes (shapes and the list in `@setpoint/shared` src/api/news.ts): All, a section, a story,
 // an article, the iPhone app's Catch up, Settings › News, Setpoint's image copies, and stories seen;
-// N3's sorting state (Unsorted and the first run), Show headlines, search, and Upcoming's Add to
-// calendar; and the recap's state (#298): News on screen, Done and its Undo. Mounted under /api behind
-// the session, like the rest of the API. Read-only but for seen and the recap; ingest (N2) and sorting
-// (N3) write the rest, and every change goes out as a `news` live event.
+// sorting's state (Unsorted and the first run), Show headlines, search, and Upcoming's Add to
+// calendar; and the recap's state: News on screen, Done and its Undo. Mounted under /api behind
+// the session, like the rest of the API. Read-only but for seen and the recap; ingest and sorting
+// write the rest, and every change goes out as a `news` live event.
 import {newsHereInput, newsSearchInput, newsSectionSchema, newsSeenInput, recapUndoSchema} from '@setpoint/shared';
 import type {NewsSeenOut, RecapDoneOut} from '@setpoint/shared';
 import {Hono} from 'hono';
@@ -31,7 +31,7 @@ async function body(c: Context): Promise<unknown> {
 export interface NewsApiOptions {
   // The data directory's news-images/; null serves no images (tests without a data directory).
   imagesDir?: string | null;
-  // Setpoint's public origin, which a keynote proposal's link to its story is made absolute on (SV-270).
+  // Setpoint's public origin, which a keynote proposal's link to its story is made absolute on.
   origin?: (c: Context) => string;
 }
 
@@ -61,7 +61,7 @@ export function newsApi(store: Store, {imagesDir = null, origin = c => new URL(c
   api.post('/news/seen', async c => {
     const ids = parse(newsSeenInput, await body(c)).story_ids;
     // Seeing a story is being on News, and seeing one of the recap's means it's on screen: the iPhone
-    // app's Catch up (D424) fixes it as the page does.
+    // app's Catch up fixes it as the page does.
     const recap = newsRecap(store)?.stories.map(story => story.id) ?? [];
     noteHere(store, recap.some(id => ids.includes(id)) ? recap : null);
     const seen = markSeen(store, ids);

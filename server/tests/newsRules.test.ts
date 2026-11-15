@@ -1,7 +1,7 @@
 // News's store rules as tables (src/domain/news.ts): the page's 48 hours and the archive's 90 days,
 // the dot per story, what's new since the user looked, which image copies the archive keeps, a block's
 // size, the leading outlet with "+N", a story's main section, a section's line, and the recap's
-// stories and the hour away that puts it away (#298).
+// stories and the hour away that puts it away.
 import type {NewsSection} from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -83,7 +83,7 @@ describe('a block\'s size', () => {
     ['fewer than three', [40, 20], 2],
     ['the top three always', [30, 20, 10, 5], 3],
     ['a fourth and fifth over the bar join', [95, 90, 85, 78, 72, 66], 5],
-    ['up to a seventh over the bar (D451)', [99, 98, 97, 96, 95, 94, 93, 50], 7],
+    ['up to a seventh over the bar', [99, 98, 97, 96, 95, 94, 93, 50], 7],
     ['never more than seven', [99, 98, 97, 96, 95, 94, 93, 92], 7],
     ['the fourth under the bar stops it', [88, 80, 75, 66, 90], 3],
     ['exactly the bar counts', [96, 84, 76, 70, 62], 4],
@@ -118,7 +118,7 @@ describe('the leading outlet and +N', () => {
   });
 });
 
-describe('a story\'s main section (D102)', () => {
+describe('a story\'s main section', () => {
   const read = (id: number, subject: StoryReading['subject'], hour = 12, hazard = false): StoryReading => ({id, publishedAt: `2026-10-10T${String(hour).padStart(2, '0')}:00:00.000Z`, hazard, subject});
   test.each<[string, NewsSection[], StoryReading[], number | null, NewsSection | null]>([
     ['an AI subject in Tech and AI: AI', ['tech', 'ai'], [read(1, 'ai')], 1, 'ai'],
@@ -155,7 +155,7 @@ describe('a section\'s line', () => {
   });
 });
 
-describe('While you were away (#298)', () => {
+describe('While you were away', () => {
   const LEFT = '2026-10-06T17:00:00.000Z';
   const NOW = '2026-10-07T15:00:00.000Z';
   const minutes = (count: number) => new Date(Date.parse(NOW) - count * 60_000).toISOString();
@@ -175,7 +175,7 @@ describe('While you were away (#298)', () => {
   const story = (id: number, section: NewsSection) => ({id, section});
   test.each<[string, {id: number; section: NewsSection}[], number[]]>([
     ['nothing', [], []],
-    ['up to two per section, biggest first as given (D429)', [1, 2, 3, 4, 5].map(id => story(id, 'local')), [1, 2]],
+    ['up to two per section, biggest first as given', [1, 2, 3, 4, 5].map(id => story(id, 'local')), [1, 2]],
     ['grouped in the blocks\' order, whatever the order of size', [story(1, 'general'), story(2, 'ai'), story(3, 'local'), story(4, 'tech')], [3, 4, 2, 1]],
     ['a big week in General doesn\'t crowd out Local', [...[1, 2, 3, 4, 5, 6].map(id => story(id, 'general')), story(7, 'local')], [7, 1, 2]],
     ['eight at most', NEWS_SECTIONS.flatMap((section, at) => [1, 2, 3, 4].map(id => story(at * 10 + id, section))), [1, 2, 11, 12, 21, 22, 31, 32]],

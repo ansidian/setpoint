@@ -1,4 +1,4 @@
-// SV-274 (D564): the agenda rail's USPS Informed Delivery row, as tables: how many thumbnails fit
+// The agenda rail's USPS Informed Delivery row, as tables: how many thumbnails fit
 // and what the "+N" tile holds, the viewer's steps stopping at the ends, and the section's line.
 import {expect, test} from 'vitest';
 import {MAIL_GAP, MAIL_TILE, mailLine, mailStrip, stepScan} from '../src/logic/mailpieces.ts';

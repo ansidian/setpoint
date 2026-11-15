@@ -1,9 +1,8 @@
 // A Todoist due as an item's due day and time, done once at the adapter's edge. Todoist's
 // `due.date` comes three ways: a day ("2026-10-07"); a floating time, wall-clock in the user's zone
 // ("2026-10-07T19:00:00"); or a fixed-zone time, a UTC instant with `due.timezone` beside it
-// ("2026-10-08T02:00:00Z"). v1 read the last as wall-clock time (56a59a4e), fixed that for display
-// only (0cf93d2d), and still stored its UTC day and misplaced its reminder (see SV-6): here an
-// instant is an instant, and its day is the local day in the user's zone.
+// ("2026-10-08T02:00:00Z"). The last is not wall-clock time: an instant is an instant, and its day
+// is the local day in the user's zone.
 import {localDay, localTime, zonedInstant} from '../../domain/time.ts';
 
 export interface TodoistDue {
@@ -36,8 +35,8 @@ export function readDue(due: TodoistDue, timeZone: string): {dueDate: string; du
  * A task's due as Todoist's write fields: a day, an instant (UTC, so Todoist keeps it fixed), or,
  * for a repeating task, one due string holding the repeat, the time and the day it starts from
  * ("every mon at 09:00 starting 2026-10-12"). Todoist reads a bare date as the end of a repeat, so
- * the repeat always travels with the date (F6b; B5 refused the date change instead, D16). A repeat
- * with a last day ("every mon until 2026-12-15", SV-113) puts it after the first, in the form Todoist
+ * the repeat always travels with the date. A repeat
+ * with a last day ("every mon until 2026-12-15") puts it after the first, in the form Todoist
  * documents ("everyday from 10 May until 20 May"): "every mon at 09:00 from 2026-10-12 until 2026-12-15".
  */
 export function writeDue(task: {dueDate: string | null; dueAt: string | null; repeat?: string | null}, timeZone: string): {due_date?: string; due_datetime?: string; due_string?: string} {
@@ -55,7 +54,7 @@ export function writeDue(task: {dueDate: string | null; dueAt: string | null; re
 // "… starting oct 12", "… from 2026-10-12", "… at 9am", "… @ 21:00": what Todoist adds to a repeat.
 const START_CLAUSE = /\s+(?:starting|from)\s+.*$/i;
 const TIME_CLAUSE = /\s+(?:at|@)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?$/i;
-// "… until dec 15", "… ending aug 3": a repeat's last day (SV-113), up to a start after it or the end.
+// "… until dec 15", "… ending aug 3": a repeat's last day, up to a start after it or the end.
 const ENDING_CLAUSE = /\s+(?:until|ending)\s+.+?(?=\s+(?:starting|from)\s+|$)/i;
 
 /**
@@ -64,7 +63,7 @@ const ENDING_CLAUSE = /\s+(?:until|ending)\s+.+?(?=\s+(?:starting|from)\s+|$)/i;
  * shortcut: only trailing "at <time>" and "starting/from <day>" clauses are taken off; a time inside
  * the repeat ("every mon 9am, wed 5pm") stays in it, and Todoist reads it the same way again. A last
  * day ("until …", "ending …") is kept, after the repeat ("every mon from oct 12 until dec 15" →
- * "every mon until dec 15"; SV-113).
+ * "every mon until dec 15").
  */
 export function repeatOf(dueString: string | null): string | null {
   const text = (dueString ?? '').trim();

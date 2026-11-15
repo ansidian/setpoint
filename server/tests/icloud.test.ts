@@ -1,4 +1,4 @@
-// The iCloud adapter against a fake IMAP server on 127.0.0.1 (BUILD-PLAN.md › B2 › Done when):
+// The iCloud adapter against a fake IMAP server on 127.0.0.1:
 // Connect iCloud, a resumable backfill with progress, new mail by polling, read elsewhere (\Seen),
 // opening in Setpoint, Mark all as read in one STORE, trash with undo (Deleted Messages and back),
 // moved away in Apple Mail, a new UIDVALIDITY, a dropped connection, and a revoked app password.
@@ -137,7 +137,7 @@ describe('iCloud: a mailbox through backfill, new mail, read state, Mark all as 
     expect(readBackfill(w.store, source.id)).toMatchObject({total: 5, fetched: 5, done: true});
     const all = w.store.db.select().from(t.messages).all();
     expect(all.map(message => message.subject).sort()).toEqual(['Bill 1', 'Bill 2', 'Bill 3', 'Bill 4', 'Bill 5']);
-    // B3: history is sorted at once by the rules-only pass, never left Unsorted.
+    // History is sorted at once by the rules-only pass, never left Unsorted.
     expect(all.every(message => message.lane !== null && message.triageSource !== null && message.backfill && message.senderAuthenticated === true)).toBe(true);
     expect((await api.send('GET', '/api/mail/counts')).body.unread).toBe(3);
     // One pooled connection did all of it.
@@ -259,7 +259,7 @@ describe('iCloud: recovery', () => {
     await env.adapter.close();
   });
 
-  test('a written rule\'s Mark read and Trash reach iCloud as the user\'s own do: seen, then Deleted Messages (SV-236)', async () => {
+  test('a written rule\'s Mark read and Trash reach iCloud as the user\'s own do: seen, then Deleted Messages', async () => {
     const env = await connected();
     const {w, imap} = env;
     const welcome = bySubject(w, 'Welcome');

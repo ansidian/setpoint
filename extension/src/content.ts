@@ -1,4 +1,4 @@
-// Setpoint on job boards' content script (SV-174, SV-202): a chip saying whether Setpoint's Jobs has
+// Setpoint on job boards' content script: a chip saying whether Setpoint's Jobs has
 // an application to a job on LinkedIn or Indeed, each read by its own readers (boards.ts). In the job
 // pane (and on a job's own page) it follows the title and says "Not applied" or why it can't answer
 // too; on the list's cards it follows the company, smaller, and only when there's an application, as

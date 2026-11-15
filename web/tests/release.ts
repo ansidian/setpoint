@@ -1,6 +1,6 @@
-// `npm run release:check` (SV-83, D274): the release checks, each run only where it hasn't already
-// passed on what it reads in HEAD (passes.ts, SV-193): npm test, the image build (SV-188), each
-// browser spec file, in that order. There's no stress run (SV-195): a check is deterministic on its own (AGENTS.md › Tests own behaviour). It says what it skipped and why, and ends by saying whether HEAD is ready to release.
+// `npm run release:check`: the release checks, each run only where it hasn't already
+// passed on what it reads in HEAD (passes.ts): npm test, the image build, each
+// browser spec file, in that order. There's no stress run: a check is deterministic on its own (AGENTS.md › Tests own behaviour). It says what it skipped and why, and ends by saying whether HEAD is ready to release.
 // What's left to run waits for the browser lock (lock.ts) and holds it to the end, so it never runs
 // beside another session's browser run, and a release:check started while another runs on the same
 // content waits for it and then finds everything passed. With nothing left, it takes no lock and
@@ -38,7 +38,7 @@ if (!clean) {
 const specs = specsOf(tree);
 const all = Object.keys(specs).sort();
 
-/** When and where the latest of `passes` ran: "16 Oct 18:02 in .claude/worktrees/sv-82". */
+/** When and where the latest of `passes` ran: "16 Oct 18:02 in .claude/worktrees/a-slice". */
 function when(passes: Pass[]): string {
   const last = passes.reduce((a, b) => (a.at > b.at ? a : b));
   const at = new Date(last.at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
@@ -57,10 +57,10 @@ type State = {passed: string} | {running: string; run: () => number; recorded: (
 
 const npm = (...rest: string[]) => () => spawnSync('npm', rest, {cwd: ROOT, stdio: 'inherit'}).status ?? 1;
 
-// SV-188: the image, built as OPERATIONS.md's deploy builds it, from `git archive` on stdin. A
+// The image, built as OPERATIONS.md's deploy builds it, from `git archive` on stdin. A
 // tarball context skips .dockerignore, so the web stage's typecheck reads web/tests too, and a file
-// they import from outside what it copies fails here rather than at the deploy (SV-174's
-// extension/src/words.ts did). It exports nothing, so no image is left behind; this Mac's own
+// they import from outside what it copies fails here rather than at the deploy (as
+// extension/src/words.ts once did). It exports nothing, so no image is left behind; this Mac's own
 // platform, which a build failure of this kind doesn't depend on.
 function buildImage(): number {
   const {status} = spawnSync('bash', ['-o', 'pipefail', '-c', 'git archive --format=tar HEAD | docker build --progress=quiet --output type=cacheonly -'], {cwd: ROOT, stdio: 'inherit'});

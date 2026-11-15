@@ -10,7 +10,7 @@ import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {sourceHealth} from '../sync/health.ts';
 
-/** Healthy with no checks: an account without a source yet (B2 connects them). */
+/** Healthy with no checks: an account without a source yet. */
 const UNCHECKED: HealthOut = {state: 'healthy', as_of: null, reason: null, last_check_at: null};
 
 export function accountList(store: Store): AccountOut[] {

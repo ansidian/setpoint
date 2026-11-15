@@ -17,7 +17,7 @@ import {applyCalendarList, fullReadDue, syncCalendar} from './sync.ts';
 export interface GoogleCalendarOptions extends CalendarApiOptions {
   // The one Google OAuth client (Config.google), which refreshes the source's tokens.
   client: GoogleClient;
-  // Setpoint's public origin; push needs an https one Google can reach (B7 sets it).
+  // Setpoint's public origin; push needs an https one Google can reach.
   publicUrl?: string | null;
   // Where Google posts instead, when the pages' origin isn't public (SETPOINT_WEBHOOK_ORIGIN).
   webhookOrigin?: string | null;

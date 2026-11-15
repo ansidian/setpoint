@@ -1,4 +1,4 @@
-// The search index after SV-135: it holds the summary and a clean body rather than `body_text`, so
+// The search index: it holds the summary and a clean body rather than `body_text`, so
 // a link matches by its domain and never by its path, a summary matches once triage writes it, and
 // what a result shows comes from what the index holds. The sample emails are invented.
 import type {SearchOut} from '@setpoint/shared';

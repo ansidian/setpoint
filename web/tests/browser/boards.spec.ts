@@ -1,6 +1,6 @@
 // Board 01 as a scene on the seed, at the design target, 1677 × 1050, built and checked for its
 // content and no page errors. The app runs on the seed with the seed's clock, so its ages and
-// counts are the brief's. Then the Inbox's right edge (SV-141).
+// counts are the board's. Then the Inbox's right edge.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
@@ -17,7 +17,7 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
     await page.locator('.today-row').first().waitFor();
     await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
-    // Opening it read it: Inbox 18 and Jobs 1 (DESIGN.md override 2).
+    // Opening it read it: Inbox 18 and Jobs 1.
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .ubadge').textContent(), text => text === '18');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -25,7 +25,7 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
   }
 });
 
-test('SV-217: the Inbox\'s rows stop before the pane on every screen: the ages, the accounts\' column, the fold\'s chevron and a search\'s rows', async () => {
+test('the Inbox\'s rows stop before the pane on every screen: the ages, the accounts\' column, the fold\'s chevron and a search\'s rows', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));

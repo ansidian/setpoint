@@ -1,6 +1,6 @@
-// An email for a Needs you item (DESIGN.md › Needs you, D401, D402), its own or that of an application
+// An email for a Needs you item, its own or that of an application
 // in its Assign to…: where the detail sits and as wide, so the item and its menu stay beside it. The
-// email alone: reading it here turns nothing read and changes nothing in mail (D313), and Open in
+// email alone: reading it here turns nothing read and changes nothing in mail, and Open in
 // Inbox is the way to everything else mail does with it. A press in it leaves an open menu open.
 import type {AccountOut} from '@setpoint/shared';
 import type {CSSProperties} from 'react';

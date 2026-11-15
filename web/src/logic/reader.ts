@@ -1,28 +1,26 @@
-// The reader's rules (DESIGN.md › The reader; BRIEF.md › The reader and Security mail): who it's
+// The reader's rules: who it's
 // from, which actions it offers, the security facts card, whether remote images load, and the
 // attachments' labels and previews.
 import type {AttachmentOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
 import {clockTime, daysBetween, localDate} from './format.ts';
 
 /**
- * The head's line after the sender's name: "organisation · via platform" in `ink2` (DESIGN.md ›
- * The reader); when the organisation is the sender (Google, Contoso Coffee), the sender's domain in
+ * The head's line after the sender's name: "organisation · via platform" in `ink2`; when the organisation is the sender (Google, Contoso Coffee), the sender's domain in
  * `ink3`, as boards 02 and 03 draw it. The reader puts " · " before it (on the phone it has its own line).
  */
 export function senderLine(message: Pick<MessageOut, 'from_name' | 'organisation' | 'via'> & Partial<Pick<MessageOut, 'remote_content'>>): {text: string; tone: 'ink2' | 'ink3'} | null {
   const parts = [message.organisation && message.organisation !== message.from_name ? message.organisation : null, message.via ? `via ${message.via}` : null]
     .filter((part): part is string => Boolean(part));
   if (parts.length) return {text: parts.join(' · '), tone: 'ink2'};
-  // Drawn from the email's row before the email is in (reader-01), the domain waits for it.
+  // Drawn from the email's row before the email is in, the domain waits for it.
   return message.remote_content?.domain ? {text: message.remote_content.domain, tone: 'ink3'} : null;
 }
 
 /**
  * Where Add to calendar and Add as task live: under the head, or in the tools' More menu on Security
- * mail (its facts card stands in) and Noise (2026-10-08; boards 02 and 03 draw no buttons).
+ * mail (its facts card stands in) and Noise (boards 02 and 03 draw no buttons).
  * Ask about this email is under the head on every email. Done is there only for Attention mail not
- * yet Done: elsewhere opening the email has already read it, so Done changed nothing but the toast
- * (2026-10-10; DESIGN.md #93).
+ * yet Done: elsewhere opening the email has already read it, so Done changed nothing but the toast.
  */
 export function readerActions(message: Pick<MessageOut, 'kind' | 'lane' | 'done'>): {done: boolean; proposals: 'buttons' | 'more'; ask: true} {
   return {
@@ -33,7 +31,7 @@ export function readerActions(message: Pick<MessageOut, 'kind' | 'lane' | 'done'
 }
 
 /**
- * The summary under the reader's subject (#238): triage's, which the list showed in the subject's
+ * The summary under the reader's subject: triage's, which the list showed in the subject's
  * place, unless the email's security facts carry it, since its facts card says the same.
  */
 export const readerSummary = (row: Pick<MessageRowOut, 'summary' | 'fact'>): string | null => (row.fact ? null : row.summary || null);
@@ -101,7 +99,7 @@ export function remoteImages(remote: RemoteContentOut, hasRemote: boolean, shown
 
 export type PreviewKind = 'pdf' | 'image' | 'csv';
 
-/** PDF, image and CSV open a preview (BRIEF.md › The reader). */
+/** PDF, image and CSV open a preview. */
 export function previewKind(file: Pick<AttachmentOut, 'mime_type' | 'filename'>): PreviewKind | null {
   const mime = file.mime_type.toLowerCase();
   if (mime === 'application/pdf') return 'pdf';
@@ -123,7 +121,7 @@ const TYPE_MIMES: [Exclude<AttachmentType, 'other'>, RegExp][] = [
 ];
 
 /**
- * What an attachment is, for its card's type tile (#122): by its name's extension, else its MIME
+ * What an attachment is, for its card's type tile: by its name's extension, else its MIME
  * type. PDF, image, spreadsheet (CSV, Excel, Numbers), document (Word, Pages, RTF, text), archive
  * (ZIP, gzip, RAR, 7z), invitation (ICS), or anything else.
  */
@@ -189,7 +187,7 @@ export function parseCsv(text: string, limit = Infinity): string[][] {
   return rows;
 }
 
-/** How wide the reading pane may be dragged (2026-10-09); DESIGN.md's 680 is where it starts. */
+/** How wide the reading pane may be dragged, starting at 680. */
 export const READING_PANE = {min: 480, max: 1100, start: 680, step: 16} as const;
 
 /** A dragged or stored width, whole and inside the bounds; anything unreadable is the start. */

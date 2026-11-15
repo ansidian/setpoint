@@ -37,7 +37,7 @@ describe('items in a range', () => {
     expect(gym[0]).toMatchObject({key: `${gym[0]!.id}@${gym[0]!.starts_at}`, occurrence_start: gym[0]!.starts_at, recurring: true});
   });
 
-  test('a subscribed calendar is read-only (SV-191), and weather off shows none', () => {
+  test('a subscribed calendar is read-only, and weather off shows none', () => {
     const w = world({seed: true});
     expect(calendarList(w.store).filter(calendar => !calendar.writable).map(calendar => calendar.name)).toEqual(['Holidays in United States']);
     expect(weatherDays(w.store, '2026-10-01', '2026-11-01', false)).toEqual([]);
@@ -141,7 +141,7 @@ describe('item changes', () => {
     expect(() => completeItem(w.store, rent, true)).toThrow(/already done/);
   });
 
-  test('SV-74: a new task may have no date, but not a time or a repeat without one; an existing task keeps its date', () => {
+  test('a new task may have no date, but not a time or a repeat without one; an existing task keeps its date', () => {
     const w = world({seed: true});
     const todoist = calendarList(w.store).find(calendar => calendar.provider === 'todoist')!.id;
     expect(itemCreateInput.parse({kind: 'task', calendar_id: todoist, title: 'Learn piano'})).toMatchObject({due_date: null, due_at: null});

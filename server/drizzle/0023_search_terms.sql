@@ -49,7 +49,7 @@ ALTER TABLE `__new_jobs` RENAME TO `jobs`;--> statement-breakpoint
 CREATE UNIQUE INDEX `jobs_active_key` ON `jobs` (`key`) WHERE "jobs"."state" in ('queued', 'running');--> statement-breakpoint
 CREATE INDEX `jobs_due` ON `jobs` (`state`,`run_at`);--> statement-breakpoint
 ALTER TABLE `messages` ADD `search_terms_version` integer;--> statement-breakpoint
--- Hand-written below this line (SV-136): mail already here is marked as from before terms, so only
+-- Hand-written below this line: mail already here is marked as from before terms, so only
 -- mail arriving from now on is read on its own, and the rest waits for `search-terms --apply`. If this
 -- migration is regenerated, append this block again unchanged.
 UPDATE `messages` SET `search_terms_version` = 0;

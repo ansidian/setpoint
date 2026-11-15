@@ -1,9 +1,8 @@
 // Jobs's routes (shapes and the list in `@setpoint/shared` jobs/api.ts): the page and an
-// application's detail (J1); Look it up (J3, D320), which starts a JD lookup on any application, and
-// its Stop (SV-170);
+// application's detail; Look it up, which starts a JD lookup on any application, and its Stop;
 // Settings › Jobs, where turning Jobs on starts the history pass, and From history's Dismiss all and
-// its Undo (J4); search and the shell's item (J5); Needs you's answers, the corrections and their
-// Undo (J6); what mail's slots draw (J7); Settings › AI's Jobs group (J8). Mounted under /api behind the session by server.ts, a
+// its Undo; search and the shell's item; Needs you's answers, the corrections and their Undo; what
+// mail's slots draw; Settings › AI's Jobs group. Mounted under /api behind the session by server.ts, a
 // wiring point, through createApp's `routes`, so the app itself never names Jobs.
 import type {Context} from 'hono';
 import {Hono} from 'hono';
@@ -39,11 +38,11 @@ export function jobsApi(store: Store) {
   const api = new Hono();
   api.get('/jobs', c => c.json(jobsPage(store)));
   api.get('/jobs/nav', c => c.json(jobsNav(store)));
-  // The empty pane's recent movement (SV-220).
+  // The empty pane's recent movement.
   api.get('/jobs/movement', c => c.json(jobsMovement(store)));
-  // Jobs's own search, never mail's or ⌘K's (D316).
+  // Jobs's own search, never mail's or ⌘K's.
   api.get('/jobs/search', c => c.json(jobsSearch(store, parse(jobsSearchInput, {q: c.req.query('q') ?? ''}).q)));
-  // Mail's slots (J7): a page of rows, or the email open, in one request (D306).
+  // Mail's slots: a page of rows, or the email open, in one request.
   api.get('/jobs/mail', c => c.json(jobsInMail(store, parse(jobsMailInput, {messages: c.req.query('messages') ?? ''}).messages)));
   api.get('/jobs/applications/:id', c => c.json(applicationDetail(store, id(c.req.param('id')))));
   // Look it up: the application's JD looked up again, open or closed. It answers at once with the
@@ -53,25 +52,25 @@ export function jobsApi(store: Store) {
     if (requestLookup(store, applicationId) === 'saved') throw conflict('jd_saved', 'This application has its JD already, Not this posting takes it away first.');
     return c.json(applicationDetail(store, applicationId), 202);
   });
-  // Stop (SV-170): the lookup ends now, to paste the posting instead. It answers with the detail.
+  // Stop: the lookup ends now, to paste the posting instead. It answers with the detail.
   api.post('/jobs/applications/:id/lookup/stop', c => {
     const applicationId = id(c.req.param('id'));
     stopLookup(store, applicationId);
     return c.json(applicationDetail(store, applicationId));
   });
   api.get('/jobs/settings', c => c.json(jobsSettings(store)));
-  // Settings › AI's Jobs group: the models, and this month's spend in its three parts (J8).
+  // Settings › AI's Jobs group: the models, and this month's spend in its three parts.
   api.get('/jobs/ai', c => c.json(jobsAi(store)));
   // On starts the history pass (once: it never reads an email twice); off stops reading.
   api.patch('/jobs/settings', async c => c.json(updateJobsSettings(store, parse(jobsSettingsPatchInput, await body(c)))));
-  // Dismiss all: the same as ignoring each From history item (D324). Its answer names them for Undo.
+  // Dismiss all: the same as ignoring each From history item. Its answer names them for Undo.
   api.post('/jobs/from-history/dismiss', c => c.json({needs_you: dismissFromHistory(store)} satisfies JobsDismissedOut));
   api.post('/jobs/from-history/undo', async c => {
     const {needs_you: ids} = parse(jobsUndoDismissInput, await body(c));
     return c.json({needs_you: undoDismissFromHistory(store, ids)} satisfies JobsDismissedOut);
   });
 
-  // Needs you's answers (J6), each with its toast's Undo.
+  // Needs you's answers, each with its toast's Undo.
   const change = (answer: JobsChangeOut) => answer;
   api.post('/jobs/applications/:id/jd/pick', async c => c.json(change(pickCandidate(store, id(c.req.param('id')), parse(jobsPickInput, await body(c)).candidate))));
   api.post('/jobs/applications/:id/jd/none', c => c.json(change(noneOfThese(store, id(c.req.param('id'))))));
@@ -80,7 +79,7 @@ export function jobsApi(store: Store) {
   api.post('/jobs/needs-you/:id/track', c => c.json(change(trackItem(store, id(c.req.param('id'))))));
   api.post('/jobs/needs-you/:id/not-a-job', c => c.json(change(notAJob(store, id(c.req.param('id'))))));
 
-  // The corrections (J6, decision 58): each sticks (stick.ts), and each has Undo.
+  // The corrections: each sticks (stick.ts), and each has Undo.
   api.patch('/jobs/applications/:id', async c => c.json(change(editApplication(store, id(c.req.param('id')), parse(jobsEditInput, await body(c))))));
   api.post('/jobs/applications/:id/status', async c => c.json(change(setStatus(store, id(c.req.param('id')), parse(jobsStatusInput, await body(c)).status))));
   api.post('/jobs/applications/:id/pin', async c => c.json(change(setPinned(store, id(c.req.param('id')), parse(jobsPinInput, await body(c)).pinned))));
@@ -100,7 +99,7 @@ export function jobsApi(store: Store) {
 }
 
 /**
- * The browser extension's route (SV-173): POST /api/jobs/check, postings' applications, read with
+ * The browser extension's route: POST /api/jobs/check, postings' applications, read with
  * Jobs's own bearer token (./token.ts) rather than the session, as Home Assistant's status is. It's a
  * POST only to carry a page of cards' companies and titles; it writes nothing. Mounted before the
  * session by server.ts through createApp's `tokenRoutes`; any other method falls through to the

@@ -1,8 +1,6 @@
-// News ingest's rules (N2; BRIEF.md › News › Sources, When things break): an article's canonical URL,
-// feed text made plain, the 48 hours a read fills, distances from the home location, which hosts a
-// read may reach, what each article is read for, which images are worth copying, how a refusal is
-// retried, and a page's text decoded by its charset. Pure, so each is tested as a table. Canonical
-// URLs and plain text are adapted from v1's server/news/news-model.ts (harvest notes on SV-45).
+// News ingest's rules: an article's canonical URL, feed text made plain, the 48 hours a read fills,
+// distances from the home location, which hosts a read may reach, what each article is read for,
+// which images are worth copying, how a refusal is retried, and a page's text decoded by its charset. Pure, so each is tested as a table.
 import {Element, Text} from 'domhandler';
 import type {ChildNode} from 'domhandler';
 import {parseDocument} from 'htmlparser2';
@@ -24,21 +22,21 @@ export interface IngestedArticle {
   discovery?: boolean;
   // The text the source gave with it (an alert's description), kept instead of reading a page.
   text?: string | null;
-  // Where it is, when official data says (a quake, a fire, an air reading): Local's closeness (N3).
+  // Where it is, when official data says (a quake, a fire, an air reading): Local's closeness.
   lat?: number | null;
   lng?: number | null;
 }
 
 // ---- Canonical URLs ----
 
-// Query parameters that only say where a click came from. v1 stripped utm_*, fbclid, gclid, mc_cid,
-// mc_eid and ref; the rest are other trackers outlets add to feed and share links.
+// Query parameters that only say where a click came from: utm_*, fbclid, gclid, mc_cid, mc_eid and
+// ref, and the other trackers outlets add to feed and share links.
 const TRACKING = /^(utm_.+|fbclid|gclid|gclsrc|dclid|msclkid|yclid|igshid|mc_cid|mc_eid|_ga|_gl|ref|ref_src|ref_url|cmpid|s_cid|ocid|smid|taid|at_medium|at_campaign|mkt_tok|sr_share|__twitter_impression)$/i;
 
 /**
  * The URL an article is kept unique by: tracking parameters and the fragment gone, the rest sorted,
  * the host lower-case without `www.` or a trailing dot, and no trailing slash. Something that isn't
- * a URL is kept as it was, trimmed (v1).
+ * a URL is kept as it was, trimmed.
  */
 export function canonicalUrl(raw: string): string {
   const text = raw.trim();
@@ -57,8 +55,8 @@ export function canonicalUrl(raw: string): string {
 
 /**
  * The canonical URL of one revision of an official record that changes in place (a fire's acres and
- * containment, an air quality reading's level): each revision is its own article, so N3 sees the
- * new fact, while `url` stays the record's page.
+ * containment, an air quality reading's level): each revision is its own article, so sorting sees
+ * the new fact, while `url` stays the record's page.
  */
 export const revisionUrl = (url: string, revision: string) => `${canonicalUrl(url)}#${revision.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-|-$/g, '')}`;
 
@@ -81,7 +79,7 @@ function collect(nodes: readonly ChildNode[], out: string[]) {
   }
 }
 
-/** Text with its whitespace collapsed, cut at a word with "…" past `maxChars` (v1's excerpt). */
+/** Text with its whitespace collapsed, cut at a word with "…" past `maxChars`. */
 export function clip(text: string, maxChars = Infinity): string {
   const flat = text.replace(/\s+/g, ' ').trim();
   if (flat.length <= maxChars) return flat;
@@ -92,8 +90,7 @@ export function clip(text: string, maxChars = Infinity): string {
 
 /**
  * HTML (a feed's description, an Atom summary) as plain text: tags gone, entities decoded, blocks
- * apart, whitespace collapsed, and cut at a word with "…" past `maxChars` (v1's excerpt, which
- * stripped tags with a regular expression and knew six entities).
+ * apart, whitespace collapsed, and cut at a word with "…" past `maxChars`.
  */
 export function plainText(html: string | null | undefined, maxChars = Infinity): string {
   if (!html) return '';
@@ -102,12 +99,12 @@ export function plainText(html: string | null | undefined, maxChars = Infinity):
   return clip(out.join(''), maxChars);
 }
 
-/** A feed summary's longest: enough for the summary-only view and N3's notes. */
+/** A feed summary's longest: enough for the summary-only view and sorting's notes. */
 export const SUMMARY_MAX = 1000;
 
 // ---- The 48 hours ----
 
-/** A read keeps what was published in the last 48 hours, so the first run fills them (BRIEF.md › Sources). */
+/** A read keeps what was published in the last 48 hours, so the first run fills them. */
 export const FILL_MS = STORY_TTL_MS;
 
 /** A published time as an instant: unreadable is null, and the future (a feed's wrong zone) is now. */
@@ -241,7 +238,7 @@ export interface ReadingPlan {
 }
 
 /**
- * What a new article is read for (BRIEF.md › Sources; D89):
+ * What a new article is read for:
  * - found only (Google News): nothing, never read;
  * - a metered paper's: nothing, it only counts toward and confirms stories;
  * - summary only (KTLA, OpenAI block automated reading): its feed's image, never its page;

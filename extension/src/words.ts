@@ -1,4 +1,4 @@
-// What Setpoint on job boards' chip says (SV-174, DESIGN.md › Decided while building #301, D434): an
+// What Setpoint on job boards' chip says: an
 // application's standing as mail's Applied before badge says it ("Applied Sep 16 · Rejected
 // Oct 5"), the company's other roles, "Not applied", and why there's no answer. The standing is
 // written here rather than imported, as web/src/app/jobs/words.ts brings the web app's modules with
@@ -24,7 +24,7 @@ export function appliedStanding(application: Application, today: string): string
   return after ? `${applied} · ${after}` : applied;
 }
 
-/** Rejected, Withdrawn and Ghosted are closed, and their chip is red rather than green (D435). */
+/** Rejected, Withdrawn and Ghosted are closed, and their chip is red rather than green. */
 export const closes = (application: Pick<JobsMailApplicationOut, 'status' | 'ghosted'>) =>
   application.status === 'rejected' || application.status === 'withdrawn' || (application.status === 'applied' && application.ghosted);
 
@@ -42,7 +42,7 @@ export type Answer =
   | {ok: true; origin: string; enabled: boolean; posting: JobsCheckPostingOut}
   | {ok: false; reason: Failure; detail?: string};
 
-/** This role's application green while open and red once closed (D435), amber for another role, quiet for none, warn for a failure. */
+/** This role's application green while open and red once closed, amber for another role, quiet for none, warn for a failure. */
 export type Tone = 'applied' | 'closed' | 'other' | 'quiet' | 'warn';
 
 /** A chip: its words, its tooltip, and where a click goes (Setpoint, or the extension's options). */

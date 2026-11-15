@@ -1,4 +1,4 @@
-// What the service worker answers a check with (SV-174): Setpoint's answer once it has been checked
+// What the service worker answers a check with: Setpoint's answer once it has been checked
 // against jobsCheckSchema from @setpoint/shared, so an answer this build can't read says so on the
 // pane rather than drawing wrong chips; or why there's none.
 import {jobsCheckSchema} from '@setpoint/shared';

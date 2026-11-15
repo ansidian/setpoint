@@ -1,9 +1,9 @@
-// Jobs in mail (J7; DESIGN.md › Jobs › In mail; boards 37a–37c; D306) against the seed: the Northwind
+// Jobs in mail (boards 37a–37c) against the seed: the Northwind
 // interview email's JD chip in the reader and its popover; Open in Jobs arriving with the application
-// open; Full posting arriving scrolled to the posting, unfolded (#271); the
+// open; Full posting arriving scrolled to the posting, unfolded; the
 // Contoso Pharmaceuticals match email's Applied before on its Noise row and in the reader, opening
 // Jobs searched for the company; one request for the list's rows, not one per row; and, with Jobs
-// turned off or on the phone (decision 49), neither slot drawn. The chip's, the popover's and the badge's own behaviour (their
+// turned off or on the phone, neither slot drawn. The chip's, the popover's and the badge's own behaviour (their
 // words, Esc, a click away) are the component tests' (web/tests/components/jobs.test.tsx); the company
 // matching the server's (server/src/jobs/tests/reading.test.ts, inMail.test.ts).
 import assert from 'node:assert/strict';
@@ -66,7 +66,7 @@ test('37a, 37b: the Northwind email\'s JD chip under the sender\'s line, and its
   }
 });
 
-test('37b, #271: Full posting arrives in Jobs scrolled to the full posting, unfolded; Esc folds it back', async () => {
+test('37b: Full posting arrives in Jobs scrolled to the full posting, unfolded; Esc folds it back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -154,7 +154,7 @@ test('37c: Applied before on the Contoso Pharmaceuticals match email, on its Noi
   }
 });
 
-test('Jobs off: neither slot is drawn (D303)', async () => {
+test('Jobs off: neither slot is drawn', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     await setpoint.api('PATCH', '/jobs/settings', {enabled: false});
@@ -172,7 +172,7 @@ test('Jobs off: neither slot is drawn (D303)', async () => {
   }
 });
 
-test('on the phone neither slot is drawn, and Jobs is never asked (decision 49)', async () => {
+test('on the phone neither slot is drawn, and Jobs is never asked', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('iphone');

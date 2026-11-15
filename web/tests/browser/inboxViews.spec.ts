@@ -1,8 +1,8 @@
-// The Inbox's views in the browser (SV-221, D471, D472), at the design target on a fresh seed each:
+// The Inbox's views in the browser, at the design target on a fresh seed each:
 // All | Unread | Attention | FYI | Noise in the header, Tab and Shift-Tab stepping them; Unread's red
 // badge and Attention's count; an email read in Unread staying there until the view changes; each
 // view's part of the list; Mark all as read following the view; an empty view's drawing, quiet line and
-// Show All (SV-226); and the sidebar's Inbox and 1 going back to All. The seed starts at 3 attention and 19 unread.
+// Show All; and the sidebar's Inbox and 1 going back to All. The seed starts at 3 attention and 19 unread.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
@@ -140,7 +140,7 @@ test('an empty view draws its own picture and says so, and Show All goes to All'
   }
 });
 
-test('an empty Attention tells when the last one needing the user came, from the list, Done or not (SV-226)', async () => {
+test('an empty Attention tells when the last one needing the user came, from the list, Done or not', async () => {
   const setpoint = await startSetpoint();
   try {
     const inbox = await setpoint.api<InboxOut>('GET', '/mail/inbox');

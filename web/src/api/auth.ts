@@ -1,8 +1,8 @@
-// Signing in (darma's pattern; DESIGN.md › Not designed yet: sign-in follows darma's card). Setpoint
+// Signing in. Setpoint
 // asks GET /api/me once at start: with a session it shows the app, else the sign-in card, which
 // claims Setpoint with the CLI's setup token the first time and signs in with the password or a
 // passkey after. When Setpoint can't be reached at all (a deploy, a restart: no connection, or the
-// proxy's 5xx), it says so and asks again until it answers (Root; DESIGN.md › Health and states).
+// proxy's 5xx), it says so and asks again until it answers (Root).
 // Any 401 later swaps the app for the card and keeps the address. /api/me also gives the owner's
 // time zone and the server's clock, which the dev server runs from the seed's moment, so the app's
 // "now" is the server's.

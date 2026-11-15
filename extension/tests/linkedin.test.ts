@@ -1,4 +1,4 @@
-// The readers against trimmed LinkedIn pages (SV-174): the job pane, the list's cards, and what a
+// The readers against trimmed LinkedIn pages: the job pane, the list's cards, and what a
 // page expects to read, which the toolbar's badge goes by. In Chromium, as LinkedIn's page is.
 import {beforeEach, describe, expect, test} from 'vitest';
 import {expects, jobIdOf, readCards, readPage, readPane} from '../src/linkedin.ts';

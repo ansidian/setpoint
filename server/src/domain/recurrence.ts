@@ -4,7 +4,7 @@
 //
 // Covered: FREQ DAILY, WEEKLY (with BYDAY), MONTHLY (on the start's day of the month) and YEARLY,
 // with INTERVAL, COUNT and UNTIL. Anything else (BYSETPOS, "2nd Tuesday", several month days) is
-// `unsupported`: the caller shows the first occurrence only, and the provider's own expansion (B5)
+// `unsupported`: the caller shows the first occurrence only, and the provider's own expansion
 // takes over for real calendars.
 import {addDays, daysBetween, weekday} from './time.ts';
 

@@ -1,4 +1,4 @@
-// Where the shared tooltip goes (DESIGN.md #299): centred under what it names, 6 px off it; above
+// Where the shared tooltip goes: centred under what it names, 6 px off it; above
 // instead when it would run past the window's bottom and fits there; slid along to stay 8 px inside
 // the window's sides.
 import {tip} from '../tokens.ts';
@@ -24,7 +24,7 @@ export function placeTip(anchor: {left: number; top: number; width: number; heig
 const squeezed = (text: string) => text.replace(/\s+/g, '');
 
 /**
- * Whether a tip only repeats its element's own words (SV-171), there for when they're cut: every one of
+ * Whether a tip only repeats its element's own words, there for when they're cut: every one of
  * its words, in order, is in the element's text, spaces aside, as "Interview Tue" in "· Interview Tue".
  */
 export const repeats = (text: string, words: string) => squeezed(text).includes(squeezed(words));

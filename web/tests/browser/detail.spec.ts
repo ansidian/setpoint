@@ -1,9 +1,9 @@
-// The floating detail in the browser (DESIGN.md › The floating detail and The glide; boards 12a and
-// 12b): what the card says and the side it takes (Time to Leave is the time-to-leave fixture, decision
-// D3), then the flows: open and close with Esc or the grid, another item shown in the same card, a drag
+// The floating detail in the browser (boards 12a and
+// 12b): what the card says and the side it takes (Time to Leave is the time-to-leave fixture),
+// then the flows: open and close with Esc or the grid, another item shown in the same card, a drag
 // starting from the card but not its text, and Edit handing over to the right pane. Where the card
 // lies and how it glides are placement.test.ts's and glide.test.ts's tables; the place on screen, the
-// glide and the drag's landing are by eye (D416, D417). SV-191: an event on a calendar the user can
+// glide and the drag's landing are by eye. An event on a calendar the user can
 // only read (the seed's holiday) changes nowhere, and no picker offers its calendar.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
@@ -36,7 +36,7 @@ async function openDentist(page: Page) {
   await page.getByRole('dialog', {name: 'Dentist'}).waitFor();
 }
 
-test('board 12a: Dentist\'s card, right of it (a Wednesday, in the grid\'s left half, #348)', async () => {
+test('board 12a: Dentist\'s card, right of it (a Wednesday, in the grid\'s left half)', async () => {
   const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
   try {
     const page = await setpoint.page('target');
@@ -50,7 +50,7 @@ test('board 12a: Dentist\'s card, right of it (a Wednesday, in the grid\'s left 
       ['Smile Dental1420 Elm St', 'Leave by 2:05 PM · 18 min', '30 min before', 'Personal']);
     assert.equal(await card(page).locator('.fd-when').textContent(), 'Wed, Oct 7 · 2:30 – 3:30 PM');
     assert.equal(await page.locator('.ag-item.sel .leave').textContent(), 'Leave by 2:05 PM · 18 min');
-    // A recurring event's card says it's a series, after the attendees, as the repeat field words it (#126).
+    // A recurring event's card says it's a series, after the attendees, as the repeat field words it.
     await showIn(page, chip(page, '2026-10-07', 'Gym'), 'Gym');
     await until('Gym\'s facts', () => card(page).locator('.fd-layer.in .fact').allTextContents(), facts => facts.join() === 'Weekly on Mon, Wed, Fri,10 min before,Personal');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -71,7 +71,7 @@ test('board 12b: a click on Dinner with Sam shows it in the same card, left of i
     await showIn(page, chip(page, '2026-10-09', 'Dinner with Sam'), 'Dinner with Sam');
     await until('Dinner with Sam turns solid', () => page.locator('.ev.sel').allTextContents(), list => list.join() === '7 PMDinner with Sam');
     assert.ok(await before!.evaluate(element => element.isConnected), 'the same card, never closed');
-    // Friday is in the grid's right half, so the card is on its left (#348).
+    // Friday is in the grid's right half, so the card is on its left.
     await until('left of it', () => card(page).getAttribute('data-side'), side => side === 'left');
     await until('Dinner with Sam\'s facts', () => card(page).locator('.fd-layer.in .fact').allTextContents(),
       facts => facts.join() === 'Blue Door2118 Sunset Blvd,Leave by 6:35 PM · 21 min,Sam Lee,1 hour before,Personal');
@@ -106,7 +106,7 @@ test('selecting items already in view never scrolls the grid: Dentist, then Dinn
     assert.equal(await scrollTop(), before, 'Dentist was in view: the grid stays');
     await october('after Dentist');
 
-    // Dentist's card covers Friday (#348), so it's put away first.
+    // Dentist's card covers Friday, so it's put away first.
     await page.keyboard.press('Escape');
     await card(page).waitFor({state: 'detached'});
     await chip(page, '2026-10-09', 'Dinner with Sam').click();
@@ -122,7 +122,7 @@ test('selecting items already in view never scrolls the grid: Dentist, then Dinn
   }
 });
 
-test('SV-264: a long description opened with More keeps the card, Edit included, inside the grid', async () => {
+test('a long description opened with More keeps the card, Edit included, inside the grid', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -202,14 +202,14 @@ test('an item picked from the agenda opens its card, and so does a link to it on
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar/2026-10-09`);
-    // Beside its row in the pane, level with it (#322), not by its chip.
+    // Beside its row in the pane, level with it, not by its chip.
     const row = page.locator('.ag-item', {hasText: 'Study group'}).first();
     await row.click();
     await page.getByRole('dialog', {name: 'Study group'}).waitFor();
     assert.equal(await card(page).getAttribute('data-side'), 'left');
     const [at, beside] = [(await rested(() => card(page).locator('.card').boundingBox()))!, (await rested(() => row.boundingBox()))!];
     assert.ok(Math.abs(at.y - beside.y) < 1 && at.x + at.width <= beside.x, `level with the row and left of it: ${JSON.stringify([at, beside])}`);
-    // A second click puts it away, the item still selected; the next opens it again (#323).
+    // A second click puts it away, the item still selected; the next opens it again.
     await row.click();
     await page.getByRole('dialog', {name: 'Study group'}).waitFor({state: 'detached'});
     assert.equal(await page.locator('.ag-item.sel', {hasText: 'Study group'}).count(), 1, 'still selected');
@@ -233,7 +233,7 @@ test('an item picked from the agenda opens its card, and so does a link to it on
   }
 });
 
-test('SV-76: a place with a long link wraps inside the card rather than running out of it', async () => {
+test('a place with a long link wraps inside the card rather than running out of it', async () => {
   const setpoint = await startSetpoint({fixtures: ['link-places']});
   try {
     const page = await setpoint.page('target');
@@ -251,7 +251,7 @@ test('SV-76: a place with a long link wraps inside the card rather than running 
   }
 });
 
-test('SV-77: a place that is a link shows its host and Open; a link among words keeps them with Open; O opens it', async () => {
+test('a place that is a link shows its host and Open; a link among words keeps them with Open; O opens it', async () => {
   const setpoint = await startSetpoint({fixtures: ['link-places']});
   try {
     const page = await setpoint.page('target');
@@ -263,7 +263,7 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
         return null;
       };
     });
-    // The agenda's line and the card's say the host, after `videocam` (#125).
+    // The agenda's line and the card's say the host, after `videocam`.
     assert.equal(await page.locator('.ag-item', {hasText: 'Career fair'}).locator('.place').textContent(), 'careers.example.edu');
     await chip(page, '2026-10-15', 'Career fair').click();
     await card(page).waitFor();
@@ -297,7 +297,7 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
   }
 });
 
-test('SV-179: the seed\'s Career fair has its own link (Google\'s source.url) on a line of its own, with Open to a new tab; O opens it', async () => {
+test('the seed\'s Career fair has its own link (Google\'s source.url) on a line of its own, with Open to a new tab; O opens it', async () => {
   // The line's look, and a place's link winning over the event's own, are the component test's (components/detail.test.tsx).
   const setpoint = await startSetpoint();
   try {
@@ -334,7 +334,7 @@ const TWO_EVENTS = `${['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Example Even
   'BEGIN:VEVENT', 'UID:two@events.example.com', 'DTSTAMP:20261001T120000Z', 'DTSTART:20261021T160000Z', 'DTEND:20261021T170000Z', 'SUMMARY:Review', 'END:VEVENT',
   'END:VCALENDAR'].join('\r\n')}\r\n`;
 
-test('SV-191, D447: the seed\'s Veterans Day, on a holiday calendar the user can only read: its menu and card say so and offer nothing that changes it, E does nothing, and neither the editor nor Into offers the calendar', async () => {
+test('the seed\'s Veterans Day, on a holiday calendar the user can only read: its menu and card say so and offer nothing that changes it, E does nothing, and neither the editor nor Into offers the calendar', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');

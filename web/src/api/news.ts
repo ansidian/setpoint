@@ -1,8 +1,8 @@
 // News's resources and its changes, seen and the recap's (shared/src/api/news.ts has the routes).
 // Seen shows at once wherever the story is loaded, its dot gone, then the server's answer and its
 // `news` event take over. An opened story is loaded before it's marked seen, so the pane still has
-// what was new since the user last looked. N5 adds sorting's state and Show headlines, Settings ›
-// News, search, and Upcoming's proposal; #298 the user on News, the recap on screen.
+// what was new since the user last looked. Also sorting's state and Show headlines, Settings ›
+// News, search, Upcoming's proposal, the user on News and the recap on screen.
 import type {NewsPageOut, NewsProposalOut, NewsSearchOut, NewsSection, NewsSectionOut, NewsSeenOut, StoryOut, StoryRowOut} from '@setpoint/shared';
 import {serverNow} from './auth.ts';
 import {cachedPaths, getCached, getJson, refresh, refreshIfShown, sendJson, updateCached} from './client.ts';
@@ -11,11 +11,11 @@ export const NEWS_PATH = '/news';
 export const sectionPath = (section: NewsSection) => `/news/sections/${section}`;
 export const storyPath = (id: number) => `/news/stories/${id}`;
 export const articlePath = (id: number) => `/news/articles/${id}`;
-/** Sorting's state: the Unsorted line and the first run's (N3). */
+/** Sorting's state: the Unsorted line and the first run's. */
 export const STATUS_PATH = '/news/status';
 /** Show headlines: what waits Unsorted, with its links. */
 export const UNSORTED_PATH = '/news/unsorted';
-/** News's empty pane: freshness, today and the quiet facts (SV-219). */
+/** News's empty pane: freshness, today and the quiet facts. */
 export const NEWS_DAY_PATH = '/news/day';
 /** Settings › News. */
 export const NEWS_SOURCES_PATH = '/news/sources';
@@ -39,7 +39,7 @@ function refreshLists() {
   for (const path of [NEWS_PATH, ...cachedPaths('/news/sections')]) refreshIfShown(path);
 }
 
-/** Stories seen: a row fully on screen for about a second, or opened (D87). */
+/** Stories seen: a row fully on screen for about a second, or opened. */
 export async function markSeen(ids: number[]): Promise<NewsSeenOut> {
   showSeen(new Set(ids), new Date(serverNow()).toISOString());
   try {
@@ -63,7 +63,7 @@ export async function openStory(id: number, onFailed: (error: Error) => void): P
 }
 
 /**
- * The user is on News (#298), with the recap's stories once it's on screen, which fixes it there: the
+ * The user is on News, with the recap's stories once it's on screen, which fixes it there: the
  * server puts it away once it has shown and they've then been away an hour.
  */
 export const noteHere = (recap: number[] | null) => sendJson<void>('POST', '/news/here', {recap});
@@ -73,6 +73,6 @@ export const searchNews = (text: string) => getJson<NewsSearchOut>(`/news/search
 
 /**
  * Add to calendar on an Upcoming keynote: the event Calendar's editor opens on, its calendar picked
- * as an email's proposal picks it (N3). Nothing is created until Create.
+ * as an email's proposal picks it. Nothing is created until Create.
  */
 export const newsProposal = (eventId: number) => sendJson<NewsProposalOut>('POST', `/news/events/${eventId}/proposal`);

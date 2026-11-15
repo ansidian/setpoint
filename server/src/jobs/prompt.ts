@@ -1,4 +1,4 @@
-// What Jobs asks Haiku 5.5 about each email (J2, decision 61) and how it reads the answer. Triage has
+// What Jobs asks Haiku 5.5 about each email and how it reads the answer. Triage has
 // already read the email: Jobs passes on its organisation, platform (`via`), type, kind and summary,
 // and asks only for what triage doesn't keep: the event, the company it names, the role, the
 // requisition ID and the one line ("Interview Tue Oct 13, 2:00 PM"). The answer is read leniently,
@@ -6,8 +6,8 @@
 import type {ToolSpec} from '../providers/ai/index.ts';
 
 /**
- * What an email is to Jobs. The first five set a status (decision 55; "interview" takes a scheduling
- * request too); the next six are quiet (decision 50); a recruiter's cold email and mail that isn't
+ * What an email is to Jobs. The first five set a status ("interview" takes a scheduling
+ * request too); the next six are quiet; a recruiter's cold email and mail that isn't
  * about the user's applications are out.
  */
 export const JOB_EMAIL_EVENTS = [

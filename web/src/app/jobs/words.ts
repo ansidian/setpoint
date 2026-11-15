@@ -1,6 +1,6 @@
-// What the Jobs page writes (DESIGN.md › Jobs, boards 32–36): its dates, each status's mark and step,
-// the JD column, the per-week tip, Needs you's lines, and the table's order; mail's chip and badge
-// (J7); and J8's states and Settings (38a, 38b, 39a, 39b). Pure, so the page and its pane stay thin.
+// What the Jobs page writes (boards 32–36): its dates, each status's mark and step,
+// the JD column, the per-week tip, Needs you's lines, and the table's order; mail's chip and badge;
+// and the states and Settings (38a, 38b, 39a, 39b). Pure, so the page and its pane stay thin.
 import type {
   ApplicationOut, ApplicationRowOut, JdSummaryOut, JobEventKind, JobMoveOut, JobReadMode, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsReadingOut, JobStatus,
   JobWeekOut, NeedsYouItemOut, PostingOut,
@@ -26,11 +26,11 @@ export const stampWord = (at: string, timeZone: string, today: string) => `${day
 
 export const STATUS_LABELS: Record<JobStatus, string> = {applied: 'Applied', in_process: 'In process', offer: 'Offer', rejected: 'Rejected', withdrawn: 'Withdrawn'};
 
-/** The status filter's segments, in the header's order (D314). */
+/** The status filter's segments, in the header's order. */
 export const FILTERS = ['all', 'applied', 'in_process', 'offer', 'rejected', 'withdrawn'] as const;
 export type Filter = (typeof FILTERS)[number];
 
-/** A row's mark and label (D309): Ghosted is a flag on Applied, drawn as its own. */
+/** A row's mark and label: Ghosted is a flag on Applied, drawn as its own. */
 export type Mark = 'applied' | 'proc' | 'offer' | 'rej' | 'wd' | 'ghost';
 export function markOf(row: Pick<ApplicationRowOut, 'status' | 'ghosted'>): Mark {
   if (row.status === 'applied') return row.ghosted ? 'ghost' : 'applied';
@@ -55,7 +55,7 @@ export function statusStep(row: ApplicationRowOut, today: string): string | null
   return dayWord(row.status_on, today);
 }
 
-/** The pencil's tip on a status set by hand (D322). */
+/** The pencil's tip on a status set by hand. */
 export const setByYou = (row: ApplicationRowOut, today: string) => `Set by you on ${dayWord(row.status_on, today)}, only an email that sets a status changes it`;
 
 /** When something was found, as the JD column's tip says it: "7h ago" today, else the day. */
@@ -76,8 +76,8 @@ export function foundBy(jd: Pick<JdSummaryOut, 'source' | 'platform'>): string {
 }
 
 /**
- * The JD column: its glyph, its words and its tip, or nothing for a closed application from history (D311).
- * There's no tip where it would only say the words again (SV-171).
+ * The JD column: its glyph, its words and its tip, or nothing for a closed application from history.
+ * There's no tip where it would only say the words again.
  */
 export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: IconName; text: string; title?: string; spin?: boolean} | null {
   switch (jd.state) {
@@ -108,8 +108,8 @@ export function foundLine(posting: Pick<PostingOut, 'source' | 'platform' | 'fou
   return `${foundHow(posting)} · ${stampWord(posting.found_at, timeZone, today)}`;
 }
 
-/** Whether a saved JD has been read: one pasted is saved first, and a reading that failed leaves it as it was (SV-140). */
-// A location the user set isn't a reading (SV-170).
+/** Whether a saved JD has been read: one pasted is saved first, and a reading that failed leaves it as it was. */
+// A location the user set isn't a reading.
 export const hasReading = (posting: PostingOut) => Boolean(posting.summary || (posting.location && !posting.location_set_at) || posting.workplace || posting.salary || posting.must_haves.length || posting.nice_to_haves.length);
 
 /** A link's host, the full posting's tool ("greenhouse.example"). */
@@ -135,8 +135,8 @@ function notFoundLine(platform: string | null, lookedAt: string | null, timeZone
 }
 
 /**
- * Not found's lead and line: No JD found, the posting the user picked that Jobs couldn't read
- * (SV-132), or the lookup the user stopped to paste the posting (SV-170).
+ * Not found's lead and line: No JD found, the posting the user picked that Jobs couldn't read,
+ * or the lookup the user stopped to paste the posting.
  */
 export function notFoundWords(jd: Pick<JdSummaryOut, 'link' | 'looked_at' | 'stopped'>, platform: string | null, timeZone: string, today: string): {lead: string; rest: string} {
   if (jd.stopped) return {lead: 'Lookup stopped', rest: jd.looked_at ? `You stopped it on ${dayWord(localDate(jd.looked_at, timeZone), today)}` : 'You stopped it'};
@@ -147,7 +147,7 @@ export function notFoundWords(jd: Pick<JdSummaryOut, 'link' | 'looked_at' | 'sto
 
 /**
  * What a pick says in its toast. One Jobs can't read can't save a JD, so it says the link was kept
- * rather than promise one, though the job still tries it once (SV-140).
+ * rather than promise one, though the job still tries it once.
  */
 export function pickWords(candidate: {unreadable: boolean}, company: string): {done: string; failed: string} {
   return candidate.unreadable
@@ -233,7 +233,7 @@ export function latestStep(detail: Pick<ApplicationOut, 'status' | 'step' | 'ste
 /** The detail's line under its head, "· Applied Oct 1", "· Applied Today". */
 export const appliedLine = (date: string, today: string) => `Applied ${appliedWord(date, today)}`;
 
-// ---- In mail (J7, boards 37a–37c) ----
+// ---- In mail (boards 37a–37c) ----
 
 /**
  * Where an application stands, after its Applied date in mail's chip and badge: "In process",
@@ -257,7 +257,7 @@ export function foundShort(posting: Pick<PostingOut, 'source' | 'platform' | 'fo
   return `${foundHow(posting)} · ${dayWord(localDate(posting.found_at, timeZone), today)}`;
 }
 
-// ---- The table's order (D314: newest first by Applied, by default) ----
+// ---- The table's order (newest first by Applied, by default) ----
 
 export const SORT_KEYS = ['company', 'role', 'applied', 'status', 'jd'] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
@@ -278,7 +278,7 @@ const text = (a: string | null, b: string | null) => (a ?? '￿').localeCompare(
 export const nextSort = (sort: Sort, key: SortKey): Sort => (sort.key === key ? {key, down: !sort.down} : {key, down: key === 'applied'});
 
 /**
- * The Pinned shelf (SV-243, D504): every pinned application, newest pin first, whatever the sort and
+ * The Pinned shelf: every pinned application, newest pin first, whatever the sort and
  * under every filter; the table below leaves them out.
  */
 export const shelfOf = <T extends ApplicationRowOut>(rows: readonly T[]): T[] =>
@@ -332,7 +332,7 @@ export function marks(textValue: string, q: string): Segment[] {
   return parts;
 }
 
-// ---- J8: the states (38a, 38b) and Settings (39a, 39b) ----
+// ---- The states (38a, 38b) and Settings (39a, 39b) ----
 
 const emails = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'email' : 'emails'}`;
 
@@ -370,7 +370,7 @@ export function readingLine(reading: JobsReadingOut, history: Pick<JobsHistoryOu
 /** Settings › Jobs's head (39a): "62 applications". */
 export const applicationsCount = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'application' : 'applications'}`;
 
-/** What Jobs reads in an account (D310, #273), its select's choices: "Every email", "Career mail only", or "Off" for one it doesn't list. */
+/** What Jobs reads in an account, its select's choices: "Every email", "Career mail only", or "Off" for one it doesn't list. */
 export const READS_WORDS: Record<JobReadMode | 'off', string> = {every: 'Every email', career: 'Career mail only', off: 'Off'};
 
 /**
@@ -394,7 +394,7 @@ export const fromHistorySetting = (waiting: number) =>
 export const jobsModelWith = (label: string, search = false) => (search ? `${label} with web search` : label);
 
 /**
- * Usage this month's Jobs row (39b), where Jobs' spend shows once (D515): "Emails $0.62 · finding JDs
+ * Usage this month's Jobs row (39b), where Jobs' spend shows once: "Emails $0.62 · finding JDs
  * $2.71 · reading JDs $0.52 · no cap". The whole note didn't fit the row at the 820 px modal; its
  * reason, NO_CAP_WHY, is the line's tip.
  */
@@ -403,10 +403,10 @@ export function jobsUsageParts(month: JobsAiOut['this_month']): string {
   return [...parts.map(([name, cost]) => `${name} ${dollars(cost, true)}`), 'no cap'].join(' · ');
 }
 
-/** Why Jobs has no cap (decision 61), in the Jobs usage line's tip. */
+/** Why Jobs has no cap, in the Jobs usage line's tip. */
 export const NO_CAP_WHY = 'No cap: a JD is worth finding while the posting is up';
 
-/** A side of a pane row's change (SV-220, D470): its label and the table's mark, Ghosted its own. */
+/** A side of a pane row's change: its label and the table's mark, Ghosted its own. */
 export const moveSide = (status: JobMoveOut['to']): {label: string; mark: Mark} =>
   status === 'ghosted' ? {label: 'Ghosted', mark: 'ghost'} : {label: STATUS_LABELS[status], mark: markOf({status, ghosted: false})};
 
@@ -420,7 +420,7 @@ export function moveDay(at: string, timeZone: string, today: string): string {
   return dayWord(day, today);
 }
 
-/** The pane's quiet line (SV-220), without numbers (D314): "Reading Jobs and Personal, since Mar 2026". */
+/** The pane's quiet line, without numbers: "Reading Jobs and Personal, since Mar 2026". */
 export function movementFoot(names: readonly string[], since: string | null, timeZone: string): string {
   const who = names.length <= 1 ? names[0] ?? 'no accounts' : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
   const from = since ? `, since ${new Date(since).toLocaleDateString('en-US', {timeZone, month: 'short', year: 'numeric'})}` : '';

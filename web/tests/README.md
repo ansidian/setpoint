@@ -12,7 +12,7 @@ efficiency core can miss a time limit. Component tests find by role, wait with `
 
 ## Browser runs
 
-- `npm run test:browser -- mail search` runs those spec files; `--only "S8"` runs checks whose
+- `npm run test:browser -- mail search` runs those spec files; `--only "board 17"` runs checks whose
   names start that way (not recorded for release:check).
 - One shared lock (browser/lock.ts) across sessions: a run waits, saying whose, and gives up at 45
   minutes. A direct `node --test` takes the same lock.

@@ -1,11 +1,11 @@
-// How free text matches (src/domain/searchMatch.ts): v1's plural partners and zero-result ladder,
+// How free text matches (src/domain/searchMatch.ts): plural partners and the zero-result ladder,
 // the words the field requires and the tiers they rank by, the index expressions, field matching in
-// BRIEF.md's order, highlight runs and the excerpt.
+// order of preference, highlight runs and the excerpt.
 import {describe, expect, test} from 'vitest';
 import {excerptOf, ftsExpression, isLinkOnly, matchTier, mergeRuns, phraseRuns, pluralVariants, searchWords, termRuns, textLadder, textMatches, TIER, typeWordsExpression, typeWordsIn, withoutExcluded} from '../src/domain/searchMatch.ts';
 import type {RankedRow} from '../src/domain/searchMatch.ts';
 
-describe('pluralVariants (v1)', () => {
+describe('pluralVariants', () => {
   test.each<[string, string[]]>([
     ['rejections', ['rejection']], ['rejection', ['rejections']], ['deliveries', ['delivery']], ['delivery', ['deliveries']],
     ['boxes', ['box']], ['matches', ['match']], ['class', []], ['days', ['day']], ['day', []], ['cs', []], ['4220', []], ['café', []],
@@ -119,7 +119,7 @@ describe('matchTier: how well an email matches', () => {
   });
 });
 
-describe('withoutExcluded: "!word"s leave out the mail that has them (SV-31)', () => {
+describe('withoutExcluded: "!word"s leave out the mail that has them', () => {
   test.each<[string, string, string[]]>([
     ['invoice !proseware', 'invoice', ['proseware']],
     ['!Proseware invoice !Woodgrove', 'invoice', ['proseware', 'woodgrove']],
@@ -131,7 +131,7 @@ describe('withoutExcluded: "!word"s leave out the mail that has them (SV-31)', (
   });
 });
 
-describe('a reading\'s type chip looks for the type\'s own words (D386)', () => {
+describe('a reading\'s type chip looks for the type\'s own words', () => {
   test('whole words and their plurals, in the subject, summary and terms only', () => {
     expect(typeWordsExpression(['statement'])).toBe('{subject summary search_terms} : ("statement" OR "statements" OR "bill" OR "bills")');
     expect(typeWordsExpression(['statement', 'statement'])).toBe('{subject summary search_terms} : ("statement" OR "statements" OR "bill" OR "bills")');
@@ -151,7 +151,7 @@ describe('a reading\'s type chip looks for the type\'s own words (D386)', () => 
 describe('matching and highlighting', () => {
   const row = {fromName: 'Dana Whitfield', fromAddress: 'dana@parksideapts.example', organisation: 'Parkside Apartments', subject: 'Lease renewal terms', summary: 'Renewal terms for the flat', searchTerms: 'tenancy agreement', searchBody: 'Your lease ends. Once it\'s signed, your new term starts.'};
 
-  test('fields in BRIEF.md\'s order, by word prefix', () => {
+  test('fields in order of preference, by word prefix', () => {
     expect(textMatches(row, ['dana', 'parkside', 'lease', 'sign', 'zebra'])).toEqual([
       {field: 'sender', terms: ['dana', 'parkside']}, {field: 'organisation', terms: ['parkside']}, {field: 'subject', terms: ['lease']}, {field: 'body', terms: ['lease', 'sign']},
     ]);

@@ -1,19 +1,19 @@
-// The Calendar page (DESIGN.md › Calendar; boards 11 and 11b): the header ("October 2026", ‹ Today ›,
+// The Calendar page (boards 11 and 11b): the header ("October 2026", ‹ Today ›,
 // Month | Week, search, New C), the month grid and the right pane. The selected day and item ride
 // in the address (/calendar/2026-10-17, /calendar/item/3?at=…); a selected item turns solid and its
 // day is selected. Keys: ← → or P N page by month, T today, C new event, D new task, E edit, Delete,
 // ⌘C copy, ⌘V paste, ⌘Z undo, Esc closes the topmost thing (the "+N" popover, the editor, the selection).
-// F6 (boards 13, 14, 15, 15b, 19b): the editor in the right pane (also at /calendar/new, the proposal
+// Boards 13, 14, 15, 15b and 19b: the editor in the right pane (also at /calendar/new, the proposal
 // card's More options), dragging items to other days with the recurring scope asked on the drop,
 // Clone, Copy and Paste, Colour, Delete, multi-select (⌘, Ctrl or ⇧ click), and every change shown
 // where it lands (a new one too, at once): pending at .5 with a spinner, failed in place with a card that says why, with Try
 // again and Move back.
-// SV-23 (DESIGN.md › Decided while building #24): the header's search button, `/` or ⌘F turn the
+// The header's search button, `/` or ⌘F turn the
 // header into Search, as mail's does, and the results take the day's agenda's place in the right pane
 // while the grid stays. A click on a result, or J / K to it, selects it as a click on the grid does;
 // ↓ or Enter in the field goes to the first; E hands it to the editor, and the results come back
 // after Create or Cancel. Esc closes the floating detail, then the search.
-// SV-18 (DESIGN.md › Week view): Month | Week, M and W, and the week view (WeekGrid), whose arrows
+// Month | Week, M and W, and the week view (WeekGrid), whose arrows
 // page a week; a range dragged there opens the editor on it, and a move or resize is sent as a drop
 // is, the recurring scope asked first. The view rides in the address (?view=week).
 import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, ItemChanges, ItemCreateInput, ItemOut, ItemsOut, RecurringScope, SubtaskOut, WeatherDayOut} from '@setpoint/shared';
@@ -77,7 +77,7 @@ type CalendarRoute = Extract<Route, {page: 'calendar'}>;
 const addressOf = (route: CalendarRoute) => routePath({...route, view: undefined});
 
 /**
- * The key the grid draws solid (DESIGN.md › The glide › Selection): when the selection moves from
+ * The key the grid draws solid: when the selection moves from
  * one item to another, the old one goes back to tinted at once and the new one turns solid 60 ms
  * into the glide.
  */
@@ -104,7 +104,7 @@ const FOLD_MS = motion.fast + motion.medium;
 const RESTORE_MS = motion.medium + 420;
 
 /**
- * Where the zoom between Month and Week centres (polish audit grids-09): the middle of the selected
+ * Where the zoom between Month and Week centres: the middle of the selected
  * week's row in the month's section, as the month shows it (leaving) or will (arriving, its month's
  * first row at the top), or the section's middle when that row is out of view.
  */
@@ -156,8 +156,8 @@ window.addEventListener('pagehide', () => [...heldDeletes.values()].forEach(send
 
 type EditorState = EditorOpen & {handed: boolean; seq: number; at: string; place?: {day: string}};
 
-// A started editor kept while the user is on another page, with its drafts, brought back on their return
-// (UX #3): only Create, Save, Cancel or Esc end a draft (DESIGN.md › Decided while building #49).
+// A started editor kept while the user is on another page, with its drafts, brought back on their return:
+// only Create, Save, Cancel or Esc end a draft.
 let keptEditor: EditorState | null = null;
 
 export function CalendarPage({route}: {route: CalendarRoute}) {
@@ -171,14 +171,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const allCalendars = calendarsLoad.data;
   const calendars = useMemo(() => allCalendars?.filter(calendar => calendar.listed), [allCalendars]);
   // The compact tier: the grid takes the width, and the right pane lies over it while it holds the
-  // editor or search; the day's pane isn't drawn (#140).
+  // editor or search; the day's pane isn't drawn.
   const compact = useCompact();
   // ⌘K shows or hides each calendar, as the sidebar's Calendars do, so the rail (which has none) keeps
-  // the filter (#140).
-  // SV-181: the file picker Import .ics… opens (the header's button and ⌘K).
+  // the filter.
+  // The file picker Import .ics… opens (the header's button and ⌘K).
   const icsInput = useRef<HTMLInputElement>(null);
   useCommands(() => ({commands: [
-    // SV-181: an .ics file's events into a Google calendar, reviewed first (D437).
+    // An .ics file's events into a Google calendar, reviewed first.
     {id: 'import-ics', section: 'more' as const, label: 'Import .ics…', icon: 'download' as const, keywords: 'ics ical import file calendar events', run: () => icsInput.current?.click()},
     ...(calendars ?? []).map(calendar => ({
       id: `calendar-${calendar.id}`, section: 'more' as const, label: `${calendar.visible ? 'Hide' : 'Show'} ${calendar.name}`, icon: calendar.visible ? 'visibility_off' as const : 'visibility' as const,
@@ -221,7 +221,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // Editors are numbered from the one brought back, so a new one never shares its key.
   const editorSeq = useRef(keptEditor?.seq ?? 0);
   const [selection, setSelection] = useState<string[]>([]);
-  // The item last clicked in the right pane, whose floating detail sits beside its row (#322).
+  // The item last clicked in the right pane, whose floating detail sits beside its row.
   const [pickedInPane, setPickedInPane] = useState<string | null>(null);
   const [ask, setAsk] = useState<Ask | null>(null);
   const [sendingNow, setSending] = useState<Map<string, ItemOut>>(new Map());
@@ -230,7 +230,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // Deletes asked for here, off the grid until the provider confirms (or back, failed, if it refuses);
   // `sent` once the server has it, when the item's own pending delete keeps it off.
   const [deleting, setDeleting] = useState<(Deleting & {sent: boolean})[]>([]);
-  // Items folding away as they're deleted here, and coming back as Undo restores them (polish audit calflows-11).
+  // Items folding away as they're deleted here, and coming back as Undo restores them.
   const [removing, setRemoving] = useState<ReadonlySet<string>>(new Set());
   const [restoring, setRestoring] = useState<ReadonlySet<string>>(new Set());
   const forAWhile = (set: typeof setRemoving, keys: string[], ms: number) => {
@@ -248,20 +248,20 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const [searching, setSearching] = useState(false);
   const search = useCalendarSearch();
   // In the compact tier the day's pane is brought over the grid by its header button, closed on every
-  // load (D183, polish audit calpanes-14); the editor and search take its place as they take each other's.
+  // load; the editor and search take its place as they take each other's.
   const [dayPane, setDayPane] = useState(false);
-  // SV-181: an .ics file under review (two or more events), kept while a run goes on elsewhere.
+  // An .ics file under review (two or more events), kept while a run goes on elsewhere.
   const review = useImportReview();
 
   const {items, weather} = useMonths([addMonths(shown, -1), shown, addMonths(shown, 1), addMonths(shown, 2)]);
   const calendarsById = useMemo(() => new Map((calendars ?? []).map(calendar => [calendar.id, calendar])), [calendars]);
-  // The Google calendars an import can go into: not one the user can only read (SV-191).
+  // The Google calendars an import can go into: not one the user can only read.
   const googleCalendars = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google' && calendar.writable), [calendars]);
 
   // Items as they show: changes on their way where they're going, deletes on their way gone.
   const present = useCallback((list: ItemOut[]) => list.flatMap(item => {
     let shown = asRetried(sendingNow.get(item.key) ?? item, retried);
-    // SV-273: a subtask deleted from its checklist leaves it the same way.
+    // A subtask deleted from its checklist leaves it the same way.
     const kept = shown.subtasks.filter(subtask => ![...heldDeletes.keys()].some(entry => entry.id === subtask.id)
       && !deleting.some(entry => entry.id === subtask.id && (!entry.sent || (subtask.command?.kind === 'item_delete' && subtask.command.state === 'pending'))));
     if (kept.length !== shown.subtasks.length) shown = {...shown, subtasks: kept};
@@ -292,13 +292,13 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // The pane reads the selected day's month itself, so a day far from the grid's still shows.
   const dayMonthLoad = {path: monthItemsPath(monthOf(selectedDay)), ...useResource<ItemsOut>(monthItemsPath(monthOf(selectedDay)))};
   const dayMonth = dayMonthLoad.data;
-  // The day's items or the calendars couldn't load: the pane says so where its agenda would be (#228).
+  // The day's items or the calendars couldn't load: the pane says so where its agenda would be.
   const dayFailed = useLoadFailed([dayMonthLoad, calendarsLoad]);
   const {data: dayWeather} = useResource<WeatherDayOut[]>(monthWeatherPath(monthOf(selectedDay)));
   const paneItems = useMemo(() => itemsByDay(present(dayMonth?.items ?? EMPTY_ITEMS), allCalendars, zone).get(selectedDay) ?? EMPTY_ITEMS, [dayMonth, present, allCalendars, zone, selectedDay]);
-  // What the calendars toggled off hide on that day, so its pane doesn't call it free (SV-56).
+  // What the calendars toggled off hide on that day, so its pane doesn't call it free.
   const paneHidden = useMemo(() => hiddenOn(selectedDay, present(dayMonth?.items ?? EMPTY_ITEMS), calendars, zone), [dayMonth, present, calendars, zone, selectedDay]);
-  // Every calendar off: the header says the view is filtered, whatever the day (SV-56).
+  // Every calendar off: the header says the view is filtered, whatever the day.
   const allHidden = !!calendars?.length && calendars.every(calendar => !calendar.visible);
 
   const solidKey = useSolidKey(selectedKey);
@@ -312,7 +312,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const selectedItems = useMemo(() => (selection.length ? drawn.filter(item => selection.includes(item.key)) : selectedItem ? [selectedItem] : []), [selection, drawn, selectedItem]);
 
   // A failed change shows its card: the selected item's, else the newest one on screen nobody closed.
-  // While an import's review is open, its refused events have their Retry there (SV-181).
+  // While an import's review is open, its refused events have their Retry there.
   const failed = useMemo(() => {
     if (selectedItem?.command?.state === 'failed') return selectedItem;
     if (selectedItem || selection.length || ask || editor || review) return null;
@@ -332,7 +332,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   useEffect(() => {
     document.title = tabTitle({page: 'calendar', title});
   }, [title]);
-  // The header's title swaps the way the grid went (polish audit grids-04): a later month rises in,
+  // The header's title swaps the way the grid went: a later month rises in,
   // an earlier one falls, a week slides as its days do. A switch of view or Search just shows.
   const titleKey = searching ? 'search' : `${mode}:${mode === 'week' ? week : shown}`;
   const [titleMove, setTitleMove] = useState<{key: string; dir: 'next' | 'prev' | undefined}>({key: titleKey, dir: undefined});
@@ -347,7 +347,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // A day chosen elsewhere (the Today block, a link, Back) comes into view.
   useEffect(() => revealDay(selectedDay), [selectedDay]);
   // So does the open editor's draft day, wherever it came from (an email's More options, the line),
-  // so its ghost is on screen (UX #5).
+  // so its ghost is on screen.
   const draftDay = editor ? previews.day : null;
   useEffect(() => {
     if (draftDay) revealDay(draftDay);
@@ -365,7 +365,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compose?.kind, compose?.message, compose?.upcoming]);
 
-  // /calendar/item/3/edit (the Today block's card's Edit, #78) opens the editor on the item once it's
+  // /calendar/item/3/edit (the Today block's card's Edit) opens the editor on the item once it's
   // drawn, and the address drops its /edit.
   const editing = route.edit ? selectedItem : null;
   useEffect(() => {
@@ -385,7 +385,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     navigate({page: 'calendar', date, item: null, at: null});
   }, []);
   // A click on a grid day selects it as usual and moves a new draft there (on the week's hours, to the
-  // time clicked too); an edited item stays (choice 14, D56).
+  // time clicked too); an edited item stays (choice 14).
   const clickDay = useCallback((date: string, at?: number) => {
     setEditor(open => (open && !open.item ? {...open, place: {day: date, ...(at === undefined ? {} : {at})}} : open));
     selectDay(date);
@@ -395,8 +395,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     // A draft or a drop waiting on its scope isn't an item yet.
     if (item.id < 0) return;
     // A click on the item whose floating detail is open puts the card away, the item still selected
-    // (as ⌘ alone does, #17); the next click opens it again (#323). The "+N" popover stays open while
-    // its items are picked (#324): what closes it is a click elsewhere (DayPopover), Esc or a change of view.
+    // (as ⌘ alone does); the next click opens it again. The "+N" popover stays open while
+    // its items are picked: what closes it is a click elsewhere (DayPopover), Esc or a change of view.
     if (!additive && detailTarget?.item.key === item.key) {
       setSelection([item.key]);
       return;
@@ -417,14 +417,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     navigate({page: 'calendar', date: null, item: item.id, at: item.occurrence_start});
   }, [selection, selectedKey, detailTarget]);
 
-  // Paging glides the month (polish audit grids-04): pressed again mid-glide, it goes on from the
+  // Paging glides the month: pressed again mid-glide, it goes on from the
   // month it's gliding to, not the one passing by.
   const page = (delta: number) => {
     setPopover(null);
     if (mode === 'week') showWeek(addDays(week, 7 * delta), 'page');
     else scrollToMonth(addMonths(view.gliding ?? shown, delta), 'page');
   };
-  // Today's disc swells as it lands (polish audit grids-11): the month's once its glide is there, the
+  // Today's disc swells as it lands: the month's once its glide is there, the
   // week's once its days are drawn.
   const goToday = () => {
     setPopover(null);
@@ -434,7 +434,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       requestAnimationFrame(() => requestAnimationFrame(pulseToday));
     } else scrollToMonth(monthOf(today), 'today');
   };
-  // Week is Month zoomed in on the selected week (polish audit grids-09): it scales up into place from
+  // Week is Month zoomed in on the selected week: it scales up into place from
   // that week's row, and Month settles back out around it.
   const [zoom, setZoom] = useState<{to: CalendarMode; y: number} | null>(null);
   /** Month | Week, M and W: Week opens on the selected day's week, Month on its month. */
@@ -448,13 +448,13 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   };
   const openEditor = (open: EditorOpen, handed = false, at = addressOf(route), keepPopover = false) => {
     // A draft with something in it leaves only by Create, Save, Cancel or Esc: New, C, D and E say so
-    // and leave it be (SV-29, replacing D56's second draft).
+    // and leave it be.
     if (editor && editorDirty) {
       showToast(editor.item ? 'Save or cancel your changes first' : 'Create or cancel the draft first');
       (document.querySelector<HTMLElement>('.editor .nl-input') ?? document.querySelector<HTMLElement>('.editor'))?.focus();
       return;
     }
-    // Editing an item from the "+N" popover is still using it; a new event or task is done with it (#324).
+    // Editing an item from the "+N" popover is still using it; a new event or task is done with it.
     if (!keepPopover) setPopover(null);
     setAsk(null);
     setDayPane(false);
@@ -463,8 +463,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     setEditorDirty(false);
   };
   const newItem = (kind: 'event' | 'task') => openEditor({kind, date: selectedDay});
-  // A day's + on the month: that day, selected, and a new event on it (polish audit grids-06); a
-  // right-click's New event here and New task here too, at a week slot's time (#248).
+  // A day's + on the month: that day, selected, and a new event on it; a
+  // right-click's New event here and New task here too, at a week slot's time.
   const newOn = (date: string, kind: 'event' | 'task' = 'event', slot?: Slot) => {
     const there: CalendarRoute = {page: 'calendar', date, item: null, at: null};
     // A started draft stays, as New says (openEditor), and so does the day.
@@ -479,8 +479,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     setEditorDirty(false);
     if (route.compose) navigate({page: 'calendar', date: null, item: null, at: null}, {replace: true});
   };
-  // A file of one event opens in the editor as a filled-in draft on its day (D437): picked or dropped
-  // here, or an email's .ics from the reader's Add to calendar (SV-182), handed over by importRun.ts.
+  // A file of one event opens in the editor as a filled-in draft on its day: picked or dropped
+  // here, or an email's .ics from the reader's Add to calendar, handed over by importRun.ts.
   const handedIcs = useHandedIcs();
   useEffect(() => {
     if (!handedIcs) return;
@@ -499,7 +499,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   }, [handedIcs]);
 
   /**
-   * SV-181: an .ics file picked (Import .ics… in the header or ⌘K) or dropped on the grid (D437). Read
+   * An .ics file picked (Import .ics… in the header or ⌘K) or dropped on the grid. Read
    * for review, nothing sent: one event opens the editor as a filled-in draft, two or more the review
    * list in the right pane; a file that can't be read, or has nothing to import, says so in the toast.
    */
@@ -534,18 +534,18 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       openReview(file.name, read);
     }, error => showToast(error instanceof ApiFailure && error.code === 'invalid_input' ? error.message : failureLine(`Couldn't read ${file.name}`, error), null, 'failed'));
   };
-  // SV-190: only the grid takes a dropped file, and shows while one is over it (FileDrop.tsx).
+  // Only the grid takes a dropped file, and shows while one is over it (FileDrop.tsx).
   const fileDrop = useFileDrop(openIcs);
   // An item's own drag isn't a file's.
   const dragsFile = (event: ReactDragEvent) => [...event.dataTransfer.types].includes('Files');
   /**
-   * Esc closes the topmost thing: the floating detail, the "+N" popover under it (#324), a multi-selection (⌘ or Ctrl
+   * Esc closes the topmost thing: the floating detail, the "+N" popover under it, a multi-selection (⌘ or Ctrl
    * alone turns the detail's item into one), then the editor (its draft goes), then the selection,
    * then a failed card. Also the editor's own Esc, which closes the editor before a "+N" popover
-   * left open beside it (#324).
+   * left open beside it.
    */
   const escape = (): boolean => {
-    // SV-273: a subtask opened from its task's card leaves the card open beside the editor; Esc closes
+    // A subtask opened from its task's card leaves the card open beside the editor; Esc closes
     // the editor first. Any other card goes first, as a draft stays until its own Esc (choice 14).
     if (editor?.item && editor.item.parent_id !== null && editor.item.parent_id === detailTarget?.item.id) closeEditor();
     else if (detailTarget) selectDay(selectedDay);
@@ -560,14 +560,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     else return false;
     return true;
   };
-  // A search with all its results shown dims the grid's other items (polish audit search-10); one with
+  // A search with all its results shown dims the grid's other items; one with
   // more to load doesn't, so nothing it matches dims.
   const matchIds = searching && search.active && search.out && search.out.next_offset === null ? search.results.map(result => result.item.id).join(',') : null;
   useEffect(() => {
     setSearchMatches(matchIds === null ? null : new Set(matchIds ? matchIds.split(',').map(Number) : []));
     return () => setSearchMatches(null);
   }, [matchIds]);
-  // Whether the open search has had a query: emptied again, it closes, as Esc does (SV-29).
+  // Whether the open search has had a query: emptied again, it closes, as Esc does.
   const [searched, setSearched] = useState(false);
   const closeSearch = () => {
     setSearching(false);
@@ -604,7 +604,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
 
   /**
    * Says what a change did, once the server has it, with an Undo that takes it back ("Moved Dentist to
-   * Thu, Oct 8 · Undo", UX #6); ⌘Z runs the same Undo. Without one (a recurring event's
+   * Thu, Oct 8 · Undo"); ⌘Z runs the same Undo. Without one (a recurring event's
    * occurrences), the line alone.
    */
   const said = (text: string | null, undo: (() => void) | null) => {
@@ -691,9 +691,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   };
 
   /**
-   * Takes the items off the grid at once and says so with Undo ("Deleted Dentist · Undo", UX #1);
+   * Takes the items off the grid at once and says so with Undo ("Deleted Dentist · Undo");
    * the delete is sent when that toast goes, however it goes but by its Undo (its time ended, swiped
-   * away, or replaced), so Undo works for as long as it shows (SV-247), and a refusal brings it back.
+   * away, or replaced), so Undo works for as long as it shows, and a refusal brings it back.
    * Undo, or ⌘Z meanwhile, keeps it and sends nothing.
    */
   const drop = (list: {item: Pick<ItemOut, 'id' | 'key' | 'occurrence_start' | 'title'>; scope: RecurringScope}[]) => {
@@ -730,7 +730,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     toast = showToast(list.length === 1 ? `Deleted ${list[0]!.item.title}` : `Deleted ${list.length} items`, {label: 'Undo', run: undo}, undefined, () => send());
   };
 
-  /** Try again on a failed change: pending at once, as every change shows (SV-42); a refusal of the retry itself brings the failure back. */
+  /** Try again on a failed change: pending at once, as every change shows; a refusal of the retry itself brings the failure back. */
   const retry = (item: ItemOut) => {
     const {id, settled_at: failedAt} = item.command!;
     setRetried(map => new Map(map).set(id, failedAt));
@@ -751,7 +751,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
 
   /** Draws the new items at once, pending, and creates them, saying so; Undo or ⌘Z deletes them again. */
   // `line` says what a clone or paste made; a create from the editor passes null and says nothing, the item
-  // on the grid being the answer (DESIGN #247), while ⌘Z still takes it back.
+  // on the grid being the answer, while ⌘Z still takes it back.
   const create = (inputs: ItemCreateInput[], what: string, line: ((drafts: ItemOut[]) => string) | null) => {
     const at = new Date().toISOString();
     const drafts = inputs.map(input => pendingItem(input, -++newIds.current, at));
@@ -765,9 +765,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     void createItems(inputs)
       .then(commands => {
         settle(commands.map(command => command.target_id));
-        // The server's own copies land as they're drawn settled (polish audit calflows-02).
+        // The server's own copies land as they're drawn settled.
         expectLanding(commands.map(command => command.target_id));
-        // SV-74: a task with no date isn't on the calendar and leaves the mirror once Todoist has it,
+        // A task with no date isn't on the calendar and leaves the mirror once Todoist has it,
         // so there's no Undo, and a failure, with no place to show in, comes as a toast.
         const undated = commands.filter((_, index) => inputs[index]!.kind === 'task' && !inputs[index]!.due_date);
         said(line?.(drafts) ?? null, undated.length ? null : () => {
@@ -780,7 +780,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       });
   };
 
-  /** SV-74: a task created with no date, until Todoist has it; refused, the toast says why and offers Try again. */
+  /** A task created with no date, until Todoist has it; refused, the toast says why and offers Try again. */
   const watchUndated = (command: CommandOut, title: string) => {
     void untilSettled(command).then(settled => {
       if (settled.state !== 'failed') return;
@@ -796,7 +796,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     showToast(`Copied ${list.length === 1 ? list[0]!.title : `${list.length} items`}, ⌘V pastes on the selected day`);
   };
 
-  // ⌘V on the selected day; a right-click's Paste here on the day it was on (#248).
+  // ⌘V on the selected day; a right-click's Paste here on the day it was on.
   const paste = (day = selectedDay) => {
     if (!clipboard.current.length) return;
     const list = clipboard.current;
@@ -815,13 +815,13 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const settleSubtask = (subtask: SubtaskOut, how: 'retry' | 'move-back') =>
     void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id).catch(toastFailure(how === 'retry' ? `Couldn't try ${subtask.title} again` : `Couldn't undo ${subtask.title}`));
   const reorder = (task: ItemOut, ids: number[]) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`));
-  // SV-273 (D566): a subtask added from the checklist says nothing; its row is the answer, as a create's is.
+  // A subtask added from the checklist says nothing; its row is the answer, as a create's is.
   const addSubtask = (task: ItemOut, title: string) =>
     createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure(`Couldn't add ${title}`));
-  // SV-273 (D567): a subtask from its checklist row in the editor, read as the item it is (an undated one is in no range).
+  // A subtask from its checklist row in the editor, read as the item it is (an undated one is in no range).
   const openSubtask = (subtask: Pick<SubtaskOut, 'id' | 'title'>) =>
     void getJson<ItemOut>(itemPath(subtask.id)).then(item => openEditor({kind: 'task', date: item.due_date ?? selectedDay, item}, false, addressOf(route), true), toastFailure(`Couldn't open ${subtask.title}`));
-  // SV-273 (D569): Clone keeps the parent; the new subtask goes at the end of the same checklist.
+  // Clone keeps the parent; the new subtask goes at the end of the same checklist.
   const cloneSubtask = (subtask: Pick<SubtaskOut, 'id' | 'title' | 'parent_id'>) =>
     void getJson<ItemOut>(itemPath(subtask.id))
       .then(item => createSubtask({...copyOf(item, 0, zone), parent_id: subtask.parent_id}))
@@ -836,14 +836,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     addSubtask: (task, title) => addSubtask(task, title),
     openSubtask: subtask => openSubtask(subtask),
     subtaskMenu: (event, subtask) => checklistMenu(event, subtask),
-    // SV-273 (D569): a subtask's clone goes at the end of the same checklist.
+    // A subtask's clone goes at the end of the same checklist.
     clone: item => (item.parent_id !== null ? cloneSubtask({...item, parent_id: item.parent_id}) : create([copyOf(item, 0, zone)], `Couldn't clone ${item.title}`, () => `Cloned ${item.title}`)),
     copy: item => copy([item]),
     colour: recolour,
     remove: item => remove([item]),
   };
 
-  // ---------- The right-click menu (DESIGN.md #248) ----------
+  // ---------- The right-click menu ----------
 
   /** An item's actions, the floating detail's, unavailable where its card's are (Google's own kinds, a change on its way). */
   const itemMenu = (item: ItemOut, date: string): MenuAction[] => {
@@ -853,25 +853,25 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         {id: 'move-back', label: 'Move back', icon: 'undo', run: () => void moveBack(item.command!.id).catch(toastFailure('Couldn\'t move it back'))},
       ];
     }
-    // SV-273 (D569): a dated subtask's chip or agenda row has its checklist row's menu.
+    // A dated subtask's chip or agenda row has its checklist row's menu.
     if (item.parent_id !== null && !item.read_only) {
       return subtaskMenu({...item, parent_id: item.parent_id}, () => complete(item), () => openEditor({kind: item.kind, date, item}, false, addressOf({page: 'calendar', date, item: null, at: null})), () => remove([item]));
     }
     const fixed = item.read_only || item.command !== null;
-    // The event's link (SV-77's in its place, else SV-179's own URL), as the card's Open.
+    // The event's link (one in its place, else the event's own URL), as the card's Open.
     const link = openLink(item);
     const calendar = calendarsById.get(item.calendar_id);
     const openIt = link ? [{id: 'open-link', label: `Open ${link.host}`, icon: 'open_in_new', hint: 'O', run: () => window.open(link.url, '_blank', 'noopener')} satisfies MenuAction] : [];
-    // A read-only event leaves out what it can't do, saying why, and keeps its link (D447).
+    // A read-only event leaves out what it can't do, saying why, and keeps its link.
     if (item.read_only) return [{id: 'read-only', label: readOnlyReason(calendar), icon: 'lock', note: true, run: () => {}}, ...openIt];
     return [
       ...(item.kind === 'task' ? [{id: 'complete', label: item.done ? 'Reopen' : 'Complete', icon: item.done ? 'undo' : 'task_alt', disabled: fixed || (item.done && !item.can_reopen), run: () => complete(item)} satisfies MenuAction] : []),
-      // Edit opens the editor at once, the item's day selected, with no card to hand it over (#248).
+      // Edit opens the editor at once, the item's day selected, with no card to hand it over.
       {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', disabled: fixed, run: () => openEditor({kind: item.kind, date, item}, false, addressOf({page: 'calendar', date, item: null, at: null}))},
       ...openIt,
       {id: 'clone', group: 'copy', label: 'Clone', icon: 'control_point_duplicate', run: () => actions.clone!(item)},
       {id: 'copy', group: 'copy', label: 'Copy', icon: 'content_copy', hint: '⌘C', run: () => copy([item])},
-      // Its colours right in the menu, one click (#325).
+      // Its colours right in the menu, one click.
       ...(item.kind === 'event' ? [{id: 'colour', group: 'colour', label: 'Colour', icon: 'contrast',
         run: () => {}, inline: close => <ColourPanel item={item} calendar={calendar} disabled={fixed} onPick={colour => {
           close();
@@ -882,7 +882,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   };
 
   /**
-   * SV-273 (D569): a subtask's menu, the same wherever it's drawn: Complete or Reopen, Edit, Clone (into
+   * A subtask's menu, the same wherever it's drawn: Complete or Reopen, Edit, Clone (into
    * the same checklist) and Delete; no Copy, whose paste would make a task of its own, and no Move up or
    * down, which its handle has. A refused one's Try again and Move back come first, as an item's do.
    */
@@ -968,7 +968,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const complete = (task: ItemOut, undoing = false) => {
     setSending(map => new Map(map).set(task.key, sending({...task, done: !task.done})));
     void completeItem(task.id, !task.done, task.recurring ? task.due_date : null)
-      // SV-249 (D510): the undo goes to the item the change was on, a repeating task's done
+      // The undo goes to the item the change was on, a repeating task's done
       // occurrence after Complete and the task itself after Reopen.
       .then(command => {
         if (!undoing) said(`${task.done ? 'Reopened' : 'Completed'} ${task.title}`, () => complete({...task, id: command.target_id, key: String(command.target_id), done: !task.done}, true));
@@ -981,8 +981,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       }));
   };
 
-  // SV-272: a subtask's check says so with Undo, as its task's does; a repeating one's Undo reopens
-  // the done occurrence the completion made (D510).
+  // A subtask's check says so with Undo, as its task's does; a repeating one's Undo reopens
+  // the done occurrence the completion made.
   const completeSubtask = (subtask: SubtaskOut, undoing = false) => {
     void completeItem(subtask.id, !subtask.done)
       .then(command => {
@@ -1025,7 +1025,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         newItem('event');
       }
       else if (plainKey(event, 'd')) newItem('task');
-      // E edits the selected item, its card open or put away by a second click or ⌘ (#323).
+      // E edits the selected item, its card open or put away by a second click or ⌘.
       else if (plainKey(event, 'e') && selectedItem && selectedItem.key !== handedKey && !selectedItem.read_only && (!selection.length || (selection.length === 1 && selection[0] === selectedItem.key))) {
         echoKey('e');
         // Handed to the editor, it's no longer held apart from its card, so Esc gives it back to one.
@@ -1033,7 +1033,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         editItem(selectedItem, !!detailTarget);
       }
       else if (plainKey(event, 'o') && detailTarget && openLink(detailTarget.item)) {
-        // SV-77, SV-179: the open card's link, as its Open does.
+        // The open card's link, as its Open does.
         echoKey('o');
         window.open(openLink(detailTarget.item)!.url, '_blank', 'noopener');
       }
@@ -1058,7 +1058,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const weekItems = useMemo(() => (mode === 'week' ? visibleItems(drawn, allCalendars) : EMPTY_ITEMS), [mode, drawn, allCalendars]);
   const detailProps = {target: detailTarget, exit: handedKey && handedKey === selectedKey ? 'edit' as const : 'close' as const, timeZone: zone, actions,
     onClose: () => selectDay(selectedDay), onEdit: (target: DetailTarget) => editItem(target.item, true),
-    // SV-273: a subtask opened from the card keeps it; in the compact tier the editor lies over the
+    // A subtask opened from the card keeps it; in the compact tier the editor lies over the
     // grid's right side, so the card glides clear of it while it's open, and back once it closes.
     room: compact && editor ? layout.rightPane : 0};
 
@@ -1100,7 +1100,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           <button className="btn ghost sm" data-tip="Today · T" data-hint="t" onClick={goToday}>Today</button>
           <button className="ibtn sm" aria-label={`Next ${mode}`} data-tip={`Next ${mode} · →`} onClick={() => page(1)}><Icon name="chevron_right" /></button>
         </span>
-        {/* Search hides Month | Week (D48); the grid still pages. */}
+        {/* Search hides Month | Week; the grid still pages. */}
         {!searching && (
           <Segmented style={{marginLeft: 8}} value={mode} onChange={switchMode} onTab={switchMode}
             segments={[{value: 'month', label: 'Month', tip: 'Month · M'}, {value: 'week', label: 'Week', tip: 'Week · W'}]} />
@@ -1124,14 +1124,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             setSearching(true);
           }}><Icon name="search" /></button>}
         <button className="btn cal-new" data-hint="c" data-tip="New event · C" onClick={() => newItem('event')}><Icon name="add" size={17} /><span className="cal-new-label">New</span><span className="kbd">C</span></button>
-        {/* SV-181: the file picker behind Import .ics…, last so the header's buttons stay side by side. */}
+        {/* The file picker behind Import .ics…, last so the header's buttons stay side by side. */}
         <input ref={icsInput} type="file" accept={ICS_ACCEPT} hidden aria-hidden="true" tabIndex={-1} onChange={event => {
           const file = event.target.files?.[0];
           event.target.value = '';
           if (file) openIcs(file);
         }} />
       </header>
-      {/* A file over the right pane, which the grid hasn't taken, is refused there rather than opened in the tab (#305). */}
+      {/* A file over the right pane, which the grid hasn't taken, is refused there rather than opened in the tab. */}
       <div className="content cal-content" onContextMenu={onContextMenu}
         onDragOver={event => {
           if (event.defaultPrevented || !dragsFile(event)) return;
@@ -1143,7 +1143,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           event.preventDefault();
         }}>
         {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines
-            sit atop the grid instead, so a failing one still shows (#140). */}
+            sit atop the grid instead, so a failing one still shows. */}
         {compact && <div className="cal-health"><HealthLines now={now} timeZone={zone} /></div>}
         {mode === 'week' ? (
           <WeekGrid enter={zoom?.to === 'week' ? zoom.y : null} onEntered={() => setZoom(null)} week={week} weekJump={view.weekJump} today={today} selectedDay={paneDay} selected={selected} looks={looks} items={weekItems} byDay={byDay} weather={weather}
@@ -1160,7 +1160,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             dayItems={date => byDay.get(date) ?? EMPTY_ITEMS} onPreview={onPreview}
             onCreate={inputs => {
               closeEditor();
-              // SV-181: the .ics draft is imported with its iCalUID; any drafts added beside it are created as usual.
+              // The .ics draft is imported with its iCalUID; any drafts added beside it are created as usual.
               const imported = editor.ics ? inputs[0]! : null;
               if (editor.ics && imported) void importFromEditor(imported.calendar_id, calendarsById.get(imported.calendar_id)?.name ?? 'the calendar', editedImport(editor.ics, imported));
               const rest = imported ? inputs.slice(1) : inputs;
@@ -1168,7 +1168,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             }}
             onSave={(item, changes, scope) => {
               closeEditor();
-              // SV-273 (D568): a subtask whose date came off leaves the grid, so the change says so, with Undo.
+              // A subtask whose date came off leaves the grid, so the change says so, with Undo.
               send(item, changes, scope, `Couldn't change ${item.title}`, changes.due_date === null ? `Took the date off ${item.title}` : null);
             }}
             onDelete={item => {

@@ -1,5 +1,4 @@
-// Which adapter serves a source. Real sources go to their provider's adapter (none until B2 and B5
-// add them); dev sources, and only dev sources, go to the dev provider.
+// Which adapter serves a source. Real sources go to their provider's adapter; dev sources, and only dev sources, go to the dev provider.
 import type {SourceProvider} from '@setpoint/shared';
 import type {AdapterRegistry, SourceAdapter, SourceRow} from './adapter.ts';
 

@@ -1,9 +1,9 @@
-// The visual net without baselines (SV-99): the main pages (the Inbox with an email open, with its JD popover open, and with the
-// Contoso Pharmaceuticals match email's Applied before on its row and in the reader (J7), the
+// The visual net without baselines: the main pages (the Inbox with an email open, with its JD popover open, and with the
+// Contoso Pharmaceuticals match email's Applied before on its row and in the reader, the
 // calendar's month and week, the editor, News
-// with a story open, Jobs with an application open, with a Needs you item's email open (D401), and
+// with a story open, Jobs with an application open, with a Needs you item's email open, and
 // with its menus open (Assign to…, and More with Merge with…'s submenu), every Settings page, Jobs with its history pass running and the AI down,
-// and Jobs off (J8), the phone's Inbox; Jobs isn't on the phone, decision 49) in Night, at the design target,
+// and Jobs off, the phone's Inbox; Jobs isn't on the phone) in Night, at the design target,
 // 1100 and 820 wide and on the phone. Settings skips 1100, as its fixed modal draws there as at the target,
 // and Assign to…, More, the history pass and Jobs off stay at the target, as they don't change with width.
 // On each, at rest: nothing scrolls sideways, no text is cut by an
@@ -103,8 +103,8 @@ function sweepPage(): string[] {
   }
 
   // Nothing interactive is covered at the centre of what shows of it. Behind a modal only the modal
-  // counts, and a pane lying over the page (the reader over the list from 640 to 1099 px, DESIGN.md
-  // #140), many times the size of what it covers, or an open menu (Jobs's, J6), covers it on purpose.
+  // counts, and a pane lying over the page (the reader over the list from 640 to 1099 px),
+  // many times the size of what it covers, or an open menu (Jobs's), covers it on purpose.
   const modal = document.querySelector('[aria-modal="true"]');
   const interactive = all.filter(element => element.matches('button, a[href], input, select, textarea, [role="button"], [role="tab"], [role^="menuitem"], [tabindex]:not([tabindex="-1"])'));
   const area = (rect: DOMRect) => rect.width * rect.height;
@@ -175,7 +175,7 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
   const application = rows.find(row => row.company === 'Northwind Talent' && row.title === 'Software Engineer I')!.id;
   const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
   const match = all.days.flatMap(day => day.rows).find(row => row.subject === 'Associate Software Engineer @ Contoso Pharmaceuticals')!.id;
-  // The seed's items have no email in mail's sample: one stands in, so Needs you's subject opens it (D401).
+  // The seed's items have no email in mail's sample: one stands in, so Needs you's subject opens it.
   const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
   try {
     database.exec('PRAGMA busy_timeout = 5000');
@@ -217,7 +217,7 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
       await page.getByRole('textbox', {name: 'Search applications'}).waitFor();
     }},
     ...SETTINGS_PAGES.map(name => ({name: `Settings › ${name}`, path: `/settings/${name}`, shows: '.settings .set-nav .nav.on', widths: [SIZES.target.width, 820]})),
-    // J8's states, last, as they change the server: the pass's line, the AI down's line, then Jobs off.
+    // Jobs's states, last, as they change the server: the pass's line, the AI down's line, then Jobs off.
     {name: 'Jobs, its history pass and the AI down', path: '/jobs', shows: '.jb-scroll .jb-tr', widths: TARGET_ONLY, open: async page => {
       const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
       try {
@@ -270,7 +270,7 @@ async function sweepAt(page: Page, setpoint: Setpoint, route: Route, width: numb
   return [...await rested(() => page.evaluate(sweepPage)), ...heard()].map(problem => `${where}: ${problem}`);
 }
 
-// axe's own color-contrast floor, WCAG AA's 4.5 (D400). The mini-month's days outside its month are dim on purpose.
+// axe's own color-contrast floor, WCAG AA's 4.5. The mini-month's days outside its month are dim on purpose.
 const CONTRAST_FLOOR = 4.5;
 const DIM_ON_PURPOSE = '.mini > .o';
 

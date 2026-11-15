@@ -1,8 +1,8 @@
-// News's reads (N1; shapes in `@setpoint/shared` src/api/news.ts): All's blocks, a section's list,
-// a story and its sources, an article, the recap (While you were away, #298) and Settings › News.
-// Order is the stored score, biggest first (N3 ranks); dots, the leading outlet, the block's size, a
-// story's main section (All's one block for it and the recap's name for it, D102), a section's line
-// and the recap's stories follow src/domain/news.ts. N3 adds the bar (a story under it never shows:
+// News's reads (shapes in `@setpoint/shared` src/api/news.ts): All's blocks, a section's list,
+// a story and its sources, an article, the recap (While you were away) and Settings › News.
+// Order is the stored score, biggest first; dots, the leading outlet, the block's size, a
+// story's main section (All's one block for it and the recap's name for it), a section's line
+// and the recap's stories follow src/domain/news.ts. Sorting adds the bar (a story under it never shows:
 // not on the page, in the recap or in search), and search over the 90-day archive.
 import type {
   AlsoReportedOut, ArticleOut, MissedOut, NewsBlockOut, NewsDayOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
@@ -34,7 +34,7 @@ const shortName = (article: ArticleRow) => article.outletShort ?? article.outlet
 interface Loaded {
   rows: Map<number, StoryRowOut>;
   articles: Map<number, ArticleRow[]>;
-  // Each row's main section (D102).
+  // Each row's main section.
   main: Map<number, NewsSection>;
 }
 
@@ -101,7 +101,7 @@ export function storyRows(store: Store, storyIds: readonly number[]): StoryRowOu
 
 /**
  * A section's stories on the page, biggest first: by score, then the newest fact. Its written ones,
- * or with `held` those waiting unwritten under the write gate, for Also reported (D452).
+ * or with `held` those waiting unwritten under the write gate, for Also reported.
  */
 function sectionStoryIds(store: Store, section: NewsSection, now: string, held = false): {id: number; score: number}[] {
   return store.db.select({id: t.newsStories.id, score: t.newsStories.score}).from(t.newsStories)
@@ -146,8 +146,8 @@ function lastLookBefore(store: Store, at: string): string | null {
 }
 
 /**
- * While you were away (#298): the stories it was fixed with once on screen, else those that can be in
- * it, biggest first, each named by its main section (D102); then up to two per section, in the
+ * While you were away: the stories it was fixed with once on screen, else those that can be in
+ * it, biggest first, each named by its main section; then up to two per section, in the
  * blocks' order. Null when it holds nothing.
  */
 export function newsRecap(store: Store): RecapOut | null {
@@ -172,7 +172,7 @@ function rankedRecap(store: Store): RecapOut & {ids: number[]} | null {
 
 /**
  * All: one block per section in its fixed order, and the recap. A block holds only the stories whose
- * main section it is, so a story shows once (D102), and is sized from them. "N more" is the rest of
+ * main section it is, so a story shows once, and is sized from them. "N more" is the rest of
  * the section's list, which holds every story in the section, those shown in another block too.
  */
 export function newsPage(store: Store): NewsPageOut {
@@ -190,7 +190,7 @@ export function newsPage(store: Store): NewsPageOut {
   return {blocks, missed: recap && {count: recap.stories.length, since: recap.since}, recap};
 }
 
-/** A section's full list, biggest first, then Also reported: its stories left unwritten under the write gate, each as its lead article (D452). */
+/** A section's full list, biggest first, then Also reported: its stories left unwritten under the write gate, each as its lead article. */
 export function newsSection(store: Store, section: NewsSection): NewsSectionOut {
   const now = isoNow(store);
   const held = storyRows(store, sectionStoryIds(store, section, now, true).map(story => story.id));
@@ -222,7 +222,7 @@ export function storyDetail(store: Store, storyId: number): StoryOut {
   };
 }
 
-/** An article in the pane. A metered paper's never is (D89). */
+/** An article in the pane. A metered paper's never is. */
 export function articleDetail(store: Store, articleId: number): ArticleOut {
   const article = store.db.select().from(t.newsArticles).where(eq(t.newsArticles.id, articleId)).get();
   if (!article || article.metered) throw notFound('No such article.');
@@ -237,7 +237,7 @@ export function articleDetail(store: Store, articleId: number): ArticleOut {
 }
 
 /**
- * The iPhone app's Catch up (D424), until setpoint-ios has its own recap: the recap's stories by the
+ * The iPhone app's Catch up, until setpoint-ios has its own recap: the recap's stories by the
  * local day each left the page, newest day first, biggest first within it.
  */
 export function missed(store: Store): MissedOut {
@@ -255,7 +255,7 @@ export function missed(store: Store): MissedOut {
   };
 }
 
-/** The icon a source's list named for its tile, kept in its config (N5); null takes its adapter's. */
+/** The icon a source's list named for its tile, kept in its config; null takes its adapter's. */
 const sourceIcon = (config: Record<string, unknown>): NewsSourceIcon | null =>
   (NEWS_SOURCE_ICONS as readonly unknown[]).includes(config.icon) ? config.icon as NewsSourceIcon : null;
 
@@ -279,7 +279,7 @@ export function newsSources(store: Store): NewsSourcesOut {
 }
 
 /**
- * News's pane with nothing open (SV-219, D466): when the page was last ranked and the next is due,
+ * News's pane with nothing open: when the page was last ranked and the next is due,
  * the feeds failing every attempt for 6 hours, today's articles, the stories first reported today
  * and the outlets read, every story kept, and the month's AI cost. Stories count
  * as the page does: written, over the bar.
@@ -302,7 +302,7 @@ export function newsDay(store: Store): NewsDayOut {
 }
 
 /**
- * Search news (D91): stories from the last 90 days, expired ones included, whose headline, one line,
+ * Search news: stories from the last 90 days, expired ones included, whose headline, one line,
  * summary or sources (an outlet's name or its own headline; never a metered paper's) hold every word
  * of the search as a prefix. Newest first. A story under the bar, or one nothing can show, isn't found.
  */

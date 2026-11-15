@@ -1,10 +1,10 @@
-// The right-click menu (DESIGN.md › Decided while building #248): an email's row offers its actions at
+// The right-click menu: an email's row offers its actions at
 // the pointer, moving the cursor there and opening nothing; Mark read reads it in place with Undo,
 // its keys run its items, Add as task opens the email with the card, and ⌥ or an open popover leave
 // the browser's own. On Calendar an event's menu selects it without the floating detail, Colour's
 // swatches take the menu's place, and empty grid offers New event here (at a week slot's time) and
 // Paste here on the day clicked. News's rows, the sidebar and the Today block have theirs. Add to
-// rule (SV-160) lists New rule from the sender and the rules it can join in the menu's place.
+// rule lists New rule from the sender and the rules it can join in the menu's place.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
@@ -130,7 +130,7 @@ test('an email\'s menu: Mark read in place with Undo, P by its key, Add as task 
   }
 });
 
-test('Add to rule (SV-160): New rule from the sender and the rules it can join, in the menu\'s place; one joined with Undo, New rule opening Add rule filled in, the email staying where it is', async () => {
+test('Add to rule: New rule from the sender and the rules it can join, in the menu\'s place; one joined with Undo, New rule opening Add rule filled in, the email staying where it is', async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -218,7 +218,7 @@ test('a calendar item\'s right-click selects it without the card; its colours in
     await setpoint.idle();
     assert.equal(await page.locator('.fd').count(), 0, 'no floating detail');
 
-    // Its colours are in the menu itself (#325), and one click colours it.
+    // Its colours are in the menu itself, and one click colours it.
     await menu(page).locator('.menu-inline .fd-swatches').getByRole('radio', {name: 'good'}).click();
     await page.locator('.toast', {hasText: 'Changed the colour of Dentist'}).waitFor();
     await menu(page).waitFor({state: 'detached'});

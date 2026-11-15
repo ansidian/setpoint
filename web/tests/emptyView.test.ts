@@ -1,4 +1,4 @@
-// An empty Inbox view's quiet line as a table (SV-226): when the last email it tells of came.
+// An empty Inbox view's quiet line as a table: when the last email it tells of came.
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {quietLine} from '../src/logic/emptyView.ts';

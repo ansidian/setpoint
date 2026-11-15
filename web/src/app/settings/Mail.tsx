@@ -1,10 +1,10 @@
 // Settings › Mail (board 18a): written rules in their order (drag, or ↑ ↓ on the handle) with Add
-// rule (open and filled in when an email's Add to rule asked for a New rule from its sender, SV-160;
-// Mark read and Trash under Send to, DESIGN.md #347; Turn off and Delete ask about a rule's waiting
-// trashes, SV-238), the note that protected mail can't be moved,
+// rule (open and filled in when an email's Add to rule asked for a New rule from its sender;
+// Mark read and Trash under Send to; Turn off and Delete ask about a rule's waiting
+// trashes), the note that protected mail can't be moved,
 // marked read or trashed by any rule, learned rules (from pattern
 // prompts) with Undo on the day they were learned and × after, the trusted remote-content domains
-// (their count and a filter once there are more than Show all's 11, SV-253 F7), and Verification
+// (their count and a filter once there are more than Show all's 11), and Verification
 // codes' expiry presets.
 import type {Kind, Lane, RuleOut, RuleTrash, RuleWaiting, Settings, TrustedDomainOut} from '@setpoint/shared';
 import {CODE_EXPIRY_PRESETS, KINDS, RULE_TRASH} from '@setpoint/shared';
@@ -34,7 +34,7 @@ const DESTINATIONS: {value: string; label: string}[] = [
   {value: 'noise', label: 'Noise'},
 ];
 
-// Add rule's filters, in the menu's order: each field's words it contains or doesn't (D487).
+// Add rule's filters, in the menu's order: each field's words it contains or doesn't.
 const RULE_FILTERS: {key: RuleFilter; label: string}[] = [
   {key: 'subject', label: 'Subject contains'}, {key: 'subjectNot', label: 'Subject doesn’t contain'},
   {key: 'name', label: 'Sender name contains'}, {key: 'nameNot', label: 'Sender name doesn’t contain'},
@@ -62,7 +62,7 @@ export function MailPage() {
   return (
     <Page title="Mail" loads={[rulesLoad, domainsLoad, settingsLoad]}>
       <Section label="Rules" right={<button className="btn quiet sm" type="button" onClick={() => (showForm ? closeForm() : setAdding(true))}><Icon name="add" size={17} />Add rule</button>}>
-        {/* "No rules yet" only once the rules are known (states-01). */}
+        {/* "No rules yet" only once the rules are known. */}
         {!rules && !showForm ? <SkeletonRows count={3} one /> : <div {...order.groupProps}>
           {showForm && <AddRule key={draft?.from} draft={draft} onDone={closeForm} />}
           {written.map((rule, index) => (
@@ -106,10 +106,10 @@ function RuleText({rule}: {rule: Pick<RuleOut, 'match' | 'lane' | 'kind' | 'enab
   const actions = ruleActionWords(rule);
   return (
     <div className={rule.enabled ? 'rule grow' : 'rule grow off'}>
-      {/* Where the modal is narrow the sender is cut ("From wingtip…"); resting on it shows the whole of it (F2). */}
+      {/* Where the modal is narrow the sender is cut ("From wingtip…"); resting on it shows the whole of it. */}
       <span className="ell" data-tip={words.map(run => run.text).join('')} data-tip-quick>{words.map((run, index) => (run.bold ? <b key={index}>{run.text}</b> : <span key={index}>{run.text}</span>))}</span>
       {/* The actions go on after the lane tag, as the sentence does: "→ Noise, mark read, trash now". Where
-          the modal is narrow this half is the row's second line, under the sender (#368). */}
+          the modal is narrow this half is the row's second line, under the sender. */}
       <span className="send" data-tip={`${laneTag(rule.lane, rule.kind)}${actions}`} data-tip-quick>
         <span className="to"><Icon name="arrow_forward" size={16} /></span>
         <span className="lane"><span className="tag">{laneTag(rule.lane, rule.kind)}</span>{actions && <span className="ell">{actions}</span>}</span>
@@ -119,7 +119,7 @@ function RuleText({rule}: {rule: Pick<RuleOut, 'match' | 'lane' | 'kind' | 'enab
 }
 
 function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; drag: DragProps; onMove: (delta: 1 | -1) => void}) {
-  // Turn off or Delete on a rule with trashes waiting asks first (D495); with none it just happens.
+  // Turn off or Delete on a rule with trashes waiting asks first; with none it just happens.
   const [ask, setAsk] = useState<'off' | 'delete' | null>(null);
   const [waiting, setWaiting] = useState<RuleWaiting>('cancel');
   const turnOff = (answer?: RuleWaiting) => void setRuleEnabled(rule.id, false, answer).catch(toastFailure('Couldn\'t turn the rule off'));
@@ -184,7 +184,7 @@ function LearnedRule({rule}: {rule: RuleOut}) {
 }
 
 /**
- * Add rule, read as a sentence (D487): "If from" a domain or address, "and" each filter added from
+ * Add rule, read as a sentence: "If from" a domain or address, "and" each filter added from
  * the menu (a field's words it contains or doesn't, each at most once), "then send to" a lane and
  * kind. From an email's draft, its sender and where it is now.
  */
@@ -235,7 +235,7 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
       )}
       <span className="lead">then send to</span>
       <span className="rule-line"><Select value={destination} options={DESTINATIONS} label="Send to" onChange={setDestination} /></span>
-      {/* The last line (D518): each label wraps with its control, and Add and Cancel keep its right end. */}
+      {/* The last line: each label wraps with its control, and Add and Cancel keep its right end. */}
       <span className="rule-line add last">
         <span className="pair">
           <span className="s">Mark read</span>

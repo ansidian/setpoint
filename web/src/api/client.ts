@@ -1,4 +1,4 @@
-// Setpoint's JSON API, with darma's small shared cache: a view shows what it last fetched at once
+// Setpoint's JSON API, with a small shared cache: a view shows what it last fetched at once
 // and refreshes behind it, on mount, on focus and when a live event names it (live.ts). A write's
 // answer, or its at-once effect (opening an email drops the counts), goes into the cache straight
 // away. A 401 means the session is gone, and the sign-in card takes over (auth.ts), unless this
@@ -50,7 +50,7 @@ async function request<T>(method: string, path: string, body?: unknown, {quiet40
   try {
     response = await fetch(`/api${path}`, {
       method,
-      // A file (SV-181's .ics) goes as its own bytes, in its own type.
+      // A file (an .ics) goes as its own bytes, in its own type.
       headers: {Accept: 'application/json', ...(body === undefined ? {} : {'Content-Type': body instanceof Blob ? body.type || 'application/octet-stream' : 'application/json'})},
       body: body === undefined ? undefined : body instanceof Blob ? body : JSON.stringify(body),
       // A change sent as the page goes away (a delete still waiting out its Undo) outlives it.
@@ -130,7 +130,7 @@ export function refresh(path: string): Promise<void> {
     data => {
       if (current.version !== version) return;
       // Asked or answered while a change to it is on its way, it may be from before that change:
-      // what's shown stays, and the hold's end loads it again (SV-80).
+      // what's shown stays, and the hold's end loads it again.
       if ((heldAtStart || isHeld(path)) && current.data !== undefined) {
         if (!isHeld(path)) queueMicrotask(() => void refresh(path));
         return;
@@ -152,7 +152,7 @@ export function refresh(path: string): Promise<void> {
   return current.loading;
 }
 
-// SV-80: paths whose answers wait while a change to them is on its way (the pin's lists and email),
+// Paths whose answers wait while a change to them is on its way (the pin's lists and email),
 // by prefix, each with how many holds it has.
 const holds = new Map<string, number>();
 const isHeld = (path: string) => [...holds.keys()].some(prefix => path === prefix || path.startsWith(`${prefix}?`) || path.startsWith(`${prefix}/`));

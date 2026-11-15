@@ -1,22 +1,22 @@
-// Calendar items, calendars, weather and Places (BRIEF.md › Calendar; DESIGN.md › Calendar).
+// Calendar items, calendars, weather and Places.
 //
 //   GET    /api/items?from=2026-10-01&to=2026-11-01   ItemsOut (occurrences expanded; `to` exclusive)
 //   GET    /api/items/:id                              ItemOut (the item itself, not an occurrence)
-//   POST   /api/items                  ItemCreateInput       CommandOut (SV-273: `parent_id` makes a subtask)
+//   POST   /api/items                  ItemCreateInput       CommandOut (`parent_id` makes a subtask)
 //   PATCH  /api/items/:id              ItemUpdateInput       CommandOut
 //   POST   /api/items/:id/delete       ItemScopeInput        CommandOut
 //   POST   /api/items/:id/complete     ItemCompleteInput     CommandOut
-//   PUT    /api/items/:id/subtasks/order SubtaskOrderInput   CommandOut (SV-272: a task's subtasks, every one, in their new order)
+//   PUT    /api/items/:id/subtasks/order SubtaskOrderInput   CommandOut (a task's subtasks, every one, in their new order)
 //   GET    /api/calendars                                     CalendarOut[]
 //   PATCH  /api/calendars/:id          CalendarUpdateInput   CalendarOut (a colour change is a command: `command` says how it went)
 //   GET    /api/weather?from=&to=                             WeatherDayOut[]
-//   GET    /api/places?query=&session_token=                  PlaceSuggestionOut[] (B5)
-//   GET    /api/places/recent                                 RecentPlaceOut[] (SV-71: what "@" offers before typing)
-//   GET    /api/places/:place_id?session_token=               PlaceOut (F7: Settings › Calendar's Home, with its coordinates)
-//   GET    /api/todoist/projects                              TodoistProjectOut[] (B5)
-//   PATCH  /api/todoist/projects/:id   TodoistProjectUpdateInput TodoistProjectOut (SV-25: a colour, a command to Todoist)
-//   GET    /api/todoist/labels                                TodoistLabelOut[] (F6b)
-//   POST   /api/todoist/connect                               TodoistConnectOut: Todoist's consent page (B5)
+//   GET    /api/places?query=&session_token=                  PlaceSuggestionOut[]
+//   GET    /api/places/recent                                 RecentPlaceOut[] (what "@" offers before typing)
+//   GET    /api/places/:place_id?session_token=               PlaceOut (Settings › Calendar's Home, with its coordinates)
+//   GET    /api/todoist/projects                              TodoistProjectOut[]
+//   PATCH  /api/todoist/projects/:id   TodoistProjectUpdateInput TodoistProjectOut (a colour, a command to Todoist)
+//   GET    /api/todoist/labels                                TodoistLabelOut[]
+//   POST   /api/todoist/connect                               TodoistConnectOut: Todoist's consent page
 //   GET    /api/ea/accounts/todoist/callback?code=&state=     Todoist's redirect back (no session; the state is)
 //   POST   /api/calendar/push                                 Google Calendar's watch notifications (no session)
 import {z} from 'zod';
@@ -45,13 +45,13 @@ export interface ItemOut extends ItemWhen {
   attendees: string[];
   // Minutes before the start.
   reminders: number[];
-  // SV-31: Time to Leave for this event, added among its notifications; never by default.
+  // Time to Leave for this event, added among its notifications; never by default.
   leave_reminder: boolean;
   // A task's Todoist project.
   project: string | null;
   done: boolean;
   done_at: string | null;
-  // SV-249 (D510): whether a done task's check reopens it: a one-off task, or a repeating task's
+  // Whether a done task's check reopens it: a one-off task, or a repeating task's
   // latest done occurrence while it still repeats. False while open, and on an older occurrence.
   can_reopen: boolean;
   command: CommandOut | null;
@@ -62,25 +62,25 @@ export interface ItemOut extends ItemWhen {
   // "Leave by 2:05 PM · 18 min": from Home by live routes, with Settings' buffer, when the event has
   // Time to Leave (`leave_reminder`) and there is one.
   time_to_leave: TimeToLeaveOut | null;
-  // F6: an event's own colour (Google's event colour, as a swatch); null takes its calendar's.
+  // An event's own colour (Google's event colour, as a swatch); null takes its calendar's.
   colour: Colour | null;
-  // F6b: a task's Todoist labels, by name. Events have none.
+  // A task's Todoist labels, by name. Events have none.
   labels: string[];
-  // F6b: a repeating task's repeat in Todoist's words ("every mon"), without its time or start.
+  // A repeating task's repeat in Todoist's words ("every mon"), without its time or start.
   repeat: string | null;
-  // SV-179: what Open opens (D439): a web link in the place, else the event's own URL (Google's
+  // What Open opens: a web link in the place, else the event's own URL (Google's
   // source.url), else null. Tasks have none.
   link: string | null;
-  // SV-180: an event's free/busy, as Google names it: `transparent` is free, left out of the
-  // editor's conflict preview (D440). Tasks have none.
+  // An event's free/busy, as Google names it: `transparent` is free, left out of the
+  // editor's conflict preview. Tasks have none.
   transparency: Transparency | null;
-  // SV-264: the description as its provider wrote it (D547): HTML on an event (Google's), Markdown on
+  // The description as its provider wrote it: HTML on an event (Google's), Markdown on
   // a task (Todoist's); null for none. Never drawn as raw HTML: web/src/logic/description reads it.
   description: string | null;
-  // SV-272 (D558): a Todoist task's subtasks, in Todoist's order, for its checklist. Each completes
+  // A Todoist task's subtasks, in Todoist's order, for its checklist. Each completes
   // and reopens by its own id (POST /api/items/:id/complete); none of it completes the task.
   subtasks: SubtaskOut[];
-  // SV-273 (D569): a subtask's task, by its id here; null for a task of its own.
+  // A subtask's task, by its id here; null for a task of its own.
   parent_id: number | null;
 }
 
@@ -89,14 +89,14 @@ export interface SubtaskOut {
   title: string;
   done: boolean;
   command: CommandOut | null;
-  // SV-273: its task's id, and its own due and reminders, for the date after its title (D567).
+  // Its task's id, and its own due and reminders, for the date after its title.
   parent_id: number;
   due_date: string | null;
   due_at: string | null;
   reminders: number[];
 }
 
-/** Time to Leave for one occurrence (DESIGN.md › Right pane). */
+/** Time to Leave for one occurrence. */
 export interface TimeToLeaveOut {
   leave_at: string;
   travel_minutes: number;
@@ -120,7 +120,7 @@ const when = {
   due_date: localDate.nullable(),
   due_at: instant.nullable(),
 };
-/** How far from the item's moment a reminder can be, either side: 4 weeks (D287). */
+/** How far from the item's moment a reminder can be, either side: 4 weeks. */
 export const REMINDER_LIMIT_MINUTES = 40_320;
 
 const editable = {
@@ -132,25 +132,25 @@ const editable = {
   place: z.string().max(300).nullable(),
   address: z.string().max(500).nullable(),
   attendees: z.array(z.string().min(1).max(200)).max(100),
-  // Minutes before the item's moment; a negative one is after it, 4 weeks either side (D287).
+  // Minutes before the item's moment; a negative one is after it, 4 weeks either side.
   reminders: z.array(z.int().min(-REMINDER_LIMIT_MINUTES).max(REMINDER_LIMIT_MINUTES)).max(10),
-  // SV-31: an event's Time to Leave, sent while Settings › Notifications has it on. Tasks have none.
+  // An event's Time to Leave, sent while Settings › Notifications has it on. Tasks have none.
   leave_reminder: z.boolean(),
   project: z.string().min(1).max(200).nullable(),
-  // F6: an event's own colour; null takes its calendar's. Tasks have none.
+  // An event's own colour; null takes its calendar's. Tasks have none.
   colour: z.enum(EVENT_COLOURS).nullable(),
-  // F6b: a task's Todoist labels, by name (Todoist's own key for them). Events have none.
+  // A task's Todoist labels, by name (Todoist's own key for them). Events have none.
   labels: z.array(z.string().trim().min(1).max(60)).max(50),
-  // F6b: a task's repeat in Todoist's words ("every mon"); null for none. Sent to Todoist with the
+  // A task's repeat in Todoist's words ("every mon"); null for none. Sent to Todoist with the
   // due day and time as one due string, so a date change never drops the repeat.
   repeat: z.string().trim().min(1).max(100).nullable(),
-  // SV-264: the description in its provider's own format (HTML for an event, Markdown for a task),
+  // The description in its provider's own format (HTML for an event, Markdown for a task),
   // sent only when the user changed it; null or an empty one clears it. Each provider keeps its own
   // limit and refuses in its own words.
   description: z.string().max(65_536).nullable().transform(text => text || null),
 };
 
-/** Whether the time fields fit the kind: a timed event, an all-day event, or a task's due day (or none, SV-74). */
+/** Whether the time fields fit the kind: a timed event, an all-day event, or a task's due day (or none). */
 export function whenProblem(item: {kind: ItemKind} & Partial<ItemWhen>): string | null {
   if (item.kind === 'task') {
     if (!item.due_date && item.due_at) return 'A task\'s time needs a due date.';
@@ -183,15 +183,15 @@ export const itemCreateInput = z.strictObject({
   place: editable.place.default(null),
   address: editable.address.default(null),
   attendees: editable.attendees.default([]),
-  // Omitted: Settings › Notifications' default for events (None unless set, D49).
+  // Omitted: Settings › Notifications' default for events (None unless set).
   reminders: editable.reminders.optional(),
-  // Never on unless asked for (SV-31).
+  // Never on unless asked for.
   leave_reminder: editable.leave_reminder.default(false),
   project: editable.project.default(null),
   // A task's project that Todoist doesn't have yet is made only when this says so: the user picked "New
-  // project" (SV-24, D50); otherwise an unknown name goes to the default project.
+  // project"; otherwise an unknown name goes to the default project.
   create_project: z.boolean().optional(),
-  // SV-273 (D566): a subtask of this task, added at the end of its checklist. It goes in the task's project.
+  // A subtask of this task, added at the end of its checklist. It goes in the task's project.
   parent_id: id.optional(),
   colour: editable.colour.default(null),
   labels: editable.labels.default([]),
@@ -225,7 +225,7 @@ export type ItemScopeInput = z.infer<typeof itemScopeInput>;
 export const itemCompleteInput = z.strictObject({done: z.boolean(), occurrence_date: localDate.nullable().default(null)});
 export const subtaskOrderInput = z.strictObject({subtask_ids: z.array(id).min(1).max(500)});
 
-/** Each Google calendar, and Todoist as one more toggle (DESIGN.md › Sidebar on Calendar). */
+/** Each Google calendar, and Todoist as one more toggle. */
 export interface CalendarOut {
   id: number;
   provider: CalendarProvider;
@@ -239,14 +239,14 @@ export interface CalendarOut {
   // Settings › Calendar's switch: false, the calendar is left out of Calendar entirely (its sidebar,
   // grid, agenda, pickers and search), whatever `visible` says.
   listed: boolean;
-  // SV-191: false for a calendar the user can only read (Google's accessRole reader or freeBusyReader,
+  // False for a calendar the user can only read (Google's accessRole reader or freeBusyReader,
   // as a subscribed holiday calendar is): its events are read-only and no picker offers it.
   writable: boolean;
-  // SV-20: the colour change waiting for Google, or failed in place with its words; null otherwise.
+  // The colour change waiting for Google, or failed in place with its words; null otherwise.
   command: CommandOut | null;
 }
 export const calendarProviderSchema = z.enum(CALENDAR_PROVIDERS);
-/** Show or hide a calendar, list it in Calendar or not (Setpoint's own settings), and SV-20: pick a Google calendar's colour, written to Google. */
+/** Show or hide a calendar, list it in Calendar or not (Setpoint's own settings), and pick a Google calendar's colour, written to Google. */
 export const calendarUpdateInput = z.strictObject({visible: z.boolean().optional(), listed: z.boolean().optional(), colour: z.enum(COLOURS).optional()})
   .refine(input => input.visible !== undefined || input.listed !== undefined || input.colour !== undefined, 'Nothing to change.');
 export type CalendarUpdateInput = z.infer<typeof calendarUpdateInput>;
@@ -267,13 +267,13 @@ export interface PlaceSuggestionOut {
   address: string;
 }
 
-/** SV-71: a place the user's events have used, offered before anything is typed; its address when one had it. */
+/** A place the user's events have used, offered before anything is typed; its address when one had it. */
 export interface RecentPlaceOut {
   name: string;
   address: string | null;
 }
 
-/** F7: one place with where it is, for Home (Time to Leave's routes and the forecast need its coordinates). */
+/** One place with where it is, for Home (Time to Leave's routes and the forecast need its coordinates). */
 export const placeInput = z.strictObject({session_token: z.string().min(8).max(64).optional()});
 export interface PlaceOut extends PlaceSuggestionOut {
   lat: number;
@@ -282,7 +282,7 @@ export interface PlaceOut extends PlaceSuggestionOut {
 
 /**
  * Todoist's own project colours, by the names its API uses, with its hex values
- * (developer.todoist.com/api/v1 › Colors). A task's ring takes its project's (SV-25, D54).
+ * (developer.todoist.com/api/v1 › Colors). A task's ring takes its project's.
  */
 export const TODOIST_COLOURS = {
   berry_red: '#b8255f', red: '#dc4c3e', orange: '#c77100', yellow: '#b29104', olive_green: '#949c31',
@@ -301,14 +301,14 @@ export interface TodoistProjectOut {
   inbox: boolean;
   // Null when Todoist named a colour Setpoint doesn't know.
   colour: TodoistColour | null;
-  // SV-25: the colour change waiting for Todoist, or failed in place with its words; null otherwise.
+  // The colour change waiting for Todoist, or failed in place with its words; null otherwise.
   command: CommandOut | null;
 }
-/** SV-25: pick a project's colour, written to Todoist. */
+/** Pick a project's colour, written to Todoist. */
 export const todoistProjectUpdateInput = z.strictObject({colour: z.enum(TODOIST_COLOUR_NAMES)});
 export type TodoistProjectUpdateInput = z.infer<typeof todoistProjectUpdateInput>;
 
-/** A Todoist label, for a task's labels picker (F6b). */
+/** A Todoist label, for a task's labels picker. */
 export interface TodoistLabelOut {
   id: string;
   name: string;

@@ -1,5 +1,5 @@
 // Calendar's last view, Month or Week, kept by this browser (localStorage, as the theme is) so the
-// sidebar's Calendar, `2`, ⌘K and links from outside open in it (DESIGN.md › Week view). While on
+// sidebar's Calendar, `2`, ⌘K and links from outside open in it. While on
 // Calendar the address carries the view; this only fills it in for an address that names none.
 import type {CalendarMode} from '../../logic/route.ts';
 

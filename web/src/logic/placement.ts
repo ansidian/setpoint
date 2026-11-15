@@ -1,9 +1,7 @@
-// Where an overlay anchored to a calendar item goes (DESIGN.md › The floating detail › Placement,
-// #348): 8 px off its item, beside it on the side away from the grid's nearer edge, an item in the
+// Where an overlay anchored to a calendar item goes: 8 px off its item, beside it on the side away from the grid's nearer edge, an item in the
 // grid's left half (the first four columns in month) getting it on its right and one in the right half on its left,
 // level with it and slid inside the grid. The side never depends on what's around the item, so it can
 // be told before the click. The floating detail uses it, and so does every overlay anchored to an item.
-// Rewritten from v1's `calendarFloatingDetailPlacement` through the harvest gate (darma SV-14).
 import {placement} from '../tokens.ts';
 import type {Rect} from './calendar.ts';
 
@@ -82,7 +80,7 @@ export function candidates(anchor: Rect, size: Size, bounds: Rect, others: Rect[
 }
 
 /**
- * Where the floating detail goes for an item in the open "+N" popover (#324): beside the popover,
+ * Where the floating detail goes for an item in the open "+N" popover: beside the popover,
  * right then left, level with the item, so the list stays readable. Where neither side has room,
  * the one short of it least, slid inside the grid over the popover's edge.
  */
@@ -95,7 +93,7 @@ export function besidePopover(chip: Rect, popover: Rect, size: Size, bounds: Rec
 }
 
 /**
- * Where the floating detail goes for a right-pane row (#322): 8 px left of the row, over the grid,
+ * Where the floating detail goes for a right-pane row: 8 px left of the row, over the grid,
  * its top level with the row's, slid inside the grid along that edge.
  */
 export function besideRow(anchor: Rect, size: Size, bounds: Rect, gap: number = placement.gapPx): Placement {
@@ -105,7 +103,7 @@ export function besideRow(anchor: Rect, size: Size, bounds: Rect, gap: number = 
 }
 
 /**
- * Where an overlay anchored to `anchor` goes (#348): right of an item whose centre is in the left
+ * Where an overlay anchored to `anchor` goes: right of an item whose centre is in the left
  * half of `bounds` (the middle column with them), left of one in the right half, the other of the
  * two when that side has no room. Short of room on both, the nearer of the two slides inside over
  * the item's edge, as long as it hides no more than half the item or a quarter of the card; past

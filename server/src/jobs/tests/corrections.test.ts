@@ -1,8 +1,7 @@
-// Needs you's answers and the corrections (J6; BRIEF.md › Jobs › Corrections; decisions 58, 67, 68, 69;
-// D322, D364–D367), against an ephemeral database holding the seed, through Jobs's routes, with
-// Anthropic and the hiring platforms faked at the HTTP boundary (./fakeWeb.ts). The Done-when list:
+// Needs you's answers and the corrections, against an ephemeral database holding the seed, through
+// Jobs's routes, with Anthropic and the hiring platforms faked at the HTTP boundary (./fakeWeb.ts):
 // each correction, then a new email, a history re-run and a lookup, and the correction stands; Undo
-// restores exactly what was there; D322's exception (an email that sets a status replaces one set by
+// restores exactly what was there; the one exception (an email that sets a status replaces one set by
 // hand, a quiet one doesn't); Let emails decide recomputes the status from the emails.
 import {jobsChangeSchema, jobsUndoneSchema, SEED_NOW} from '@setpoint/shared';
 import type {JobsChangeOut, JobStatus} from '@setpoint/shared';
@@ -379,7 +378,7 @@ const CASES: Case[] = [
   },
 ];
 
-describe('every correction sticks (decision 58): a new email, a history re-run and a lookup leave it', () => {
+describe('every correction sticks: a new email, a history re-run and a lookup leave it', () => {
   test.each(CASES)('$name', async ({correct, email, history, lookup, stands}) => {
     const s = await setup();
     await correct(s);
@@ -431,7 +430,7 @@ describe('Undo restores exactly what was there', () => {
 
 });
 
-describe('a status set by hand (D322, D365)', () => {
+describe('a status set by hand', () => {
   const litware = (s: Setup) => s.id('Litware', 'QA Engineer');
 
   test.each<[string, Reading, JobStatus, 'user' | 'email']>([
@@ -465,7 +464,7 @@ describe('a status set by hand (D322, D365)', () => {
   });
 });
 
-describe('a pin (SV-243, D504, D505)', () => {
+describe('a pin', () => {
   const litware = (s: Setup) => s.id('Litware', 'QA Engineer');
   const pinnedAt = (s: Setup, id: number) => jobsPage(s.store).rows.find(row => row.id === id)!.pinned_at;
 

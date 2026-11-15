@@ -1,7 +1,7 @@
-// The shared tooltip (DESIGN.md › Decided while building #299), in place of the browser's own: any
+// The shared tooltip, in place of the browser's own: any
 // element with `data-tip` names itself with it. The mouse resting on one, or the keyboard focusing one,
 // shows the tip under it (logic/tip.ts): after 80 ms where it's marked `data-tip-quick` (what it
-// reveals where you've stopped to read, as the reader's sender), 500 ms elsewhere (SV-171). Leaving it,
+// reveals where you've stopped to read, as the reader's sender), 500 ms elsewhere. Leaving it,
 // a press, a scroll, Esc, or the window resizing or losing focus puts it away; so does the element
 // going or losing its `data-tip`. A tip that only repeats the element's own words shows only while
 // some of them are cut. One gaining a `data-tip` under the mouse (the editor's line over a mark) shows

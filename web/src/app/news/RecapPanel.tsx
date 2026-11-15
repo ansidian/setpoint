@@ -1,4 +1,4 @@
-// The recap's story panel (SV-219, D466 as amended, DESIGN.md #332): a story of While you were away
+// The recap's story panel: a story of While you were away
 // opened from News's pane, over the list's column, so the pane and its recap stay in view beside it.
 // It grows out of the row clicked, from that row's box to the column's over 260 ms, and shrinks back
 // into it as it closes. Its head says where it is in the recap ("3 of 8"), with Open at its outlet
@@ -10,7 +10,7 @@
 // In a narrow window the pane covers the list, so the panel has no column: it opens as a modal in
 // Settings's frame instead, over a scrim.
 //
-// Opening a story sees it (D87), so its row in the pane turns `ink2`. Not in the address bar, as
+// Opening a story sees it, so its row in the pane turns `ink2`. Not in the address bar, as
 // Settings isn't.
 import type {ArticleOut, StoryOut, StoryRowOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';

@@ -1,16 +1,16 @@
-// Every correction sticks (decision 58; BRIEF.md › Jobs › Corrections; J6): the one place the reader,
+// Every correction sticks: the one place the reader,
 // the rules, the history pass and the lookup ask before they write, so that no new email, re-run or
 // lookup undoes what the user set.
 //
 // - A field the user set (company, title, status) is theirs: nothing automatic writes it again. The
-//   one exception is D322's: an email that sets a status (an assessment, interview, offer or
+//   one exception: an email that sets a status (an assessment, interview, offer or
 //   rejection), no older than the status it replaces, takes over from one set by hand; a quiet email
-//   never does (decision 68). `emailSetsStatus` is that exception, and the only place it's made.
+//   never does. `emailSetsStatus` is that exception, and the only place it's made.
 // - A merge, a move, an assignment and an edited title or company leave the application answering to
 //   the company and role they brought (`knownApplications`' aliases), so a later email naming them
 //   comes to it rather than making another application or waiting in Needs you.
 // - Not an application blocks its emails and, by its company and role, the ones after them
-//   (`blockedEmails`, decision 67). Delete blocks nothing, so a later email can make it again.
+//   (`blockedEmails`). Delete blocks nothing, so a later email can make it again.
 // - A posting the user turned down (None of these, Not this posting, Look it up after a pick Jobs
 //   couldn't read) is never saved or offered again (`rejectedLinks`), and a lookup writes only while its application is still `looking` for one
 //   (`stillLooking`): Undo, None of these or Not this posting since it began win over what it found.
@@ -32,7 +32,7 @@ export function setByHand(store: Store, applicationId: number, field: JobHandFie
 }
 
 /**
- * D322's exception, the only one: an email that sets a status has just moved this application
+ * The exception, the only one: an email that sets a status has just moved this application
  * (rules.ts `statusAfter` said so), so a status the user set by hand gives way to it.
  */
 export function emailSetsStatus(store: Store, applicationId: number) {
@@ -68,7 +68,7 @@ export function addAlias(store: Store, applicationId: number, alias: Alias, now:
   jobsDb(store.sqlite).insert(j.jobsAliases).values({applicationId, company: alias.company, titleKey: alias.titleKey, requisitionId: alias.requisitionId, createdAt: now}).run();
 }
 
-/** The emails Not an application blocked, by their own company and role, else as they were read (decision 67). */
+/** The emails Not an application blocked, by their own company and role, else as they were read. */
 export function blockedEmails(store: Store): BlockedEmail[] {
   return jobsDb(store.sqlite).select({
     messageId: j.jobsBlockedEmails.messageId, blockedCompany: j.jobsBlockedEmails.company, blockedKey: j.jobsBlockedEmails.titleKey,

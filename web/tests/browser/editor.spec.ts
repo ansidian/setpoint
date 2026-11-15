@@ -1,10 +1,10 @@
-// The editor in the right pane (DESIGN.md › Editor and Recurring events; boards 13 and 14): boards
+// The editor in the right pane (boards 13 and 14): boards
 // 13 and 14 built and checked (board 13's Dinner with Sam isn't on the calendar yet, the no-dinner
-// fixture, D3), then the flows:
+// fixture), then the flows:
 // creating the board's two events at once, an edit asking which occurrences (This event, then All
 // events), a Todoist task from the same editor, the editor opened from an email's proposal at
-// /calendar/new, an edited item's Title read as a line (SV-90), and a new item's one line, its lit
-// phrases made title words again by a click or ⌥⌫ (D290).
+// /calendar/new, an edited item's Title read as a line, and a new item's one line, its lit
+// phrases made title words again by a click or ⌥⌫.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CommandOut, ItemsOut} from '@setpoint/shared';
@@ -32,7 +32,7 @@ async function settled(setpoint: Setpoint, date: string) {
   return until(`${date}'s changes confirmed`, () => day(setpoint, date), items => items.every(item => item.state === null), 8000);
 }
 
-/** The line's title words as it shows them: its text outside the lit phrases (D290). */
+/** The line's title words as it shows them: its text outside the lit phrases. */
 const titleWords = (page: Page) => page.locator('.editor .nl-text').evaluate(text => [...text.childNodes].filter(node => node.nodeType === Node.TEXT_NODE)
   .map(node => node.textContent).join(' ').replace(/\s+/g, ' ').trim());
 
@@ -52,7 +52,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.keyboard.press('c');
     const line = page.getByLabel('Describe the event');
     await line.waitFor();
-    // A new item is its one line, with no Title field under it (D290), and no conflict line warns about an empty draft.
+    // A new item is its one line, with no Title field under it, and no conflict line warns about an empty draft.
     assert.equal(await page.locator('.editor').getByLabel('Title', {exact: true}).count(), 0, 'no Title field');
     assert.equal(await page.locator('.editor .conflict').count(), 0, 'no conflict preview for an empty draft');
     await line.pressSequentially('Dinner with Sam fri 7-9pm @Blue Door');
@@ -73,7 +73,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await line.pressSequentially('Gym sat 9am');
     await page.locator('.cell[data-date="2026-10-10"] .ev.ghost', {hasText: 'Gym'}).waitFor();
     await page.getByRole('button', {name: 'Expand draft: Dinner with Sam fri 7-9pm @Blue Door'}).click();
-    // Time to Leave is never there by default (SV-31); the menu offers it with Settings' buffer.
+    // Time to Leave is never there by default; the menu offers it with Settings' buffer.
     assert.equal(await page.locator('.editor .qchip.ttl').count(), 0);
     await page.getByRole('button', {name: 'Add reminder'}).click();
     await page.getByRole('menuitem', {name: 'Time to Leave 5 min buffer'}).click();
@@ -89,7 +89,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.locator('.cell[data-date="2026-10-09"] .ev', {hasText: 'Dinner with Sam'}).waitFor();
     await settled(setpoint, '2026-10-09');
     const dinner = (await day(setpoint, '2026-10-09')).find(item => item.title === 'Dinner with Sam')!;
-    // Settings' reminder default (override 8), the place as typed, and Time to Leave.
+    // Settings' reminder default, the place as typed, and Time to Leave.
     assert.deepEqual([dinner.at, dinner.place, dinner.reminders, dinner.leave], ['7:00 PM', 'Blue Door', [10], true]);
     assert.deepEqual(await titles(setpoint, '2026-10-10'), ['Gym 9:00 AM']);
     await page.locator('.cell[data-date="2026-10-10"] .ev:not(.ghost)', {hasText: 'Gym'}).waitFor();
@@ -100,7 +100,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
   }
 });
 
-test('SV-27: a picked place stops the place, so what\'s typed after it is the title again, and its full address shows', async () => {
+test('a picked place stops the place, so what\'s typed after it is the title again, and its full address shows', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -110,7 +110,7 @@ test('SV-27: a picked place stops the place, so what\'s typed after it is the ti
     await line.waitFor();
     await line.pressSequentially('Lunch fri 1pm @coffee');
     await page.locator('.places .menu-i.cur', {hasText: 'Blue Door Coffee'}).waitFor();
-    // Tab picks as Enter does, and the line reads the place in full, then a space (SV-29).
+    // Tab picks as Enter does, and the line reads the place in full, then a space.
     await page.keyboard.press('Tab');
     await page.locator('.eg > .place-address', {hasText: '77 Elm Ave, Glendale'}).waitFor();
     assert.equal(await line.inputValue(), 'Lunch fri 1pm @Blue Door Coffee ');
@@ -234,7 +234,7 @@ test('choice 14: clicks on the grid keep the draft; E doesn\'t replace it; Esc c
   }
 });
 
-test('UX #3: a started draft and an unsaved edit are still there after going to the Inbox and back', async () => {
+test('a started draft and an unsaved edit are still there after going to the Inbox and back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -270,7 +270,7 @@ test('UX #3: a started draft and an unsaved edit are still there after going to 
   }
 });
 
-test('D56: a click on a day moves a new draft there, empty or started, unless its line names a day', async () => {
+test('a click on a day moves a new draft there, empty or started, unless its line names a day', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -323,7 +323,7 @@ test('D56: a click on a day moves a new draft there, empty or started, unless it
   }
 });
 
-test('SV-29: New, C and D leave a started draft be and say so; a folded draft goes with its ×; an empty draft is a ghost too', async () => {
+test('New, C and D leave a started draft be and say so; a folded draft goes with its ×; an empty draft is a ghost too', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -364,7 +364,7 @@ test('SV-29: New, C and D leave a started draft be and say so; a folded draft go
   }
 });
 
-test('SV-29: an event\'s days picked in its sheet reach the event, the End list its last day\'s and on screen; typed too', async () => {
+test('an event\'s days picked in its sheet reach the event, the End list its last day\'s and on screen; typed too', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -375,7 +375,7 @@ test('SV-29: an event\'s days picked in its sheet reach the event, the End list 
     const date = page.getByLabel('Date', {exact: true});
     await date.click();
     // The sheet itself (Sunday first, the band following the pointer either way, its fills, typing)
-    // is tests/components/dateRange.test.tsx's (SV-101); here, the days picked reach the event.
+    // is tests/components/dateRange.test.tsx's; here, the days picked reach the event.
     await page.getByRole('dialog', {name: 'Date: pick the first day'}).getByRole('button', {name: '2026-10-13'}).click();
     await page.getByRole('dialog', {name: 'Date: pick the last day'}).getByRole('button', {name: '2026-10-16'}).click();
     await page.locator('.datepop').waitFor({state: 'detached'});
@@ -435,7 +435,7 @@ test('a Todoist task in the same editor: its due day from the line and its proje
   }
 });
 
-test('SV-264: a description shows formatted in the detail; an edit that leaves it alone doesn\'t send it, one that changes it sends it as Google writes it, and clearing it sends none', async () => {
+test('a description shows formatted in the detail; an edit that leaves it alone doesn\'t send it, one that changes it sends it as Google writes it, and clearing it sends none', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -506,7 +506,7 @@ test('SV-264: a description shows formatted in the detail; an edit that leaves i
   }
 });
 
-test('SV-264: a new task\'s description is written as Markdown, and a task\'s detail reads it back formatted', async () => {
+test('a new task\'s description is written as Markdown, and a task\'s detail reads it back formatted', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -536,7 +536,7 @@ test('SV-264: a new task\'s description is written as Markdown, and a task\'s de
   }
 });
 
-test('SV-74: a new task\'s × takes its date off, its time and repeat with it; Todoist gets it with no date, and a refusal comes as a toast', async () => {
+test('a new task\'s × takes its date off, its time and repeat with it; Todoist gets it with no date, and a refusal comes as a toast', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -554,7 +554,7 @@ test('SV-74: a new task\'s × takes its date off, its time and repeat with it; T
     assert.deepEqual([await page.getByLabel('Start', {exact: true}).count(), await page.getByRole('button', {name: 'Add a time'}).count(), await page.getByRole('button', {name: 'Repeat'}).count()], [0, 0, 0]);
     await page.getByRole('button', {name: 'Create task'}).click();
     const created = await until('the create confirmed', () => setpoint.api<CommandOut[]>('GET', '/commands?active=false'), list => list.some(one => one.kind === 'item_create' && one.state === 'confirmed'));
-    // A create says nothing (DESIGN #247), even with no day to land on.
+    // A create says nothing, even with no day to land on.
     await setpoint.idle();
     assert.equal(await page.locator('.toast').count(), 0, 'no toast for a create');
     const id = created.find(one => one.kind === 'item_create')!.target_id;
@@ -574,7 +574,7 @@ test('SV-74: a new task\'s × takes its date off, its time and repeat with it; T
   }
 });
 
-test('SV-72: a new task\'s ghost takes its default project\'s colour before one is picked, the same as a task already in it', async () => {
+test('a new task\'s ghost takes its default project\'s colour before one is picked, the same as a task already in it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     // Home, as the seed's Inbox is Todoist's charcoal, too near the unset ring's gray to tell apart.
@@ -598,7 +598,7 @@ test('SV-72: a new task\'s ghost takes its default project\'s colour before one 
   }
 });
 
-test('SV-88: a task made with no project keeps its default project\'s colour once it\'s saved, and is in that project', async () => {
+test('a task made with no project keeps its default project\'s colour once it\'s saved, and is in that project', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     await setpoint.api('PATCH', '/settings', {todoist: {default_project: 'Home'}});
@@ -625,7 +625,7 @@ test('SV-88: a task made with no project keeps its default project\'s colour onc
   }
 });
 
-test('SV-25: a task\'s #project in the line: suggestions under Project, a pick ends it, and New project is made with the task; a typed repeat is the task\'s', async () => {
+test('a task\'s #project in the line: suggestions under Project, a pick ends it, and New project is made with the task; a typed repeat is the task\'s', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -643,7 +643,7 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
     assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Home↵', 'New project “hom”']);
     // Not a project yet: the mark is ink2.
     assert.equal(await markColour(), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ink2').trim()));
-    // Each project in its own colour (SV-29): Home is the seed's orange (#c77100), clamped per theme as its rings are (#175).
+    // Each project in its own colour: Home is the seed's orange (#c77100), clamped per theme as its rings are.
     const orange = await rested(() => page.evaluate(() => {
       const probe = document.createElement('span');
       probe.style.color = 'oklch(from #c77100 clamp(var(--ringMin), l, var(--ringMax)) c h)';
@@ -655,7 +655,7 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
     assert.equal(await rested(() => menu.getByRole('option', {name: 'Home'}).locator('.dot').evaluate(dot => getComputedStyle(dot).backgroundColor)), orange);
     await page.keyboard.press('Enter');
     await menu.waitFor({state: 'detached'});
-    // The line reads the project's name, then a space (SV-29).
+    // The line reads the project's name, then a space.
     assert.equal(await line.inputValue(), 'Pay bills #Home ');
     // Home's orange, as its dot in the Project field and menu (TODOIST_COLOURS.orange).
     await mark.filter({hasText: '#Home'}).waitFor();
@@ -691,7 +691,7 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
   }
 });
 
-test('SV-56: a line longer than the field shows its typed end and marks, with the cut side flagged; Home goes back to its start', async () => {
+test('a line longer than the field shows its typed end and marks, with the cut side flagged; Home goes back to its start', async () => {
   const setpoint = await startSetpoint({fixtures: ['no-dinner'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -733,7 +733,7 @@ test('SV-56: a line longer than the field shows its typed end and marks, with th
   }
 });
 
-test('SV-71: a task\'s lone # shows every project before anything is typed; a pick goes into the line and the field', async () => {
+test('a task\'s lone # shows every project before anything is typed; a pick goes into the line and the field', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -758,7 +758,7 @@ test('SV-71: a task\'s lone # shows every project before anything is typed; a pi
   }
 });
 
-test('SV-71: an event\'s lone # shows every calendar, and a lone @ or an empty Place the places events have used', async () => {
+test('an event\'s lone # shows every calendar, and a lone @ or an empty Place the places events have used', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -803,7 +803,7 @@ test('SV-71: an event\'s lone # shows every calendar, and a lone @ or an empty P
   }
 });
 
-test('D57: an event\'s #calendar in the line filters the Calendar menu; typing alone takes the first, a pick ends it, and #1 stays a title', async () => {
+test('an event\'s #calendar in the line filters the Calendar menu; typing alone takes the first, a pick ends it, and #1 stays a title', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -819,7 +819,7 @@ test('D57: an event\'s #calendar in the line filters the Calendar menu; typing a
     assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Classes↵']);
     await calendar.filter({hasText: 'Classes'}).waitFor();
     await page.locator('.nl .tok-c', {hasText: '#cl'}).waitFor();
-    // Tab picks as Enter does: the line reads the calendar's name, then a space (SV-29).
+    // Tab picks as Enter does: the line reads the calendar's name, then a space.
     await page.keyboard.press('Tab');
     await menu.waitFor({state: 'detached'});
     assert.equal(await line.inputValue(), 'Lab review fri 3pm #Classes ');
@@ -837,7 +837,7 @@ test('D57: an event\'s #calendar in the line filters the Calendar menu; typing a
   }
 });
 
-test('SV-25: the date and time pickers: a month under the date, 15-minute lists (End\'s with lengths), shorthand, and × back to all day', async () => {
+test('the date and time pickers: a month under the date, 15-minute lists (End\'s with lengths), shorthand, and × back to all day', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -845,7 +845,7 @@ test('SV-25: the date and time pickers: a month under the date, 15-minute lists 
     await page.keyboard.press('c');
     await page.getByLabel('Describe the event').pressSequentially('Standup fri 10am');
     const [date, start, end] = ['Date', 'Start', 'End'].map(label => page.getByLabel(label, {exact: true}));
-    // The date: a month under it, a click picks the first day, then the last (SV-29): the same day
+    // The date: a month under it, a click picks the first day, then the last: the same day
     // again is one day. ↓ moves a week and Enter picks as a click does.
     await date!.click();
     const month = page.getByRole('dialog', {name: 'Date: pick the first day'});
@@ -875,7 +875,7 @@ test('SV-25: the date and time pickers: a month under the date, 15-minute lists 
     await page.keyboard.press('Enter');
     await starts.waitFor({state: 'detached'});
     assert.deepEqual([await start!.inputValue(), await end!.inputValue()], ['10:15 AM', '11:15 AM']);
-    // End: No end (SV-78), then from after the start, with lengths.
+    // End: No end, then from after the start, with lengths.
     await end!.click();
     const ends = page.getByRole('listbox', {name: 'End times'});
     assert.deepEqual((await ends.getByRole('option').allTextContents()).slice(0, 2), ['No end', '10:30 AM (15 min)']);
@@ -908,7 +908,7 @@ test('SV-25: the date and time pickers: a month under the date, 15-minute lists 
   }
 });
 
-test('SV-78: No end in the End list makes an event that ends as it starts; it says its start alone and overlaps nothing', async () => {
+test('No end in the End list makes an event that ends as it starts; it says its start alone and overlaps nothing', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -950,7 +950,7 @@ test('SV-78: No end in the End list makes an event that ends as it starts; it sa
   }
 });
 
-test('SV-180: a free event clashes with nothing in the conflict preview or the agenda: an event during the Career fair, and the fair over it (D440)', async () => {
+test('a free event clashes with nothing in the conflict preview or the agenda: an event during the Career fair, and the fair over it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -983,7 +983,7 @@ test('SV-180: a free event clashes with nothing in the conflict preview or the a
   }
 });
 
-test('SV-108: the line\'s "2pm no end" and "2pm to 2pm" pick No end in End, lit with the time; saved, it ends as it starts and opens as No end', async () => {
+test('the line\'s "2pm no end" and "2pm to 2pm" pick No end in End, lit with the time; saved, it ends as it starts and opens as No end', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1018,7 +1018,7 @@ test('SV-108: the line\'s "2pm no end" and "2pm to 2pm" pick No end in End, lit 
   }
 });
 
-test('SV-111: the line\'s span of days: "oct 23–25" is all day over them, "fri 7pm to sun 3pm" one event across them', async () => {
+test('the line\'s span of days: "oct 23–25" is all day over them, "fri 7pm to sun 3pm" one event across them', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1054,7 +1054,7 @@ test('SV-111: the line\'s span of days: "oct 23–25" is all day over them, "fri
   }
 });
 
-test('SV-111: a span of days with one time range repeats it daily until the last day, as Repeat says', async () => {
+test('a span of days with one time range repeats it daily until the last day, as Repeat says', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1079,7 +1079,7 @@ test('SV-111: a span of days with one time range repeats it daily until the last
   }
 });
 
-test('SV-111: a length after "for" sets End from the start, and with no time typed from 9:00 AM', async () => {
+test('a length after "for" sets End from the start, and with no time typed from 9:00 AM', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1118,7 +1118,7 @@ test('SV-111: a length after "for" sets End from the start, and with no time typ
 /** The editor's reminder chips as they read, Time to Leave's aside. */
 const reminderChips = (page: Page) => page.locator('.editor .prow.reminders .qchip:not(.ttl)').allTextContents();
 
-test('SV-112: "remind me 1h before" in a new event\'s line replaces Settings\' default, and a reminder ticked sits beside it', async () => {
+test('"remind me 1h before" in a new event\'s line replaces Settings\' default, and a reminder ticked sits beside it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1152,7 +1152,7 @@ test('SV-112: "remind me 1h before" in a new event\'s line replaces Settings\' d
   }
 });
 
-test('SV-112: a moment in the line, "reminder fri 8pm", is the reminder\'s and not the event\'s day, kept as its offset; kept as words, it drops it', async () => {
+test('a moment in the line, "reminder fri 8pm", is the reminder\'s and not the event\'s day, kept as its offset; kept as words, it drops it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1163,7 +1163,7 @@ test('SV-112: a moment in the line, "reminder fri 8pm", is the reminder\'s and n
     await page.locator('.nl .tok-r', {hasText: 'reminder fri 8pm'}).waitFor();
     await until('the chip at its moment, the offset beside it', () => reminderChips(page), list => list.join() === 'Fri, Oct 9, 8:00 PM19 hrs before');
     assert.match(await page.getByLabel('Date', {exact: true}).inputValue(), /Oct 10/);
-    // Kept as words (⌥⌫ inside it, D290), the phrase drops its reminder for Settings' default; typed into again, it's back.
+    // Kept as words (⌥⌫ inside it), the phrase drops its reminder for Settings' default; typed into again, it's back.
     await line.press('ArrowLeft');
     await line.press('Alt+Backspace');
     await page.locator('.nl .tok-r').waitFor({state: 'detached'});
@@ -1184,7 +1184,7 @@ test('SV-112: a moment in the line, "reminder fri 8pm", is the reminder\'s and n
   }
 });
 
-test('SV-112: a reminder phrase typed into an edited item\'s Title adds to its reminders', async () => {
+test('a reminder phrase typed into an edited item\'s Title adds to its reminders', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1210,7 +1210,7 @@ test('SV-112: a reminder phrase typed into an edited item\'s Title adds to its r
   }
 });
 
-test('F6b: a task\'s labels and repeat: picked from Todoist\'s, set on a new task and changed on an existing one', async () => {
+test('a task\'s labels and repeat: picked from Todoist\'s, set on a new task and changed on an existing one', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1232,7 +1232,7 @@ test('F6b: a task\'s labels and repeat: picked from Todoist\'s, set on a new tas
     const created = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Water plants')!;
     assert.deepEqual([created.labels, created.repeat, created.recurring], [['waiting'], 'every fri', true]);
 
-    // Pay rent: a label, and a repeat set with a new date in one change (D16: the repeat goes with the date).
+    // Pay rent: a label, and a repeat set with a new date in one change (the repeat goes with the date).
     await page.locator('.cell[data-date="2026-10-07"] .tk', {hasText: 'Pay rent'}).click();
     await page.locator('.fd').waitFor();
     await page.keyboard.press('e');
@@ -1254,7 +1254,7 @@ test('F6b: a task\'s labels and repeat: picked from Todoist\'s, set on a new tas
   }
 });
 
-test('F6b: an event moves to another calendar of its account; a repeating one goes as a series', async () => {
+test('an event moves to another calendar of its account; a repeating one goes as a series', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1300,7 +1300,7 @@ test('F6b: an event moves to another calendar of its account; a repeating one go
 
 // The row's own behaviour (Custom…'s fields, the 4 weeks, a chip reopening it) is in
 // web/tests/components/reminders.test.tsx; this is the journey to the API and the detail.
-test('SV-109: Custom… picks a moment after the start, which the event keeps and its card reads as that moment; a task without a time counts from 9:00 AM', async () => {
+test('Custom… picks a moment after the start, which the event keeps and its card reads as that moment; a task without a time counts from 9:00 AM', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1388,12 +1388,12 @@ test('the editor\'s keys after a pick from one of its menus: ⌘Enter saves, Esc
     const task = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-10&to=2026-10-11')).items.find(item => item.title === 'Return forms')!;
     assert.deepEqual([task.project, task.repeat, task.labels], ['School', 'every sat', ['waiting']]);
 
-    // Esc after a pick: an open menu closes first, then the editor (D30's order).
+    // Esc after a pick: an open menu closes first, then the editor.
     await page.keyboard.press('c');
     await page.getByLabel('Describe the event').pressSequentially('Coffee sun 10am');
     await page.getByRole('button', {name: 'Repeat'}).click();
     await page.getByRole('menuitemradio', {name: 'Daily'}).click();
-    // A press outside an open menu closes it, and only it (SV-24).
+    // A press outside an open menu closes it, and only it.
     for (const opener of ['Calendar', 'Repeat']) {
       await page.getByRole('button', {name: opener, exact: true}).click();
       await page.getByRole('menu').waitFor();
@@ -1422,14 +1422,14 @@ test('/calendar/new?message=: the editor opens pre-filled from the email\'s prop
     const sam = all.days.flatMap(group => group.rows).find(row => row.subject === 'Dinner Friday?')!;
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar/new?kind=event&message=${sam.id}`);
-    // The proposal's title goes into the line, its words read as words only (D290).
+    // The proposal's title goes into the line, its words read as words only.
     const line = page.getByLabel('Describe the event');
     await until('the proposal fills the editor', () => line.inputValue(), value => value.length > 0);
     const proposal = await setpoint.api<{item: {title: string}; from_email: string[]}>('POST', '/proposals/from-message', {message_id: sam.id, kind: 'event'});
     assert.equal(await line.inputValue(), proposal.item.title);
     assert.equal(await page.locator('.nl [data-start]').count(), 0, 'nothing in the title lit');
-    // F6b: the fields the email gave carry the card's "from the email" mark, until they're changed;
-    // the title's sits at the line's trailing edge (D290).
+    // The fields the email gave carry the card's "from the email" mark, until they're changed;
+    // the title's sits at the line's trailing edge.
     const marked = async () => {
       const rows = {title: '.ed-line .nl', date: '.eg .prow:has(input[aria-label="Date"])', place: '.eg label.field:has(input[aria-label="Place"])'};
       const found: string[] = [];
@@ -1439,13 +1439,13 @@ test('/calendar/new?message=: the editor opens pre-filled from the email\'s prop
     const expected = ['title', 'date', 'place'].filter(field => proposal.from_email.includes(field) || (field === 'date' && proposal.from_email.includes('time')));
     assert.ok(expected.includes('title'), `the seed's proposal gives a title (${proposal.from_email.join(', ')})`);
     await until('the marks', marked, found => found.join() === expected.join());
-    // At the line's right end, before its ? (SV-114), the line's text stopping before both.
+    // At the line's right end, before its ?, the line's text stopping before both.
     const [mark, field, input, question] = await rested(() => Promise.all(['.ed-line .nl > .srcm', '.ed-line .nl', '.ed-line .nl-input', '.ed-line .lr-q']
       .map(selector => page.locator(selector).evaluate(element => element.getBoundingClientRect().toJSON() as DOMRect))));
     assert.ok(question!.right <= field!.right && field!.right - question!.right < 16, `the ? at ${question!.left}–${question!.right}, the line ${field!.right}`);
     assert.ok(question!.top >= field!.top && question!.bottom <= field!.bottom, `the ? at ${question!.top}–${question!.bottom}, inside the line's ${field!.top}–${field!.bottom}`);
     assert.ok(mark!.right <= question!.left && input!.right <= mark!.left, `the mark at ${mark!.left}–${mark!.right}, the ? from ${question!.left}, the text to ${input!.right}`);
-    // SV-114 (D295): the ? opens What the line reads under it, its right edge on the line's; Esc
+    // The ? opens What the line reads under it, its right edge on the line's; Esc
     // closes it, not the editor (the rest is in components/lineReference.test.tsx).
     await page.getByRole('button', {name: 'What the line reads'}).click();
     const reference = page.getByRole('dialog', {name: 'What the line reads'});
@@ -1456,7 +1456,7 @@ test('/calendar/new?message=: the editor opens pre-filled from the email\'s prop
     await reference.waitFor({state: 'detached'});
     assert.equal(await page.locator('.editor').count(), 1, 'the editor stays');
     await page.locator('.ed-foot .legend', {hasText: 'From the email'}).waitFor();
-    // It stays inside the footer's padding, however narrow the editor (UX #23).
+    // It stays inside the footer's padding, however narrow the editor.
     const [legend, foot] = await page.locator('.ed-foot').evaluate(element => [element.querySelector('.legend')!.getBoundingClientRect().right, element.getBoundingClientRect().right]);
     assert.ok(legend! <= foot! - 16, `the legend ends at ${legend}, the footer at ${foot}`);
     await line.fill('Dinner with Sam at Blue Door');
@@ -1471,7 +1471,7 @@ test('/calendar/new?message=: the editor opens pre-filled from the email\'s prop
   }
 });
 
-test('UX #5: More options on an email for another month shows that month, so the draft\'s ghost is in view', async () => {
+test('More options on an email for another month shows that month, so the draft\'s ghost is in view', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const all = await setpoint.api<{days: {rows: {id: number; subject: string}[]}[]}>('GET', '/mail/all?limit=100');
@@ -1493,7 +1493,7 @@ test('UX #5: More options on an email for another month shows that month, so the
   }
 });
 
-test('UX #7: E opens the editor with its Title focused and selected, so typing renames the item', async () => {
+test('E opens the editor with its Title focused and selected, so typing renames the item', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1514,7 +1514,7 @@ test('UX #7: E opens the editor with its Title focused and selected, so typing r
   }
 });
 
-test('D290: a click on a lit phrase, or ⌥⌫ inside it, makes it title words, and what it set goes, until it\'s typed into again', async () => {
+test('a click on a lit phrase, or ⌥⌫ inside it, makes it title words, and what it set goes, until it\'s typed into again', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1536,7 +1536,7 @@ test('D290: a click on a lit phrase, or ⌥⌫ inside it, makes it title words, 
     // Over the lit phrase, the focused line says what a click does.
     await page.mouse.move(box.x + box.width / 2 + 1, box.y + box.height / 2);
     await until('the tooltip', () => line.getAttribute('data-tip'), title => title === 'Click to keep as words');
-    // Gained under the mouse, the tip shows once it moves, and the click puts it away (DESIGN.md #299).
+    // Gained under the mouse, the tip shows once it moves, and the click puts it away.
     await page.mouse.move(box.x + box.width / 2 + 2, box.y + box.height / 2);
     await page.locator('.tip', {hasText: 'Click to keep as words'}).waitFor();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -1608,7 +1608,7 @@ test('⌘Z in the line takes back a phrase made words, newest first, and once ty
   }
 });
 
-test('D290: E on an edit with phrases typed selects only its title words, so typing renames it and the phrases stay', async () => {
+test('E on an edit with phrases typed selects only its title words, so typing renames it and the phrases stay', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1635,7 +1635,7 @@ test('D290: E on an edit with phrases typed selects only its title words, so typ
   }
 });
 
-test('SV-90: what an edit types into a Title reads as a new item\'s line does; the words it had stay its title', async () => {
+test('what an edit types into a Title reads as a new item\'s line does; the words it had stay its title', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1707,7 +1707,7 @@ test('SV-90: what an edit types into a Title reads as a new item\'s line does; t
   }
 });
 
-test('SV-90: a title that already ends in "@" and a letter opens with no menu; only an edit\'s own "@" opens one', async () => {
+test('a title that already ends in "@" and a letter opens with no menu; only an edit\'s own "@" opens one', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1742,7 +1742,7 @@ test('SV-90: a title that already ends in "@" and a letter opens with no menu; o
   }
 });
 
-test('SV-113: "next week" is next Monday, and "Trip fri for 3 days" is all day Friday to Sunday (D294, D298)', async () => {
+test('"next week" is next Monday, and "Trip fri for 3 days" is all day Friday to Sunday', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1775,7 +1775,7 @@ test('SV-113: "next week" is next Monday, and "Trip fri for 3 days" is all day F
   }
 });
 
-test('SV-113: "every mon until dec 15" ends the repeat there, as Repeat says, its Mondays on the calendar and none after', async () => {
+test('"every mon until dec 15" ends the repeat there, as Repeat says, its Mondays on the calendar and none after', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1800,7 +1800,7 @@ test('SV-113: "every mon until dec 15" ends the repeat there, as Repeat says, it
   }
 });
 
-test('SV-113: "Gym every day for 2 weeks" repeats daily for two weeks, an hour each, not one event two weeks long', async () => {
+test('"Gym every day for 2 weeks" repeats daily for two weeks, an hour each, not one event two weeks long', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');

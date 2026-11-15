@@ -1,5 +1,5 @@
-// Settings › Appearance (not drawn): System, Light or Night, kept in this browser (DESIGN.md ›
-// Settings; the same choice as ⌘K's Appearance).
+// Settings › Appearance (not drawn): System, Light or Night, kept in this browser (the same
+// choice as ⌘K's Appearance).
 import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {setThemeChoice, useThemeChoice} from '../theme.ts';
