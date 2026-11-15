@@ -29,6 +29,7 @@ import {RuleTrashScheduler} from './triage/ruleTrash.ts';
 import {loadKeyring} from './secrets/crypto.ts';
 import {storeClock} from './store.ts';
 import type {Store} from './store.ts';
+import {SendWorker} from './sending/worker.ts';
 import {SyncEngine} from './sync/engine.ts';
 import {Adapters} from './sync/registry.ts';
 import {MailpiecesWorker} from './mailpieces/worker.ts';
@@ -85,7 +86,12 @@ const news = new NewsWorker({store, imagesDir: newsImages, ...(config.production
 const newsSort = new NewsSortWorker({store, endpoints: aiEndpoints});
 // Each USPS digest's scans, read from its source through the engine's adapters.
 const mailpiecesWorker = new MailpiecesWorker({store, fetchSource: (sourceId, message): Promise<Buffer | null> => engine.emailSource(sourceId, message)});
-const engine: SyncEngine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader, mailpiecesWorker]});
+// Each held send, once its Undo hold ends, through the account's adapter.
+const sender = new SendWorker({
+  store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, rfc822Id) => engine.findSent(sourceId, rfc822Id),
+  attachment: (sourceId, message, attachmentId) => engine.attachment(sourceId, message, attachmentId),
+});
+const engine: SyncEngine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader, mailpiecesWorker, sender]});
 const connectors = {gmail: google ? gmailConnector(store, google, pubsub !== null) : null, icloud: icloudConnector(store, icloud)};
 const reminders = new ReminderScheduler({store, notifier});
 // A written rule's delayed trash: a pass every minute.

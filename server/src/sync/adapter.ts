@@ -24,6 +24,29 @@ export interface AttachmentBytes {
   filename: string;
 }
 
+/**
+ * An email to send (src/sending/), built once for both providers. `raw` keeps the Bcc line, as
+ * Gmail's send and the copy filed in Sent need; `delivered` leaves it out, for SMTP, whose
+ * recipients are the envelope's.
+ */
+export interface OutgoingMail {
+  raw: Buffer;
+  delivered: Buffer;
+  // The Message-ID Setpoint set, with its angle brackets.
+  rfc822Id: string;
+  // The envelope: who it's from and every To, Cc and Bcc address.
+  sender: string;
+  recipients: string[];
+  // The provider's thread to send it in (a reply's, on Gmail). Null for a new conversation.
+  threadId: string | null;
+}
+
+/** What the provider made of a sent email: its id in the record's form, and its thread where it says. */
+export interface SentMail {
+  providerId: string;
+  threadId: string | null;
+}
+
 export interface SyncResult {
   // The cursor to resume from next time. Null keeps the one there is.
   cursor: string | null;
@@ -66,6 +89,19 @@ export interface SourceAdapter {
    * the record doesn't keep. Null when the provider no longer has the email.
    */
   source?(context: AdapterContext, message: {providerId: string}): Promise<Buffer | null>;
+  /**
+   * A mail adapter's send: the provider takes the email, and the copy is in its sent mail. Resolves
+   * with the sent email's id once the provider accepted it; otherwise throws a ProviderError in the
+   * provider's words.
+   */
+  send?(context: AdapterContext, mail: OutgoingMail): Promise<SentMail>;
+  /**
+   * The sent email with this Message-ID, when the provider's sent mail holds it: asked before a send
+   * runs again after one that reached the provider (a restart mid-send), so it never goes twice.
+   * `certain` says whether "not there" means it was never accepted (Gmail files every send in SENT)
+   * or only that no copy is there yet.
+   */
+  findSent?(context: AdapterContext, rfc822Id: string): Promise<{sent: SentMail | null; certain: boolean}>;
 }
 
 /** Which adapter serves a source: by provider for real ones, the dev provider for dev ones. */

@@ -14,7 +14,7 @@ import type {Notifier} from '../notify/index.ts';
 import {readSourceCredentials} from '../secrets/store.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
-import type {AdapterContext, AdapterRegistry, AttachmentBytes, SourceAdapter, SourceRow} from './adapter.ts';
+import type {AdapterContext, AdapterRegistry, AttachmentBytes, OutgoingMail, SentMail, SourceAdapter, SourceRow} from './adapter.ts';
 import {asProviderError, ProviderError} from './errors.ts';
 import {recordFailure, recordSuccess, sourceHealth} from './health.ts';
 import {claimDueJobs, enqueueJob, failJob, finishJob, hasActiveJob, pruneJobs, wakeSync} from './jobs.ts';
@@ -139,6 +139,26 @@ export class SyncEngine {
     if (!source || !adapter?.source) throw new ProviderError('permanent', 'Nothing serves this account\'s mail in this Setpoint.');
     if (source.needsReconnectAt) throw new ProviderError('auth', 'This account needs signing in again.');
     return this.timed(adapter.source(this.context(source), message));
+  }
+
+  /** Sends an email through its source's adapter, now (src/sending/worker.ts), as `attachment` fetches one. */
+  async sendMail(sourceId: number, mail: OutgoingMail): Promise<SentMail> {
+    const {source, adapter} = this.mailAdapter(sourceId, 'send');
+    return this.timed(adapter.send!(this.context(source), mail));
+  }
+
+  /** The provider's sent email with this Message-ID, if it holds one. */
+  async findSent(sourceId: number, rfc822Id: string): Promise<{sent: SentMail | null; certain: boolean}> {
+    const {source, adapter} = this.mailAdapter(sourceId, 'findSent');
+    return this.timed(adapter.findSent!(this.context(source), rfc822Id));
+  }
+
+  private mailAdapter(sourceId: number, needs: 'send' | 'findSent'): {source: SourceRow; adapter: SourceAdapter} {
+    const source = this.store.db.select().from(t.sources).where(eq(t.sources.id, sourceId)).get();
+    const adapter = source ? this.adapters.adapterFor(source) : null;
+    if (!source || !adapter?.[needs]) throw new ProviderError('permanent', 'Nothing sends this account\'s mail in this Setpoint.');
+    if (source.needsReconnectAt) throw new ProviderError('auth', 'This account needs signing in again.');
+    return {source, adapter};
   }
 
   private schedule() {

@@ -1,11 +1,14 @@
 // The dev provider: an in-process stand-in for Gmail, iCloud, Google Calendar, Todoist and weather,
 // serving only the seed's dev sources. The seed is its whole state, so a sync finds nothing new. It
 // confirms a command locally after a short delay, so `npm run dev` shows pending, confirmed and (by
-// rule) failed changes and their live events end to end.
+// rule) failed changes and their live events end to end. It takes a sent email the same way, as if
+// the provider had accepted it, so Sent shows it; mail to any address at refused.example is refused
+// in a provider's words, for the composer's failed state.
 //
 // It never touches a real account. The registry gives it only sources marked `dev`, a dev source
 // can't hold credentials (a database check), and it refuses anything else itself.
 import type {PlaceOut, PlaceSuggestionOut} from '@setpoint/shared';
+import {randomBytes} from 'node:crypto';
 import type {SourceAdapter, AdapterContext, CommandRow} from '../../sync/adapter.ts';
 import {devAttachment} from '../../dev/attachments.ts';
 import {DEV_DIGESTS, devDigestSource} from '../../dev/digest.ts';
@@ -23,6 +26,9 @@ export interface DevProviderOptions {
   // While this says so, a change waits rather than being confirmed (SETPOINT_DEV_PROVIDER_HOLD).
   held?: () => boolean;
 }
+
+/** Mail to any address at this domain is refused by the dev provider's send. */
+export const DEV_REFUSED_DOMAIN = 'refused.example';
 
 function assertDev(context: AdapterContext) {
   if (!context.source.dev || context.source.credentials !== null) throw new Error('The dev provider serves only the seed\'s dev sources.');
@@ -61,6 +67,22 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
       assertDev(context);
       const digest = DEV_DIGESTS.find(one => one.providerId === message.providerId);
       return digest ? devDigestSource(digest) : null;
+    },
+    // Accepted after the same short delay, with a provider-style id. No Sent copy is filed anywhere:
+    // the Sent row Setpoint inserts is the only one, and a dev sync finds nothing to match.
+    async send(context, mail) {
+      assertDev(context);
+      await wait(delayMs, context.signal);
+      while (held?.()) await wait(50, context.signal);
+      const refused = mail.recipients.find(address => address.endsWith(`@${DEV_REFUSED_DOMAIN}`));
+      if (refused) throw new ProviderError('permanent', `550 5.1.1 <${refused}>: Recipient address rejected: User unknown`);
+      const id = `dev-sent-${randomBytes(6).toString('hex')}`;
+      return {providerId: context.source.provider === 'icloud' ? `sent:dev:${id}` : id, threadId: mail.threadId ?? id};
+    },
+    // Nothing is ever lost on the way, so a dev send that ran is never there to find.
+    async findSent(context) {
+      assertDev(context);
+      return {sent: null, certain: true};
     },
     async execute(context, command) {
       assertDev(context);

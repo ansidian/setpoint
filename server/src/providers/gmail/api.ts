@@ -20,6 +20,15 @@ export interface GmailMessage {
   payload?: {headers?: {name: string; value: string}[]};
 }
 
+export interface GmailSendAs {
+  sendAsEmail: string;
+  displayName?: string;
+  isPrimary?: boolean;
+  isDefault?: boolean;
+  // Absent on the primary address; an alias can send only once it is "accepted".
+  verificationStatus?: string;
+}
+
 export interface GmailHistoryEvent {
   message?: GmailMessage;
   labelIds?: string[];
@@ -131,6 +140,18 @@ export class GmailApi {
 
   async untrash(id: string): Promise<void> {
     await this.request(`messages/${encodeURIComponent(id)}/untrash`, {what: 'Gmail messages.untrash', method: 'POST'});
+  }
+
+  /** messages.send: the raw email, in the thread given. Gmail takes the recipients from its headers. */
+  async send(raw: Buffer, threadId: string | null): Promise<GmailMessage> {
+    const response = await this.request('messages/send', {what: 'Gmail messages.send', method: 'POST', body: {raw: raw.toString('base64url'), ...(threadId ? {threadId} : {})}});
+    return await response.json() as GmailMessage;
+  }
+
+  /** settings.sendAs.list: the account's own address and its "Send mail as" aliases. */
+  async sendAs(): Promise<GmailSendAs[]> {
+    const response = await this.request('settings/sendAs', {what: 'Gmail settings.sendAs.list'});
+    return (await response.json() as {sendAs?: GmailSendAs[]}).sendAs ?? [];
   }
 
   /** users.watch on the inbox and sent mail, publishing to the Pub/Sub topic. */

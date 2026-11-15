@@ -3,7 +3,7 @@
 // (special-use \Trash) and "Sent Messages" (\Sent), and the commands Setpoint's IMAP client
 // sends: CAPABILITY, LOGIN, NAMESPACE, LIST/LSUB, SELECT/EXAMINE, UID SEARCH (ALL, SINCE, UID,
 // HEADER), UID FETCH (UID, FLAGS, INTERNALDATE, BODY[]), UID STORE ±FLAGS, UID MOVE with COPYUID,
-// NOOP and LOGOUT. It answers
+// APPEND with APPENDUID, NOOP and LOGOUT. It answers
 // as an IMAP server does, including NO [AUTHENTICATIONFAILED] for a revoked app password, and lets
 // tests inject a NO, a dropped connection or a hang. Hand-written rather than a library: the
 // maintained IMAP test servers are gone, and this keeps exactly the surface Setpoint relies on.
@@ -114,6 +114,8 @@ export async function fakeImap() {
   const users = new Map<string, FakeImapUser>();
   const sockets = new Set<net.Socket>();
   const commands: string[] = [];
+  // Every APPEND, in order.
+  const appends: {folder: string; uid: number; raw: Buffer}[] = [];
   const injected: {pattern: RegExp; response: 'drop' | 'hang' | string; times: number}[] = [];
   let logins = 0;
 
@@ -233,6 +235,20 @@ export async function fakeImap() {
           send('* BYE Logging out\r\n');
           ok();
           return socket.end();
+        case 'APPEND': {
+          // APPEND mailbox [(flags)] [date] literal, answered with UIDPLUS's APPENDUID.
+          const folder = account?.folders.get(str(args[0]));
+          if (!folder) return send(`${tag} NO [TRYCREATE] Mailbox doesn't exist\r\n`);
+          const raw = args.at(-1);
+          if (!Buffer.isBuffer(raw)) return send(`${tag} BAD Missing message literal\r\n`);
+          const flags = Array.isArray(args[1]) ? args[1].map(str) : [];
+          const stamp = args.slice(1, -1).map(str).find(arg => /^\s?\d{1,2}-\w{3}-\d{4}/.test(arg));
+          const date = stamp ? new Date(stamp.trim().replace(/^(\d+)-(\w+)-(\d+)/, '$1 $2 $3')) : new Date();
+          const appended = {uid: folder.uidNext++, flags: new Set(flags), internalDate: Number.isFinite(date.getTime()) ? date : new Date(), raw};
+          folder.messages.push(appended);
+          appends.push({folder: folder.name, uid: appended.uid, raw});
+          return ok(`[APPENDUID ${folder.uidValidity} ${appended.uid}] APPEND completed`);
+        }
         case 'UID':
           return uid(tag, str(args[0]).toUpperCase(), args.slice(1));
         default:
@@ -324,7 +340,7 @@ export async function fakeImap() {
   const fake = {
     host: '127.0.0.1',
     port: (server.address() as AddressInfo).port,
-    commands,
+    commands, appends,
     get logins() {
       return logins;
     },

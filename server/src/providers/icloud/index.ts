@@ -8,8 +8,8 @@ import {connectMailAccount} from '../../sync/connect.ts';
 import type {Connected} from '../../sync/connect.ts';
 import type {ICloudAdapter} from './adapter.ts';
 
-export {ICloudAdapter, ICLOUD_IMAP, imapError} from './adapter.ts';
-export type {ICloudAdapterOptions, ImapEndpoint} from './adapter.ts';
+export {ICloudAdapter, ICLOUD_IMAP, ICLOUD_SMTP, imapError, smtpError} from './adapter.ts';
+export type {ICloudAdapterOptions, ImapEndpoint, SmtpEndpoint} from './adapter.ts';
 
 export interface ICloudConnector {
   connect(input: ICloudConnectInput): Promise<Connected>;

@@ -18,12 +18,20 @@
 // one Message-ID: the row is the inbox copy's, marked sent. A sent copy seen first is a sent-only
 // row until the inbox copy arrives and takes it over, for triage. Trash and Undo on a sent-only row
 // move its copy between the sent mailbox and Deleted Messages.
+//
+// Sending goes over SMTP (smtp.mail.me.com:587, STARTTLS, the same app password), then the copy
+// with its Bcc line is APPENDed to the sent mailbox, unless one with its Message-ID is there
+// already. Whether iCloud files a copy of SMTP mail itself is not known yet, so the append is a
+// setting (`appendSent`) that defaults to appending. A copy appended is the Sent row's id at once;
+// without APPENDUID, or without the append, the row waits under a placeholder id
+// ("sent:pending:<Message-ID>") until the sent mailbox's next poll matches it by Message-ID.
 import {createHash} from 'node:crypto';
 import {and, eq, inArray} from 'drizzle-orm';
 import {ImapFlow} from 'imapflow';
+import {createTransport} from 'nodemailer';
 import type {FetchMessageObject} from 'imapflow';
 import * as t from '../../db/schema.ts';
-import type {AdapterContext, AttachmentBytes, CommandRow, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
+import type {AdapterContext, AttachmentBytes, CommandRow, OutgoingMail, SentMail, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
 import {BACKFILL_SCOPE, readBackfill, readCursor, SENT_BACKFILL_SCOPE, startBackfill, writeBackfill, writeCursor} from '../../sync/cursors.ts';
 import {ProviderError} from '../../sync/errors.ts';
 import {enqueueJob} from '../../sync/jobs.ts';
@@ -42,6 +50,15 @@ export interface ImapEndpoint {
 
 export const ICLOUD_IMAP: ImapEndpoint = {host: 'imap.mail.me.com', port: 993, secure: true};
 
+export interface SmtpEndpoint {
+  host: string;
+  port: number;
+  // STARTTLS required (iCloud's 587). Off only for the test server on 127.0.0.1.
+  requireTLS: boolean;
+}
+
+export const ICLOUD_SMTP: SmtpEndpoint = {host: 'smtp.mail.me.com', port: 587, requireTLS: true};
+
 export interface ICloudAdapterOptions {
   endpoint?: ImapEndpoint;
   // Close a pooled connection after 10 minutes unused.
@@ -52,6 +69,9 @@ export interface ICloudAdapterOptions {
   backfillChunk?: number;
   // The header pass: rows per step.
   headerChunk?: number;
+  smtp?: SmtpEndpoint;
+  // APPEND each sent email to the sent mailbox (true), or leave the copy to iCloud (false).
+  appendSent?: boolean;
 }
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -86,6 +106,20 @@ export function imapError(error: unknown): ProviderError {
   if (['UNAVAILABLE', 'INUSE', 'SERVERBUG', 'LIMIT', 'OVERQUOTA'].includes(e.serverResponseCode ?? '')) return new ProviderError('transient', `iCloud: ${said}`);
   if (e.code && /^(E[A-Z]+|NoConnection|ClosedAfterConnect.*|ProtocolError|Timeout.*)$/.test(e.code)) return new ProviderError('transient', `iCloud: ${said}`);
   if ((e as {responseStatus?: string}).responseStatus === 'NO' || (e as {responseStatus?: string}).responseStatus === 'BAD') return new ProviderError('permanent', `iCloud: ${said}`);
+  return new ProviderError('transient', `iCloud: ${said}`);
+}
+
+/**
+ * An SMTP refusal as a ProviderError, in iCloud's words. A refused login is needs-reconnect. A 4xx
+ * reply and a dropped connection are transient, a 5xx permanent ("550 5.1.1 … Recipient address
+ * rejected").
+ */
+export function smtpError(error: unknown): ProviderError {
+  if (error instanceof ProviderError) return error;
+  const e = error as {code?: string; responseCode?: number; response?: string; message?: string};
+  const said = (e.response || e.message || 'iCloud closed the connection.').trim();
+  if (e.code === 'EAUTH') return new ProviderError('auth', `iCloud refused the app password: ${said}`);
+  if (typeof e.responseCode === 'number') return new ProviderError(e.responseCode >= 500 ? 'permanent' : 'transient', `iCloud: ${said}`);
   return new ProviderError('transient', `iCloud: ${said}`);
 }
 
@@ -201,12 +235,18 @@ export class ICloudAdapter implements SourceAdapter {
   private readonly pool: ImapPool;
   private readonly backfillChunk: number;
   private readonly headerChunk: number;
+  private readonly smtp: SmtpEndpoint;
+  private readonly appendSent: boolean;
+  private readonly connectTimeoutMs: number;
   private readonly locks = new Map<number, Promise<unknown>>();
 
   constructor(options: ICloudAdapterOptions = {}) {
-    this.pool = new ImapPool({endpoint: options.endpoint ?? ICLOUD_IMAP, idleMs: options.idleMs ?? 10 * 60_000, connectTimeoutMs: options.connectTimeoutMs ?? 15_000});
+    this.connectTimeoutMs = options.connectTimeoutMs ?? 15_000;
+    this.pool = new ImapPool({endpoint: options.endpoint ?? ICLOUD_IMAP, idleMs: options.idleMs ?? 10 * 60_000, connectTimeoutMs: this.connectTimeoutMs});
     this.backfillChunk = options.backfillChunk ?? 50;
     this.headerChunk = options.headerChunk ?? 200;
+    this.smtp = options.smtp ?? ICLOUD_SMTP;
+    this.appendSent = options.appendSent ?? true;
   }
 
   /** Connect iCloud: logs in once with the app password, outside the pool. Throws the refusal. */
@@ -419,6 +459,60 @@ export class ICloudAdapter implements SourceAdapter {
       let source: Buffer | undefined;
       for await (const fetched of client.fetch(String(uid), {uid: true, source: true}, {uid: true})) source = fetched.source;
       return source ?? null;
+    });
+  }
+
+  /**
+   * Sends over SMTP, the envelope naming every recipient and the delivered copy no Bcc line, then
+   * files the copy in the sent mailbox. A failed append doesn't undo a send iCloud accepted: the
+   * row waits for the sent mailbox's poll instead.
+   */
+  async send(context: AdapterContext, mail: OutgoingMail): Promise<SentMail> {
+    const credentials = context.credentials();
+    if (!credentials || credentials.kind !== 'app_password') throw new ProviderError('auth', 'iCloud has no app password; reconnect it in Settings › Accounts.');
+    const transport = createTransport({
+      host: this.smtp.host, port: this.smtp.port, secure: false, requireTLS: this.smtp.requireTLS, ignoreTLS: !this.smtp.requireTLS,
+      auth: {user: credentials.username, pass: credentials.password},
+      connectionTimeout: this.connectTimeoutMs, greetingTimeout: this.connectTimeoutMs, socketTimeout: 60_000,
+    });
+    try {
+      await transport.sendMail({envelope: {from: mail.sender, to: mail.recipients}, raw: mail.delivered});
+    } catch (error) {
+      throw smtpError(error);
+    } finally {
+      transport.close();
+    }
+    const pending: SentMail = {providerId: `${SENT_PREFIX}pending:${mail.rfc822Id}`, threadId: null};
+    if (!this.appendSent) return pending;
+    try {
+      return await this.fileSent(context, mail) ?? pending;
+    } catch {
+      return pending;
+    }
+  }
+
+  /** APPENDs the copy to the sent mailbox unless one with its Message-ID is there. Its id, when iCloud says. */
+  private async fileSent(context: AdapterContext, mail: OutgoingMail): Promise<SentMail | null> {
+    const path = await this.withMailbox(context, INBOX, client => sentMailbox(client));
+    if (!path) return null;
+    return this.withMailbox(context, path, async client => {
+      const uidValidity = String(client.mailbox && client.mailbox.uidValidity);
+      const there = (await search(client, {header: {'message-id': mail.rfc822Id}})).at(-1);
+      if (there !== undefined) return {providerId: SENT_PREFIX + providerId(uidValidity, there), threadId: null};
+      const appended = await client.append(path, mail.raw, [SEEN], context.store.now());
+      if (!appended || !appended.uid) return null;
+      return {providerId: SENT_PREFIX + providerId(appended.uidValidity ?? uidValidity, appended.uid), threadId: null};
+    });
+  }
+
+  /** The sent mailbox's copy with this Message-ID. iCloud's copy may come late, so "none" is never certain. */
+  async findSent(context: AdapterContext, rfc822Id: string): Promise<{sent: SentMail | null; certain: boolean}> {
+    const path = await this.withMailbox(context, INBOX, client => sentMailbox(client));
+    if (!path) return {sent: null, certain: false};
+    return this.withMailbox(context, path, async client => {
+      const uidValidity = String(client.mailbox && client.mailbox.uidValidity);
+      const uid = (await search(client, {header: {'message-id': rfc822Id}})).at(-1);
+      return {sent: uid === undefined ? null : {providerId: SENT_PREFIX + providerId(uidValidity, uid), threadId: null}, certain: false};
     });
   }
 

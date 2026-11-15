@@ -12,10 +12,13 @@
 //   SENT has its own over the same days, beside it: mail the user sent, from any client.
 // - the header pass (src/sync/headers.ts), once the backfill is done: To, Cc, Reply-To and the
 //   reply headers for mail held from before they were kept, by format=metadata.
+// - the "Send mail as" list, once a day, for the composer's From (src/sending/aliases.ts).
+// - send: messages.send, in the answered email's thread, on the gmail.modify scope already held.
 import {inArray} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';
 import type {Store} from '../../store.ts';
-import type {AdapterContext, AttachmentBytes, CommandRow, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
+import {aliasesDue, replaceAliases} from '../../sending/aliases.ts';
+import type {AdapterContext, AttachmentBytes, CommandRow, OutgoingMail, SentMail, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
 import {BACKFILL_DAYS, BACKFILL_SCOPE, readBackfill, readCursor, SENT_BACKFILL_SCOPE, startBackfill, writeBackfill, writeCursor} from '../../sync/cursors.ts';
 import type {BackfillState} from '../../sync/cursors.ts';
 import {ProviderError} from '../../sync/errors.ts';
@@ -159,7 +162,36 @@ export class GmailAdapter implements SourceAdapter {
     if (sweep && !resynced) await this.reconcile(api, context, this.options.sweepDays);
     for (const backfill of BACKFILLS) await this.backfillStep(api, context, backfill);
     await headerPassStep(context.store, {id: context.source.id, accountId: this.accountId(context)}, this.options.headerChunk, rows => this.readHeaders(api, rows));
+    await this.readAliases(api, context);
     return {cursor: next};
+  }
+
+  /** The "Send mail as" list, once a day: verified aliases only. A failed read waits for the next check. */
+  private async readAliases(api: GmailApi, context: AdapterContext) {
+    if (!aliasesDue(context.store, context.source.id)) return;
+    let list;
+    try {
+      list = await api.sendAs();
+    } catch (error) {
+      if (error instanceof ProviderError && error.kind !== 'auth') return;
+      throw error;
+    }
+    const usable = list.filter(entry => entry.isPrimary || entry.verificationStatus === 'accepted');
+    replaceAliases(context.store, context.source.id, this.accountId(context),
+      usable.map(entry => ({address: entry.sendAsEmail, name: entry.displayName ?? null, primary: entry.isPrimary === true})));
+  }
+
+  /** messages.send in the answered email's thread. The id and thread are Gmail's, as its sync will see them. */
+  async send(context: AdapterContext, mail: OutgoingMail): Promise<SentMail> {
+    const sent = await this.api(context).send(mail.raw, mail.threadId);
+    return {providerId: sent.id, threadId: sent.threadId ?? null};
+  }
+
+  /** SENT's message with this Message-ID. Gmail files every send there, so its absence is certain. */
+  async findSent(context: AdapterContext, rfc822Id: string): Promise<{sent: SentMail | null; certain: boolean}> {
+    const {messages} = await this.api(context).list({q: `rfc822msgid:${rfc822Id.replace(/^<|>$/g, '')}`, labelIds: ['SENT'], maxResults: 1});
+    const found = messages[0];
+    return {sent: found ? {providerId: found.id, threadId: found.threadId ?? null} : null, certain: true};
   }
 
   private async history(api: GmailApi, context: AdapterContext, cursor: string): Promise<string> {

@@ -30,9 +30,12 @@ class Mailbox {
   historyId = 1000;
   // history.list from before this answers 404.
   oldestHistory = 0;
+  // settings.sendAs: the address itself, plus any aliases a test adds.
+  sendAs: Record<string, unknown>[];
 
   constructor(address: string) {
     this.address = address;
+    this.sendAs = [{sendAsEmail: address, displayName: '', isPrimary: true, isDefault: true}];
   }
 
   private ref(message: FakeMessage) {
@@ -54,13 +57,20 @@ class Mailbox {
   }
 }
 
-type Injected = {status: number; body?: unknown; headers?: Record<string, string>} | 'hang';
+// 'lost': handled as usual, but the connection drops before the answer (did it happen?).
+type Injected = {status: number; body?: unknown; headers?: Record<string, string>} | 'hang' | 'lost';
 
 export interface Delivery {
   raw: Buffer;
   date: string;
   labels?: string[];
   threadId?: string;
+}
+
+/** A header's value from a source's header block, unfolded, or null. */
+function headerValue(raw: Buffer, name: string): string | null {
+  const block = raw.toString('utf8').split(/\r?\n\r?\n/)[0]!.replace(/\r?\n[ \t]+/g, ' ');
+  return new RegExp(`^${name}:\\s*(.*)$`, 'im').exec(block)?.[1]?.trim() ?? null;
 }
 
 // `clock` is the test's, for the times Google stamps (a watch's expiry, a push's publish time).
@@ -84,6 +94,8 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
   const pubsubQueue: {ackId: string; data: string}[] = [];
   const injected: {pattern: RegExp; response: Injected; times: number}[] = [];
   const requests: {method: string; path: string; query: URLSearchParams; body: unknown}[] = [];
+  // Every messages.send Gmail took, in order.
+  const sent: {address: string; id: string; raw: Buffer; threadId: string | null}[] = [];
   const hanging: http.ServerResponse[] = [];
   let nextId = 1;
 
@@ -151,10 +163,23 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
         ...(offset + size < all.length ? {nextPageToken: String(offset + size)} : {}),
       });
     }
+    if (route === 'settings/sendAs' && method === 'GET') return json(response, 200, {sendAs: box.sendAs});
+    if (route === 'messages/send' && method === 'POST') {
+      const raw = Buffer.from(String(body.raw ?? ''), 'base64url');
+      const named = ['To', 'Cc', 'Bcc'].map(name => headerValue(raw, name) ?? '').join(',');
+      if (!/@/.test(named)) return apiError(response, 400, 'Recipient address required', 'invalidArgument');
+      const threadId = typeof body.threadId === 'string' && [...box.messages.values()].some(item => item.threadId === body.threadId) ? body.threadId : undefined;
+      const toSelf = named.toLowerCase().includes(box.address.toLowerCase());
+      const id = fake.deliver(box.address, {raw, date: clock().toISOString(), labels: toSelf ? ['SENT', 'INBOX', 'UNREAD'] : ['SENT'], threadId});
+      sent.push({address: box.address, id, raw, threadId: threadId ?? null});
+      return json(response, 200, {id, threadId: threadId ?? id, labelIds: toSelf ? ['SENT', 'INBOX', 'UNREAD'] : ['SENT']});
+    }
     if (route === 'messages' && method === 'GET') {
       const labels = query.getAll('labelIds');
       const after = /after:(\d+)/.exec(query.get('q') ?? '')?.[1];
+      const messageId = /rfc822msgid:(\S+)/.exec(query.get('q') ?? '')?.[1];
       const matching = [...box.messages.values()]
+        .filter(item => !messageId || headerValue(item.raw, 'Message-ID') === `<${messageId.replace(/^<|>$/g, '')}>`)
         .filter(item => labels.every(label => item.labels.has(label)) && (!after || item.internalDate >= Number(after) * 1000))
         .sort((a, b) => b.internalDate - a.internalDate);
       const offset = Number(query.get('pageToken') ?? 0);
@@ -229,7 +254,13 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
           hanging.push(response);
           return;
         }
-        return json(response, rule.response.status, rule.response.body ?? {error: {code: rule.response.status, message: 'Injected', status: 'ERROR'}}, rule.response.headers);
+        if (rule.response === 'lost') {
+          // Google does the work, and the answer never arrives.
+          Object.assign(response, {writeHead: () => response, end: () => {
+            request.socket.destroy();
+            return response;
+          }});
+        } else return json(response, rule.response.status, rule.response.body ?? {error: {code: rule.response.status, message: 'Injected', status: 'ERROR'}}, rule.response.headers);
       }
       if (url.pathname === '/token') return handleToken(new URLSearchParams(text), response);
       const token = request.headers.authorization?.replace(/^Bearer /, '') ?? '';
@@ -249,7 +280,7 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
   const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
   const fake = {
-    url, requests, mailboxes,
+    url, requests, mailboxes, sent,
     historyPageSize: 500,
     // Gmail's resultSizeEstimate is rough. This skews it.
     estimateSkew: 0,
@@ -288,6 +319,14 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
       box.messages.set(id, item);
       box.record('messagesAdded', item);
       return id;
+    },
+    /** The mailbox's "Send mail as" list, after its own address. */
+    setAliases(address: string, aliases: {sendAsEmail: string; displayName?: string; verificationStatus?: string}[]) {
+      const box = mailbox(address);
+      box.sendAs = [box.sendAs[0]!, ...aliases.map(alias => ({displayName: '', isPrimary: false, isDefault: false, verificationStatus: 'accepted', ...alias}))];
+    },
+    setOwnName(address: string, displayName: string) {
+      mailbox(address).sendAs[0]!.displayName = displayName;
     },
     labels: (address: string, id: string) => [...message(address, id).labels].sort(),
     change: (address: string, id: string, add: string[], remove: string[]) => mailbox(address).change(message(address, id), add, remove),
