@@ -5,7 +5,8 @@ import type {LiveEventType, NewsSection} from '../enums.ts';
 import type {JobsLiveEvent} from '../jobs/api.ts';
 
 export type LiveEvent =
-  | {type: 'mail'; messages: number[]; accounts: number[]; commands: number[]}
+  // `drafts`: drafts that were started, saved, sent, failed or discarded (the Drafts row and count).
+  | {type: 'mail'; messages: number[]; accounts: number[]; commands: number[]; drafts?: number[]}
   | {type: 'items'; items: number[]; calendars: number[]; commands: number[]}
   | {type: 'health'; sources: number[]}
   // News: `stories` changed in place (their dot, sources or summary: the page updates those rows

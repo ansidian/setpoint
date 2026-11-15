@@ -14,8 +14,9 @@ import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
   NEWS_ADAPTERS, NEWS_SECTIONS, RULE_TRASH, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
-  type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
+  DRAFT_KINDS, SEND_STATES, type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
+import type {Block} from '@setpoint/shared/richText';
 import type {ArticleNotes, NoiseReason} from '../domain/newsSorting.ts';
 import type {SenderAuthentication} from '../domain/senderAuthentication.ts';
 
@@ -189,6 +190,63 @@ export const attachments = sqliteTable('attachments', {
   mimeType: text('mime_type').notNull(),
   sizeBytes: integer('size_bytes').notNull(),
 }, table => [index('attachments_message').on(table.messageId)]);
+
+/**
+ * An address an account can send as, for the composer's From: the account's own and, for Gmail, the
+ * verified aliases of its "Send mail as" list, read from Gmail now and then (src/sending/aliases.ts).
+ * An iCloud account has its own address only.
+ */
+export const sendAs = sqliteTable('send_as', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  accountId: integer('account_id').notNull().references(() => accounts.id, {onDelete: 'cascade'}),
+  address: text('address').notNull(),
+  // The name the provider sends with. Null where it has none.
+  name: text('name'),
+  primary: integer('primary', {mode: 'boolean'}).notNull().default(false),
+  position: integer('position').notNull(),
+}, table => [uniqueIndex('send_as_account_address').on(table.accountId, table.address)]);
+
+/**
+ * A draft: mail the user is writing, kept in Setpoint only until it is sent (DESIGN.md's exception
+ * to "providers are the truth"). It is saved as the user types, so a reload, a closed tab or a
+ * restart keeps it. A reply, reply all or forward answers one email, one draft per email and kind.
+ *
+ * Send holds it (`send_state` held) with a `send` job due at `send_at`; Undo takes the job back while
+ * it waits. The job sends it through the account's provider (src/sending/worker.ts), and the draft
+ * is deleted only once the provider has accepted the email. `rfc822_id` is the Message-ID Setpoint
+ * set, kept across Try again, and `attempted_at` says a send reached the provider: a send run again
+ * after one (a restart, a retry) first asks the provider whether that Message-ID is already there,
+ * so an accepted email is never sent twice.
+ */
+export const drafts = sqliteTable('drafts', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  kind: text('kind', {enum: DRAFT_KINDS}).notNull(),
+  // The email it answers or forwards. A draft outlives its email (deleted at the provider), so the
+  // user's text stays; it then sends with no quote and no reply headers.
+  messageId: integer('message_id').references(() => messages.id, {onDelete: 'set null'}),
+  // From: the account, and which of its addresses.
+  accountId: integer('account_id').notNull().references(() => accounts.id, {onDelete: 'cascade'}),
+  fromAddress: text('from_address').notNull(),
+  toRecipients: text('to_recipients', {mode: 'json'}).$type<Recipient[]>().notNull(),
+  ccRecipients: text('cc_recipients', {mode: 'json'}).$type<Recipient[]>().notNull(),
+  bccRecipients: text('bcc_recipients', {mode: 'json'}).$type<Recipient[]>().notNull(),
+  subject: text('subject').notNull(),
+  // Rich-text blocks (shared/src/richText.ts), the user's own text without the quote.
+  body: text('body', {mode: 'json'}).$type<Block[]>().notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  sendState: text('send_state', {enum: SEND_STATES}),
+  sendAt: text('send_at'),
+  sendError: text('send_error'),
+  rfc822Id: text('rfc822_id'),
+  attemptedAt: text('attempted_at'),
+}, table => [
+  // One reply, reply all and forward per email. New messages are any number.
+  uniqueIndex('drafts_answer').on(table.messageId, table.kind).where(sql`${table.messageId} is not null`),
+  index('drafts_updated').on(table.updatedAt),
+  check('drafts_kind', sql`${table.kind} in (${quoted(DRAFT_KINDS)})`),
+  check('drafts_send_state', sql`${table.sendState} is null or ${table.sendState} in (${quoted(SEND_STATES)})`),
+]);
 
 /** Where items come from: each Google calendar, and Todoist as one more toggle. */
 export const calendars = sqliteTable('calendars', {
@@ -516,7 +574,8 @@ export const syncCursors = sqliteTable('sync_cursors', {
 // point: Jobs reads what triage sorted in the accounts it reads (src/jobs/reader.ts). Removing Jobs
 // may leave the value. `search_terms` is one email's search terms (src/search/terms.ts).
 // `mailpieces` is one USPS digest's scans, which src/mailpieces/worker.ts reads from its source.
-export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort', 'jobs_read', 'search_terms', 'mailpieces'] as const;
+// `send` is one draft's send, due when its Undo hold ends (src/sending/worker.ts).
+export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort', 'jobs_read', 'search_terms', 'mailpieces', 'send'] as const;
 export const JOB_STATES = ['queued', 'running', 'done', 'failed'] as const;
 
 /**
@@ -535,6 +594,8 @@ export const jobs = sqliteTable('jobs', {
   messageId: integer('message_id').references(() => messages.id, {onDelete: 'cascade'}),
   // The News source a `news` job fetches.
   newsSourceId: integer('news_source_id').references((): AnySQLiteColumn => newsSources.id, {onDelete: 'cascade'}),
+  // The draft a `send` job sends.
+  draftId: integer('draft_id').references((): AnySQLiteColumn => drafts.id, {onDelete: 'cascade'}),
   state: text('state', {enum: JOB_STATES}).notNull().default('queued'),
   attempts: integer('attempts').notNull().default(0),
   runAt: text('run_at').notNull(),

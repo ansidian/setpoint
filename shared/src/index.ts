@@ -17,3 +17,4 @@ export * from './api/status.ts';
 export * from './api/triage.ts';
 export * from './api/news.ts';
 export * from './jobs/index.ts';
+export * from './api/drafts.ts';

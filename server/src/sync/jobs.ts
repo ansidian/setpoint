@@ -14,10 +14,10 @@ export type JobKind = Job['kind'];
 export const LEASE_MS = 10 * 60_000;
 
 /** Queues a job unless one with its key is already queued or running. Returns whether it queued. */
-export function enqueueJob(store: Store, job: {kind: JobKind; key: string; sourceId?: number | null; commandId?: number | null; messageId?: number | null; newsSourceId?: number | null; runAt?: string}): boolean {
+export function enqueueJob(store: Store, job: {kind: JobKind; key: string; sourceId?: number | null; commandId?: number | null; messageId?: number | null; newsSourceId?: number | null; draftId?: number | null; runAt?: string}): boolean {
   const now = isoNow(store);
   const result = store.db.insert(t.jobs).values({
-    kind: job.kind, key: job.key, sourceId: job.sourceId ?? null, commandId: job.commandId ?? null, messageId: job.messageId ?? null, newsSourceId: job.newsSourceId ?? null,
+    kind: job.kind, key: job.key, sourceId: job.sourceId ?? null, commandId: job.commandId ?? null, messageId: job.messageId ?? null, newsSourceId: job.newsSourceId ?? null, draftId: job.draftId ?? null,
     runAt: job.runAt ?? now, createdAt: now,
   }).onConflictDoNothing().run();
   return result.changes === 1;
@@ -57,7 +57,7 @@ export function claimDueJobs(store: Store, skip: ReadonlySet<number>, limit = 20
 
 export function finishJob(store: Store, jobId: number) {
   const job = store.db.update(t.jobs).set({state: 'done', finishedAt: isoNow(store), leaseUntil: null}).where(eq(t.jobs.id, jobId)).returning().get();
-  if (job?.again) enqueueJob(store, {kind: job.kind, key: job.key, sourceId: job.sourceId, commandId: job.commandId, messageId: job.messageId, newsSourceId: job.newsSourceId});
+  if (job?.again) enqueueJob(store, {kind: job.kind, key: job.key, sourceId: job.sourceId, commandId: job.commandId, messageId: job.messageId, newsSourceId: job.newsSourceId, draftId: job.draftId});
 }
 
 /** A failed attempt: queued again after the policy's delay, or failed for good. Returns whether it will retry. */

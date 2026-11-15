@@ -56,6 +56,8 @@ export interface MessageRowOut {
   // When the user replied to it (the row's reply mark), left out while they haven't. Not in the
   // iPhone app's contract yet.
   replied_at?: string;
+  // A draft answers it (a reply, reply all or forward the user started). Left out otherwise.
+  draft?: true;
 }
 
 /** One Inbox group, in INBOX_GROUPS' order. Empty groups are left out. */

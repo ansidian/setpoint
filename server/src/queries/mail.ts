@@ -13,6 +13,7 @@ import {localDay, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {backfillProgress, readBackfill} from '../sync/cursors.ts';
 import {isoNow} from '../store.ts';
+import {draftedMessages} from '../sending/drafts.ts';
 import {conversationOf, repliesOf} from './thread.ts';
 import type {Store} from '../store.ts';
 
@@ -56,7 +57,7 @@ function factOf(row: MessageRow): string | null {
 
 type Replies = Map<number, {id: number; at: string}>;
 
-function presentRow(row: Candidate, replies?: Replies): MessageRowOut {
+function presentRow(row: Candidate, replies?: Replies, drafted?: Set<number>): MessageRowOut {
   const reply = replies?.get(row.id);
   return {
     id: row.id, account_id: row.accountId, from_name: row.fromName, from_address: row.fromAddress, organisation: row.organisation, via: row.via,
@@ -66,6 +67,7 @@ function presentRow(row: Candidate, replies?: Replies): MessageRowOut {
     trash_due_at: row.pinnedAt === null ? row.trashDueAt : null, attachment_count: row.attachmentCount, command: row.command,
     ...(row.sent && !row.received ? {sent_only: true} as const : {}),
     ...(reply ? {replied_at: reply.at} : {}),
+    ...(drafted?.has(row.id) ? {draft: true} as const : {}),
   };
 }
 
@@ -112,10 +114,11 @@ export function inbox(store: Store, accountId?: number): InboxOut {
   const shown = accountId ? all.filter(row => row.accountId === accountId) : all;
   const groups = inboxGroups(shown, now);
   const replies = repliesOf(store, groups.flatMap(group => group.rows));
+  const drafted = draftedMessages(store);
   return {
     account_id: accountId ?? null,
     groups: groups.map(group => ({
-      group: group.group, count: group.rows.length, unread: group.unread, rows: group.rows.map(row => presentRow(row, replies)),
+      group: group.group, count: group.rows.length, unread: group.unread, rows: group.rows.map(row => presentRow(row, replies, drafted)),
     })),
     counts: countsOf(all, now, accountIdsOf(store)),
     next_change_at: nextInboxChange(shown, now),
@@ -139,12 +142,13 @@ function pageByDay<R>(store: Store, shown: SQL | undefined, input: PageInput, pr
     ? store.db.select({id: t.attachments.messageId, n: count()}).from(t.attachments).where(inArray(t.attachments.messageId, page.map(row => row.id))).groupBy(t.attachments.messageId).all().map(row => [row.id, row.n])
     : []);
   const replies = repliesOf(store, page);
+  const drafted = draftedMessages(store);
   const days: {date: string; rows: R[]}[] = [];
   for (const row of page) {
     const date = localDay(row.receivedAt, store.timeZone);
     if (days.at(-1)?.date !== date) days.push({date, rows: []});
     const command = commands.get(row.id) ?? null;
-    days.at(-1)!.rows.push(present(row, presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0}, replies)));
+    days.at(-1)!.rows.push(present(row, presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0}, replies, drafted)));
   }
   const last = page.at(-1);
   return {days, next_before: rows.length > input.limit && last ? `${last.receivedAt}|${last.id}` : null};
@@ -176,9 +180,10 @@ export function messageRows(store: Store, ids: number[]): Map<number, {row: Mess
   const rows = store.db.select().from(t.messages).where(inArray(t.messages.id, ids)).all();
   const attachments = new Map(store.db.select({id: t.attachments.messageId, n: count()}).from(t.attachments).where(inArray(t.attachments.messageId, ids)).groupBy(t.attachments.messageId).all().map(row => [row.id, row.n]));
   const replies = repliesOf(store, rows);
+  const drafted = draftedMessages(store);
   return new Map(rows.map(row => {
     const command = commands.get(row.id) ?? null;
-    return [row.id, {row, out: presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0}, replies)}];
+    return [row.id, {row, out: presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0}, replies, drafted)}];
   }));
 }
 
@@ -198,9 +203,10 @@ export function messageDetail(store: Store, messageId: number): MessageOut {
   const domain = domainOf(row.fromAddress);
   const trusted = isTrusted(store, domain);
   const replies = repliesOf(store, [row]);
+  const drafted = draftedMessages(store);
   const reply = replies.get(row.id);
   return {
-    ...presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.length}, replies),
+    ...presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.length}, replies, drafted),
     thread_id: row.threadId,
     body_text: row.bodyText,
     body_html: row.bodyHtml,

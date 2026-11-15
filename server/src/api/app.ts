@@ -8,7 +8,7 @@ import {
   accountOrderInput, accountUpdateInput, allInput, sentInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, mailpiecesInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
-  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput,
+  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftUpdateInput,
 } from '@setpoint/shared';
 import type {
   ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
@@ -47,6 +47,8 @@ import {ICS_MAX_BYTES} from '../domain/icsImport.ts';
 import {markAllRead, openMessage, setDone, setPinned, setRead, trashMessage} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
 import {conflict, forbidden, invalid, parse, SetpointError, unauthorized} from '../errors.ts';
+import {createDraft, discardDraft, fromOptions, getDraftRow, listDrafts, presentDraft, updateDraft} from '../sending/drafts.ts';
+import {holdSend, undoSend} from '../sending/send.ts';
 import type {FeedEvent} from '../live/feed.ts';
 import type {Notifier} from '../notify/index.ts';
 import {devPlace, devPlaces} from '../providers/dev/index.ts';
@@ -615,6 +617,20 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json({commands: markAllRead(store, input.account_id).map(presentCommand)} satisfies MarkAllReadOut);
   });
   app.get('/api/mail/indexing', c => c.json(indexing(store)));
+
+  // ---- Drafts and sending (src/sending/) ----
+
+  app.get('/api/mail/from', c => c.json(fromOptions(store)));
+  app.get('/api/mail/drafts', c => c.json(listDrafts(store)));
+  app.post('/api/mail/drafts', async c => c.json(createDraft(store, parse(draftCreateInput, await body(c))), 201));
+  app.get('/api/mail/drafts/:id', c => c.json(presentDraft(getDraftRow(store, id(c.req.param('id'))))));
+  app.patch('/api/mail/drafts/:id', async c => c.json(updateDraft(store, id(c.req.param('id')), parse(draftUpdateInput, await body(c)))));
+  app.delete('/api/mail/drafts/:id', c => {
+    discardDraft(store, id(c.req.param('id')));
+    return c.body(null, 204);
+  });
+  app.post('/api/mail/drafts/:id/send', c => c.json(holdSend(store, id(c.req.param('id')))));
+  app.post('/api/mail/drafts/:id/undo', c => c.json(undoSend(store, id(c.req.param('id')))));
   // Triage's health, pattern prompts, rules and Settings › AI (src/api/triage.ts).
   app.route('/api', triageApi(store));
   app.get('/api/mail/trusted-domains', c => c.json(trustedDomains(store)));
