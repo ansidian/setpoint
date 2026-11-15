@@ -12,5 +12,5 @@ playwright-report/
 *.tsbuildinfo
 .claude/worktrees/
 .claude/launch.json
-# News's local sources name Andy's area; only the example is committed (D91).
+# News's local sources name the owner's area; only the example is committed.
 server/news/local-sources.json

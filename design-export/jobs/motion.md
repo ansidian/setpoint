@@ -174,7 +174,7 @@ Motion · Settings › Jobs
 
 [`boards/39b-settings-ai.html`](boards/39b-settings-ai.html)
 
-No cap for Jobs (D315), so no meter: a cap that stopped search would read as a failure. This month's spend is a figure, and Usage this month gains a Jobs row broken into its three parts, as News's is.
+No cap for Jobs, so no meter: a cap that stopped search would read as a failure. This month's spend is a figure, and Usage this month gains a Jobs row broken into its three parts, as News's is.
 
 ## 40 · Light version of 32
 

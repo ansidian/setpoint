@@ -1,7 +1,7 @@
 # Setpoint on job boards
 
 A Chromium extension that puts a chip on LinkedIn's and Indeed's jobs saying whether Setpoint's Jobs
-has an application to one (BRIEF.md › Applied before?, D433, D450; darma SV-172, SV-202). It was
+has an application to one. It was
 Setpoint on LinkedIn until Indeed came beside it; each board has its own readers
 ([`src/linkedin.ts`](src/linkedin.ts), [`src/indeed.ts`](src/indeed.ts)), picked by the page's host
 ([`src/boards.ts`](src/boards.ts)), and everything else is shared:
@@ -18,9 +18,9 @@ answer: **Set up Setpoint**, **Setpoint refused the token**, **Setpoint unreacha
 in Setpoint**, or **Couldn't read Setpoint's answer**. On the list's cards it follows the company,
 smaller, and only when there's an application, as mail's rows show Applied before. A click on a chip
 never selects the card under it. The words are [`src/words.ts`](src/words.ts), and the look is
-[`src/chip.ts`](src/chip.ts) (DESIGN.md › Decided while building #301, D434, D435).
+[`src/chip.ts`](src/chip.ts).
 
-It's desktop Chrome only, loaded unpacked, with no Web Store listing (D433). It reads
+It's desktop Chrome only, loaded unpacked, with no Web Store listing. It reads
 `www.linkedin.com` and `www.indeed.com`, not Indeed's other countries.
 
 ## Building and loading it
@@ -159,4 +159,4 @@ component tests run, and `npm run typecheck` checks `src/` against `@types/chrom
 The service worker's request, the options page and the permission prompt need Chrome itself: they're
 checked by hand, loaded unpacked against `npm run try`. The content script on a board's live page can
 be tried without Chrome's extension APIs: the built `dist/content.js`, run on the page after a stand-in
-`chrome.runtime.sendMessage` that answers checks, draws its chips as the extension would (SV-202).
+`chrome.runtime.sendMessage` that answers checks, draws its chips as the extension would.

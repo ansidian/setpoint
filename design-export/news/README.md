@@ -1,11 +1,11 @@
 # Setpoint v2 · News boards (design round 3)
 
-These are boards 25–31 for [News](../../BRIEF.md#news-after-20). Claude drew them on 2026-10-10 on
-a Claude Design canvas, from the brief, and Andy reviewed them there. Each board is plain HTML on
+These are boards 25–31 for News. Claude drew them on 2026-10-10 on
+a Claude Design canvas, from the brief, and the owner reviewed them there. Each board is plain HTML on
 the round-2 stylesheet (`../styles/setpoint.css`) plus [`news.css`](news.css). That file holds
 News's components, and the DESIGN.md overrides that the round-2 stylesheet doesn't carry: Light
 `page` `#f6f6f4`, and the done glyph in `good`.
-[DESIGN.md › News](../../DESIGN.md#news-after-20) wins over these boards wherever the two differ.
+The app and its tests win over these boards wherever the two differ.
 
 | # | Board | File |
 | --- | --- | --- |

@@ -16,9 +16,9 @@ local: the fonts are bundled, nothing loads from the network.
 | `styles/fonts.css`, `styles/fonts/` | Geist and Geist Mono (variable, OFL), and Material Symbols Rounded subset to the icons used (Apache-2.0). |
 | `tokens/setpoint-tokens.json` | The tokens parsed from `setpoint.css`, per theme, plus type and layout constants. |
 | `tokens/mantel-tokens.json` | mantel's design-system tokens as installed on the canvas (Night values match Setpoint's). |
-| `glyphs/icons/*.svg`, `glyphs/icons.json` | Every Material Symbols icon the boards use, as SVG paths: Rounded, wght 300, FILL 0, GRAD 0, opsz 24, `viewBox="0 -960 960 960"` (the same form as mantel's `Icon`). `-fill` files are the FILL 1 uses. |
+| `glyphs/icons/*.svg`, `glyphs/icons.json` | Every Material Symbols icon the boards use, as SVG paths: Rounded, wght 300, FILL 0, GRAD 0, opsz 24, `viewBox="0 -960 960 960"`. `-fill` files are the FILL 1 uses. |
 | `glyphs/marks/*.svg` | The five mark options from board 24. `1-set-point.svg` is the stand-in in the sidebar (bare 18 px, `ink`). |
-| `glyphs/task-open.svg`, `glyphs/task-done.svg` | Todoist status glyphs: the open ring and darma's filled disc with the check knocked out. |
+| `glyphs/task-open.svg`, `glyphs/task-done.svg` | Todoist status glyphs: the open ring and a filled disc with the check knocked out. |
 | `glyphs/material-symbols-used.txt` | The icon names, for bundling. |
 | `motion/glide.json`, `motion/glide.css` | Board 12c's motion values, machine-readable. |
 | `boards.json` | Board index: number, title, size, section and canvas position. |

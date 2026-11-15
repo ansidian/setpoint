@@ -1,13 +1,13 @@
 # Setpoint v2 · Jobs boards (design round 4)
 
-These are boards 32–40 for [Jobs](../../BRIEF.md#jobs-after-20), plus 32b, 34c and a states strip. Claude
-drew them on 2026-10-29 on a Claude Design canvas, from the brief (decisions 49–63), and Andy reviewed them
-there; his answers to the round's questions (decisions 64–73) are drawn in. Each board is plain HTML on the
+These are boards 32–40 for Jobs, plus 32b, 34c and a states strip. Claude
+drew them on 2026-10-29 on a Claude Design canvas, from the brief, and the owner reviewed them
+there; the owner's answers to the round's questions are drawn in. Each board is plain HTML on the
 round-2 stylesheet (`../styles/setpoint.css`) plus [`jobs.css`](jobs.css). That file holds Jobs's
 components, and the DESIGN.md overrides and tokens that the round-2 stylesheet doesn't carry, at the values
 `web/src/tokens.ts` ships: Night `panel` and `ink3`, Light `page`, `ink2` and `cardOn`, `navOn`, `accent`,
 `sub4`, `edgeFocus`, `hl`, `switchOn`, and the done glyph in `good`. It adds no new tokens.
-[DESIGN.md](../../DESIGN.md) wins over these boards wherever the two differ; its Jobs section comes next.
+The app and its tests win over these boards wherever the two differ.
 
 Each board's motion, with its values, is in [`motion.md`](motion.md).
 
@@ -40,7 +40,7 @@ Each board's motion, with its values, is in [`motion.md`](motion.md).
   the table. Applications per week is a 12-bar chart beside search, this week's bar outlined since the week
   isn't over.
 - **Needs you is a band above the table**, drawn like Attention's but without `caution`: its count is
-  `ink2`, in the band and in the sidebar, since Jobs informs and never nags (D313).
+  `ink2`, in the band and in the sidebar, since Jobs informs and never nags.
 - **The detail opens where the reading pane does** (680 px). While it's open, the Platform column drops and
   JD becomes a glyph, as mail drops its chips beside the reader. Platform shows only while the pane is
   closed.
