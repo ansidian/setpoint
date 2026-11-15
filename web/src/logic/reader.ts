@@ -197,3 +197,21 @@ export function paneWidth(width: number | string | null): number {
   const value = width === null || width === '' ? NaN : Number(width);
   return Number.isFinite(value) ? Math.round(Math.min(READING_PANE.max, Math.max(READING_PANE.min, value))) : READING_PANE.start;
 }
+
+/** A screen's name among the kept widths: its size in CSS px, which tells a laptop's own display
+ * from an external one where the pixel ratio doesn't. */
+export const screenKey = (screen: {width: number; height: number}) => `${screen.width}x${screen.height}`;
+
+/** The stored widths, one per screen the pane was dragged on. A lone number is from before
+ * screens were told apart, and is the width of the screen in front. */
+export function paneWidths(stored: string | null, screen: string): Record<string, number> {
+  let value: unknown;
+  try {
+    value = JSON.parse(stored ?? '');
+  } catch {
+    return {};
+  }
+  if (typeof value === 'number') return {[screen]: paneWidth(value)};
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([, width]) => typeof width === 'number').map(([key, width]) => [key, paneWidth(width as number)]));
+}

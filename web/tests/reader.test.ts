@@ -3,7 +3,7 @@
 import type {MessageOut, RemoteContentOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attachmentLabel, attachmentType, factRows, fileSize, hasRemoteContent, paneWidth, parseCsv, previewKind, readerActions, readerSummary, remoteImages, senderLine, whenLabel} from '../src/logic/reader.ts';
+import {attachmentLabel, attachmentType, factRows, fileSize, hasRemoteContent, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, whenLabel} from '../src/logic/reader.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -19,6 +19,20 @@ describe('the reading pane\'s width', () => {
     ['an empty value', '', 680],
     ['junk', 'wide', 680],
   ] as const)('%s', (_name, width, expected) => expect(paneWidth(width)).toBe(expected));
+});
+
+describe('the reading pane\'s widths, one per screen', () => {
+  const laptop = screenKey({width: 1512, height: 982});
+  test.each<[string, string | null, Record<string, number>]>([
+    ['nothing stored', null, {}],
+    ['an empty value', '', {}],
+    ['junk', 'wide', {}],
+    ['a list', '[900]', {}],
+    ['a lone number, from before: the screen in front', '900', {'1512x982': 900}],
+    ['a lone number out of bounds', '2000', {'1512x982': 1100}],
+    ['a width per screen', '{"1512x982":560,"2560x1440":900}', {'1512x982': 560, '2560x1440': 900}],
+    ['each inside the bounds, and only numbers', '{"1512x982":300,"2560x1440":"wide"}', {'1512x982': 480}],
+  ])('%s', (_name, stored, expected) => expect(paneWidths(stored, laptop)).toEqual(expected));
 });
 
 describe('senderLine', () => {

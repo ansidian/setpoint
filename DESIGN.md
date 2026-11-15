@@ -1849,7 +1849,10 @@ was decided; the audit itself was retired by D480.
     2026-10-09; darma SV-22).
 22. **The reading pane resizes from its left edge,** 480 to 1100 px (and leaving the list 420),
     starting at 680; ← and → step it 16 px when the edge has focus. This browser keeps the width
-    (Andy, 2026-10-09; darma SV-22).
+    (Andy, 2026-10-09; darma SV-22), one per screen: an external display and the laptop's own
+    each have theirs, told apart by the screen's size, and a screen it was never sized on starts
+    at 680. Moving the window to another screen takes that screen's width (Andy, 2026-11-14;
+    darma SV-275, D575).
 23. **The reader's More shows only when it holds something**, on Security and Noise mail; elsewhere
     the tools end at previous and next (Andy, 2026-10-08; darma SV-24).
 24. **Calendar search** opens as mail's does (#8): the header's search button, `/` or ⌘F turn the
