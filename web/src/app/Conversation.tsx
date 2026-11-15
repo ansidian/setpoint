@@ -12,12 +12,12 @@ import {Icon} from '../ui/Icon.tsx';
  * they sit: all earlier, all later, or both, with this email's place marked between. A long run of
  * earlier emails folds behind one line, keeping the nearest in view.
  */
-export function Conversation({message, now, timeZone, onOpen}: {message: MessageOut; now: number; timeZone: string; onOpen: (id: number) => void}) {
+export function Conversation({message, now, timeZone, onOpen}: {message: MessageOut; now: number; timeZone: string; onOpen: (id: number, sent: boolean) => void}) {
   const [unfolded, setUnfolded] = useState(false);
   const view = conversationLines(message, unfolded);
   if (!view) return null;
   const line = (email: ConversationEmailOut) => (
-    <button key={email.id} type="button" className={email.sent ? 'rd-conv-line you' : 'rd-conv-line'} onClick={() => onOpen(email.id)}>
+    <button key={email.id} type="button" className={email.sent ? 'rd-conv-line you' : 'rd-conv-line'} onClick={() => onOpen(email.id, email.sent)}>
       <span className="who" data-tip={email.sent ? undefined : email.from_address} data-tip-quick>{email.sent ? 'You' : email.from_name}</span>
       <span className="words">{email.excerpt || email.subject}</span>
       <span className="age num" data-tip={fullTimestamp(email.received_at, timeZone)} data-tip-quick>{age(email.received_at, now, timeZone)}</span>

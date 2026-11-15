@@ -6,7 +6,8 @@
 // an account with none reads quieter, and a click on it still opens it, to an empty view. The Inbox
 // has no account filter: here the account is the address the user chose to write from.
 //
-// The reader opens a sent email as any other. Its tools are Trash and Open in Gmail. J and K move the
+// The reader opens a sent email as any other. Its tools are Trash and Open in Gmail. A received email
+// of its conversation opens in the Inbox. J and K move the
 // cursor (with an email open, they open the next and previous one), Enter opens, E Trash (with Undo in
 // the toast, and ⌘Z), O Open in Gmail, Esc closes the reader, then the search.
 //
@@ -161,6 +162,10 @@ export function SentPage({route}: {route: SentRoute}) {
     go({open: id});
     void openMessage(id).catch(toastFailure('Couldn\'t mark it read'));
   }
+
+  // From the reader: an email of its conversation the user didn't send is received mail, not
+  // Sent's, so it opens in the Inbox with the Inbox's tools. The rest open here.
+  const openFromReader = (id: number, sent?: boolean) => (sent === false ? navigate({page: 'inbox', open: id}) : openEmail(id));
 
   const close = () => go({open: null});
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;
@@ -339,7 +344,7 @@ export function SentPage({route}: {route: SentRoute}) {
             onPoint={key => key !== cursor && setCursor(key)} onOpen={(id, key) => openEmail(id, key)} onToggleNoise={nothing} onNearEnd={loadMore} onUnpin={nothing} />
         )}
         {open !== null && (
-          <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={id => openEmail(id)}
+          <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={openFromReader}
             sent canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}
       </div>

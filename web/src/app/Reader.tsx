@@ -79,7 +79,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   actions: ReaderActions;
   marks?: string[];
   // Opens another email (an Answer card's source).
-  onOpen: (id: number) => void;
+  // `sent` says whether the user sent it, when the caller knows (a conversation line, the reply line).
+  onOpen: (id: number, sent?: boolean) => void;
   // Where the phone's Back goes: the Inbox, or the search results the email was opened from.
   back?: 'Inbox' | 'Search';
   // Opened from Sent: its tools are Trash and Open in Gmail, as sent-only mail's are anywhere.
@@ -355,7 +356,7 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
   now: number;
   timeZone: string;
   marks: string[];
-  onOpen: (id: number) => void;
+  onOpen: (id: number, sent?: boolean) => void;
   cards: Cards;
   // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
   unread: boolean;
@@ -395,7 +396,7 @@ function Email({listed, message, load, accounts, now, timeZone, marks, cards, un
   onCodeCopied?: () => void;
   // Opens another email of its conversation. Without it, as on another page's pane, there is no
   // "You replied" line and no conversation list.
-  onOpen?: (id: number) => void;
+  onOpen?: (id: number, sent?: boolean) => void;
 }) {
   const failed = useLoadFailed([load]);
   const arrived = useArrival(message !== undefined);
@@ -425,7 +426,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
   unread: boolean;
   onCodeCopied: (() => void) | undefined;
   // Opens the reply from the "You replied" line, which shows only with it.
-  onOpen: ((id: number) => void) | undefined;
+  onOpen: ((id: number, sent?: boolean) => void) | undefined;
 }) {
   const account = accounts.get(listed.account_id);
   // The line draws from the row at once. A click opens the reply once the email names it.
@@ -472,7 +473,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
       </div>
       {replied && onOpen && (
         <button className="rd-replied" type="button" disabled={replyId === undefined} data-tip={fullTimestamp(replied, timeZone)} data-tip-quick
-          onClick={() => replyId !== undefined && onOpen(replyId)}>
+          onClick={() => replyId !== undefined && onOpen(replyId, true)}>
           <Icon name="reply" size={16} />You replied {dayOf(replied, now, timeZone)}
         </button>
       )}

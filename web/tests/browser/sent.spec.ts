@@ -41,7 +41,7 @@ test('the sidebar\'s Sent: its list names who each went to, an email opens with 
     assert.deepEqual(await page.locator('.hd .sent-accounts button').allTextContents(), ['All', 'Business', 'Personal', 'Work', 'Jobs', 'iCloud']);
     // Newest first, each naming its first recipient, and how many more.
     assert.deepEqual(await rows(page).evaluateAll(found => found.map(row => row.querySelector('.from')?.getAttribute('aria-label'))),
-      ['To Priya Raman', 'To Sam Ortiz', 'To Mom', 'To Lena Fischer +1', 'To Ravi Menon +1', 'To Contoso Coffee', 'To Tailspin Toys Support']);
+      ['To Priya Raman', 'To Sam Ortiz', 'To Mom', 'To Lena Fischer +1', 'To Theo Walsh', 'To Ravi Menon +1', 'To Theo Walsh', 'To Theo Walsh', 'To Theo Walsh', 'To Contoso Coffee', 'To Tailspin Toys Support']);
 
     // An email opens beside it with Sent's tools, and the head says who it went to.
     await rowOf(page, 'Lab notes for Friday').click();
@@ -52,7 +52,7 @@ test('the sidebar\'s Sent: its list names who each went to, an email opens with 
 
     // E: out of the list, the next one opens, and Undo puts it back in the reader.
     await page.keyboard.press('e');
-    await page.locator('.rd-subj', {hasText: 'Order 4417 arrived damaged'}).waitFor();
+    await page.locator('.mailtext', {hasText: 'Games and a cooler'}).waitFor();
     await until('it left the list', () => rowOf(page, 'Lab notes for Friday').count(), count => count === 0);
     await holdToast(page);
     await page.locator('.toast button', {hasText: 'Undo'}).click();
@@ -112,9 +112,40 @@ test('search from Sent covers sent mail only, in its account; from the Inbox it 
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await page.locator('.hd .sent-accounts button', {hasText: 'Personal'}).click();
-    await until('Personal\'s', () => rows(page).count(), count => count === 3);
+    await until('Personal\'s', () => rows(page).count(), count => count === 7);
     await search(page, 'hike');
     await until('Personal\'s hike', () => results(page), found => JSON.stringify(found) === JSON.stringify([['To Sam Ortiz', 'Re: Saturday hike']]));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a conversation from Sent: a sent reply lists its thread, Theo\'s email opens in the Inbox with its own tools, and a sent one opened from there has Sent\'s; Sent\'s rows carry no reply mark', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/sent`);
+    await rowOf(page, 'Re: Saturday hike').waitFor();
+    assert.equal(await page.locator('.list .row .replied').count(), 0);
+    // The last reply to Theo, Oct 4.
+    await rows(page).filter({has: page.locator('.from[aria-label="To Theo Walsh"]')}).first().click();
+    await page.locator('.mailtext', {hasText: '4 PM works.'}).waitFor();
+    assert.equal(await page.locator('.rd-replied').count(), 0);
+    await page.locator('.rd-conv-h', {hasText: 'Earlier in this conversation'}).waitFor();
+    assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO']);
+
+    // Theo's email is received mail: it opens in the Inbox, with Pin, and says the user replied.
+    await page.locator('.rd-conv-line', {hasText: 'Perfect, Ana and Kofi'}).click();
+    await page.locator('.mailtext', {hasText: 'Perfect, Ana and Kofi'}).waitFor();
+    assert.match(new URL(page.url()).pathname, /^\/inbox\/\d+$/);
+    await page.locator('.rd-replied', {hasText: 'You replied Oct 4'}).waitFor();
+    assert.deepEqual(await tools(page), ['TrashE', 'PinP', 'Open in GmailO']);
+
+    // A reply opened from the Inbox's reader has Sent's tools.
+    await page.locator('.rd-conv-line.you', {hasText: 'Games and a cooler'}).click();
+    await page.locator('.mailtext', {hasText: 'Games and a cooler'}).waitFor();
+    await until('Sent\'s tools', () => tools(page), shown => shown.join() === 'TrashE,Open in GmailO');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

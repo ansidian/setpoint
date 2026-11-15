@@ -1,7 +1,7 @@
 // The reader's conversation list: the other emails of the open email's thread, one line each with
 // the sender's name or "You", the first words and the age, oldest first. Its heading says where they
 // sit, this email's place is marked when they sit on both sides, and a long run of earlier emails
-// folds behind "N more", keeping the nearest in view. A line opens its email, a sent one included.
+// folds behind "N more", keeping the nearest in view. A line opens its email, a sent one included, saying which.
 import type {ConversationEmailOut, MessageOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {expect, test, vi} from 'vitest';
@@ -34,7 +34,7 @@ test('earlier emails, oldest first: the sender or "You", the first words and the
   // An email with no words shows its subject.
   expect(lines()).toEqual(['Theo Walsh | Words of 1 | Sep 23', 'You | Words of 2 | Sep 24', 'Theo Walsh | Re: Cabin weekend in November | Sep 25']);
   await userEvent.click(page.getByRole('button', {name: /^You/}));
-  expect(onOpen).toHaveBeenCalledWith(2);
+  expect(onOpen).toHaveBeenCalledWith(2, true);
 });
 
 test('only later emails say so, and emails on both sides mark this one between them', async () => {
