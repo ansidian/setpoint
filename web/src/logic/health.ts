@@ -1,8 +1,7 @@
-// Health and states, as the lines
-// and words they show. Healthy shows nothing. Needs reconnect is a bar at the top of the Inbox;
-// stale is a muted line, failing the same line in `caution` with the provider's reason; triage down
-// notes the Unsorted group. Settings › Accounts says each source's state on its row, and the
-// calendar's right pane has its own sources' lines.
+// Health and states, as the lines and words they show. Healthy shows nothing. Needs reconnect is a
+// bar at the top of the Inbox. Stale is a muted line, and failing is the same line in `caution` with
+// the provider's reason. Triage down notes the Unsorted group. Settings › Accounts says each
+// source's state on its row, and the calendar's right pane has its own sources' lines.
 import type {AccountOut, HealthOut, SourceOut, TriageStatusOut} from '@setpoint/shared';
 import {clockTime, readerTime} from './format.ts';
 import {mergeSources} from './settings.ts';
@@ -27,9 +26,9 @@ export function reconnectLine(accounts: Pick<AccountOut, 'label' | 'health'>[]):
 }
 
 /**
- * Where the needs-reconnect bar's Reconnect goes: straight to Google's sign-in for the
- * one Gmail account needing it, as its row in Settings › Accounts does; for iCloud's app password,
- * or several accounts, Settings › Accounts.
+ * Where the needs-reconnect bar's Reconnect goes. For the one Gmail account needing it, it goes
+ * straight to Google's sign-in, as its row in Settings › Accounts does. For iCloud's app password,
+ * or several accounts, it goes to Settings › Accounts.
  */
 export function reconnectTarget(accounts: Pick<AccountOut, 'id' | 'provider' | 'health'>[]): {gmail: number} | 'settings' {
   const needing = accounts.filter(account => account.health.state === 'needs_reconnect');
@@ -41,7 +40,7 @@ export interface HealthLine {
   text: string;
 }
 
-/** "Personal, as of 9:14 PM" (stale), "Personal, as of 9:14 PM, <reason>" (failing); nothing for healthy. Status lines take commas. */
+/** "Personal, as of 9:14 PM" (stale), "Personal, as of 9:14 PM, <reason>" (failing), nothing for healthy. Status lines take commas. */
 export function healthLine(name: string, health: HealthOut, now: number, timeZone: string): HealthLine | null {
   if (health.state !== 'stale' && health.state !== 'failing') return null;
   const since = health.as_of ? `as of ${asOf(health.as_of, now, timeZone)}` : 'not checked yet';
@@ -79,7 +78,7 @@ export function calendarHealthLines(sources: SourceOut[], now: number, timeZone:
   return CALENDAR_SOURCES.flatMap(([provider, name]) => {
     const source = mergeSources(sources.filter(one => one.provider === provider));
     const line = source && healthLine(name, source.health, now, timeZone);
-    // Google Calendar's accounts show as one, the worst; Check now checks that one.
+    // Google Calendar's accounts show as one, the worst. Check now checks that one.
     return source && line ? [{...line, key: name, source: source.id, health: source.health}] : [];
   });
 }
@@ -91,9 +90,9 @@ export function triageNote(triage: Pick<TriageStatusOut, 'state' | 'as_of'> | un
 }
 
 /**
- * Which glyph a Settings row's state leads with: a `good`
- * dot when checked, `history` when checks stopped, `warning` when failing, `sync_problem` when it
- * needs sign-in; nothing before a first check.
+ * Which glyph a Settings row's state leads with: a `good` dot when checked, `history` when checks
+ * stopped, `warning` when failing, `sync_problem` when it needs sign-in. Nothing before a first
+ * check.
  */
 export type HealthKind = HealthOut['state'] | null;
 

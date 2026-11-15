@@ -1,14 +1,14 @@
-// An application's detail (boards 32, 32b, 33, 34c, 38b): where
-// the reading pane sits, and as wide. Its tools (Back in a narrow window, Open posting `O`, or Open
-// email while a JD with no link is looked up; previous and next); its head (the company, "via" its
-// platform, the account and Applied; the title; the status and its latest step; "First seen in this
-// email"); then the JD first: what they want, the facts, both lists and the full posting one
-// step away, or where the JD stands (looking, No JD found with Look it up, candidates in Needs you);
-// the timeline, each event opening its email; Applied before at the company, and its other
-// applications. At not_found, Paste the posting: the main action after a pick Jobs couldn't
-// read, beside Look it up otherwise; a JD pasted shows what Haiku has read of it so far. While it's
-// looked up, Paste the posting stops the lookup and opens the area. The JD's location is
-// added or changed in place. The corrections (boards 35a, 35b): More after the tools, the title edited in
+// An application's detail (boards 32, 32b, 33, 34c, 38b), where the reading pane sits, and as wide.
+// First its tools: Back in a narrow window, Open posting `O` (or Open email while a JD with no link
+// is looked up), previous and next. Then its head: the company, "via" its platform, the account and
+// Applied, the title, the status and its latest step, and "First seen in this email". Then the JD
+// first: what they want, the facts, both lists and the full posting one step away. Without one, it
+// shows where the JD stands (looking, No JD found with Look it up, candidates in Needs you). Then
+// the timeline, each event opening its email. Then Applied before at the company, and its other
+// applications. At not_found, Paste the posting is the main action after a pick Jobs couldn't read,
+// and sits beside Look it up otherwise. A JD pasted shows what Haiku has read of it so far. While
+// it's looked up, Paste the posting stops the lookup and opens the area. The JD's location is added
+// or changed in place. The corrections (boards 35a, 35b): More after the tools, the title edited in
 // place (and the company, from More), the status chip's Set status, Not this posting's candidates
 // offered where the JD was, and each event's ··· (Open email, Move to…, Not about this), also on a
 // right-click. An event whose email Gmail no longer has keeps its line and opens nothing.
@@ -211,7 +211,7 @@ function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSa
   );
 }
 
-/** The JD first: its summary, facts, lists and the full posting; or where it stands without one. */
+/** The JD first: its summary, facts, lists and the full posting, or where it stands without one. */
 function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
   detail: ApplicationOut;
   timeZone: string;
@@ -236,7 +236,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
       toastFailure('Couldn\'t stop the lookup')(error);
     });
   };
-  // The location in place: shown at once, then saved, with Undo; empty takes it away.
+  // The location in place: shown at once, then saved, with Undo. Empty takes it away.
   const place = (value: string) => {
     setPlacing(false);
     const location = value || null;
@@ -290,7 +290,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
       </div>
     );
   }
-  // No JD found, or never looked up (a closed application from history): each says so
+  // No JD found, or never looked up (a closed application from history). Each says so
   // under the section's label, with Look it up where it can run. A lookup stopped to paste
   // reads as stopped from the click, so the area isn't drawn again when the server answers.
   const stoppedHere = detail.jd.state === 'looking';
@@ -301,8 +301,8 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
       ? {icon: 'pending' as const, lead: 'Is this the posting?', rest: `${detail.jd.candidates} ${detail.jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`}
       : {icon: 'remove' as const, lead: 'Not looked up', rest: detail.status === 'rejected' || detail.status === 'withdrawn' ? 'it was closed before Jobs read it' : 'Jobs hasn\'t looked for it yet'};
   const notFound = jd.state === 'not_found';
-  // After a pick Jobs couldn't read, the text is what's left, so Paste leads and Look it up steps back;
-  // with nothing found, another look still costs the user less. Stopped, the user chose to paste.
+  // After a pick Jobs couldn't read, the text is what's left, so Paste leads and Look it up steps back.
+  // With nothing found, another look still costs the user less. Stopped, the user chose to paste.
   const pasteFirst = notFound && (jd.link !== null || jd.stopped);
   const lookUpButton = (
     <button className={`btn ${notFound && !pasteFirst ? 'out' : 'quiet'} sm`} type="button" disabled={asking} onClick={lookItUp}><Icon name="search" size={16} />Look it up</button>
@@ -372,7 +372,7 @@ export function JdFacts({posting, location, reading = true}: {posting: PostingOu
   );
 }
 
-/** Must-haves and nice-to-haves in two columns, each with its count; none when both are empty. */
+/** Must-haves and nice-to-haves in two columns, each with its count. None when both are empty. */
 export function JdLists({posting}: {posting: PostingOut}) {
   if (!posting.must_haves.length && !posting.nice_to_haves.length) return null;
   return (
@@ -397,7 +397,8 @@ const GONE_TIP = 'Gmail no longer has this email, so Jobs keeps only its line';
 /**
  * The timeline, oldest first: each event opens its email, and one whose email is gone keeps
  * its line and says so. Its ··· (on hover, or a right-click) holds Open email, Move to… and Not
- * about this; one moved or taken off folds out (180 ms), one a merge brings settles from sub2 (900 ms).
+ * about this. One moved or taken off folds out (180 ms), and one a merge brings settles from sub2
+ * (900 ms).
  */
 function Timeline({events, timeZone, today, onEmail, menuOpen, onMenu}: {
   events: JobEventOut[];

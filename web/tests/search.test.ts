@@ -1,7 +1,6 @@
-// Search, the Answer card and the proposal card's rules as tables:
-// highlighted runs, reasons, the results line, what Alfred is asked, what the
-// reader highlights, and how a proposal's time reads; calendar results: Upcoming then Past,
-// the row's day, and its line with a series' rule.
+// Search, the Answer card and the proposal card's rules as tables: highlighted runs, reasons, the
+// results line, what Alfred is asked, what the reader highlights, and how a proposal's time reads.
+// For calendar results: Upcoming then Past, the row's day, and its line with a series' rule.
 import type {AnswerOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';

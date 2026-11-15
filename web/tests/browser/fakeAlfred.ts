@@ -1,9 +1,9 @@
-// A fake Anthropic on 127.0.0.1 for the browser checks (server/tests/fakeModels.ts is the full one):
-// Anthropic's Messages API answering Alfred's turns with the tool calls a test scripts, so board 07
-// can show Alfred answering, and a suggestion's reading of a search with invented readings of the seed's mail
-// (`SEED_READINGS`). Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a dev run accepts;
-// with the key set, triage and the history pass ask it too, and are told it's overloaded, so they
-// change nothing. No check reaches a real model provider.
+// A fake Anthropic on 127.0.0.1 for the browser checks (server/tests/fakeModels.ts is the full one).
+// It is Anthropic's Messages API, answering Alfred's turns with the tool calls a test scripts, so
+// board 07 can show Alfred answering. It also answers a suggestion's reading of a search with
+// invented readings of the seed's mail (`SEED_READINGS`). Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a
+// dev run accepts. With the key set, triage and the history pass ask it too. The fake tells them
+// it's overloaded, so they change nothing. No check reaches a real model provider.
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 
@@ -45,10 +45,10 @@ export const SEED_READINGS: Record<string, FakeReading> = {
 };
 
 /**
- * The fake, answering Alfred's turns with `answer`. With `held`, each of Alfred's turns waits until the
- * check lets it go, as does a reading marked `held`, so a check reads the card while Alfred works, or
- * the field while a reading comes, for as long as it needs rather than inside a window of time.
- * `release()` lets one go: the one held longest, or, with none held yet, the next to come.
+ * The fake, answering Alfred's turns with `answer`. With `held`, each of Alfred's turns waits until
+ * the check lets it go, as does a reading marked `held`. So a check reads the card while Alfred
+ * works, or the field while a reading comes, for as long as it needs rather than inside a window of
+ * time. `release()` lets one go: the one held longest, or, with none held yet, the next to come.
  */
 export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = false, readings = SEED_READINGS}: {held?: boolean; readings?: Record<string, FakeReading>} = {}) {
   let ids = 0;
@@ -104,7 +104,7 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = fal
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   // A check that fails before it closes the fake (Setpoint didn't start) mustn't keep its spec file
-  // running: the socket alone doesn't hold the process open.
+  // running. The socket alone doesn't hold the process open.
   server.unref();
   const {port} = server.address() as AddressInfo;
   return {url: `http://127.0.0.1:${port}`, read, release, close: () => new Promise<void>(resolve => {
@@ -116,9 +116,9 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = fal
 const LEASE = 'When does my lease renewal need to be signed?';
 
 /**
- * Board 07's Alfred: the lease question searches, reads the
- * renewal terms and answers "By Oct 31, 2026, per Parkside's Sep 30 email."; the follow-up "what's
- * the new rent?" answers from the email the thread read: "$2,140 a month, up from $2,060."
+ * Board 07's Alfred. The lease question searches, reads the renewal terms and answers "By Oct 31,
+ * 2026, per Parkside's Sep 30 email.". The follow-up "what's the new rent?" answers from the email
+ * the thread read: "$2,140 a month, up from $2,060."
  */
 export function leaseAlfred({question, results}: AlfredTurn): Call {
   type Row = {message_id: number; email: string};

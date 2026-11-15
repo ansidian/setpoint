@@ -1,6 +1,6 @@
 // Dates, times and ages as DESIGN.md › Copy writes them: ages "now", "4m", "2h", "Yesterday",
-// "Mon", "Oct 1" in the Inbox; clock times "2:30 PM"; full timestamps in tooltips. Local days are
-// the owner's zone (GET /api/me's `time_zone`), never the browser's.
+// "Mon", "Oct 1" in the Inbox, clock times "2:30 PM", and full timestamps in tooltips. Local days
+// are the owner's zone (GET /api/me's `time_zone`), never the browser's.
 
 const MINUTE = 60_000;
 const DAY = 86_400_000;
@@ -42,7 +42,7 @@ export function minutesOf(at: string | number, timeZone: string): number {
   return Number(parts.hour) * 60 + Number(parts.minute);
 }
 
-/** The instant of a local day and minutes after its midnight in `timeZone` (DST-safe; 1440 is the next midnight). */
+/** The instant of a local day and minutes after its midnight in `timeZone` (DST-safe, 1440 is the next midnight). */
 export function instantAt(date: string, minutes: number, timeZone: string): string {
   const day = addDays(date, Math.floor(minutes / 1440));
   const rest = ((minutes % 1440) + 1440) % 1440;
@@ -56,7 +56,7 @@ export function instantAt(date: string, minutes: number, timeZone: string): stri
   return new Date(wall - offset(first)).toISOString();
 }
 
-// Intl writes a narrow no-break space before AM/PM; the design writes a plain one.
+// Intl writes a narrow no-break space before AM/PM. The design writes a plain one.
 const plain = (text: string) => text.replace(/\s/g, ' ');
 
 /** "7:12 AM". */
@@ -149,7 +149,7 @@ export function expiresSoon(at: string, now: number): boolean {
 
 /**
  * When expiresIn's words next change: the end of the current minute ("Expires in 11 min" reads 10),
- * and in the last minute the expiry itself, when the row leaves; null once expired.
+ * and in the last minute the expiry itself, when the row leaves. Null once expired.
  */
 export function countdownChange(at: string, now: number): number | null {
   const expires = Date.parse(at);
@@ -157,7 +157,7 @@ export function countdownChange(at: string, now: number): number | null {
   return minutes <= 0 ? null : expires - (minutes - 1) * MINUTE;
 }
 
-/** A verification code in two groups: "482913" → "482 913", "12345678" → "1234 5678"; others as they are. */
+/** A verification code in two groups: "482913" → "482 913", "12345678" → "1234 5678". Others stay as they are. */
 export function codeGroups(code: string): string {
   if (!/^\w+$/.test(code) || code.length < 6 || code.length % 2) return code;
   return `${code.slice(0, code.length / 2)} ${code.slice(code.length / 2)}`;

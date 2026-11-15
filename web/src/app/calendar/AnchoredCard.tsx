@@ -1,8 +1,8 @@
-// An overlay anchored to a calendar item: the recurring-drop
-// prompt (board 15b) and the failed card (board 19b). It sits 8 px off its item on the side the
-// grid half it is in sets, inside the grid (placeBeside), measured in the month section's own
-// CSS pixels so the wide-screen zoom doesn't throw it off (geometry.ts), and follows its item as
-// the grid scrolls. With its item out of view it hides.
+// An overlay anchored to a calendar item: the recurring-drop prompt (board 15b) and the failed card
+// (board 19b). It sits 8 px off its item, inside the grid, on the side set by the grid half it is in
+// (placeBeside). It is measured in the month section's own CSS pixels so the wide-screen zoom
+// doesn't throw it off (geometry.ts). It follows its item as the grid scrolls. With its item out of
+// view it hides.
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
 import {placeBeside} from '../../logic/placement.ts';

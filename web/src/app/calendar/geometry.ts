@@ -1,17 +1,19 @@
 // Where the calendar's overlays (the "+N" popover, the floating detail) measure things: in the month
 // section's own CSS pixels, the space their left, top and translate are set in. On a wide screen
-// styles.css zooms the root (1.075 from 1440 px, 1.25 from 2200), and the page's boxes and pointer positions come in
-// zoomed pixels, so each is taken relative to the section and divided by its zoom.
+// styles.css zooms the root (1.075 from 1440 px, 1.25 from 2200). The page's boxes and pointer
+// positions then come in zoomed pixels, so each is taken relative to the section and divided by its
+// zoom.
 import type {Rect} from '../../logic/calendar.ts';
 
 // The calendar's grids, month and week, mark their parts the same way, so the overlays anchored to
-// items (the floating detail, the "+N" popover, the drop prompt, the failed card) work on either: the
-// section they're drawn in, the scroller they move with, the grid of days, and each day and item.
+// items (the floating detail, the "+N" popover, the drop prompt, the failed card) work on either.
+// They mark the section they're drawn in, the scroller they move with, the grid of days, and each
+// day and item.
 export const CAL = {section: '[data-cal-section]', scroll: '[data-cal-scroll]', grid: '[data-cal-grid]'} as const;
 /** Every item, "+N" and all, an anchored overlay tries not to cover. */
 export const CAL_ITEMS = `${CAL.grid} :is(.ev, .tk, .wb, .more)`;
 /**
- * An item's element on a day of the grid; else, with `more`, that day's "+N" it's folded into; else
+ * An item's element on a day of the grid. Else, with `more`, that day's "+N" it's folded into. Else
  * wherever it's drawn (a bar across days picked on another, a block across midnight).
  */
 export function findItem(root: ParentNode, date: string, key: string, more = false): HTMLElement | null {

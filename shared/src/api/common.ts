@@ -14,8 +14,8 @@ export const localDate = z.iso.date();
 export const id = z.int().positive();
 
 /**
- * A source's health. `as_of` is the last successful
- * check, for "Personal, as of 9:14 PM"; `reason` is the provider's error while failing.
+ * A source's health. `as_of` is the last successful check, for "Personal, as of 9:14 PM".
+ * `reason` is the provider's error while failing.
  */
 export interface HealthOut {
   state: HealthState;
@@ -36,12 +36,12 @@ export interface CommandOut {
   target_id: number;
   kind: CommandKind;
   state: CommandState;
-  // The provider that carries it out, for "Google Calendar · …"; null when it never reached one.
+  // The provider that carries it out, for "Google Calendar · …", or null when it never reached one.
   provider: SourceProvider | null;
   provider_message: string | null;
   can_retry: boolean;
   can_move_back: boolean;
-  // An item change's earlier time, for "From Fri, Oct 9" (board 19b); null otherwise.
+  // An item change's earlier time, for "From Fri, Oct 9" (board 19b), or null otherwise.
   previous: ItemWhen | null;
   created_at: string;
   settled_at: string | null;

@@ -1,6 +1,6 @@
 // The Calendar in the browser: boards 11 and 11b built and checked (11b's busy Saturday is the
-// busy-saturday fixture), then the flows: the grid's sizes, paging through months, a
-// calendar toggled off and on, the "+3" popover opening and closing with Esc, selecting a day and an item,
+// busy-saturday fixture). Then the flows: the grid's sizes, paging through months, a calendar
+// toggled off and on, the "+3" popover opening and closing with Esc, selecting a day and an item,
 // the mini-month, and the Today block's links landing on the right day.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
@@ -16,7 +16,7 @@ const text = (page: Page, selector: string) => page.locator(selector).first().te
 const chips = (page: Page, date: string) => page.locator(`.cell[data-date="${date}"] :is(.ev, .tk)`).allTextContents();
 
 test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist', async () => {
-  // Time to Leave comes from live routes; the time-to-leave fixture holds the board's estimate.
+  // Time to Leave comes from live routes. The time-to-leave fixture holds the board's estimate.
   // The server's clock holds at the seed's 9:12 AM, so a slow start can't move the now-line's minute.
   const setpoint = await startSetpoint({fixtures: ['time-to-leave'], clock: 'frozen'});
   try {
@@ -27,7 +27,7 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     assert.equal(await page.locator('.ag-item', {hasText: 'Dentist'}).locator('.leave').textContent(), 'Leave by 2:05 PM · 18 min');
     assert.equal(await page.locator('.ag-item .leave').count(), 1, 'only Dentist has one today');
-    // The line names the calendar; the place has its own line.
+    // The line names the calendar. The place has its own line.
     const dentist = page.locator('.ag-item', {hasText: 'Dentist'});
     assert.equal(await dentist.locator('.line').textContent(), '2:30 – 3:30 PM · Personal');
     assert.equal(await dentist.locator('.place').textContent(), 'Smile Dental');
@@ -76,7 +76,7 @@ test('board 11b: a busy Saturday folds into "+3"; its popover stays open while i
     await page.getByRole('dialog', {name: 'Lunch with Jo'}).waitFor();
     await setpoint.idle();
     assert.equal(await popover.count(), 1, 'still open');
-    // E on one of its items keeps it; Esc closes the card first, then the popover.
+    // E on one of its items keeps it. Esc closes the card first, then the popover.
     await page.keyboard.press('e');
     await page.locator('.editor').waitFor();
     await setpoint.idle();
@@ -106,7 +106,7 @@ test('board 11b: a busy Saturday folds into "+3"; its popover stays open while i
 });
 
 // Which month a scroll shows, and which rows it draws, are monthAtScroll's and rowsInView's, tables in
-// calendar.test.ts; the wheel's scrolls went with them.
+// calendar.test.ts. The wheel's scrolls went with them.
 test('← → P N and ‹ › page through months, the header, tab title and mini-month reading each; T comes back to today', async () => {
   const setpoint = await startSetpoint();
   try {
@@ -331,7 +331,7 @@ test('selecting a day updates the right pane; an item turns solid; Esc lets it g
     await until('Esc lets the item go', () => page.locator('.ev.sel').count(), count => count === 0);
     assert.equal(new URL(page.url()).pathname, '/calendar/2026-10-12');
 
-    // The mini-month picks a day; ‹ › step only the mini-month.
+    // The mini-month picks a day. ‹ › step only the mini-month.
     await page.locator('.mini button[aria-label="2026-10-20"]').click();
     await until('Tue, Oct 20', () => text(page, '.rp-date'), title => title === 'Tue, Oct 20');
     assert.equal(await page.locator('.mini .vis').textContent(), '20');
@@ -381,7 +381,7 @@ test('a task made with a new project loads the calendar\'s Todoist projects agai
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
-    // As the editor's New project sends it: the confirmed create's live event names the task's
+    // As the editor's New project sends it. The confirmed create's live event names the task's
     // calendar, and that loads the projects again, with Garden.
     const todoist = (await setpoint.api<CalendarOut[]>('GET', '/calendars')).find(calendar => calendar.provider === 'todoist')!;
     const projects = page.waitForResponse(async response => response.url().endsWith('/api/todoist/projects')
@@ -394,7 +394,7 @@ test('a task made with a new project loads the calendar\'s Todoist projects agai
   }
 });
 
-// Where a month sits in the scroller; rounded, as at a fractional zoom it lands on the nearest device pixel.
+// Where a month sits in the scroller. It is rounded, because at a fractional zoom it lands on the nearest device pixel.
 const monthTop = (month: string) => monthTopRow(month) * layout.monthRow;
 const scrollTop = (page: Page) => page.locator('.cal-scroll').evaluate(element => Math.round(element.scrollTop));
 
@@ -433,7 +433,7 @@ test('Tab and Shift-Tab step Month | Week from anywhere; in the editor Tab is it
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.cal-month').waitFor();
     assert.equal(await page.locator('.hd .seg').getAttribute('data-tip'), 'Tab · ⇧Tab');
-    // One step each way turns stepping on; the wrap is components/segmented.test.tsx's.
+    // One step each way turns stepping on. The wrap is components/segmented.test.tsx's.
     await page.keyboard.press('Tab');
     await page.locator('.cal-week').waitFor();
     await page.keyboard.press('Shift+Tab');
@@ -467,7 +467,7 @@ test('a day\'s + makes an event on that day, and an empty day\'s ghost rows, New
     assert.equal(await page.getByLabel('Date', {exact: true}).inputValue(), 'Thu, Oct 15');
     await page.keyboard.press('Escape');
     await page.locator('.editor').waitFor({state: 'detached'});
-    // An empty day: two ghost rows in the pane; New task opens the editor on that day.
+    // An empty day: two ghost rows in the pane. New task opens the editor on that day.
     await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
     const ghosts = page.locator('.rpane .ag-ghost');
     await until('Sat, Oct 24\'s ghost rows', () => ghosts.allTextContents(), rows => rows.join() === 'New eventC,New taskD');
@@ -526,7 +526,7 @@ test('the selected day\'s USPS Informed Delivery in the rail, one row with "+N",
     assert.ok(last!.x + last!.width <= row!.x + row!.width + 0.5, 'the row fits the rail');
     assert.equal(last!.y, first!.y, 'never a second row');
 
-    // "+N" opens the viewer at the first piece it holds; the arrows stop at the last.
+    // "+N" opens the viewer at the first piece it holds. The arrows stop at the last.
     await more.click();
     const viewer = page.getByRole('dialog', {name: 'USPS Informed Delivery, Sat, Oct 3'});
     await viewer.getByText(`${shown + 1} of 8`).waitFor();
@@ -547,7 +547,7 @@ test('the selected day\'s USPS Informed Delivery in the rail, one row with "+N",
     await page.mouse.click(10, 10);
     await viewer.waitFor({state: 'detached'});
 
-    // L opens the day's mail at its first scan; its hint is in the header.
+    // L opens the day's mail at its first scan. Its hint is in the header.
     await section.locator('.rp-mail-head .kbd', {hasText: 'L'}).waitFor();
     await page.keyboard.press('l');
     await viewer.getByText('1 of 8').waitFor();

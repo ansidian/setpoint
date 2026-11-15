@@ -1,6 +1,6 @@
 // A provider's error, classified for the one retry policy and carrying the provider's own words,
 // which a failed change shows as they are ("The requested event was modified by another client.
-// (409 Conflict)"). Adapters throw these; anything else a check throws counts as transient.
+// (409 Conflict)"). Adapters throw these. Anything else a check throws counts as transient.
 import type {ProviderErrorKind} from '../domain/retry.ts';
 
 export class ProviderError extends Error {

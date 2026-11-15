@@ -1,8 +1,8 @@
 // Places autocomplete for the editor's place field, Places API (New), with the editor's session
 // token so one editing session is billed as one.
-// "a&b auto" becomes "a & b auto" (Google missed the exact business otherwise), results
-// are restricted to 12 km around Home, widened to 24 km (still a restriction, merged, first pass
-// first) when that finds fewer than five, ranked by distance, US only. The key is
+// "a&b auto" becomes "a & b auto" (Google missed the exact business otherwise). Results are
+// restricted to 12 km around Home, US only, and ranked by distance. When that finds fewer than
+// five, the area widens to 24 km (still a restriction, merged, first pass first). The key is
 // Settings' Places key (also Time to Leave's routes).
 import type {Home, PlaceOut, PlaceSuggestionOut} from '@setpoint/shared';
 import {requestJson} from '../http.ts';
@@ -41,7 +41,7 @@ function suggestions(answer: {suggestions?: {placePrediction?: Prediction}[]} | 
   });
 }
 
-/** Suggestions for what the user has typed; [] for nothing typed. Throws a ProviderError with Google's words. */
+/** Suggestions for what the user has typed. [] for nothing typed. Throws a ProviderError with Google's words. */
 export async function placeSuggestions(options: PlacesOptions, key: string, query: string, sessionToken: string, home: Home | null, signal?: AbortSignal): Promise<PlaceSuggestionOut[]> {
   const input = normalisePlaceQuery(query);
   if (!input) return [];
@@ -59,7 +59,7 @@ export async function placeSuggestions(options: PlacesOptions, key: string, quer
     const seen = new Set(found.map(place => place.place_id));
     found = [...found, ...suggestions(await ask(WIDER_METERS)).filter(place => !seen.has(place.place_id))];
   }
-  // Nearest first; Google's order otherwise (a stable sort), unknown distances last.
+  // Nearest first, Google's order otherwise (a stable sort), unknown distances last.
   return found
     .map((place, index) => ({place, index}))
     .sort((a, b) => (a.place.distance ?? Infinity) - (b.place.distance ?? Infinity) || a.index - b.index)
@@ -68,7 +68,7 @@ export async function placeSuggestions(options: PlacesOptions, key: string, quer
 
 /**
  * One place's name, address and coordinates (Place Details, Places API (New)), for Home in
- * Settings › Calendar; the session token closes the autocomplete session it came from. Throws a
+ * Settings › Calendar. The session token closes the autocomplete session it came from. Throws a
  * ProviderError with Google's words.
  */
 export async function placeDetails(options: PlacesOptions, key: string, placeId: string, sessionToken: string | null, signal?: AbortSignal): Promise<PlaceOut> {

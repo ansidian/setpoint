@@ -1,10 +1,9 @@
 // An email's actions, one list for ⌘K's This email (board 20), the reader's More (its proposals on
-// Security and Noise mail) and the right-click menu on its row, so they can't
-// drift. ⌘K's order: Done H (Attention mail not yet Done), Trash E, Pin or Unpin P, Open in
-// Gmail O (Gmail's mail), Add to calendar, Add as task, Ask about this email, Add to rule, Mark
-// unread ⇧U. The menu leads with Open ↵, offers Mark read on an unread row in Mark unread's place,
-// and ends with its Copy items: the sender's address and a code row's code, whose copy reads the
-// email.
+// Security and Noise mail) and the right-click menu on its row, so they can't drift. ⌘K's order:
+// Done H (Attention mail not yet Done), Trash E, Pin or Unpin P, Open in Gmail O (Gmail's mail),
+// Add to calendar, Add as task, Ask about this email, Add to rule, Mark unread ⇧U. The menu leads
+// with Open ↵ and offers Mark read on an unread row in Mark unread's place. It ends with its Copy
+// items: the sender's address and a code row's code, whose copy reads the email.
 import type {ItemKind, MessageRowOut, RuleOut} from '@setpoint/shared';
 import {setRuleMatch} from '../api/settings.ts';
 import {readerActions} from '../logic/reader.ts';
@@ -85,10 +84,10 @@ export function selectionActions(rows: MessageRowOut[], on: SelectionHandlers, w
 }
 
 /**
- * Add to rule: New rule from the sender, which opens Settings › Mail's Add rule filled in
- * with it and where the email is now, then each written rule the sender can join, which it then
- * matches too. The email itself stays where it is: a rule sorts new mail. In the menu they're a list
- * in its place; ⌘K, which has no such list, offers each as a command of its own.
+ * Add to rule: New rule from the sender, which opens Settings › Mail's Add rule filled in with it
+ * and where the email is now. Then comes each written rule the sender can join, which it then
+ * matches too. The email itself stays where it is, because a rule sorts new mail. In the menu they're a list
+ * in its place. ⌘K has no such list, so it offers each as a command of its own.
  */
 function ruleActions(row: MessageRowOut, rules: RuleOut[] | undefined, where: 'menu' | 'palette'): MenuAction[] {
   const sender = ruleSender(row.from_address);

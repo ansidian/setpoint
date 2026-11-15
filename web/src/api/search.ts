@@ -1,6 +1,7 @@
-// Search, Alfred and proposals (shared/src/api/search.ts has the routes). None of these is cached:
-// a search, an answer and a proposal belong to the screen that asked for them. Create is the one
-// change here, a command: pending until its provider confirms it, failed with the provider's words.
+// Search, Alfred and proposals (shared/src/api/search.ts has the routes). None of these is cached,
+// because a search, an answer and a proposal belong to the screen that asked for them. Create is
+// the one change here. It is a command: pending until its provider confirms it, failed with the
+// provider's words.
 import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, ItemKind, ProposalOut, SearchChip, SearchOut, SearchRead, SearchSuggestOut} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
 
@@ -21,8 +22,9 @@ export const searchMail = ({text, chips, read, typed, page}: SearchQuery) =>
   sendJson<SearchOut>('POST', '/search', {text, chips, ...(read ? {read} : {}), ...(typed === undefined ? {} : {typed}), ...(page ?? {})});
 
 /**
- * A suggestion for the field's exact text: the grammar's date alone without `model`, and with
- * it a reading too, the only way a search reaches a model. `signal` drops it once the text has moved on.
+ * A suggestion for the field's exact text. Without `model` it is the grammar's date alone. With
+ * `model` it adds a reading too, the only way a search reaches a model. `signal` drops it once the
+ * text has moved on.
  */
 export const searchSuggestion = ({text, chips}: Pick<SearchQuery, 'text' | 'chips'>, model: boolean, signal: AbortSignal) =>
   sendJson<SearchSuggestOut>('POST', '/search/suggestion', {text, chips, model}, {signal});
@@ -34,7 +36,7 @@ export const searchSuggestionLog = (id: number, event: 'shown' | 'accepted', sea
 /** The search log: a chip the user took off a search, so a wrong reading can be seen. */
 export const searchChipRemoved = (searchId: number, chip: SearchChip) => sendJson<void>('POST', '/search/chip-removed', {search_id: searchId, chip});
 
-/** The calendar's search; a later page passes the last one's `next_offset`. Not logged. */
+/** The calendar's search. A later page passes the last one's `next_offset`. Not logged. */
 export const searchCalendar = ({text, chips, offset}: {text: string; chips: CalendarSearchChip[]; offset: number}) =>
   sendJson<CalendarSearchOut>('POST', '/calendar/search', {text, chips, ...(offset ? {offset} : {})});
 
@@ -42,7 +44,7 @@ export const searchCalendar = ({text, chips, offset}: {text: string; chips: Cale
 export const searchOpened = (searchId: number, messageId: number, position: number) =>
   sendJson<void>('POST', '/search/opened', {search_id: searchId, message_id: messageId, position});
 
-/** A question; a follow-up names its conversation; Ask about this email names the email. */
+/** A question. A follow-up names its conversation, and Ask about this email names the email. */
 export const askAlfred = (question: string, {conversation, message, ask}: {conversation?: number | null; message?: number | null; ask?: string} = {}) =>
   sendJson<AnswerOut>('POST', '/alfred/ask', {question, ...(conversation ? {conversation_id: conversation} : {}), ...(message ? {message_id: message} : {}), ...(ask ? {ask_id: ask} : {})});
 

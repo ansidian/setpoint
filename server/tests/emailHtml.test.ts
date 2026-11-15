@@ -34,7 +34,7 @@ describe('what never reaches the frame', () => {
 });
 
 describe('what a browser would show', () => {
-  // A browser folds an email's documents into one body; the reader's page holds what's in all of them.
+  // A browser folds an email's documents into one body. The reader's page holds what's in all of them.
   test.each([
     ['one document', '<!doctype html><html><head><title>T</title></head><body><p>One</p></body></html>', '<p>One</p>'],
     ['a fragment', '<p>One</p> <p>Two</p>', '<p>One</p> <p>Two</p>'],
@@ -57,7 +57,7 @@ describe('what a browser would show', () => {
 describe('what the frame\'s own height can\'t change', () => {
   // The frame is as tall as its page, so a rule that asks how tall the window is would ask the frame,
   // and could flip as the frame grows (a notice flipped from landscape to portrait at 600 px
-  // and back, forever): such rules read as they would in a tall window.
+  // and back, forever). So such rules read as they would in a tall window.
   test.each([
     ['landscape never holds', '@media screen and (max-width: 767px) and (orientation: landscape) { .t { width: 360px; } }', '@media screen and (max-width: 767px) and (max-width: 0px) { .t { width: 360px; } }'],
     ['portrait always does', '@media (orientation:portrait) { .t { width: 100%; } }', '@media (min-width: 0px) { .t { width: 100%; } }'],
@@ -109,7 +109,7 @@ describe('remote content', () => {
     const policy = emailPolicy(load);
     expect(policy).toContain("default-src 'none'");
     expect(policy).toContain(images);
-    // One script runs, the reader's own measuring script, by its hash; the frame keeps no origin.
+    // One script runs, the reader's own measuring script, by its hash. The frame keeps no origin.
     const hash = createHash('sha256').update(MEASURE_SCRIPT).digest('base64');
     expect(policy).toContain(`script-src 'sha256-${hash}';`);
     expect(policy.match(/script-src/g)).toHaveLength(1);

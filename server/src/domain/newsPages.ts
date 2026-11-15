@@ -1,8 +1,8 @@
 // Web pages read for News: an article's readable text and its og:image, and the posts a page
-// read lists where a lab has no feed (Anthropic's news page and Mistral's, as a list of links to
-// posts; the Claude release notes, as dated sections of one page). Pure: HTML in, text and posts
+// read lists where a lab has no feed. Anthropic's news page and Mistral's are a list of links to
+// posts. The Claude release notes are dated sections of one page. Pure: HTML in, text and posts
 // out. No outlet's layout is assumed beyond what most pages share, so a page that changes keeps
-// reading if it can, and a page read that finds nothing says so (the adapter fails it).
+// reading if it can. A page read that finds nothing says so (the adapter fails it).
 import type {ChildNode, Document} from 'domhandler';
 import {Element, Text} from 'domhandler';
 import {findAll, findOne, getAttributeValue, isTag, removeElement, textContent} from 'domutils';
@@ -39,11 +39,11 @@ const NOISE_WORDS = new Set([
 // A paragraph that is the page talking about itself, not the article.
 const NOISE_TEXT = /^(advertisement|sponsored|sign up|subscribe|read more|related:|click here|share this|copyright|©|all rights reserved|follow us|this story has been updated)/i;
 // The outlet asking the reader to become a member, as a public broadcaster does before its story and
-// after it: the ask itself, not a story about giving or a station's funding.
+// after it. This is the ask itself, not a story about giving or a station's funding.
 const APPEAL = /\b(?:please become a (?:\w+ )?member|become a (?:\w+ )?member today|increase your (?:existing )?membership|100% (?:community|listener|reader|member)[- ](?:funded|supported))\b/i;
 
 // A utility class with a value or a variant ("scroll-m-(--nav-height)", "lg:pt-4") isn't the
-// element's name, so its words don't count: Mistral's post list once read as navigation.
+// element's name, so its words don't count. Mistral's post list once read as navigation.
 const isUtility = (token: string) => /[()[\]:/]/.test(token);
 const words = (element: Element) => [...(attr(element, 'class') ?? '').split(/\s+/).filter(token => !isUtility(token)), attr(element, 'id') ?? '']
   .join(' ').toLowerCase().split(/[^a-z]+/).filter(Boolean);
@@ -57,7 +57,8 @@ function isNoise(element: Element): boolean {
   if (element.attribs.hidden !== undefined || attr(element, 'aria-hidden') === 'true' || /display\s*:\s*none/i.test(attr(element, 'style') ?? '')) return true;
   if (name === 'article' || name === 'main' || name === 'body') return false;
   if (!words(element).some(word => NOISE_WORDS.has(word))) return false;
-  // A layout's wrapper can carry such a word ("with-sidebar"): it isn't noise if it holds the article.
+  // A layout's wrapper can carry such a word ("with-sidebar"). It isn't noise if it holds the
+  // article.
   return !findOne(node => node.name === 'p' && textOf(node).length >= LONG_PARAGRAPH, element.children);
 }
 
@@ -74,8 +75,8 @@ const hasBlockChild = (element: Element) => element.children.some(node => isTag(
 const ownText = (node: ChildNode): string => (node instanceof Text ? node.data : node instanceof Element && node.name.toLowerCase() !== 'a' ? node.children.map(ownText).join('') : '');
 
 /**
- * A list item of the article's own: not one holding a list of its own (its items are counted), and
- * not only links, as a list of the outlet's other stories is.
+ * A list item of the article's own. It is not one holding a list of its own (its items are
+ * counted), and not only links, as a list of the outlet's other stories is.
  */
 const isItem = (element: Element) => !findOne(node => node.name.toLowerCase() === 'li', element.children) && /[\p{L}\p{N}]/u.test(ownText(element));
 
@@ -89,8 +90,8 @@ function marker(item: Element): string {
 /**
  * The text blocks of a container, in order: its paragraphs, and divs that hold only inline text
  * (Apple's newsroom writes its paragraphs as divs), long enough to be prose and not the page's own.
- * With `lists`, each list item is a block too, marked as one ("• Fabrikam Park, 1200 Ocean Blvd."),
- * however short, and what's inside it counts once, as the item; choosing the container leaves lists
+ * With `lists`, each list item is also a block, marked as one ("• Fabrikam Park, 1200 Ocean Blvd."),
+ * however short. What's inside it counts once, as the item. Choosing the container leaves lists
  * out, so a page's link lists can't outweigh its story.
  */
 function blockElements(root: Document | Element, lists = false): {element: Element; text: string}[] {
@@ -121,15 +122,15 @@ const MAX_ARTICLE_CHARS = 60_000;
 
 /** A headline is shorter than this (prod's CBS video lists never pass 100). */
 const HEADLINE_MAX = 150;
-// A block that ends as a sentence or a lead-in does, before any closing quotes or brackets. Not "!" or
-// "?", which headlines end with too.
+// A block that ends as a sentence or a lead-in does, before any closing quotes or brackets. Not "!"
+// or "?", because headlines also end with those.
 const SENTENCE_END = /[.…:]["'”’)\]]*$/u;
 
 /**
- * Whether a page's text blocks hold any prose. The outlet's list of other stories, which is
- * all a video page gives (its other videos' headlines, a programme's episodes, the latest stories with
- * their times), is lines no longer than a headline that don't end as a sentence does. An article has
- * at least one block that does, or that runs longer than a headline.
+ * Whether a page's text blocks hold any prose. A video page gives only the outlet's list of other
+ * stories (its other videos' headlines, a programme's episodes, the latest stories with their
+ * times). That list is lines no longer than a headline that don't end as a sentence does. An article
+ * has at least one block that does, or that runs longer than a headline.
  */
 export function hasProse(blocks: readonly string[]): boolean {
   return blocks.some(block => block.length >= HEADLINE_MAX || SENTENCE_END.test(block));
@@ -156,7 +157,7 @@ function articleContainer(document: Document): Element | null {
   return [...scores.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 }
 
-/** The articleBody of the page's JSON-LD, when an outlet gives one: a fallback for pages the DOM doesn't yield. */
+/** The articleBody of the page's JSON-LD, when an outlet gives one. A fallback for pages the DOM doesn't yield. */
 function jsonLdBody(document: Document): {text: string | null; image: string | null} {
   const out = {text: null as string | null, image: null as string | null};
   for (const script of all(document, element => element.name === 'script' && attr(element, 'type') === 'application/ld+json')) {
@@ -184,7 +185,7 @@ function jsonLdBody(document: Document): {text: string | null; image: string | n
 }
 
 export interface ExtractedArticle {
-  // Paragraphs separated by a blank line (the article view's shape); null when none could be found.
+  // Paragraphs separated by a blank line (the article view's shape). Null when none could be found.
   text: string | null;
   // The page's own image for sharing (og:image, twitter:image, the JSON-LD's).
   imageUrl: string | null;
@@ -214,9 +215,10 @@ const joinParagraphs = (paragraphs: string[]) => {
 
 /**
  * An article page's readable text, paragraphs and list items only (no navigation, sharing,
- * promotions, appeals or the page's own lines), and its image. A page that yields too little (a
- * teaser, a consent wall, an app shell that draws itself with scripts), or no prose (a video page's
- * list of the outlet's other videos), has no text, and the article falls back to its feed summary.
+ * promotions, appeals or the page's own lines), and its image. Some pages yield too little (a
+ * teaser, a consent wall, an app shell that draws itself with scripts) or no prose (a video page's
+ * list of the outlet's other videos). Such a page has no text, and the article falls back to its
+ * feed summary.
  */
 export function extractArticle(html: string, pageUrl: string): ExtractedArticle {
   const document = parseDocument(html);
@@ -242,7 +244,7 @@ export interface PagePost {
   anchor: string | null;
   headline: string;
   date: PostDate | null;
-  // A dated section's own text (release notes); a listed post's is read from its page.
+  // A dated section's own text (release notes). A listed post's text is read from its page.
   text: string | null;
 }
 
@@ -252,7 +254,8 @@ const HEADINGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 
 /**
  * The card a post's link sits in: its ancestors, up to three, while they link nowhere else (a list
- * of posts is the first that does), so the title and date found there are this post's and no other's.
+ * of posts is the first that does). So the title and date found there are this post's and no
+ * other's.
  */
 function cardOf(link: Element, href: string, base: string): Element {
   let card = link;
@@ -288,8 +291,8 @@ function postDate(card: Element): PostDate | null {
 
 /**
  * The posts a news page lists (Anthropic's, Mistral's): links on the same site below the page's
- * own path (/news/a-post under /news), not to archives (categories, tags, pages, authors), each
- * once, in the page's order, with its title and, when the page shows one, its date.
+ * own path (/news/a-post under /news), not to archives (categories, tags, pages, authors). Each
+ * comes once, in the page's order, with its title and, when the page shows one, its date.
  */
 export function listedPosts(html: string, pageUrl: string): PagePost[] {
   const document = parseDocument(html);
@@ -308,7 +311,7 @@ export function listedPosts(html: string, pageUrl: string): PagePost[] {
     const headline = postTitle(link, card);
     const known = posts.get(key);
     if (known) {
-      // A card often links twice (its image and its title): keep the better title and any date.
+      // A card often links twice (its image and its title). Keep the better title and any date.
       if (headline.length > known.headline.length && headline.length <= 200) known.headline = headline;
       known.date ??= postDate(card);
       continue;
@@ -327,9 +330,9 @@ const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').re
 const firstSentence = (text: string) => clip(/^(.{20,}?[.!?])(\s|$)/.exec(text)?.[1] ?? text, 160);
 
 /**
- * The dated sections of a release notes page (the Claude release notes): each heading that reads as
- * a date starts one, up to the next heading at its level or above, and each is its own post: its
- * anchor on the page, its first line as the headline, and its paragraphs and list items as its text.
+ * The dated sections of a release notes page (the Claude release notes). Each heading that reads as
+ * a date starts one, up to the next heading at its level or above. Each is its own post: its anchor
+ * on the page, its first line as the headline, and its paragraphs and list items as its text.
  */
 export function datedSections(html: string, pageUrl: string): PagePost[] {
   const document = parseDocument(html);

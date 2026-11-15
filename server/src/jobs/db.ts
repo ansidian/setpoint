@@ -1,5 +1,6 @@
-// Jobs's tables on the app's database: its own migrations (./drizzle) with its own migrations table,
-// applied after the app's, and a Drizzle instance typed by its own schema over the same connection.
+// Jobs's tables on the app's database. Jobs has its own migrations (./drizzle) and its own migrations
+// table, applied after the app's. Its Drizzle instance is typed by its own schema and uses the same
+// connection.
 // Every place that opens a database Jobs is used on calls migrateJobs: the server at start and the
 // seed (both wiring points), and Jobs's tests. It's idempotent.
 import {fileURLToPath} from 'node:url';
@@ -24,7 +25,7 @@ export function jobsDb(sqlite: Database.Database): JobsDb {
   return db;
 }
 
-/** Creates or updates Jobs's tables; run after the app's own migrations. */
+/** Creates or updates Jobs's tables. Run it after the app's own migrations. */
 export function migrateJobs(sqlite: Database.Database) {
   migrate(jobsDb(sqlite), {migrationsFolder: MIGRATIONS, migrationsTable: schema.JOBS_MIGRATIONS_TABLE});
 }

@@ -1,30 +1,30 @@
-// The Inbox page: the header, the list (days first: Attention, the Pinned shelf, then
-// every email by day, Today first) and the reading pane, with mail's keys (DESIGN.md › Interaction
-// rules). An email turns read only when opened, by a click or Enter (or Mark all as read); moving the
-// cursor, scrolling and opening a Noise line never read anything. Unread mail sits in its day, so
-// reading one never moves it.
-// The keyboard cursor is a `sub2` fill that J and K move and the pointer takes (with an email open,
-// J and K open the next and previous one instead); Enter opens; H Done,
-// E Trash (each with Undo in the toast, and ⌘Z), P Pin, O Open in Gmail, ⇧I Mark all as read, ⇧U Mark unread, U to the
-// next unread email; Esc closes the reader. Done or Trash on the open email opens the next one.
+// The Inbox page: the header, the list (days first: Attention, the Pinned shelf, then every email by
+// day, Today first) and the reading pane, with mail's keys (DESIGN.md › Interaction rules). An email
+// turns read only when opened, by a click or Enter (or Mark all as read). Moving the cursor,
+// scrolling and opening a Noise line never read anything. Unread mail sits in its day, so reading
+// one never moves it.
+// The keyboard cursor is a `sub2` fill that J and K move and the pointer takes. With an email open,
+// J and K open the next and previous one instead. Enter opens, H Done, E Trash (each with Undo in
+// the toast, and ⌘Z), P Pin, O Open in Gmail, ⇧I Mark all as read, ⇧U Mark unread, U to the next
+// unread email. Esc closes the reader. Done or Trash on the open email opens the next one.
 //
-// ⌘ or Ctrl-click and ⇧-click select several emails: the reading pane shows the
-// selection (SelectionPane), and H, E, P, ⇧U, a selected row's right-click and ⌘K act on all of it,
-// each email's change its own command, with one toast and one Undo. A plain click or Enter ends it and
-// opens the email; Esc ends it first.
+// ⌘ or Ctrl-click and ⇧-click select several emails. The reading pane shows the selection
+// (SelectionPane), and H, E, P, ⇧U, a selected row's right-click and ⌘K act on all of it. Each
+// email's change is its own command, with one toast and one Undo. A plain click or Enter ends the
+// selection and opens the email. Esc ends it first.
 //
-// Search: while the header's field holds a search, its results replace the list
-// and the header reads "Search"; the reading pane, J, K and Enter work the same, and each open is
-// logged with its position. ⌘Enter asks Alfred, whose Answer card sits above the results. Esc closes
-// the reader, then the card, then the search.
+// Search: while the header's field holds a search, its results replace the list and the header
+// reads "Search". The reading pane, J, K and Enter work the same, and each open is logged with its
+// position. ⌘Enter asks Alfred, whose Answer card sits above the results. Esc closes the reader,
+// then the card, then the search.
 //
-// Views: All | Unread | Attention | FYI | Noise in the header's segmented control, Tab
-// and Shift-Tab stepping them. Unread's segment has the red unread badge and Attention's its count;
-// an email read in Unread stays there, drawn read, until the user leaves the view. Mark all as read
-// follows the view, and Attention has none. An empty view says so, with Show All.
+// Views: All | Unread | Attention | FYI | Noise in the header's segmented control. Tab and Shift-Tab
+// step them. Unread's segment has the red unread badge and Attention's has its count. An email read
+// in Unread stays there, drawn read, until the user leaves the view. Mark all as read follows the
+// view, and Attention has none. An empty view says so, with Show All.
 //
-// On the phone (board 21) the header is the mark, Inbox and its counts and Mark
-// all as read (no account filter), with a plain search field under it (no chips, no Alfred).
+// On the phone (board 21) the header is the mark, Inbox and its counts and Mark all as read (no
+// account filter). A plain search field sits under it (no chips, no Alfred).
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -86,7 +86,7 @@ type InboxRoute = Extract<Route, {page: 'inbox'}>;
 const VIEW_LABELS: Record<InboxView, string> = {all: 'All', unread: 'Unread', attention: 'Attention', fyi: 'FYI', noise: 'Noise'};
 
 /**
- * Whether any of the Pinned shelf shows in the list, where a pin lands; with no shelf yet, whether
+ * Whether any of the Pinned shelf shows in the list, where a pin lands. With no shelf yet, whether
  * the place it comes (above the first day) does. Below Attention it can be out of sight either way.
  */
 function shelfInView(): boolean {
@@ -97,11 +97,11 @@ function shelfInView(): boolean {
   return inSight(places.map(place => place.getBoundingClientRect()), list.getBoundingClientRect());
 }
 
-// The email last opened, so the address following an open doesn't open it twice; a deep link,
+// The email last opened, so the address following an open doesn't open it twice. A deep link,
 // a reload or Back to an email opens it.
 let lastOpened: number | null = null;
 
-// ⌘Z: what undoes each Done and Trash made here, newest last; the toast's Undo runs the same one.
+// ⌘Z: what undoes each Done and Trash made here, newest last. The toast's Undo runs the same one.
 const undos: (() => void)[] = [];
 
 /** The emails whose change the server refused, with why, from `changeEach`'s outcomes. */
@@ -115,8 +115,8 @@ let slides = 0;
 /**
  * The phone's push and back: the reader slides in over the list, which moves a little under it,
  * and slides back off it, as one 260 ms view transition (phone.css draws it, by the direction on the
- * root). Only the app's own opens and closes slide: the browser's Back (popstate) doesn't, as Safari's
- * edge swipe animates it already. Without the API it's the cut it was; which way is phoneSlide's.
+ * root). Only the app's own opens and closes slide. The browser's Back (popstate) doesn't, as Safari's
+ * edge swipe animates it already. Without the API it's the cut it was. phoneSlide owns which way.
  */
 function slide(direction: 'in' | 'back' | null, update: () => void) {
   if (!direction || !('startViewTransition' in document)) return update();
@@ -130,8 +130,8 @@ function slide(direction: 'in' | 'back' | null, update: () => void) {
 
 /**
  * The rows Undo put back in Attention or on the shelf before the server's list has them again, and
- * the list they were last checked against: each is let go once the list holds it, or it's taken out
- * again (Done, Trash).
+ * the list they were last checked against. Each is let go once the list holds it, or when it's taken
+ * out again (Done, Trash).
  */
 interface Kept {
   groups: InboxGroupOut[] | null;
@@ -153,7 +153,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const inbox = inboxLoad.data;
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
   const {data: openMessageData} = useResource<MessageOut>(route.open ? messagePath(route.open) : null);
-  // Emails Trash took out here, hidden at once rather than when the server's list leaves them out;
+  // Emails Trash took out here, hidden at once rather than when the server's list leaves them out.
   // Undo, or a refused Trash, lets one back.
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
   const untrashing = (id: number) => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
@@ -171,7 +171,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const allPages = useResources<AllOut>(allPaths);
   const {error: allError} = useResource<AllOut>(allPath());
   const allRows = useMemo(() => allPages.flatMap(page => page?.days.flatMap(day => day.rows) ?? []).filter(row => !trashing.has(row.id)), [allPages, trashing]);
-  // The days whose Noise the user opened here; each starts folded.
+  // The days whose Noise the user opened here. Each starts folded.
   const [noiseOpen, setNoiseOpen] = useState<ReadonlySet<string>>(new Set());
   const toggleNoise = (date: string) => setNoiseOpen(dates => (dates.has(date) ? new Set([...dates].filter(one => one !== date)) : new Set(dates).add(date)));
   const loadMore = () => {
@@ -179,7 +179,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     if (next && !befores.includes(next)) setBefores([...befores, next]);
   };
 
-  // The pattern prompt (triage's; none while its route answers 404), and the ones answered here.
+  // The pattern prompt (triage's, and none while its route answers 404), and the ones answered here.
   const {data: prompts} = useResource<PatternPrompt[]>(PROMPTS_PATH);
   // Add to rule's rules to join, in the row's menu.
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
@@ -220,7 +220,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // The emails U can go to: the unread ones the list shows, not Done.
   const unreadShown = useMemo(() => new Set([...attention, ...shelf, ...dayViews.flatMap(day => day.lanes.flatMap(lane => lane.rows.map(({row}) => row)))].filter(unreadNotDone).map(row => row.id)),
     [attention, shelf, dayViews]);
-  // Unread's badge: every unread email; Attention's count, what's in it not Done.
+  // Unread's badge counts every unread email. Attention's count is what's in it not Done.
   const unreadHere = counts?.unread ?? 0;
   const attentionHere = useMemo(() => attentionRows(inboxGroups, false).length, [inboxGroups]);
   // FYI's or Noise's Mark all as read: that view's unread mail, as Mark all as read reads it.
@@ -282,7 +282,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   /**
    * Opens an email. `travel` is the way the user stepped to it (J, K, the arrows, Done or Trash moving
-   * on), so the reader's swap comes from that side; a click has none.
+   * on), so the reader's swap comes from that side. A click has none.
    */
   function openEmail(id: number, key?: string, travel: Travel | null = null) {
     if (selected.length) clearSelection();
@@ -294,14 +294,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
       search.opened(id);
       search.mark(id, {unread: false});
     }
-    // On the phone the reader slides in over the list; the desktop's sits beside it.
+    // On the phone the reader slides in over the list. The desktop's sits beside it.
     slide(phoneSlide(phone, open, id), () => go({open: id}));
     void openMessage(id).catch(toastFailure('Couldn\'t mark it read'));
   }
 
   /**
-   * A click on a row: with ⌘ or Ctrl it joins the selection or leaves it (the first one taking the
-   * open email, whose reader gives way), with ⇧ every email from the last one clicked to it joins; a
+   * A click on a row. With ⌘ or Ctrl it joins the selection or leaves it (the first one taking the
+   * open email, whose reader gives way). With ⇧ every email from the last one clicked to it joins. A
    * plain click ends the selection and opens it. Selecting opens and reads nothing.
    */
   function clickRow(id: number, key: string, event?: ReactMouseEvent) {
@@ -352,7 +352,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   /**
    * Done or Trash: the emails leave the list. On the open email the next one opens (and reads), or the
-   * reader closes at the end (on the phone, always); from the cursor row or a selection nothing opens.
+   * reader closes at the end (on the phone, always). From the cursor row or a selection nothing opens.
    * Each email's change is its own command, sent together (`changeEach`). The toast's Undo, or ⌘Z
    * later, puts them back where they were in the list, read or not, and an open email back in the
    * reader. `undo` puts one back on screen at once and gives what to send once its change is in.
@@ -372,7 +372,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else close();
     }
     takeOut(ids);
-    // The emails the server took; Undo waits for them, as an untrash sent before the trash is refused.
+    // The emails the server took. Undo waits for them, as an untrash sent before the trash is refused.
     const sent = changeEach(ids, change).then(outcomes => {
       const refused = refusals(ids, outcomes);
       for (const {id} of refused) beats.delete(id);
@@ -445,7 +445,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         }
       });
     },
-    // The email's Gmail link: the open one's is in; a row's comes with the email, asked for as its menu opened.
+    // The email's Gmail link. The open one's is in. A row's comes with the email, asked for as its menu opened.
     openInGmail: (id: number) => {
       const url = getCached<MessageOut>(messagePath(id))?.open_url;
       if (url) window.open(url, '_blank', 'noopener');
@@ -458,7 +458,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         }, () => tab?.close());
       }
     },
-    // ⇧U or ⌘K: the emails unread again; an open one's reader closes, so it stays unread.
+    // ⇧U or ⌘K: the emails unread again. An open one's reader closes, so it stays unread.
     markUnread: (ids: number[]) => {
       if (open !== null && ids.includes(open)) close();
       void changeEach(ids, id => markUnread(id)).then(outcomes => {
@@ -501,7 +501,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   };
 
   // The selection's actions, for its pane, its right-click menu, its keys and ⌘K. Done and Trash
-  // end it; Pin and the read changes keep it.
+  // end it. Pin and the read changes keep it.
   const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
   const forSelection: SelectionHandlers = {
     done: () => {
@@ -541,7 +541,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       requestAnimationFrame(() => document.querySelector(`[data-key="${key}"]`)?.scrollIntoView({block: 'nearest'}));
     },
     // "Marked 12 as read · Undo": Undo marks those same emails unread. Every row stays where it is.
-    // In FYI or Noise only that view's mail; Attention has none.
+    // In FYI or Noise only that view's mail. Attention has none.
     markAllRead: () => {
       if (view === 'attention') return;
       if (view === 'fyi' || view === 'noise') {
@@ -611,7 +611,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
       else if (plainKey(event, 'i', {shift: true}) && view !== 'attention') run(actions.markAllRead, 'shift+i');
       else if (plainKey(event, 'u', {shift: true})) run(actions.markUnread);
-      // U goes to the next unread email; 1, the Inbox's key elsewhere, goes back to All from a
+      // U goes to the next unread email. 1, the Inbox's key elsewhere, goes back to All from a
       // search, another view or on the phone.
       else if (plainKey(event, 'u') && !searching) run(actions.toUnread);
       else if (plainKey(event, '1') && (searching || phone || view !== 'all')) run(() => navigate(toInbox()));
@@ -651,8 +651,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'));
 
   /**
-   * A right-click: on an email's row (Attention, the shelf, a day, search's results or
-   * Alfred's sources) its actions, the cursor moving there and nothing opening. Add to calendar, Add as
+   * A right-click on an email's row (Attention, the shelf, a day, search's results or Alfred's
+   * sources) opens its actions. The cursor moves there and nothing opens. Add to calendar, Add as
    * task and Ask open the email with their card.
    */
   function onContextMenu(event: ReactMouseEvent) {
@@ -662,7 +662,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     const row = rowOf(id);
     if (!element || !row) return;
     const key = element.dataset.key ?? stopOf(stops, id)?.key ?? null;
-    // On a selected row, the selection's; on any other, its own, the selection kept.
+    // On a selected row, the selection's. On any other, its own, and the selection stays.
     if (selected.includes(id)) {
       if (openContextMenu(event, element, selectionActions(selectedRows, forSelection, 'menu')) && key && stops.some(stop => stop.key === key)) setCursor(key);
       return;
@@ -707,7 +707,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         )}
         <span className="grow" />
         {!phone && !searching && markable && (
-          // Its tooltip names what it reads; below 1100 px it's the icon alone, beside the views.
+          // Its tooltip names what it reads. Below 1100 px it's the icon alone, beside the views.
           <button className="btn quiet sm mark-all" type="button" data-hint="shift+i" aria-label={markScope} data-tip={`${markScope} · ⇧I`} onClick={actions.markAllRead}>
             <Icon name="mark_email_read" size={16} /><span className="lbl">Mark all as read</span><span className="kbd">⇧I</span>
           </button>
@@ -729,7 +729,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onAsk={askAlfred} />
         ) : (
-          // Until both answers are in, its skeleton, or why they didn't come; rows not
+          // Until both answers are in, its skeleton, or why they didn't come. Rows not
           // shown before don't fold in then. A view starts afresh, at its top.
           <AllList key={view} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
             empty={view !== 'all' && shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before)

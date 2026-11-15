@@ -1,8 +1,9 @@
-// An item's description on screen: the floating detail's row (formatted, drawn
-// from the short list of formats and never from the provider's markup; folded at 6 lines under More)
-// and the editor's Description field (the bar while it has focus, an event's Underline and a task's
-// none, typing, a format, a link, a paste read through the same list). The reading and writing of
-// each format is description.test.ts's table; the save reaching the API stays in editor.spec.ts.
+// An item's description on screen. The floating detail's row is formatted, drawn from the short list
+// of formats and never from the provider's markup, and folded at 6 lines under More. The editor's
+// Description field is checked for the bar while it has focus (an event's Underline and a task's
+// none), typing, a format, a link, and a paste read through the same list. The reading and
+// writing of each format is description.test.ts's table. The save reaching the API stays in
+// editor.spec.ts.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {useLayoutEffect} from 'react';

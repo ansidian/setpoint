@@ -1,9 +1,8 @@
-// The read-state rules in the browser (DESIGN.md › Interaction rules),
-// at 1677 × 1050 and an iPhone size, each on a fresh seed: an email turns read only when
-// opened (Enter or a click) or by Mark all as read; moving the cursor, scrolling and opening a
-// Noise line never read anything; the counts follow at once, opening dropping the unread counts
-// and only Done dropping Attention's count. The seed starts at 3 attention and 19 unread. Reading
-// never moves a row: unread mail sits in its day.
+// The read-state rules in the browser (DESIGN.md › Interaction rules), at 1677 × 1050 and an iPhone
+// size, each on a fresh seed. An email turns read only when opened (Enter or a click) or by Mark all
+// as read. Moving the cursor, scrolling and opening a Noise line never read anything. The counts
+// follow at once: opening drops the unread counts, and only Done drops Attention's count. The seed
+// starts at 3 attention and 19 unread. Reading never moves a row: unread mail sits in its day.
 // A row's key says where it is: Attention ("attention:22") or its day ("all:5").
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
@@ -16,7 +15,7 @@ after(cleanUp);
 
 const sizes: SizeName[] = ['target', 'iphone'];
 
-/** Attention's count on its segment and the sidebar's unread badge; null where the sidebar isn't shown (the phone). */
+/** Attention's count on its segment and the sidebar's unread badge. Null where the sidebar isn't shown (the phone). */
 async function sidebar(page: Page): Promise<{attention: string; unread: string} | null> {
   if (!await page.locator('.sb').isVisible()) return null;
   const text = async (selector: string) => ((await page.locator(selector).count()) ? (await page.locator(selector).first().textContent()) ?? '' : '');
@@ -109,7 +108,7 @@ for (const size of sizes) {
         const after = await until('the server read it', () => counts(setpoint), value => value.unread === 18);
         assert.equal(after.attention, 3);
         assert.equal(await page.title(), 'Interview availability for Software Engineer I');
-        // Esc closes the reader; read, not Done, it stays in Attention without its dot, with its ring.
+        // Esc closes the reader. Read, not Done, it stays in Attention without its dot, with its ring.
         await page.keyboard.press('Escape');
         await until('the reader closes', () => page.locator('.pane:not(.idle)').count(), count => count === 0);
         assert.equal(await row(page, `attention:${northwind}`).count(), 1);
@@ -133,7 +132,7 @@ for (const size of sizes) {
         if (await page.locator('.sb').isVisible()) {
           await until('the sidebar follows', () => sidebar(page), shown => shown?.unread === '18' && shown.attention === '3');
         }
-        // One fewer row is drawn unread; the row stays, read, under the reader, once it closes, and
+        // One fewer row is drawn unread. The row stays, read, under the reader, once it closes, and
         // once the server's lists have it. A refetch asked now has the server's read.
         await until('one fewer drawn unread', () => unreadRows(page), now => now === before - 1);
         const refetched = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/mail/all');
@@ -171,7 +170,7 @@ for (const size of sizes) {
       try {
         const page = await load(setpoint, size);
         const {google, exams} = await ids(setpoint);
-        // Opening the protected email reads it; Attention's count stays.
+        // Opening the protected email reads it. Attention's count stays.
         await row(page, `attention:${google}`).click();
         await page.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
         await until('read', () => counts(setpoint), value => value.unread === 18);
@@ -209,10 +208,10 @@ for (const size of sizes) {
         const page = await load(setpoint, size);
         const rows = await page.locator('.list .row').count();
         await page.keyboard.press('Shift+I');
-        // The server first: a refetch sent before the provider confirms can draw the list again
-        // until the live stream's catches up.
+        // The server first, because a refetch sent before the provider confirms can draw the list
+        // again until the live stream's catches up.
         await until('the server read them', () => counts(setpoint).then(after => [after.attention, after.unread, after.unread_fyi].join()), value => value === '3,5,3');
-        // Attention's two unread and Security's three keep their dots; nothing moved.
+        // Attention's two unread and Security's three keep their dots. Nothing moved.
         await until('the rest read', () => page.locator('.list .row.unread').count(), count => count === 5, 5000);
         assert.equal(await page.locator('.list .row').count(), rows);
         const bands = () => page.locator('.list .gh:not(.day)').allTextContents().then(all => all.map(text => text.replace(/\s+/g, ' ').trim().split(' ')[0]!.toLowerCase()).join());
@@ -254,7 +253,7 @@ test('Mark all as read leaves Security unread in its day at once, before All\'s 
     });
     marked = true;
     await page.keyboard.press('Shift+I');
-    // Security's codes and sign-in alerts, in their day, keep their dots; the rest of the days' read.
+    // Security's codes and sign-in alerts, in their day, keep their dots. The rest of the days' read.
     const dayUnread = page.locator('.list .row.unread:not(.done):not([data-key^="attention:"]):not([data-key^="pinned:"])');
     await until('the days read but Security', () => dayUnread.count(), count => count === 3);
     gate.resolve();

@@ -1,6 +1,6 @@
-// One email's RFC 822 source, parsed for the message record: Gmail's `format=raw` and IMAP's
-// BODY[] go through the same parser (mailparser), so charsets, transfer
-// encodings and HTML-only mail decode the same way for both providers.
+// One email's RFC 822 source, parsed for the message record. Gmail's `format=raw` and IMAP's
+// BODY[] go through the same parser (mailparser), so charsets, transfer encodings and HTML-only
+// mail decode the same way for both providers.
 import {convert} from 'html-to-text';
 import type {HtmlToTextOptions} from 'html-to-text';
 import {simpleParser} from 'mailparser';
@@ -12,7 +12,7 @@ import type {ReadDigest, Scan} from '../domain/mailpieces.ts';
 import type {AttachmentBytes} from '../sync/adapter.ts';
 import type {FetchedAttachment, FetchedMessage, ProviderState} from '../sync/mailMirror.ts';
 
-// What the record and its index keep of a body; the reader shows the HTML.
+// What the record and its index keep of a body. The reader shows the HTML.
 export const BODY_TEXT_MAX_CHARS = 20_000;
 export const BODY_HTML_MAX_CHARS = 2_000_000;
 const SNIPPET_CHARS = 140;
@@ -45,7 +45,7 @@ function isInline(attachment: ParsedMailAttachment): boolean {
 const squash = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 // mailparser's own conversion of HTML-only mail (its nesting limit), except that an image leaves
-// only its alt text: html-to-text's default writes its address too, and an embedded `data:` image's
+// only its alt text. html-to-text's default writes its address too, and an embedded `data:` image's
 // address can fill the whole stored text.
 const HTML_TEXT_OPTIONS: HtmlToTextOptions = {
   limits: {maxDepth: 1000},
@@ -58,7 +58,7 @@ const HTML_TEXT_OPTIONS: HtmlToTextOptions = {
   selectors: [{selector: 'img', format: 'imageAlt'}],
 };
 
-/** The text of an HTML-only email; empty when its HTML can't be converted, as mailparser leaves it. */
+/** The text of an HTML-only email. Empty when its HTML can't be converted, as mailparser leaves it. */
 function htmlText(html: string): string {
   try {
     return convert(html, HTML_TEXT_OPTIONS).trim();
@@ -96,7 +96,7 @@ function naiveParse(source: Buffer): ParsedMail {
   };
 }
 
-/** The date after the top Received header's last ";", comments dropped; null when it doesn't read. */
+/** The date after the top Received header's last ";", comments dropped. Null when it doesn't read. */
 function topReceived(headers: AuthenticationHeader[]): string | null {
   const value = headers.find(header => header.name.toLowerCase() === 'received')?.value;
   if (!value?.includes(';')) return null;
@@ -115,7 +115,7 @@ async function parsedSource(source: Buffer): Promise<ParsedMail> {
   }
 }
 
-/** One attachment of an email's source, by the id parseEmail gave it; null when it isn't there. */
+/** One attachment of an email's source, by the id parseEmail gave it. Null when it isn't there. */
 export async function attachmentFromSource(source: Buffer, id: string): Promise<AttachmentBytes | null> {
   const parsed = await parsedSource(source);
   const attachment = (parsed.attachments ?? []).find((item, index) => !isInline(item) && attachmentId(item, index) === id);
@@ -131,7 +131,7 @@ export async function parseEmail(source: Buffer): Promise<ParsedEmail> {
   const parsed = await parsedSource(source);
   const from = parsed.from?.value?.[0];
   const html = typeof parsed.html === 'string' && parsed.html ? parsed.html : null;
-  // mailparser leaves an HTML-only email's text empty (skipHtmlToText): Setpoint makes it.
+  // mailparser leaves an HTML-only email's text empty (skipHtmlToText), so Setpoint makes it.
   const parsedText = (parsed.text ?? '').trim();
   const {text, snippet} = storedText(parsedText || !html ? parsedText : htmlText(html));
   const references = Array.isArray(parsed.references) ? parsed.references : parsed.references ? [parsed.references] : [];
@@ -160,7 +160,7 @@ export async function parseEmail(source: Buffer): Promise<ParsedEmail> {
 
 export interface SourceMeta extends ProviderState {
   providerId: string;
-  // The provider's own thread id (Gmail's); IMAP has none, so the thread root stands in.
+  // The provider's own thread id (Gmail's). IMAP has none, so the thread root stands in.
   threadId?: string | null;
   // When the provider received it (Gmail's internalDate, IMAP's INTERNALDATE). Gmail's follows a
   // Date header earlier than its arrival, so a Gmail email takes its top Received header first.

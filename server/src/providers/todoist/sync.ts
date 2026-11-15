@@ -1,15 +1,15 @@
-// Todoist into the mirror, polled (the webhook comes at cutover).
-// Todoist's sync token is the cursor ("*" for everything), a refused
-// token is retried once as a full sync, a full sync is the whole list (open tasks it leaves out
-// are gone), deletions arrive as `is_deleted`, and each sync applies in one transaction.
+// Todoist into the mirror, polled (Todoist's webhook only wakes a sync sooner). Todoist's sync
+// token is the cursor ("*" for everything). A refused token is retried once as a full sync. A full
+// sync is the whole list (open tasks it leaves out are gone). Deletions arrive as `is_deleted`, and
+// each sync applies in one transaction.
 //
-// Completed occurrences of repeating tasks are kept (ea_completed_tasks):
-// completing one in Setpoint makes its row at once (src/commands/items.ts), and ones completed in
-// Todoist's apps are read from its activity log, so they no longer vanish when Todoist
-// moves the task on. Todoist's completed list never holds a repeating task's occurrence, only tasks
-// really checked, so one-off tasks still come from there. A sync never prunes them for
-// being absent; they go with their task when it's deleted, or when the log shows the task put back
-// on their day (an Undo in Todoist's app, or Setpoint's reopen).
+// Completed occurrences of repeating tasks are kept (ea_completed_tasks). Completing one in
+// Setpoint makes its row at once (src/commands/items.ts). Ones completed in Todoist's apps are read
+// from its activity log, so they no longer vanish when Todoist moves the task on. Todoist's
+// completed list never holds a repeating task's occurrence, only tasks really checked, so one-off
+// tasks still come from there. A sync never prunes them for being absent. They go with their task
+// when it's deleted, or when the log shows the task put back on their day (an Undo in Todoist's
+// app, or Setpoint's reopen).
 import {isTodoistColour} from '@setpoint/shared';
 import {and, eq, inArray, isNull, notInArray} from 'drizzle-orm';
 import {localDay} from '../../domain/time.ts';
@@ -38,7 +38,7 @@ export function todoistCalendar(store: Store) {
   return store.db.insert(t.calendars).values({provider: 'todoist', providerId: 'todoist', name: 'Todoist', colour: null, position}).returning().get();
 }
 
-/** A task's columns from Todoist; its reminders are Setpoint's own, which Todoist never holds. */
+/** A task's columns from Todoist. Its reminders are Setpoint's own, which Todoist never holds. */
 function taskColumns(task: TodoistTask, projects: Map<string, string>, timeZone: string): Partial<ItemRow> | null {
   const due = task.due ? readDue(task.due, timeZone) : null;
   // Undated tasks aren't on the calendar, except subtasks.
@@ -52,9 +52,9 @@ function taskColumns(task: TodoistTask, projects: Map<string, string>, timeZone:
 }
 
 /**
- * One sync: incremental from `cursor`, or everything; returns the next cursor, or null to keep the
- * one there is when a change held a task or project the answer named: Todoist's
- * token can't move past one change alone, so the next sync reads it again, until the hold has ended
+ * One sync: incremental from `cursor`, or everything. Returns the next cursor. It returns null to
+ * keep the one there is when a change held a task or project the answer named, because Todoist's
+ * token can't move past one change alone. So the next sync reads it again, until the hold has ended
  * and it applies.
  */
 export async function syncTodoist(store: Store, api: TodoistApi, cursor: string | null): Promise<string | null> {
@@ -71,12 +71,12 @@ export async function syncTodoist(store: Store, api: TodoistApi, cursor: string 
   return applySync(store, answer, full) ? null : answer.sync_token;
 }
 
-/** Applies a sync's answer; true when it left a task or a project's colour as it was because a change holds it. */
+/** Applies a sync's answer. True when it left a task or a project's colour as it was because a change holds it. */
 export function applySync(store: Store, answer: SyncAnswer, full: boolean): boolean {
   return transaction(store, () => {
     const calendar = todoistCalendar(store);
     // Projects first, so tasks get their names. A full sync lists them all, so one it leaves out is
-    // gone; the others keep their ids, which a colour change's command names.
+    // gone. The others keep their ids, which a colour change's command names.
     const projectRows = answer.projects ?? [];
     const before = JSON.stringify(store.db.select().from(t.todoistProjects).all());
     if (full) store.db.delete(t.todoistProjects).where(notInArray(t.todoistProjects.providerId, projectRows.map(project => project.id))).run();
@@ -98,7 +98,7 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean): bool
     }
     const projectsChanged = JSON.stringify(store.db.select().from(t.todoistProjects).all()) !== before;
     const projects = new Map(store.db.select().from(t.todoistProjects).all().map(row => [row.providerId, row.name]));
-    // Labels, for the editor's picker; a task names its labels itself.
+    // Labels, for the editor's picker. A task names its labels itself.
     if (full) store.db.delete(t.todoistLabels).run();
     for (const label of answer.labels ?? []) {
       if (label.is_deleted) {
@@ -142,7 +142,7 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean): bool
         touched.add(row.id);
       }
     }
-    // A full sync lists every open task: an open one it left out is gone. Done ones are history
+    // A full sync lists every open task, so an open one it left out is gone. Done ones are history
     // (a full sync leaves completed tasks out).
     if (full) {
       for (const row of tasks) {
@@ -164,7 +164,7 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean): bool
 /**
  * Tasks completed in Todoist's apps since the last look, from its completed list: a one-off task is
  * marked done. The list never holds a repeating task's occurrence (those come from the activity log,
- * syncActivity); a repeating task in it was completed for good, and its last occurrence becomes its
+ * syncActivity). A repeating task in it was completed for good, and its last occurrence becomes its
  * done row on its day (once). A look that left a held task alone ends where it began, so the next
  * one reads it again.
  */
@@ -220,7 +220,7 @@ function extraOf(event: TodoistActivity): Record<string, unknown> {
   return extra;
 }
 
-/** A due in the activity log as a local day: an instant's in the user's zone, a floating time's own. */
+/** A due in the activity log as a local day: an instant's in the user's zone, or a floating time's own. */
 function logDay(value: unknown, timeZone: string): string | null {
   if (typeof value !== 'string') return null;
   if (/(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
@@ -234,10 +234,10 @@ function logDay(value: unknown, timeZone: string): string | null {
  * Occurrences of repeating tasks completed in Todoist's apps since the last look, from its
  * activity log. A `completed` event of a repeating task names the occurrence's day
  * (`completed_due_date_local`), which becomes its done row (once). An undo leaves that event and
- * adds an `updated` one putting the due back, with no `uncompleted`, so an update that lands the task
- * on a day it holds a done row for undoes it: the row goes, as does one the same look would make.
- * Each occurrence is settled by its last event; one-off tasks are left to the completed list. A look
- * that left a held task's event alone ends where it began, so the next one reads it again.
+ * adds an `updated` one putting the due back, with no `uncompleted`. So an update that lands the
+ * task on a day it holds a done row for undoes it. The row goes, as does one the same look would
+ * make. Each occurrence is settled by its last event. One-off tasks are left to the completed list.
+ * A look that left a held task's event alone ends where it began, so the next one reads it again.
  */
 export async function syncActivity(store: Store, api: TodoistApi, since: string | null): Promise<string> {
   const until = isoNow(store);

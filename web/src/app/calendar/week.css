@@ -1,6 +1,6 @@
-/* The week view (board 16's .wk-* and .wb, which these follow): day heads and
-   the all-day row held at the top of one scroller, 24 hours under them, blocks in lanes. Items in the
-   all-day row are calendar.css's chips; the hours' blocks are `.wb`. */
+/* The week view (board 16's .wk-* and .wb, which these follow). Day heads and the all-day row are
+   held at the top of one scroller, with 24 hours under them and blocks in lanes. Items in the
+   all-day row are calendar.css's chips, and the hours' blocks are `.wb`. */
 
 .cal-week { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
 /* From Month, the week zooms in from its row there. */
@@ -43,7 +43,7 @@
   .wk-dhead { flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 0 6px; }
 }
 
-/* The all-day row: bars spanning their days, then tasks; two to three 20 px lines. */
+/* The all-day row: bars spanning their days, then tasks, in two to three 20 px lines. */
 .wk-all { border-bottom: 1px solid var(--hair); }
 .wk-all .wk-gut-cell { display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; color: var(--ink3); }
 .wk-all-bg { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
@@ -76,8 +76,8 @@
 .wk-now { position: absolute; left: 0; right: 0; height: 1.5px; background: var(--alert); z-index: 3; pointer-events: none; }
 .wk-now::before { content: ''; position: absolute; left: -4px; top: -3.25px; width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
 
-/* Blocks: the chip's tint, bar and colours (its text capped at --tintL); the title at 500, its
-   times under it at 400 and .8; past, grey with a faint bar and fill. */
+/* Blocks take the chip's tint, bar and colours (its text capped at --tintL). The title is at 500,
+   its times under it at 400 and .8. A past block is grey with a faint bar and fill. */
 .wb { position: absolute; border-radius: 6px; color: oklch(from var(--c, var(--cool)) min(l, var(--tintL)) c h); background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent);
   box-shadow: inset 3px 0 0 var(--c, var(--cool)); padding: 3px 7px 3px 9px; font-size: 12px; font-weight: 500; line-height: 1.3; overflow: hidden; z-index: 1;
   animation: wk-fade var(--weekFade) var(--ease); }
@@ -85,7 +85,7 @@
 .wb .t { display: block; font-weight: 400; opacity: .96; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wb.short { padding-top: 2px; padding-bottom: 0; white-space: nowrap; text-overflow: ellipsis; }
 .wb.short .wb-title, .wb.short .t { display: inline; }
-/* Sharing the column, a tall enough block's title wraps to two lines, as board 16's lanes do; every
+/* Sharing the column, a tall enough block's title wraps to two lines, as board 16's lanes do. Every
    line is whole or not drawn (logic/week.ts › blockLines). */
 .wb.narrow { padding: 3px 5px 3px 8px; }
 .wb.two:not(.short) .wb-title { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -93,8 +93,8 @@
 .wb.sel { background: var(--c, var(--cool)); color: var(--onInk); box-shadow: none; }
 .wb.past { color: var(--ink3); background: color-mix(in oklch, var(--c, var(--cool)) calc(var(--evtint) / 2), transparent); box-shadow: inset 3px 0 0 color-mix(in oklch, var(--c, var(--cool)) 45%, transparent); }
 .wb.past .t { opacity: 1; }
-/* Waiting for its provider: .5, its bar dashed, marching from a second on with the spinner; arrived,
-   its tint brightens once (calendar.css's `landed`). */
+/* Waiting for its provider, a block is at .5 with its bar dashed. From a second on, the bar marches
+   with the spinner. Once it has arrived, its tint brightens once (calendar.css's `landed`). */
 .wb.pending { opacity: .5; box-shadow: none; background-image: repeating-linear-gradient(to bottom, var(--c, var(--cool)) 0 3px, transparent 3px 6px); background-size: 3px 100%; background-repeat: no-repeat;
   animation: sending 900ms linear 1s infinite; }
 .wb.landed:not(.sel) { animation: landed 420ms var(--ease); }
@@ -121,8 +121,9 @@
 .wb .spin { animation: spin-later 0s 1s both; }
 .wb .spin .icon { animation: spin 900ms linear infinite; }
 
-/* Where a press would start a new event: a 30-minute slot at the 15-minute step
-   under the pointer, + and its time in `ink3`, moving with it over 120 ms; only with a pointer that hovers. */
+/* Where a press would start a new event: a 30-minute slot at the 15-minute step under the pointer.
+   It shows + and its time in `ink3` and moves with the pointer over 120 ms. It shows only with a
+   pointer that hovers. */
 .wk-hover { position: absolute; top: 0; left: 4px; right: 5px; height: 22px; border-radius: 6px; background: var(--sub); box-shadow: inset 0 0 0 1px var(--edge);
   display: flex; align-items: center; gap: 4px; padding: 0 6px; color: var(--ink3); font-size: 11px; white-space: nowrap; overflow: hidden; pointer-events: none;
   transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); animation: wk-fade var(--dur-fast) var(--ease); }
@@ -156,8 +157,8 @@
 @keyframes wk-in-prev { from { transform: translateX(calc(-1 * var(--weekSlide))); opacity: 0; } }
 @keyframes wk-fade { from { opacity: 0; } }
 
-/* As a chip's (calendar.css): the pointer lays the block's own colour at `--evhover`
-   over its fill (a selected block `sub`), and a press gives it to .97 and 28%. */
+/* As a chip's (calendar.css): the pointer lays the block's own colour at `--evhover` over its fill
+   (a selected block `sub`). A press gives it to .97 and 28%. */
 .wb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in oklch, var(--c, var(--cool)) var(--evhover), transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
 .wb.sel::after { background: var(--sub); }
 .wb:not(.ghost, .lift):active { transform: scale(.97); transition-duration: var(--dur-press); }

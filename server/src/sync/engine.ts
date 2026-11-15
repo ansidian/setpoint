@@ -1,10 +1,10 @@
-// The sync engine: one engine with provider adapters. Each tick it
-// schedules every source's checks from its own interval (a poll's sync, or the sweep behind a
-// push, plus push renewals), runs due jobs (checks and commands) through their adapters, records
-// each check as the source's heartbeat, and sends a `health` event when a source's state changes.
-// A source that needs reconnecting isn't checked until new credentials arrive, and notifies once.
-// Work that isn't a source's (triage, say) runs through a JobWorker: the engine claims its jobs
-// with the rest and hands them over; the worker finishes or fails each by the same retry policy.
+// The sync engine: one engine with provider adapters. Each tick it schedules every source's checks
+// from its own interval (a poll's sync, or the sweep behind a push, plus push renewals). It runs due
+// jobs (checks and commands) through their adapters and records each check as the source's
+// heartbeat. It sends a `health` event when a source's state changes. A source that needs
+// reconnecting isn't checked until new credentials arrive, and notifies once. Work that isn't a
+// source's (triage, say) runs through a JobWorker. The engine claims its jobs with the rest and
+// hands them over. The worker finishes or fails each by the same retry policy.
 import type {HealthState} from '@setpoint/shared';
 import {and, eq} from 'drizzle-orm';
 import {confirmCommand, failCommand, getCommand} from '../commands/index.ts';
@@ -93,7 +93,7 @@ export class SyncEngine {
     }
   }
 
-  /** Starts due jobs once the current write is done; a burst of changes makes one pass. */
+  /** Starts due jobs once the current write is done. A burst of changes makes one pass. */
   private runSoon() {
     if (this.soon || this.stopping.signal.aborted) return;
     this.soon = true;
@@ -121,8 +121,8 @@ export class SyncEngine {
   }
 
   /**
-   * An attachment's bytes from its source's adapter, now (the reader's preview): a ProviderError
-   * when the provider refuses, or `unavailable` when nothing serves the source.
+   * An attachment's bytes from its source's adapter, now (the reader's preview). Throws a
+   * ProviderError when the provider refuses, or `unavailable` when nothing serves the source.
    */
   async attachment(sourceId: number, message: {providerId: string}, attachmentId: string): Promise<AttachmentBytes | null> {
     const source = this.store.db.select().from(t.sources).where(eq(t.sources.id, sourceId)).get();
@@ -225,7 +225,7 @@ export class SyncEngine {
       const error = asProviderError(caught);
       const beganReconnect = transaction(this.store, () => {
         const began = recordFailure(this.store, source.id, error);
-        // The retry policy ends the job on refused credentials: only new ones fix that.
+        // The retry policy ends the job on refused credentials, because only new ones fix that.
         failJob(this.store, job, error);
         return began;
       });
@@ -256,7 +256,7 @@ export class SyncEngine {
       transaction(this.store, () => {
         if (error.kind === 'auth') beganReconnect = recordFailure(this.store, found.source.id, error);
         const retrying = failJob(this.store, job, error);
-        // A retry keeps it pending; otherwise it fails in place with the provider's words.
+        // A retry keeps it pending. Otherwise it fails in place with the provider's words.
         if (!retrying && getCommand(this.store, command.id).state === 'pending') failCommand(this.store, command.id, error.message);
       });
       if (beganReconnect) await this.alertReconnect(found.source);
@@ -266,7 +266,7 @@ export class SyncEngine {
   /**
    * "Business needs sign-in": one ntfy notification per reconnect.
    * An account's sources share one sign-in (Gmail and Calendar, one Google consent), so only the
-   * first of them to need reconnecting alerts; the one sign-in fixes them all.
+   * first of them to need reconnecting alerts. The one sign-in fixes them all.
    */
   private async alertReconnect(source: SourceRow) {
     if (!this.notifier) return;

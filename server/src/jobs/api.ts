@@ -1,9 +1,14 @@
-// Jobs's routes (shapes and the list in `@setpoint/shared` jobs/api.ts): the page and an
-// application's detail; Look it up, which starts a JD lookup on any application, and its Stop;
-// Settings › Jobs, where turning Jobs on starts the history pass, and From history's Dismiss all and
-// its Undo; search and the shell's item; Needs you's answers, the corrections and their Undo; what
-// mail's slots draw; Settings › AI's Jobs group. Mounted under /api behind the session by server.ts, a
-// wiring point, through createApp's `routes`, so the app itself never names Jobs.
+// Jobs's routes. Their shapes and the list are in `@setpoint/shared` jobs/api.ts. They cover:
+// - the page and an application's detail
+// - Look it up, which starts a JD lookup on any application, and its Stop
+// - Settings › Jobs, where turning Jobs on starts the history pass
+// - From history's Dismiss all and its Undo
+// - search and the shell's item
+// - Needs you's answers, the corrections and their Undo
+// - what mail's slots draw
+// - Settings › AI's Jobs group
+// server.ts, a wiring point, mounts them under /api behind the session through createApp's
+// `routes`, so the app itself never names Jobs.
 import type {Context} from 'hono';
 import {Hono} from 'hono';
 import {z} from 'zod';
@@ -46,7 +51,7 @@ export function jobsApi(store: Store) {
   api.get('/jobs/mail', c => c.json(jobsInMail(store, parse(jobsMailInput, {messages: c.req.query('messages') ?? ''}).messages)));
   api.get('/jobs/applications/:id', c => c.json(applicationDetail(store, id(c.req.param('id')))));
   // Look it up: the application's JD looked up again, open or closed. It answers at once with the
-  // detail, its JD `looking`; the lookup runs on Jobs's worker and its end comes as a `jobs` event.
+  // detail, its JD `looking`. The lookup runs on Jobs's worker, and its end comes as a `jobs` event.
   api.post('/jobs/applications/:id/lookup', c => {
     const applicationId = id(c.req.param('id'));
     if (requestLookup(store, applicationId) === 'saved') throw conflict('jd_saved', 'This application has its JD already, Not this posting takes it away first.');
@@ -61,7 +66,7 @@ export function jobsApi(store: Store) {
   api.get('/jobs/settings', c => c.json(jobsSettings(store)));
   // Settings › AI's Jobs group: the models, and this month's spend in its three parts.
   api.get('/jobs/ai', c => c.json(jobsAi(store)));
-  // On starts the history pass (once: it never reads an email twice); off stops reading.
+  // On starts the history pass (once: it never reads an email twice). Off stops reading.
   api.patch('/jobs/settings', async c => c.json(updateJobsSettings(store, parse(jobsSettingsPatchInput, await body(c)))));
   // Dismiss all: the same as ignoring each From history item. Its answer names them for Undo.
   api.post('/jobs/from-history/dismiss', c => c.json({needs_you: dismissFromHistory(store)} satisfies JobsDismissedOut));
@@ -101,8 +106,8 @@ export function jobsApi(store: Store) {
 /**
  * The browser extension's route: POST /api/jobs/check, postings' applications, read with
  * Jobs's own bearer token (./token.ts) rather than the session, as Home Assistant's status is. It's a
- * POST only to carry a page of cards' companies and titles; it writes nothing. Mounted before the
- * session by server.ts through createApp's `tokenRoutes`; any other method falls through to the
+ * POST only to carry a page of cards' companies and titles. It writes nothing. server.ts mounts it
+ * before the session through createApp's `tokenRoutes`. Any other method falls through to the
  * session's rules, and the token opens nothing else. The header is never logged.
  */
 export function jobsTokenApi(store: Store) {

@@ -1,13 +1,13 @@
-// The right-click menu: a
-// right-click on an email, a calendar item or empty day, a story, an attachment or a sidebar row opens
-// that thing's actions at the pointer, the ones it already has elsewhere (More, the floating detail,
-// ⌘K, its keys) with their key hints, plus Copy items. It's the reader's More menu (`.pop.menu`),
-// kept on screen (logic/contextMenu.ts). Its cursor starts on the first item; ↑ ↓ move it, Enter
-// runs it, an item's key runs that item, and Esc, a press elsewhere, a scroll or the window
-// resizing close it. An event's colours are swatches in the menu itself. An item with a panel shows it in its place, at the same spot,
-// and one with items (Add to rule) shows them there, as a list of its own with the same keys. A
-// disabled item is drawn in a fainter ink without its key hint, and a note (a read-only event's
-// reason) is a quiet line the cursor passes over.
+// The right-click menu. A right-click on an email, a calendar item or empty day, a story, an
+// attachment or a sidebar row opens that thing's actions at the pointer. These are the ones it
+// already has elsewhere (More, the floating detail, ⌘K, its keys) with their key hints, plus Copy
+// items. It's the reader's More menu (`.pop.menu`), kept on screen (logic/contextMenu.ts). Its
+// cursor starts on the first item. ↑ ↓ move it, Enter runs it, and an item's key runs that item.
+// Esc, a press elsewhere, a scroll or the window resizing close it. An event's colours are swatches
+// in the menu itself. An item with a panel shows it in its place, at the same spot. One with items
+// (Add to rule) shows them there, as a list of its own with the same keys. A disabled item is drawn
+// in a fainter ink without its key hint. A note (a read-only event's reason) is a quiet line the
+// cursor passes over.
 //
 // The browser keeps its own menu on a link or field inside the thing, on selected text, inside an
 // email's body (its frame never reaches here), and with ⌥ held. A right-click that closes an open
@@ -24,7 +24,7 @@ export interface MenuAction {
   id: string;
   label: string;
   icon: IconName;
-  // Its key, as a hint ("H", "⇧U", "⌘C"); a single letter, with ⇧ or ⌘ or not, also runs it here.
+  // Its key, as a hint ("H", "⇧U", "⌘C"). A single letter, with ⇧ or ⌘ or not, also runs it here.
   hint?: string;
   // More words ⌘K finds it by, where it's offered there too.
   keywords?: string;
@@ -32,13 +32,13 @@ export interface MenuAction {
   // Destructive: `alert` under the pointer.
   danger?: boolean;
   disabled?: boolean;
-  // A quiet line saying something, not an action: never picked, the cursor passing over it.
+  // A quiet line saying something, not an action: never picked, and the cursor passes over it.
   note?: boolean;
   // Items of different groups have a hairline between them.
   group?: string;
   // Picked, it shows this in its place, at the same spot, rather than running.
   panel?: (close: () => void) => ReactNode;
-  // Drawn in the menu as it is, not a row to pick (an event's colour swatches); the cursor passes over it.
+  // Drawn in the menu as it is, not a row to pick (an event's colour swatches). The cursor passes over it.
   inline?: (close: () => void) => ReactNode;
   // Picked, these take the menu's place, at the same spot, rather than it running (Add to rule's rules).
   items?: MenuAction[];
@@ -124,7 +124,7 @@ if (typeof document !== 'undefined') {
   }, true);
 }
 
-/** Whether `event` is `hint`'s key: "H", "⇧U" or "⌘C"; other hints (Del, ↵) run only from the menu's cursor. */
+/** Whether `event` is `hint`'s key: "H", "⇧U" or "⌘C". Other hints (Del, ↵) run only from the menu's cursor. */
 function isHint(hint: string | undefined, event: ReactKeyboardEvent): boolean {
   const parts = /^(⇧|⌘)?([A-Z])$/.exec(hint ?? '');
   if (!parts || event.altKey || event.ctrlKey) return false;

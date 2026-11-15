@@ -1,9 +1,10 @@
-// The right pane (boards 11 and 11b): the selected day, its forecast
-// ("Sunny · 78° / 61°") or else what it holds ("6 events · 2 tasks"), its events (time, colour bar,
-// title, "7:00 – 8:00 AM · Personal", the place on its own line, the recurring glyph, the next lifted with "in 5h" or "45m left" under way, "Leave by 2:05 PM
-// · 18 min", in `caution` once it's time to go and gone once the event starts), the now-line
-// in `alert` today, riding the event under way, and its tasks with their projects, a timed one
-// over its start and in time order, the untimed last; the footer's keys. The line under an
+// The right pane (boards 11 and 11b). It shows the selected day and its forecast ("Sunny · 78° /
+// 61°"), or else what it holds ("6 events · 2 tasks"). Then come its events: time, colour bar,
+// title, "7:00 – 8:00 AM · Personal", the place on its own line and the recurring glyph. The next
+// event is lifted, with "in 5h", or "45m left" while under way. "Leave by 2:05 PM · 18 min" is in
+// `caution` once it's time to go, and gone once the event starts. The now-line is in `alert` today
+// and rides the event under way. Then come its tasks with their projects, a timed one over its start
+// and in time order, the untimed last. Then the footer's keys. The pane also has the line under an
 // event that starts during another ("Overlaps Study group until 8:30 PM", board 12b), "Moving to Thu,
 // Oct 8" while a drop waits on its scope (board 15b), completing a task from its ring, and a change
 // waiting for its provider (a spinner, board 19b). The calendar's sources' stale and failing
@@ -39,7 +40,7 @@ import {useCalendarFade} from './view.ts';
 interface DayPaneProps {
   date: string;
   // The day's items or the calendars haven't come yet: its line and agenda are a skeleton, never
-  // "Nothing planned"; `failed` says why they didn't come instead.
+  // "Nothing planned". `failed` says why they didn't come instead.
   loading: boolean;
   failed?: ReactNode;
   today: string;
@@ -82,8 +83,8 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
   const colours = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.colour]));
   const day = agenda(date, items, calendars, now, timeZone);
   const justDone = useJustDone(day.tasks);
-  // Another day picked: its heading fades in, its items slide in 6 px from the side it lies on; the same
-  // day again, or an item changing, plays nothing.
+  // Another day picked: its heading fades in, and its items slide in 6 px from the side it lies on. The
+  // same day again, or an item changing, plays nothing.
   const [shownDay, setShownDay] = useState<{date: string; dir: 'next' | 'prev' | undefined}>({date, dir: undefined});
   if (shownDay.date !== date) setShownDay({date, dir: date > shownDay.date ? 'next' : 'prev'});
   const wx = forecast ? weatherOf(forecast) : null;
@@ -190,8 +191,8 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
 
 /**
  * "Todoist, as of 8:40 AM" (board 19b), muted while stale, in `caution` with the reason while
- * failing, wrapping so the provider's words show in full, each with
- * Check now on it; folding in as they come and out as they go.
+ * failing, wrapping so the provider's words show in full. Each has Check now on it. They fold in
+ * as they come and out as they go.
  */
 export function HealthLines({now, timeZone}: {now: number; timeZone: string}) {
   const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);

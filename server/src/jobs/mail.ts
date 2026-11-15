@@ -1,6 +1,6 @@
-// Jobs's one window on mail: small, read-only functions over mail's tables. Mail never
-// imports Jobs; Jobs reads mail only through here: its lookups, an email as triage left it and
-// the emails waiting to be read, and the history pass: what's left for it, sorted or not.
+// Jobs's one window on mail: small, read-only functions over mail's tables. Mail never imports
+// Jobs, and Jobs reads mail only through here. It covers Jobs's lookups, an email as triage left it,
+// the emails waiting to be read, and what's left for the history pass, sorted or not.
 import type {JobsReadAccount, Kind, MessageType} from '@setpoint/shared';
 import {and, asc, count, eq, gte, inArray, isNotNull, isNull, lt, or, sql} from 'drizzle-orm';
 import type {SQL} from 'drizzle-orm';
@@ -53,8 +53,8 @@ const LINK = /<?https?:\/\/\S+>?/g;
 const STUB_RATIO = 3;
 
 /**
- * What an email says, for the reader: its text part, unless that's empty, a stub or HTML
- * itself, when its HTML's words take over; else the snippet. Only Jobs reads mail this way.
+ * What an email says, for the reader. It's the text part, unless that's empty, a stub or HTML
+ * itself. Then its HTML's words take over. Otherwise it's the snippet. Only Jobs reads mail this way.
  */
 export function emailBody({text, html, snippet}: {text: string; html: string | null; snippet: string}): string {
   const textIsHtml = /^\s*<(!doctype|html)\b/i.test(text);
@@ -65,7 +65,7 @@ export function emailBody({text, html, snippet}: {text: string; html: string | n
   return rich.length >= STUB_RATIO * plain.replace(LINK, '').trim().length ? rich : plain;
 }
 
-/** The email, once triage has sorted it; null while it's Unsorted or once it's gone. */
+/** The email, once triage has sorted it. Null while it's Unsorted or once it's gone. */
 export function jobsEmail(store: MailReader, messageId: number): JobsEmail | null {
   const row = store.db.select({
     id: t.messages.id, accountId: t.messages.accountId, accountLabel: t.accounts.label, fromName: t.messages.fromName, fromAddress: t.messages.fromAddress,
@@ -85,7 +85,7 @@ export function readsDifferently(store: MailReader, ids: number[]): Set<number> 
   return new Set(rows.filter(row => emailBody(row) !== (row.text.trim() || row.snippet)).map(row => row.id));
 }
 
-/** An email as the JD lookup reads it for links: its sender, text and HTML, whether or not triage has sorted it; null once it's gone. */
+/** An email as the JD lookup reads it for links: its sender, text and HTML, whether or not triage has sorted it. Null once it's gone. */
 export function lookupEmail(store: MailReader, messageId: number): {fromAddress: string; text: string; html: string | null} | null {
   const row = store.db.select({fromAddress: t.messages.fromAddress, bodyText: t.messages.bodyText, bodyHtml: t.messages.bodyHtml, snippet: t.messages.snippet})
     .from(t.messages).where(eq(t.messages.id, messageId)).get();
@@ -101,7 +101,7 @@ export interface ReadWindow {
 }
 
 // An email that came minutes ago and is still with triage holds back the ones after it, so a
-// confirmation is read before its update even when triage sorts them out of order; one Unsorted
+// confirmation is read before its update even when triage sorts them out of order. One Unsorted
 // longer than this (triage down, a key missing) stops holding them.
 const HOLD_BEHIND_UNSORTED_MS = 24 * 60 * 60_000;
 
@@ -118,10 +118,10 @@ const fromHiringPlatform = or(...HIRING_PLATFORM_SENDERS.flatMap(name => [
 ]));
 
 /**
- * A Career-only account's email Jobs reads: triage's Career; and, for backfilled
- * mail only, which the rules sorted without a model and whose kind triage's extraction never changes,
- * one typed a confirmation or rejection (by the extraction, or the rules until it runs) or sent by a
- * hiring platform. Live mail stays Career only.
+ * A Career-only account's email Jobs reads: triage's Career. For backfilled mail only, it's also one
+ * typed a confirmation or rejection (by the extraction, or the rules until it runs) or sent by a
+ * hiring platform. The rules sorted backfilled mail without a model, and triage's extraction never
+ * changes its kind. Live mail stays Career only.
  */
 const careerMail = or(
   eq(t.messages.kind, 'career'),
@@ -174,8 +174,8 @@ export function emailsWaiting(store: MailReader, window: ReadWindow): number {
 
 /**
  * What the history pass has left in its window: emails it can read now (sorted by triage, as
- * `emailsWaiting` counts them), and emails triage hasn't sorted yet in any account it lists, which it
- * waits for, since only triage's kind says whether a Career-only account's email is one to read.
+ * `emailsWaiting` counts them), and emails triage hasn't sorted yet in any account it lists. It waits
+ * for those, since only triage's kind says whether a Career-only account's email is one to read.
  */
 export function historyLeft(store: MailReader, window: ReadWindow): {sorted: number; unsorted: number} {
   const accounts = window.accounts.map(account => account.account_id);

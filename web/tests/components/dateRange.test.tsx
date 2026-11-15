@@ -1,6 +1,6 @@
-// An event's days in its Date field (Pickers.tsx › DateField with a range): one sheet, a
-// first click and then a last, either side of it, the band between following the pointer
-// (its fills are by eye), and typed too. The editor's own fields and its save stay in editor.spec.ts.
+// An event's days in its Date field (Pickers.tsx › DateField with a range). It is one sheet: a first
+// click and then a last, either side of it, with the band between following the pointer (its fills
+// are by eye), and typed too. The editor's own fields and its save stay in editor.spec.ts.
 import {useState} from 'react';
 import {expect, test} from 'vitest';
 import {page, userEvent} from 'vitest/browser';

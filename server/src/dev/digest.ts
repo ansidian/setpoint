@@ -147,9 +147,10 @@ export function devDigestSource({day, scans, campaigns = 0, withoutImage = 0, se
 }
 
 /**
- * The seed's digests (src/dev/sample.ts), the days before SEED_NOW (Wed, Oct 7): mail most days, a
- * Monday saying nothing is coming, none on Sunday, a Saturday with more than the rail fits, and a
- * day with a piece USPS has no picture of. The dev provider serves each one's source by its id.
+ * The seed's digests (src/dev/sample.ts), for the days before SEED_NOW (Wed, Oct 7). They have mail
+ * most days, a Monday saying nothing is coming, none on Sunday, a Saturday with more than the rail
+ * fits, and a day with a piece USPS has no picture of. The dev provider serves each one's source by
+ * its id.
  */
 export const DEV_DIGESTS: readonly (DevDigestOptions & {providerId: string})[] = [
   {day: '2026-10-07', scans: 4, campaigns: 1, seed: 71},
@@ -161,7 +162,7 @@ export const DEV_DIGESTS: readonly (DevDigestOptions & {providerId: string})[] =
   {day: '2026-09-30', scans: 4, seed: 1},
 ].map(digest => ({...digest, providerId: `seed-digest-${digest.day}`}));
 
-/** The scans kept from a seed digest's source, in its order; its campaigns' pictures aren't. */
+/** The scans kept from a seed digest's source, in its order. Its campaigns' pictures aren't kept. */
 export const devDigestScans = (digest: DevDigestOptions) => Array.from({length: digest.scans}, (_, n) => devScan((digest.seed ?? 1) + n));
 
 /** A real digest's From and Gmail's Authentication-Results for it, DMARC on the parent domain. */
@@ -179,7 +180,7 @@ export function insertDevDigests(db: Pick<OpenDatabase['db'], 'insert' | 'select
   for (const digest of DEV_DIGESTS) {
     if (db.select({id: t.messages.id}).from(t.messages).where(eq(t.messages.providerId, digest.providerId)).get()) continue;
     const receivedAt = zonedInstant(digest.day, '07:30', SEED_TIME_ZONE);
-    // What the digest says, campaigns counted; what's kept leaves them out.
+    // What the digest says, campaigns counted. What's kept leaves them out.
     const pieces = digest.scans + (digest.campaigns ?? 0) + (digest.withoutImage ?? 0);
     const kept = digest.scans + (digest.withoutImage ?? 0);
     const body = `You have ${pieces} mailpiece(s) and 1 inbound package(s) arriving soon.`;

@@ -1,6 +1,6 @@
 // What the Jobs page writes (boards 32–36): its dates, each status's mark and step,
-// the JD column, the per-week tip, Needs you's lines, and the table's order; mail's chip and badge;
-// and the states and Settings (38a, 38b, 39a, 39b). Pure, so the page and its pane stay thin.
+// the JD column, the per-week tip, Needs you's lines, and the table's order. Then mail's chip and
+// badge, and the states and Settings (38a, 38b, 39a, 39b). Pure, so the page and its pane stay thin.
 import type {
   ApplicationOut, ApplicationRowOut, JdSummaryOut, JobEventKind, JobMoveOut, JobReadMode, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsReadingOut, JobStatus,
   JobWeekOut, NeedsYouItemOut, PostingOut,
@@ -155,7 +155,7 @@ export function pickWords(candidate: {unreadable: boolean}, company: string): {d
     : {done: `JD saved for ${company}`, failed: 'Couldn\'t save the JD'};
 }
 
-/** Applications per week's bars: the busiest week 20 px and the rest in proportion; a week with none a 1 px stub. */
+/** Applications per week's bars: the busiest week 20 px and the rest in proportion. A week with none is a 1 px stub. */
 export function barHeights(weeks: Pick<JobWeekOut, 'count'>[], tallest = 20): number[] {
   const most = Math.max(0, ...weeks.map(week => week.count));
   return weeks.map(week => (week.count === 0 || most === 0 ? 1 : Math.max(2, Math.round((week.count / most) * tallest))));
@@ -216,12 +216,12 @@ export function historyWhy(item: NeedsYouItemOut): string {
 export const NO_ROLE = 'No role named';
 export const titleOf = (row: Pick<ApplicationRowOut, 'title'>) => row.title.trim() || NO_ROLE;
 
-/** The tab's title: "Jobs", or "Software Engineer I · Northwind Talent" with one open; never a count. */
+/** The tab's title: "Jobs", or "Software Engineer I · Northwind Talent" with one open. Never a count. */
 export const tabTitle = (row: Pick<ApplicationRowOut, 'title' | 'company'> | null) => (row ? (row.title.trim() ? `${row.title.trim()} · ${row.company}` : row.company) : 'Jobs');
 
 /**
  * The detail's status line after its chip: In process's latest step, else the last email that set a
- * status after the first ("Update on your application"), with its age; "No reply yet" when none has.
+ * status after the first ("Update on your application"), with its age. "No reply yet" when none has.
  */
 export function latestStep(detail: Pick<ApplicationOut, 'status' | 'step' | 'step_at' | 'timeline'>): {text: string; at: string | null} {
   if (detail.status === 'in_process' && detail.step) return {text: detail.step, at: detail.step_at};
@@ -237,7 +237,7 @@ export const appliedLine = (date: string, today: string) => `Applied ${appliedWo
 
 /**
  * Where an application stands, after its Applied date in mail's chip and badge: "In process",
- * "Rejected Oct 5", "Offer Oct 6", "Ghosted"; nothing for Applied, which the date already says.
+ * "Rejected Oct 5", "Offer Oct 6", "Ghosted". Nothing for Applied, which the date already says.
  */
 export function standing(application: Pick<JobsMailApplicationOut, 'status' | 'status_on' | 'ghosted'>, today: string): string | null {
   if (application.status === 'applied') return application.ghosted ? 'Ghosted' : null;
@@ -279,14 +279,14 @@ export const nextSort = (sort: Sort, key: SortKey): Sort => (sort.key === key ? 
 
 /**
  * The Pinned shelf: every pinned application, newest pin first, whatever the sort and
- * under every filter; the table below leaves them out.
+ * under every filter. The table below leaves them out.
  */
 export const shelfOf = <T extends ApplicationRowOut>(rows: readonly T[]): T[] =>
   rows.filter(row => row.pinned_at !== null).sort((a, b) => b.pinned_at!.localeCompare(a.pinned_at!) || b.id - a.id);
 
 /**
  * The shelf from every row and the table from the filter's, by the sort, a pinned row on the shelf
- * only; J / K go through the shelf, then the table.
+ * only. J / K go through the shelf, then the table.
  */
 export function shelfAndTable(rows: readonly ApplicationRowOut[], filtered: readonly ApplicationRowOut[], sort: Sort) {
   return {shelf: shelfOf(rows), table: sortRows(filtered.filter(row => row.pinned_at === null), sort)};
@@ -395,7 +395,7 @@ export const jobsModelWith = (label: string, search = false) => (search ? `${lab
 
 /**
  * Usage this month's Jobs row (39b), where Jobs' spend shows once: "Emails $0.62 · finding JDs
- * $2.71 · reading JDs $0.52 · no cap". The whole note didn't fit the row at the 820 px modal; its
+ * $2.71 · reading JDs $0.52 · no cap". The whole note didn't fit the row at the 820 px modal. Its
  * reason, NO_CAP_WHY, is the line's tip.
  */
 export function jobsUsageParts(month: JobsAiOut['this_month']): string {

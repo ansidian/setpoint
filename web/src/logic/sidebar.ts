@@ -1,6 +1,6 @@
-// Whether the sidebar is folded to its icon rail. Under
-// 1100 px (the compact tier) it's always the rail; from there to 1599 it starts as the rail and from
-// 1600 open, and a choice made by hand (`` ` `` or the rail's edge) wins over that in both directions.
+// Whether the sidebar is folded to its icon rail. Under 1100 px (the compact tier) it's always the
+// rail. From there to 1599 it starts as the rail, and from 1600 it starts open. A choice made by hand
+// (`` ` `` or the rail's edge) wins over that in both directions.
 import {viewport} from '../tokens.ts';
 
 export type SidebarChoice = 'rail' | 'open';

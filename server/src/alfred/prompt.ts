@@ -1,4 +1,4 @@
-// Alfred's system prompt and tools. Its tools are the same queries and commands the UI uses; it
+// Alfred's system prompt and tools. Its tools are the same queries and commands the UI uses. It
 // can't do anything the user can't, and anything it would create is a proposal.
 //
 // The prompt holds the date anchor in the owner's zone

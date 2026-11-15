@@ -1,8 +1,8 @@
-// The title line's parser for the iPhone app (setpoint-ios), which runs it in JavaScriptCore
-// so the same words parse the same way on both clients (D8). Built into
-// shared/compose/compose.js, a global `SetpointCompose` with no module loader and no DOM, by
-// web/tests/composeBundle.test.ts (`npm run compose:record`), which also records
-// shared/compose/cases.json; `npm test` fails when either is stale against compose.ts.
+// The title line's parser for the iPhone app (setpoint-ios). The app runs it in JavaScriptCore so
+// the same words parse the same way on both clients. web/tests/composeBundle.test.ts
+// (`npm run compose:record`) builds it into shared/compose/compose.js, a global `SetpointCompose`
+// with no module loader and no DOM. That test also records shared/compose/cases.json. `npm test`
+// fails when either is stale against compose.ts.
 //
 // Each function takes one plain-JSON object and returns plain JSON, and `call` does the same with
 // JSON text, for Swift's Codable. Offsets (`start`, `end`, a mark's) are UTF-16 code units.
@@ -51,7 +51,7 @@ export function editedWhen(input: {item: When; read: {date: string | null; start
   return whenEdited(input.item, input.read, input.kind);
 }
 
-/** A "#" or "@" just typed at the line's end, which opens its menu; null when there's none. */
+/** A "#" or "@" just typed at the line's end, which opens its menu. Null when there's none. */
 export function bareToken(input: {text: string; trigger: '#' | '@'}): {start: number; query: string} | null {
   return bare(input.text, input.trigger);
 }

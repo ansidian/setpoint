@@ -1,5 +1,5 @@
-// Where a right-click's menu opens, as a table: down and right from the pointer;
-// to its left past the window's right, upward past its bottom, and 8 px inside the window always.
+// Where a right-click's menu opens, as a table: down and right from the pointer, to its left past
+// the window's right, upward past its bottom, and always 8 px inside the window.
 import {describe, expect, test} from 'vitest';
 import {opensUp, placeMenuAt} from '../src/logic/contextMenu.ts';
 

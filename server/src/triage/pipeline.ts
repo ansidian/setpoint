@@ -2,11 +2,11 @@
 // model when the cheap one is unsure, and the policy last (src/domain/triagePolicy.ts).
 //
 // - A rule that decides the lane still has the cheap model read the email, for its organisation,
-//   type, key date, summary and security facts (extracted once, at triage); without a
+//   type, key date, summary and security facts (extracted once, at triage). Without a
 //   model, or when it fails, the rule's lane stands with what the history pass can read.
 // - Hard-risk mail goes straight to the strong model unless the user's rule names its
 //   sender or keeps it in Attention.
-// - The cheap model's Attention, unsure, unreadable or protected answers go to the strong model; an
+// - The cheap model's Attention, unsure, unreadable or protected answers go to the strong model. An
 //   unsure strong answer is FYI.
 // - With no model to ask and no rule deciding, the email can't be sorted: TriageUnavailable, and it
 //   waits in Unsorted. A provider's refusal is thrown as it came, for the job's retry policy.
@@ -31,7 +31,7 @@ export interface TriageEmail extends RuleEmail {
 export interface PipelineContext {
   rules: readonly Rule[];
   codeExpiryMinutes: number;
-  // Asks a model; null when no model can be asked (no key). Resolves to null for an unusable answer.
+  // Asks a model. Null when no model can be asked (no key). Resolves to null for an unusable answer.
   ask: ((tier: Tier, reason: string) => Promise<Reading | null>) | null;
 }
 
@@ -40,7 +40,7 @@ export interface Outcome {
   source: TriageSource;
   ruleId: number | null;
   tiers: Tier[];
-  // The deciding written rule's actions, for new mail only (never the history pass's); the intake
+  // The deciding written rule's actions, for new mail only (never the history pass's). The intake
   // carries them out unless the email is protected or arrived before the rule was saved.
   actions?: RuleActions | null;
 }

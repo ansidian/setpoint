@@ -37,7 +37,7 @@ function triageAnswer(email: RecordedEmail): FakeAnswer {
   return {tool: {...email.triage, key_date: null, security: null, protected_class: null, confidence: 0.95}};
 }
 
-/** Jobs's answer for a recorded email; one Jobs should never ask about fails the test's request. */
+/** Jobs's answer for a recorded email. One Jobs should never ask about fails the test's request. */
 function jobsAnswer(email: RecordedEmail): FakeAnswer {
   if (!email.jobs) return {status: 400, body: {type: 'error', error: {type: 'invalid_request_error', message: `Jobs asked about "${email.subject}"`}}};
   return {tool: email.jobs, usage: {input: 700, output: 60}};
@@ -137,7 +137,7 @@ describe('a recorded set of invented emails', () => {
       {company: 'Woodgrove Bank', title: 'Junior Developer', requisitionId: null, status: 'applied', statusSetBy: 'email', step: null, platform: 'Workday',
         account: 'Jobs', jdLookup: 'looking', reappliedFrom: 'Woodgrove Bank'},
     ]);
-    // Each application's Applied date is its confirmation's; the re-application links the rejected one.
+    // Each application's Applied date is its confirmation's. The re-application links the rejected one.
     expect(apps[3]!.appliedAt).toBe(RECORDED_EMAILS.find(email => email.key === 'tailspin-applied')!.at);
     expect(apps[7]!.reappliedFromId).toBe(apps[6]!.id);
     expect(apps.every(row => !row.companyUnknown)).toBe(true);
@@ -180,7 +180,7 @@ describe('a recorded set of invented emails', () => {
     expect(page.reading).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, cause: null, retrying: false});
     expect(page.rows.find(row => row.company === 'Tailspin Toys')!.jd).toMatchObject({state: 'looking'});
 
-    // Each email Jobs reads is read once; Business mail that isn't Career never is.
+    // Each email Jobs reads is read once. Business mail that isn't Career never is.
     const outcomes = Object.fromEntries(RECORDED_EMAILS.map(email => [email.key, s.read(email.key)?.outcome ?? 'not read']));
     expect(outcomes).toEqual({
       'tailspin-match': 'event', 'fabrikam-applied': 'application', 'fabrikam-verify': 'event', 'humongous-r100': 'application', 'humongous-r200': 'application',
@@ -237,7 +237,7 @@ describe('the hook', () => {
     expect(s.read('fabrikam-applied')?.outcome).toBe('application');
     s.deliver('fabrikam-verify', 'fabrikam-again');
     s.w.at('2026-10-10T15:01:30.000Z');
-    // Triage sorts them; nothing tells Jobs.
+    // Triage sorts them. Nothing tells Jobs.
     await s.drain();
     expect(s.read('fabrikam-verify')).toBeUndefined();
     expect(jobsPage(s.store).reading.waiting).toBe(2);
@@ -314,7 +314,7 @@ describe('the AI down (When things break)', () => {
     const healthy = jobsPage(s.store).reading;
     expect(healthy).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, cause: null, retrying: false});
 
-    // Anthropic overloaded for Jobs; triage still sorts.
+    // Anthropic overloaded for Jobs. Triage still sorts.
     s.fake.answer(request => {
       const email = BY_SUBJECT.get(subjectOf(request))!;
       return isJobs(request) ? 'overloaded' : triageAnswer(email);
@@ -426,7 +426,7 @@ describe('statuses and corrections that stick', () => {
     const s = await setup();
     await s.arrive('woodgrove-applied');
     const [application] = s.applications();
-    // Not an application: its emails blocked, the application hidden; here it's gone.
+    // Not an application: its emails blocked, the application hidden. Here it's gone.
     s.db.insert(j.jobsBlockedEmails).values({messageId: s.ids.get('woodgrove-applied')!, blockedAt: '2026-10-15T16:00:00.000Z'}).run();
     s.db.delete(j.jobsApplications).where(eq(j.jobsApplications.id, application!.id)).run();
     // Its later confirmation, the same company and role from another email, makes nothing.

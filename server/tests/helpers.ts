@@ -1,5 +1,5 @@
 // Test worlds: an ephemeral SQLite database (optionally with the seed), a clock the test moves, a
-// live feed and a key; and the app signed in as the owner, the way a browser is.
+// live feed and a key, and the app signed in as the owner, the way a browser is.
 import {SEED_NOW} from '@setpoint/shared';
 import {onTestFinished} from 'vitest';
 import {createApp} from '../src/api/app.ts';
@@ -51,7 +51,7 @@ export function world({seed = false, now = SEED_NOW, newsImagesDir = null}: {see
   const events: FeedEvent[] = [];
   live.subscribe(event => events.push(event));
   const store: Store = {sqlite, db, timeZone: 'America/Los_Angeles', now: () => new Date(clock), live, keyring: keyringFrom(TEST_KEY)};
-  // News's images go to `newsImagesDir`; without one only their rows are kept.
+  // News's images go to `newsImagesDir`. Without one, only their rows are kept.
   if (seed && newsImagesDir) seedSampleData({sqlite, db}, {newsImagesDir});
   return {
     store, events,

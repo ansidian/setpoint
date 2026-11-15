@@ -1,6 +1,6 @@
-// A file dragged over the month or week grid. The grid's section takes the
-// drop and lights while one is over it (`data-file-drop`, calendar.css), its pill at the centre
-// saying whether it will import; the right pane takes none.
+// A file dragged over the month or week grid. The grid's section takes the drop and lights while
+// one is over it (`data-file-drop`, calendar.css). Its pill at the centre says whether it will
+// import. The right pane takes none.
 import {useEffect, useRef, useState} from 'react';
 import type {DOMAttributes, DragEvent as ReactDragEvent} from 'react';
 import {fileDrag, FILE_DRAG_LINES} from '../../logic/icsImport.ts';
@@ -15,7 +15,7 @@ export interface FileDropBinding {
 
 const dragOf = (event: ReactDragEvent) => fileDrag([...event.dataTransfer.types], [...event.dataTransfer.items]);
 
-/** The state and handlers for the grid's section; `onFile` gets the one file a drop that can import brings. */
+/** The state and handlers for the grid's section. `onFile` gets the one file a drop that can import brings. */
 export function useFileDrop(onFile: (file: File) => void): FileDropBinding {
   const [over, setOver] = useState<FileDrag>(null);
   // dragenter and dragleave fire for every child the pointer crosses, the next one's enter before the
@@ -33,7 +33,7 @@ export function useFileDrop(onFile: (file: File) => void): FileDropBinding {
       depth.current = 0;
       setOver(null);
     };
-    // Caught on the way down, so nothing stopping them hides them; blur only as the window's own.
+    // Caught on the way down, so nothing stopping them hides them. Blur only as the window's own.
     window.addEventListener('dragend', reset, true);
     window.addEventListener('drop', reset, true);
     window.addEventListener('blur', reset);
@@ -53,7 +53,7 @@ export function useFileDrop(onFile: (file: File) => void): FileDropBinding {
     onDragOver: event => {
       const drag = dragOf(event);
       if (!drag) return;
-      // Always, so the browser never opens the file in the tab; one that can't import shows "not allowed".
+      // Always, so the browser never opens the file in the tab. One that can't import shows "not allowed".
       event.preventDefault();
       event.dataTransfer.dropEffect = drag === 'ics' ? 'copy' : 'none';
     },

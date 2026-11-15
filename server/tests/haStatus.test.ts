@@ -1,6 +1,6 @@
 // Home Assistant's status endpoint over the API on the seed: the chip's numbers are the sidebar's,
-// opening never drops attention, Done and archiving do, a source needing reconnect is never all clear, and only Home Assistant's own token
-// reads it.
+// opening never drops attention, Done and archiving do, a source needing reconnect is never all
+// clear, and only Home Assistant's own token reads it.
 import {haStatusSchema, SEED_NOW} from '@setpoint/shared';
 import {and, eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -124,7 +124,7 @@ describe('needs reconnect', () => {
     const {w, owner, status} = await setup();
     for (const email of (await status()).attention_emails) await owner.send('POST', `/api/mail/messages/${email.id}/done`, {body: {done: true}});
     for (const command of markAllRead(w.store)) confirmCommand(w.store, command.id);
-    // Mark all as read leaves Security; those are read one by one.
+    // Mark all as read leaves Security. Those are read one by one.
     const security = w.store.db.select().from(t.messages).where(and(eq(t.messages.kind, 'security'), eq(t.messages.unread, true))).all();
     for (const message of security) confirmCommand(w.store, setRead(w.store, message.id, false).id);
     expect(await status()).toMatchObject({attention: 0, unread_fyi: 0, attention_emails: [], needs_reconnect: [], all_clear: true});

@@ -76,7 +76,7 @@ function tokenize(input: Buffer[]): Token[] {
         i = text.indexOf('}', i) + 1;
       } else {
         let end = i;
-        // Atoms may carry brackets (BODY.PEEK[]); stop at a space or a closing paren.
+        // Atoms may carry brackets (BODY.PEEK[]). Stop at a space or a closing paren.
         let depth = 0;
         while (end < text.length && (depth > 0 || (text[end] !== ' ' && text[end] !== ')' && text[end] !== '('))) {
           if (text[end] === '[') depth += 1;

@@ -1,11 +1,13 @@
-// Settings in the browser: board 17 built and checked, then each page
-// saving: the modal itself (⌘,, Esc, not in the address bar, a link straight to a page, Reconnect), Accounts
-// (colour, rename, order, Connect Gmail's "not configured", Connect iCloud's form), Mail (a rule, Undo
-// on a learned rule, a domain, code expiry), Notifications (Send test to a fake ntfy on 127.0.0.1,
-// switches, defaults), Calendar (a calendar hidden, Home, weather, and calendar colours written to
-// Google, waiting, refused, tried again and changed back), Todoist (project colours, the same
-// way, and the task rings that take them), AI (a key set write-only, a model), Appearance, and
-// Security's recovery codes and paired iPhones. The passkey ceremony is in passkey.spec.ts.
+// Settings in the browser: board 17 built and checked, then each page saving:
+// - the modal itself (⌘,, Esc, not in the address bar, a link straight to a page, Reconnect)
+// - Accounts (colour, rename, order, Connect Gmail's "not configured", Connect iCloud's form)
+// - Mail (a rule, Undo on a learned rule, a domain, code expiry)
+// - Notifications (Send test to a fake ntfy on 127.0.0.1, switches, defaults)
+// - Calendar (a calendar hidden, Home, weather, and calendar colours written to Google, waiting,
+//   refused, tried again and changed back)
+// - Todoist (project colours, the same way, and the task rings that take them)
+// - AI (a key set write-only, a model), Appearance, and Security's recovery codes and paired iPhones.
+// The passkey ceremony is in passkey.spec.ts.
 // Boards 30a and 30b: Settings › News (sources by section, read-only, no key row) and AI's
 // News group (its models, the cap, this month and its usage), and the cap reached.
 import assert from 'node:assert/strict';
@@ -35,8 +37,8 @@ async function openAt(page: Page, base: string, settingsPage: string) {
 const settled = <T,>(what: string, read: () => Promise<T>, check: (value: T) => boolean) => until(what, read, check, 5000);
 
 /**
- * A file the dev provider waits on while it's there (SETPOINT_DEV_PROVIDER_HOLD), so a change stays
- * pending, its spinner up, for as long as the check reads it rather than the provider's 600 ms.
+ * A file the dev provider waits on while it's there (SETPOINT_DEV_PROVIDER_HOLD). So a change stays
+ * pending, its spinner up, for as long as the check reads it, rather than the provider's 600 ms.
  * Starts held.
  */
 function providerHold() {
@@ -123,7 +125,7 @@ test('board 30a: Settings › News, after Calendar, its warning glyph while FOX 
     assert.equal(await page.locator('.settings .set-head .head-note').textContent(), `${sources.articles_today} articles today · ${sources.stories_on_page} stories`);
     assert.deepEqual(await page.locator('.settings .set-label').allTextContents(),
       sources.sections.map(({section, sources: list}) => `${{local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'}[section]} ${list.length}`));
-    // FOX 11 says it's failing, and why; the rest say when they were checked.
+    // FOX 11 says it's failing, and why. The rest say when they were checked.
     assert.equal(await fox.locator('.state').textContent(), 'Failing, 404 since 6:02 AM');
     assert.equal(await fox.locator('.state').getAttribute('data-tip'), 'Failing, 404 since 6:02 AM, 404 Not Found', 'its words, then why');
     const ktla = page.locator('.settings .news-src', {hasText: 'KTLA'});
@@ -151,7 +153,7 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     assert.deepEqual(await news.locator('.set-row .t').allTextContents(), ['Articles and grouping', 'Stories and ranking', 'Monthly cap', 'This month']);
     assert.deepEqual(await news.locator('.val').allTextContents(), ['Claude Haiku 5.5', 'Claude Sonnet 5.5']);
     assert.equal(await news.getByRole('button', {name: 'Monthly cap', exact: true}).textContent(), '$40');
-    // How far the meter fills is capMeter's, a table in news.test.ts; its width on screen is by eye.
+    // How far the meter fills is capMeter's, a table in news.test.ts. Its width on screen is by eye.
     const meter = news.locator('.meter');
 
     // Usage this month: Triage, Search terms, Search reading, Alfred, News and Jobs, News and Jobs in their parts.
@@ -167,8 +169,8 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     // The month's total in the label.
     assert.equal(await usage.locator('.set-label .r').textContent(), '$25.25');
 
-    // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings. From 90% of it
-    // the meter is near, before the cap is reached; under that, plain again.
+    // The cap is editable, as board 30b draws it, and it saves through PATCH /api/settings. From 90%
+    // of it the meter is near, before the cap is reached. Under that, it is plain again.
     await choose(page, 'Monthly cap', '$20');
     await amount.filter({hasText: '$18.40 of $20'}).waitFor();
     assert.match(await meter.getAttribute('class') ?? '', /\bnear\b/);
@@ -214,7 +216,7 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     const current = page.locator('.settings .set-nav .nav.on');
     const currentFill = async () => current.evaluate(nav => [nav.textContent, document.activeElement === nav]);
     await until('Accounts marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Accounts', true]));
-    // ↓ in the nav changes page; keys inside never reach the page (2 would go to Calendar, J would move a cursor).
+    // ↓ in the nav changes page. Keys inside never reach the page (2 would go to Calendar, J would move a cursor).
     // ↓ from Accounts is Mail, the middle group's first.
     await page.keyboard.press('ArrowDown');
     await page.locator('.settings .set-title', {hasText: 'Mail'}).waitFor();
@@ -531,14 +533,14 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
     await openAt(page, setpoint.base, 'notifications');
     const settings = () => setpoint.api<Settings>('GET', '/settings');
     await page.locator('.settings .set-label', {hasText: 'Not set up'}).waitFor();
-    // With no server, the topics' switches can't work: off and disabled, saying what's missing, and no
-    // Send test. Time to Leave's group isn't here: it's on Calendar.
+    // With no server, the topics' switches can't work: off and disabled, saying what's missing, and
+    // no Send test. Time to Leave's group isn't here, because it's on Calendar.
     for (const name of ['setpoint-reminders', 'setpoint-mail', 'FYI mail', 'Reconnect alerts']) {
       const toggle = page.getByRole('switch', {name});
       assert.deepEqual([await toggle.isDisabled(), await toggle.getAttribute('aria-checked')], [true, 'false'], name);
     }
     assert.equal(await page.locator('.settings .set-row', {hasText: 'setpoint-reminders'}).locator('.s').textContent(), 'Set a server first');
-    // FYI mail says so too; with a server it has no second line.
+    // FYI mail says so too. With a server it has no second line.
     const fyi = page.locator('.settings .set-row', {has: page.getByRole('switch', {name: 'FYI mail'})});
     assert.equal(await fyi.locator('.s').textContent(), 'Set a server first');
     assert.equal(await page.getByRole('button', {name: 'Send test'}).count(), 0);
@@ -665,7 +667,7 @@ test('Calendar and Appearance: a calendar unlisted, Home set with its coordinate
     const home = await settled('Home', settings, value => value.calendar.home !== null);
     assert.deepEqual(home.calendar.home, {label: 'Home', address: '845 Example St, Los Angeles', lat: 34.1478, lng: -118.1445});
     await page.locator('.settings .set-row', {hasText: '845 Example St, Los Angeles'}).waitFor();
-    // With Home, Time to Leave says where it leaves from and shows on, as it's kept; it turns off and
+    // With Home, Time to Leave says where it leaves from and shows on, as it's kept. It turns off and
     // back on, and the buffer steps by 5 min.
     await leaveRow.locator('.s', {hasText: /^Live routes from Home$/}).waitFor();
     assert.deepEqual([home.time_to_leave, await leave.isDisabled(), await leave.getAttribute('aria-checked')], [{enabled: true, buffer_minutes: 5}, false, 'true']);
@@ -683,7 +685,7 @@ test('Calendar and Appearance: a calendar unlisted, Home set with its coordinate
     await page.getByRole('switch', {name: 'Weather'}).click();
     await settled('weather off', settings, value => !value.calendar.weather);
 
-    // Reconnect is in Todoist's row's menu on Accounts; the dev run has no Todoist app, so it says why under Sources.
+    // Reconnect is in Todoist's row's menu on Accounts. The dev run has no Todoist app, so it says why under Sources.
     await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).click();
     await page.getByRole('button', {name: 'Todoist options'}).click();
     await page.getByRole('menuitem', {name: 'Reconnect'}).click();
@@ -874,8 +876,8 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
     // Sign out is the nav's foot only, and Add passkey has its + as Add rule does.
     assert.equal(await page.locator('.settings').getByRole('button', {name: 'Sign out'}).count(), 1);
     assert.equal(await page.locator('.settings .set-label').getByRole('button', {name: 'Add passkey'}).locator('svg').count(), 1);
-    // No passkeys is an empty line, as Mail's "No rules yet · Add rule" is, not a passkey named "None yet";
-    // the recovery row is titled, its count its value.
+    // No passkeys is an empty line, as Mail's "No rules yet · Add rule" is, not a passkey named "None
+    // yet". The recovery row is titled, its count its value.
     // Passkeys' own, not iPhones'.
     const none = page.locator('.settings .set-row', {hasText: 'Add passkey'});
     assert.equal(await none.locator('.set-empty').textContent(), 'None yet · Add passkey');
@@ -910,7 +912,7 @@ test('Security › iPhones: Add iPhone shows the QR and its link, the phone pair
     const pair = (code: string) => fetch(`${setpoint.base}/api/auth/pair`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code, name: 'iPhone 17 Pro'})});
     const shownCode = async () => new URL((await panel.locator('.pair-link code').textContent())!).searchParams.get('code')!;
 
-    // The QR holds the link shown beside it, to this Setpoint; Add iPhone rests while it shows.
+    // The QR holds the link shown beside it, to this Setpoint. Add iPhone rests while it shows.
     await add.click();
     await panel.waitFor();
     const link = (await panel.locator('.pair-link code').textContent())!;
@@ -961,8 +963,9 @@ test('Security: a load that reaches the server just after a change there ended t
     // held below is Mail's own and not the prefetch's.
     await until('the prefetch of the domains answered', () => page.evaluate(() => performance.getEntriesByType('resource').some(entry => entry.name.endsWith('/api/mail/trusted-domains'))), answered => answered);
     await setpoint.idle();
-    // Mail's trusted domains' load is held until Make new codes has ended every session, then reaches the server
-    // under the one the browser had when it asked, which refuses it, as a slow connection can have it.
+    // Mail's trusted domains' load is held until Make new codes has ended every session. Then it
+    // reaches the server under the session the browser had when it asked, and the server refuses it,
+    // as a slow connection can have it.
     const oldSession = `${setpoint.cookie!.name}=${setpoint.cookie!.value}`;
     let release = () => {};
     const changed = new Promise<void>(resolve => {
@@ -1116,8 +1119,8 @@ for (const width of [852, 640]) test(`Add rule in a ${width} px window stays ins
   }
 });
 
-// A rule's sentence where the modal is narrow: at 820 it's two lines and nothing in it is
-// cut (before, its sender was "From wingtip…" with no tip); at 608 what's still cut shows the whole of it.
+// A rule's sentence where the modal is narrow. At 820 it's two lines and nothing in it is cut
+// (before, its sender was "From wingtip…" with no tip). At 608 what's still cut shows the whole of it.
 for (const width of [852, 640]) test(`in a ${width} px window ${width === 852 ? 'no mail rule\'s words are cut' : 'a mail rule\'s cut words show in its tip'}`, async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
   try {
@@ -1229,7 +1232,7 @@ test('a group\'s rows share their sync and state columns as the modal narrows, a
         }
       }
       if (width === 852) {
-        // At 820 an address is cut; resting on it shows the whole of it.
+        // At 820 an address is cut. Resting on it shows the whole of it.
         await openAt(page, setpoint.base, 'accounts');
         const address = page.locator('.settings [data-account] .lines .s').filter({hasText: 'user@studio.example.com'});
         assert.ok(await address.evaluate(element => element.scrollWidth > element.clientWidth), 'the address is cut at 820');

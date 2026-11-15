@@ -1,7 +1,7 @@
 // The interface News's source adapters implement (one per NEWS_ADAPTERS key: RSS and
 // Atom feeds, NWS, USGS, Cal Fire, AirNow, Hacker News through Algolia, page reads and Google News
 // search, in src/providers/news/). The worker schedules each source from its own interval, runs its
-// adapter as a durable `news` job, records the heartbeat, and stores what came back; adapters only
+// adapter as a durable `news` job, records the heartbeat, and stores what came back. Adapters only
 // read their source. Then the worker has each new article read (NewsArticleReader): its page's text
 // and its image, copied.
 import type {Home} from '@setpoint/shared';
@@ -38,7 +38,7 @@ export interface FetchedArticle {
   headline: string;
   feedSummary?: string | null;
   publishedAt: string;
-  // The outlet's image, for ingest to copy; never served as it is.
+  // The outlet's image, for ingest to copy. It's never served as it is.
   imageUrl?: string | null;
   // Only found, never read (Google News).
   discovery?: boolean;
@@ -52,7 +52,7 @@ export interface FetchedArticle {
 
 export interface NewsFetchResult {
   articles: FetchedArticle[];
-  // Where the next fetch resumes (an ETag, Last-Modified, the newest id); null keeps the one there is.
+  // Where the next fetch resumes (an ETag, Last-Modified, the newest id). Null keeps the one there is.
   cursor: string | null;
 }
 
@@ -64,7 +64,7 @@ export interface NewsAdapter {
   ready?(store: Store, source: NewsSourceRow): boolean;
   /**
    * Reads the source from `cursor` (null on the first run, which fills the last 48 hours). Throws a
-   * ProviderError (src/sync/errors.ts) with the source's own words when it fails; a page read that
+   * ProviderError (src/sync/errors.ts) with the source's own words when it fails. A page read that
    * suddenly finds nothing throws too, as failing rather than quiet.
    */
   fetch(context: NewsFetchContext, cursor: string | null): Promise<NewsFetchResult>;
@@ -74,7 +74,7 @@ export type NewsAdapters = Partial<Record<NewsAdapterKey, NewsAdapter>>;
 
 /** What reading a new article gave: its page's text and its image's copies. */
 export interface ArticleReading {
-  // Paragraphs separated by a blank line; null when the page wasn't read or yielded none.
+  // Paragraphs separated by a blank line. Null when the page wasn't read or yielded none.
   text: string | null;
   // The image that was copied (the feed's, or the page's og:image), with its copies.
   imageUrl: string | null;

@@ -1,7 +1,7 @@
-// The week view in the browser (board 16 drawn Sunday first): switching from
-// Month and back with the view kept in the address, the week's layout at the design target, paging
-// and Today, a range dragged into the editor, a block moved and resized by drag with its Undo, a
-// recurring block's scope asked on the drop, and the floating detail on a block.
+// The week view in the browser (board 16 drawn Sunday first): switching from Month and back with the
+// view kept in the address, the week's layout at the design target, paging and Today, a range
+// dragged into the editor, a block moved and resized by drag with its Undo, a recurring block's
+// scope asked on the drop, and the floating detail on a block.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
@@ -33,8 +33,8 @@ async function dragFrom(page: Page, from: {x: number; y: number}, to: {x: number
 }
 
 test('Week from Month, kept in the address and remembered; the week of Oct 4 laid out as board 16', async () => {
-  // The server's clock holds at the seed's 9:12 AM and the page's stops there while the now-line's
-  // minute is read, so neither a slow start nor a busy machine moves it.
+  // The server's clock holds at the seed's 9:12 AM, and the page's stops there while the now-line's
+  // minute is read. So neither a slow start nor a busy machine moves it.
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -44,8 +44,7 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     await page.keyboard.press('w');
     await block(page, '2026-10-07', 'Dentist').waitFor();
     assert.match(page.url(), /\/calendar\?view=week$/);
-    // Board 16 is read on Week as it loads, not as it zooms in from Month, which
-    // is by eye.
+    // Board 16 is read on Week as it loads, not as it zooms in from Month, which is by eye.
     await page.goto(`${setpoint.base}/calendar?view=week`);
     await block(page, '2026-10-07', 'Dentist').waitFor();
     await pauseClock(page);
@@ -61,12 +60,12 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     assert.equal(await page.locator('.wk-cols > .wk-nowx').count(), 1, 'now across the week');
     assert.equal(await page.locator('.wk-gut.now').textContent(), '9:12 AM');
     await page.clock.resume();
-    // Tasks sit in the all-day row; the mini-month marks the week.
+    // Tasks sit in the all-day row. The mini-month marks the week.
     await page.locator('.wk-all .tk', {hasText: 'Pay rent'}).waitFor();
     assert.deepEqual(await page.locator('.mini .wk').allTextContents(), ['4', '5', '6', '7', '8', '9', '10'], 'one band for the week');
     assert.equal(await block(page, '2026-10-07', 'Dentist').getAttribute('aria-label'), 'Dentist, Wed, Oct 7, 2:30 – 3:30 PM, Personal');
 
-    // Paging keeps the view and the address; Today comes back.
+    // Paging keeps the view and the address. Today comes back.
     await page.keyboard.press('ArrowRight');
     await until('the next week', () => page.locator('.hd-title').textContent(), title => title === 'Oct 11 – 17, 2026');
     assert.equal(await page.locator('.wk-nowx').count(), 0, 'another week has none');
@@ -118,7 +117,7 @@ test('a new block shows once while its create\'s answer is on its way, though th
     const page = await setpoint.page('target');
     await openWeek(page, setpoint.base);
     // The server makes the item at once, the provider confirms it and the live stream reloads the
-    // week, but the create's own answer reaches the browser only after those loads, as answers on
+    // week. But the create's own answer reaches the browser only after those loads, as answers on
     // separate connections can.
     let release = () => {};
     const held = new Promise<void>(resolve => {
@@ -180,8 +179,8 @@ test('a block moves by drag in 15-minute steps to another day, and its bottom ed
     await until('Dentist an hour and a half', () => block(page, '2026-10-08', 'Dentist').textContent(), shown => !!shown?.includes('3:00 – 4:30 PM'));
     await page.keyboard.press('Meta+z');
     await until('the resize undone', () => block(page, '2026-10-08', 'Dentist').textContent(), shown => !!shown?.includes('3:00 – 4:00 PM'));
-    // Pressed while Google still has the resize, the Undo waits for it rather than being refused: two
-    // trips through the dev provider (600 ms each) and the wait between them.
+    // Pressed while Google still has the resize, the Undo waits for it rather than being refused. That
+    // is two trips through the dev provider (600 ms each) and the wait between them.
     await until('the server has it undone', () => setpoint.api<{items: {title: string; ends_at: string | null; command: unknown}[]}>('GET', '/items?from=2026-10-08&to=2026-10-09'),
       list => list.items.some(item => item.title === 'Dentist' && item.ends_at === '2026-10-08T23:00:00.000Z' && !item.command), 10_000);
     assert.equal(await page.locator('.toast', {hasText: 'Couldn\'t'}).count(), 0);

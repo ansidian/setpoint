@@ -1,10 +1,10 @@
 // Jobs's tables, all `jobs_`, in their own Drizzle schema and migrations folder (./drizzle, made
-// by `npx drizzle-kit generate --config src/jobs/drizzle.config.ts` from server/), applied with their
-// own migrations table after the main ones (./db.ts). They point at mail by message and account id
-// only, as plain integers with no foreign key, and nothing in mail's tables points back, so
-// drop.sql removes them without touching mail and mail never waits on Jobs.
+// by `npx drizzle-kit generate --config src/jobs/drizzle.config.ts` from server/). They're applied
+// with their own migrations table after the main ones (./db.ts). They point at mail by message and
+// account id only, as plain integers with no foreign key, and nothing in mail's tables points back.
+// So drop.sql removes them without touching mail, and mail never waits on Jobs.
 //
-// Timestamps are ISO 8601 UTC strings; JSON columns hold values checked by `@setpoint/shared`.
+// Timestamps are ISO 8601 UTC strings. JSON columns hold values checked by `@setpoint/shared`.
 import {sql} from 'drizzle-orm';
 import {check, index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn} from 'drizzle-orm/sqlite-core';
 import {
@@ -21,7 +21,7 @@ export const JOBS_MIGRATIONS_TABLE = 'jobs_migrations';
 
 /**
  * An application: a company and a role. `titleKey` is the title normalised (case,
- * brackets and tags like "remote" ignored) for matching; `requisitionId` wins over it when an email
+ * brackets and tags like "remote" ignored) for matching. `requisitionId` wins over it when an email
  * gives one. Status is never Ghosted (that's computed), and `statusSetBy` says whether an email or the
  * user set it. Applications are kept for good.
  */
@@ -49,7 +49,7 @@ export const jobsApplications = sqliteTable('jobs_applications', {
   // Its confirmation named no company (Indeed's "Indeed Application: <title>") and no match email
   // paired with it yet: `company` holds the platform until one does.
   companyUnknown: integer('company_unknown', {mode: 'boolean'}).notNull().default(false),
-  // Where its JD lookup stands; a saved posting is `found` (jobs_postings).
+  // Where its JD lookup stands. A saved posting is `found` (jobs_postings).
   jdLookup: text('jd_lookup', {enum: JD_LOOKUPS}).notNull().default('none'),
   jdLookupAt: text('jd_lookup_at'),
   // The user stopped its lookup to paste the posting: `not_found`, saying "Lookup stopped",
@@ -57,7 +57,7 @@ export const jobsApplications = sqliteTable('jobs_applications', {
   jdLookupStoppedAt: text('jd_lookup_stopped_at'),
   // Its lookup was started by the history pass's end: what it's unsure of goes to From history.
   jdLookupFromHistory: integer('jd_lookup_from_history', {mode: 'boolean'}).notNull().default(false),
-  // Pinned to the table's Pinned shelf, newest first; cleared when it closes.
+  // Pinned to the table's Pinned shelf, newest first. It's cleared when it closes.
   pinnedAt: text('pinned_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -71,7 +71,7 @@ export const jobsApplications = sqliteTable('jobs_applications', {
 
 /**
  * A timeline event. It keeps its own copy of what it shows, so it outlives the
- * email; `messageId` (mail's messages.id, no foreign key) links to the email while it exists.
+ * email. `messageId` (mail's messages.id, no foreign key) links to the email while it exists.
  */
 export const jobsEvents = sqliteTable('jobs_events', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -108,7 +108,7 @@ export const jobsPostings = sqliteTable('jobs_postings', {
   niceToHaves: text('nice_to_haves', {mode: 'json'}).$type<string[]>().notNull(),
   link: text('link'),
   source: text('source', {enum: JD_SOURCES}).notNull(),
-  // The platform it was found on ("Greenhouse"); null for a search.
+  // The platform it was found on ("Greenhouse"). Null for a search.
   platform: text('platform'),
   foundAt: text('found_at').notNull(),
 }, table => [
@@ -126,12 +126,12 @@ export const jobsJdCandidates = sqliteTable('jobs_jd_candidates', {
   link: text('link').notNull(),
   position: integer('position').notNull(),
   foundAt: text('found_at').notNull(),
-  // How the lookup found it (a pick saves it as found this way); null reads as a search.
+  // How the lookup found it (a pick saves it as found this way). Null reads as a search.
   source: text('source', {enum: JD_SOURCES}),
   // The user picked it: the lookup reads this one and saves it.
   pickedAt: text('picked_at'),
   // Opening it came back `unreadable` (a 403, a non-HTML answer, a page with no text Jobs can use),
-  // so the picker says so; a failure to reach it says nothing about the page, and leaves this false.
+  // so the picker says so. A failure to reach it says nothing about the page, and leaves this false.
   unreadable: integer('unreadable', {mode: 'boolean'}).notNull().default(false),
 }, table => [
   uniqueIndex('jobs_jd_candidates_link').on(table.applicationId, table.link),
@@ -168,7 +168,7 @@ export const jobsAliases = sqliteTable('jobs_aliases', {
 
 /**
  * What a correction or an answer changed, kept for its toast's Undo: the rows as they were
- * before, and the rows it made. Undo puts them back exactly (./undo.ts); a day later they go.
+ * before, and the rows it made. Undo puts them back exactly (./undo.ts). A day later they go.
  */
 export const jobsUndo = sqliteTable('jobs_undo', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -228,7 +228,7 @@ export const jobsEmailsRead = sqliteTable('jobs_emails_read', {
   titleKey: text('title_key'),
   requisitionId: text('requisition_id'),
   line: text('line'),
-  // The application it went to, or made; a Needs you item's is null until it's assigned.
+  // The application it went to, or made. A Needs you item's is null until it's assigned.
   applicationId: integer('application_id').references(() => jobsApplications.id, {onDelete: 'set null'}),
 }, table => [
   index('jobs_emails_read_event').on(table.event, table.at),
@@ -236,9 +236,10 @@ export const jobsEmailsRead = sqliteTable('jobs_emails_read', {
 
 /**
  * What Not an application blocked: each of its emails, so none makes an application
- * again, and its company and role, so no later email naming them does either. Not an application keeps that company
- * and role here, as the application had them (null falls back to what the email was read as), and a
- * row without an email holds the role alone, for an application whose emails Setpoint never held.
+ * again, and its company and role, so no later email naming them does either. Not an application
+ * keeps that company and role here, as the application had them (null falls back to what the email
+ * was read as). A row without an email holds the role alone, for an application whose emails
+ * Setpoint never held.
  * `applicationId` is the application it was, gone now, for Undo.
  */
 export const jobsBlockedEmails = sqliteTable('jobs_blocked_emails', {
@@ -270,7 +271,7 @@ export const jobsHandSet = sqliteTable('jobs_hand_set', {
 export const jobsSettings = sqliteTable('jobs_settings', {
   id: integer('id').primaryKey(),
   enabled: integer('enabled', {mode: 'boolean'}).notNull().default(false),
-  // When it was last turned on: mail received from then on is read as it's triaged; what came
+  // When it was last turned on: mail received from then on is read as it's triaged. What came
   // before is the history pass's. Null reads as `updated_at`.
   enabledAt: text('enabled_at'),
   accounts: text('accounts', {mode: 'json'}).$type<JobsReadAccount[]>().notNull(),
@@ -282,8 +283,8 @@ export const jobsSettings = sqliteTable('jobs_settings', {
 /**
  * The history pass, one row: the last one started. It reads, oldest first,
  * what Jobs hasn't read in the accounts it lists from before `before` (when Jobs was turned on).
- * `total` is fixed when it starts; while it runs, what it has read is counted from jobs_emails_read
- * (read since `started_at`, received before `before`), and `read` is kept once it's done. No row is a
+ * `total` is fixed when it starts. While it runs, what it has read is counted from jobs_emails_read
+ * (read since `started_at`, received before `before`). `read` is kept once it's done. No row is a
  * pass not started yet.
  */
 export const jobsHistory = sqliteTable('jobs_history', {
@@ -311,7 +312,7 @@ export const jobsReader = sqliteTable('jobs_reader', {
   // The first failure since the last success: "Anthropic unreachable since 8:52 AM".
   failingSince: text('failing_since'),
   lastError: text('last_error'),
-  // The failure's kind (src/domain/retry.ts): `auth` waits for a key; the rest are retried.
+  // The failure's kind (src/domain/retry.ts): `auth` waits for a key. The rest are retried.
   lastErrorKind: text('last_error_kind', {enum: PROVIDER_ERROR_KINDS}),
 }, table => [
   check('jobs_reader_one', sql`${table.id} = 1`),
@@ -319,7 +320,7 @@ export const jobsReader = sqliteTable('jobs_reader', {
 
 /**
  * The browser extension's bearer token for POST /api/jobs/check, one row, as Home Assistant's
- * is: only its SHA-256 kept, issued and rotated by the CLI (`jobs-token`), and revoking deletes it.
+ * is. Only its SHA-256 is kept. The CLI (`jobs-token`) issues and rotates it, and revoking deletes it.
  */
 export const jobsCheckToken = sqliteTable('jobs_check_token', {
   id: integer('id').primaryKey(),

@@ -1,8 +1,9 @@
-// The .ics import under review, and its run. Kept in the module, as the editor's kept
-// drafts are, so a run carries on while the user looks at another page. Events go one at a time, each
-// waiting for Google's answer (`untilSettled`); one Google refuses stays in the list with its words
-// and Retry, so a partial import never reads as done. Once every event has gone, the review closes
-// and the toast says so, with Undo deleting the events the import created (never ones it updated).
+// The .ics import under review, and its run. They are kept in the module, as the editor's kept
+// drafts are, so a run carries on while the user looks at another page. Events go one at a time,
+// and each waits for Google's answer (`untilSettled`). An event Google refuses stays in the list
+// with its words and Retry, so a partial import never reads as done. Once every event has gone, the
+// review closes and the toast says so. Its Undo deletes the events the import created (never ones
+// it updated).
 import type {IcsEventOut, IcsReadOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {ApiFailure} from '../../api/client.ts';
@@ -43,8 +44,8 @@ const subscribe = (listener: () => void) => {
 
 export const useImportReview = () => useSyncExternalStore(subscribe, () => review);
 
-// A file of one event, handed to Calendar to open in the editor as a draft once it's drawn: from
-// Calendar's own picker or drop, or from an email's .ics on another page.
+// A file of one event, handed to Calendar to open in the editor as a draft once it's drawn. It
+// comes from Calendar's own picker or drop, or from an email's .ics on another page.
 let handed: IcsEventOut | null = null;
 export const useHandedIcs = () => useSyncExternalStore(subscribe, () => handed);
 export function handIcs(event: IcsEventOut | null) {
@@ -53,9 +54,9 @@ export function handIcs(event: IcsEventOut | null) {
 }
 
 /**
- * An email's .ics, read, lands as a file from Calendar does (icsLanding): nothing to import
- * says so in the toast; otherwise Calendar opens on the event's day, one event in the editor
- * and two or more in the review.
+ * An email's .ics, once read, lands as a file from Calendar does (icsLanding). If there is nothing
+ * to import, the toast says so. Otherwise Calendar opens on the event's day, with one event in the
+ * editor and two or more in the review.
  */
 export function landIcs(name: string, read: IcsReadOut, timeZone: string) {
   const landing = icsLanding(read, timeZone);
@@ -133,7 +134,7 @@ export async function retryRow(uid: string, calendarName: string) {
   if (review?.read === owner.read && !review.running) finish(calendarName, true);
 }
 
-/** Every event sent: the toast says how many went, with Undo; the review closes once none was refused. */
+/** Every event sent: the toast says how many went, with Undo. The review closes once none was refused. */
 function finish(calendarName: string, retried = false) {
   if (!review?.order) return;
   const {done, failed} = runCounts(review.order, review.rows);
@@ -147,7 +148,7 @@ function finish(calendarName: string, retried = false) {
   if (done) showToast(importedLine(done, calendarName), created.length ? {label: 'Undo', run: () => void undoImport(created)} : null);
 }
 
-/** Undo: the events the import created are deleted (a series whole); ones it updated stay as they now are. */
+/** Undo deletes the events the import created (a series whole). Ones it updated stay as they now are. */
 async function undoImport(itemIds: number[]) {
   try {
     for (const id of itemIds) await deleteItem(id, {scope: 'all'});

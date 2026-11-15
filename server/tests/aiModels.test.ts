@@ -48,7 +48,7 @@ describe('anthropicClient', () => {
 
   test.each<[string, Record<string, unknown>, Record<string, unknown> | undefined]>([
     // model, tool_choice, thinking (claude-api skill: the newest models refuse a forced tool, and
-    // Sonnet 5.5 turns thinking off with between_tools; Opus 5.5 can't turn it off)
+    // Sonnet 5.5 turns thinking off with between_tools, and Opus 5.5 can't turn it off)
     ['claude-haiku-5-5', {type: 'tool', name: 'submit_email_triage'}, {type: 'disabled'}],
     ['claude-sonnet-5-5', {type: 'auto'}, {type: 'between_tools'}],
     ['claude-opus-5-5', {type: 'auto'}, undefined],
@@ -101,7 +101,7 @@ describe('anthropicClient', () => {
 describe('anthropicClient with web search', () => {
   const SEARCH_TOOL = {name: 'submit_search', description: 'Submit what was found.', schema: {type: 'object', properties: {found: {type: 'string'}}, required: ['found']}};
   // Claude's answer in the web search tool's real shape (the claude-api skill, 2026-10): its query, the
-  // results (encrypted, to send back), then the answer's tool; searches billed in server_tool_use.
+  // results (encrypted, to send back), then the answer's tool. Searches are billed in server_tool_use.
   const searched = (stop: string, content: unknown[], searches: number) => ({status: 200, body: {
     id: `msg_${stop}`, type: 'message', role: 'assistant', model: 'claude-sonnet-5-5', stop_reason: stop, stop_sequence: null, content,
     usage: {input_tokens: 3000, output_tokens: 200, cache_read_input_tokens: 500, cache_creation_input_tokens: 0, server_tool_use: {web_search_requests: searches}},

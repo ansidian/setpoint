@@ -1,5 +1,5 @@
-// What every board's readers give the content script: the postings on a page, each
-// with the line its chip goes at the end of, and what the page should have let them read but didn't.
+// What every board's readers give the content script: the postings on a page, each with the line
+// its chip goes at the end of, and what the page should have let them read but didn't.
 
 /** A posting as the board shows it, and the line its chip goes at the end of. */
 export interface Posting {

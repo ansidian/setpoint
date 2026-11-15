@@ -1,22 +1,22 @@
 // The chip grammar: words that name an organisation, a type, a date or range, an account or a kind
 // become chips that filter exactly. `northwind rejection march` becomes Org Northwind · Type
 // Rejection · Date Mar 2026. Words that form no chip stay free text, and so does anything in
-// "quotes". A "!" before a word negates it: `!confirmation` is a Not Type Confirmation chip,
-// and a "!word" that forms no chip stays in the text, where search leaves out the mail that has it.
+// "quotes". A "!" before a word negates it. `!confirmation` is a Not Type Confirmation chip. A
+// "!word" that forms no chip stays in the text, where search leaves out the mail that has it.
 //
-// Mail's field no longer runs all of it: a word typed there stays a word. What's left is a
-// "!word", any time; dates for a suggestion (src/search/reading.ts); and Alfred's searches, whole.
+// Mail's field no longer runs all of it, and a word typed there stays a word. What's left is a
+// "!word", any time, dates for a suggestion (src/search/reading.ts), and Alfred's searches, whole.
 // Calendar search keeps its own words on `parseChips` below.
 //
-// Pure: the known organisations and accounts come in as a vocabulary, and dates resolve against the
-// given clock in the owner's zone. Dates prefer the past (the user is looking for an email they got):
-// "march" in October 2026 is March 2026, in February 2026 it's March 2025. Chrono reads the day
-// phrases ("sep 30", "3/14", "march 14 2025", "monday", "mar 1 - mar 5"); the rest (bare months and
+// Pure. The known organisations and accounts come in as a vocabulary, and dates resolve against the
+// given clock in the owner's zone. Dates prefer the past (the user is looking for an email they got).
+// "march" in October 2026 is March 2026, and in February 2026 it's March 2025. Chrono reads the day
+// phrases ("sep 30", "3/14", "march 14 2025", "monday", "mar 1 - mar 5"). The rest (bare months and
 // years, "last week", "this month", "last 7 days", "since sep", "before 2025") is read here, because
 // Chrono resolves those forward or not at all.
 //
 // The grammar is here rather than in `shared/` because it needs the vocabulary (the database's
-// organisations and accounts) and keeps Chrono out of the web bundle: the web shows the chips each
+// organisations and accounts) and keeps Chrono out of the web bundle. The web shows the chips each
 // answer returns (`SearchOut.chips`).
 import * as chrono from 'chrono-node';
 import type {CalendarSearchChip, Kind, MessageType, SearchChip} from '@setpoint/shared';
@@ -31,9 +31,9 @@ export interface ChipVocabulary {
 export interface ChipContext extends ChipVocabulary {
   now: string;
   timeZone: string;
-  // What plain words form: every chip (Alfred's), only dates, the rest staying text for search to
-  // rank (a suggestion), or nothing (the field). A word after "!" is the whole grammar's in each,
-  // since it says what it leaves out as exactly as it did.
+  // What plain words form: every chip (Alfred's), only dates with the rest staying text for search
+  // to rank (a suggestion), or nothing (the field). A word after "!" is the whole grammar's in each,
+  // because it says what it leaves out as exactly as it did.
   fromWords?: 'all' | 'dates' | 'none';
 }
 
@@ -51,7 +51,7 @@ export const wordsOf = (value: string) => fold(value).match(/[\p{L}\p{N}]+/gu) ?
 
 /**
  * Words that never start an organisation chip on their own: filler, and the words a question to
- * Alfred is made of, so "where" in a question doesn't become Where Wild Things Grow. The
+ * Alfred is made of. So "where" in a question doesn't become Where Wild Things Grow. The
  * organisation still chips by more of its words ("where wild").
  */
 const FILLER = new Set([
@@ -84,7 +84,7 @@ export const TYPE_LABELS: Record<MessageType, string> = {
   reminder: 'Reminder', verification_code: 'Verification code', alert: 'Alert', newsletter: 'Newsletter', statement: 'Statement',
 };
 
-// "Other" stays a word: it's too common to mean the kind.
+// "Other" stays a word, because it's too common to mean the kind.
 const KIND_WORDS: Record<string, Kind> = {
   deliveries: 'deliveries', delivery: 'deliveries', money: 'money', career: 'career', security: 'security', updates: 'updates', people: 'people',
 };
@@ -99,7 +99,7 @@ const MONTHS: Record<string, number> = {
   aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
 };
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-// Before every email: "before 2025" runs from here.
+// Before every email. "before 2025" runs from here.
 const EPOCH = '1970-01-01';
 
 interface Range {
@@ -207,10 +207,10 @@ const endOf = (point: {date: string; granularity: Granularity}) => {
   return nextMonth(year, month);
 };
 
-/** Day phrases through Chrono: the whole phrase must be one date or range, with no time of day. */
+/** Day phrases through Chrono. The whole phrase must be one date or range, with no time of day. */
 function chronoRange(raw: string, words: string[], today: string): Range | null {
   const phrase = raw.trim();
-  // A bare "may" is the verb far more often than the month; weekdays only by their full names.
+  // A bare "may" is the verb far more often than the month. Weekdays count only by their full names.
   if (words.length === 1 && (words[0] === 'may' || /^(sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)$/.test(words[0]!))) return null;
   const results = chrono.parse(phrase, chronoReference(today));
   if (results.length !== 1) return null;
@@ -222,7 +222,7 @@ function chronoRange(raw: string, words: string[], today: string): Range | null 
   if (!result.end) return range(start.date, endOf(start), today);
   const end = chronoPoint(result.end, today);
   if (!end) return null;
-  // "mar 1 - mar 5" in an implied year: keep the end after the start.
+  // "mar 1 - mar 5" in an implied year. Keep the end after the start.
   let to = endOf(end);
   if (to <= start.date) to = addMonths(to, 12);
   return range(start.date, to, today);
@@ -271,7 +271,7 @@ function dateRange(words: string[], raw: string, today: string): Range | null {
   return chronoRange(raw, words, today);
 }
 
-/** A month's name alone ("march"), as its number; "may" stays a word. */
+/** A month's name alone ("march"), as its number. "may" stays a word. */
 export const bareMonth = (words: string[]): number | null => (words.length === 1 && words[0] !== 'may' ? MONTHS[words[0]!] ?? null : null);
 
 /** "since sep", "after mar 14", "before 2025", "until march", or a plain date or range. */
@@ -326,7 +326,7 @@ const MAX_WINDOW = 5;
 /** Whether a chip leaves out what it matches (typed after "!"). */
 export const isNot = (chip: SearchChip | CalendarSearchChip) => 'not' in chip && chip.not === true;
 
-/** A chip as words the grammar reads back as the same chip: its label, after "!" for a Not chip. */
+/** A chip as words the grammar reads back as the same chip. Its label, after "!" for a Not chip. */
 export const chipWords = (chip: SearchChip) => (isNot(chip) ? `!${chip.label}` : chip.label);
 
 /** The same filter, whatever its label says. */
@@ -339,7 +339,7 @@ export function sameChip(a: SearchChip | CalendarSearchChip, b: SearchChip | Cal
 interface Token {
   raw: string;
   quoted: boolean;
-  // Folded, punctuation trimmed; empty for punctuation alone.
+  // Folded, punctuation trimmed. Empty for punctuation alone.
   word: string;
   // Typed after "!" ("!confirmation").
   negated: boolean;
@@ -372,8 +372,8 @@ export function parseQuery(text: string, context: ChipContext): ParsedQuery {
 
 /**
  * The tokens' chips by a grammar, longest phrase first at each word, and the words left over. With
- * `negate`, a phrase starting with "!" gives its chips negated, and never takes in a later "!" word;
- * without it, "!" is punctuation.
+ * `negate`, a phrase starting with "!" gives its chips negated, and never takes in a later "!" word.
+ * Without it, "!" is punctuation.
  */
 export function parseChips<C extends SearchChip | CalendarSearchChip>(text: string, chipFor: (words: string[], raw: string, negated: boolean) => C | C[] | null, negate?: (chip: C) => C): {chips: C[]; text: string} {
   const all = tokens(text);

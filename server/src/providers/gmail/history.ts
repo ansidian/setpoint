@@ -1,7 +1,7 @@
-// Reading Gmail's history records: which
-// messages arrived in the inbox, and which changed in a way the mirror shows (read, trash, inbox,
-// spam, deleted). The mirror then reads each changed message's current labels rather than
-// replaying events in order, so a burst of changes settles on Gmail's state, not on the last event.
+// Reading Gmail's history records: which messages arrived in the inbox, and which changed in a way
+// the mirror shows (read, trash, inbox, spam, deleted). The mirror then reads each changed message's
+// current labels rather than replaying events in order, so a burst of changes settles on Gmail's
+// state, not on the last event.
 import type {ProviderState} from '../../sync/mailMirror.ts';
 import type {GmailHistoryEvent, GmailHistoryRecord} from './api.ts';
 

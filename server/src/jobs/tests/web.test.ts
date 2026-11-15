@@ -1,7 +1,7 @@
 // The JD lookup's reads of the web: each platform's invented fixture (Greenhouse's
 // job board API, Lever's postings API, Ashby's posting API, each in its real shape) and the posting
 // pages parse into postings with their text as markdown, faked at the HTTP boundary (./fakeWeb.ts).
-// Every request names Setpoint in its User-Agent; a board or posting that isn't there is nothing, and
+// Every request names Setpoint in its User-Agent. A board or posting that isn't there is nothing, and
 // a failure is thrown for the retry policy.
 import {describe, expect, test} from 'vitest';
 import {ProviderError} from '../../sync/errors.ts';
@@ -191,7 +191,7 @@ describe('a link', () => {
     expect(await readLink(fake.web, 'https://click.indeed.example/rc/clk?jk=7c1e9a24f0b3', signal)).toMatchObject({title: 'Full Stack Developer', site: 'Indeed'});
   });
 
-  // What a search candidate is, once opened: gone is dropped; unreadable stays, since the user can open it in a browser.
+  // What a search candidate is, once opened: gone is dropped. Unreadable stays, since the user can open it in a browser.
   const html = {'content-type': 'text/html'};
   test.each<[string, Parameters<Awaited<ReturnType<typeof fakeWeb>>['serve']>[1], 'gone' | 'unreadable']>([
     ['a 404', {status: 404, body: 'Not Found', headers: html}, 'gone'],

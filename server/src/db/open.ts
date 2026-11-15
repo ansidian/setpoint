@@ -17,9 +17,9 @@ export interface OpenDatabase {
 }
 
 /**
- * The SQL functions migrations call. A migration can't import TypeScript, and 0022_search_body fills
- * `search_body` for every email already there with the rule new mail gets, inside its own
- * transaction. Every database replays it once, so this stays while that migration does.
+ * The SQL functions migrations call. A migration can't import TypeScript. 0022_search_body fills
+ * `search_body` for every email already there, inside its own transaction, with the rule new mail
+ * gets. Every database replays it once, so this stays while that migration does.
  */
 function registerMigrationFunctions(sqlite: Database.Database) {
   sqlite.function('search_body_of', {deterministic: true}, body => searchBody(String(body)));
@@ -29,8 +29,8 @@ function registerMigrationFunctions(sqlite: Database.Database) {
 export function openDatabase(file: string): OpenDatabase {
   if (file !== ':memory:') {
     fs.mkdirSync(path.dirname(file), {recursive: true});
-    // A large migration's temporary data sits beside the database: the image's /tmp is a small
-    // tmpfs, which filled at 0022's rewrite of every email (SQLITE_FULL, with the disk half empty).
+    // A large migration's temporary data sits beside the database. The image's /tmp is a small
+    // tmpfs, and it filled at 0022's rewrite of every email (SQLITE_FULL, with the disk half empty).
     process.env.SQLITE_TMPDIR ??= path.dirname(file);
   }
   const sqlite = new Database(file);
@@ -41,8 +41,8 @@ export function openDatabase(file: string): OpenDatabase {
 }
 
 /**
- * An in-memory copy of a database from its `sqlite.serialize()`, as it stood: nothing migrates, and
- * writes reach only the copy. Tests start from one, since migrating and seeding each time was most
+ * An in-memory copy of a database from its `sqlite.serialize()`, as it stood. Nothing migrates, and
+ * writes reach only the copy. Tests start from one, because migrating and seeding each time was most
  * of what a seeded test cost.
  */
 export const openImage = (image: Buffer): OpenDatabase => connected(new Database(image));

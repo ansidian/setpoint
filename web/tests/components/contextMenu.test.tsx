@@ -1,8 +1,8 @@
-// The right-click menu's rows (ContextMenu.tsx): a disabled item reads as
-// unavailable, without its key hint, and a note (a read-only event's reason) is a quiet line the
-// cursor passes over and a click doesn't run. Which items a read-only event's menu offers stays in
-// detail.spec.ts, on the seed's Veterans Day. An event's colours are swatches in the menu itself,
-// a row the cursor passes over. How the rows and swatches look is by eye.
+// The right-click menu's rows (ContextMenu.tsx). A disabled item reads as unavailable, without its
+// key hint. A note (a read-only event's reason) is a quiet line that the cursor passes over and a
+// click doesn't run. Which items a read-only event's menu offers stays in detail.spec.ts, on the
+// seed's Veterans Day. An event's colours are swatches in the menu itself, a row the cursor passes
+// over. How the rows and swatches look is by eye.
 import type {MouseEvent} from 'react';
 import {expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';

@@ -1,10 +1,11 @@
 // What a model call cost, for the AI usage ledger (Settings › AI). Standard text API rates in US
 // dollars per million tokens: input, cached input reads, output. Anthropic's rates are the claude-api
-// skill's pricing table (cached 2026-10-06; cache reads 0.1× input except where it states otherwise:
-// Opus 5.5 and Sonnet 5.5 $0.20, Fable 5.1 $0.25). Cache writes cost 1.25× input, for Anthropic's
-// five minutes.
-// Claude Haiku 5.5 bills a prompt over 100K tokens at 5× in every bucket. Dated snapshots price as their model. A model not listed has no cost (null; the ledger
-// keeps its tokens and records 0) rather than a guessed one.
+// skill's pricing table, cached 2026-10-06. Cache reads cost 0.1× input except where it states
+// otherwise: Opus 5.5 and Sonnet 5.5 $0.20, Fable 5.1 $0.25. Cache writes cost 1.25× input, for
+// Anthropic's five minutes.
+// Claude Haiku 5.5 bills a prompt over 100K tokens at 5× in every bucket. Dated snapshots price as
+// their model. A model not listed has no cost (null, and the ledger keeps its tokens and records 0)
+// rather than a guessed one.
 
 interface Rate {
   input: number;

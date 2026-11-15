@@ -1,9 +1,9 @@
-// The production build is served by the server from the same origin. In development Vite proxies
-// /api (the live stream included) to the server on 127.0.0.1:7430 (SETPOINT_PORT), keeping the
-// browser's Host so the session cookie and the server's own-page check see Vite's origin.
+// The server serves the production build from the same origin. In development Vite proxies /api
+// (the live stream included) to the server on 127.0.0.1:7430 (SETPOINT_PORT). It keeps the
+// browser's Host, so the session cookie and the server's own-page check see Vite's origin.
 // A worktree's Vite in front of setpoint-dev's API (`npm run try` from a worktree) sets
-// SETPOINT_PAGE_ORIGIN to setpoint-dev's page: a change sent from this Vite's own page is passed
-// on as from that one, so the shared API takes it; one from anywhere else still isn't.
+// SETPOINT_PAGE_ORIGIN to setpoint-dev's page. Then it passes a change sent from this Vite's own page
+// on as from that page, so the shared API takes it. A change from anywhere else still isn't.
 // Fonts and glyphs are bundled: nothing loads from the network at runtime.
 import react from '@vitejs/plugin-react';
 import {defineConfig} from 'vite';

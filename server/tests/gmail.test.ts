@@ -1,7 +1,7 @@
-// The Gmail adapter against a fake Google on 127.0.0.1: Connect
-// Gmail, a resumable 365-day backfill with progress, new mail by Pub/Sub pull, read elsewhere, opening
-// in Setpoint, Mark all as read in one batchModify, trash with undo, history too old (full resync),
-// 429, timeouts, an expired access token and a revoked one; with the counts following the rules.
+// The Gmail adapter against a fake Google on 127.0.0.1: Connect Gmail, a resumable 365-day backfill
+// with progress, new mail by Pub/Sub pull, read elsewhere, opening in Setpoint, Mark all as read in
+// one batchModify, trash with undo, history too old (full resync), 429, timeouts, an expired access
+// token and a revoked one. The counts follow the rules.
 import {askAlfred} from '../src/alfred/ask.ts';
 import {setSecret} from '../src/secrets/store.ts';
 import {generateKeyPairSync} from 'node:crypto';
@@ -359,7 +359,7 @@ describe('Gmail: recovery and Google\'s errors', () => {
     const command = ruleActions(w.store, welcome.id, 1, {markRead: true, trash: 'now'})!;
     expect(bySubject(w, 'Welcome')).toMatchObject({unread: false, trashedAt: expect.any(String)});
     await env.drain();
-    // Read first, as Mark read does; the trash Gmail refused fails in place, still in the Inbox.
+    // Read first, as Mark read does. The trash Gmail refused fails in place, still in the Inbox.
     expect(google.labels(ADDRESS, welcome.providerId)).toEqual(['INBOX']);
     expect((await api.send('GET', `/api/mail/messages/${welcome.id}`)).body.command).toMatchObject({kind: 'trash', state: 'failed', can_retry: true, can_move_back: true});
     expect((await api.send('GET', '/api/mail/inbox')).body.groups.flatMap((group: {rows: {id: number}[]}) => group.rows.map(row => row.id))).toContain(welcome.id);
@@ -459,7 +459,7 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     const html = await api.send('GET', `/api/mail/messages/${message.id}/attachments/${row[1]!.id}`);
     expect(html.headers.get('content-type')).toBe('application/octet-stream');
     expect(html.headers.get('content-disposition')).toMatch(/^attachment; filename="notes.html"/);
-    // Another email's attachment id, or none, is not found; signed out is refused.
+    // Another email's attachment id, or none, is not found. Signed out is refused.
     expect((await api.send('GET', `/api/mail/messages/${message.id}/attachments/999`)).status).toBe(404);
     expect((await client(w).send('GET', `/api/mail/messages/${message.id}/attachments/${row[0]!.id}`)).status).toBe(401);
 

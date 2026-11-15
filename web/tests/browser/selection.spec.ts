@@ -1,8 +1,8 @@
-// Selecting several emails: ⌘-click and ⇧-click select rows without opening or
-// reading them, and the reading pane shows the selection; the first ⌘-click takes the open email, and
-// a plain click ends it and opens. A selected row's right-click offers the selection's actions and
-// another row's its own; E trashes every one with one toast, and ⌘Z brings every one back; Mark
-// read, Pin and Done act on all of it.
+// Selecting several emails. ⌘-click and ⇧-click select rows without opening or reading them, and the
+// reading pane shows the selection. The first ⌘-click takes the open email, and a plain click ends
+// it and opens. A selected row's right-click offers the selection's actions, and another row's
+// offers its own. E trashes every one with one toast, and ⌘Z brings every one back. Mark read, Pin
+// and Done act on all of it.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AllOut, MessageOut, MessageRowOut} from '@setpoint/shared';
@@ -40,8 +40,8 @@ async function rightClick(target: Locator) {
 }
 
 /**
- * Four emails next to each other in a day, none of them in Attention or on the shelf: three for a selection,
- * and the day's next one after them.
+ * Four emails next to each other in a day, none of them in Attention or on the shelf: three for a
+ * selection, and the day's next one after them.
  */
 async function fourInADay(page: Page, setpoint: Setpoint): Promise<MessageRowOut[]> {
   const shown = await onScreen(page);
@@ -186,7 +186,7 @@ test('Mark read, Pin and Done act on the whole selection: Pin keeps it, Done cou
     const tools = () => pane(page).locator('.rd-tools .tool').allTextContents();
     assert.deepEqual(await tools(), ['Done 2H', 'TrashE', 'PinP', 'Mark read', 'ClearEsc']);
 
-    // Mark read: the unread ones, one toast; the selection stays.
+    // Mark read: the unread ones, one toast. The selection stays.
     await pane(page).locator('.tool', {hasText: 'Mark read'}).click();
     await page.locator('.toast', {hasText: /Marked \d as read/}).waitFor();
     for (const id of attention.map(one => one.id)) await until(`${id} read`, () => message(setpoint, id), found => !found.unread);

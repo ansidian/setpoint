@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 export interface Config {
-  // SETPOINT_HOST: the address to listen on. 127.0.0.1 by default; 0.0.0.0 inside a container whose
+  // SETPOINT_HOST: the address to listen on. 127.0.0.1 by default, 0.0.0.0 inside a container whose
   // port the host publishes on its own loopback (OPERATIONS.md).
   host: string;
   port: number;
@@ -14,31 +14,32 @@ export interface Config {
   webDir: string;
   // Local days (All's headings, the calendar) are counted in this zone.
   timeZone: string;
-  // Setpoint's own origin (SETPOINT_PUBLIC_URL): an https one makes the session cookie Secure, and
-  // it's the passkeys' relying party and the base of ntfy's click links.
+  // Setpoint's own origin (SETPOINT_PUBLIC_URL). An https one makes the session cookie Secure. It's
+  // also the passkeys' relying party and the base of ntfy's click links.
   publicUrl: string | null;
   // SETPOINT_WEBHOOK_ORIGIN: the https origin Google Calendar's watch channels are told to post to,
-  // when it isn't the public URL's (pages on a private name, webhooks on a public one). Null uses the public URL, if that's https.
+  // when it isn't the public URL's (pages on a private name, webhooks on a public one). Null uses
+  // the public URL, if that's https.
   webhookOrigin: string | null;
   production: boolean;
-  // `seed` runs the clock from the seed's moment (SEED_NOW) onwards, for `npm run dev`; `frozen`
+  // `seed` runs the clock from the seed's moment (SEED_NOW) onwards, for `npm run dev`. `frozen`
   // holds it at SEED_NOW, so the browser checks' screenshots don't depend on how long they take.
   clock: 'real' | 'seed' | 'frozen';
   // SETPOINT_DEV_AI_URL: every model call (triage, history, Alfred) goes to this fake on the loopback
   // instead of Anthropic, so the browser checks can show Alfred answering. Development only.
   devAiUrl: string | null;
-  // SETPOINT_DEV_PROVIDER_HOLD: a file; while it's there, the dev provider holds every change it's
+  // SETPOINT_DEV_PROVIDER_HOLD: a file. While it's there, the dev provider holds every change it's
   // sent rather than confirming it, so a browser check decides when the provider confirms.
   // Development only.
   devProviderHold: string | null;
   // The one Google OAuth client, for Connect Gmail's consent, which Google Calendar rides too
-  // (SETPOINT_GOOGLE_CLIENT_ID and _SECRET); null leaves Gmail and Calendar unconnectable.
+  // (SETPOINT_GOOGLE_CLIENT_ID and _SECRET). Null leaves Gmail and Calendar unconnectable.
   google: {clientId: string; clientSecret: string} | null;
   // Gmail push: the topic users.watch publishes to, Setpoint's own pull subscription on it, and the
   // service account that pulls (SETPOINT_GMAIL_PUBSUB_TOPIC, _SUBSCRIPTION and
   // SETPOINT_GOOGLE_SERVICE_ACCOUNT_FILE). Null polls Gmail every 2 minutes instead.
   gmailPubSub: {topic: string; subscription: string; serviceAccountFile: string} | null;
-  // Todoist's OAuth app (SETPOINT_TODOIST_CLIENT_ID and _SECRET); its callback is
+  // Todoist's OAuth app (SETPOINT_TODOIST_CLIENT_ID and _SECRET). Its callback is
   // /api/ea/accounts/todoist/callback. Null leaves Todoist unconnectable.
   todoistClient: {clientId: string; clientSecret: string} | null;
 }

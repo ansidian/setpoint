@@ -1,6 +1,6 @@
-// Where a right-click's menu opens: from the pointer, down and to the right, as
-// the system's do; one that would run past the right opens to the pointer's left instead, one that
-// would run past the bottom opens upward, and either way it stays 8 px inside the window.
+// Where a right-click's menu opens: from the pointer, down and to the right, as the system's do. A
+// menu that would run past the right opens to the pointer's left instead. One that would run past
+// the bottom opens upward. Either way it stays 8 px inside the window.
 
 export const MENU_MARGIN = 8;
 

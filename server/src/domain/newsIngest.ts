@@ -1,6 +1,7 @@
 // News ingest's rules: an article's canonical URL, feed text made plain, the 48 hours a read fills,
 // distances from the home location, which hosts a read may reach, what each article is read for,
-// which images are worth copying, how a refusal is retried, and a page's text decoded by its charset. Pure, so each is tested as a table.
+// which images are worth copying, how a refusal is retried, and a page's text decoded by its
+// charset. Pure, so each is tested as a table.
 import {Element, Text} from 'domhandler';
 import type {ChildNode} from 'domhandler';
 import {parseDocument} from 'htmlparser2';
@@ -22,7 +23,8 @@ export interface IngestedArticle {
   discovery?: boolean;
   // The text the source gave with it (an alert's description), kept instead of reading a page.
   text?: string | null;
-  // Where it is, when official data says (a quake, a fire, an air reading): Local's closeness.
+  // Where it is, when official data says (a quake, a fire, an air reading). Used for Local's
+  // closeness.
   lat?: number | null;
   lng?: number | null;
 }
@@ -34,9 +36,9 @@ export interface IngestedArticle {
 const TRACKING = /^(utm_.+|fbclid|gclid|gclsrc|dclid|msclkid|yclid|igshid|mc_cid|mc_eid|_ga|_gl|ref|ref_src|ref_url|cmpid|s_cid|ocid|smid|taid|at_medium|at_campaign|mkt_tok|sr_share|__twitter_impression)$/i;
 
 /**
- * The URL an article is kept unique by: tracking parameters and the fragment gone, the rest sorted,
- * the host lower-case without `www.` or a trailing dot, and no trailing slash. Something that isn't
- * a URL is kept as it was, trimmed.
+ * The URL an article is kept unique by. Tracking parameters and the fragment are gone, the rest is
+ * sorted, the host is lower-case without `www.` or a trailing dot, and there is no trailing slash.
+ * Something that isn't a URL is kept as it was, trimmed.
  */
 export function canonicalUrl(raw: string): string {
   const text = raw.trim();
@@ -55,7 +57,7 @@ export function canonicalUrl(raw: string): string {
 
 /**
  * The canonical URL of one revision of an official record that changes in place (a fire's acres and
- * containment, an air quality reading's level): each revision is its own article, so sorting sees
+ * containment, an air quality reading's level). Each revision is its own article, so sorting sees
  * the new fact, while `url` stays the record's page.
  */
 export const revisionUrl = (url: string, revision: string) => `${canonicalUrl(url)}#${revision.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-|-$/g, '')}`;
@@ -107,7 +109,7 @@ export const SUMMARY_MAX = 1000;
 /** A read keeps what was published in the last 48 hours, so the first run fills them. */
 export const FILL_MS = STORY_TTL_MS;
 
-/** A published time as an instant: unreadable is null, and the future (a feed's wrong zone) is now. */
+/** A published time as an instant. Unreadable is null, and the future (a feed's wrong zone) is now. */
 export function publishedInstant(raw: string | number | null | undefined, now: string): string | null {
   if (raw === null || raw === undefined || raw === '') return null;
   const at = typeof raw === 'number' ? raw : Date.parse(raw);
@@ -122,9 +124,9 @@ export type PostDate = {kind: 'instant'; at: string} | {kind: 'day'; date: strin
 
 /**
  * When a post on a page read was published, or null to leave it out. A dated post is kept within the
- * 48 hours (a day counts from the day 48 hours ago, in the user's zone); a day that's today is now, an
- * earlier one its noon. An undated post can't be told from an old one on the first read, so that read
- * only notes it; on later reads it's new on the page, so now.
+ * 48 hours (a day counts from the day 48 hours ago, in the user's zone). A day that's today is now,
+ * and an earlier one is its noon. An undated post can't be told from an old one on the first read,
+ * so that read only notes it. On later reads it's new on the page, so now.
  */
 export function postedAt(date: PostDate | null, now: string, timeZone: string, firstRead: boolean): string | null {
   if (!date) return firstRead ? null : now;
@@ -202,8 +204,9 @@ function privateIpv4(host: string): boolean {
 
 /**
  * Whether a read may fetch a URL: http(s) on a public host. A feed's links come from outside, so
- * none may point Setpoint at the home network: no loopback, private, link-local or carrier-grade
- * NAT address (a tailnet), no single-label or .local, .internal, .localhost or .ts.net name.
+ * none may point Setpoint at the home network. That means no loopback, private, link-local or
+ * carrier-grade NAT address (a tailnet), and no single-label or .local, .internal, .localhost or
+ * .ts.net name.
  */
 export function isPublicUrl(raw: string): boolean {
   let url: URL;
@@ -239,10 +242,10 @@ export interface ReadingPlan {
 
 /**
  * What a new article is read for:
- * - found only (Google News): nothing, never read;
- * - a metered paper's: nothing, it only counts toward and confirms stories;
- * - summary only (KTLA, OpenAI block automated reading): its feed's image, never its page;
- * - one that came with its text (official data): its feed's image;
+ * - found only (Google News): nothing, never read.
+ * - a metered paper's: nothing, because it only counts toward and confirms stories.
+ * - summary only (KTLA, OpenAI block automated reading): its feed's image, never its page.
+ * - one that came with its text (official data): its feed's image.
  * - the rest: its page, for the text and the image.
  */
 export function readingPlan(article: {discovery: boolean; metered: boolean; summaryOnly: boolean; hasText: boolean}): ReadingPlan {
@@ -261,10 +264,10 @@ export function usableImage(width: number, height: number): boolean {
 // ---- Refusals ----
 
 /**
- * How a source's refusal is retried, by the one policy (src/domain/retry.ts): as any provider's
- * (src/sync/errors.ts's kindOfStatus), except that a 503 asking for a pause with Retry-After is
- * rate limited too, so the policy waits as long as it asks. A 401 or 403 is the source saying no to
- * reading (no account to reconnect), so permanent.
+ * How a source's refusal is retried, by the one policy (src/domain/retry.ts). It is retried as any
+ * provider's is (src/sync/errors.ts's kindOfStatus), except that a 503 asking for a pause with
+ * Retry-After is also rate limited, so the policy waits as long as it asks. A 401 or 403 is the
+ * source saying no to reading (no account to reconnect), so it is permanent.
  */
 export function kindOfNewsStatus(status: number, retryAfter: boolean): ProviderErrorKind {
   if (status === 429 || (status === 503 && retryAfter)) return 'rate_limited';
@@ -276,7 +279,7 @@ export function kindOfNewsStatus(status: number, retryAfter: boolean): ProviderE
 
 /**
  * A response's text in its charset: the Content-Type's, else the XML declaration's or the page's
- * <meta charset>, else UTF-8 (a label TextDecoder doesn't know is UTF-8 too).
+ * <meta charset>, else UTF-8 (a label TextDecoder doesn't know is also UTF-8).
  */
 export function decodeText(bytes: Uint8Array, contentType: string | null): string {
   const head = new TextDecoder('latin1').decode(bytes.subarray(0, 1024));

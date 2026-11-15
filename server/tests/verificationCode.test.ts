@@ -65,7 +65,7 @@ describe('detectVerificationCode refuses look-alikes', () => {
 describe('detectVerificationCode reads code emails the strict pass misses', () => {
   // Modelled on code emails the strict pass missed in production, wording invented. The second pass
   // is Android's rule (AOSP NotificationOtpDetectionHelper): a context word within 50 characters, in
-  // the code's sentence or the one before; it runs only when the subject says it's a code email.
+  // the code's sentence or the one before. It runs only when the subject says it's a code email.
   const read = (subject: string, body: string, html: string | null = null) =>
     detectVerificationCode({subject, snippet: body.slice(0, 120), bodyText: body, bodyHtml: html, receivedAt: RECEIVED, expiryMinutes: 15})?.code ?? null;
 

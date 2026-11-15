@@ -1,7 +1,7 @@
-// Google events as items, and items as Google event bodies, keeping what Google says: all-day is a
-// `date` start (Google's end date is already exclusive, as Setpoint's), a master is an event with
-// `recurrence`, an exception names its `recurringEventId` and `originalStartTime`, a cancelled one
-// is deleted, rooms and equipment aren't attendees, "(No title)" for an untitled event, and only
+// Google events as items, and items as Google event bodies, keeping what Google says. All-day is a
+// `date` start (Google's end date is already exclusive, as Setpoint's). A master is an event with
+// `recurrence`. An exception names its `recurringEventId` and `originalStartTime`. A cancelled one
+// is deleted. Rooms and equipment aren't attendees. An untitled event is "(No title)". Only
 // `default` events can be changed here (birthdays, focus time and out-of-office are Google's own).
 import {eventColourOf, EVENT_COLOUR_IDS} from '../../domain/colours.ts';
 import {parseRule} from '../../domain/recurrence.ts';
@@ -38,13 +38,13 @@ export function splitLocation(location: string | undefined): {place: string | nu
   return {place: text.slice(0, comma), address: text.slice(comma + 2)};
 }
 
-/** "Smile Dental, 1420 Elm St, …"; a street address picked as the place is written once. */
+/** "Smile Dental, 1420 Elm St, …". A street address picked as the place is written once. */
 export function joinLocation(place: string | null, address: string | null): string {
   if (place && address && (address === place || address.startsWith(`${place}, `))) return address;
   return [place, address].filter(Boolean).join(', ');
 }
 
-/** The series' rule when this expander covers it alone; otherwise Google's own expansion is used. */
+/** The series' rule when this expander covers it alone. Otherwise Google's own expansion is used. */
 export function recurrenceOf(lines: string[] | undefined, allDay: boolean): {recurrence: string | null; expanded: boolean} {
   if (!lines?.length) return {recurrence: null, expanded: false};
   const rules = lines.filter(line => line.startsWith('RRULE:'));
@@ -70,7 +70,7 @@ export function attendeesOf(event: GoogleEvent): string[] {
   return (event.attendees ?? []).filter(person => person.email && !person.resource && !person.self).map(person => person.displayName || person.email!);
 }
 
-/** A confirmed Google event as the mirror's columns; `calendarZone` when the event names none. */
+/** A confirmed Google event as the mirror's columns. `calendarZone` when the event names none. */
 export function eventColumns(event: GoogleEvent, calendarZone: string, calendarDefaults: number[]): EventColumns {
   const allDay = !event.start?.dateTime && Boolean(event.start?.date);
   const {place, address} = splitLocation(event.location);
@@ -102,7 +102,7 @@ export function eventColumns(event: GoogleEvent, calendarZone: string, calendarD
 
 /**
  * A cancelled occurrence of a series: kept as a cancelled exception so the series skips it. Google
- * sends only its original start; it takes that time (and the series' length) so the row is whole.
+ * sends only its original start. It takes that time (and the series' length) so the row is whole.
  */
 export function cancelledOccurrence(originalStart: string, master: Pick<ItemRow, 'startsAt' | 'endsAt'> | null) {
   if (!originalStart.includes('T')) {
@@ -114,9 +114,9 @@ export function cancelledOccurrence(originalStart: string, master: Pick<ItemRow,
 
 /**
  * An item's when, as Google's start and end: an all-day date pair, or instants in the item's zone.
- * The other kind's fields go as null: a patch merges start and end into what they were, so an all-day
- * event made timed would otherwise keep its date beside the new dateTime, which Google refuses as
- * "Invalid start time".
+ * The other kind's fields go as null, because a patch merges start and end into what they were.
+ * Otherwise an all-day event made timed would keep its date beside the new dateTime, which Google
+ * refuses as "Invalid start time".
  */
 export function eventTimes(item: Pick<ItemRow, 'allDay' | 'startsAt' | 'endsAt' | 'startDate' | 'endDate' | 'timeZone'>, fallbackZone: string): {start: EventTime; end: EventTime} {
   if (item.allDay) return {start: {date: item.startDate!, dateTime: null, timeZone: null}, end: {date: item.endDate!, dateTime: null, timeZone: null}};
@@ -126,14 +126,14 @@ export function eventTimes(item: Pick<ItemRow, 'allDay' | 'startsAt' | 'endsAt' 
 
 /**
  * The event's colour as Google's colorId, or null to take the calendar's. Written only when the
- * colour itself changes (or on create): several of Google's colours read as one swatch, so writing it
- * back on every change would turn Lavender into Grape.
+ * colour itself changes (or on create). Several of Google's colours read as one swatch, so writing
+ * it back on every change would turn Lavender into Grape.
  */
 export const colorIdOf = (colour: ItemRow['colour']) => (colour && colour in EVENT_COLOUR_IDS ? EVENT_COLOUR_IDS[colour as keyof typeof EVENT_COLOUR_IDS] : null);
 
 /**
  * A new event's description, as the user wrote it. On a change it goes only when it's what
- * changed (the caller's, as the colour is): Setpoint shows a description through a short list of
+ * changed (the caller's, as the colour is). Setpoint shows a description through a short list of
  * formats, so writing back what it read would strip an invite's own markup.
  */
 export const descriptionOf = (row: Pick<ItemRow, 'description'>): Partial<GoogleEvent> => (row.description ? {description: row.description} : {});
@@ -144,9 +144,9 @@ export function eventBody(item: ItemRow, fallbackZone: string): Partial<GoogleEv
     summary: item.title,
     location: joinLocation(item.place, item.address),
     ...eventTimes(item, fallbackZone),
-    // Google has no reminder after the start: only the before-ones go, the after-ones stay Setpoint's.
+    // Google has no reminder after the start. Only the before-ones go, and the after-ones stay Setpoint's.
     reminders: {useDefault: false, overrides: (item.reminders ?? []).filter(minutes => minutes >= 0).map(minutes => ({method: 'popup', minutes}))},
-    // "off" rather than nothing: a patch merges private properties, so leaving it out would keep "on".
+    // "off" rather than nothing, because a patch merges private properties, so leaving it out would keep "on".
     extendedProperties: {private: {[LEAVE_PROPERTY]: item.leaveReminder ? 'on' : 'off'}},
   };
 }

@@ -1,5 +1,5 @@
 // Mail's read queries over the message record: the Inbox's groups and counts,
-// All by day, and one email. Every view is a query; nothing is copied per view. The rules for what
+// All by day, and one email. Every view is a query. Nothing is copied per view. The rules for what
 // the Inbox shows and counts are src/domain/inbox.ts.
 import type {AllOut, CommandOut, GmailLinkOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
 import {and, count, desc, eq, inArray, isNull, lt, or, sql} from 'drizzle-orm';
@@ -36,7 +36,7 @@ function commandsByMessage(store: Store): Map<number, CommandOut> {
 function candidates(store: Store, accountId?: number): Candidate[] {
   const commands = commandsByMessage(store);
   const attachments = new Map(store.db.select({id: t.attachments.messageId, n: count()}).from(t.attachments).groupBy(t.attachments.messageId).all().map(row => [row.id, row.n]));
-  // USPS's digest is out of the Inbox and its counts; its scans are the agenda rail's.
+  // USPS's digest is out of the Inbox and its counts. Its scans are the agenda rail's.
   const shown = eq(t.messages.uspsDigest, false);
   return store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all().map(row => {
     const command = commands.get(row.id) ?? null;
@@ -97,7 +97,7 @@ export function mailDayOf(store: Store): MailDayOut {
   };
 }
 
-/** The Inbox, optionally for one account; the counts are always every account's (the sidebar's). */
+/** The Inbox, optionally for one account. The counts are always every account's (the sidebar's). */
 export function inbox(store: Store, accountId?: number): InboxOut {
   const now = isoNow(store);
   const all = candidates(store);
@@ -112,10 +112,10 @@ export function inbox(store: Store, accountId?: number): InboxOut {
   };
 }
 
-/** All: every email, Noise included, newest first, by local day; trashed mail and USPS's digest left out. */
+/** All: every email, Noise included, newest first, by local day. Trashed mail and USPS's digest are left out. */
 export function allMail(store: Store, input: {account_id?: number; before?: string; limit: number}): AllOut {
   const commands = commandsByMessage(store);
-  // USPS's digest is the agenda rail's, out of All as it's out of the Inbox; search finds it.
+  // USPS's digest is the agenda rail's, out of All as it's out of the Inbox. Search finds it.
   const shown = eq(t.messages.uspsDigest, false);
   let where = input.account_id ? and(shown, eq(t.messages.accountId, input.account_id)) : shown;
   if (input.before) {
@@ -139,7 +139,7 @@ export function allMail(store: Store, input: {account_id?: number; before?: stri
   return {days, next_before: rows.length > input.limit && last ? `${last.receivedAt}|${last.id}` : null};
 }
 
-/** Rows for the given emails (search's page), as every list shows them; missing ids are left out. */
+/** Rows for the given emails (search's page), as every list shows them. Missing ids are left out. */
 export function messageRows(store: Store, ids: number[]): Map<number, {row: MessageRow; out: MessageRowOut}> {
   if (!ids.length) return new Map();
   const commands = commandsByMessage(store);
@@ -157,7 +157,7 @@ function isTrusted(store: Store, domain: string): boolean {
   return isTrustedDomain(new Set(store.db.select({domain: t.trustedDomains.domain}).from(t.trustedDomains).all().map(row => row.domain)), domain);
 }
 
-/** One email for the reading pane. Reading it doesn't mark it read; opening does (POST …/open). */
+/** One email for the reading pane. Reading it doesn't mark it read. Opening does (POST …/open). */
 export function messageDetail(store: Store, messageId: number): MessageOut {
   const row = store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
   if (!row) throw notFound('No such email.');
@@ -184,7 +184,7 @@ export const gmailUrl = (address: string, providerId: string) => `https://mail.g
 
 /**
  * The email a Gmail address names, by its Gmail account's address (any case) and
- * Gmail's message id; null when Setpoint doesn't have it, or has only trashed it.
+ * Gmail's message id. Null when Setpoint doesn't have it, or has only trashed it.
  */
 export function gmailLink(store: Store, address: string, providerId: string): GmailLinkOut {
   const row = store.db.select({id: t.messages.id}).from(t.messages).innerJoin(t.accounts, eq(t.accounts.id, t.messages.accountId))

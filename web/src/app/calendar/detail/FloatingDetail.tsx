@@ -1,8 +1,9 @@
-// The floating detail (boards 12a, 12b, 12c and 12d): a 360 px card
-// beside the selected item (or the right-pane row it was clicked on), placed on the side covering the fewest other items, that glides to the
-// next item clicked, can be dragged from anywhere but its buttons and text and left anywhere in the
-// grid, and hands the item to the right pane's editor with Edit or E. It lives in the month section, as the grid's other overlays do.
-// motion.ts runs the motion; this renders the card and tells it what's selected.
+// The floating detail (boards 12a, 12b, 12c and 12d): a 360 px card beside the selected item (or the
+// right-pane row it was clicked on), placed on the side covering the fewest other items. It glides to
+// the next item clicked. It can be dragged from anywhere but its buttons and text and left anywhere
+// in the grid. It hands the item to the right pane's editor with Edit or E. It lives in the month
+// section, as the grid's other overlays do.
+// motion.ts runs the motion. This renders the card and tells it what's selected.
 import {useEffect, useLayoutEffect, useState, useSyncExternalStore} from 'react';
 import type {RefObject} from 'react';
 import {DetailContent} from './DetailContent.tsx';

@@ -167,7 +167,7 @@ export type CalendarSearch = SearchFieldState<CalendarSearchChip, CalendarSearch
 export const useCalendarSearch = (): CalendarSearch =>
   useSearchField<CalendarSearchChip, CalendarSearchResultOut, CalendarSearchOut>((text, chips, after) => searchCalendar({text, chips, offset: after?.next_offset ?? 0}), false);
 
-/** News's search: words only, no chips, over the 90-day archive; one page of stories, newest first. */
+/** News's search: words only, no chips, over the 90-day archive. One page of stories, newest first. */
 export interface NewsSearchPage {
   chips: never[];
   text: string;

@@ -1,19 +1,19 @@
-// The sidebar's Today block on mail pages:
-// "Dentist" over "2:30 PM · in 5h" and the open tasks due today, a timed one over its time ("9:00 AM"),
-// in one list by time with the untimed tasks after; under a Tomorrow label of its own
-// (none when nothing's on), tomorrow's events and open tasks in the same order, the first two and "3
-// more due tomorrow" when there are more than three. Today's lines never fold.
-// A line opens the floating detail's card beside the sidebar instead of leaving the page: Edit (E)
+// The sidebar's Today block on mail pages. It shows "Dentist" over "2:30 PM · in 5h" and the open
+// tasks due today, a timed one over its time ("9:00 AM"), in one list by time with the untimed tasks
+// after. Under a Tomorrow label of its own (none when nothing's on) come tomorrow's events and open
+// tasks in the same order: the first two and "3 more due tomorrow" when there are more than three.
+// Today's lines never fold.
+// A line opens the floating detail's card beside the sidebar instead of leaving the page. Edit (E)
 // goes to Calendar's editor, a task completes there or from its ring, an item that isn't a repeating
 // event deletes, and Open in Calendar shows it there. Esc, the close button or a click elsewhere
-// closes it; it follows a click on another line. The event leads with its calendar's bar, and its
-// "in 12m" warms to `caution` from 15 minutes before and `alert` once under way. A completed task
-// shows its done check for a moment (the one completion moment, `ring-done`, which the calendar's pane
-// and card share), then its line folds away as the mail list's rows do (app/fold.ts), and Undo folds
-// it back, a repeating task's too, reopening the occurrence it completed.
-// Folded to the rail, it's one slot instead: a clock over the time until today's next timed
-// item, event or task alike, named in its tooltip with what else is left, opening the same card;
-// nothing once no timed item is left today.
+// closes the card. It follows a click on another line. The event leads with its calendar's bar, and
+// its "in 12m" warms to `caution` from 15 minutes before and `alert` once under way. A completed
+// task shows its done check for a moment (the one completion moment, `ring-done`, which the
+// calendar's pane and card share). Then its line folds away as the mail list's rows do
+// (app/fold.ts). Undo folds it back, a repeating task's too, and reopens the occurrence it completed.
+// Folded to the rail, it's one slot instead: a clock over the time until today's next timed item,
+// event or task alike. Its tooltip names that item with what else is left, and it opens the same
+// card. The slot shows nothing once no timed item is left today.
 import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent, ReactNode} from 'react';
@@ -62,7 +62,7 @@ const tomorrowItem = (line: TomorrowLine) => ('event' in line ? line.event.item 
 // Every line that goes folds out, and one that comes back (Undo, a refused change) folds in.
 const FOLDS: FoldRules<TaskLine> = {folds: () => true, arrives: () => true};
 
-/** The block, or three lines of skeleton until today's items come; in the rail, its next-up slot. */
+/** The block, or three lines of skeleton until today's items come. In the rail, its next-up slot. */
 export function TodayBlock({rail = false}: {rail?: boolean}) {
   const now = useNow();
   const zone = timeZone();
@@ -113,7 +113,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     );
   }
   if (!today.event && !folded.length && !tomorrowEvents.length) return null;
-  // Each day's events and tasks in one list by time, untimed tasks last; a task folding away
+  // Each day's events and tasks in one list by time, untimed tasks last. A task folding away
   // keeps the place its time gives it.
   type Folded = (typeof folded)[number];
   type Line = {event: TodayEvent | TomorrowEvent} | {task: Folded};
@@ -139,7 +139,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   });
 
   /**
-   * Completes a task: its line shows the done check for a moment, then folds away, with Undo; a
+   * Completes a task: its line shows the done check for a moment, then folds away, with Undo. A
    * refusal brings it back and says why. A repeating task's line then shows its next date, if due.
    */
   const complete = (task: ItemOut) => {
@@ -185,10 +185,10 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     settleSubtask: (subtask, how) => void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id)
       .catch(toastFailure(how === 'retry' ? `Couldn't try ${subtask.title} again` : `Couldn't undo ${subtask.title}`)),
     reorderSubtasks: (task, ids) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`)),
-    // Added here as on Calendar; editing one and its menu are Calendar's, through Open.
+    // Added here as on Calendar. Editing one and its menu are Calendar's, through Open.
     addSubtask: (task, title) => createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure(`Couldn't add ${title}`)),
     open: one => navigate(itemRoute(one)),
-    // A repeating event asks which of its events go; Calendar asks that.
+    // A repeating event asks which of its events go. Calendar asks that.
     ...(item.kind === 'event' && item.recurring ? {} : {remove}),
   });
 
@@ -214,9 +214,9 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   };
 
   // An event's line leads with its calendar's bar (or its own colour's), as calendar chips and the
-  // agenda draw it, where tasks have rings; its title on the whole width, then when, neither
-  // wrapping.
-  // Today's is the next event (`next`); tomorrow's aren't.
+  // agenda draw it, where tasks have rings. Its title takes the whole width, then when, and neither
+  // wraps.
+  // Today's is the next event (`next`). Tomorrow's aren't.
   const eventLine = (item: ItemOut, key: string, title: string, when: ReactNode, next = false) => (
     <a key={key} className={`${lineClass(item)} event${next ? ' next' : ''}`} data-key={key} href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={lineMenu(item)}
       aria-haspopup="dialog" aria-expanded={openKey === key}>
@@ -243,8 +243,8 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
           }}>
           {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
         </button>
-        {/* The title wraps to two lines, as the event's, over a timed task's time alone;
-            the label says its day. */}
+        {/* The title wraps to two lines, as the event's, over a timed task's time alone.
+            The label says its day. */}
         <span className="lines">
           <span className="ell title" data-tip={title}>{title}</span>
           {time && <span className="when"><span className="t num">{time}</span></span>}
@@ -306,7 +306,7 @@ interface TodayCardProps {
 
 /**
  * The floating detail's card for a Today line, 8 px right of the sidebar with its title level with
- * the line, kept on screen; drawn over the page, in the shell, as the sidebar clips.
+ * the line, kept on screen. It's drawn over the page, in the shell, as the sidebar clips.
  */
 function TodayCard({item, calendar, timeZone, actions, onClose, onEdit}: TodayCardProps) {
   const card = useRef<HTMLDivElement>(null);
@@ -341,7 +341,7 @@ function TodayCard({item, calendar, timeZone, actions, onClose, onEdit}: TodayCa
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Esc closes it; E edits and Delete deletes, before the Inbox's own E (Trash) and Esc see them.
+  // Esc closes it. E edits and Delete deletes, before the Inbox's own E (Trash) and Esc see them.
   const latest = useRef({item, actions, onClose, onEdit});
   useEffect(() => {
     latest.current = {item, actions, onClose, onEdit};

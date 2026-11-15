@@ -1,9 +1,9 @@
-// The story pane (boards 25, 26a, 26b): where the reading pane sits, and
-// as wide. A story shows Open at its leading outlet `O`, previous and next; its sections as tags
-// (and Updated when it changed since the user last looked); the headline and meta; its image with the
-// outlet's caption; "New since you looked" on an updated story; the summary; then its Sources, each
+// The story pane (boards 25, 26a, 26b): where the reading pane sits, and as wide. A story shows
+// Open at its leading outlet `O`, previous and next. Then its sections as tags (and Updated when it
+// changed since the user last looked), the headline and meta, and its image with the outlet's
+// caption. Then "New since you looked" on an updated story, the summary, and its Sources, each
 // opening its article in the same pane. An article shows Back to story `Esc` and Open at its outlet
-// `O`, its head, image and extracted text; one whose page can't be read here (board 26b) shows its
+// `O`, its head, image and extracted text. One whose page can't be read here (board 26b) shows its
 // feed summary under a note with Read at, then Also in this story.
 import type {ArticleOut, StoryOut, StoryRowOut, StorySourceOut} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
@@ -98,7 +98,7 @@ export function StoryContent({storyId, row, lookedAt, now, timeZone, onArticle}:
   const fresh = story && lookedAt ? factsSince(story.facts, lookedAt) : [];
   if (!shown) return <div className="st-body">{failed ? <LoadFailed what="this story" loads={[storyLoad]} /> : <StoryBodySkeleton />}</div>;
   return (
-    // The head from the story's row at once; its summary and sources wait for the story.
+    // The head from the story's row at once. Its summary and sources wait for the story.
     <div className="st-swap" key={storyId}>
       <div className="st-head">
         <div className="st-secs">
@@ -151,8 +151,8 @@ export function ArticleContent({storyId, articleId, now, timeZone, onArticle, on
 
 /**
  * New since you looked: the newest four facts, then "6 more" folding the rest away, so the story's
- * summary stays in view; a click opens the fold, the card growing over
- * 180 ms, and its chevron turns. Five facts or fewer all show.
+ * summary stays in view. A click opens the fold, the card grows over 180 ms, and its chevron turns.
+ * Five facts or fewer all show.
  */
 function NewSince({facts, lookedAt, now, timeZone}: {facts: StoryOut['facts']; lookedAt: string; now: number; timeZone: string}) {
   const [open, setOpen] = useState(false);

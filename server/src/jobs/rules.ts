@@ -1,9 +1,9 @@
-// Jobs's pure rules, tested as tables (tests/rules.test.ts, tests/reading.test.ts): Ghosted, the
-// per-week buckets, the counts by status, which of a company's other applications are Applied before;
-// and what each email does: the keys and loose company names applications match on, a
-// confident match, duplicates and re-applications, Indeed's pairs, statuses and blocked emails; and
-// mail's Applied before. No
-// database, no clock: the caller passes now and the zone.
+// Jobs's pure rules, tested as tables (tests/rules.test.ts, tests/reading.test.ts). They cover
+// Ghosted, the per-week buckets, the counts by status, and which of a company's other applications
+// are Applied before. They cover what each email does: the keys and loose company names applications
+// match on, a confident match, duplicates and re-applications, Indeed's pairs, statuses and blocked
+// emails. They cover mail's Applied before too. No database, no clock: the caller passes now and the
+// zone.
 import {GHOSTED_AFTER_DAYS, isQuietJobEvent, JOB_STATUSES, JOB_WEEKS, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
 import type {JobCountsOut, JobEventKind, JobReadMode, JobStatus, JobWeekOut, Kind, NeedsYouReason} from '@setpoint/shared';
 import {addDays, daysBetween, localDay, weekday} from '../domain/time.ts';
@@ -58,7 +58,7 @@ export function countsByStatus(applications: {status: JobStatus; ghosted: boolea
 export const isClosed = (status: JobStatus) => status === 'rejected' || status === 'withdrawn';
 
 /**
- * A pin goes when the status becomes Rejected or Withdrawn; Ghosted, a flag, never touches it.
+ * A pin goes when the status becomes Rejected or Withdrawn. Ghosted, a flag, never touches it.
  * One pinned while already closed stays, as the user chose.
  */
 export const unpinOnClose = (before: {status: JobStatus}, status: JobStatus): {pinnedAt?: null} =>
@@ -66,7 +66,7 @@ export const unpinOnClose = (before: {status: JobStatus}, status: JobStatus): {p
 
 /**
  * Splits a company's other applications for the detail: earlier, closed ones are Applied
- * before (a re-application's earlier one among them); the rest, open or later, are Also at.
+ * before (a re-application's earlier one among them). The rest, open or later, are Also at.
  * Both newest first.
  */
 export function relatedApplications<T extends {id: number; appliedAt: string; status: JobStatus}>(self: {id: number; appliedAt: string}, others: T[]) {
@@ -101,7 +101,7 @@ const companyWords = (company: string) => companyKey(company).split(' ').filter(
 /**
  * Companies match loosely: case, punctuation and "Inc." ignored, and one name may
  * be the start of the other, word by word. "Fabrikam Labs" is "Fabrikam", and "wide world" is "Wide
- * World Importers"; "Northwind Talent" isn't "Northwind Traders", and "Fabrikam" isn't "Fabrikamco".
+ * World Importers". "Northwind Talent" isn't "Northwind Traders", and "Fabrikam" isn't "Fabrikamco".
  */
 export function sameCompany(a: string, b: string): boolean {
   const [short, long] = [companyWords(a), companyWords(b)].sort((x, y) => x.length - y.length) as [string[], string[]];
@@ -171,7 +171,7 @@ const newestFirst = (a: KnownApplication, b: KnownApplication) => b.appliedAt.lo
 /**
  * A confident match: a role (requisition ID or normalised title) that matches exactly
  * one of the company's applications, or the one that's still open when it matches a closed one and
- * its re-application; or, for an email naming no role, the company's only open application.
+ * its re-application. For an email naming no role, it's the company's only open application.
  * Otherwise it might match (two or more, or a role the company's applications don't have) or matches
  * nothing (no application at the company, or none open for an email naming no role).
  */
@@ -194,8 +194,9 @@ export function matchApplication(applications: KnownApplication[], company: stri
  * Applied before, for mail: a job board's match email ("Associate Software
  * Engineer @ Contoso Pharmaceuticals") whose company matches applications, loosely and by the
  * companies corrections gave them, as an email does. Any other email, or one naming no company, has
- * none. The matches come newest first, the badge naming the first; `query` is the search that shows
- * them all on Jobs: the words their companies share, or the newest's company when they share none.
+ * none. The matches come newest first, and the badge names the first. `query` is the search that
+ * shows them all on Jobs: the words their companies share, or the newest's company when they share
+ * none.
  */
 export function appliedBefore<T extends KnownApplication>(email: {event: string | null; company: string | null}, applications: T[]): {matches: T[]; query: string} | null {
   if (email.event !== 'match' || !email.company?.trim()) return null;
@@ -234,7 +235,7 @@ export function checkPosting<T extends KnownApplication>(posting: {company: stri
 /**
  * The status an event moves its application to, or null: only an event that sets
  * one, and only when it's no older than the status it replaces, so an email read late never undoes a
- * newer one. A status set by hand gives way to a later email that sets one; a quiet email never moves it.
+ * newer one. A status set by hand gives way to a later email that sets one. A quiet email never moves it.
  */
 export function statusAfter(application: Pick<KnownApplication, 'statusSetAt'>, kind: JobEventKind, at: string): JobStatus | null {
   if (isQuietJobEvent(kind)) return null;
@@ -252,7 +253,7 @@ export interface StatusEvent {
 
 /**
  * The status an application's emails make it: the latest event that sets one, by its
- * date, with In process's step its line; with none, Applied as of its Applied date. Let emails decide
+ * date, with In process's step its line. With none, it's Applied as of its Applied date. Let emails decide
  * hands a status set by hand back to this, and a merge, a move or Not about this recomputes it unless
  * the user set it.
  */
@@ -339,13 +340,13 @@ export const EVENT_OF_EMAIL = {
 
 /**
  * What an email does, given the applications so far, the blocked emails and the match emails read:
- * - a recruiter's cold email and mail that isn't about an application are out; a blocked one too
+ * - a recruiter's cold email and mail that isn't about an application are out, and a blocked one too
  * - a confirmation makes an application, unless it matches an open one (a duplicate, quiet) or only
- *   a closed one (a re-application, linked); naming no company, it takes its Indeed pair's
- * - an assessment, interview, offer or rejection matching one becomes its event, moving the status;
- *   one that might match waits to be assigned; a rejection matching nothing is ignored unless an open
- *   application elsewhere has its role, and the rest matching nothing wait as Track this
- * - quiet mail becomes a quiet event when it matches, and is otherwise ignored; a job board's match
+ *   a closed one (a re-application, linked). Naming no company, it takes its Indeed pair's
+ * - an assessment, interview, offer or rejection matching one becomes its event and moves the status.
+ *   One that might match waits to be assigned. A rejection matching nothing is ignored unless an open
+ *   application elsewhere has its role. The rest matching nothing wait as Track this
+ * - quiet mail becomes a quiet event when it matches, and is otherwise ignored. A job board's match
  *   email only joins an application as its Indeed pair
  */
 export function planEmail(email: IncomingEmail, applications: KnownApplication[], blocked: BlockedEmail[], matches: ReadMatchEmail[]): Plan {

@@ -1,7 +1,7 @@
-// News's rules as tables: the meta copy and ages against the seed's moment
-// (Wed, Oct 7, 2026, 9:12 AM Pacific; the user last looked Mon at 10:40 PM), the held order and what the
-// pill counts, the recap held for the visit and where it shows, seen timing, the cursor, and
-// Upcoming's line; the states, Settings › News and Settings › AI's News group.
+// News's rules as tables: the meta copy and ages against the seed's moment (Wed, Oct 7, 2026,
+// 9:12 AM Pacific, and the user last looked Mon at 10:40 PM), the held order and what the pill
+// counts, the recap held for the visit and where it shows, seen timing, the cursor, and Upcoming's
+// line. Then the states, Settings › News and Settings › AI's News group.
 import type {NewsPageOut, NewsSection, RecapOut, StoryRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -126,8 +126,8 @@ describe('the held order and the pill', () => {
     expect(waiting(held, latest, rows)).toEqual(expected);
   });
 
-  // The rows N brings onto the list settle in from sub2: whatever the held
-  // order didn't show, seen or not; not a row re-ranked among those shown, nor one leaving.
+  // The rows N brings onto the list settle in from sub2. That is whatever the held order didn't
+  // show, seen or not. It is not a row re-ranked among those shown, nor one leaving.
   test.each([
     ['nothing changed', held, []],
     ['the board\'s three new and one updated, and Local\'s 2 moved to AI', [{key: 'local', ids: [5, 7, 1], more: 13}, {key: 'tech', ids: [6, 4], more: 6}, {key: 'ai', ids: [2], more: 0}], [5, 7, 6]],
@@ -240,8 +240,8 @@ describe('the visit\'s dots: they stay for the visit, go when opened, and come b
     ['a fact after it was opened: updated again', [{rows: [fire]}, {open: 1}, {rows: [{...fire, last_new_fact_at: '2026-10-07T16:30:00.000Z', seen_at: NOW}]}], [fire], ['updated']],
     ['a new story with a newer fact stays new', [{rows: [flag]}, {rows: [{...flag, last_new_fact_at: '2026-10-07T16:30:00.000Z'}]}], [flag], ['new']],
     ['a story the visit hasn\'t met shows its own dot', [{rows: [fire]}], [flag], ['new']],
-    // The first run fills the last 48 hours while the user reads: a fact older than their look moves the
-    // story's newest fact on, but the server still has it seen, so nothing is new to them.
+    // The first run fills the last 48 hours while the user reads. A fact older than their look moves
+    // the story's newest fact on, but the server still has it seen, so nothing is new to them.
     ['seen, then a fact from before the look: keeps its arrival dot, not updated', [
       {rows: [flag]}, {rows: [seen(flag)]}, {rows: [{...seen(flag), last_new_fact_at: '2026-10-07T15:50:00.000Z'}]},
     ], [flag], ['new']],

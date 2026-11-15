@@ -1,24 +1,25 @@
-// The server's reading of a whole search, offered as a suggestion. Typing
-// never comes here: only POST /api/search/suggestion does, which the web asks on a pause in typing.
-// Results are the words' results whatever it finds. Only accepting one filters, and that asks nothing.
+// The server's reading of a whole search, offered as a suggestion. Typing never comes here. Only
+// POST /api/search/suggestion does, which the web asks on a pause in typing. Results are the words'
+// results whatever it finds. Only accepting one filters, and that asks nothing.
 //
 // - Claude Haiku 5.5 reads the search with today's date and the organisations and types in its best
 //   keyword matches (src/search/readingPrompt.ts). It says which organisations and types the search
-//   asks for and which words are left. Dates stay the grammar's, the same every time; the model only
+//   asks for and which words are left. Dates stay the grammar's, the same every time. The model only
 //   says when what the grammar took for a date is a name, and then its words go back to being words.
-// - "!" words and "quotes" never reach the model: they're what the user said exactly. They run through
-//   the grammar as always, and stay in force whatever the model says.
+// - "!" words and "quotes" never reach the model, because they're what the user said exactly. They
+//   run through the grammar as always, and stay in force whatever the model says.
 // - Its chips are checked against the mail: only organisations that exist, and only words that were
-//   typed left as keywords. An organisation chip covers names that start with it, and a type chip
+//   typed left as keywords. An organisation chip covers names that start with it. A type chip
 //   matches the classified type, or the type's word in the subject, summary or terms.
-// - A suggestion is offered only if it hides a real share of the word results and leaves a row:
-//   see SUGGESTION_HIDES. Filters that leave nothing are dropped, leaving any date the grammar found.
-// - The answer counts what the words find and the chips don't, the "more" line, and `left_out` lists it.
-// - No key, no answer in time, or a failed call: no reading, so what the grammar found or nothing. The
-//   model is never asked twice for a search: a call that runs past the wait still lands, in the ledger
-//   and the cache.
-// - Readings are held briefly per search, since a repeat would otherwise pay again and may change
-//   its chips: see READING_HELD_MS. Each call is in the ledger, purpose `search_reading`.
+// - A suggestion is offered only if it hides a real share of the word results and leaves a row (see
+//   SUGGESTION_HIDES). Filters that leave nothing are dropped, leaving any date the grammar found.
+// - The answer counts what the words find and the chips don't (the "more" line), and `left_out`
+//   lists it.
+// - No key, no answer in time, or a failed call means no reading, so what the grammar found or
+//   nothing. The model is never asked twice for a search. A call that runs past the wait still
+//   lands, in the ledger and the cache.
+// - Readings are held briefly per search, because a repeat would otherwise pay again and may change
+//   its chips (see READING_HELD_MS). Each call is in the ledger, purpose `search_reading`.
 import {MAX_SEARCH_CHIPS} from '@setpoint/shared';
 import type {MessageType, SearchChip, SearchOut, SearchReadingFallback, SearchSuggestOut, SearchSuggestionOut, searchSuggestionInput} from '@setpoint/shared';
 import type {z} from 'zod';
@@ -41,9 +42,9 @@ import type {Reading} from './readingPrompt.ts';
 import {answerSearch, chipVocabulary, matchSearch, organisationsFor, searchMail} from './search.ts';
 import type {SearchMatches, SearchRequest} from './search.ts';
 
-// How long a suggestion waits for the model, and how long the call may go on behind it. The model took
-// about 0.85 s typically and 1.8 s at worst in measured runs, nothing on screen waits for
-// it, and a slower answer isn't lost: it's held for the next pause on those words.
+// How long a suggestion waits for the model, and how long the call may go on behind it. The model
+// took about 0.85 s typically and 1.8 s at worst in measured runs. Nothing on screen waits for it,
+// and a slower answer isn't lost, because it's held for the next pause on those words.
 export const READING_WAIT_MS = 2000;
 const READING_CALL_MS = 15_000;
 // How long a reading stays good, and how many are held.
@@ -52,7 +53,7 @@ const READINGS_HELD = 200;
 // The share of the word results a suggestion must hide to be worth a look. An exact fifth counts.
 export const SUGGESTION_HIDES = 0.2;
 
-/** A chip a suggestion makes: what the "more" number is counted against. A Not chip is the user's own. */
+/** A chip a suggestion makes. The "more" number is counted against it. A Not chip is the user's own. */
 const isSuggested = (chip: SearchChip) => !isNot(chip) && (chip.kind === 'organisation' || chip.kind === 'type' || chip.kind === 'date');
 
 const withoutRepeats = (chips: SearchChip[]) => chips.filter((chip, at) => !chips.slice(0, at).some(earlier => sameChip(earlier, chip)));
@@ -66,7 +67,7 @@ type SearchSuggestionRequest = z.output<typeof searchSuggestionInput>;
 export interface ReadingPlan {
   // The word results, with any date the grammar found.
   dated: SearchMatches;
-  // The model's input; null when nothing in the search is for it to read.
+  // The model's input. Null when nothing in the search is for it to read.
   prompt: string | null;
   // Dates the grammar found, which the model may say are names.
   dates: SearchChip[];
@@ -113,7 +114,7 @@ export function keptSearch(store: Store, input: SearchedField, typed: string): K
   return {matches, left: {...words, ids: words.ids.filter(inLeft), first: words.ids.slice(0, words.first).filter(inLeft).length}, words: words.ids.length};
 }
 
-/** The model's filters as chips: organisations the mail has, those another chip covers left out. */
+/** The model's filters as chips: organisations the mail has, with those another chip covers left out. */
 function readingChips(store: Store, reading: Reading): SearchChip[] {
   const known = chipVocabulary(store).organisations;
   const names = [...new Set(reading.organisations.flatMap(name => known.filter(own => fold(own) === fold(name))))];
@@ -145,7 +146,7 @@ export function applyReading(store: Store, input: SearchedField, plan: ReadingPl
   // Always few enough to send back.
   const filters = reading ? readingChips(store, reading).slice(0, Math.max(0, MAX_SEARCH_CHIPS - words.chips.length - given.length)) : [];
   if (reading && filters.length) {
-    // Only words that were typed: the model can drop a word a chip now says, never add one.
+    // Only words that were typed. The model can drop a word a chip now says, but never add one.
     const keywords = new Set(wordsOf(reading.keywords));
     const text = keptTokens(undated, token => token.quoted || token.negated || (token.word !== '' && wordsOf(token.word).every(word => keywords.has(word))));
     const kept = settled(text, [...given, ...filters]);
@@ -158,7 +159,7 @@ export function applyReading(store: Store, input: SearchedField, plan: ReadingPl
 /**
  * What the field would become, if it adds a chip, leaves a row and hides a real share of the word
  * results (SUGGESTION_HIDES). With no word results there's nothing to hide, and a filter that finds
- * something is the only way to anything: `last week` can have no word results.
+ * something is the only way to anything. `last week` can have no word results.
  */
 export function suggestionOf(input: SearchedField, {kept: {matches, left, words}, typed, undated}: AppliedReading): Omit<SearchSuggestionOut, 'id'> | null {
   const offers = matches.chips.filter(chip => isSuggested(chip) && !input.chips.some(given => sameChip(given, chip)));

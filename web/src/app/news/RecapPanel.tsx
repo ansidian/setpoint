@@ -2,7 +2,7 @@
 // opened from News's pane, over the list's column, so the pane and its recap stay in view beside it.
 // It grows out of the row clicked, from that row's box to the column's over 260 ms, and shrinks back
 // into it as it closes. Its head says where it is in the recap ("3 of 8"), with Open at its outlet
-// `O`, previous and next, and ×; the pane marks the open story's row. J / K or ← → step through the
+// `O`, previous and next, and ×. The pane marks the open story's row. J / K or ← → step through the
 // recap, and a click on another of its rows switches to that story in place. A source opens its article
 // in the panel. Esc goes from an article back to its story, then closes it, as × and a click anywhere
 // else do. No scrim: the pane stays live. While it's open the page's own keys are held.
@@ -95,7 +95,7 @@ export function RecapPanel({ids, at, closing, rows, now, zone, onAt, onSeen, onC
   const lead = (story?.id === storyId ? story.lead : null) ?? row?.lead;
 
   useFocusReturn();
-  // It grows out of its row as it opens; a step or a switch swaps its content in place.
+  // It grows out of its row as it opens. A step or a switch swaps its content in place.
   useLayoutEffect(() => {
     const element = panel.current;
     if (!element) return;
@@ -135,7 +135,7 @@ export function RecapPanel({ids, at, closing, rows, now, zone, onAt, onSeen, onC
     if (url) window.open(url, '_blank', 'noopener');
   }
 
-  // Its keys, wherever focus is (a click on a recap row leaves it there); the page's own wait meanwhile.
+  // Its keys, wherever focus is (a click on a recap row leaves it there). The page's own wait meanwhile.
   const keys = useRef<(event: KeyboardEvent) => void>(() => {});
   useEffect(() => {
     keys.current = event => {

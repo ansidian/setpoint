@@ -1,8 +1,8 @@
-// Mail changes (DESIGN.md › Interaction rules). Read state and
-// trash are the provider's, so they're commands: opening an unread email marks it read in Gmail or
-// iCloud (counts drop at once), Mark read / unread, Trash and its Undo, Mark all as read (one
-// provider call per account), and a written rule's Mark read and Trash on new mail. Done and Pin are Setpoint's own (no provider has them), so they
-// change at once with no command.
+// Mail changes (DESIGN.md › Interaction rules). Read state and trash are the provider's, so these
+// are commands: opening an unread email marks it read in Gmail or iCloud (counts drop at once), Mark
+// read / unread, Trash and its Undo, Mark all as read (one provider call per account), and a
+// written rule's Mark read and Trash on new mail. Done and Pin are Setpoint's own (no provider has
+// them), so they change at once with no command.
 import type {RuleTrash} from '@setpoint/shared';
 import {and, eq, inArray} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -67,7 +67,7 @@ export function setRead(store: Store, messageId: number, unread: boolean): Comma
   });
 }
 
-/** Trash (`E`) moves it to the provider's trash; Undo is untrash. */
+/** Trash (`E`) moves it to the provider's trash. Undo is untrash. */
 export function trashMessage(store: Store, messageId: number, trashed: boolean): CommandRow {
   const row = message(store, messageId);
   if ((row.trashedAt !== null) === trashed) throw conflict('unchanged', trashed ? 'That email is already in the trash.' : 'That email isn\'t in the trash.');
@@ -84,10 +84,10 @@ export function trashMessage(store: Store, messageId: number, trashed: boolean):
 const earlier = (a: string | null, b: string | null) => (a === null ? b : b === null ? a : a < b ? a : b);
 
 /**
- * A written rule's actions on new mail it just sorted, carried out as the user's own
- * Mark read and Trash are: a command, the mirror changed at once, and a refusal failed in place with
- * Try again and Move back. Trash now with Mark read is one trash command that marks it read first,
- * since an email takes one change at a time. A delayed trash only stores when it's due, for the
+ * A written rule's actions on new mail it just sorted, carried out as the user's own Mark read and
+ * Trash are. Each is a command, the mirror changes at once, and a refusal fails in place with Try
+ * again and Move back. Trash now with Mark read is one trash command that marks it read first,
+ * because an email takes one change at a time. A delayed trash only stores when it's due, for the
  * minute pass (ruleTrashDue). Returns the command, or null when there's nothing to send.
  */
 export function ruleActions(store: Store, messageId: number, ruleId: number, actions: {markRead: boolean; trash: RuleTrash}): CommandRow | null {
@@ -110,7 +110,7 @@ export function ruleActions(store: Store, messageId: number, ruleId: number, act
 /**
  * Mark all as read: every unread email outside Attention, Noise included, as one command (one
  * provider call) per account. The emails read at once, as opening one does, so a load before the
- * provider confirms doesn't bring them back; an email with its own change waiting is left to it.
+ * provider confirms doesn't bring them back. An email with its own change waiting is left to it.
  */
 export function markAllRead(store: Store, accountId?: number): CommandRow[] {
   return transaction(store, () => {
@@ -155,7 +155,7 @@ export function setDone(store: Store, messageId: number, done: boolean): Message
 /**
  * Pin (`P`) keeps an email on the Pinned shelf until it's unpinned. Pinning also cancels a waiting
  * trash. Unpinning doesn't bring a rule's back, but brings a code's back at its original
- * expiry while the code is live; unpinned after it, the email stays.
+ * expiry while the code is live. Unpinned after it, the email stays.
  */
 export function setPinned(store: Store, messageId: number, pinned: boolean): MessageRow {
   return transaction(store, () => {
@@ -170,11 +170,11 @@ export function setPinned(store: Store, messageId: number, pinned: boolean): Mes
 }
 
 /**
- * A delayed trash, now due (the minute pass, src/triage/ruleTrash.ts): a rule's or a code's,
+ * A delayed trash, now due (the minute pass, src/triage/ruleTrash.ts): a rule's or a code's. It's
  * the user's own Trash command, sent once, so the due time goes as it's sent. Its payload says which:
  * `code` when the due time is the code's expiry, else the rule's `rule_id`. Refused, changing nothing,
- * while the email has a change of its own waiting; the due time stays for the next pass. A trash the
- * provider refuses fails in place, and the pass tries it again (`delayed` in its payload).
+ * while the email has a change of its own waiting. The due time then stays for the next pass. A trash
+ * the provider refuses fails in place, and the pass tries it again (`delayed` in its payload).
  */
 export function ruleTrashDue(store: Store, messageId: number): CommandRow {
   const row = message(store, messageId);

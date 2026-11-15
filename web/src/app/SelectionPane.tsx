@@ -1,10 +1,10 @@
-// The reading pane while emails are selected (option B): the reader's tools for the
-// whole selection, Done H (for the ones that can be), Trash E, Pin or Unpin P, Mark read or Mark
-// unread ⇧U, and Clear Esc at the right; then "3 emails selected" where the subject goes, and each
-// email in the list's order, sender and subject as its row reads them (a summary in the subject's
+// The reading pane while emails are selected (option B). It shows the reader's tools for the whole
+// selection: Done H (for the ones that can be), Trash E, Pin or Unpin P, Mark read or Mark unread ⇧U,
+// and Clear Esc at the right. Then "3 emails selected" sits where the subject goes. Each email
+// follows in the list's order, sender and subject as its row reads them (a summary in the subject's
 // place, the subject its tooltip), with an × that takes it out. A click on one opens it.
-// From 640 to 1099 px, where a pane covers the list, it stays out of the way: the rows show the
-// selection and the keys and right-click act on it.
+// From 640 to 1099 px, where a pane covers the list, it stays out of the way. The rows show the
+// selection, and the keys and right-click act on it.
 import type {MessageRowOut} from '@setpoint/shared';
 import type {CSSProperties} from 'react';
 import {allRowLine} from '../logic/all.ts';

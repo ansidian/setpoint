@@ -1,5 +1,5 @@
 // Connecting a mail account (Settings › Accounts: Connect Gmail, Connect iCloud) and reconnecting
-// one: the account with its label, colour, icon and order, its mail source with encrypted
+// one. That covers the account with its label, colour, icon and order, its mail source with encrypted
 // credentials, and for Google the Calendar source on the same consent. Reconnecting the same
 // address replaces the credentials, which clears needs-reconnect.
 import type {AccountProvider, Colour, Credentials, SourceProvider, SyncMode} from '@setpoint/shared';

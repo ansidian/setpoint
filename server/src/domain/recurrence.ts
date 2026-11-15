@@ -4,7 +4,7 @@
 //
 // Covered: FREQ DAILY, WEEKLY (with BYDAY), MONTHLY (on the start's day of the month) and YEARLY,
 // with INTERVAL, COUNT and UNTIL. Anything else (BYSETPOS, "2nd Tuesday", several month days) is
-// `unsupported`: the caller shows the first occurrence only, and the provider's own expansion
+// `unsupported`. The caller then shows the first occurrence only, and the provider's own expansion
 // takes over for real calendars.
 import {addDays, daysBetween, weekday} from './time.ts';
 
@@ -77,7 +77,7 @@ export function occurrenceDates(rule: Rule, start: string, from: string, to: str
   const dates: string[] = [];
   let seen = 0;
   const last = rule.untilDate && rule.untilDate < to ? addDays(rule.untilDate, 1) : to;
-  // COUNT counts from the start; without it, skip straight to the range.
+  // COUNT counts from the start. Without it, skip straight to the range.
   let date = rule.count === null && from > start ? from : start;
   for (let steps = 0; date < last && steps < maxDays; steps += 1, date = addDays(date, 1)) {
     if (date < start || !matches(rule, start, date)) continue;

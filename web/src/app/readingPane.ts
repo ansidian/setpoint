@@ -31,7 +31,7 @@ export function setReadingPaneWidth(next: number) {
 }
 
 // The window moved to another screen: that screen's width takes over. The query names the screen
-// it was made on, so each change watches the next one; a resize covers a browser that doesn't
+// it was made on, so each change watches the next one. A resize covers a browser that doesn't
 // re-read the query on the move.
 function watchScreen() {
   const query = window.matchMedia(`(device-width: ${window.screen.width}px) and (device-height: ${window.screen.height}px)`);

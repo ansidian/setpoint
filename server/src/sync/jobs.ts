@@ -1,6 +1,6 @@
 // Durable jobs: a source's sync, sweep or push renewal, a command for its provider, an email's
 // triage or a News source's fetch, the last two run by JobWorkers the engine is given.
-// Each is claimed with a lease, so one a crash left running is taken up again after it; `key` keeps
+// Each is claimed with a lease, so one a crash left running is taken up again after it. `key` keeps
 // one queued or running job per purpose. Failures follow the one retry policy (src/domain/retry.ts).
 import {and, asc, eq, inArray, lt, lte, or} from 'drizzle-orm';
 import * as t from '../db/schema.ts';

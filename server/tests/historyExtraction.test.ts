@@ -90,7 +90,7 @@ test('it resumes after a restart and never charges for an email twice', async ()
   expect(historyProgress(world.store)).toMatchObject({state: 'running', done: 3});
   expect(ledger()).toHaveLength(3);
 
-  // A restart: new workers on a new engine over the same database; the provider is back.
+  // A restart: new workers on a new engine over the same database. The provider is back.
   const restarted = new SyncEngine({store: world.store, adapters: new Adapters(), workers: [
     new TriageWorker({store: world.store, endpoints: fake.endpoints}), new HistoryExtractor({store: world.store, endpoints: fake.endpoints}),
   ]});

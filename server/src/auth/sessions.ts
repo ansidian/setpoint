@@ -1,4 +1,4 @@
-// A browser's session. The cookie holds 256 random bits; only their SHA-256 is stored, so a copy of
+// A browser's session. The cookie holds 256 random bits. Only their SHA-256 is stored, so a copy of
 // the database signs no one in. A session lasts 30 days from its last use, and only while the
 // owner's security generation is the one it was made under: a security change ends every session at
 // once.
@@ -45,8 +45,8 @@ export function createSession(store: Store, {generation, method, passwordAt}: {g
 
 /**
  * The session behind a cookie's secret, or null once it has ended, idled out or outlived its
- * security generation. Each use extends it, recorded at most once a minute; the live stream's checks
- * pass `extend: false`, so a tab left open isn't use.
+ * security generation. Each use extends it, recorded at most once a minute. The live stream's
+ * checks pass `extend: false`, so a tab left open isn't use.
  */
 export function findSession(store: Store, secret: string, extend = true): Session | null {
   if (!SECRET_PATTERN.test(secret)) return null;

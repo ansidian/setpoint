@@ -2,7 +2,7 @@
    (none on a quick answer), fades in over 180 ms, then breathes, every bar in phase: its opacity to
    --skel-low and back over --skel-breathe. Bars are `sub2` on the page, `sub3` inside a `sub` group.
    What replaces it fades in over 120 ms (.sk-arrive). */
-/* The block fades in; its shapes breathe, all from the same moment, so in phase. The bands and
+/* The block fades in. Its shapes breathe, all from the same moment, so in phase. The bands and
    lines it draws between them (a header's `panel`, a group's `sub`) stay still. */
 .sk { --sk-fill: var(--skel); animation: sk-in var(--dur-medium) var(--ease) var(--skel-delay) both; pointer-events: none; }
 .sk :is(.sk-bar, .sk-dot, .sk-ring, .sk-box, .sk-img, .sk-thumb, .sk-fav, .sk-tile, .sk-attach, .rail) {
@@ -48,7 +48,7 @@
 /* ---------- The sidebar: .acct, .today-row (styles.css) ---------- */
 .sk-today { display: flex; flex-direction: column; gap: 2px; }
 .sk-line { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
-/* The event's two lines, as tall as .today-row.ev; its bars line up with the tasks' titles. */
+/* The event's two lines, as tall as .today-row.ev. Its bars line up with the tasks' titles. */
 .sk-line:first-child { height: auto; padding-top: 7px; padding-bottom: 7px; }
 .sk-ev { display: flex; flex-direction: column; justify-content: space-around; gap: 1px; height: calc(13px * 1.35 + 1px + 12px * 1.35); padding-left: 27px; }
 .sk-ring { width: 13px; height: 13px; flex: none; border-radius: 999px; border: 1.5px solid var(--skel-on-sub); margin: 0 3px 0 1px; }

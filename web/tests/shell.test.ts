@@ -90,8 +90,8 @@ describe('the Today block', () => {
     expect(today.tasks.map(line => [line.title, line.time])).toEqual([['Call the bank', '8:00 AM'], ['Pay rent', null]]);
   });
 
-  // A day's events and tasks in one list by time, an event first at the same time, the untimed
-  // tasks last in the order given; a task whose time has passed sorts by it, so it leads.
+  // A day's events and tasks in one list by time, an event first at the same time, and the untimed
+  // tasks last in the order given. A task whose time has passed sorts by it, so it leads.
   test.each([
     ['the seed\'s morning with timed tasks: the passed one first, the event among them, the untimed last', [
       task('Any time', '2026-10-07'),
@@ -134,7 +134,7 @@ describe('the Today block', () => {
     expect(todayBlock(items, now, zone).tomorrowEvents.map(line => [line.time, line.title])).toEqual([['6:00 PM', 'CS 101 lecture'], ['8:00 PM', 'Late']]);
   });
 
-  // Only tomorrow's lines fold; the rest's line says "due" unless an event is among them.
+  // Only tomorrow's lines fold. The rest's line says "due" unless an event is among them.
   test.each([
     ['three fit', ['task', 'task', 'task'], false, 3, null],
     ['more than three: two, then a line for the rest', ['task', 'task', 'task', 'task', 'task'], false, 2, '3 more due tomorrow'],
@@ -279,15 +279,15 @@ describe('live events refresh only what they name', () => {
     expect(pathsForEvent(event, news)).toEqual(expected);
   });
 
-  // Jobs: every event refreshes what's on screen under /jobs: the page, the shell's item, an open
-  // application and a search, so a row lands, moves or changes its JD in place.
+  // Jobs: every event refreshes what's on screen under /jobs (the page, the shell's item, an open
+  // application and a search), so a row lands, moves or changes its JD in place.
   test('jobs: everything mounted under /jobs, nothing else', () => {
     const mounted = ['/jobs', '/jobs/nav', '/jobs/applications/4', '/jobs/search?q=humongous', '/jobsearch', '/mail/inbox'];
     expect(pathsForEvent({type: 'jobs', applications: [4], needs_you: []}, mounted)).toEqual(['/jobs', '/jobs/nav', '/jobs/applications/4', '/jobs/search?q=humongous']);
   });
 });
 
-// Offline, the keys that change something are refused; reading goes on.
+// Offline, the keys that change something are refused. Reading goes on.
 describe('the keys offline refuses', () => {
   const key = (name: string, mods: {shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean} = {}) => ({key: name, shiftKey: false, metaKey: false, ctrlKey: false, altKey: false, ...mods});
   test.each([
@@ -332,8 +332,8 @@ describe('the rail\'s next-up slot', () => {
   ] as const)('%s', (_name, items, expected) => expect(slot([...items])).toEqual(expected));
 });
 
-// The rail under 1100 px always; from there the choice made by hand, else the width (the
-// rail below 1600). The width is the window's, so the 1.075 zoom at 1591 doesn't move it.
+// The rail under 1100 px always. From there, the choice made by hand, else the width (the rail
+// below 1600). The width is the window's, so the 1.075 zoom at 1591 doesn't move it.
 describe('whether the sidebar is the rail', () => {
   test.each([
     ['the compact tier: always', 1000, null, true],

@@ -1,6 +1,6 @@
 // A written rule's delayed trash, run the way the reminders are: a pass every
 // minute. Each pass:
-// 1. tries again every delayed trash the provider refused, which failed in place;
+// 1. tries again every delayed trash the provider refused, which failed in place.
 // 2. trashes each email whose due time has come, unless it's pinned or protected, through the
 //    user's own Trash command. One the command can't take yet (the email has a change of its own
 //    waiting) keeps its due time for the next pass.
@@ -34,7 +34,7 @@ export class RuleTrashScheduler {
     this.timer = null;
   }
 
-  /** One pass; a pass already running is joined rather than doubled. */
+  /** One pass. A pass already running is joined rather than doubled. */
   tick(): Promise<void> {
     this.running ??= this.pass().catch(error => console.error('Rule trash', error)).finally(() => (this.running = null));
     return this.running;

@@ -4,7 +4,7 @@
 //
 // - A field the user set (company, title, status) is theirs: nothing automatic writes it again. The
 //   one exception: an email that sets a status (an assessment, interview, offer or
-//   rejection), no older than the status it replaces, takes over from one set by hand; a quiet email
+//   rejection), no older than the status it replaces, takes over from one set by hand. A quiet email
 //   never does. `emailSetsStatus` is that exception, and the only place it's made.
 // - A merge, a move, an assignment and an edited title or company leave the application answering to
 //   the company and role they brought (`knownApplications`' aliases), so a later email naming them
@@ -12,8 +12,9 @@
 // - Not an application blocks its emails and, by its company and role, the ones after them
 //   (`blockedEmails`). Delete blocks nothing, so a later email can make it again.
 // - A posting the user turned down (None of these, Not this posting, Look it up after a pick Jobs
-//   couldn't read) is never saved or offered again (`rejectedLinks`), and a lookup writes only while its application is still `looking` for one
-//   (`stillLooking`): Undo, None of these or Not this posting since it began win over what it found.
+//   couldn't read) is never saved or offered again (`rejectedLinks`). A lookup writes only while its
+//   application is still `looking` for one (`stillLooking`). Undo, None of these or Not this posting
+//   since it began win over what it found.
 // - Emails already read are never read again (jobs_emails_read), so a history re-run never replays
 //   an email the user moved, assigned or took off. `jobs-reread` (./reread.ts) forgets only ignored
 //   emails, which no correction can have touched.

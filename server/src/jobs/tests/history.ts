@@ -1,12 +1,12 @@
 // A recorded invented history for Jobs's history pass: five months of mail held in three
 // accounts before Jobs is turned on (Oct 8, 2026), in prod's shapes. Mail before Jul 1 is the year's
-// backfill, sorted as it landed by triage's rules-only pass (its kind and organisation guessed from
-// the words and the sender); from Jul 1 triage's model sorted each email as it came (its fields
-// here). `jobs` is what Haiku answers for Jobs, null for an email Jobs must never ask about: Business
-// mail that isn't Career (nor, in the backfill, typed a confirmation or rejection or sent by a hiring
-// platform), and an account Jobs doesn't list. Companies are Microsoft's
-// fictional ones and every address an example domain. tests/history.test.ts serves the answers from
-// the fake Anthropic and states what they make.
+// backfill. Triage's rules-only pass sorted it as it landed (its kind and organisation guessed from
+// the words and the sender). From Jul 1, triage's model sorted each email as it came (its fields
+// here). `jobs` is what Haiku answers for Jobs. It's null for an email Jobs must never ask about:
+// Business mail that isn't Career (nor, in the backfill, typed a confirmation or rejection or sent by
+// a hiring platform), and an account Jobs doesn't list. Companies are Microsoft's fictional ones and
+// every address an example domain. tests/history.test.ts serves the answers from the fake Anthropic
+// and states what they make.
 export interface HistoryEmail {
   key: string;
   account: 'Jobs' | 'Business' | 'Personal';
@@ -14,7 +14,7 @@ export interface HistoryEmail {
   from: [name: string, address: string];
   subject: string;
   body: string;
-  // Sorted by triage's model when it came; absent for the backfill, which the rules-only pass sorts.
+  // Sorted by triage's model when it came. Absent for the backfill, which the rules-only pass sorts.
   triage?: {lane: 'attention' | 'fyi' | 'noise'; kind: string | null; type: string | null; organisation: string; via: string | null; summary: string};
   jobs: {event: string; company: string | null; title: string | null; requisition_id: string | null; line: string | null} | null;
 }

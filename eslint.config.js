@@ -36,17 +36,18 @@ const network = ['fetch', 'EventSource', 'XMLHttpRequest', 'WebSocket'].map(name
 }));
 const windowNetwork = ['window', 'globalThis', 'self'].flatMap(object => network.map(({name, message}) => ({object, property: name, message})));
 
-// The browser checks' own rules. A fixed pause says why on the line before it: one that waits for
-// something to happen should wait for it (`until`, a waiting locator), as a pause long enough on an
-// idle machine is too short on a busy one; a "nothing happened" check keeps its pause and says so.
-// A bound shorter than the 5 s default says why too: "at once" is proven by holding the server's
-// answer, not by a short limit, which only adds a way for a slow machine to fail. A one-shot read
+// The browser checks' own rules. A fixed pause says why on the line before it. A pause that waits
+// for something to happen should wait for it (`until`, a waiting locator), because a pause long
+// enough on an idle machine is too short on a busy one. A "nothing happened" check keeps its pause
+// and says so.
+// A bound shorter than the 5 s default also says why. Holding the server's answer proves "at
+// once". A short limit does not, and only adds a way for a slow machine to fail. A one-shot read
 // of a computed style or box goes through `rested` (nothing moving first) or polls with `until`, or
-// says why on the line before it: an element mid-entrance, mid-fade or mid-slide measures as it
+// it says why on the line before it. An element mid-entrance, mid-fade or mid-slide measures as it
 // passes, not where it rests.
-// A named function that reads is a reader, and so is one that uses a reader: each use of one is a
+// A named function that reads is a reader, and so is one that uses a reader. Each use of one is a
 // read, checked where it's used. A read explained on the line before its own statement inside the
-// function (at rest already, or meant to catch motion) is settled there; a doc comment on the
+// function (at rest already, or meant to catch motion) is settled there. A doc comment on the
 // function itself excuses nothing.
 const SHORT_BOUND_MS = 5000;
 const RESTING = new Set(['rested', 'until']);
@@ -126,7 +127,7 @@ const browserChecks = {
           'CallExpression[callee.property.name="getBoundingClientRect"]'(node) { reads.push(node); },
           'CallExpression[callee.property.name="boundingBox"]'(node) { reads.push(node); },
           // A named function that reads (`const fill = element => getComputedStyle(element)…`, passed to
-          // evaluate, or one that evaluates) is a reader, and so is one that uses a reader: each use of
+          // evaluate, or one that evaluates) is a reader, and so is one that uses a reader. Each use of
           // a reader is a read, checked where it's used.
           'Program:exit'() {
             const readers = new Set();
@@ -161,9 +162,9 @@ const browserChecks = {
   },
 };
 
-// Jobs (after News) is a module that can be removed whole: nothing outside its three folders
-// imports them but its wiring points, the files server/src/jobs/README.md lists. Relative imports are
-// resolved, so `../jobs/…` from mail is refused wherever it's written.
+// Jobs (after News) is a module that can be removed whole. Nothing outside its three folders
+// imports them but its wiring points, the files server/src/jobs/README.md lists. The lint resolves
+// relative imports, so it refuses `../jobs/…` from mail wherever it's written.
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const JOBS_FOLDERS = ['server/src/jobs/', 'web/src/app/jobs/', 'shared/src/jobs/'];
 const JOBS_WIRING = [
@@ -218,8 +219,8 @@ export default tseslint.config(
     languageOptions: {globals: globals.browser},
   },
   {
-    // Setpoint on job boards: its scripts and tests run in Chromium, with the extension's APIs;
-    // its build and Vitest config run in Node.
+    // Setpoint on job boards: its scripts and tests run in Chromium, with the extension's APIs.
+    // Its build and Vitest config run in Node.
     files: ['extension/src/**/*.ts', 'extension/tests/**/*.ts'],
     languageOptions: {globals: {...globals.browser, ...globals.webextensions}},
   },

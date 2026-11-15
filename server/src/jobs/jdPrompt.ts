@@ -2,9 +2,9 @@
 // answers, leniently, as Jobs reads an email's (./prompt.ts):
 // - Haiku 5.5 checks the candidates the email's link or a platform found against the application
 //   (company, normalised title, location, date): each is the posting, might be, or isn't.
-// - Sonnet 5.5 with Claude's web search, only when those miss, searches and judges what it finds
-//   itself, as the same three verdicts. Haiku then checks the pages of those it wasn't sure of, which
-//   can only drop one.
+// - Only when those miss, Sonnet 5.5 with Claude's web search searches. It judges what it finds
+//   itself, with the same three verdicts. Haiku then checks the pages of those it wasn't sure of,
+//   which can only drop one.
 // - Haiku 5.5 reads the saved JD: location and setting, salary if stated, must-haves, nice-to-haves
 //   and the three-line what-they-want summary.
 import type {JobWorkplace} from '@setpoint/shared';
@@ -16,7 +16,7 @@ export const CHECK_TEXT_LIMIT = 1_500;
 export const EMAIL_EXCERPT_LIMIT = 3_000;
 /** How much of a posting the reading sees: the whole of nearly every posting. */
 export const READING_TEXT_LIMIT = 30_000;
-/** Web searches Sonnet may run for one lookup (D-recorded). */
+/** Web searches Sonnet may run for one lookup. */
 export const SEARCH_MAX_USES = 5;
 
 export const CHECK_MAX_OUTPUT_TOKENS = 300;
@@ -253,7 +253,7 @@ export interface PostingReading {
 
 const items = (value: unknown) => (Array.isArray(value) ? value.map(item => line(item, 120)).filter((item): item is string => item !== null).slice(0, 8) : []);
 
-/** What the reading found; an answer it can't use reads as nothing found, so the JD is still kept (its text is what matters). */
+/** What the reading found. An answer it can't use reads as nothing found, so the JD is still kept (its text is what matters). */
 export function postingReadingOf(input: Record<string, unknown> | null, fallbackLocation: string | null): PostingReading {
   const workplace = input?.workplace;
   const summary = typeof input?.summary === 'string' ? input.summary.replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').trim().slice(0, 600) : '';

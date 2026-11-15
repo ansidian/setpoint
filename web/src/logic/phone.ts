@@ -5,8 +5,8 @@ import {dayTitle, isPast, timeRange} from './calendar.ts';
 import {addDays, clockTime, daysBetween} from './format.ts';
 
 /**
- * How the phone's reader changes: an email opened from the list slides in over it, and closing it
- * slides back; going from one email to another, and the desktop's reader beside the list, don't slide.
+ * How the phone's reader changes. An email opened from the list slides in over it, and closing it
+ * slides back. Going from one email to another, and the desktop's reader beside the list, don't slide.
  */
 export function phoneSlide(phone: boolean, from: number | null, to: number | null): 'in' | 'back' | null {
   if (!phone) return null;
@@ -40,14 +40,14 @@ export interface AgendaLine {
 }
 
 export type AgendaSection =
-  // `nowAt`: today's now-line, before lines[nowAt] (agendaNowAt); null on other days.
+  // `nowAt`: today's now-line, before lines[nowAt] (agendaNowAt). Null on other days.
   | {kind: 'day'; date: string; title: string; today: boolean; lines: AgendaLine[]; nowAt: number | null}
   | {kind: 'empty'; from: string; to: string; title: string; today: boolean};
 
 /**
  * Where today's now-line goes among its lines: before the first timed event not yet over,
  * else after the last timed event, before the tasks. All-day events lead the day and tasks end it,
- * so neither places it; a day without a timed event has none.
+ * so neither places it. A day without a timed event has none.
  */
 export function agendaNowAt(lines: AgendaLine[]): number | null {
   const timed = lines.flatMap((line, index) => (line.item.kind === 'event' && !line.item.all_day && line.item.starts_at ? [index] : []));

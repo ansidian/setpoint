@@ -55,7 +55,7 @@ export function searchTermsInput(email: TermsEmail): string {
   ].join('\n');
 }
 
-/** The usable terms of an answer, tidied and once each; none for an answer without any. */
+/** The usable terms of an answer, tidied and once each. None for an answer without any. */
 export function termsOf(input: Record<string, unknown> | null): string[] {
   const raw = Array.isArray(input?.terms) ? input.terms : [];
   const clean = raw.flatMap(term => (typeof term === 'string' ? [term.replace(/\s+/g, ' ').trim().toLowerCase()] : []))
@@ -63,5 +63,5 @@ export function termsOf(input: Record<string, unknown> | null): string[] {
   return [...new Set(clean)].slice(0, MAX_TERMS);
 }
 
-/** Terms as `search_terms` holds them: one a line, so a term stays a unit. Null for none. */
+/** Terms as `search_terms` holds them: one per line, so a term stays a unit. Null for none. */
 export const termsText = (terms: string[]) => (terms.length ? terms.join('\n') : null);

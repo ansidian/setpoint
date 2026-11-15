@@ -1,8 +1,9 @@
-// News's API sources: the hazards' official data, each asked about the home
-// location in Settings › Calendar (NWS alerts for its zones, found from the point; USGS, Cal Fire and
-// AirNow within their radius), and Hacker News through Algolia over its points. A hazard source isn't
-// ready, so isn't read, until the home location is set. AirNow's is its free hourly reporting-area
-// file, which needs no key (its observations web service was retired on 2026-10-01).
+// News's API sources. The hazards' official data comes from sources that are each asked about the
+// home location in Settings › Calendar: NWS alerts for its zones, found from the point, and USGS,
+// Cal Fire and AirNow within their radius. Hacker News comes through Algolia, over its points. A
+// hazard source isn't ready, so isn't read, until the home location is set. AirNow's is its free
+// hourly reporting-area file, which needs no key (its observations web service was retired on
+// 2026-10-01).
 import {getSettings} from '../../settings.ts';
 import {airNowReportingAreas, calFireIncidents, hnStories, isAirNowFile, nwsAlerts, nwsPoint, nwsZones, usgsQuakes} from '../../domain/newsApis.ts';
 import {configNumber, FILL_MS} from '../../domain/newsIngest.ts';
@@ -48,8 +49,8 @@ function readNwsCursor(cursor: string | null): NwsCursor | null {
 }
 
 /**
- * NWS alerts for the home location's zones: the point's zones are found once (/points) and kept in
- * the cursor until Home moves, then each zone's active alerts are read, each alert once.
+ * NWS alerts for the home location's zones. The point's zones are found once (/points) and kept in
+ * the cursor until Home moves. Then each zone's active alerts are read, each alert once.
  */
 export function nwsAdapter(options: NewsHttpOptions = {}): NewsAdapter {
   return {
@@ -117,7 +118,7 @@ export function calFireAdapter(options: NewsHttpOptions = {}): NewsAdapter {
 /**
  * Unhealthy air near home from AirNow's reporting-area file (config: radius, minimum AQI). The file
  * (about 2 MB, under newsGet's 5 MB cap) changes hourly, so it's a conditional GET with its
- * validators as the cursor, as a feed's are: an unchanged file is a 304, healthy with nothing new.
+ * validators as the cursor, as a feed's are. An unchanged file is a 304, healthy with nothing new.
  */
 export function airNowAdapter(options: NewsHttpOptions = {}): NewsAdapter {
   return {
@@ -128,7 +129,7 @@ export function airNowAdapter(options: NewsHttpOptions = {}): NewsAdapter {
       const response = await newsGet(options, {url: base(context.source), userAgent: context.userAgent, signal: context.signal, accept: 'text/plain, */*;q=0.5', ...readValidators(cursor)});
       if (response.status === 304) return {articles: [], cursor: null};
       const file = responseText(response);
-      // Something else (an error page) would read as clean air: failing instead.
+      // Something else (an error page) would read as clean air, so it fails instead.
       if (!isAirNowFile(file)) throw new ProviderError('permanent', `${hostOf(response.url)} didn't send AirNow's reporting-area file.`, {status: response.status});
       const next: Validators = {etag: response.headers.get('etag'), lastModified: response.headers.get('last-modified')};
       return {articles: airNowReportingAreas(file, at, config, now(context)), cursor: JSON.stringify(next)};

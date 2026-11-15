@@ -1,8 +1,9 @@
 // Needs you's answers and the corrections, against an ephemeral database holding the seed, through
-// Jobs's routes, with Anthropic and the hiring platforms faked at the HTTP boundary (./fakeWeb.ts):
-// each correction, then a new email, a history re-run and a lookup, and the correction stands; Undo
-// restores exactly what was there; the one exception (an email that sets a status replaces one set by
-// hand, a quiet one doesn't); Let emails decide recomputes the status from the emails.
+// Jobs's routes, with Anthropic and the hiring platforms faked at the HTTP boundary (./fakeWeb.ts).
+// Each correction is followed by a new email, a history re-run and a lookup, and the correction
+// stands. Undo restores exactly what was there. The one exception: an email that sets a status
+// replaces one set by hand, and a quiet one doesn't. Let emails decide recomputes the status from the
+// emails.
 import {jobsChangeSchema, jobsUndoneSchema, SEED_NOW} from '@setpoint/shared';
 import type {JobsChangeOut, JobStatus} from '@setpoint/shared';
 import {and, asc, eq, lte} from 'drizzle-orm';
@@ -56,7 +57,7 @@ function searched(candidates: unknown[]): FakeAnswer {
   }};
 }
 
-// After the seed's now, as new mail comes; and before Jobs was turned on, for the history pass.
+// After the seed's now, as new mail comes. And before Jobs was turned on, for the history pass.
 const LATER = '2026-10-07T18:00:00.000Z';
 const EARLIER = '2026-09-20T17:00:00.000Z';
 
@@ -333,7 +334,7 @@ const CASES: Case[] = [
     },
     stands: s => {
       const lucerne = s.id('Lucerne Publishing', 'Junior Developer');
-      // Greenhouse's board offered both again and the check said no; search's one is turned down: nothing waits.
+      // Greenhouse's board offered both again and the check said no. Search's one is turned down: nothing waits.
       expect(applicationDetail(s.store, lucerne)).toMatchObject({candidates: [], posting: null, jd: {state: 'not_found'}});
       expect(jobsPage(s.store).needs_you.filter(each => each.company === 'Lucerne Publishing')).toEqual([]);
     },

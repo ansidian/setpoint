@@ -14,7 +14,7 @@ import {hashSecret, SESSION_DAYS} from './sessions.ts';
 
 export type Owner = typeof t.owner.$inferSelect;
 
-/** bcrypt's cost; tests pass 4. Hashes made at another cost still check. */
+/** bcrypt's cost. Tests pass 4. Hashes made at another cost still check. */
 export const BCRYPT_COST = 12;
 export const SETUP_TOKEN_MINUTES = 60;
 /** The password budget: 10 attempts per 15 minutes, shared by every caller. */
@@ -71,7 +71,7 @@ function setupTokenMatches(store: Store, submitted: string): boolean {
 const normaliseCode = (value: string) => value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 export const hashRecoveryCode = (code: string) => hashSecret(normaliseCode(code));
 
-/** Eight codes like "SP-1A2B-…" (128 bits each); only their hashes are kept. */
+/** Eight codes like "SP-1A2B-…" (128 bits each). Only their hashes are kept. */
 export function generateRecoveryCodes(n = RECOVERY_CODE_COUNT): string[] {
   return Array.from({length: n}, () => `SP-${randomBytes(16).toString('hex').toUpperCase().match(/.{4}/g)!.join('-')}`);
 }
@@ -116,8 +116,9 @@ export async function claimOwner(store: Store, setupToken: string, password: str
 /**
  * Reserves one password attempt before bcrypt runs, successes included, so concurrent guesses from
  * anywhere share one budget and none can erase another's. A refused attempt doesn't extend the
- * window. Throws 429 with how long to wait. The window runs on real time: a development clock starts
- * again from the seed's moment at every restart, and a window measured on it would never end.
+ * window. Throws 429 with how long to wait. The window runs on real time, because a development
+ * clock starts again from the seed's moment at every restart, and a window measured on it would
+ * never end.
  */
 export function reservePasswordAttempt(store: Store) {
   transaction(store, () => {
@@ -137,7 +138,7 @@ export function reservePasswordAttempt(store: Store) {
   });
 }
 
-/** Strict mode needs a passkey after the password; without one registered, it can't be met. */
+/** Strict mode needs a passkey after the password. Without one registered, it can't be met. */
 export function passwordSignInOutcome(mode: AuthMode, passkeyCount: number): 'signed_in' | 'passkey_required' | 'misconfigured' {
   if (mode === 'password_or_passkey') return 'signed_in';
   return passkeyCount > 0 ? 'passkey_required' : 'misconfigured';
@@ -148,10 +149,10 @@ export const passkeyCount = (store: Store) => store.db.select({n: count()}).from
 // ---- Security transitions ----
 
 /**
- * One security change: if the owner is still at `expectedGeneration`, runs `mutate`, moves the
- * generation on and ends every session, pending sign-in and WebAuthn challenge made under the old
- * one, all in one transaction. Returns the new generation, or null (changing nothing) when another
- * change got there first. A failing `mutate` rolls everything back.
+ * One security change, in one transaction. If the owner is still at `expectedGeneration`, it runs
+ * `mutate`, moves the generation on and ends every session, pending sign-in and WebAuthn challenge
+ * made under the old one. Returns the new generation, or null (changing nothing) when
+ * another change got there first. A failing `mutate` rolls everything back.
  */
 export function securityTransition(store: Store, expectedGeneration: number, mutate: () => void): number | null {
   return transaction(store, () => {
@@ -211,9 +212,9 @@ export async function recover(store: Store, code: string, newPassword: string, c
 }
 
 /**
- * Expired pending sign-ins, challenges, setup tokens and pairing codes, and sessions ended or idle for 30 days,
- * swept on each sign-in so the tables stay small (a cookie that stops being sent never comes back to
- * be deleted).
+ * Expired pending sign-ins, challenges, setup tokens and pairing codes, and sessions ended or idle
+ * for 30 days. Each sign-in sweeps them so the tables stay small (a cookie that stops being sent
+ * never comes back to be deleted).
  */
 export function sweepExpiredAuth(store: Store) {
   const now = isoNow(store);

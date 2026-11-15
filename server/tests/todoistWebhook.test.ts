@@ -1,6 +1,6 @@
-// Todoist's webhook at POST /api/todoist/webhook: signed deliveries wake
-// one sync of the Todoist source and nothing else, without a session or Setpoint's own page;
-// redeliveries are taken once, for 30 days.
+// Todoist's webhook at POST /api/todoist/webhook: signed deliveries wake one sync of the Todoist
+// source and nothing else, without a session or Setpoint's own page. Redeliveries are taken once,
+// for 30 days.
 import {createHmac} from 'node:crypto';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';

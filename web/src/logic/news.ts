@@ -1,14 +1,15 @@
-// News's rules, kept out of the components: the meta
-// copy and ages, the held order and what the pill counts, when a row on screen counts as seen, the
-// cursor's stops; the recap held for the visit and where it shows; the states above the list
-// and in a section (boards 29a, 29b), and Settings › News and Settings › AI's News group (boards 30a,
-// 30b).
+// News's rules, kept out of the components:
+// - the meta copy and ages, the held order and what the pill counts, when a row on screen counts as
+//   seen, the cursor's stops
+// - the recap held for the visit and where it shows
+// - the states above the list and in a section (boards 29a, 29b), and Settings › News and
+//   Settings › AI's News group (boards 30a, 30b).
 //
-// The held order: the page draws the order it last took (on opening, or from the pill) and
-// takes each story's dot, sources and summary from the latest answer, so nothing moves under the
-// cursor. A story the latest order shows that the held one doesn't waits behind the pill, counted as
-// new or updated by its dot; a seen story moving into view, one leaving, or a re-ranking among the
-// stories already shown wait too, but say nothing until the pill has something to count.
+// The held order: the page draws the order it last took (on opening, or from the pill). It takes
+// each story's dot, sources and summary from the latest answer, so nothing moves under the cursor.
+// A story the latest order shows that the held one doesn't waits behind the pill, counted as new or
+// updated by its dot. A seen story moving into view, one leaving, or a re-ranking among the stories
+// already shown wait too, but say nothing until the pill has something to count.
 import type {
   AiOut, AiUsageOut, NewsAdapterKey, NewsAiOut, NewsSourceOut, NewsPageOut, NewsSection, NewsSectionOut, NewsSourceHealthOut, NewsSourcesOut, NewsStatusOut,
   RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
@@ -67,10 +68,10 @@ export function rowMeta(row: StoryRowOut, now: number, timeZone: string, section
   };
 }
 
-/** The recap's header, on the right: "since Fri 6:10 PM", a stamp as the pane's meta words one; none when the user never looked. */
+/** The recap's header, on the right: "since Fri 6:10 PM", a stamp as the pane's meta words one. None when the user never looked. */
 export const recapSince = (since: string | null, now: number, timeZone: string) => (since ? `since ${stamp(since, now, timeZone)}` : null);
 
-/** The pane's meta: "5 outlets · first reported 6:12 AM · updated 8:40 AM"; "updated" only once a later fact came. */
+/** The pane's meta: "5 outlets · first reported 6:12 AM · updated 8:40 AM". "updated" only once a later fact came. */
 export function storyMeta(story: Pick<StoryOut, 'outlets' | 'first_reported_at' | 'last_new_fact_at'>, now: number, timeZone: string): string[] {
   return [
     `${story.outlets} ${story.outlets === 1 ? 'outlet' : 'outlets'}`,
@@ -137,7 +138,7 @@ export const sameLayout = (a: Layout, b: Layout) => a.length === b.length
 export interface Waiting {
   fresh: number;
   updated: number;
-  // Whether the latest order differs at all; the pill shows only when it has something to count.
+  // Whether the latest order differs at all. The pill shows only when it has something to count.
   changed: boolean;
 }
 
@@ -174,7 +175,7 @@ const heldFrom = (recap: RecapOut): HeldRecap => ({
 
 /**
  * The recap after an answer: chosen from the visit's first (undefined until then) and fixed for the
- * visit, so nothing slides in; one put away goes, by Done here or elsewhere. A recap the visit didn't
+ * visit, so nothing slides in. One put away goes, by Done here or elsewhere. A recap the visit didn't
  * open with, or a new one after it's put away, waits for the next visit.
  */
 export function holdRecap(held: HeldRecap | null | undefined, latest: RecapOut | null): HeldRecap | null {
@@ -219,7 +220,7 @@ export function storiesOnScreen(rows: ReadonlyMap<string, number>): Sightings {
 }
 
 /**
- * The stories waiting to be seen (new or updated on screen), each since it began to: a story that
+ * The stories waiting to be seen (new or updated on screen), each since it began to. A story that
  * turns updated while its row is on screen waits from then, not from when the row came into view.
  */
 export function waitingSince(before: Sightings, ids: Iterable<number>, at: number): Sightings {
@@ -239,7 +240,7 @@ export function nextSeen(visible: Sightings, waiting: Sightings, after: number =
 
 /**
  * When the user last looked at an updated story before this visit, from the first of these that has it
- * updated (the story as opened, before it was seen); null for a story that wasn't updated.
+ * updated (the story as opened, before it was seen). Null for a story that wasn't updated.
  */
 export function lookedAt(...states: (Pick<StoryRowOut, 'state' | 'seen_at'> | null | undefined)[]): string | null {
   return states.find(state => state?.state === 'updated')?.seen_at ?? null;
@@ -261,7 +262,7 @@ export interface VisitDot {
 export type VisitDots = ReadonlyMap<number, VisitDot>;
 
 /**
- * The visit's dots after an answer: a story it hasn't met takes its dot as it is; one with a newer
+ * The visit's dots after an answer. A story it hasn't met takes its dot as it is. One with a newer
  * fact takes the server's dot, new or updated. A newer fact the server still has seen is older than
  * the user's look (the first run filling the last 48 hours), so the story keeps the dot it had.
  */
@@ -325,7 +326,7 @@ export const unseen = (row: Pick<StoryRowOut, 'state'>) => row.state !== 'seen';
 export const storyKey = (shelf: string, id: number) => `${shelf}:${id}`;
 export const keyStory = (key: string) => Number(key.slice(key.lastIndexOf(':') + 1));
 
-/** Also reported's rows, as their own shelf for J and K; never story rows. */
+/** Also reported's rows, as their own shelf for J and K, never story rows. */
 export const ALSO_SHELF = 'also';
 export const isAlsoKey = (key: string | null) => key !== null && key.startsWith(`${ALSO_SHELF}:`);
 
@@ -367,8 +368,8 @@ const count = (n: number, one: string, many: string) => `${n.toLocaleString('en-
 /**
  * The Unsorted line while sorting is down and articles wait (29a): "12 articles not sorted yet,
  * Anthropic unreachable since 8:52 AM, retrying". A key that's missing or refused waits for
- * Settings › AI, which `settings` makes the line's link; nothing waits, or sorting is up, is
- * no line. Status lines take commas.
+ * Settings › AI, which `settings` makes the line's link. When nothing waits, or sorting is up, there
+ * is no line. Status lines take commas.
  */
 export function unsortedLine(status: Pick<NewsStatusOut, 'unsorted' | 'down'>, now: number, timeZone: string): {text: string; settings: boolean} | null {
   const {down} = status;
@@ -394,7 +395,7 @@ export function firstRunLine(status: Pick<NewsStatusOut, 'first_run'>): string |
   return `Sorting the last 48 hours · ${run.sorted.toLocaleString('en-US')} of ${count(run.total, 'article', 'articles')}, showing what’s sorted so far`;
 }
 
-/** A whole section stale or failing (29a): "AI, as of 7:02 AM", under its header; its stories stay. */
+/** A whole section stale or failing (29a): "AI, as of 7:02 AM", under its header. Its stories stay. */
 export function sectionLine(section: NewsSection, health: SectionHealthOut | null, now: number, timeZone: string): {state: 'stale' | 'failing'; text: string} | null {
   if (!health) return null;
   return {state: health.state, text: `${SECTION_LABELS[section]}, ${health.as_of ? `as of ${asOf(health.as_of, now, timeZone)}` : 'not checked yet'}`};
@@ -406,7 +407,7 @@ export const STORY_HOURS = 48;
 /**
  * A section with no story to show, in All's block or its own list (29a, 29b). A story stays on the
  * page for 48 hours after its last new fact, so an empty section has had nothing new for 48 hours:
- * "Nothing new in Tech since Mon", from then; anything that came and left unseen before is the recap's.
+ * "Nothing new in Tech since Mon", from then. Anything that came and left unseen before is the recap's.
  * During the first run it's still being sorted: "Nothing sorted in AI yet". A section with stories
  * shows them, seen or not: the dots aren't a to-do list. An empty block in All whose section
  * has `more` (its stories shown in other blocks) isn't an empty section: it isn't drawn.
@@ -455,10 +456,12 @@ export interface NewsSourceState {
 }
 
 /**
- * A source's state as Settings › Accounts words one (30a): "Checked 9:10 AM"; "Checks stopped, as of
- * 9:14 PM", muted; "Failing, 404 since 6:02 AM" in `caution`, the status code standing for the
- * provider's words when it leads them, else "Failing since 6:02 AM, <the words>". A source not read
- * yet (no home location, no key) says so.
+ * A source's state as Settings › Accounts words one (30a):
+ * - "Checked 9:10 AM"
+ * - "Checks stopped, as of 9:14 PM", muted
+ * - "Failing, 404 since 6:02 AM" in `caution`, the status code standing for the provider's words
+ *   when it leads them, else "Failing since 6:02 AM, <the words>".
+ * A source not read yet (no home location, no key) says so.
  */
 export function newsSourceState(health: NewsSourceHealthOut | null, now: number, timeZone: string): NewsSourceState {
   if (!health) return {tone: 'muted', text: 'Not checked yet', warn: false, title: null, kind: null};
@@ -486,10 +489,10 @@ export const feedFailing = (out: Pick<NewsSourcesOut, 'sections'> | undefined) =
 
 // ---- Settings › AI's News group (board 30b) ----
 
-/** Dollars: "$40" whole, "$18.40" otherwise; `cents` always shows them. */
+/** Dollars: "$40" whole, "$18.40" otherwise. `cents` always shows them. */
 export const dollars = (amount: number, cents = false) => (!cents && Number.isInteger(amount) ? `$${amount}` : `$${amount.toFixed(2)}`);
 
-/** The monthly cap's choices; one set elsewhere still shows as itself. */
+/** The monthly cap's choices. One set elsewhere still shows as itself. */
 export const CAP_CHOICES = [10, 20, 30, 40, 50, 75, 100];
 
 /** How full This month's meter is when it turns `caution`, before the cap rather than at it. */
@@ -503,7 +506,7 @@ export function capMeter(news: Pick<NewsAiOut, 'this_month_usd' | 'monthly_cap_u
 
 /**
  * At the cap, This month says so: "Cap reached, summaries use Claude
- * Haiku 5.5 until Nov 1", the 1st of next month; null below it.
+ * Haiku 5.5 until Nov 1", the 1st of next month. Null below it.
  */
 export function cappedLine(news: Pick<NewsAiOut, 'capped' | 'summaries_model'>, since: string, timeZone: string, label: (model: string) => string): string | null {
   if (!news.capped) return null;

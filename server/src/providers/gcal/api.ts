@@ -11,7 +11,7 @@ import type {HttpOptions, Refusal} from '../http.ts';
 export const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 export const CALENDAR_TIMEOUT_MS = 30_000;
 
-// null clears a field in a patch: Google merges start and end into what they were.
+// null clears a field in a patch, because Google merges start and end into what they were.
 export type EventTime = {dateTime?: string | null; date?: string | null; timeZone?: string | null};
 
 /** The parts of Google's Event resource Setpoint reads and writes. */
@@ -20,7 +20,7 @@ export interface GoogleEvent {
   status?: 'confirmed' | 'tentative' | 'cancelled';
   etag?: string;
   summary?: string;
-  // HTML, as Google's own editor writes it; null in a patch deletes it (Google's patch semantics).
+  // HTML, as Google's own editor writes it. null in a patch deletes it (Google's patch semantics).
   description?: string | null;
   location?: string;
   start?: EventTime;
@@ -34,9 +34,9 @@ export interface GoogleEvent {
   updated?: string;
   // "1" … "11", Google's event colours.
   colorId?: string | null;
-  // Where the event came from (an .ics file's URL line); its url is the event's link when the location has none.
+  // Where the event came from (an .ics file's URL line). Its url is the event's link when the location has none.
   source?: {url?: string; title?: string};
-  // Free/busy; Google leaves it out for busy ("opaque", its default).
+  // Free/busy. Google leaves it out for busy ("opaque", its default).
   transparency?: 'opaque' | 'transparent';
   // The RFC 5545 UID an .ics import writes by (events.import), and the file's SEQUENCE.
   iCalUID?: string;
@@ -190,7 +190,7 @@ export class GoogleCalendarApi {
   }
 
   /**
-   * The user's own colour for a calendar (their calendar list entry, not the calendar), as RGB:
+   * The user's own colour for a calendar (their calendar list entry, not the calendar), as RGB.
    * Google keeps the colour as given and sets its nearest colorId itself. Needs the
    * calendar.calendarlist scope.
    */
@@ -207,7 +207,7 @@ export class GoogleCalendarApi {
   }
 
   /**
-   * Events.import, a private copy of an .ics event keyed on its iCalUID: one the calendar
+   * Events.import, a private copy of an .ics event keyed on its iCalUID. One the calendar
    * already has is updated in place, rather than a second made, and no invitation is sent.
    * An exception to a series is imported with the series' iCalUID and its originalStartTime.
    */

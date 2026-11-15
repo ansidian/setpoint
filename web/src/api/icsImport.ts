@@ -1,5 +1,6 @@
-// An .ics file read for review (or an email's attachment, read on the server), then its events imported one at a time (shared/src/api/
-// icsImport.ts has the routes). Each import is a command, settled as any change is (untilSettled).
+// An .ics file (or an email's attachment, read on the server) is read for review. Then its events
+// are imported one at a time (shared/src/api/icsImport.ts has the routes). Each import is a
+// command, settled as any change is (untilSettled).
 import type {CommandOut, IcsImportEvent, IcsReadOut} from '@setpoint/shared';
 import {sendJson} from './client.ts';
 

@@ -1,5 +1,5 @@
-// What the import review says of each of a file's events before anything is sent:
-// whether it's already over, so it starts unticked. Pure: the caller gives it now and the user's zone.
+// What the import review says of each of a file's events before anything is sent: whether it's
+// already over, so it starts unticked. Pure. The caller gives it now and the user's zone.
 import {occurrenceDates, parseRule} from './recurrence.ts';
 import {addDays, localDay} from './time.ts';
 
@@ -13,14 +13,14 @@ interface PastInput {
   recurrence: string[];
 }
 
-// How far ahead a COUNT is looked for (about 55 years): further than any file's series runs.
+// How far ahead a COUNT is looked for (about 55 years). That is further than any file's series runs.
 const COUNT_SEARCH_DAYS = 20_000;
 
 /**
- * Whether the event has ended by `now`: a single event once its end has passed (an all-day one the
- * day after its last day; a timed one with no length at its start), a repeating one once its rule has
- * no occurrence from today on (UNTIL or COUNT run out). A rule the expander doesn't cover, or extra
- * dates (RDATE) beside one, count as still to come, so they start ticked.
+ * Whether the event has ended by `now`. A single event has ended once its end has passed: an all-day
+ * one the day after its last day, a timed one with no length at its start. A repeating one has ended
+ * once its rule has no occurrence from today on (UNTIL or COUNT run out). A rule the expander doesn't
+ * cover, or extra dates (RDATE) beside one, count as still to come, so they start ticked.
  */
 export function importPast(event: PastInput, now: string, userZone: string): boolean {
   const zone = event.time_zone ?? userZone;
@@ -35,6 +35,7 @@ export function importPast(event: PastInput, now: string, userZone: string): boo
   if (!rule) return false;
   const start = event.all_day ? event.start_date! : localDay(event.starts_at!, zone);
   if (rule.untilDate === null && rule.count === null) return false;
-  // Today's occurrence counts as to come until the day is over: the review doesn't read its time.
+  // Today's occurrence counts as to come until the day is over, because the review doesn't read its
+  // time.
   return occurrenceDates(rule, start, today, addDays(today, COUNT_SEARCH_DAYS)).length === 0;
 }

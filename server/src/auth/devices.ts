@@ -1,9 +1,9 @@
 // Paired iPhones. The phone reaches Setpoint only over a private network, where native
-// passkeys can't work, so a signed-in browser pairs it: Settings › Security shows a one-time code
-// (five minutes, one at a time) in a QR code and a setpoint://pair link, and the app exchanges it at
+// passkeys can't work, so a signed-in browser pairs it. Settings › Security shows a one-time code
+// (five minutes, one at a time) in a QR code and a setpoint://pair link. The app exchanges it at
 // POST /api/auth/pair for a device token it sends as a bearer header. Codes and tokens are 256
 // random bits kept only as SHA-256, as sessions are. A token has no idle timeout and outlives
-// security changes; it ends when revoked, or at recovery (owner.ts).
+// security changes. It ends when revoked, or at recovery (owner.ts).
 import type {DeviceOut, PairingOut} from '@setpoint/shared';
 import {desc, eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -25,7 +25,7 @@ export type Device = typeof t.devices.$inferSelect;
 export const pairingLink = (server: string, code: string) =>
   `setpoint://pair?${new URLSearchParams({server, code}).toString()}`;
 
-/** A new pairing code, replacing (withdrawing) any earlier one. Returned once; only its hash is kept. */
+/** A new pairing code, replacing (withdrawing) any earlier one. Returned once. Only its hash is kept. */
 export function issuePairingCode(store: Store, server: string, minutes = PAIRING_MINUTES): PairingOut {
   requireOwner(store);
   const code = newSecret();
@@ -60,7 +60,7 @@ export function pairDevice(store: Store, code: string, name: string | undefined)
   });
 }
 
-/** The device behind an Authorization header's bearer token, or null; each use is recorded. */
+/** The device behind an Authorization header's bearer token, or null. Each use is recorded. */
 export function findDevice(store: Store, token: string, extend = true): Device | null {
   if (!TOKEN_PATTERN.test(token)) return null;
   const device = store.db.select().from(t.devices).where(eq(t.devices.hash, hashSecret(token))).get();

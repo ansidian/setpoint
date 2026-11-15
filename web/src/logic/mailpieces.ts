@@ -1,7 +1,7 @@
-// The agenda rail's USPS mail. One row of thumbnails, all one size, as many as fit the
-// rail's width and never wrapping: when there are more scans than fit, the last tile is "+3" for the
-// rest, and opens the viewer at the first of them. The viewer steps through the day's scans and
-// stops at the ends.
+// The agenda rail's USPS mail. One row of thumbnails, all one size, as many as fit the rail's width
+// and never wrapping. When there are more scans than fit, the last tile is "+3" for the rest, and
+// opens the viewer at the first of them. The viewer steps through the day's scans and stops at the
+// ends.
 
 export const MAIL_TILE = 56;
 export const MAIL_GAP = 6;

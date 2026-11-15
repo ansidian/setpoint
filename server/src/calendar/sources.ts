@@ -1,7 +1,7 @@
 // The calendar's sources that no connection makes: the one weather source, made at start. Google
-// Calendar's comes with Connect Gmail (one consent for both, src/sync/connect.ts), which finds the
-// account's existing one on a reconnect, so there's exactly one per Google account; Todoist's is
-// made by its OAuth callback.
+// Calendar's comes with Connect Gmail (one consent for both, src/sync/connect.ts). On a reconnect,
+// Connect Gmail finds the account's existing one, so there's exactly one per Google account.
+// Todoist's OAuth callback makes Todoist's.
 import {eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {DEFAULT_SCHEDULES} from '../domain/sources.ts';

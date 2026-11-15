@@ -1,5 +1,5 @@
 // While you were away's state: the user on News, the
-// recap on screen, Done and its Undo. The rule for the hour away is src/domain/news.ts's; its stories
+// recap on screen, Done and its Undo. The rule for the hour away is src/domain/news.ts's. Its stories
 // are src/queries/news.ts's. A change the page draws goes out as a `news` event naming every section,
 // so All, in any tab, asks again.
 import {NEWS_SECTIONS} from '@setpoint/shared';

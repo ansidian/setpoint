@@ -793,7 +793,7 @@ describe('when a repeat ends, only after one', () => {
     ['Gym every day 6 times', null, 'RRULE:FREQ=DAILY;COUNT=6', 'every day 6 times'],
     ['Gym every day for 6 times', null, 'RRULE:FREQ=DAILY;COUNT=6', 'every day for 6 times'],
     ['Gym weekly 1 time', null, 'RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=1', 'weekly 1 time'],
-    // "for N days/weeks/months" lasts that long from the first occurrence, its last day the one before first + N.
+    // "for N days/weeks/months" lasts that long from the first occurrence. Its last day is the one before first + N.
     ['Gym every day for 2 weeks', '2026-10-26', 'RRULE:FREQ=DAILY;UNTIL=20261108', 'every day for 2 weeks'],
     ['Gym every day for 3 days', '2026-10-26', 'RRULE:FREQ=DAILY;UNTIL=20261028', 'every day for 3 days'],
     ['Gym every mon for 4 weeks', '2026-10-26', 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261122', 'every mon for 4 weeks'],
@@ -831,7 +831,7 @@ describe('when a repeat ends, only after one', () => {
     expect(describeRule('RRULE:FREQ=MONTHLY;INTERVAL=2;COUNT=3', MON)).toBe('Every 2 months on day 26, 3 times');
   });
   test.each<[string, string | null, string, string]>([
-    // A task's end goes to Todoist as "until" a date, which it documents; a count, which it doesn't, stays words.
+    // A task's end goes to Todoist as "until" a date, which Todoist documents. A count, which it doesn't, stays words.
     ['Water plants every mon until dec 15', 'every mon until 2026-12-15', 'Water plants', 'Every Monday, until Tue, Dec 15'],
     ['Vitamins every day for 2 weeks', 'every day until 2026-11-08', 'Vitamins', 'Every day, until Sun, Nov 8'],
     ['Water plants every mon until end of next month', 'every mon until 2026-11-30', 'Water plants', 'Every Monday, until Mon, Nov 30'],
@@ -851,8 +851,8 @@ describe('when a repeat ends, only after one', () => {
 });
 
 describe('a length in whole days with a time is that time each day over them', () => {
-  // "Gym 7am for 3 weeks" is 7 AM every day for three weeks, as a span of days with
-  // a time repeats each day; hours still make one long event ("for 48h").
+  // "Gym 7am for 3 weeks" is 7 AM every day for three weeks, because a span of days with a time
+  // repeats each day. Hours still make one long event ("for 48h").
   const MON = '2026-10-26';
   const on = (text: string) => parseTitle(text, MON, CALENDARS);
   test.each<[string, string, number, number | null, string | null, string]>([

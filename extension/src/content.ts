@@ -1,11 +1,12 @@
-// Setpoint on job boards' content script: a chip saying whether Setpoint's Jobs has
-// an application to a job on LinkedIn or Indeed, each read by its own readers (boards.ts). In the job
-// pane (and on a job's own page) it follows the title and says "Not applied" or why it can't answer
-// too; on the list's cards it follows the company, smaller, and only when there's an application, as
-// mail's rows show Applied before. The boards draw all of it without loading a page, rebuilding the
-// pane for each job and the cards for each page of results, so a MutationObserver places chips
-// wherever they're missing, asking Setpoint once for all the postings it hasn't asked about yet. A
-// page it should read but can't shows the toolbar's badge (watch.ts).
+// Setpoint on job boards' content script: a chip that says whether Setpoint's Jobs has an
+// application to a job on LinkedIn or Indeed. Each board is read by its own readers (boards.ts). In
+// the job pane (and on a job's own page) the chip follows the title. There it also says "Not
+// applied" or why it can't answer. On the list's cards it follows the company, smaller, and only
+// when there's an application, as mail's rows show Applied before. The boards draw all of it
+// without loading a page: they rebuild the pane for each job and the cards for each page of
+// results. So a MutationObserver places chips wherever they're missing, and asks Setpoint once for
+// all the postings it hasn't asked about yet. A page it should read but can't shows the toolbar's
+// badge (watch.ts).
 import {boardOf} from './boards.ts';
 import {draw, HOST} from './chip.ts';
 import type {Posting, Unread} from './posting.ts';
@@ -56,8 +57,8 @@ function ask(postings: Posting[]): Promise<Answer>[] {
 
 // ---- Placing ----
 
-// A card's line with nothing to show (or still asked about): the job it was decided for, so it isn't
-// asked about again until the board draws another job there.
+// A card's line with nothing to show (or still asked about), mapped to the job it was decided for,
+// so the line isn't asked about again until the board draws another job there.
 const quiet = new WeakMap<Element, string>();
 
 const drawnOn = (line: Element) => line.querySelector<HTMLElement>(`:scope > ${HOST}`);
@@ -85,7 +86,7 @@ function place(posting: Posting, answer: Promise<Answer>, where: Place): void {
   };
   show(null);
   void answer.then(got => {
-    // The board may have drawn another job on this line meanwhile; that one has its own.
+    // The board may have drawn another job on this line meanwhile. That one has its own.
     if (line.isConnected && placed(posting)) show(got);
   });
 }

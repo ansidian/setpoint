@@ -41,13 +41,13 @@ const HN: SourceRule = {section: 'tech', hazard: false, subjectCheck: true, firs
 
 describe('noise and politics, as applied to the model\'s reading', () => {
   test.each<[string, SourceRule, ArticleNotes, {keep: true; sections: NewsSection[]} | {keep: false; reason: NoiseReason}]>([
-    // Events, not arguments; the subject wins over politics.
+    // Events, not arguments. The subject wins over politics.
     ['"OpenAI testifies before Congress" is in, under AI', FEED, notes('politics_argument', 'ai', ['general']), {keep: true, sections: ['ai']}],
     ['an antitrust ruling against Google is in, under Tech', FEED, notes('event', 'tech', ['tech', 'general']), {keep: true, sections: ['tech', 'general']}],
     ['a council vote on a housing project in the area is in, under Local', LOCAL_FEED, notes('event', 'local', ['local']), {keep: true, sections: ['local']}],
     ['a law taking effect is an event', FEED, notes('event', 'us', ['general']), {keep: true, sections: ['general']}],
     ['a poll is an argument: out', FEED, notes('politics_argument', 'us', ['general']), {keep: false, reason: 'politics_argument'}],
-    // Never anywhere; any kind but an event is dropped as itself.
+    // Never anywhere. Any kind but an event is dropped as itself.
     ['sports', LOCAL_FEED, notes('sports', 'local', ['local']), {keep: false, reason: 'sports'}],
     ['a forecast: weather counts only as a hazard', LOCAL_FEED, notes('weather_forecast', 'local', ['local']), {keep: false, reason: 'weather_forecast'}],
     ['General: world news', FEED, notes('event', 'world', ['general']), {keep: false, reason: 'world'}],
@@ -55,7 +55,7 @@ describe('noise and politics, as applied to the model\'s reading', () => {
     ['official hazard data is kept, in Local, whatever the reading says', HAZARD, notes('weather_forecast', 'other', ['general']), {keep: true, sections: ['local']}],
     ['Hacker News on a cooking subject is out', HN, notes('event', 'other', ['tech']), {keep: false, reason: 'off_subject'}],
     ['Hacker News on an AI release is in, AI and Tech only', HN, notes('event', 'ai', ['ai', 'general']), {keep: true, sections: ['ai']}],
-    // Sections the subject allows; else its own.
+    // Sections the subject allows, else its own.
     ['an Anthropic release in the national headlines sits in both', FEED, notes('event', 'ai', ['ai', 'general']), {keep: true, sections: ['ai', 'general']}],
     ['a US story can\'t be Local', FEED, notes('event', 'us', ['local']), {keep: true, sections: ['general']}],
     ['no sections given: the subject\'s own', FEED, notes('event', 'tech', []), {keep: true, sections: ['tech']}],
@@ -443,7 +443,7 @@ describe('reading the models\' answers', () => {
     expect(groupingOf(null)).toEqual({storyId: null, newFacts: [], changesHeadline: null});
     expect(writtenOf({headline: ' Brush fire grows ', one_line: 'Warnings widened', summary: 'Text.', lead_article_id: 3, image_article_id: null, importance: 72}))
       .toEqual({headline: 'Brush fire grows', oneLine: 'Warnings widened', summary: 'Text.', leadArticleId: 3, imageArticleId: null, importance: 72});
-    // Importance is kept within 0–100; an answer without one leaves the story's as it was.
+    // Importance is kept within 0–100. An answer without one leaves the story's as it was.
     expect(writtenOf({headline: 'Fire', importance: 140})?.importance).toBe(100);
     expect(writtenOf({headline: 'Fire', importance: 'high'})?.importance).toBeNull();
     expect(writtenOf({headline: ''})).toBeNull();

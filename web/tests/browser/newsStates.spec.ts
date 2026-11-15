@@ -1,7 +1,7 @@
-// News's states, search and Light (boards 29a, 29b and 31) against
-// fixtures (server/src/dev/fixtures/newsStates.ts), which reach no model or feed: Unsorted with the AI
-// down and Show headlines, a stale section and a section with nothing new (29a); the first run (29b);
-// offline, as on every page; and Search news over the archive. Board 31 (Light) is news.spec.ts's,
+// News's states, search and Light (boards 29a, 29b and 31) against fixtures
+// (server/src/dev/fixtures/newsStates.ts), which reach no model or feed: Unsorted with the AI down
+// and Show headlines, a stale section and a section with nothing new (29a), the first run (29b),
+// offline as on every page, and Search news over the archive. Board 31 (Light) is news.spec.ts's,
 // beside board 25.
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -146,7 +146,7 @@ test('offline on News: the pill, the page dimmed but readable, J still moving th
     // Stopped within 9:12 AM while the stream drops, so the pill's minute is the check's.
     await pauseClock(page);
     await page.context().setOffline(true);
-    // The drop is seen at once; the pill comes past its grace, on the page's clock.
+    // The drop is seen at once. The pill comes past its grace, on the page's clock.
     await page.locator('.main.down').waitFor();
     await page.clock.runFor(OFFLINE_GRACE_MS);
     const pill = page.locator('.offline-pill');

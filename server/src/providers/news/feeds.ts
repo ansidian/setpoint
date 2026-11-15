@@ -1,6 +1,6 @@
-// News's feeds: RSS and Atom with a conditional GET (the ETag and Last-Modified are the cursor;
-// a 304 is a healthy check with nothing new), and Google News search, read the same way but only to
-// find stories: its articles are discovery, shown with their headline and Google's link, never read.
+// News's feeds: RSS and Atom with a conditional GET (the ETag and Last-Modified are the cursor, and
+// a 304 is a healthy check with nothing new). Google News search is read the same way but only to
+// find stories. Its articles are discovery, shown with their headline and Google's link, never read.
 import {parseFeed, NotAFeed} from '../../domain/newsFeeds.ts';
 import type {FeedItem} from '../../domain/newsFeeds.ts';
 import {canonicalUrl, inWindow, outletOf, publishedInstant} from '../../domain/newsIngest.ts';
@@ -89,14 +89,14 @@ export function googleNewsUrl(base: string, query: string): string {
   return url.toString();
 }
 
-/** Google News titles end with " - Outlet"; the outlet is in <source>. */
+/** Google News titles end with " - Outlet". The outlet is in <source>. */
 export function googleHeadline(headline: string, outlet: string | null): string {
   if (outlet && headline.endsWith(` - ${outlet}`)) return headline.slice(0, -(outlet.length + 3)).trim();
   return headline;
 }
 
 /**
- * Google News search for the area (`config.query`): it finds stories but is never read.
+ * Google News search for the area (`config.query`). It finds stories but is never read.
  * Each article is discovery, named for the outlet Google found it at, linked to Google.
  */
 export function googleNewsAdapter(options: NewsHttpOptions = {}): NewsAdapter {

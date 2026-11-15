@@ -1,10 +1,10 @@
 // The mail mirror: what the Gmail and iCloud adapters write to the message record. Providers own
-// the email and its read, trash and inbox state; Setpoint owns what triage derives (lane, kind,
+// the email and its read, trash and inbox state. Setpoint owns what triage derives (lane, kind,
 // organisation, …), Done, pins and when the user opened it, and the mirror never touches those. New
-// mail arrives Unsorted (lane null) with a triage job; backfilled history is sorted at once.
+// mail arrives Unsorted (lane null) with a triage job. Backfilled history is sorted at once.
 //
 // A message whose own change is still waiting for its provider (or failed, held in place) keeps
-// the state the command layer gave it: a sync that read the provider just before the change
+// the state the command layer gave it. A sync that read the provider just before the change
 // landed mustn't put it back (DESIGN.md › Interaction rules: nothing quietly reverts).
 import {and, eq, gte, inArray} from 'drizzle-orm';
 import {activeCommands} from '../commands/index.ts';
@@ -107,8 +107,8 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
         fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText, searchBody: searchBody(message.bodyText), bodyHtml: message.bodyHtml,
         receivedAt: message.receivedAt, senderAuth: message.senderAuth, senderAuthenticated: senderAuthenticated(message.senderAuth),
       };
-      // USPS's daily digest goes to the agenda rail, not the Inbox: sorted as it arrives
-      // (never triaged, so never notified), and its scans read from its source by a job.
+      // USPS's daily digest goes to the agenda rail, not the Inbox. It's sorted as it arrives
+      // (never triaged, so never notified), and a job reads its scans from its source.
       const digest = isDigest({...fields, senderAuthenticated: fields.senderAuthenticated});
       if (!row) {
         const created = store.db.insert(t.messages).values({
@@ -136,7 +136,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
       }
       updated.push(row.id);
     }
-    // New mail is queued for triage; backfilled history is sorted now by the rules-only pass.
+    // New mail is queued for triage. Backfilled history is sorted now by the rules-only pass.
     triageIntake(store, inserted, options.backfill ?? false);
     noteLive(store, {type: 'mail', messages: [...inserted, ...digests, ...updated], accounts: [accountId], commands: []});
     return {inserted: [...inserted, ...digests], updated};
@@ -178,7 +178,7 @@ export function removeMessages(store: Store, accountId: number, providerIds: str
       .where(and(eq(t.messages.accountId, accountId), inArray(t.messages.providerId, providerIds))).all();
     const ids = rows.map(row => row.id);
     if (!ids.length) return [];
-    // A command about a deleted email can't land any more; its history goes with it.
+    // A command about a deleted email can't land any more. Its history goes with it.
     store.db.delete(t.commands).where(and(eq(t.commands.target, 'message'), inArray(t.commands.targetId, ids))).run();
     store.db.update(t.aiUsage).set({messageId: null}).where(inArray(t.aiUsage.messageId, ids)).run();
     store.db.delete(t.messages).where(inArray(t.messages.id, ids)).run();

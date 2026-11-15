@@ -1,13 +1,13 @@
-// The iCloud adapter: IMAP with an app-specific password over one pooled
-// connection per account, polled every 2 minutes; the \Seen flag both ways; Trash with Undo; and
-// the 365-day backfill.
+// The iCloud adapter: IMAP with an app-specific password over one pooled connection per account,
+// polled every 2 minutes. It covers the \Seen flag both ways, Trash with Undo, and the 365-day
+// backfill.
 //
 // Each poll (sync) selects INBOX and
-// - fetches what arrived since the stored UID (the cursor is UIDVALIDITY and the last UID seen;
-//   a new UIDVALIDITY means every UID changed, so the backfill starts again and matches emails
-//   by Message-ID);
-// - reads every INBOX message's flags: read elsewhere shows here, and a message gone from INBOX
-//   left it (moved to Archive or Deleted Messages in Apple Mail) unless Setpoint trashed it;
+// - fetches what arrived since the stored UID. The cursor is UIDVALIDITY and the last UID seen. A
+//   new UIDVALIDITY means every UID changed, so the backfill starts again and matches emails by
+//   Message-ID.
+// - reads every INBOX message's flags. Read elsewhere shows here. A message gone from INBOX left it
+//   (moved to Archive or Deleted Messages in Apple Mail) unless Setpoint trashed it.
 // - takes the next step of the backfill.
 import {createHash} from 'node:crypto';
 import {eq, inArray} from 'drizzle-orm';
@@ -25,7 +25,7 @@ import {attachmentFromSource, fetchedMessage} from '../mime.ts';
 export interface ImapEndpoint {
   host: string;
   port: number;
-  // TLS from the start (iCloud's 993); plain only for the test server on 127.0.0.1.
+  // TLS from the start (iCloud's 993). Plain only for the test server on 127.0.0.1.
   secure: boolean;
 }
 
@@ -54,8 +54,8 @@ const providerId = (uidValidity: string | bigint, uid: number) => `${uidValidity
 const uidOf = (id: string, uidValidity: string) => (id.startsWith(`${uidValidity}:`) ? Number(id.slice(uidValidity.length + 1)) : null);
 
 /**
- * An IMAP refusal as a ProviderError: a refused login is needs-reconnect (the app password was
- * revoked or mistyped); server trouble and dropped connections are transient; anything else the
+ * An IMAP refusal as a ProviderError. A refused login is needs-reconnect (the app password was
+ * revoked or mistyped). Server trouble and dropped connections are transient. Anything else the
  * server said no to is permanent, in its own words.
  */
 export function imapError(error: unknown): ProviderError {
@@ -78,8 +78,8 @@ interface Pooled {
 }
 
 /**
- * One persistent connection per source: concurrent callers share the connect in
- * flight; a dead or failed connection is evicted so the next call connects afresh; idle ones close.
+ * One persistent connection per source. Concurrent callers share the connect in flight. A dead or
+ * failed connection is evicted so the next call connects afresh. Idle ones close.
  */
 class ImapPool {
   private readonly entries = new Map<number, Pooled>();
@@ -113,7 +113,7 @@ class ImapPool {
           return client;
         }
       } catch {
-        // Its connect failed; it was evicted, and a fresh one follows.
+        // Its connect failed. It was evicted, and a fresh one follows.
       }
     }
     if (existing) this.evict(sourceId, existing);
@@ -148,7 +148,7 @@ class ImapPool {
     if (this.entries.get(sourceId) === entry) this.entries.delete(sourceId);
   }
 
-  /** Whether a source's session is pooled: one iCloud closes leaves the pool as its client sees it go. */
+  /** Whether a source's session is pooled. One iCloud closes leaves the pool as its client sees it go. */
   holds(sourceId: number): boolean {
     return this.entries.has(sourceId);
   }
@@ -210,7 +210,7 @@ export class ICloudAdapter implements SourceAdapter {
     await this.pool.closeAll();
   }
 
-  /** The source's pooled connection, used under one mailbox lock; an aborted check closes it. */
+  /** The source's pooled connection, used under one mailbox lock. An aborted check closes it. */
   private async withMailbox<T>(context: AdapterContext, mailbox: string, work: (client: ImapFlow) => Promise<T>): Promise<T> {
     const credentials = context.credentials();
     if (!credentials || credentials.kind !== 'app_password') throw new ProviderError('auth', 'iCloud has no app password; reconnect it in Settings › Accounts.');
@@ -269,8 +269,8 @@ export class ICloudAdapter implements SourceAdapter {
     const {store} = context;
     const accountId = this.accountId(context);
     return this.withMailbox(context, INBOX, async client => {
-      // Selected again on purpose: the pooled session's view of UIDVALIDITY and UIDNEXT is from
-      // its last SELECT, which may be hours old.
+      // Selected again on purpose, because the pooled session's view of UIDVALIDITY and UIDNEXT is
+      // from its last SELECT, which may be hours old.
       const mailbox = await client.mailboxOpen(INBOX);
       if (!mailbox) throw new ProviderError('transient', 'iCloud didn\'t open the inbox.');
       const uidValidity = String(mailbox.uidValidity);
@@ -403,7 +403,7 @@ export class ICloudAdapter implements SourceAdapter {
       const moved = await client.messageMove(String(uid), INBOX, {uid: true});
       if (!moved) throw new ProviderError('permanent', 'iCloud couldn\'t move it back to the inbox.');
       const inboxUid = moved.uidMap?.get(uid);
-      // Its new INBOX UID; without UIDPLUS the next poll finds it by Message-ID.
+      // Its new INBOX UID. Without UIDPLUS the next poll finds it by Message-ID.
       store.db.update(t.messages).set({trashRef: null, ...(inboxUid && moved.uidValidity ? {providerId: providerId(moved.uidValidity, inboxUid)} : {})})
         .where(eq(t.messages.id, row.id)).run();
     });

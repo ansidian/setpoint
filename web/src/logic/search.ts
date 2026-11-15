@@ -1,5 +1,6 @@
-// Search, Alfred's Answer card, the proposal card's and the calendar search's rules: what the field asks, the results line, each reason's parts, the highlighted runs,
-// what the reader highlights, and how a proposal's time reads.
+// Search, Alfred's Answer card, the proposal card's and the calendar search's rules: what the field
+// asks, the results line, each reason's parts, the highlighted runs, what the reader highlights,
+// and how a proposal's time reads.
 import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
@@ -62,10 +63,10 @@ export const fieldSegments = (result: Pick<SearchResultOut, 'subject' | 'excerpt
   segments(result[field], result.highlights.filter(run => run.field === field));
 
 /**
- * The reasons a mail result shows: only what its lines don't already show. A
- * sender's or organisation's goes when the sender line is highlighted, a subject's when the subject is,
- * a body's when the excerpt is, and a date's always (it's the row's own day, in its age column). Type,
- * kind, account and a body match the excerpt doesn't hold stay. None left, the row has no why line.
+ * The reasons a mail result shows: only what its lines don't already show. A sender's or
+ * organisation's goes when the sender line is highlighted, a subject's when the subject is, a body's
+ * when the excerpt is, and a date's always (it's the row's own day, in its age column). Type, kind,
+ * account and a body match the excerpt doesn't hold stay. With none left, the row has no why line.
  */
 export function shownReasons(result: Pick<SearchResultOut, 'reasons' | 'highlights' | 'organisation'>): MatchReasonOut[] {
   const marked = (field: HighlightOut['field']) => result.highlights.some(run => run.field === field && run.end > run.start);
@@ -102,9 +103,12 @@ export function resultsLine(out: Pick<SearchOut, 'total'> & Partial<Pick<SearchO
 export const firstSection = (out: Pick<SearchOut, 'total' | 'first_section'>) => out.first_section || out.total;
 
 /**
- * What the list's end asks for as it nears (Search.tsx): the next page while the section above the fold
- * is still paging, or the fold is open and its pages are; else the rows left out under an open fold; and
- * nothing once the section above a closed fold is all here, so the rows under it wait until it opens.
+ * What the list's end asks for as it nears (Search.tsx):
+ * - the next page while the section above the fold is still paging, or the fold is open and its
+ *   pages are
+ * - else the rows left out under an open fold
+ * - nothing once the section above a closed fold is all here, so the rows under it wait until it
+ *   opens.
  */
 export function nextAsk(out: Pick<SearchOut, 'total' | 'first_section' | 'next_offset'> | null, mentions: boolean, shown: number, moreLeftOut: boolean): 'more' | 'left-out' | null {
   const ended = out !== null && !mentions && shown >= firstSection(out);
@@ -144,9 +148,9 @@ export interface MentionsFold {
 }
 
 /**
- * The fold for an answer: the same search keeps its own, whatever a later page or new mail says, and
- * a new one decides again, except that a fold the user closed stays closed while they refine the
- * same words (one's text starting the other's, the same chips), so typing doesn't undo the close.
+ * The fold for an answer. The same search keeps its own, whatever a later page or new mail says. A
+ * new one decides again, except that a fold the user closed stays closed while they refine the same
+ * words (one's text starting the other's, the same chips), so typing doesn't undo the close.
  */
 export function foldFor(before: MentionsFold | null, out: Pick<SearchOut, 'chips' | 'text' | 'first_section'> | null): MentionsFold | null {
   if (!out) return null;
@@ -170,9 +174,9 @@ export interface LeftOut<R> {
 }
 
 /**
- * The line under the results and its rows: `more` from the reading, less rows taken out meanwhile,
- * and like the fold it waits for everything above it to load, then shows whether the fold is open
- * or not. The server's count, not the rows, since only an open line has any.
+ * The line under the results and its rows: `more` from the reading, less rows taken out meanwhile.
+ * Like the fold, it waits for everything above it to load, then shows whether the fold is open or
+ * not. The server's count, not the rows, since only an open line has any.
  */
 export function leftOutSection<R extends {id: number}>(results: readonly R[], out: Pick<SearchOut, 'total' | 'first_section' | 'reading'> | null, left: LeftOut<R> | null, gone: ReadonlySet<number>): {more: number; rows: R[]} {
   const more = out?.reading?.more ?? 0;
@@ -195,9 +199,10 @@ const SUGGEST_MIN_LETTERS = 3;
 export const suggestionKey = (text: string) => text.trim().replace(/\s+/g, ' ').toLowerCase();
 
 /**
- * Whether a pause on the field's text asks for a suggestion: not with chips a suggestion left
- * in the field, which are the search's one reading, not for text too short to mean anything, and not
- * for text the user turned one down for. A "!word"'s Not chip is what they typed, and doesn't count.
+ * Whether a pause on the field's text asks for a suggestion. It doesn't with chips a suggestion left
+ * in the field, which are the search's one reading. It doesn't for text too short to mean anything,
+ * or for text the user turned one down for. A "!word"'s Not chip is what they typed, and doesn't
+ * count.
  */
 export const asksForSuggestion = (chips: readonly SearchChip[], text: string, declined: ReadonlySet<string>) =>
   !chips.some(standsForWords) && (text.match(/[\p{L}\p{N}]/gu)?.length ?? 0) >= SUGGEST_MIN_LETTERS && !declined.has(suggestionKey(text));
@@ -241,15 +246,15 @@ export const queryParts = (chips: readonly SearchChip[], text: string) => [...ch
 
 /**
  * What ⌘Enter asks Alfred: the words in the field, in the order they were typed when the field
- * still knows it (`typed`), since a chip leaves the text where it formed and sits first. Without that order, chips go back first as their words, which the grammar reads as the same
- * chips.
+ * still knows it (`typed`), since a chip leaves the text where it formed and sits first. Without
+ * that order, chips go back first as their words, which the grammar reads as the same chips.
  */
 export const alfredQuestion = (chips: readonly SearchChip[], text: string, typed: string | null = null) =>
   typed?.trim() ? typed.trim() : queryParts(chips, text).join(' ');
 
 /**
  * The field's words as typed, after its text went from `before` to `after` while it holds chips.
- * Typing on at the end keeps the order, a new word after chips that took every word; any other edit
+ * Typing on at the end keeps the order, a new word after chips that took every word. Any other edit
  * loses it (null), and it stays lost until the field holds no chips again.
  */
 export function typedAfter(typed: string | null, before: string, after: string): string | null {
@@ -266,7 +271,7 @@ export const answerSegments = (turn: Pick<AnswerOut, 'answer' | 'emphasis'>) => 
 
 /**
  * What the reader highlights in the open email's body: the bold phrases of the answers it's a source
- * of (board 07); else the words the search matched in it (board 06).
+ * of (board 07), else the words the search matched in it (board 06).
  */
 export function readerMarks(open: number | null, results: readonly SearchResultOut[], turns: readonly AnswerOut[]): string[] {
   if (open === null) return [];
@@ -286,8 +291,8 @@ export function searchedLine(searched: readonly string[]): string | null {
 }
 
 /**
- * The Answer card while Alfred works: what it's doing, from the tool it last ran; before its first,
- * reading the email a scoped card (Ask about this email) is about, or looking through the mail.
+ * The Answer card while Alfred works: what it's doing, from the tool it last ran. Before its first,
+ * it is reading the email a scoped card (Ask about this email) is about, or looking through the mail.
  */
 export function alfredStepLine(step: AskStep | null, scoped = false): string {
   if (!step) return scoped ? 'Reading this email…' : 'Looking through your mail…';
@@ -322,7 +327,7 @@ export function shownSources<T>(sources: readonly T[], all: boolean): {shown: T[
 
 /**
  * The names holding what's typed, any case, best first: those starting with it, then those
- * with a word starting with it, then the rest, each in list order; all of them for nothing typed.
+ * with a word starting with it, then the rest, each in list order. All of them for nothing typed.
  * The line reads "#ho" as the name it starts, so the menu's first row is the one it reads.
  */
 export function rankMatches<T>(text: string, list: T[], name: (one: T) => string): T[] {
@@ -341,7 +346,7 @@ export function rankMatches<T>(text: string, list: T[], name: (one: T) => string
     .map(entry => entry.one);
 }
 
-/** The projects Project's menu offers for what's typed: those whose name holds it, any case, best first (rankMatches); all of them for nothing typed. */
+/** The projects Project's menu offers for what's typed: those whose name holds it, any case, best first (rankMatches). All of them for nothing typed. */
 export const projectMatches = <T extends {name: string}>(text: string, projects: T[]): T[] => rankMatches(text, projects, project => project.name);
 
 /** Whether what's typed names a project exactly, any case, so the menu offers no New project. */
@@ -357,9 +362,9 @@ export const projectMenu = (text: string, projects: {name: string}[], isNew: boo
 ];
 
 /**
- * A task proposal's project as Create sends it: none typed is Settings' default; a
- * project's name in any case is that project; a new one is made only when the user picked New project,
- * and otherwise the card says so rather than guessing.
+ * A task proposal's project as Create sends it. None typed is Settings' default. A project's name in
+ * any case is that project. A new one is made only when the user picked New project, and otherwise
+ * the card says so rather than guessing.
  */
 export function projectChoice(text: string, projects: {name: string}[], create: boolean): {project: string | null; create_project: boolean} | {problem: string} {
   const name = text.trim();
@@ -395,7 +400,7 @@ export function resultDay(date: string, today: string): {day: string; year: stri
 
 /**
  * A result's line under its title, as the agenda's: an event's time, its series' rule as the editor
- * words it ("Weekly on Mon, Wed") and its place or calendar; a task's time, repeat and project.
+ * words it ("Weekly on Mon, Wed") and its place or calendar. A task's time, repeat and project.
  */
 export function calendarResultLine(result: Pick<CalendarSearchResultOut, 'item' | 'rule' | 'date'>, calendar: string | undefined, timeZone: string): string {
   const {item} = result;

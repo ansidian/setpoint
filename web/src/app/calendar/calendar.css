@@ -1,11 +1,11 @@
 /* The Calendar page: the month grid, the "+N" popover, the right pane and the
    sidebar's Calendar section. Values and class names are design-export/styles/setpoint.css's
-   (without `.sp`), as boards 11 and 11b draw them; the app wins where they differ. */
+   (without `.sp`), as boards 11 and 11b draw them. The app wins where they differ. */
 
 /* ---------- The header ---------- */
 .cal-title { min-width: 128px; }
 /* Paging swaps the title the way the grid went: a later month rises in 6 px,
-   an earlier one falls in; a week slides in from the side its days come from. */
+   an earlier one falls in. A week slides in from the side its days come from. */
 .cal-title[data-dir] { animation: cal-title-in var(--titleSwap) var(--ease); }
 .cal-title[data-dir="next"] { --title-from: translateY(var(--titleShift)); }
 .cal-title[data-dir="prev"] { --title-from: translateY(calc(-1 * var(--titleShift))); }
@@ -36,7 +36,7 @@
 .cell { border-right: 1px solid var(--hair); border-bottom: 1px solid var(--hair); padding: 6px 6px 4px; display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
 .cell:nth-child(7n) { border-right: 0; }
 /* In this order: a day outside the month takes its tint over a weekend's, and the selected day over
-   both. Weekends sit back and the days outside the shown month further; `out` flips as the
+   both. Weekends sit back and the days outside the shown month further. `out` flips as the
    scroll moves the shown month, so it eases. */
 .cell { transition: background-color var(--dur-medium) var(--ease); }
 .cell.weekend { background: var(--dayOff); }
@@ -86,9 +86,9 @@
 .wx.cloud { color: var(--ink2); }
 .wx.rain { color: var(--cool); }
 
-/* Events: tinted chips: the calendar's colour as text, its lightness capped at --tintL
-  , a 3 px inset bar, the colour at --evtint as fill; the selected item turns solid, with no
-   outline ring; a past item turns grey, its bar and fill faint. */
+/* Events are tinted chips: the calendar's colour as text, its lightness capped at --tintL, a 3 px
+   inset bar, and the colour at --evtint as fill. The selected item turns solid, with no outline
+   ring. A past item turns grey, its bar and fill faint. */
 .ev { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 6px 0 9px; border-radius: 6px; color: oklch(from var(--c, var(--cool)) min(l, var(--tintL)) c h);
   background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent); box-shadow: inset 3px 0 0 var(--c, var(--cool));
   font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
@@ -98,7 +98,7 @@
 .ev.past .t { opacity: 1; }
 .ev.pending, .tk.pending { opacity: .5; }
 /* On its way: an event's bar is dashed rather than solid, still for the
-   first second, then marching with the spinner; arrived, its tint brightens to `--evland` once
+   first second, then marching with the spinner. Arrived, its tint brightens to `--evland` once
    and settles over 420 ms, and its .5 eases back over 120 ms. A task keeps .5 and the spinner, and the ease. */
 .ev.pending { box-shadow: none; background-image: repeating-linear-gradient(to bottom, var(--c, var(--cool)) 0 3px, transparent 3px 6px); background-size: 3px 100%; background-repeat: no-repeat;
   animation: sending 900ms linear 1s infinite; }
@@ -106,7 +106,7 @@
 .ev.landed:not(.sel) { animation: landed 420ms var(--ease); }
 @keyframes landed { 0% { background-color: color-mix(in oklch, var(--c, var(--cool)) var(--evland), transparent); } }
 /* Deleted: a chip fades and shrinks out over 120 ms, then folds up over 180,
-   so the chips under it slide up into its place, as a mail row folds; Undo or ⌘Z unfolds it back in
+   so the chips under it slide up into its place, as a mail row folds. Undo or ⌘Z unfolds it back in
    reverse over 180 ms, then its tint lands. */
 .ev.removing, .tk.removing { animation: chip-out var(--dur-fast) var(--ease) forwards, chip-fold var(--dur-medium) var(--ease) var(--dur-fast) forwards; pointer-events: none; }
 .ev.restoring, .tk.restoring { animation: chip-unfold var(--dur-medium) var(--ease); }
@@ -115,7 +115,7 @@
 @keyframes chip-fold { to { height: 0; margin-bottom: -3px; } }
 @keyframes chip-unfold { from { height: 0; margin-bottom: -3px; opacity: 0; transform: scale(.96); } }
 .ev.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
-/* Tasks: the ring (12 px; its project's colour, else ink2, on the grid) or the done glyph in `good`, the title in ink 12. */
+/* Tasks: the ring (12 px, in its project's colour, else ink2, on the grid) or the done glyph in `good`, the title in ink 12. */
 .tk { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 4px; border-radius: 6px; color: var(--ink); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
 .tk .ring { --ring-base: var(--ring, var(--ink2)); width: 12px; height: 12px; vertical-align: -2px; margin: 0 6px 0 0; }
 .tk .task-glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
@@ -140,7 +140,7 @@
 /* A task's dot is its ring, its Todoist colour clamped per theme as the ring's is. */
 .more-dots .md.task { background: none; box-shadow: inset 0 0 0 1.5px oklch(from var(--ring, var(--ink2)) clamp(var(--ringMin), l, var(--ringMax)) c h); }
 
-/* The "+N" popover (board 11b): the day's every item, hanging from the "+N"; Esc closes it. */
+/* The "+N" popover (board 11b): the day's every item, hanging from the "+N". Esc closes it. */
 .daypop { position: absolute; width: 280px; padding: 6px 6px 8px; z-index: 3; }
 /* It grows from its "+N" (DayPopover places the point). */
 .pop.daypop, .pop.daypop[data-up] { transform-origin: var(--from-x, 8px) var(--from-y, 0px); }
@@ -204,7 +204,7 @@
 .ag-task .count:hover, .ag-task .count[aria-expanded="true"] { color: var(--ink); background: var(--sub2); }
 .ag-subtasks { padding: 0 20px 8px; }
 /* The checklist (Subtasks.tsx), in the floating detail and the day pane: a handle column, the ring,
-   the title. The handle shows under the pointer or with focus; a dragged row is at .5 and the
+   the title. The handle shows under the pointer or with focus. A dragged row is at .5 and the
    others slide to make room, as Settings' lists do. */
 .subtasks { display: flex; flex-direction: column; }
 .subtask { display: flex; align-items: flex-start; gap: 6px; padding: 2px 0; color: var(--ink2); }
@@ -216,7 +216,7 @@
 .subtask.pending, .subtask.dragging { opacity: .5; }
 .subtask.failed .fd-mark .icon { color: var(--alert); }
 .subtask .acts { display: inline-flex; flex: none; margin: -4px 0; }
-/* A title that opens the editor reads as text; a dated one's date and bell after it. */
+/* A title that opens the editor reads as text. A dated one's date and bell come after it. */
 button.subtask, .subtask button.title { border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .subtask button.title { padding: 0; }
 button.subtask { padding: 2px 0; width: 100%; }
@@ -233,7 +233,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .ag-task.timed { align-items: flex-start; }
 .ag-task.timed .check { padding-top: 2px; }
 /* The next event, lifted out of the list: a tint of its colour at 9% (14%
-   under the pointer, 16% selected), its time in `ink` and "in 5h" in its colour at 500; its content
+   under the pointer, 16% selected), its time in `ink` and "in 5h" in its colour at 500. Its content
    keeps the rows' 20 px inset. Under way, its bar fills as it goes, the rest at 30%. */
 .ag-item.next { margin: 2px 8px; padding: 8px 12px; border-radius: 10px; background: color-mix(in oklch, var(--c) 9%, transparent); }
 .ag-item.next:hover { background: color-mix(in oklch, var(--c) 14%, transparent); }
@@ -263,7 +263,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .ag-empty button { color: var(--ink2); }
 .ag-empty button:hover { color: var(--ink); }
 /* An empty day's ghost rows: 36 px, radius 10, the drafts' dashed outline in
-   `edgeOn`, `ink2`; under the pointer `sub`, `ink` and an `edgeHover` outline, over 120 ms. */
+   `edgeOn`, `ink2`. Under the pointer `sub`, `ink` and an `edgeHover` outline, over 120 ms. */
 .ag-ghosts { display: flex; flex-direction: column; gap: 6px; padding: 14px 8px 0; }
 .ag-ghost { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 12px; border-radius: 10px; outline: 1.5px dashed var(--edgeOn); outline-offset: -1.5px; color: var(--ink2); text-align: left;
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), outline-color var(--dur-fast) var(--ease); }
@@ -283,10 +283,10 @@ button.subtask.add:hover { color: var(--ink2); }
 .mini-head .step { display: inline-flex; }
 .mini { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; padding: 0 6px; }
 .mini > * { height: var(--miniDay); display: grid; place-items: center; font-size: 12px; color: var(--ink2); font-variant-numeric: tabular-nums; border-radius: 999px; }
-/* True 26 px discs: the pointer `sub2`, the selected day `sub3` with its
-   number `ink` at 500, so the two never look alike; the week view's shown week one `sub2` band, its
-   ends round, today's disc on it; six rows always, so nothing under it moves; ‹ › slide the days in
-   8 px from the side they come from over 180 ms. */
+/* True 26 px discs: the pointer `sub2`, the selected day `sub3` with its number `ink` at 500, so
+   the two never look alike. The week view's shown week is one `sub2` band, its ends round, today's
+   disc on it. There are always six rows, so nothing under it moves. ‹ › slide the days in 8 px from
+   the side they come from over 180 ms. */
 .mini > button { width: var(--miniDay); justify-self: center; }
 .mini > button:hover { background: var(--sub2); }
 .mini > .h { font-size: 11px; color: var(--ink3); height: 22px; }
@@ -306,7 +306,7 @@ button.subtask.add:hover { color: var(--ink2); }
 @keyframes mini-in-prev { from { opacity: 0; transform: translateX(-8px); } }
 .calrow { height: var(--calendarRow); width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; text-align: left; }
 .calrow:hover { background: var(--sub); }
-/* Off, a calendar's name recedes with its box; Todoist has no mark of its own. */
+/* Off, a calendar's name recedes with its box. Todoist has no mark of its own. */
 .calrow[aria-pressed="false"] { color: var(--ink3); }
 .chk { width: 14px; height: 14px; border-radius: 4px; background: var(--c); display: grid; place-items: center; flex: none; }
 .chk::after { content: ""; width: 3px; height: 7px; border: solid var(--onAccent); border-width: 0 1.6px 1.6px 0; transform: translateY(-1px) rotate(45deg); }
@@ -316,8 +316,8 @@ button.subtask.add:hover { color: var(--ink2); }
 .chk { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .chk::after { transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 
-/* A calendar toggled: hidden, its items fade out over 120 ms before they go;
-   shown, they fade in over 180 ms. */
+/* A calendar toggled: hidden, its items fade out over 120 ms before they go.
+   Shown, they fade in over 180 ms. */
 .ev.leaving, .tk.leaving, .wb.leaving, .ag-item.leaving { animation: ev-out var(--dur-fast) var(--ease) forwards; pointer-events: none; }
 .ev.entering, .tk.entering, .wb.entering, .ag-item.entering { animation: ev-in var(--dur-medium) var(--ease); }
 @keyframes ev-out { to { opacity: 0; } }
@@ -325,7 +325,7 @@ button.subtask.add:hover { color: var(--ink2); }
 
 /* ---------- Direct manipulation and changes in place ---------- */
 /* A draft, a drag's origin, or a drop waiting on its scope: a dashed ghost in the item's colour
-   (boards 13, 15, 15b); faded while the drop waits. */
+   (boards 13, 15, 15b). It's faded while the drop waits. */
 .ev.ghost { background: color-mix(in oklch, var(--c) 14%, transparent); box-shadow: none; outline: 1.5px dashed var(--c); outline-offset: -1.5px; color: oklch(from var(--c) min(l, var(--tintL)) c h); }
 .ev.ghost.faded { opacity: .35; }
 .tk.ghost { outline: 1.5px dashed var(--ink3); outline-offset: -1.5px; }
@@ -336,7 +336,7 @@ button.subtask.add:hover { color: var(--ink2); }
 /* Picked up, it eases into its tilt, scale and shadow over 120 ms. */
 .ev.lift, .tk.lift { animation: lift-in var(--dur-fast) var(--ease); }
 @keyframes lift-in { from { transform: none; box-shadow: none; } }
-/* The day under the drag takes the item's colour (`--dc`; a task's `ink3`), its fill at 9% and a 1.5 px
+/* The day under the drag takes the item's colour (`--dc`, or `ink3` for a task), its fill at 9% and a 1.5 px
    ring at 55% (Light 7% and 50%), over 120 ms, and shows where the item would land among its items as
    a dashed slot, its colour at 70% over 10%. */
 .cal-month { --droptint: 9%; --dropedge: 55%; }
@@ -357,11 +357,11 @@ button.subtask.add:hover { color: var(--ink2); }
   animation: fade-in var(--dur-fast) var(--ease); }
 .drag-tip.file-drop-tip { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; gap: 6px; animation: fade-in var(--dur-fast) var(--ease); }
 .drag-tip.file-drop-tip:not(.ics) { color: var(--ink2); }
-/* Waiting for the provider: a spinner after the title; failed: an error glyph before it (board 19b). */
+/* Waiting for the provider: a spinner after the title. Failed: an error glyph before it (board 19b). */
 .ev .icon, .tk .icon { display: inline-block; vertical-align: -2px; }
 .ev.failed .icon, .tk.failed .icon { margin-right: 4px; }
 .tk.failed { color: var(--alert); box-shadow: inset 0 0 0 1px var(--alert); }
-/* Waiting shows at .5 at once, the shared spinner (states.css) only after a second; its place is kept so the title doesn't shift. */
+/* Waiting shows at .5 at once, the shared spinner (states.css) only after a second. Its place is kept so the title doesn't shift. */
 .ev .spin, .tk .spin, .ag-item .spin, .cal-row .spin { animation: spin-later 0s 1s both; }
 .ev .spin { color: inherit; }
 
@@ -411,25 +411,25 @@ button.subtask.add:hover { color: var(--ink2); }
 .rpane > .rp-health, .cal-health > .rp-health { flex: none; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--hair); font-size: 12.5px; color: var(--ink3); }
 .rpane > .rp-health.failing, .cal-health > .rp-health.failing { color: var(--caution); padding-top: 7px; padding-bottom: 7px; line-height: 18px; }
 .rpane > .rp-health.failing > .icon, .cal-health > .rp-health.failing > .icon { align-self: flex-start; margin-top: 1px; }
-/* Check now on the line, kept whole after the words; on a failing line that wraps, centred
+/* Check now on the line, kept whole after the words. On a failing line that wraps, it's centred
    on the words. */
 .rp-health > .rp-act { flex: none; display: inline-flex; align-items: center; }
 .cal-health { flex: none; display: flex; flex-direction: column; }
 
-/* The compact tier, 640 to 1099 px: beside the 400 px pane the
-   grid would be 184 to 643 px, its chips cut to "7 A…", so it takes the width, and the right pane
-   lies over its right side, with an overlay's shadow, while it holds the editor or search; the day's
-   own pane isn't drawn. The floating detail floats over it, as it would over the grid; beside the
-   editor it glides clear of it (motion.ts). */
+/* The compact tier, 640 to 1099 px. Beside the 400 px pane the grid would be 184 to 643 px, its
+   chips cut to "7 A…", so it takes the width. The right pane lies over its right side, with an
+   overlay's shadow, while it holds the editor or search. The day's own pane isn't drawn. The
+   floating detail floats over it, as it would over the grid. Beside the editor it glides clear of
+   it (motion.ts). */
 @media (min-width: 640px) and (max-width: 1099px) {
   .cal-content { flex-direction: column; }
   .cal-content > .rpane { position: absolute; top: 0; right: 0; bottom: 0; z-index: 4; background: var(--page); border-left: 1px solid var(--edgeOn); box-shadow: var(--shadow-pop); }
-  /* It comes in 24 px from the right over 180 ms; an editor the card hands over keeps its own entrance. */
+  /* It comes in 24 px from the right over 180 ms. An editor the card hands over keeps its own entrance. */
   .cal-content > .rpane:not(.handed) { animation: rpane-over var(--dur-medium) var(--ease); }
   .cal-content .fd { z-index: 5; }
   @keyframes rpane-over { from { transform: translateX(24px); opacity: 0; } }
   /* The day's pane, brought over by its header button, lies where the
-     editor does; its sources' health already sits atop the grid. The button is lit `sub2` while it's open. */
+     editor does. Its sources' health already sits atop the grid. The button is lit `sub2` while it's open. */
   .cal-content > .rpane > .rp-health { display: none; }
   .ibtn.cal-daypane[aria-pressed="true"] { background: var(--sub2); color: var(--ink); }
   /* A file's pill centres in the part of the grid an open pane leaves uncovered. */
@@ -439,7 +439,7 @@ button.subtask.add:hover { color: var(--ink2); }
 @media (min-width: 640px) and (max-width: 719px) {
   .hd .btn.cal-new { width: 30px; padding: 0; justify-content: center; }
   .hd .btn.cal-new > .cal-new-label, .hd .btn.cal-new > .kbd { display: none; }
-  /* No room for Import .ics… here; ⌘K and a file dropped on the grid still import. */
+  /* No room for Import .ics… here. ⌘K and a file dropped on the grid still import. */
   .hd .ibtn.cal-import-open { display: none; }
 }
 
@@ -466,7 +466,7 @@ button.subtask.add:hover { color: var(--ink2); }
    answer lies over it: its own colour at `--evhover`, deepening it (a solid, selected chip keeps the
    `sub` it had). Pressed, it gives to .97 and deepens to 28% until a drag lifts it. */
 .ev { position: relative; transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), filter var(--dur-medium) var(--ease); }
-/* A calendar search dims what it doesn't match to .3 over 180 ms, and back; as
+/* A calendar search dims what it doesn't match to .3 over 180 ms, and back, as
    a filter, so a match waiting for its provider keeps its own .5 on top. */
 .ev.unmatched, .tk.unmatched { filter: opacity(.3); }
 .ev::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in oklch, var(--c, var(--cool)) var(--evhover), transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }

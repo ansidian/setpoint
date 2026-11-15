@@ -1,8 +1,9 @@
 // The Inbox's views in the browser, at the design target on a fresh seed each:
-// All | Unread | Attention | FYI | Noise in the header, Tab and Shift-Tab stepping them; Unread's red
-// badge and Attention's count; an email read in Unread staying there until the view changes; each
-// view's part of the list; Mark all as read following the view; an empty view's drawing, quiet line and
-// Show All; and the sidebar's Inbox and 1 going back to All. The seed starts at 3 attention and 19 unread.
+// All | Unread | Attention | FYI | Noise in the header, with Tab and Shift-Tab stepping them. Then
+// Unread's red badge and Attention's count, an email read in Unread staying there until the view
+// changes, each view's part of the list, and Mark all as read following the view. Then an empty
+// view's drawing, quiet line and Show All, and the sidebar's Inbox and 1 going back to All. The seed
+// starts at 3 attention and 19 unread.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
@@ -31,17 +32,17 @@ test('the views: Unread\'s red badge and Attention\'s count, Tab and Shift-Tab s
     const page = await load(setpoint);
     assert.deepEqual(await views(page), ['All', 'Unread19', 'Attention3', 'FYI', 'Noise']);
     assert.equal(await on(page), 'All');
-    // The sidebar's Inbox has the red badge and nothing else; the tab counts unread.
+    // The sidebar's Inbox has the red badge and nothing else. The tab counts unread.
     assert.deepEqual(await page.locator('.nav:has-text("Inbox") .num').allTextContents(), ['19']);
     assert.equal(await page.locator('.nav:has-text("Inbox") .ubadge').count(), 1);
     await until('the title counts unread', () => page.title(), title => title === '(19) Inbox');
-    // Tab steps to the next view; Shift-Tab goes back (the wrap is components/segmented.test.tsx's).
+    // Tab steps to the next view, and Shift-Tab goes back (the wrap is components/segmented.test.tsx's).
     for (const [key, view] of [['Tab', 'unread'], ['Shift+Tab', null]] as const) {
       await page.keyboard.press(key);
       await until(`${key} to ${view ?? 'all'}`, async () => viewOf(page), now => now === view);
     }
     assert.equal(await on(page), 'All');
-    // 1 goes back to All; the sidebar's Inbox does from any view.
+    // 1 goes back to All. The sidebar's Inbox does from any view.
     await page.locator('.hd .ib-views button', {hasText: 'Noise'}).click();
     await until('Noise', async () => viewOf(page), now => now === 'noise');
     await page.keyboard.press('1');
@@ -106,7 +107,7 @@ test('Attention, FYI and Noise each show their part; Mark all as read reads only
     const button = page.locator('.hd .mark-all');
     assert.equal(await button.getAttribute('data-tip'), 'Mark FYI as read · ⇧I');
     await button.click();
-    // Security keeps its three; the rest of FYI reads, and Noise and Attention don't.
+    // Security keeps its three. The rest of FYI reads, and Noise and Attention don't.
     await until('FYI read but Security', () => counts(setpoint), value => value.unread_fyi === 3, 5000);
     assert.equal((await counts(setpoint)).unread, before.unread - (before.unread_fyi - 3));
 

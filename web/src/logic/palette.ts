@@ -1,6 +1,6 @@
-// ⌘K's list (board 20): commands, not search. With nothing typed it shows This
-// email (on an open email) or Selected emails, Go to and Appearance; typing finds every command, the ones that only
-// have a key too (New event, New task, Mark all as read, Sign out), in the same section order.
+// ⌘K's list (board 20): commands, not search. With nothing typed it shows This email (on an open
+// email) or Selected emails, Go to and Appearance. Typing finds every command, in the same section
+// order. That includes the ones that only have a key (New event, New task, Mark all as read, Sign out).
 
 export const PALETTE_SECTIONS = ['email', 'selection', 'goto', 'appearance', 'more'] as const;
 export type PaletteSection = (typeof PALETTE_SECTIONS)[number];
@@ -37,7 +37,7 @@ export function matchedRuns(label: string, query: string): {start: number; end: 
   return runs;
 }
 
-/** The sections to show for what's typed, each with its commands in their order; empty sections left out. */
+/** The sections to show for what's typed, each with its commands in their order. Empty sections are left out. */
 export function paletteList<T extends Matchable>(commands: T[], query: string): {section: PaletteSection; items: T[]}[] {
   const typed = query.trim() !== '';
   return PALETTE_SECTIONS

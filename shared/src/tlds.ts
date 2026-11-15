@@ -29,5 +29,5 @@ const COUNTRY = [
 
 const TLDS: ReadonlySet<string> = new Set([...GENERIC, ...COUNTRY]);
 
-/** Whether a bare domain ending in `tld` ("tv", "com") counts as a link; any case. */
+/** Whether a bare domain ending in `tld` ("tv", "com") counts as a link, in any letter case. */
 export const isLinkTld = (tld: string): boolean => TLDS.has(tld.toLowerCase());

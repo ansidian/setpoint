@@ -1,6 +1,7 @@
-// The sidebar's Today block on mail pages: the next event ("2:30 PM  Dentist  in 5h") and the open tasks due today, a timed one
-// with its time ("9:00 AM"), in one list by time with the untimed tasks after; then, under its own
-// Tomorrow label, tomorrow's events and its open tasks in the same order. Confirmed data only, and nothing for an empty line.
+// The sidebar's Today block on mail pages: the next event ("2:30 PM  Dentist  in 5h") and the open
+// tasks due today, a timed one with its time ("9:00 AM"). They are in one list by time with the
+// untimed tasks after. Then, under its own Tomorrow label, come tomorrow's events and its open tasks
+// in the same order. Confirmed data only, and nothing for an empty line.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, localDate, startsIn} from './format.ts';
 
@@ -44,7 +45,7 @@ export interface TomorrowEvent {
 
 export interface Today {
   event: TodayEvent | null;
-  // Today's first, then tomorrow's; none when nothing's due.
+  // Today's first, then tomorrow's. None when nothing's due.
   tasks: TodayTask[];
   // Tomorrow's timed events by their start, under the Tomorrow label before its tasks.
   tomorrowEvents: TomorrowEvent[];
@@ -66,7 +67,7 @@ export function todayRange(now: number, timeZone: string): {from: string; to: st
   return {from, to: addDays(from, 2)};
 }
 
-/** Where an item sits in a day's time order: an event's start, a timed task's time; null for an untimed task. */
+/** Where an item sits in a day's time order: an event's start, a timed task's time. Null for an untimed task. */
 export const lineTime = (item: ItemOut): string | null => (item.kind === 'task' ? item.due_at : item.starts_at);
 
 /**
@@ -84,9 +85,9 @@ export function byTime<T>(lines: readonly T[], itemOf: (line: T) => ItemOut): T[
 }
 
 /**
- * The next timed event today that hasn't ended (one under way says "now"); tomorrow's timed events by
- * their start; open tasks due today and tomorrow, each day's timed ones by their time, then the
- * untimed. Items still waiting for their provider (pending) aren't confirmed, so they don't count.
+ * The next timed event today that hasn't ended (one under way says "now"), tomorrow's timed events
+ * by their start, and open tasks due today and tomorrow, each day's timed ones by their time, then
+ * the untimed. Items still waiting for their provider (pending) aren't confirmed, so they don't count.
  */
 export function todayBlock(items: ItemOut[], now: number, timeZone: string): Today {
   const today = localDate(now, timeZone);
@@ -115,9 +116,9 @@ export function todayBlock(items: ItemOut[], now: number, timeZone: string): Tod
 }
 
 /**
- * Tomorrow's lines, in time order, to show (Today's never fold): every one when they fit or the block's been opened;
- * otherwise the first two and "3 more due tomorrow" for the rest ("3 more tomorrow" when an event is
- * among them), which opens them all.
+ * Tomorrow's lines, in time order, to show (Today's never fold). Every one shows when they fit or
+ * the block's been opened. Otherwise the first two show, and "3 more due tomorrow" for the rest
+ * ("3 more tomorrow" when an event is among them), which opens them all.
  */
 export function shownTomorrow<T>(lines: T[], open: boolean, isEvent: (line: T) => boolean): {shown: T[]; more: string | null} {
   if (open || lines.length <= TODAY_TASKS) return {shown: lines, more: null};
@@ -143,7 +144,7 @@ export interface NextUp {
 /**
  * Today's next timed item, an event or a task alike: an event under way or still to start, or
  * a timed task still to come, the earliest first, an event before a task at the same time. A timed
- * task whose time has passed isn't next. None once nothing timed is left today; pending items don't count.
+ * task whose time has passed isn't next. None once nothing timed is left today. Pending items don't count.
  */
 export function nextUp(items: ItemOut[], now: number, timeZone: string): NextUp | null {
   const today = localDate(now, timeZone);

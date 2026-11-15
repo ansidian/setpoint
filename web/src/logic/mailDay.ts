@@ -5,7 +5,7 @@ import {fileSize} from './reader.ts';
 
 const n = (value: number) => value.toLocaleString('en-US');
 
-/** The headline: "3 need you" and ", 1 overdue" (in `caution`); null when nothing needs the user (All caught up). */
+/** The headline: "3 need you" and ", 1 overdue" (in `caution`). Null when nothing needs the user (All caught up). */
 export function needLine(day: Pick<MailDayOut, 'need_you' | 'overdue'>): {need: string; overdue: string | null} | null {
   if (day.need_you === 0) return null;
   return {need: `${n(day.need_you)} ${day.need_you === 1 ? 'needs' : 'need'} you`, overdue: day.overdue ? `${n(day.overdue)} overdue` : null};

@@ -1,8 +1,8 @@
 // Time to Leave's rules: from Home, using live routes, with the buffer. The physical-location test,
 // the leave time (start − buffer − travel) and the bounded route-check cadence. The buffer comes
-// from Settings (5 min by default), the leave time is floored to the minute and the travel time
-// rounded up, so "Leave by 2:05 PM · 18 min" adds up exactly; and implausible routes (a geocode in
-// the wrong city) are refused instead of sending the user out hours early.
+// from Settings (5 min by default). The leave time is floored to the minute and the travel time is
+// rounded up, so "Leave by 2:05 PM · 18 min" adds up exactly. Implausible routes (a geocode in the
+// wrong city) are refused instead of sending the user out hours early.
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -18,7 +18,7 @@ export function isPhysicalLocation(location: string | null | undefined): boolean
   return !URL_ONLY.test(text) && !ZOOM_ONLY.test(text);
 }
 
-/** The longest drive and distance Setpoint believes; anything more is a wrong geocode. */
+/** The longest drive and distance Setpoint believes. Anything more is a wrong geocode. */
 export const MAX_TRAVEL_SECONDS = 4 * 60 * 60;
 export const MAX_TRAVEL_METERS = 400_000;
 
@@ -39,9 +39,9 @@ export function leaveAt(startsAt: string, durationSeconds: number, bufferMinutes
 }
 
 /**
- * When to check the route next: more than 3 hours before leaving, once at 3 hours
- * before; between 1 and 3 hours, every 15 minutes; in the last hour (or past it), every 5; never
- * after the start, and not at all once it has started.
+ * When to check the route next. More than 3 hours before leaving, check once at 3 hours before.
+ * Between 1 and 3 hours, check every 15 minutes. In the last hour (or past it), check every 5. Never
+ * check after the start, and not at all once it has started.
  */
 export function nextRouteCheck(now: string, departure: string, startsAt: string): string | null {
   const nowMs = Date.parse(now);
@@ -52,7 +52,7 @@ export function nextRouteCheck(now: string, departure: string, startsAt: string)
   return new Date(Math.min(next, start)).toISOString();
 }
 
-/** After a failed check: the last estimate stands, and the next try is at least 5 minutes away. */
+/** After a failed check, the last estimate stands, and the next try is at least 5 minutes away. */
 export function retryRouteCheck(now: string, departure: string | null, startsAt: string): string | null {
   const nowMs = Date.parse(now);
   if (nowMs >= Date.parse(startsAt)) return null;

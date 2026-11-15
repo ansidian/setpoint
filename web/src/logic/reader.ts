@@ -1,12 +1,12 @@
-// The reader's rules: who it's
-// from, which actions it offers, the security facts card, whether remote images load, and the
-// attachments' labels and previews.
+// The reader's rules: who it's from, which actions it offers, the security facts card, whether
+// remote images load, and the attachments' labels and previews.
 import type {AttachmentOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
 import {clockTime, daysBetween, localDate} from './format.ts';
 
 /**
- * The head's line after the sender's name: "organisation · via platform" in `ink2`; when the organisation is the sender (Google, Contoso Coffee), the sender's domain in
- * `ink3`, as boards 02 and 03 draw it. The reader puts " · " before it (on the phone it has its own line).
+ * The head's line after the sender's name: "organisation · via platform" in `ink2`. When the
+ * organisation is the sender (Google, Contoso Coffee), it is the sender's domain in `ink3`, as
+ * boards 02 and 03 draw it. The reader puts " · " before it (on the phone it has its own line).
  */
 export function senderLine(message: Pick<MessageOut, 'from_name' | 'organisation' | 'via'> & Partial<Pick<MessageOut, 'remote_content'>>): {text: string; tone: 'ink2' | 'ink3'} | null {
   const parts = [message.organisation && message.organisation !== message.from_name ? message.organisation : null, message.via ? `via ${message.via}` : null]
@@ -20,7 +20,7 @@ export function senderLine(message: Pick<MessageOut, 'from_name' | 'organisation
  * Where Add to calendar and Add as task live: under the head, or in the tools' More menu on Security
  * mail (its facts card stands in) and Noise (boards 02 and 03 draw no buttons).
  * Ask about this email is under the head on every email. Done is there only for Attention mail not
- * yet Done: elsewhere opening the email has already read it, so Done changed nothing but the toast.
+ * yet Done. Elsewhere opening the email has already read it, so Done changed nothing but the toast.
  */
 export function readerActions(message: Pick<MessageOut, 'kind' | 'lane' | 'done'>): {done: boolean; proposals: 'buttons' | 'more'; ask: true} {
   return {
@@ -88,7 +88,7 @@ export function hasRemoteContent(html: string | null): boolean {
 }
 
 /**
- * Whether remote images load, and whether the images-hidden bar shows: they load on their own when
+ * Whether remote images load, and whether the images-hidden bar shows. They load on their own when
  * the server says so (the sender passed DMARC and it isn't Noise, or its domain is trusted), or once
  * the user says Show for this email. The bar shows only while there's something hidden.
  */
@@ -190,7 +190,7 @@ export function parseCsv(text: string, limit = Infinity): string[][] {
 /** How wide the reading pane may be dragged, starting at 680. */
 export const READING_PANE = {min: 480, max: 1100, start: 680, step: 16} as const;
 
-/** A dragged or stored width, whole and inside the bounds; anything unreadable is the start. */
+/** A dragged or stored width, whole and inside the bounds. Anything unreadable is the start. */
 export function paneWidth(width: number | string | null): number {
   const value = width === null || width === '' ? NaN : Number(width);
   return Number.isFinite(value) ? Math.round(Math.min(READING_PANE.max, Math.max(READING_PANE.min, value))) : READING_PANE.start;

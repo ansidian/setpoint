@@ -1,6 +1,6 @@
 // Reading sorted mail again for its verification code. Triage stores the code it finds once,
 // so mail sorted before the detector improved keeps what the older one found. This lists what reading
-// again would change and, with apply, writes it; it also lists the emails triage typed as code
+// again would change and, with apply, writes it. It also lists the emails triage typed as code
 // emails that still have no code, the detector's likely misses. Unsorted mail is left alone: it gets
 // its code when triage sorts it.
 import {and, eq, inArray, isNotNull} from 'drizzle-orm';

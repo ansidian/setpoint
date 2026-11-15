@@ -1,8 +1,8 @@
-// A count that rolls when it changes: the unread badge, the sidebar's
-// unread counts, a group header's and All's lane counts. For 180 ms it shows both numbers in one
-// cell: going down (a Done, a read), the old one leaves downward and the new one comes in from above,
-// as an odometer rolls; going up, the other way. The old number is drawn by the cell's ::after from
-// `data-was`, so the count's text is only ever the number itself.
+// A count that rolls when it changes: the unread badge, the sidebar's unread counts, a group
+// header's and All's lane counts. For 180 ms it shows both numbers in one cell. Going down (a Done,
+// a read), the old one leaves downward and the new one comes in from above, as an odometer rolls.
+// Going up, they move the other way. The cell's ::after draws the old number from `data-was`, so
+// the count's text is only ever the number itself.
 import {useEffect, useState} from 'react';
 import {motion} from '../tokens.ts';
 

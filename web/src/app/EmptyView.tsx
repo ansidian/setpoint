@@ -5,7 +5,7 @@ import {EMPTY_HEADLINES, quietLine} from '../logic/emptyView.ts';
 import type {EmptyInboxView} from '../logic/emptyView.ts';
 import {useNow} from './clock.ts';
 
-// One line of a drawing: `ink3` unless it's the view's one touch of colour; `solid` ones hide what's behind.
+// One line of a drawing: `ink3` unless it's the view's one touch of colour. `solid` ones hide what's behind.
 interface Stroke {d: string; accent?: boolean; solid?: boolean}
 
 // The emptied tray FYI and Noise share: its rim's notch, as the app's inbox glyph has it.

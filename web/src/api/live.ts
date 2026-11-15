@@ -1,13 +1,14 @@
 // Live updates: one Server-Sent Events stream, GET /api/events, while the user is signed in
 // (shared/src/api/live.ts). Each event names what changed, and the app refetches only what it
-// shows of that (logic/live.ts); `resync` refetches everything on screen. The browser reconnects on
-// its own after a dropped connection with the last id; a stream that's refused (the server down, or
-// the session gone) reconnects after a few seconds and asks whether it's still signed in.
+// shows of that (logic/live.ts). `resync` refetches everything on screen. After a dropped
+// connection the browser reconnects on its own with the last id. A stream that's refused (the
+// server down, or the session gone) reconnects after a few seconds and asks whether it's still
+// signed in.
 //
-// While the stream is down Setpoint is offline: changes are refused
-// at once rather than queued (client.ts), and if it's still down after a 2 s grace the pill says since
-// when and the page dims, still readable, so a laptop waking or a
-// Wi-Fi handoff never cries wolf. Retry now reconnects at once.
+// While the stream is down, Setpoint is offline. Changes are refused at once rather than queued
+// (client.ts). If the stream is still down after a 2 s grace, the pill says since when and the page
+// dims but stays readable. The grace means a laptop waking or a Wi-Fi handoff never cries wolf.
+// Retry now reconnects at once.
 import {LIVE_EVENT_TYPES} from '@setpoint/shared';
 import type {LiveEvent} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
@@ -26,7 +27,7 @@ let onRefused: () => void = () => {};
 /** How long the stream may be down before the page says so. */
 export const OFFLINE_GRACE_MS = 2000;
 
-/** Down since this moment (the server's clock), or null while the stream is up; changes are refused meanwhile. */
+/** Down since this moment (the server's clock), or null while the stream is up. Changes are refused meanwhile. */
 let downSince: number | null = null;
 /** The same moment once the grace has passed and the page says so, or null. */
 let offlineSince: number | null = null;
@@ -60,7 +61,7 @@ const subscribe = (listener: () => void) => {
 /** Offline since this moment, once it's lasted the grace: the pill and the dim show it. */
 export const useOfflineSince = () => useSyncExternalStore(subscribe, () => offlineSince);
 
-/** Whether changes are refused now: from the moment the stream drops, before the pill shows. */
+/** Whether changes are refused now. They are from the moment the stream drops, before the pill shows. */
 export const writesRefused = () => downSince !== null;
 export const useDown = () => useSyncExternalStore(subscribe, writesRefused);
 
@@ -101,14 +102,14 @@ function connect() {
   };
 }
 
-/** Opens the stream; `refused` runs when it's turned away, to check the session. */
+/** Opens the stream. `refused` runs when it's turned away, to check the session. */
 export function startLive(refused: () => void) {
   onRefused = refused;
   if (source || timer !== undefined) return;
   connect();
 }
 
-/** Closes the stream (signed out); signing in again resumes from the last id. */
+/** Closes the stream (signed out). Signing in again resumes from the last id. */
 export function stopLive() {
   window.clearTimeout(timer);
   timer = undefined;

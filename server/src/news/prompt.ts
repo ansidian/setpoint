@@ -2,14 +2,14 @@
 // through one tool:
 // - each article (Claude Haiku 5.5): its sections, what kind of thing it is and what it's about (the
 //   noise and politics policy is applied to that answer in src/domain/newsSorting.ts), its key facts,
-//   its importance against the section's guide, where it happened, and a keynote it announces;
+//   its importance against the section's guide, where it happened, and a keynote it announces
 // - grouping (Haiku): whether an article is about one of a few likely stories, what facts it adds, and
-//   whether they change the story's headline or one line, which alone rewrites it;
+//   whether they change the story's headline or one line, which alone rewrites it
 // - a story (Claude Sonnet 5.5, Haiku past the monthly cap): the neutral headline, the one line and
 //   the summary, from Haiku's fact notes in the story's window, with the lead article, the best
 //   image and how much the story matters against its sections' guides. That judgement is the story's
-//   importance in the ranking; no separate call ranks the stories.
-// Each system prompt is fixed text, so its cached prefix holds; what changes rides in the input.
+//   importance in the ranking. No separate call ranks the stories.
+// Each system prompt is fixed text, so its cached prefix holds. What changes rides in the input.
 // Answers are read leniently, field by field: what doesn't fit is dropped, and only an answer missing
 // what the step can't do without is unusable (null).
 import {NEWS_SECTIONS} from '@setpoint/shared';
@@ -202,8 +202,8 @@ export interface PromptSource {
 }
 
 /**
- * The story as its writer sees it: on a rewrite, the headline and summary it has, which carry its past;
- * then its window's facts and sources (writerWindow).
+ * The story as its writer sees it: on a rewrite, the headline and summary it has, which carry its past.
+ * Then its window's facts and sources (writerWindow).
  */
 export function storyInput(story: {headline: string | null; summary: string | null; sections: NewsSection[]; facts: {at: string; text: string}[]}, sources: readonly PromptSource[]): string {
   return [
@@ -249,7 +249,7 @@ function validZone(zone: string): boolean {
   }
 }
 
-/** A keynote as the model gave it: a real date, and a time with its zone when it gave both; a day without one is all day. */
+/** A keynote as the model gave it: a real date, and a time with its zone when it gave both. A day without one is all day. */
 export function keynoteOf(value: unknown, timeZone: string): KeynoteNote | null {
   if (!isRecord(value)) return null;
   const company = text(value.company, 60);
@@ -282,7 +282,7 @@ export const fallbackNotes = (section: NewsSection, headline: string): ArticleNo
   sections: [section], kind: 'event', subject: 'other', facts: [headline], importance: 20, place: null, keynote: null,
 });
 
-/** The grouping tool's input; an unusable answer is no match, and one that doesn't say whether the headline changes is null. */
+/** The grouping tool's input. An unusable answer is no match, and one that doesn't say whether the headline changes is null. */
 export function groupingOf(input: Record<string, unknown> | null): {storyId: number | null; newFacts: string[]; changesHeadline: boolean | null} {
   if (!input) return {storyId: null, newFacts: [], changesHeadline: null};
   const storyId = integer(input.story_id);
@@ -298,7 +298,7 @@ export interface WrittenStory {
   summary: string | null;
   leadArticleId: number | null;
   imageArticleId: number | null;
-  // How much the story matters, 0–100; null when the answer gave none, which leaves the story's as it was.
+  // How much the story matters, 0–100. Null when the answer gave none, which leaves the story's as it was.
   importance: number | null;
 }
 

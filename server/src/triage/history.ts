@@ -8,7 +8,7 @@
 //   from the CLI (`npm run cli -- triage-history`). Starting it is recorded (schedule_marks), so
 //   accounts backfilled later are read too.
 // - Each email is a durable `extract` job on the engine (key `extract:<id>`), retried by the one
-//   policy; every few minutes the pass queues whatever is left, so it resumes after a restart.
+//   policy. Every few minutes the pass queues whatever is left, so it resumes after a restart.
 // - `extracted_at` is written with the result, after the call, in one transaction, and a job for an
 //   email already read finishes without a call: each email is charged for at most once. An answer
 //   without a usable reading still counts as read (it was paid for).
@@ -67,8 +67,8 @@ export function startHistoryExtraction(store: Store): HistoryExtractionOut & {qu
 }
 
 /**
- * Writes what the model read, once: only fields it filled, never the lane, kind or protection; a
- * code or protected email keeps its type; security facts only on security mail.
+ * Writes what the model read, once: only fields it filled, never the lane, kind or protection. A
+ * code or protected email keeps its type. Security facts go only on security mail.
  */
 export function applyExtraction(store: Store, messageId: number, reading: Reading | null): boolean {
   return transaction(store, () => {
@@ -119,7 +119,7 @@ export class HistoryExtractor implements JobWorker {
     this.timeoutMs = timeoutMs;
   }
 
-  /** Starts the pass once the backfills are done and a key is set; afterwards, queues what's left. */
+  /** Starts the pass once the backfills are done and a key is set. Afterwards, queues what's left. */
   schedule() {
     const now = this.store.now().getTime();
     if (now - this.lastCheckAt < this.everyMs) return;

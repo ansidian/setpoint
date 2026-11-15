@@ -1,6 +1,7 @@
-// Small coloured text in its worst state: each on the background a hovered, cursor or
-// open row gives it, or its own wash, in Night and in Light. The sweep's axe sees the pages at rest only,
-// so these states are checked here, at WCAG's 4.5:1 for text under 18.66 px bold. Jobs's are in jobs.test.tsx.
+// Small coloured text in its worst state: each on the background that a hovered, cursor or open row
+// gives it, or on its own wash, in Night and in Light. The sweep's axe sees the pages at rest only,
+// so these states are checked here, at WCAG's 4.5:1 for text under 18.66 px bold. Jobs's are in
+// jobs.test.tsx.
 import type {ReactNode} from 'react';
 import {afterAll, afterEach, expect, test} from 'vitest';
 import {render} from 'vitest-browser-react';

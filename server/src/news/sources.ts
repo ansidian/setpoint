@@ -1,10 +1,10 @@
-// News's sources: the built-in list here holds only what isn't
-// local (national outlets, first-party newsrooms, the tech press, the labs' pages, Hacker News, and
-// the hazard APIs, which read the home location in Settings › Calendar). The local list (the area's
-// stations, a crime wire, Google News search for the area) names the user's city, so it lives in the data
-// directory, never in this public repository: news-local-sources.json there, first copied from the
-// uncommitted server/news/local-sources.json when there is one (server/news/local-sources.example.json
-// shows the shape). Every source is registered at start, by key, so a restart adds no duplicates.
+// News's sources. The built-in list here holds only what isn't local (national outlets, first-party
+// newsrooms, the tech press, the labs' pages, Hacker News, and the hazard APIs, which read the home
+// location in Settings › Calendar). The local list (the area's stations, a crime wire, Google News
+// search for the area) names the user's city. So it lives in the data directory, never in this public
+// repository: news-local-sources.json there. It's first copied from the uncommitted
+// server/news/local-sources.json when there is one (server/news/local-sources.example.json shows the
+// shape). Every source is registered at start, by key, so a restart adds no duplicates.
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -40,7 +40,7 @@ export interface NewsSourceSpec {
   summaryOnly?: boolean;
   metered?: boolean;
   intervalSeconds?: number;
-  // Its tile in Settings › News, kept in its config; none takes its adapter's.
+  // Its tile in Settings › News, kept in its config. None takes its adapter's.
   icon?: NewsSourceIcon;
 }
 
@@ -86,7 +86,7 @@ export const DEFAULT_NEWS_SOURCES: NewsSourceSpec[] = [
   {key: 'hacker-news', name: 'Hacker News', section: 'tech', kind: 'feed', adapter: 'hn_algolia', url: 'https://hn.algolia.com/api/v1/search_by_date',
     reads: 'Stories over 300 points on a tech or AI subject', config: {minPoints: 300}},
   // AI: the labs' newsrooms. Anthropic's news and release notes and Mistral's news have no feed, so
-  // their pages are read directly; Anthropic's status feed is there for major outages.
+  // their pages are read directly. Anthropic's status feed is there for major outages.
   page('anthropic-news', 'Anthropic news', 'https://www.anthropic.com/news', 'Anthropic', 'News page, read directly'),
   page('claude-release-notes', 'Claude Platform release notes', 'https://platform.claude.com/docs/en/release-notes/overview', 'Anthropic', 'Release notes, read directly',
     {layout: 'dated_sections'}),
@@ -136,7 +136,7 @@ const localSourceSchema = z.strictObject({
   summary_only: z.boolean().default(false),
   metered: z.boolean().default(false),
   interval_minutes: z.int().min(1).max(24 * 60).optional(),
-  // Its tile in Settings › News; one not in NEWS_SOURCE_ICONS makes the list unreadable, as any bad field does.
+  // Its tile in Settings › News. One not in NEWS_SOURCE_ICONS makes the list unreadable, as any bad field does.
   icon: z.enum(NEWS_SOURCE_ICONS).optional(),
 });
 export const localSourcesSchema = z.strictObject({

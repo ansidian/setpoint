@@ -1,7 +1,7 @@
 // The calendar's resources (shared/src/api/items.ts has the routes): items and weather by month,
-// one item, the calendars with their toggles, and changes to items. A toggle shows at once and
-// is Setpoint's own setting, not a provider change, so it needs no command; a calendar's colour
-// is written to Google, so it is one.
+// one item, the calendars with their toggles, and changes to items. A toggle shows at once. It is
+// Setpoint's own setting, not a provider change, so it needs no command. A calendar's colour is
+// written to Google, so it is a command.
 import type {CalendarOut, Colour, CommandOut, ItemChanges, ItemCreateInput, ItemKind, PlaceSuggestionOut, ProposalOut, RecurringScope, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
 import {addMonths, firstOfMonth} from '../logic/calendar.ts';
 import {afterPending, cachedPaths, getJson, refresh, refreshIfShown, sendJson, updateCached} from './client.ts';
@@ -15,10 +15,10 @@ export const weatherPath = (from: string, to: string) => `/weather?from=${from}&
 export const monthItemsPath = (month: string) => itemsPath(firstOfMonth(month), firstOfMonth(addMonths(month, 1)));
 export const monthWeatherPath = (month: string) => weatherPath(firstOfMonth(month), firstOfMonth(addMonths(month, 1)));
 
-// Each calendar's latest toggle on its way. A toggle sent while the one before is still on its way (off,
-// then straight back on; Show all, then its Undo) could reach the server first and be undone by it, so
-// it's sent once that one is answered; and only the latest's answer shows, so an earlier one's doesn't
-// put back what it changed.
+// Each calendar's latest toggle on its way. A toggle sent while the one before is still on its way
+// (off, then straight back on, or Show all, then its Undo) could reach the server first and be
+// undone by it. So it's sent once that one is answered. Only the latest's answer shows, so an
+// earlier one's doesn't put back what it changed.
 const toggles = new Map<number, Promise<unknown>>();
 
 /** Shows a calendar or hides it on the grid and in the agenda (the sidebar's checkbox). */
@@ -48,8 +48,8 @@ async function setCalendarShown(id: number, shown: {visible: boolean} | {listed:
 }
 
 /**
- * A Google calendar's colour, a change to Google through the command layer. It shows at once;
- * the calendar answers with the command pending, and live events bring Google's answer.
+ * A Google calendar's colour, a change to Google through the command layer. It shows at once. The
+ * calendar answers with the command pending, and live events bring Google's answer.
  */
 export async function setCalendarColour(id: number, colour: Colour): Promise<void> {
   updateCached<CalendarOut[]>(CALENDARS_PATH, list => list.map(one => (one.id === id ? {...one, colour} : one)));
@@ -69,9 +69,9 @@ export async function settleCalendarColour(commandId: number, how: 'retry' | 'mo
 }
 
 // ---------- Changes, through the command layer ----------
-// Each change answers with its command at once (pending); the grid then refetches its months, so the
-// item shows where the change put it, at .5 until the provider confirms, or failed in place. Live
-// events bring the confirmation or the failure.
+// Each change answers with its command at once (pending). The grid then refetches its months, so
+// the item shows where the change put it: at .5 until the provider confirms, or failed in place.
+// Live events bring the confirmation or the failure.
 
 export const SETTINGS_PATH = '/settings';
 export const TODOIST_PROJECTS_PATH = '/todoist/projects';
@@ -113,8 +113,8 @@ const SETTLE_WAIT_MS = 60_000;
 
 /**
  * A command until its provider settles it, as it last stood (still pending if the provider takes
- * over a minute): for a change with nothing on the grid to fail in place (an email's Add as task,
- * a task created with no date).
+ * over a minute). It is for a change with nothing on the grid to fail in place (an email's Add as
+ * task, a task created with no date).
  */
 export async function untilSettled(command: CommandOut): Promise<CommandOut> {
   const ends = Date.now() + SETTLE_WAIT_MS;
@@ -145,20 +145,20 @@ export function createSubtask(input: Partial<ItemCreateInput> & Pick<ItemCreateI
 }
 
 /**
- * An email's proposal created from its card, which waits there, at .5, until the provider
- * settles it, a failure staying in the card with the provider's words.
+ * An email's proposal created from its card. It waits there, at .5, until the provider settles it.
+ * A failure stays in the card with the provider's words.
  */
 export const createSettled = (input: ItemCreateInput) => change(async () => untilSettled(await sendJson<CommandOut>('POST', '/items', input)));
 
-/** A move, resize or edit; Undo right after waits for the change before it to reach the provider. */
+/** A move, resize or edit. Undo right after waits for the change before it to reach the provider. */
 export const updateItem = (id: number, input: {changes: ItemChanges; scope?: RecurringScope; occurrence_start?: string | null}) =>
   change(() => afterPending(() => sendJson<CommandOut>('PATCH', `/items/${id}`, input)));
 
-/** A delete; one right after a change (⌘Z on a paste) waits for that change to reach the provider. */
+/** A delete. One right after a change (⌘Z on a paste) waits for that change to reach the provider. */
 export const deleteItem = (id: number, input: {scope?: RecurringScope; occurrence_start?: string | null} = {}, {keepalive = false} = {}) =>
   change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/delete`, input, {keepalive})));
 
-/** Complete or Reopen; Undo right after waits for the Complete before it to reach Todoist. */
+/** Complete or Reopen. Undo right after waits for the Complete before it to reach Todoist. */
 export const completeItem = (id: number, done: boolean, occurrenceDate: string | null = null) =>
   change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/complete`, {done, occurrence_date: occurrenceDate})));
 
@@ -170,7 +170,7 @@ export const reorderSubtasks = (id: number, subtaskIds: number[]) =>
 export const retryChange = (commandId: number) => change(() => sendJson<CommandOut>('POST', `/commands/${commandId}/retry`));
 export const moveBack = (commandId: number) => change(() => sendJson<CommandOut>('POST', `/commands/${commandId}/move-back`));
 
-/** Places suggestions for the editor's place; one session token per editing session. */
+/** Places suggestions for the editor's place, with one session token per editing session. */
 export const placeSuggestions = (query: string, sessionToken: string) =>
   getJson<PlaceSuggestionOut[]>(`/places?query=${encodeURIComponent(query)}&session_token=${encodeURIComponent(sessionToken)}`);
 

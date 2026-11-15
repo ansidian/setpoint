@@ -1,7 +1,6 @@
 // Where an item is, as the floating detail, the failed card, the agenda and search lines show it
-// (board 12a): the place, then its address in full. Google keeps one
-// location line, so an event placed at a street address comes back as the address alone
-// (server/src/providers/gcal/normalize.ts).
+// (board 12a): the place, then its address in full. Google keeps one location line, so an event
+// placed at a street address comes back as the address alone (server/src/providers/gcal/normalize.ts).
 
 /**
  * The place and its address as two lines. An address alone leads with its street ("1420 Elm St",
@@ -30,7 +29,7 @@ export type {PlaceLink} from '@setpoint/shared';
 /**
  * What the card's Open, `O` and the right-click menu open: the place's link as it stands here,
  * so a place changed and still waiting for Google has it at once, else the server's `link` (the
- * event's own URL). An event's only; null for a task.
+ * event's own URL). An event's only. Null for a task.
  */
 export function openLink(item: Pick<ItemOut, 'kind' | 'place' | 'address' | 'link'>): {url: string; host: string} | null {
   if (item.kind !== 'event') return null;

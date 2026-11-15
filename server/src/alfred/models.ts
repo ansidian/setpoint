@@ -1,7 +1,7 @@
-// Which model Alfred asks (bring your own key; Settings › AI's `ai.alfred_model`). A chosen model
-// needs the Anthropic key; with no choice, Alfred takes the default. That's the most capable general
+// Which model Alfred asks (bring your own key, Settings › AI's `ai.alfred_model`). A chosen model
+// needs the Anthropic key. With no choice, Alfred takes the default. That's the most capable general
 // model on offer, Claude Opus 5.5 (the claude-api skill's default). Alfred answers a question or two
-// at a time, so cost per answer is small next to triage's every email; the user can choose a cheaper
+// at a time, so cost per answer is small next to triage's every email. The user can choose a cheaper
 // model in Settings › AI.
 import type {AiModelChoiceOut, AiProvider, Settings} from '@setpoint/shared';
 import {providerOf, savedModel} from '../triage/models.ts';

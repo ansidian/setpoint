@@ -1,11 +1,11 @@
-// The shared tooltip, in place of the browser's own: any
-// element with `data-tip` names itself with it. The mouse resting on one, or the keyboard focusing one,
-// shows the tip under it (logic/tip.ts): after 80 ms where it's marked `data-tip-quick` (what it
-// reveals where you've stopped to read, as the reader's sender), 500 ms elsewhere. Leaving it,
-// a press, a scroll, Esc, or the window resizing or losing focus puts it away; so does the element
-// going or losing its `data-tip`. A tip that only repeats the element's own words shows only while
-// some of them are cut. One gaining a `data-tip` under the mouse (the editor's line over a mark) shows
-// it once the mouse moves.
+// The shared tooltip, in place of the browser's own: any element with `data-tip` names itself with
+// it. The mouse resting on one, or the keyboard focusing one, shows the tip under it (logic/tip.ts).
+// It shows after 80 ms where the element is marked `data-tip-quick` (what it reveals where you've
+// stopped to read, as the reader's sender), and after 500 ms elsewhere. Leaving it, a press, a
+// scroll, Esc, or the window resizing or losing focus puts it away. So does the element going or
+// losing its `data-tip`. A tip that only repeats the element's own words shows only while some of
+// them are cut. One gaining a `data-tip` under the mouse (the editor's line over a mark) shows it
+// once the mouse moves.
 // One listener on the document serves every element, so a tooltip is only an attribute. While it
 // shows, the element is described by it for a screen reader. A touch never shows one, and the phone
 // mounts none: its few `data-tip`s (the attention badges) were `title`s no touch showed either. An
@@ -47,7 +47,7 @@ export function Tip() {
     let n = 0;
     let pending: HTMLElement | null = null;
     let anchor: HTMLElement | null = null;
-    // What the mouse was last over, so a move only counts when that changes; and what a press focused, as
+    // What the mouse was last over, so a move only counts when that changes. And what a press focused, as
     // a field focused by a click matches :focus-visible too.
     let under: HTMLElement | null = null;
     let pressed: HTMLElement | null = null;
@@ -67,7 +67,7 @@ export function Tip() {
       if (!words || (repeats(target.textContent ?? '', words) && !cut(target))) return;
       anchor = target;
       describe(target, true);
-      // Its words changing update it; it going, or losing them, puts it away.
+      // Its words changing update it. It going, or losing them, puts it away.
       watch = new MutationObserver(() => {
         if (!target.isConnected || !target.dataset.tip) hide();
         else setShown(now => (now && now.text !== target.dataset.tip ? {...now, text: target.dataset.tip!} : now));

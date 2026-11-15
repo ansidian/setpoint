@@ -1,20 +1,21 @@
 // Verification codes (codes are temporary): one exact code found in an email's subject, snippet or
-// body, or none. Conservative and context-bound, because matching "code" broadly
-// catches programming and news mail, order numbers, phone numbers and prices. A code is returned
-// only when exactly one candidate scores highest; anything ambiguous is no code. When that strict pass finds none and the subject says it's a code email, a second pass
-// applies Android's rule (from AOSP's NotificationOtpDetectionHelper, Apache-2.0): a context
-// word within 50 characters of the code, in its sentence or the one before, with any words between;
-// again exactly one code or none. Both read the HTML part's text as well as the text part, since
-// some senders put the code only in the HTML. The row leaves the Inbox after Settings › Mail's code
-// expiry (15 minutes by default), counted from the email's arrival.
+// body, or none. Conservative and context-bound, because matching "code" broadly catches
+// programming and news mail, order numbers, phone numbers and prices. A code is returned only when
+// exactly one candidate scores highest. Anything ambiguous is no code. When that strict pass finds
+// none and the subject says it's a code email, a second pass applies Android's rule (from AOSP's
+// NotificationOtpDetectionHelper, Apache-2.0). That rule wants a context word within 50 characters
+// of the code, in its sentence or the one before, with any words between. Again the pass gives
+// exactly one code or none. Both passes read the HTML part's text as well as the text part,
+// because some senders put the code only in the HTML. The row leaves the Inbox after
+// Settings › Mail's code expiry (15 minutes by default), counted from the email's arrival.
 //
-// Pure: no I/O, and nothing here logs a code or its surroundings.
+// Pure. No I/O, and nothing here logs a code or its surroundings.
 
 export const CODE_KINDS = ['numeric', 'alphanumeric', 'hyphenated'] as const;
 export type CodeKind = (typeof CODE_KINDS)[number];
 
 export interface DetectedCode {
-  // The token exactly as written: leading zeroes, case and hyphens kept.
+  // The token exactly as written, with leading zeroes, case and hyphens kept.
   code: string;
   kind: CodeKind;
   // When its row leaves the Inbox.
@@ -26,7 +27,7 @@ export interface CodeInput {
   snippet: string | null | undefined;
   bodyText: string | null | undefined;
   bodyHtml?: string | null | undefined;
-  // When the email arrived (ISO 8601 UTC); without a valid one, freshness can't be known.
+  // When the email arrived (ISO 8601 UTC). Without a valid one, freshness can't be known.
   receivedAt: string | null | undefined;
   expiryMinutes: number;
 }
@@ -36,7 +37,7 @@ interface Candidate {
   kind: CodeKind;
   start: number;
   end: number;
-  // Letters only in hyphenated groups ("abcd-efgh"): accepted only in the strongest templates.
+  // Letters only in hyphenated groups ("abcd-efgh"). Accepted only in the strongest templates.
   alphabeticHyphenated: boolean;
 }
 
@@ -48,7 +49,7 @@ interface Scored {
 
 const NAMED_ENTITIES: Record<string, string> = {amp: '&', apos: '\'', gt: '>', lt: '<', nbsp: ' ', quot: '"'};
 
-// Phrases that say "this is a code": strong ones always count; the bare word "code" counts only
+// Phrases that say "this is a code". Strong ones always count. The bare word "code" counts only
 // when the subject already has a strong one ("Your code is 482913" in a code email's body).
 const STRONG_MARKER_SOURCE = [
   String.raw`(?:verification|security|authentication|confirmation|login|sign[\s-]?in|one[\s-]?time)\s+(?:code|passcode|pin|password)`,
@@ -105,7 +106,7 @@ function htmlText(html: string | null | undefined): string {
   return normalizeCodeText(stripTags(body)).slice(0, HTML_TEXT_LIMIT);
 }
 
-/** A strict ISO 8601 UTC instant that round-trips; anything else is refused rather than guessed. */
+/** A strict ISO 8601 UTC instant that round-trips. Anything else is refused rather than guessed. */
 function validInstant(value: unknown): Date | null {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return null;
   const parsed = new Date(value);
@@ -137,10 +138,10 @@ function maskRejected(text: string): string {
     .replace(/\b(?:order|tracking|claim|ticket|invoice)\s*(?:(?:number|no\.?|id)\s*)?[:#-]?\s*[A-Za-z0-9-]{4,}\b/gi, mask);
 }
 
-/** 4–8 digits; 4–12 letters and digits with at least one of each; or 2–4 hyphenated groups of 3–4. */
+/** 4–8 digits, 4–12 letters and digits with at least one of each, or 2–4 hyphenated groups of 3–4. */
 function classify(code: string): Pick<Candidate, 'kind' | 'alphabeticHyphenated'> | null {
   if (/^\d{4,8}$/.test(code)) return {kind: 'numeric', alphabeticHyphenated: false};
-  // Three lowercase letters in a row are a word run into digits ("418265Please"); Android found no
+  // Three lowercase letters in a row are a word run into digits ("418265Please"). Android found no
   // code that has them.
   if (/^[A-Za-z0-9]{4,12}$/.test(code) && /[A-Za-z]/.test(code) && /\d/.test(code) && !/[a-z]{3}/.test(code)) return {kind: 'alphanumeric', alphabeticHyphenated: false};
   if (/^[A-Za-z0-9]{3,4}(?:-[A-Za-z0-9]{3,4}){1,3}$/.test(code)) return {kind: 'hyphenated', alphabeticHyphenated: !/\d/.test(code)};
@@ -206,7 +207,7 @@ function scoreField(text: string, fieldBase: number, allowBareCode: boolean, cod
       }
     }
     if (best < 0 || !direct) continue;
-    // Letters-only hyphenated groups look like words ("plan-this-week"): only a direct strong
+    // Letters-only hyphenated groups look like words ("plan-this-week"). Only a direct strong
     // marker scoring 105 is enough (anywhere in the subject, within 15 characters in the snippet,
     // within 5 in the body).
     if (candidate.alphabeticHyphenated && (!strong || best < 105)) continue;
@@ -217,7 +218,7 @@ function scoreField(text: string, fieldBase: number, allowBareCode: boolean, cod
 
 // Android's context words, less "TAN" (a German bank's transaction number, and an English word).
 const CONTEXT_RE = new RegExp(String.raw`\b(?:pin|pass[-\s]?(?:code|word)|otp|2fa|(?:two|2)[-\s]?factor|log[-\s]?in|auth(?:enticat(?:e|ion))?|code|secret|verif(?:y|ication)|one[-\s]?time|access|validat(?:e|ion))\b`, 'gi');
-// A subject that says it's a code email, which the second pass needs: without it, "log in" near an
+// A subject that says it's a code email, which the second pass needs. Without it, "log in" near an
 // account number or "code" near a promotion would read as a code.
 const CODE_SUBJECT = /\b(?:verif(?:y|ication)|one[-\s]?time|2fa|two[-\s]?factor|authenticat(?:e|ion))\b/i;
 const CONTEXT_REACH = 50;
@@ -260,7 +261,7 @@ function onlyBest(matches: Scored[]): Scored | null {
   }
   const top = Math.max(...[...bestByCode.values()].map(match => match.score));
   const winners = [...bestByCode.values()].filter(match => match.score === top);
-  // Two different codes equally likely: no code.
+  // Two different codes equally likely means no code.
   return winners.length === 1 ? winners[0]! : null;
 }
 

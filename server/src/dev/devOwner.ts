@@ -1,7 +1,7 @@
 // The dev copy's owner with a short password. A real claim needs MIN_PASSWORD_LENGTH
-// characters, so `npm run try` writes the owner into its database itself, before the server starts:
-// it makes one with recovery codes if there's none, and puts the password back if it was changed.
-// For a local copy of the sample only; nothing here runs in the server.
+// characters, so `npm run try` writes the owner into its database itself, before the server starts.
+// It makes one with recovery codes if there's none, and puts the password back if it was changed.
+// For a local copy of the sample only. Nothing here runs in the server.
 import bcrypt from 'bcryptjs';
 import {SEED_NOW} from '@setpoint/shared';
 import {generateRecoveryCodes, hashPassword, hashRecoveryCode} from '../auth/owner.ts';

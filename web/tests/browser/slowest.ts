@@ -11,7 +11,7 @@ const COUNT = 10;
 
 export default async function* slowest(source: AsyncIterable<Event>): AsyncGenerator<string> {
   const checks: {name: string; file: string; ms: number}[] = [];
-  // A check's own event names harness.ts, where `test` is; a file's checks are reported together,
+  // A check's own event names harness.ts, where `test` is. A file's checks are reported together,
   // then the suite the harness names for the spec file (harness.ts › register), which gives them theirs.
   let unfiled: typeof checks = [];
   for await (const event of source) {
@@ -21,7 +21,7 @@ export default async function* slowest(source: AsyncIterable<Event>): AsyncGener
       for (const check of unfiled) check.file = name;
       unfiled = [];
     }
-    // A suite (a describe, or a file's own entry) holds checks; only checks are listed.
+    // A suite (a describe, or a file's own entry) holds checks. Only checks are listed.
     if (!details || details.type === 'suite' || !file || name === file) continue;
     const check = {name, file: path.basename(file), ms: details.duration_ms};
     checks.push(check);

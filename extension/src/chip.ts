@@ -1,8 +1,8 @@
-// The chip on a board's page. Each is
-// in its own shadow root, so the board's styles don't reach it. Its colours are Setpoint's (good while
-// this role's application is open and alert once it's closed, as Jobs's Offer and Rejected, an amber
-// for another role, alert for a failure, violet for focus) mixed with the page's own text colour, so
-// it reads in the boards' light and dark themes alike.
+// The chip on a board's page. Each chip is in its own shadow root, so the board's styles don't
+// reach it. Its colours are Setpoint's, mixed with the page's own text colour, so it reads in the
+// boards' light and dark themes alike. They are good while this role's application is open and alert
+// once it's closed (as Jobs's Offer and Rejected), an amber for another role, alert for a failure
+// and violet for focus.
 import type {Chip, Place} from './words.ts';
 
 export const HOST = 'setpoint-chip';

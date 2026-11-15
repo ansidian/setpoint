@@ -1,7 +1,7 @@
-// An answer or a correction, said in the toast with its Undo for 6 seconds and its glyph: `check` in `good` for a
-// thing done ("JD saved for Lucerne Publishing", "Merged"), `delete` in `ink3` for one taken away
-// (Dismiss all, Not an application, Delete). A refusal says what failed and why, its parts joined by
-// a comma. Undo puts back exactly what was there (server/src/jobs/undo.ts).
+// An answer or a correction, said in the toast with its Undo for 6 seconds and its glyph. The glyph
+// is `check` in `good` for a thing done ("JD saved for Lucerne Publishing", "Merged"), and `delete` in
+// `ink3` for one taken away (Dismiss all, Not an application, Delete). A refusal says what failed and
+// why, its parts joined by a comma. Undo puts back exactly what was there (server/src/jobs/undo.ts).
 import type {JobsChangeOut} from '@setpoint/shared';
 import type {ToastTone} from '../../logic/toast.ts';
 import {showToast, toastFailure} from '../toast.ts';
@@ -27,7 +27,7 @@ export async function actInPlace(send: () => Promise<JobsChangeOut>, said: Omit<
   return change;
 }
 
-/** Sends it; says what it did with Undo, or what failed. Answers the change, or null when it was refused. */
+/** Sends it, then says what it did with Undo, or what failed. Answers the change, or null when it was refused. */
 export async function act(send: () => Promise<JobsChangeOut>, said: Said): Promise<JobsChangeOut | null> {
   try {
     return await actInPlace(send, said);

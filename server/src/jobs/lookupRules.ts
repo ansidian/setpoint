@@ -1,9 +1,12 @@
-// The JD lookup's pure rules, tested as
-// tables (tests/lookupRules.test.ts): which links in an email are postings and on which platform,
-// which hiring platforms and board names to try, when GovernmentJobs' search runs and which of its
-// results are the employer's, which of a board's postings could be the role, what the model's
-// verdicts make (confident, unsure, nothing), how a lookup ends, and what counts as a failure to retry
-// rather than a miss. No network, no database, no clock.
+// The JD lookup's pure rules, tested as tables (tests/lookupRules.test.ts). They decide:
+// - which links in an email are postings, and on which platform
+// - which hiring platforms and board names to try
+// - when GovernmentJobs' search runs, and which of its results are the employer's
+// - which of a board's postings could be the role
+// - what the model's verdicts make (confident, unsure, nothing)
+// - how a lookup ends
+// - what counts as a failure to retry rather than a miss
+// No network, no database, no clock.
 import type {ProviderError} from '../sync/errors.ts';
 import {companyKey, requisitionKey, titleKey} from './rules.ts';
 
@@ -141,10 +144,10 @@ export function postingLinks(links: string[], hosts: PostingHosts, limit = 3): s
 const OTHER_PLATFORMS = /^(workday|icims|taleo|successfactors|smartrecruiters|breezy( ?hr)?|workable|jobvite|bamboo ?hr|jazzhr|recruitee|teamtailor|personio|paylocity|adp|ukg|ultipro|oracle|governmentjobs|neogov|usajobs|dayforce|rippling|gusto|pinpoint|eightfold|avature|phenom)\b/i;
 
 /**
- * Which platforms to ask, in order: one an email's link points at first; the one triage named when
- * it's one of the three; otherwise all three (a job board like Indeed or LinkedIn, or nothing named),
- * unless a link already said which, or triage named another tracking system (Workday, iCIMS), which
- * has no board on these to look at.
+ * Which platforms to ask, in order. First, one an email's link points at. Next, the one triage named,
+ * when it's one of the three. Otherwise all three (a job board like Indeed or LinkedIn, or nothing
+ * named), unless a link already said which, or triage named another tracking system (Workday,
+ * iCIMS), which has no board on these to look at.
  */
 export function platformsToTry(via: string | null, linked: JobPlatform[]): JobPlatform[] {
   const named = JOB_PLATFORMS.find(platform => via !== null && via.trim().toLowerCase() === PLATFORM_NAMES[platform].toLowerCase());
@@ -175,7 +178,7 @@ export function senderBoard(address: string): string | null {
 }
 
 /**
- * The board names to try on each platform, most likely first, at most `limit` (D-recorded): the
+ * The board names to try on each platform, most likely first, at most `limit`: the
  * board an email's link names, the employer's own mail domain, then the company's name as the
  * platforms usually write it: run together ("lucernepublishing"), dashed ("lucerne-publishing"), and
  * its first word when that's long enough to be distinctive ("lucerne", not "city").
@@ -222,10 +225,10 @@ export const POSTED_AFTER_APPLYING_DAYS = 2;
 const words = (key: string) => key.split(' ').filter(Boolean);
 
 /**
- * How well a board's posting fits the application (its company, title and date; the
- * model weighs location): 3 its requisition ID, 2 its normalised title, 1 a title whose words hold
- * the other's ("Junior Developer" and "Junior Developer, Digital"), 0 not at all. A posting published
- * after the application can't be it.
+ * How well a board's posting fits the application by its company, title and date (the model weighs
+ * location): 3 its requisition ID, 2 its normalised title, 1 a title whose words hold the other's
+ * ("Junior Developer" and "Junior Developer, Digital"), 0 not at all. A posting published after the
+ * application can't be it.
  */
 export function postingFit(application: LookupApplication, posting: PostingCandidate): number {
   if (posting.postedAt && Date.parse(posting.postedAt) > Date.parse(application.appliedAt) + POSTED_AFTER_APPLYING_DAYS * DAY_MS) return 0;
@@ -239,9 +242,9 @@ export function postingFit(application: LookupApplication, posting: PostingCandi
 }
 
 /**
- * The board's postings that could be the role, best first, at most `limit`: a requisition ID match
- * alone when there is one; else the closest titles, those published nearest before the application
- * first.
+ * The board's postings that could be the role, best first, at most `limit`. A requisition ID match
+ * comes alone when there is one. Otherwise the closest titles come, those published nearest before
+ * the application first.
  */
 export function matchPostings<T extends PostingCandidate>(application: LookupApplication, postings: T[], limit = 3): T[] {
   const scored = postings.map(posting => ({posting, fit: postingFit(application, posting)})).filter(entry => entry.fit > 0);
@@ -284,8 +287,8 @@ export type Verdict = 'match' | 'maybe' | 'no';
 export type StepOutcome<T> = {is: 'confident'; posting: T} | {is: 'unsure'; candidates: T[]} | {is: 'none'};
 
 /**
- * What the model's verdicts make: exactly one match is confident; otherwise the
- * matches and maybes, in order and at most three, are unsure; nothing is none.
+ * What the model's verdicts make. Exactly one match is confident. Otherwise the matches and maybes,
+ * in order and at most three, are unsure. Nothing is none.
  */
 export function outcomeOf<T>(judged: {candidate: T; verdict: Verdict}[], limit = 3): StepOutcome<T> {
   const matches = judged.filter(entry => entry.verdict === 'match');
@@ -296,14 +299,14 @@ export function outcomeOf<T>(judged: {candidate: T; verdict: Verdict}[], limit =
 
 /**
  * Whether a source's failure is a miss (it said no: a 404, a 403, a posting taken down) or a failure
- * to retry (the network, a timeout, a 5xx, a 429): a lookup that failed is never "No JD found".
+ * to retry (the network, a timeout, a 5xx, a 429). A lookup that failed is never "No JD found".
  */
 export const isMiss = (error: ProviderError) => error.kind === 'permanent';
 
 /**
- * How a lookup ends, from what its sources gave in order: the first confident posting
- * is saved; a source that failed means the lookup failed, to be retried, never "No JD found"; then
- * the unsure candidates, at most three, wait in Needs you; with nothing at all, "No JD found".
+ * How a lookup ends, from what its sources gave in order. The first confident posting is saved. A
+ * source that failed means the lookup failed, to be retried, never "No JD found". Then the unsure
+ * candidates, at most three, wait in Needs you. With nothing at all, it's "No JD found".
  */
 export type LookupEnd<T> = {is: 'save'; posting: T} | {is: 'failed'; error: ProviderError} | {is: 'candidates'; candidates: T[]} | {is: 'not_found'};
 
@@ -316,9 +319,9 @@ export function lookupEnd<T>(steps: (StepOutcome<T> | {is: 'failed'; error: Prov
 }
 
 /**
- * Whether the next source runs: the platforms run while nothing is confident; web
- * search, which costs, only when the email's link and the platforms cleanly missed: nothing
- * confident, nothing unsure, nothing failed.
+ * Whether the next source runs. The platforms run while nothing is confident. Web search, which
+ * costs, runs only when the email's link and the platforms cleanly missed: nothing confident, nothing
+ * unsure, nothing failed.
  */
 export function nextSourceRuns(source: 'platforms' | 'search', steps: (StepOutcome<unknown> | {is: 'failed'})[]): boolean {
   if (steps.some(step => step.is === 'confident')) return false;

@@ -20,7 +20,7 @@ export function Bar({w, h = 9, style}: {w: number | string; h?: number; style?: 
 export const Dot = ({size = 8}: {size?: number}) => <span className="sk-dot" style={{width: size, height: size}} />;
 
 /**
- * A skeleton: its bars breathe together. `kind` names it for the checks; it's hidden from the
+ * A skeleton: its bars breathe together. `kind` names it for the checks. It's hidden from the
  * accessibility tree, which has nothing to read in it. `immediate`: at once, without its delay and fade.
  */
 export function Sk({kind, className, style, immediate = false, children}: {kind: string; className?: string; style?: CSSProperties; immediate?: boolean; children: ReactNode}) {
@@ -30,7 +30,7 @@ export function Sk({kind, className, style, immediate = false, children}: {kind:
 
 /**
  * Whether what's loaded here arrived after a wait (this key showed without it first), so it fades in
- * as it replaces its skeleton; what was there at once (the cache) doesn't.
+ * as it replaces its skeleton. What was there at once (the cache) doesn't.
  */
 export function useArrival(loaded: boolean, key: unknown = null): boolean {
   const [seen, setSeen] = useState<{key: unknown; waited: boolean}>({key, waited: !loaded});
@@ -42,7 +42,7 @@ export function useArrival(loaded: boolean, key: unknown = null): boolean {
 }
 
 /**
- * Whether `on` has held for `ms` (a search's first answer still on its way after a moment); each
+ * Whether `on` has held for `ms` (a search's first answer still on its way after a moment). Each
  * time it turns on, it waits again.
  */
 export function useAfter(on: boolean, ms: number): boolean {
@@ -81,7 +81,7 @@ export function useLoadFailed(loads: Load[]): boolean {
 
 /**
  * "Couldn’t load the Inbox, Something went wrong. · Try again", in place of what didn't load:
- * the failing health line's look, its glyph `warning` in `caution`; Try again loads each failed one
+ * the failing health line's look, its glyph `warning` in `caution`. Try again loads each failed one
  * again. Nothing while they're loading or loaded, or while Setpoint is offline.
  */
 export function LoadFailed({what, loads, className}: {what: string; loads: Load[]; className?: string}) {

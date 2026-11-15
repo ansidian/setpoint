@@ -1,6 +1,7 @@
 // Jobs's reads: the page (its two numbers, Needs you, From history, the rows, and the history
-// pass) and an application's detail, shaped as `@setpoint/shared`'s jobs/api.ts; search and
-// the shell's item; the emails for mail's slots. Ghosted comes from the clock here, never from a stored status (rules.ts).
+// pass) and an application's detail, shaped as `@setpoint/shared`'s jobs/api.ts. Also search and
+// the shell's item, and the emails for mail's slots. Ghosted comes from the clock here, never from a
+// stored status (rules.ts).
 import type {
   ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsCheckOut, JobsMailApplicationOut, JobMoveOut, JobsMovementOut, JobsMailMessageOut, JobsMailOut, JobsNavOut,
   JobsPageOut, JobsSearchOut, NeedsYouItemOut, PostingOut,
@@ -98,7 +99,7 @@ export function jobsPage(store: Store): JobsPageOut {
     application_id: item.applicationId,
     candidates: item.kind === 'jd_to_confirm' && item.applicationId ? (candidates.get(item.applicationId) ?? []).slice(0, 3).map(candidateOut) : [],
   });
-  // Today's as they came, oldest first; From history newest first by its email's date.
+  // Today's as they came, oldest first. From history newest first by its email's date.
   const today = open.filter(item => !item.fromHistory).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id - b.id);
   const history = open.filter(item => item.fromHistory).sort((a, b) => b.at.localeCompare(a.at) || b.id - a.id);
   return {
@@ -166,15 +167,15 @@ export function jobsNav(store: Store): JobsNavOut {
 
 /**
  * GET /api/jobs/mail?messages=…: what mail's slots draw for these emails, in one request for a page
- * of rows: the application each belongs to, for the reader's JD chip, and Applied before on
- * a job board's match email whose company matches applications, the most recent of them named. Only
- * the emails with something are listed, and none while Jobs is off. Nothing here writes, so mail's
- * counts never change.
+ * of rows. That's the application each belongs to, for the reader's JD chip. It's also Applied
+ * before on a job board's match email whose company matches applications, with the most recent of
+ * them named. Only the emails with something are listed, and none while Jobs is off. Nothing here
+ * writes, so mail's counts never change.
  */
 export function jobsInMail(store: Store, messageIds: number[]): JobsMailOut {
   if (!messageIds.length || !jobsEnabled(store)) return {messages: []};
   const db = jobsDb(store.sqlite);
-  // The application an email belongs to is the one its event is on; the newest, should two be.
+  // The application an email belongs to is the one its event is on (the newest, should two be).
   const belongs = new Map<number, number>();
   for (const event of db.select({messageId: j.jobsEvents.messageId, applicationId: j.jobsEvents.applicationId}).from(j.jobsEvents)
     .where(inArray(j.jobsEvents.messageId, messageIds)).orderBy(asc(j.jobsEvents.at), asc(j.jobsEvents.id)).all()) {
@@ -234,11 +235,11 @@ export const MOVES_SHOWN = 8;
 
 /**
  * GET /api/jobs/movement: each application's latest status change, newest first, the
- * last MOVES_SHOWN. Its emails, oldest first, change it when one sets a status it didn't have (the first
- * from nothing, a new application); a status set by hand changes it from what its emails had set before
- * (it keeps no history, so only the latest hand move shows); and turning Ghosted, at the start of the day
- * 30 days after its last email of any kind, changes it from Applied. Nothing here writes, and there are
- * no counts.
+ * last MOVES_SHOWN. Its emails, oldest first, change it when one sets a status it didn't have (the
+ * first from nothing, a new application). A status set by hand changes it from what its emails had
+ * set before (it keeps no history, so only the latest hand move shows). Turning Ghosted changes it
+ * from Applied, at the start of the day 30 days after its last email of any kind. Nothing here
+ * writes, and there are no counts.
  */
 export function jobsMovement(store: Store): JobsMovementOut {
   const db = jobsDb(store.sqlite);

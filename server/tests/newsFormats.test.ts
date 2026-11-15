@@ -30,7 +30,7 @@ describe('feeds', () => {
       imageUrl: `${BASE}/images/fire-1200.jpg`,
       source: null,
     });
-    // An enclosure; an entity decoded once by XML and once as HTML.
+    // An enclosure, and an entity decoded once by XML and once as HTML.
     expect(feed.items[1]).toMatchObject({imageUrl: `${BASE}/images/water-main.jpg`, summary: 'Contoso Avenue is closed between 3rd and 5th streets & drivers are asked to avoid the area.', byline: 'Station staff'});
     // The untitled item isn't one.
     expect(feed.items.map(item => item.headline)).not.toContain('');
@@ -312,13 +312,14 @@ describe('APIs', () => {
         lat: 34.2, lng: -118.1,
       },
     ]);
-    // A lower bar takes Example Coast too; Example Desert, past 40 km, only a wider radius; the lines
-    // that can't be read (an unknown zone, a latitude that isn't one, not a line of the file) are skipped.
+    // A lower bar takes Example Coast too. Only a wider radius takes Example Desert, past 40 km. The
+    // lines that can't be read (an unknown zone, a latitude that isn't one, not a line of the file) are
+    // skipped.
     expect(airNowReportingAreas(file, HOME, {radiusKm: 40, minAqi: 101}, NOW).map(article => article.headline)).toEqual([
       'Unhealthy air quality in Example Valley, AQI 160', 'Unhealthy for Sensitive Groups air quality in Example Coast, AQI 120', 'Unhealthy air quality in Example Foothills, AQI 156',
     ]);
     expect(airNowReportingAreas(file, HOME, {radiusKm: 500, minAqi: 151}, NOW).map(article => article.headline)).toContain('Very Unhealthy air quality in Example Desert, AQI 210');
-    // A worse level the same day is a new article; the same level an hour later isn't.
+    // A worse level the same day is a new article. The same level an hour later isn't.
     const worse = `${file}10/07/26|10/07/26|09:00|PDT|0|O|Y|Example Valley|CA|34.1000|-118.2000|PM2.5|215|Very Unhealthy|No||Example Air District\r\n`;
     expect(airNowReportingAreas(worse, HOME, {radiusKm: 40, minAqi: 151}, NOW)[0]!.canonicalUrl).toBe('https://airnow.gov?city=Example+Valley&country=USA&state=CA#2026-10-07-aqi-category-5');
     const same = `${file}10/07/26|10/07/26|09:00|PDT|0|O|Y|Example Valley|CA|34.1000|-118.2000|PM2.5|170|Unhealthy|No||Example Air District\r\n`;

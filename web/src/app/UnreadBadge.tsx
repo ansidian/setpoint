@@ -1,7 +1,7 @@
 // The red unread badge: Inbox's in the sidebar and the rail, and Unread's segment. Its
 // count rolls (Count), and a rise registers from the corner of the eye: it swells to 1.22
-// and back over 260 ms. A fall, the user's own reading, stays quiet. From none it scales in from .6;
-// at none it scales out before it goes.
+// and back over 260 ms. A fall, the user's own reading, stays quiet. From none it scales in from .6.
+// At none it scales out before it goes.
 import {useEffect, useRef, useState} from 'react';
 import {motion} from '../tokens.ts';
 import {Count} from './Count.tsx';

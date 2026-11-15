@@ -1,13 +1,13 @@
-// A list's rows as they show while it changes: a row that
-// leaves stays, folding out, in the place it had, and a row that arrives folds in when its email was
-// shown already (Pin moves it onto the shelf) or left just now (Undo brings it back). app/fold.ts
-// draws the motion; the list decides which rows fold.
+// A list's rows as they show while it changes. A row that leaves stays, folding out, in the place
+// it had. A row that arrives folds in when its email was shown already (Pin moves it onto the
+// shelf) or left just now (Undo brings it back). app/fold.ts draws the motion, and the list decides
+// which rows fold.
 
 export type Fold = 'in' | 'out' | null;
 
 export interface Entry<T> {
   key: string;
-  // The email a row shows; null for a header or the prompt.
+  // The email a row shows. Null for a header or the prompt.
   id: number | null;
   item: T;
 }

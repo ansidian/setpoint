@@ -1,8 +1,8 @@
-// News's store against an ephemeral database: stories leave the page 48 hours after their last
-// new fact into the archive, which keeps the summary, sources and thumbnail and drops the rest, and
-// goes after 90 days; seen is per story; the recap holds the biggest of what left unseen, fixed once
-// on screen and put away after an hour away or by Done; the routes serve it all; News sources
-// keep their health to Settings › News; and the worker reads sources through their adapters.
+// News's store against an ephemeral database. Stories leave the page into the archive 48 hours
+// after their last new fact. The archive keeps the summary, sources and thumbnail, drops the rest,
+// and goes after 90 days. Seen is per story. The recap holds the biggest of what left unseen. It is
+// fixed once on screen and put away after an hour away or by Done. The routes serve it all. News
+// sources keep their health to Settings › News, and the worker reads sources through their adapters.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -132,7 +132,7 @@ describe('the archive', () => {
     expect(archived).toMatchObject({summary: 'The summary from every source.', outlets: 2, facts: [], new_since: null, expired_at: ago(-18)});
     expect(archived.sources.map(source => source.outlet)).toEqual(['KTLA', 'NBC Los Angeles']);
     expect(archived.image).toMatchObject({large: null, outlet: 'KTLA', thumb: {width: 4, height: 3}});
-    // The full text goes; the feed's summary and the link stay.
+    // The full text goes. The feed's summary and the link stay.
     expect(articleDetail(w.store, nbc)).toMatchObject({text: null, feed_summary: 'The feed\'s summary', image: null});
   });
 
@@ -234,7 +234,7 @@ describe('All shows a story once, in its main section\'s block', () => {
     expect(block('ai')).toMatchObject({stories: [expect.objectContaining({id: both}), expect.objectContaining({id: unread})], more: 0});
     expect(block('general')).toMatchObject({stories: [], more: 1});
     expect(page.blocks.flatMap(one => one.stories.map(story => story.id)).sort((a, b) => a - b)).toEqual([both, ...tech, unread].sort((a, b) => a - b));
-    // Each section's list still holds every story in it; "N more" is its list less what the block showed.
+    // Each section's list still holds every story in it. "N more" is its list less what the block showed.
     expect(newsSection(w.store, 'tech').stories.map(story => story.id)).toEqual([both, ...tech]);
     expect(newsSection(w.store, 'ai').stories.map(story => story.id)).toEqual([both, unread]);
     expect(newsSection(w.store, 'general').stories.map(story => story.id)).toEqual([unread]);
@@ -565,7 +565,7 @@ describe('the lists of sources', () => {
       ['local:channel-4', 'local', 'feed', true, 900], ['local:area-search', 'local', 'discovery', false, 1800],
     ]);
 
-    // Again: nothing new. The data directory's list wins over the checkout's from now on; a source
+    // Again: nothing new. The data directory's list wins over the checkout's from now on. A source
     // dropped from it is retired, not deleted.
     expect(registerNewsSources(w.store, dataDir, repoFile)).toEqual([]);
     fs.writeFileSync(path.join(dataDir, LOCAL_SOURCES_FILE), JSON.stringify({sources: [{key: 'channel-4', name: 'Channel 4', url: 'https://www.example.com/feed'}]}));
@@ -617,7 +617,7 @@ describe('the lists of sources', () => {
       expect(source.key).toMatch(/^[a-z0-9-]{1,64}$/);
       expect(new URL(source.url!).protocol).toBe('https:');
     }
-    // The outlets' feeds and pages name their outlet; the hazard APIs and Hacker News name their own.
+    // The outlets' feeds and pages name their outlet. The hazard APIs and Hacker News name their own.
     const outlets = new Map<string, string[]>();
     for (const source of DEFAULT_NEWS_SOURCES.filter(spec => spec.adapter === 'feed' || spec.adapter === 'page_read')) {
       expect(typeof source.config?.outlet, source.key).toBe('string');
@@ -631,7 +631,7 @@ describe('the lists of sources', () => {
       'Anthropic': ['anthropic-news', 'claude-release-notes', 'claude-apps-release-notes', 'anthropic-status'],
       'NPR': ['npr-national', 'npr-law'],
     });
-    // The newsrooms speak for their company (a keynote they announce is confirmed); the press doesn't.
+    // The newsrooms speak for their company (a keynote they announce is confirmed). The press doesn't.
     const firstParty = DEFAULT_NEWS_SOURCES.flatMap(source => {
       const company = sourceRule(source).firstParty;
       return company ? [`${source.key}: ${company}`] : [];

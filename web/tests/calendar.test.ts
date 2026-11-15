@@ -151,7 +151,7 @@ describe('items on days', () => {
     expect(titles(calendars.map(cal => (cal.name === 'Classes' ? {...cal, listed: false} : cal)))).toEqual(['Fall break', 'Gym', 'Dentist', 'CS 101 lab report', 'Pay rent']);
   });
 
-  // What the calendars toggled off hide on a day, so an empty day can say so rather than "No events".
+  // What the calendars toggled off hide on a day. An empty day can then say so rather than "No events".
   test.each<[string, string[], string, number]>([
     ['every calendar on', [], '2026-10-07', 0],
     ['Personal and Todoist off: Gym, Dentist and two tasks', ['Personal', 'Todoist'], '2026-10-07', 4],

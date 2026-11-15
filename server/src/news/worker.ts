@@ -1,13 +1,12 @@
-// News's job worker on the sync engine: each News source is read on its own interval (feeds every
+// News's job worker on the sync engine. Each News source is read on its own interval (feeds every
 // 15 minutes, hazards every 5) as a durable `news:<id>` job through its adapter, and each read is the
-// source's heartbeat. Its health rides on `news` events and shows only in Settings › News: the
+// source's heartbeat. Its health rides on `news` events and shows only in Settings › News. The
 // engine's `health` events, the health pill, Settings › Accounts and mantel's status never see News
 // sources. A source with no adapter yet, or whose adapter isn't ready (no home location, no key),
 // isn't read, and has no health until it is. After a read, its new articles are read too: their
-// pages' text and their images' copies; then they're sorted (a `news_sort` job,
-// src/news/sortWorker.ts). Every minute it also runs the expiry:
-// stories leave the page 48 h after their last new fact, and the archive goes after 90 days, with
-// their image copies.
+// pages' text and their images' copies. Then they're sorted (a `news_sort` job,
+// src/news/sortWorker.ts). Every minute it also runs the expiry: stories leave the page 48 h after
+// their last new fact, and the archive goes after 90 days, with their image copies.
 import {and, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {readingPlan} from '../domain/newsIngest.ts';
@@ -32,9 +31,9 @@ const READ_AT_ONCE = 3;
 export interface NewsWorkerOptions {
   store: Store;
   adapters?: NewsAdapters;
-  // Reads each new article's page and copies its image; none leaves articles on their feed summaries.
+  // Reads each new article's page and copies its image. None leaves articles on their feed summaries.
   reader?: NewsArticleReader | null;
-  // The data directory's news-images/ (src/news/images.ts); null leaves files alone.
+  // The data directory's news-images/ (src/news/images.ts). Null leaves files alone.
   imagesDir?: string | null;
   // One read's limit.
   timeoutMs?: number;
@@ -66,7 +65,7 @@ export class NewsWorker implements JobWorker {
     this.expireEveryMs = expireEveryMs;
   }
 
-  /** The adapter that reads a source, when it's ready to; never one for the seed's stand-ins. */
+  /** The adapter that reads a source, when it's ready to. Never one for the seed's stand-ins. */
   adapterFor(source: NewsSourceRow): NewsAdapter | null {
     const adapter = source.dev ? null : this.adapters[source.adapter] ?? null;
     return adapter && (adapter.ready?.(this.store, source) ?? true) ? adapter : null;
@@ -116,7 +115,7 @@ export class NewsWorker implements JobWorker {
         if (result.cursor !== null) this.store.db.update(t.newsSources).set({cursor: result.cursor}).where(eq(t.newsSources.id, source.id)).run();
         recordNewsCheck(this.store, source.id, null);
         finishJob(this.store, job.id);
-        // Settings › News's article count; the stories change once sorting groups them.
+        // Settings › News's article count. The stories change once sorting groups them.
         if (ids.length) noteLive(this.store, {type: 'news', stories: [], sections: [], sources: [source.id]});
         return ids;
       });
@@ -155,7 +154,7 @@ export class NewsWorker implements JobWorker {
       try {
         reading = await reader.read({userAgent: NEWS_USER_AGENT, signal: AbortSignal.any([signal, AbortSignal.timeout(this.readTimeoutMs)])}, item.article, item.plan);
       } catch {
-        // A reader gives up quietly; one that throws anyway has read nothing.
+        // A reader gives up quietly. One that throws anyway has read nothing.
       }
       if (!signal.aborted) storeArticleReading(this.store, this.imagesDir, item.article.id, item.plan, reading);
       return next();

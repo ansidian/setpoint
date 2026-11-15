@@ -20,7 +20,7 @@ const LINK = /(?:(?:https?:\/\/|www\.)[^\s<>"]+?|(?<![\w@.\-/:])(?:[a-z0-9](?:[a
 // shared/ is typed without the DOM or Node, and both have WHATWG's URL.
 declare const URL: new (url: string) => {protocol: string; hostname: string};
 
-/** The host of an http or https link, without a leading "www."; null for anything else. */
+/** The host of an http or https link, without a leading "www.", or null for anything else. */
 function webHost(url: string): string | null {
   try {
     const parsed = new URL(url);
@@ -44,7 +44,7 @@ export function placeLink(item: {place: string | null; address: string | null}):
   return null;
 }
 
-/** An http or https URL as its link and host (Google's `source.url`); null for any other text. */
+/** An http or https URL as its link and host (Google's `source.url`), or null for any other text. */
 export function webLink(url: string | null): {url: string; host: string} | null {
   const text = url?.trim();
   if (!text || /\s/.test(text)) return null;
@@ -55,7 +55,8 @@ export function webLink(url: string | null): {url: string; host: string} | null 
 /**
  * The event's link, for Open: the place's link, else its own URL (Google's `source.url`, an
  * .ics file's URL line), else none. Only http and https count. A bare domain in the place counts
- * when its top-level domain is real (tlds.ts) and opens as https; the event's own URL needs its scheme.
+ * when its top-level domain is real (tlds.ts) and opens as https. The event's own URL needs its
+ * scheme.
  */
 export function eventLink(item: {place: string | null; address: string | null; source_url: string | null}): string | null {
   return placeLink(item)?.url ?? webLink(item.source_url)?.url ?? null;

@@ -1,6 +1,6 @@
 // Triage's job worker on the sync engine: one job per new email (`triage:<id>`), run through the
 // pipeline with the models Settings › AI chooses. Each model call is written to the AI usage ledger
-// with its tokens and cost, and to triage's health; a refusal fails the job by the one retry policy
+// with its tokens and cost, and to triage's health. A refusal fails the job by the one retry policy
 // and the email waits in Unsorted. Every few minutes, and as soon as triage recovers or its keys or
 // models change, Unsorted mail is queued again. New Attention and FYI mail is sent by ntfy once
 // sorted, each lane as Settings › Notifications allows.
@@ -37,10 +37,10 @@ export interface TriageWorkerOptions {
   concurrency?: number;
   // One model call's limit (120 s by default).
   timeoutMs?: number;
-  // Sends new Attention and FYI mail; none without it.
+  // Sends new Attention and FYI mail. None without it.
   notifier?: Notifier | null;
   // Told each time an email is sorted, after it's written: a module that reads mail as triage left
-  // it (Jobs, wired in server.ts) learns there's something to read. It names no module; it should
+  // it (Jobs, wired in server.ts) learns there's something to read. It names no module. It should
   // return at once, and what it throws is logged, never failing the email's triage.
   onSorted?: ((messageId: number) => void) | null;
 }
@@ -64,7 +64,7 @@ export interface TriageClients {
   missing: string | null;
 }
 
-/** The clients for the models Settings › AI chooses, with the keys set; none without a key. */
+/** The clients for the models Settings › AI chooses, with the keys set. None without a key. */
 export function triageClients(store: Store, endpoints: AiEndpoints, timeoutMs?: number): TriageClients {
   const chosen = chooseTriageModels(getSettings(store).ai, aiKeys(store));
   const clientFor = (choice: AiModelChoiceOut | null) => {

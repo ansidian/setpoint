@@ -1,10 +1,10 @@
-// Jobs's pane with nothing open, in the Inbox's and News's shape
-// (InboxDay.tsx, NewsDay.tsx): one block centred across the pane, a third of the way down. The mark;
-// Recent movement as a neutral band over one row per application, its latest status change newest first
-// ("Applied → Rejected": an email that set it, turning Ghosted, a status set by hand), each opening
-// its detail, its right-click the table's menu condensed; and in the
-// foot over the keys, the quiet line naming what Jobs reads, led by any trouble's chip (EmptyPane).
-// No counts, and nothing asks anything of the user.
+// Jobs's pane with nothing open, in the Inbox's and News's shape (InboxDay.tsx, NewsDay.tsx): one
+// block centred across the pane, a third of the way down. It holds the mark, then Recent movement as
+// a neutral band over one row per application. Each row is its latest status change, newest first
+// ("Applied → Rejected": an email that set it, turning Ghosted, a status set by hand). Each opens its
+// detail, and its right-click is the table's menu condensed. In the foot over the keys, the quiet
+// line names what Jobs reads, led by any trouble's chip (EmptyPane). No counts, and nothing asks
+// anything of the user.
 import type {JobMoveOut, JobsMovementOut} from '@setpoint/shared';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {useResource} from '../../api/client.ts';

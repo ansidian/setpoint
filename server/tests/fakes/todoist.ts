@@ -3,12 +3,11 @@
 // OAuth's token exchange. Repeating tasks move on when closed, as Todoist's do, and the closed
 // occurrence is only in the activity log (a `completed` event naming its day), never in the
 // completed list, which lists only tasks really checked (seen on the user's Todoist). A due
-// change, an undo's included, is an `updated` event with the new due; the log has no `uncompleted`
+// change, an undo's included, is an `updated` event with the new due. The log has no `uncompleted`
 // for an undo, and its `completed` event stays. Event dates are Todoist's UTC instants, a day's due
-// its local end (23:59:59), in the user's zone (Los Angeles here). The Sync
-// endpoint takes `item_update_date_complete` with `is_forward: 0`, the undo of a repeating task's
-// completion, and `reopen` does nothing on a task that isn't checked, as Todoist's doesn't. Errors are
-// Todoist's: 401 for a token it didn't issue (or revoked), 400 for a sync token it doesn't know,
+// its local end (23:59:59), in the user's zone (Los Angeles here). The Sync endpoint takes
+// `item_update_date_complete` with `is_forward: 0`, the undo of a repeating task's completion.
+// `reopen` does nothing on a task that isn't checked, as Todoist's doesn't. Errors are Todoist's: 401 for a token it didn't issue (or revoked), 400 for a sync token it doesn't know,
 // 404 for a task that isn't there.
 import type {TodoistLabel, TodoistProject, TodoistTask} from '../../src/providers/todoist/api.ts';
 import {addDays, localDay, localTime, zonedInstant} from '../../src/domain/time.ts';
@@ -81,7 +80,7 @@ export async function fakeTodoist() {
   };
   /**
    * A close, from the API or Todoist's app: a repeating task moves on and its occurrence is only in
-   * the log; a one-off is checked, in the log and the completed list.
+   * the log. A one-off is checked, in the log and the completed list.
    */
   const close = (task: Task) => {
     const occurrence = logDue(task.due);
@@ -100,7 +99,7 @@ export async function fakeTodoist() {
   const dueFrom = (body: Record<string, unknown>, recurring: TodoistTask['due']) => {
     // Enough of Todoist's due words for a repeat: "every <weekday>[ at HH:MM] starting YYYY-MM-DD"
     // (or "from YYYY-MM-DD until …") lands on that weekday on or after the start, as Todoist's
-    // does; other repeats on the start.
+    // does. Other repeats land on the start.
     // "no date" takes the date off, as Todoist's does.
     if (body.due_string === 'no date') return null;
     if (typeof body.due_string === 'string') {
@@ -164,7 +163,7 @@ export async function fakeTodoist() {
       const until = request.query.get('until')!;
       return {status: 200, body: {items: completed.filter(task => task.completed_at >= since && task.completed_at <= until), next_cursor: null}};
     }),
-    // The activity log, newest first, in pages of `limit` (Todoist's cursor is opaque; here it's the
+    // The activity log, newest first, in pages of `limit` (Todoist's cursor is opaque, and here it's the
     // offset). `date_from` is inclusive, `date_to` exclusive.
     on('GET', /^\/api\/v1\/activities$/, request => {
       if (!authorized(request)) return unauthorized();
@@ -276,7 +275,7 @@ export async function fakeTodoist() {
     addLabel(label: TodoistLabel) {
       labels.set(label.id, {...label, seq: (seq += 1)});
     },
-    /** A task as it is in Todoist; `everyDays` makes it repeat. */
+    /** A task as it is in Todoist. `everyDays` makes it repeat. */
     put(task: TodoistTask & {everyDays?: number}) {
       return show(save({checked: false, is_deleted: false, ...task}));
     },

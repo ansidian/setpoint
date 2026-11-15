@@ -1,9 +1,9 @@
-// Setpoint's JSON API, with a small shared cache: a view shows what it last fetched at once
-// and refreshes behind it, on mount, on focus and when a live event names it (live.ts). A write's
+// Setpoint's JSON API, with a small shared cache. A view shows what it last fetched at once and
+// refreshes behind it: on mount, on focus and when a live event names it (live.ts). A write's
 // answer, or its at-once effect (opening an email drops the counts), goes into the cache straight
 // away. A 401 means the session is gone, and the sign-in card takes over (auth.ts), unless this
-// browser has replaced it meanwhile. This folder is the only place that talks to the server (the lint
-// enforces it).
+// browser has replaced the session meanwhile. This folder is the only place that talks to the
+// server (the lint enforces it).
 import type {ApiError} from '@setpoint/shared';
 import {useEffect, useSyncExternalStore} from 'react';
 
@@ -61,9 +61,9 @@ async function request<T>(method: string, path: string, body?: unknown, {quiet40
   } catch {
     throw new ApiFailure(0, 'unreachable', 'Can’t reach Setpoint');
   }
-  // A change in Settings › Security ends every session and answers with a new one, so a request that
-  // left under the old one and reached the server after the change is refused though this browser is
-  // still signed in: then it's asked once more, under the new one.
+  // A change in Settings › Security ends every session and answers with a new one. A request that
+  // left under the old one and reached the server after the change is refused, though this browser
+  // is still signed in. Then it's asked once more, under the new one.
   if (response.status === 401 && !quiet401 && !again && await unauthorized()) return request<T>(method, path, body, {quiet401, keepalive, signal}, true);
   if (!response.ok) {
     const error = (json as ApiError | undefined)?.error;
@@ -129,8 +129,8 @@ export function refresh(path: string): Promise<void> {
   current.loading = getJson<unknown>(path).then(
     data => {
       if (current.version !== version) return;
-      // Asked or answered while a change to it is on its way, it may be from before that change:
-      // what's shown stays, and the hold's end loads it again.
+      // An answer asked or given while a change to it is on its way may be from before that change.
+      // What's shown stays, and the hold's end loads it again.
       if ((heldAtStart || isHeld(path)) && current.data !== undefined) {
         if (!isHeld(path)) queueMicrotask(() => void refresh(path));
         return;
@@ -158,10 +158,10 @@ const holds = new Map<string, number>();
 const isHeld = (path: string) => [...holds.keys()].some(prefix => path === prefix || path.startsWith(`${prefix}?`) || path.startsWith(`${prefix}/`));
 
 /**
- * Holds the answers of the paths under `prefixes` until the returned release: one that lands
- * meanwhile, or was asked meanwhile, doesn't replace what's shown, and the release loads the ones
- * on screen again. For a run of changes whose at-once effect a refresh landing between them would
- * undo (a pin, then an unpin before it's answered).
+ * Holds the answers of the paths under `prefixes` until the returned release. An answer that lands
+ * or was asked meanwhile doesn't replace what's shown. The release loads the ones on screen again.
+ * It is for a run of changes whose at-once effect a refresh between them would undo (a pin, then an
+ * unpin before it's answered).
  */
 export function holdLoads(prefixes: string[]): () => void {
   for (const prefix of prefixes) holds.set(prefix, (holds.get(prefix) ?? 0) + 1);
@@ -179,8 +179,8 @@ export function holdLoads(prefixes: string[]): () => void {
 }
 
 /**
- * Loads `path` ahead of the view that shows it (Settings' pages, as Settings opens): only one that
- * has no answer and isn't on its way, so it never asks twice.
+ * Loads `path` ahead of the view that shows it (Settings' pages, as Settings opens). It loads only a
+ * path that has no answer and isn't on its way, so it never asks twice.
  */
 export function prefetch(path: string) {
   const found = cache.get(path);
@@ -202,7 +202,7 @@ function forget(path: string) {
   offScreen.delete(path);
 }
 
-/** Refreshes a resource on screen; one that isn't, which a change has made wrong, is forgotten, so it loads fresh when it shows. */
+/** Refreshes a resource on screen. One off screen, which a change has made wrong, is forgotten, so it loads fresh when it shows. */
 export function refreshIfShown(path: string) {
   if (mounted.has(path)) void refresh(path);
   else forget(path);
@@ -210,7 +210,7 @@ export function refreshIfShown(path: string) {
 
 /**
  * Refreshes everything on screen (focus, a resync, signing in again). What's off screen keeps its
- * answer, which may be from before: it refreshes when it shows again.
+ * answer, which may be from before. It refreshes when it shows again.
  */
 export function refreshAll() {
   for (const path of mounted.keys()) void refresh(path);
@@ -226,7 +226,7 @@ export function clearCache() {
 /** What `path` last answered, or what a write put there. */
 export const getCached = <T>(path: string) => cache.get(path)?.data as T | undefined;
 
-/** The load of `path` on its way, if one is; it resolves once its answer is in the cache. */
+/** The load of `path` on its way, if one is. It resolves once its answer is in the cache. */
 export const loadingOf = (path: string): Promise<void> | undefined => cache.get(path)?.loading;
 
 /** Shows a write's answer or at-once effect now. */
@@ -312,9 +312,9 @@ export function useResources<T>(paths: string[]): (T | undefined)[] {
 if (typeof window !== 'undefined') window.addEventListener('focus', refreshAll);
 
 /**
- * A command on an email or an item while its last one still waits for the provider (opening it,
- * then Trash at once; Undo while Trash or Complete is on its way) is refused with `command_pending`:
- * it's sent again once that one settles, for up to ten seconds.
+ * The server refuses with `command_pending` a command on an email or an item while its last one
+ * still waits for the provider (opening it, then Trash at once, or Undo while Trash or Complete is
+ * on its way). The command is sent again once that one settles, for up to ten seconds.
  */
 export async function afterPending<T>(send: () => Promise<T>, waitMs = 10_000): Promise<T> {
   const ends = Date.now() + waitMs;

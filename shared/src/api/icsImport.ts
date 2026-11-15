@@ -26,7 +26,7 @@ export interface IcsFieldsOut {
   ends_at: string | null;
   start_date: string | null;
   end_date: string | null;
-  // The file's IANA zone; null takes the user's.
+  // The file's IANA zone. Null takes the user's.
   time_zone: string | null;
   // The file's LOCATION, as the mirror splits Google's (a place, then its address).
   place: string | null;

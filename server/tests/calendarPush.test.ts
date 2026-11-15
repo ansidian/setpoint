@@ -23,7 +23,7 @@ describe('watch channels', () => {
     const rows = w.store.db.select().from(t.calendarChannels).all();
     expect(rows.map(row => row.state).sort()).toEqual(['active', 'unsupported']);
     expect(JSON.stringify(rows)).not.toContain(google.channels[0]!.token);
-    // A holiday calendar can't be watched; it isn't asked again while that's remembered.
+    // A holiday calendar can't be watched. It isn't asked again while that's remembered.
     w.advance(16 * 60_000);
     await run();
     expect(google.requests.filter(request => request.path.endsWith('/watch') && request.path.includes('holiday'))).toHaveLength(1);

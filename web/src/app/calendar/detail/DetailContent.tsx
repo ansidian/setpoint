@@ -1,16 +1,16 @@
-// What the floating detail shows of an item (board 12a): the
-// colour dot and title, the date and time, the place and its address (a link alone as `videocam` and
-// its host, and any link with Open), the event's own link when its place has none (`link` and
-// its host, with Open), Time to Leave (in `caution`
-// once it's time to go and gone once the event starts, as in the day agenda), attendees, a
-// recurring event's repeat, reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions: Clone, Copy (⌘V pastes on the
-// selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
-// Delete; a Todoist task's ring completes it, its done check reopening it, a repeating task's only from its latest done occurrence. Google's own kinds
-// of event take none of them. Off Calendar (the Today block's card) a page offers the ones it
-// can carry out and Open in Calendar; the others aren't drawn. A read-only event (a calendar the user
-// can only read, or one of Google's own kinds) says so on its calendar's line, `lock` and "Read-only ·
-// ‹calendar›" with the reason as its tip, and leaves out what it can't do, the row going with nothing
-// left.
+// What the floating detail shows of an item (board 12a): the colour dot and title, the date and
+// time, the place and its address (a link alone as `videocam` and its host, and any link with Open),
+// the event's own link when its place has none (`link` and its host, with Open), Time to Leave (in
+// `caution` once it's time to go and gone once the event starts, as in the day agenda), attendees, a
+// recurring event's repeat, reminders and the calendar, its glyph in the item's colour. Then come
+// Edit E and the icon actions: Clone, Copy (⌘V pastes on the selected day), Colour (an event's own,
+// from the swatches Google's event colours fall on) and Delete. A Todoist task's ring completes it,
+// and its done check reopens it, a repeating task's only from its latest done occurrence. Google's
+// own kinds of event take none of them. Off Calendar (the Today block's card) a page offers the ones
+// it can carry out and Open in Calendar. The others aren't drawn. A read-only event (a calendar the
+// user can only read, or one of Google's own kinds) says so on its calendar's line, `lock` and
+// "Read-only · ‹calendar›" with the reason as its tip. It leaves out what it can't do, and the row
+// goes with nothing left.
 import type {CalendarOut, EventColour, ItemOut, Settings, SubtaskOut} from '@setpoint/shared';
 import {EVENT_COLOURS} from '@setpoint/shared';
 import {useMemo, useState} from 'react';
@@ -35,7 +35,7 @@ import type {DetailTarget} from './motion.ts';
 /** The card's icon actions, carried out by the Calendar page, or the ones another page offers. */
 export interface DetailActions {
   complete: (task: ItemOut) => void;
-  // Checks or reopens one of a task's subtasks; the task itself stays as it is.
+  // Checks or reopens one of a task's subtasks. The task itself stays as it is.
   completeSubtask?: (subtask: SubtaskOut) => void;
   // A subtask's failed check, tried again or undone.
   settleSubtask?: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
@@ -86,7 +86,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const colour = {'--c': colourVar(item.colour ?? calendar?.colour ?? (item.kind === 'task' ? undefined : 'cool'))} as CSSProperties;
   const fixed = item.read_only || !actions;
   const act = (run: (one: ItemOut) => void) => () => !fixed && run(item);
-  // Without actions (the phone) every one is drawn, unavailable; a read-only item leaves them out.
+  // Without actions (the phone) every one is drawn, unavailable. A read-only item leaves them out.
   // A subtask has no Copy, whose paste would make a task of its own.
   const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !item.read_only && !(action === 'copy' && item.parent_id !== null) && (!actions || !!actions[action]);
   const complete = item.kind === 'task';

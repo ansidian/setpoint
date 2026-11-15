@@ -1,13 +1,13 @@
 // What search indexes of an email's body: `body_text` without its links and footers. Most of
 // what's in a marketing email's text is tracking links, so a word in a URL's path or query matched
-// as if the email had said it. A link leaves its domain behind as a word, once per email: a sender
-// can be findable only through the site its links go to. `body_text` itself stays as it is, since
-// the reader, triage, Alfred and Jobs read it.
+// as if the email had said it. A link leaves its domain behind as a word, once per email, because a
+// sender can be findable only through the site its links go to. `body_text` itself stays as it is,
+// because the reader, triage, Alfred and Jobs read it.
 //
 // A footer here is a line that's plainly the mailing's own boilerplate, near the end of the email:
 // an unsubscribe or preferences line, why you're getting this, a copyright line. Losing a footer
-// line only keeps noise, and losing a real line loses a search, so anything unsure stays: an address,
-// a signature, a line that says more than the boilerplate does, and quoted replies.
+// line only keeps noise, and losing a real line loses a search, so anything unsure stays. That means
+// an address, a signature, a line that says more than the boilerplate does, and quoted replies.
 // The links of a footer line still leave their domains, at the end. Pure: a string in, a string out.
 
 // Only this many lines from the end can be a footer, so a mention earlier in the email is never one.
@@ -52,8 +52,8 @@ function replaceLinks(line: string, wordsFor: (url: string) => string): string {
   });
 }
 
-// A line of nothing but these, split at | · •: at least one a strong one, since "Contact us" alone
-// could be anyone's.
+// A line of nothing but these, split at | · •. At least one must be a strong one, because
+// "Contact us" alone could be anyone's.
 const FOOTER_STRONG_LINK = /^(?:unsubscribe(?: here)?|(?:manage|update|change)(?: your)?(?: (?:email|mail|communication|notification))? (?:preferences|subscriptions?)|(?:email|mail|communication|notification|subscription) preferences|preferences|privacy(?: policy| notice| statement)?|terms(?: of (?:service|use)| (?:and|&) conditions)?)$/;
 const FOOTER_LINK = /^(?:contact us|help|help cent(?:er|re)|support|about us|faqs?|view (?:in|on)(?: your)? (?:browser|web)|view online)$/;
 
@@ -63,7 +63,7 @@ const FOOTER_SENTENCES = [
   // "To unsubscribe, click here." "You can update your preferences at any time."
   /^(?:please )?(?:click here to |you (?:can|may)(?: always| also)? |to )(?:unsubscribe\b|(?:update|manage|change) your (?:email |mail )?(?:preferences|subscriptions?)\b|opt[- ]?out of (?:(?:these|this|future|our|all|marketing|promotional) )+(?:e-?mails?|messages?|communications?|mailings?|marketing)\b)/,
   /^unsubscribe (?:here|at any time|from (?:this (?:list|mailing list)|these e-?mails|our (?:e-?mails|mailing list)|(?:future|all) e-?mails))\b/,
-  // Why it came, only for a mailing: a reason about the reader's own business is content.
+  // Why it came, only for a mailing. A reason about the reader's own business is content.
   /^you(?:'re| are)? (?:receiving|received|getting) this\b.*\bbecause you(?:'ve| have| are|'re)? (?:signed up|subscribed|opted in|registered|joined|a (?:subscriber|member))\b/,
   /^this (?:e-?mail|message) was sent to\b/,
   /^(?:copyright )?(?:©|\(c\)|copyright)\s*(?:19|20)\d{2}\b/,
@@ -95,7 +95,7 @@ function footerLines(lines: string[]): Set<number> {
 /** The body with nothing a link left, footers and all: the words the email says itself. */
 export const withoutLinks = (body: string) => body.split(/\r?\n/).map(line => replaceLinks(line, () => '')).join('\n');
 
-/** The body as search indexes it: no links or footers, each link's domain kept once as a word. */
+/** The body as search indexes it: no links or footers, and each link's domain kept once as a word. */
 export function searchBody(body: string): string {
   const lines = body.replace(/\bmailto:/gi, '').split(/\r?\n/);
   const footer = footerLines(lines);

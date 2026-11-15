@@ -1,8 +1,8 @@
-// The week view's rules (board 16): the shown week (Sunday first) and its
-// title, which items go in the all-day row and how its bars and tasks stack before "+N", the timed
-// blocks of each day (an event crossing midnight in both days) and their lanes, the opening scroll,
-// and what a drag makes of a pointer: 15-minute steps for a create, a move or a resize. Local days
-// are `YYYY-MM-DD` and times minutes after a day's midnight, in the owner's zone.
+// The week view's rules (board 16): the shown week (Sunday first) and its title, which items go in
+// the all-day row and how its bars and tasks stack before "+N", the timed blocks of each day (an
+// event crossing midnight in both days) and their lanes, the opening scroll, and what a drag makes
+// of a pointer: 15-minute steps for a create, a move or a resize. Local days are `YYYY-MM-DD` and
+// times minutes after a day's midnight, in the owner's zone.
 import type {CalendarOut, ItemChanges, ItemOut} from '@setpoint/shared';
 import {week as tokens} from '../tokens.ts';
 import {calendarShown, dayOfWeek, dayTitle, timeRange, weekIndex} from './calendar.ts';
@@ -173,7 +173,7 @@ export function allDayLayout(items: ItemOut[], start: string, timeZone: string):
 export interface Segment {
   item: ItemOut;
   date: string;
-  // Minutes after the day's midnight; an event carrying on into the next day ends at 1440.
+  // Minutes after the day's midnight. An event carrying on into the next day ends at 1440.
   start: number;
   end: number;
   // Whether it began the day before, or carries on into the next.
@@ -265,8 +265,8 @@ export function blockBox(start: number, end: number): {top: number; height: numb
 export const isShort = (start: number, end: number) => end - start < tokens.shortMinutes;
 
 /**
- * Where the hours open: this week puts now about a third
- * down; another week an hour before its first timed item, else 7 AM.
+ * Where the hours open. This week puts now about a third down. Another week opens an hour before
+ * its first timed item, else at 7 AM.
  */
 export function openingScroll(start: string, today: string, now: number, list: Segment[], timeZone: string, height: number): number {
   const total = minuteTop(DAY_MINUTES) - height;
@@ -353,7 +353,7 @@ export function dayRange(pressed: string, pointer: string): {from: string; to: s
 
 // ---------- Words ----------
 
-/** What a move says: "Moved Dentist to Thu, Oct 8, 3:00 PM"; an all-day event or a task "Moved Pay rent to Thu, Oct 8". */
+/** What a move says: "Moved Dentist to Thu, Oct 8, 3:00 PM", an all-day event or a task "Moved Pay rent to Thu, Oct 8". */
 export function movedLine(item: ItemOut, changes: ItemChanges, timeZone: string): string {
   if (changes.starts_at) return `Moved ${item.title} to ${dayTitle(localDate(changes.starts_at, timeZone))}, ${clockTime(changes.starts_at, timeZone)}`;
   const day = changes.start_date ?? changes.due_date;
@@ -370,7 +370,7 @@ export function resizedLine(item: ItemOut, changes: ItemChanges, timeZone: strin
   return `Changed ${item.title} to ${timeRange(after, timeZone)}`;
 }
 
-/** A block's time where it shares its column: its start, as a month chip words it ("7 PM", "6:30 PM"); its height gives its length. */
+/** A block's time where it shares its column: its start, as a month chip words it ("7 PM", "6:30 PM"). Its height gives its length. */
 export const laneTime = (item: ItemOut, timeZone: string) => clockTime(item.starts_at!, timeZone).replace(':00 ', ' ');
 
 /**

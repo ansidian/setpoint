@@ -26,7 +26,7 @@ describe("sender authentication projection", () => {
       provider: "gmail",
       source: "gmail_authentication_results",
       headerFromDomain: "billing.example",
-      // AUID alone does not identify the signing d= domain; DMARC still passes.
+      // AUID alone does not identify the signing d= domain. DMARC still passes.
       dkim: [{ result: "pass", domain: null, aligned: false }],
       spf: { result: "pass", domain: "billing.example", aligned: true },
       dmarc: { result: "pass", domain: "billing.example", aligned: true },

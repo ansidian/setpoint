@@ -1,12 +1,11 @@
-// The Inbox, days first: Attention, the Pinned shelf, then every
-// email by day, Noise included, newest first, under day headings ("TODAY Wed, Oct 7",
-// "YESTERDAY Tue, Oct 6", "MON Oct 5"). Days are the owner's, midnight to midnight Pacific, never the
-// browser's. Unread mail stays in its day, drawn unread, so reading never moves a row. Each day groups
-// its rows by lane, with the kind once where an FYI run starts, and folds its Noise to one line.
-// An email in Attention or on the Pinned shelf leaves its day meanwhile.
-// The views show part of it: Unread the unread mail in the same shape, Attention its
-// rows alone, FYI and Noise their mail by day; only All has the shelf, so elsewhere a pinned email
-// sits where it belongs.
+// The Inbox, days first: Attention, the Pinned shelf, then every email by day, Noise included,
+// newest first, under day headings ("TODAY Wed, Oct 7", "YESTERDAY Tue, Oct 6", "MON Oct 5"). Days
+// are the owner's, midnight to midnight Pacific, never the browser's. Unread mail stays in its day,
+// drawn unread, so reading never moves a row. Each day groups its rows by lane, with the kind once
+// where an FYI run starts, and folds its Noise to one line. An email in Attention or on the Pinned
+// shelf leaves its day meanwhile. The views show part of it. Unread shows the unread mail in the
+// same shape, Attention its rows alone, and FYI and Noise their mail by day. Only All has the shelf,
+// so elsewhere a pinned email sits where it belongs.
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroupOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {daysBetween, localDate} from './format.ts';
@@ -29,8 +28,8 @@ export const unreadNotDone = (row: Pick<MessageRowOut, 'unread' | 'done'>) => ro
 /**
  * Rows by local day in `timeZone`, newest day first and newest first within it. Pages of All are
  * joined here, so a day split between two pages shows once. A pinned email leaves its day for the
- * Pinned shelf until it's unpinned, unless there's no shelf (`shelf` false), and one Attention
- * shows (`above`) leaves it too.
+ * Pinned shelf until it's unpinned, unless there's no shelf (`shelf` false). One that Attention
+ * shows (`above`) leaves its day too.
  */
 export function groupByDay(rows: MessageRowOut[], timeZone: string, above: ReadonlySet<number> = new Set(), shelf = true): Day[] {
   const days: Day[] = [];
@@ -141,7 +140,7 @@ export function viewList(view: InboxView, from: {groups: InboxGroupOut[]; rows: 
 /**
  * Unread's rows for this visit to it: each email unread and not Done in the Inbox (`inbox`),
  * and each one it held before as it is now (`latest`, All's pages and the Inbox's), so one read here
- * stays, drawn read, until the user leaves the view. One Done or in Trash (`gone`) leaves; one read
+ * stays, drawn read, until the user leaves the view. One Done or in Trash (`gone`) leaves. One read
  * that no list has any more stays read as it was held. A row the hold already has is kept as it is, so
  * an unchanged answer gives back the same rows.
  */
@@ -186,9 +185,9 @@ export const dayStops = (views: DayView[], shelf: MessageRowOut[] = [], attentio
 ];
 
 /**
- * U: the next unread email's stop after the cursor, in the list's order, from the top again
- * past the last one; from the top with no cursor. A folded Noise's emails have no stop, so U passes
- * them. Null when no unread email has one.
+ * U: the next unread email's stop after the cursor, in the list's order. Past the last one, and
+ * with no cursor, it starts from the top. A folded Noise's emails have no stop, so U passes them.
+ * Null when no unread email has one.
  */
 export function nextUnread(stops: Stop[], cursor: string | null, unread: ReadonlySet<number>): string | null {
   const at = cursor === null ? -1 : stops.findIndex(stop => stop.key === cursor);
@@ -200,7 +199,7 @@ const onDay = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`$
 
 /**
  * A day's heading: the label in the group header's uppercase, then the date in its own case.
- * Today and Yesterday name the weekday with the date; earlier days are the weekday, then the date,
+ * Today and Yesterday name the weekday with the date. Earlier days are the weekday, then the date,
  * with the year once it isn't this year's.
  */
 export function dayHeading(date: string, today: string): {label: string; date: string} {
@@ -223,10 +222,10 @@ export function kindGroup(row: Pick<MessageRowOut, 'lane' | 'kind'>): InboxGroup
 export const kindLabel = (row: Pick<MessageRowOut, 'lane' | 'kind'>): string => GROUP_LABELS[kindGroup(row)];
 
 /**
- * A row's text in All, as the Inbox's: the summary, when triage
- * wrote one, takes the subject's place and the subject moves to the row's tooltip; then " · " and
- * the platform in `ink3`. A code row shows its subject with the code in Geist Mono, two groups of
- * three. A security email's lead is its decisive fact ("New sign-in · MacBook Pro · Los Angeles"); a
+ * A row's text in All, as the Inbox's. When triage wrote a summary, it takes the subject's place
+ * and the subject moves to the row's tooltip. Then come " · " and the platform in `ink3`. A code
+ * row shows its subject with the code in Geist Mono, two groups of three. A security email's lead
+ * is its decisive fact ("New sign-in · MacBook Pro · Los Angeles"). A
  * protected one keeps its subject, in `alert`, with the fact's details or its summary after it
  * ("Your recovery email was changed · Windows · Chrome · Phoenix, AZ").
  */

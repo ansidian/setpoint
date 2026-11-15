@@ -1,11 +1,10 @@
 // Settings › Mail (board 18a): written rules in their order (drag, or ↑ ↓ on the handle) with Add
-// rule (open and filled in when an email's Add to rule asked for a New rule from its sender;
-// Mark read and Trash under Send to; Turn off and Delete ask about a rule's waiting
-// trashes), the note that protected mail can't be moved,
-// marked read or trashed by any rule, learned rules (from pattern
-// prompts) with Undo on the day they were learned and × after, the trusted remote-content domains
-// (their count and a filter once there are more than Show all's 11), and Verification
-// codes' expiry presets.
+// rule. Add rule is open and filled in when an email's Add to rule asked for a New rule from its
+// sender. Mark read and Trash are under Send to. Turn off and Delete ask about a rule's waiting
+// trashes. Then the note that protected mail can't be moved, marked read or trashed by any rule.
+// Then learned rules (from pattern prompts), with Undo on the day they were learned and × after.
+// Then the trusted remote-content domains (their count and a filter once there are more than Show
+// all's 11), and Verification codes' expiry presets.
 import type {Kind, Lane, RuleOut, RuleTrash, RuleWaiting, Settings, TrustedDomainOut} from '@setpoint/shared';
 import {CODE_EXPIRY_PRESETS, KINDS, RULE_TRASH} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
@@ -119,7 +118,7 @@ function RuleText({rule}: {rule: Pick<RuleOut, 'match' | 'lane' | 'kind' | 'enab
 }
 
 function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; drag: DragProps; onMove: (delta: 1 | -1) => void}) {
-  // Turn off or Delete on a rule with trashes waiting asks first; with none it just happens.
+  // Turn off or Delete on a rule with trashes waiting asks first. With none it just happens.
   const [ask, setAsk] = useState<'off' | 'delete' | null>(null);
   const [waiting, setWaiting] = useState<RuleWaiting>('cancel');
   const turnOff = (answer?: RuleWaiting) => void setRuleEnabled(rule.id, false, answer).catch(toastFailure('Couldn\'t turn the rule off'));

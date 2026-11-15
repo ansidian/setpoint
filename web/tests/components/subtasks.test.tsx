@@ -1,8 +1,8 @@
-// A task's subtasks. In the floating detail they're a checklist under "Subtasks 1/4",
-// a column in from the header: each ring completes or reopens its subtask alone, never the task; the
-// handle in that column moves it a place with ↑ ↓ (dragging is Settings' live order, order.ts), the
-// rows showing the new order at once. Without actions (the phone) the rings are marks and nothing
-// moves. On the grid the task's chip ends in the count, on its one line.
+// A task's subtasks. In the floating detail they're a checklist under "Subtasks 1/4", a column in
+// from the header. Each ring completes or reopens its subtask alone, never the task. The handle in
+// that column moves it a place with ↑ ↓ (dragging is Settings' live order, order.ts), and the rows
+// show the new order at once. Without actions (the phone) the rings are marks and nothing moves. On
+// the grid the task's chip ends in the count, on its one line.
 import type {CalendarOut, ItemOut, SubtaskOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {expect, test, vi} from 'vitest';

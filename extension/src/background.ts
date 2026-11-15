@@ -1,9 +1,9 @@
 // Setpoint on job boards' service worker. It asks Setpoint's POST /api/jobs/check about
-// postings (the job pane's, or a page of the list's cards at once) with the extension's own token,
-// kept in chrome.storage.local beside Setpoint's address. The request is made here rather than on
-// the board's page, so the page never sees the token, and the host permission the options page asks
-// for lets it reach Setpoint without CORS. It also keeps each tab's toolbar badge, which says when
-// the page couldn't be read (watch.ts).
+// postings (the job pane's, or a page of the list's cards at once) with the extension's own token.
+// It keeps the token in chrome.storage.local beside Setpoint's address. It makes the request here
+// rather than on the board's page, so the page never sees the token. The host permission the
+// options page asks for lets it reach Setpoint without CORS. It also keeps each tab's toolbar badge,
+// which says when the page couldn't be read (watch.ts).
 import {JOBS_CHECK_MAX} from '@setpoint/shared';
 import type {JobsCheckOut} from '@setpoint/shared';
 import {replyOf} from './reply.ts';
@@ -32,8 +32,8 @@ chrome.runtime.onMessage.addListener((message: Message, sender, reply) => {
 
 /**
  * Postings' applications, in the order asked, or why there are none to show. The page sends every
- * posting it hasn't asked about in one message, and they go to Setpoint as many at a time as the
- * route takes: a page of 25 cards and the pane is one request.
+ * posting it hasn't asked about in one message. They go to Setpoint as many at a time as the route
+ * takes, so a page of 25 cards and the pane is one request.
  */
 async function check(postings: Asked[]): Promise<CheckReply> {
   const {origin, token} = await chrome.storage.local.get(['origin', 'token']);

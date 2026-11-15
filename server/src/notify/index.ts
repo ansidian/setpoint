@@ -1,10 +1,10 @@
-// The one notification outlet: reminders, Time to Leave, a source that needs
-// reconnecting and Send test all go through notify(), which logs each one and delivers it by ntfy.
-// Nothing else knows about ntfy (the lint enforces it). Topics come from Settings › Notifications
-// (`setpoint-reminders`, `setpoint-mail`), and each notification's click opens the exact email,
-// item or Settings page: in the iPhone app while one is paired, for an email or item.
+// The one notification outlet. Reminders, Time to Leave, a source that needs reconnecting and Send
+// test all go through notify(), which logs each one and delivers it by ntfy. Nothing else knows
+// about ntfy (the lint enforces it). Topics come from Settings › Notifications
+// (`setpoint-reminders`, `setpoint-mail`). Each notification's click opens the exact email, item or
+// Settings page. While an iPhone is paired, an email or item opens in the iPhone app.
 // The link is chosen as each notification is sent, so a retry follows a pairing or a Revoke since.
-// ntfy is one delivery; APNs could later be a second beside it, given the same Notification.
+// ntfy is one delivery. APNs could later be a second beside it, given the same Notification.
 import {appLink, deepLinkPath} from '@setpoint/shared';
 import type {DeepLink, Lane, NotificationKind, NotificationOut, NotifyStatusOut, NotifyTopic} from '@setpoint/shared';
 import {desc, eq} from 'drizzle-orm';
@@ -22,16 +22,16 @@ export interface Notification {
   title: string;
   body: string;
   link?: DeepLink;
-  // Mail's lane, for its switch (Attention mail or FYI mail); Attention when left out.
+  // Mail's lane, for its switch (Attention mail or FYI mail). Attention when left out.
   lane?: Exclude<Lane, 'noise'>;
   // Sends at most once per key ("reconnect:3:2026-10-07T…", "reminder:12@…").
   dedupe?: string;
 }
 
 export interface NotifierOptions {
-  // Setpoint's own origin, for web click links; without it, only the app's links go.
+  // Setpoint's own origin, for web click links. Without it, only the app's links go.
   publicUrl: string | null;
-  // The network: tests pass a fake ntfy's.
+  // The network. Tests pass a fake ntfy's.
   fetch?: typeof fetch;
 }
 
@@ -56,7 +56,7 @@ export class Notifier {
   }
 
   /**
-   * Logs and sends one notification. A dedupe key already sent is not sent again; one that failed
+   * Logs and sends one notification. A dedupe key already sent is not sent again. One that failed
    * is tried again. It's skipped, and logged as skipped, when ntfy isn't set up or Settings turns
    * that kind off (the reminders topic, except Send test; Attention or FYI mail; reconnect alerts).
    */
@@ -93,7 +93,7 @@ export class Notifier {
     return present(row!);
   }
 
-  /** The app's link while an iPhone is paired, else the web's on the public URL; none without either. */
+  /** The app's link while an iPhone is paired, else the web's on the public URL. None without either. */
   private click(link: DeepLink | undefined): string | null {
     if (!link) return null;
     const app = hasPairedDevice(this.store) ? appLink(link) : null;

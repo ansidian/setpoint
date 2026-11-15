@@ -1,9 +1,9 @@
-// Jobs in the shell: the sidebar's item under News, `work`, its
-// count the Needs you count in ink2 (gone at zero), its tooltip "Jobs · 3 need you"; in the rail
-// its slot after News, its count a neutral 16 px badge (jobs.css). Only while Jobs is on:
-// turned on, it folds in under News over 180 ms (39a); off, it has no item, and `4` opens the off page
-// (38c). ⌘K's Go to lists "Jobs 4" only while it's on, as the sidebar does. What this browser last saw is
-// kept, so the item draws before its answer and `4` knows whether it's on.
+// Jobs in the shell. The sidebar's item is under News, `work`, with the Needs you count in ink2
+// (gone at zero) and the tooltip "Jobs · 3 need you". In the rail its slot is after News, and its
+// count is a neutral 16 px badge (jobs.css). It shows only while Jobs is on. Turned on, it folds in
+// under News over 180 ms (39a). Off, it has no item, and `4` opens the off page (38c). ⌘K's Go to
+// lists "Jobs 4" only while it's on, as the sidebar does. What this browser last saw is kept, so
+// the item draws before its answer and `4` knows whether it's on.
 import type {JobsNavOut} from '@setpoint/shared';
 import {useEffect, useState} from 'react';
 import type {MouseEvent} from 'react';

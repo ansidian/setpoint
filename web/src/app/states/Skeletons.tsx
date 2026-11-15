@@ -34,7 +34,7 @@ function Row({index, all = false}: {index: number; all?: boolean}) {
   );
 }
 
-/** The Inbox's list loading: a day under its heading, its lanes' labels and rows; `more` is the next page's. */
+/** The Inbox's list loading: a day under its heading, its lanes' labels and rows. `more` is the next page's. */
 export function AllSkeleton({more = false, first = !more}: {more?: boolean; first?: boolean}) {
   const days = more ? [[3]] : [[2, 5], [6]];
   const rows = numbered(days.flat());

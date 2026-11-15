@@ -1,8 +1,7 @@
 // Mail's details in the browser, at the design target on a fresh seed each:
-// Done or Trash on the open email opens the next, each with Undo in the toast;
-// pin and unpin; Mark all as read; copying a code, and a code leaving at its expiry; images hidden
-// and Show / Always show; an attachment's preview; the pattern prompt's answer; the one list's parts
-// and days.
+// Done or Trash on the open email opens the next, each with Undo in the toast. Then pin and unpin,
+// Mark all as read, copying a code, a code leaving at its expiry, images hidden and Show / Always
+// show, an attachment's preview, the pattern prompt's answer, and the one list's parts and days.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -98,8 +97,7 @@ test('Done on the open email opens the next, which reads it; Attention\'s count 
     await holdToast(page);
     await until('Attention\'s count drops again', () => attentionCount(page), text => text === '1');
     assert.equal(await page.locator('.list .row.open', {hasText: 'Contoso University'}).count(), 1);
-    // Northwind's row folds out of Attention and settles in
-    // its day, quiet, with a Done tag.
+    // Northwind's row folds out of Attention and settles in its day, quiet, with a Done tag.
     await until('Northwind in its day, Done', () => rowOf(page, 'Pick a 30-minute slot').evaluate(row => [row.classList.contains('done'), row.querySelector('.tag')?.textContent]), ([done, tag]) => done === true && tag === 'Done');
     assert.match((await page.locator('.list .gh.day').first().textContent())!, /^Today Wed, Oct 7/);
     await until('the server has it', () => counts(setpoint).then(value => [value.attention, value.unread].join()), value => value === '1,17');
@@ -123,7 +121,7 @@ test('Done on the open email opens the next, which reads it; Attention\'s count 
     await setpoint.idle();
     assert.equal(await page.locator('.rd-subj', {hasText: 'Application received'}).count(), 1, 'H does nothing on FYI mail');
     assert.equal(await page.locator('.toast').count(), 0);
-    // Done on Northwind opens Contoso University; Done on that, the last in the Attention band, opens
+    // Done on Northwind opens Contoso University. Done on that, the last in the Attention band, opens
     // the Pinned shelf's lease, and the band goes.
     await rowOf(page, 'Pick a 30-minute slot').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
@@ -174,9 +172,9 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     await page.clock.install();
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    // Each Trash the page sends, and below each the route holds: the server once had Consolidated Messenger's Trash
-    // although its route was held (Thread A's timing report, seen once at 737333e and not since), so
-    // a failure says which it was: sent before the route, sent past it, or never sent.
+    // Each Trash the page sends, and below each the route holds. The server once had Consolidated
+    // Messenger's Trash although its route was held (Thread A's timing report, seen once at 737333e and
+    // not since). So a failure says which it was: sent before the route, sent past it, or never sent.
     const sent: string[] = [];
     page.on('request', request => {
       if (request.url().endsWith('/trash')) sent.push(new URL(request.url()).pathname);
@@ -429,7 +427,7 @@ test('P then P again before the pin is answered: one pin change at a time, the l
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    // Each pin change's answer is held, as a slow connection can; what's sent and answered is noted in order.
+    // Each pin change's answer is held, as a slow connection can do. What's sent and answered is noted in order.
     const gates = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
     const seen: string[] = [];
     await page.route('**/api/mail/messages/*/pin', async route => {
@@ -452,7 +450,7 @@ test('P then P again before the pin is answered: one pin change at a time, the l
     // Nothing more goes out while the pin waits: a second change sent now could reach the server first.
     await page.waitForTimeout(300);
     assert.deepEqual(seen, ['send true'], 'the unpin waits for the pin\'s answer');
-    // The pin lands, and the lists load again while the unpin is still on its way: the server says
+    // The pin lands, and the lists load again while the unpin is still on its way. The server says
     // pinned then, but the screen keeps what was last asked.
     const reloaded = page.waitForResponse(/\/api\/mail\/inbox$/);
     gates[0]!.resolve();
@@ -482,8 +480,8 @@ test('P on an email still loading: its first answer, from before the pin, doesn\
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    // The server answers the email's first load before the pin, but the browser has that answer only
-    // after the pin is made and before any other answer about the email: the open's, the pin's and
+    // The server answers the email's first load before the pin. But the browser has that answer only
+    // after the pin is made and before any other answer about the email. The open's, the pin's and
     // the loads after the first wait until the end.
     const first = Promise.withResolvers<void>();
     const end = Promise.withResolvers<void>();
@@ -515,7 +513,7 @@ test('P on an email still loading: its first answer, from before the pin, doesn\
     await delivered;
     await page.locator('.rd-body:not(:has(.sk-body))').waitFor();
     assert.equal(await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).count(), 1, 'still pinned on screen');
-    // So P unpins it, at once on screen; the unpin goes once the pin is answered.
+    // So P unpins it, at once on screen. The unpin goes once the pin is answered.
     await page.keyboard.press('p');
     await page.locator('.rd-tools .tool:not(.active)', {hasText: 'Pin'}).waitFor();
     end.resolve();
@@ -533,7 +531,7 @@ test('a pin out of the shelf\'s sight says so, with Undo, and lands on the shelf
     // A short window, so the shelf starts below Attention's three rows, out of sight, with nothing scrolled.
     const page = await setpoint.page({width: 1677, height: 220});
     await page.goto(`${setpoint.base}/inbox`);
-    // P on Contoso University, the last in Attention: the toast says Pinned, with Undo; the row leaves
+    // P on Contoso University, the last in Attention: the toast says Pinned, with Undo. The row leaves
     // Attention for the shelf.
     const exams = page.locator('.row:not(.shelf):has(b[data-tip^="Final exam schedule"])');
     await point(exams);
@@ -618,7 +616,7 @@ test('Mark all as read says how many it read; Undo brings the dots back at once,
     const held = new Promise<void>(resolve => {
       release = resolve;
     });
-    // Once released the route only passes the lists on, so it stays to the check's end: removing it
+    // Once released, the route only passes the lists on, so it stays to the check's end. Removing it
     // turns the browser's interception off, which can strand whatever /api request is crossing it.
     // Its pages close at the end, maybe while it passes one on.
     const lists = /\/api\/mail\/(inbox|all)(\?|$)/;
@@ -667,7 +665,7 @@ test('a code row: Copy puts the code on the clipboard and reads its email in pla
     // Stopped at about the time read, however long that read took.
     await pauseClock(page);
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
-    // Today's live code row; Contoso Insurance's other email is in an earlier day, its code long gone.
+    // Today's live code row. Contoso Insurance's other email is in an earlier day, its code long gone.
     const row = page.locator('.list .row', {has: page.locator('.code-line')});
     assert.equal(await row.locator('.code').textContent(), '482 913');
     const id = await row.getAttribute('data-id');
@@ -694,15 +692,15 @@ test('a code row: Copy puts the code on the clipboard and reads its email in pla
     await row.locator('button', {hasText: 'Copy'}).click();
     await page.locator('.toast', {hasText: 'Couldn\'t copy it'}).waitFor();
     assert.equal(await row.locator('.copy').textContent(), 'Copy');
-    // At its expiry Copy and the countdown go, without a reload, and not up to 15 s later on the app's
-    // clock; its last minute counts down in seconds. The row stays in its day.
+    // At its expiry Copy and the countdown go, without a reload, and not up to 15 s later on the
+    // app's clock. Its last minute counts down in seconds. The row stays in its day.
     const countdown = row.locator('.sum');
     const seconds = Number(/^Expires in (\d+) sec$/.exec((await countdown.textContent())!)?.[1]);
     assert.ok(seconds > 0 && seconds <= 12, `${seconds} seconds left`);
     // A second later it reads one less.
     await page.clock.runFor(1000);
     await until('a second less', () => countdown.textContent(), text => text === `Expires in ${seconds - 1} sec`);
-    // When it expires is codeExpired's, a table in inbox.test.ts; its fold out is by eye.
+    // When it expires is codeExpired's, a table in inbox.test.ts. Its fold out is by eye.
     await page.clock.runFor(loaded + 12_000 + 400 - await page.evaluate(() => Date.now()));
     await page.clock.resume();
     await until('Copy gone', () => row.count(), count => count === 0);
@@ -749,7 +747,7 @@ test('images hidden: Show loads them this time; Always show trusts the domain', 
   const setpoint = await startSetpoint({fixtures: ['coffee-html']});
   try {
     const page = await load(setpoint);
-    // The images' host, faked in the check: nothing reaches the network, but a request that gets
+    // The images' host, faked in the check. Nothing reaches the network, but a request that gets
     // this far would have loaded.
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==', 'base64');
     await page.context().route('https://cdn.contosocoffee.example/**', route => route.fulfill({contentType: 'image/png', body: png}));
@@ -895,7 +893,7 @@ test('on the phone, a newsletter wider than the screen is zoomed to fit it, as t
   }
 });
 
-/** Waits for the stitched notice to fit its frame; says what sits where, in the page's order. */
+/** Waits for the stitched notice to fit its frame. Says what sits where, in the page's order. */
 async function stitchedNotice(page: Page) {
   const frame = page.frameLocator('iframe.mailframe');
   await frame.getByText('please don\'t reply').waitFor();
@@ -920,7 +918,7 @@ test('an email of three whole documents shows all three, in order, as tall as th
   }
 });
 
-/** Opens an email and waits for it to fit its frame; says the frame's box and where each line sits in the page. */
+/** Opens an email and waits for it to fit its frame. Says the frame's box and where each line sits in the page. */
 async function fitted(page: Page, setpoint: Setpoint, subject: string, lines: string[]) {
   await page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id: await idOf(setpoint, subject)})}`);
   const frame = page.frameLocator('iframe.mailframe');
@@ -962,7 +960,7 @@ test('with the email clicked into, its keys still reach Setpoint, and its text s
     await stitchedNotice(page);
     const frame = page.frameLocator('iframe.mailframe');
     const intoEmail = async () => {
-      // By the pointer at its box: under the page's zoom, Playwright's own hit check inside the frame
+      // By the pointer at its box. Under the page's zoom, Playwright's own hit check inside the frame
       // misses (it maps the point without the zoom), while the browser's lands on it.
       const heading = (await rested(() => frame.getByText('Your statement is ready', {exact: true}).boundingBox()))!;
       await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2, {clickCount: 3});
@@ -1230,16 +1228,16 @@ test('days first: Attention, the shelf, then the days, Today first; lanes, kinds
     assert.deepEqual((await page.locator('.list.all .lh').allTextContents()).slice(0, 2), ['FYI 8', 'FYI 4']);
     // Each FYI run of one kind under its subheading.
     assert.deepEqual((await page.locator('.list.all .kh').allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
-    // The summary takes the subject's place; the subject is its tooltip.
+    // The summary takes the subject's place. The subject is its tooltip.
     const fabrikam = page.locator('.list.all .row', {hasText: 'Fabrikam'}).first();
     assert.equal(await fabrikam.locator('.subj').textContent(), 'Data Analyst · via Workday');
     assert.equal(await fabrikam.locator('.subj b').getAttribute('data-tip'), 'Application received');
-    // Above the days and in Today, ages; in earlier days, clock times. The pinned lease is on the shelf only.
+    // Above the days and in Today, ages. In earlier days, clock times. The pinned lease is on the shelf only.
     assert.equal(await fabrikam.locator('.age').textContent(), '7h');
     assert.match((await page.locator('.list.all .row:has(b[data-tip="Lab 5 posted"]) .age').textContent())!, /^\d{1,2}:\d\d [AP]M$/);
     assert.deepEqual(await page.locator('.list.all .row:has(b[data-tip="Lease renewal terms"])').evaluateAll(rows => rows.map(row => [row.classList.contains('shelf'), row.querySelector('.age')!.textContent])),
       [[true, 'Sep 30']]);
-    // Today's Noise is one line; J and K stop on it after Attention's 3, the shelf's 1 and Today's 8,
+    // Today's Noise is one line. J and K stop on it after Attention's 3, the shelf's 1 and Today's 8,
     // and Enter opens it in place.
     const coffee = page.locator('.list.all .row', {hasText: 'Contoso Coffee'});
     const noise = page.locator('.list.all .nfold').first();
@@ -1257,7 +1255,7 @@ test('days first: Attention, the shelf, then the days, Today first; lanes, kinds
     await until('Unread counts one less', () => page.locator('.hd .ib-views .ubadge').textContent(), text => text === '18');
     // The account stays on every row beside the reading pane.
     assert.equal(await coffee.first().locator('.ac').isVisible(), true);
-    // Trash takes the row out, and ⌘Z brings it back; the folds are by eye.
+    // Trash takes the row out, and ⌘Z brings it back. The folds are by eye.
     await page.keyboard.press('Escape');
     const lease = page.locator('.list.all .row:has(b[data-tip="Lease renewal terms"])');
     await point(lease);
@@ -1362,7 +1360,7 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
     await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
     assert.equal(await paneWidth(), 680);
 
-    // dx in the page's pixels; the pointer moves in the window's.
+    // dx in the page's pixels. The pointer moves in the window's.
     const drag = async (dx: number) => {
       const edge = (await rested(() => page.locator('.pane-edge').boundingBox()))!;
       const at = {x: edge.x + edge.width / 2, y: edge.y + 200};

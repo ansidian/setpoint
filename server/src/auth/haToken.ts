@@ -12,7 +12,7 @@ import {hashSecret} from './sessions.ts';
 
 const PREFIX = 'sp_ha_';
 
-/** A new token (256 random bits), replacing any earlier one. Returned once; only its hash is kept. */
+/** A new token (256 random bits), replacing any earlier one. Returned once. Only its hash is kept. */
 export function issueHaToken(store: Store): {token: string; createdAt: string} {
   const token = `${PREFIX}${randomBytes(32).toString('base64url')}`;
   const createdAt = store.now().toISOString();
@@ -23,7 +23,7 @@ export function issueHaToken(store: Store): {token: string; createdAt: string} {
   return {token, createdAt};
 }
 
-/** Revokes the token; returns whether there was one. */
+/** Revokes the token and returns whether there was one. */
 export function revokeHaToken(store: Store): boolean {
   return store.db.delete(t.haToken).returning({id: t.haToken.id}).all().length > 0;
 }

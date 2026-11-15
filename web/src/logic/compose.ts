@@ -1,7 +1,7 @@
 // The editor's title as it's typed (board 13): "Dinner with Sam fri 7-9pm
-// @Blue Door" is the title "Dinner with Sam", Fri, Oct 9 from 7 to 9 PM, at Blue Door, each parsed
-// part marked where it was typed. It reads the few phrases the editor needs itself, as local days
-// and minutes, so every mark has its exact place in the text.
+// @Blue Door" is the title "Dinner with Sam", Fri, Oct 9 from 7 to 9 PM, at Blue Door. Each parsed
+// part is marked where it was typed. It reads the few phrases the editor needs itself, as local
+// days and minutes, so every mark has its exact place in the text.
 //
 // What it reads, anywhere in the title:
 // - a day: today, tonight, tomorrow (tmr, tmrw); a weekday (the next one, today counting; "next
@@ -19,8 +19,8 @@
 //   "no end" by a time ("2pm no end", "no end 2pm").
 // - an event's length after "for": "for 15 min", "for 1.5h", "for 1 hour 20mins",
 //   "for 1h30"; digits only, in min(s)/minute(s), h/hr(s)/hour(s), d/day(s) and week(s). It ends the
-//   event that long after its start; with no time typed, `length` alone says it, for the reader's
-//   default start, but a length in whole days or weeks is all day over them ("Trip fri for 3 days" is
+//   event that long after its start. With no time typed, `length` alone says it, for the reader's
+//   default start. But a length in whole days or weeks is all day over them ("Trip fri for 3 days" is
 //   Fri–Sun). The first of a length or an end wins ("2-3pm for 2h" keeps "for 2h" as words).
 // - an event's span of days, as the Date field takes them: "oct 23–25", "oct 23 to 25",
 //   "oct 30 – nov 2", "fri to sun", "fri through sun", "from fri to sun", the last day read from the
@@ -32,8 +32,8 @@
 //   ("1h before", "30 mins before", "2 hours after", "at start", in minutes, hours, days or weeks) or a moment ("sun 8pm",
 //   "tomorrow 9am", "at 6pm" on the item's own day), several joined by "and" or commas ("remind 1 day
 //   and 10 mins before"). Read before the days and times, so "sun 8pm" there isn't the item's day.
-//   Given what the item counts from (`remind`), each phrase is checked against it: past 4 weeks
-//   either side, or past 10 with what the item keeps, it stays words; with none given (a task with
+//   Given what the item counts from (`remind`), each phrase is checked against it. Past 4 weeks
+//   either side, or past 10 with what the item keeps, it stays words. With none given (a task with
 //   no date) every such phrase does. "remind" and a day with no time stays words too.
 // - repeats: daily, weekly, monthly, yearly, annually, biweekly; every day / week / month / year;
 //   every 2 weeks; every other mon; every mon, wed and fri; every weekday / weekend; first mon of
@@ -165,7 +165,7 @@ const meridiemOf = (text: string | undefined) => (text ? (text[0]!.toLowerCase()
 
 /**
  * A range's two ends. An end missing its am/pm takes the first reading after the start ("9am-5" is
- * 5 PM); a start missing its own takes the last reading before the end ("7-9pm" is 7 PM, "11-1pm"
+ * 5 PM). A start missing its own takes the last reading before the end ("7-9pm" is 7 PM, "11-1pm"
  * 11 AM). With am/pm on neither, both need minutes or a 24-hour hour ("9:00-10:30", "13-15"). The
  * same time twice ("2-2pm", "14:00–14:00") is No end, the end at the start.
  */
@@ -213,9 +213,9 @@ interface State {
   // A span's last day, when it's all day or repeats each day; a span across days with a time at
   // each end is just its date, start and end.
   last: string | null;
-  // What reminder phrases count from; null, and they stay words.
+  // What reminder phrases count from. When it is null, they stay words.
   remind: ReminderBase | null;
-  // Each reminder phrase read, where it starts; a moment's null day is the item's own.
+  // Each reminder phrase read, where it starts. A moment's null day is the item's own.
   reminders: {start: number; reads: ({minutes: number} | {date: string | null; time: number})[]}[];
   // A weekend read as the day: an event's is all day Saturday–Sunday with no time.
   weekend: boolean;
@@ -233,7 +233,7 @@ const fresh = (event: boolean, remind: ReminderBase | null = null): State => ({d
 interface Matcher {
   kind: MarkKind;
   pattern: RegExp;
-  // False when the match isn't one after all; `state` is changed only when it is. 'words' when it's
+  // False when the match isn't one after all. `state` is changed only when it is. 'words' when it's
   // a phrase that stays words whole (a backwards span, a task's span), read no further.
   apply: (match: RegExpExecArray, state: State, today: string) => boolean | 'words';
 }
@@ -280,7 +280,7 @@ const REPEATS: Matcher[] = [
   }},
 ];
 
-/** A time on its own; "no end" by it is No end, unless a length came first. */
+/** A time on its own. "no end" by it is No end, unless a length came first. */
 function single(m: RegExpExecArray, s: State): boolean {
   if (s.start !== null) return false;
   const noEnd = /no\s+end/i.test(m[0]);
@@ -303,7 +303,7 @@ const TIMES: Matcher[] = [
     [s.start, s.end] = [found.start, found.end];
     return true;
   }},
-  // A time, with "no end" before or after it for No end; without it, once a length is read.
+  // A time, with "no end" before or after it for No end. Without "no end", once a length is read.
   {kind: 'when', pattern: sticky(`(?:no\\s+end\\s+)?(?:at\\s+)?(?:(noon|midnight)|${TIME})(?:\\s+no\\s+end)?${END}`), apply: single},
   {kind: 'when', pattern: sticky(`(?:at\\s+)?(?:(noon|midnight)|${TIME})${END}`), apply: single},
 ];
@@ -317,8 +317,8 @@ const UNIT_MINUTES: Record<string, number> = {m: 1, h: 60, d: 1440, w: 10080};
 
 const LENGTH: Matcher = {
   kind: 'when', pattern: sticky(`for\\s+(${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?)${END}`), apply: (m, s) => {
-    // A task's line keeps it as words, and the first of a length or an end wins; whole days
-    // are how many days it runs, so a time's end leaves them be.
+    // A task's line keeps it as words, and the first of a length or an end wins. Whole days are
+    // how many days it runs, so a time's end leaves them be.
     if (!s.event || s.length !== null || s.span !== null) return false;
     const minutes = minutesIn(m[1]!);
     if (minutes === null || minutes < 1) return false;
@@ -398,7 +398,7 @@ const SPAN: Matcher = {
 // ---------- When a repeat ends ----------
 
 /**
- * When a repeat ends, only once one is read; the first ending wins. Without a repeat
+ * When a repeat ends, only once one is read. The first ending wins. Without a repeat
  * "until …" and a count stay words, and "for N days/weeks" is left to the length.
  */
 function ending(s: State, start: number, found: Omit<NonNullable<State['ending']>, 'start'>, orLength = false): boolean | 'words' {
@@ -491,7 +491,7 @@ const REMINDERS: Matcher[] = [
 /**
  * The reminders the phrases read, each checked against the item's moment once the whole line is
  * read: a phrase with one past 4 weeks either side, or one too many with what the item keeps, stays
- * words. Approximate in minutes on the clock; reminders.ts turns them into exact offsets.
+ * words. Approximate in minutes on the clock. reminders.ts turns them into exact offsets.
  */
 function resolveReminders(state: State, days: number | null): {reminders: ReminderRead[] | null; words: Set<number>} {
   const words = new Set<number>();
@@ -651,20 +651,20 @@ export function typedSpan(before: string, after: string): {start: number; end: n
 }
 
 /**
- * Reads the title as typed; `today` places weekdays and bare dates, `calendars` are the names "cal …"
+ * Reads the title as typed. `today` places weekdays and bare dates, `calendars` are the names "cal …"
  * knows, and `picked` is the place text a suggestion was picked for, where the place stops. `hash`
  * is what "#…" reads (a task's projects or an event's calendars): their names, in the list's order,
  * with the text a menu pick was made for.
  *
- * `edit` is an item's title as it was and its day, when the text is that title edited: only
+ * `edit` is an item's title as it was and its day, when the text is that title edited. Then only
  * phrases wholly inside what the edit typed are read (`typedSpan`), and a repeat with no day of its
  * own counts from the item's day rather than today. With no phrase read the title is the text as
- * typed, spaces and all; phrases that leave no words keep the title as it was.
+ * typed, spaces and all. Phrases that leave no words keep the title as it was.
  *
- * A task's line (`hash` its projects) reads no lengths or spans of days; any other, an event's, does.
+ * A task's line (`hash` its projects) reads no lengths or spans of days. Any other, an event's, does.
  *
- * `remind` is what the item's reminders count from when the line names no day or time; with
- * none, reminder phrases stay words.
+ * `remind` is what the item's reminders count from when the line names no day or time. With none,
+ * reminder phrases stay words.
  */
 export function parseTitle(text: string, today: string, calendars: string[] = [], picked: string | null = null,
   hash: {kind: 'project' | 'calendar'; names: string[]; picked: string | null} | null = null,
@@ -840,7 +840,7 @@ export interface DraftContent {
 /**
  * Whether new drafts hold anything the user put there: a line, a title, a place, a field set by hand,
  * a reminder, repeat or project chosen, or a second draft. Such a draft leaves only by Create,
- * Cancel or Esc; E or New on another item doesn't replace it.
+ * Cancel or Esc. E or New on another item doesn't replace it.
  */
 export function draftStarted(drafts: DraftContent[]): boolean {
   return drafts.length > 1 || drafts.some(draft => draft.text.trim() !== '' || draft.title.trim() !== '' || draft.place.trim() !== ''
@@ -990,7 +990,7 @@ const shortDay = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateStr
 export function describeRule(rule: string | null, date: string): string {
   if (!rule) return 'Does not repeat';
   const parts = ruleParts(rule);
-  // An UNTIL with a time is an instant in UTC, whose local day this can't tell; it's left unsaid.
+  // An UNTIL with a time is an instant in UTC, whose local day this can't tell. It's left unsaid.
   const until = /^(\d{4})(\d{2})(\d{2})$/.exec(parts.get('UNTIL') ?? '');
   const count = Number(parts.get('COUNT') ?? 0);
   const said = describeRepeat(rule, date);
@@ -1010,7 +1010,7 @@ function describeRepeat(rule: string, date: string): string {
     case 'WEEKLY': {
       const list = (days ?? RRULE_DAYS[weekdayOf(date)]!).split(',');
       if (interval === 1 && list.join(',') === 'MO,TU,WE,TH,FR') return 'Every weekday';
-      // One day is spelled out; several stay short.
+      // One day is spelled out, and several stay short.
       const names = list.length === 1 ? FULL_DAY_NAMES : DAY_NAMES;
       return `${every('Weekly', 'weeks')} on ${list.map(code => names[RRULE_DAYS.indexOf(code as (typeof RRULE_DAYS)[number])]).join(', ')}`;
     }

@@ -1,6 +1,7 @@
 // Passkeys (WebAuthn): the passkey store, challenge store, pending sign-ins, WebAuthn config and
 // service. Challenges and pending sign-ins are stored as hashes, spent once, last five minutes and
-// belong to one security generation. A sign-in that needs a passkey after the password (strict mode) carries the password's time in its pending row.
+// belong to one security generation. A sign-in that needs a passkey after the password (strict
+// mode) carries the password's time in its pending row.
 import {randomBytes} from 'node:crypto';
 import {
   generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse,
@@ -27,10 +28,10 @@ export interface RelyingParty {
 }
 
 /**
- * The relying party: Setpoint's public origin when set (SETPOINT_PUBLIC_URL, https in production),
- * else in development the browser's own loopback origin (localhost or 127.0.0.1, any port), so
- * passkeys work against `npm run dev` and Vite alike. Passkeys belong to the hostname, which is why
- * the cutover keeps it.
+ * The relying party is Setpoint's public origin when set (SETPOINT_PUBLIC_URL, https in
+ * production). Else, in development, it's the browser's own loopback origin (localhost or
+ * 127.0.0.1, any port), so passkeys work against `npm run dev` and Vite alike. Passkeys belong to
+ * the hostname, which is why the cutover keeps it.
  */
 export function relyingParty(publicUrl: string | null, requestOrigin: string | undefined, production: boolean): RelyingParty {
   if (publicUrl) {
@@ -68,7 +69,7 @@ export interface PendingSignIn {
 }
 
 /**
- * A pending sign-in under `generation`; its secret goes in a short-lived cookie. Null, making
+ * A pending sign-in under `generation`. Its secret goes in a short-lived cookie. Null, making
  * nothing, when the owner's generation has moved on since the caller checked the password (a
  * security change landed while bcrypt ran).
  */
@@ -115,7 +116,7 @@ function spendChallenge(store: Store, challenge: string, purpose: 'sign_in' | 'r
 
 /**
  * The options for a passkey sign-in. In strict mode it continues the pending sign-in a correct
- * password started; otherwise it starts one. Returns the pending cookie's secret when it made one.
+ * password started. Otherwise it starts one. Returns the pending cookie's secret when it made one.
  */
 export async function passkeySignInOptions(store: Store, rp: RelyingParty, pendingSecret: string | null) {
   const owner = getOwner(store);
@@ -199,7 +200,7 @@ export async function passkeyRegistrationOptions(store: Store, rp: RelyingParty,
   });
 }
 
-/** Verifies and stores a new passkey; a security change, so it returns the new generation. */
+/** Verifies and stores a new passkey. It's a security change, so it returns the new generation. */
 export async function registerPasskey(store: Store, rp: RelyingParty, session: {id: number; securityGeneration: number}, label: string, response: Record<string, unknown>) {
   let verification;
   try {
@@ -224,7 +225,7 @@ export async function registerPasskey(store: Store, rp: RelyingParty, session: {
   });
 }
 
-/** Removes a passkey; removing the last one turns strict mode off, so sign-in stays possible. */
+/** Removes a passkey. Removing the last one turns strict mode off, so sign-in stays possible. */
 export function deletePasskey(store: Store, generation: number, passkeyId: number): number | null {
   const passkey = store.db.select().from(t.passkeys).where(eq(t.passkeys.id, passkeyId)).get();
   if (!passkey) throw notFound('No such passkey.');

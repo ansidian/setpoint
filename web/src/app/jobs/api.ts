@@ -1,7 +1,7 @@
 // Jobs's calls to the server (the page, Needs you's answers, the corrections and their Undo,
-// Settings › Jobs and Settings › AI's Jobs group), through web/src/api/client.ts's helpers, never `fetch` itself (the
-// lint holds the network to web/src/api/). Every path is under /jobs, so a `jobs` live event refreshes
-// whichever are on screen (logic/live.ts).
+// Settings › Jobs and Settings › AI's Jobs group), through web/src/api/client.ts's helpers, never
+// `fetch` itself (the lint holds the network to web/src/api/). Every path is under /jobs, so a
+// `jobs` live event refreshes whichever are on screen (logic/live.ts).
 import type {ApplicationOut, JobsChangeOut, JobsDismissedOut, JobsEdit, JobsNavOut, JobsReadAccount, JobsSettingsOut, JobStatus, JobsUndoneOut} from '@setpoint/shared';
 import {getCached, refreshIfShown, sendJson, setCached} from '../../api/client.ts';
 
@@ -29,7 +29,7 @@ export const cachedNav = () => getCached<JobsNavOut>(NAV_PATH);
 
 /**
  * Look it up: the JD looked up again, on any application. The answer is the detail with its JD
- * `looking`, shown at once; the lookup's end comes as a `jobs` event.
+ * `looking`, shown at once. The lookup's end comes as a `jobs` event.
  */
 export async function lookUp(id: number): Promise<void> {
   const detail = await sendJson<ApplicationOut>('POST', `${applicationPath(id)}/lookup`);
@@ -51,7 +51,7 @@ function refreshJobs(applications: (number | null)[] = []) {
   for (const id of applications) if (id !== null) refreshIfShown(applicationPath(id));
 }
 
-/** Sends an answer or a correction, then refreshes what it changed; the answer carries its Undo. */
+/** Sends an answer or a correction, then refreshes what it changed. The answer carries its Undo. */
 async function change(method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown, applications: (number | null)[] = []): Promise<JobsChangeOut> {
   const answer = await sendJson<JobsChangeOut>(method, path, body);
   refreshJobs([...applications, answer.application]);
@@ -94,8 +94,8 @@ export async function undoDismiss(ids: number[]): Promise<void> {
 }
 
 /**
- * Settings › Jobs's switch: on starts the history pass and brings Jobs into the sidebar; off stops
- * reading. Settings shows the answer at once; the page and the shell's item ask again.
+ * Settings › Jobs's switch: on starts the history pass and brings Jobs into the sidebar, and off stops
+ * reading. Settings shows the answer at once, and the page and the shell's item ask again.
  */
 export async function turnJobs(enabled: boolean): Promise<void> {
   const settings = await sendJson<JobsSettingsOut>('PATCH', SETTINGS_PATH, {enabled});
@@ -103,7 +103,7 @@ export async function turnJobs(enabled: boolean): Promise<void> {
   refreshJobs();
 }
 
-/** Reads: the accounts Jobs reads and how; while it's on, a change starts the history pass over what's new to it. */
+/** Reads: the accounts Jobs reads and how. While it's on, a change starts the history pass over what's new to it. */
 export async function setReads(accounts: JobsReadAccount[]): Promise<void> {
   const settings = await sendJson<JobsSettingsOut>('PATCH', SETTINGS_PATH, {accounts});
   setCached(SETTINGS_PATH, settings);

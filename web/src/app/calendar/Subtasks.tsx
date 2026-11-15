@@ -1,16 +1,16 @@
-// A task's subtasks as a checklist, in the floating detail and under the task's row in
-// the day pane: each a ring that completes it alone, struck through once done, at .5 while Todoist
-// hasn't confirmed. They sit a column in from the task, and that column holds each one's handle,
-// shown under the pointer: dragging it reorders them, live as Settings' lists do (order.ts), and
-// ↑ ↓ on it move the subtask a place. A check Todoist refused stays in place, as every failed change
-// does: the row says so in `alert`, Todoist's words as its tip, with Try again and Undo. Without the
+// A task's subtasks as a checklist, in the floating detail and under the task's row in the day
+// pane. Each is a ring that completes it alone, struck through once done, at .5 while Todoist hasn't
+// confirmed. They sit a column in from the task, and that column holds each one's handle, shown
+// under the pointer. Dragging it reorders them, live as Settings' lists do (order.ts), and ↑ ↓ on it
+// move the subtask a place. A check Todoist refused stays in place, as every failed change does. The
+// row says so in `alert`, with Todoist's words as its tip, and Try again and Undo. Without the
 // actions (the phone) the rings are marks.
 //
-// A dated subtask's date follows its title in `ink3`, with the bell when it has reminders;
-// its title opens it in the editor, and a right-click its menu. The last row adds one:
-// "Add subtask", a field in place once clicked, where Enter adds what's typed at the end, at
-// .5 until the server has it, and the field clears for the next; Esc, or leaving it empty, puts the
-// row back, and leaving it with text adds that first.
+// A dated subtask's date follows its title in `ink3`, with the bell when it has reminders. Its
+// title opens it in the editor, and a right-click opens its menu. The last row adds one:
+// "Add subtask", a field in place once clicked. Enter adds what's typed at the end, at .5 until the
+// server has it, and the field clears for the next. Esc, or leaving it empty, puts the row back.
+// Leaving it with text adds that first.
 import type {ItemOut, SubtaskOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
@@ -28,9 +28,9 @@ interface SubtasksProps {
   onComplete?: (subtask: SubtaskOut) => void;
   // A failed check's Try again, or its Undo (Move back).
   onSettle?: (subtask: SubtaskOut, how: 'retry' | 'move-back') => void;
-  // Every subtask's id in the new order; settles once the server has it, or refused it.
+  // Every subtask's id in the new order. It settles once the server has it, or refused it.
   onReorder?: (task: ItemOut, ids: number[]) => Promise<unknown>;
-  // A new subtask at the end; settles once the server has it, or refused it.
+  // A new subtask at the end. It settles once the server has it, or refused it.
   onAdd?: (task: ItemOut, title: string) => Promise<unknown>;
   // The subtask in the editor, and its right-click menu.
   onOpen?: (subtask: SubtaskOut) => void;
@@ -161,7 +161,7 @@ function AddSubtask({onAdd}: {onAdd: (title: string) => void}) {
         }}
         onKeyDown={event => {
           if (event.key === 'Escape') {
-            // Esc puts the row back; the card stays.
+            // Esc puts the row back. The card stays.
             event.preventDefault();
             event.stopPropagation();
             event.nativeEvent.stopImmediatePropagation();

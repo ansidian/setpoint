@@ -90,7 +90,7 @@ export function NotificationsPage() {
           <Row title={ntfy.topics.mail} sub={noServer ? 'Set a server first' : ntfy.attention_mail ? 'Attention mail' : 'Attention mail, off for now'} mono>
             <Switch on={ntfy.attention_mail && !noServer} disabled={noServer} label={ntfy.topics.mail} onChange={on => change({notifications: {attention_mail: on}})} />
           </Row>
-          {/* Like its siblings, it says what's missing without a server; with one, no second line. */}
+          {/* Like its siblings, it says what's missing without a server. With one, no second line. */}
           <Row title="FYI mail" sub={noServer ? 'Set a server first' : undefined}>
             <Switch on={ntfy.fyi_mail && !noServer} disabled={noServer} label="FYI mail" onChange={on => change({notifications: {fyi_mail: on}})} />
           </Row>
@@ -124,7 +124,7 @@ export function NotificationsPage() {
 }
 
 /**
- * ntfy's server: saved on Enter or leaving the field; empty turns ntfy off. The field is keyed by the
+ * ntfy's server: saved on Enter or leaving the field. Empty turns ntfy off. The field is keyed by the
  * saved server, so the page, not the field a save replaces, shows that it saved.
  */
 function ServerField({value, onSave}: {value: string | null; onSave: (server: string | null) => void}) {

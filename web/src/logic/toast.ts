@@ -1,9 +1,8 @@
-// The toast's tone: a glyph before the line says
-// what kind of thing happened before a word is read. Done things lead with `check` in `good`, things
-// taken away with `delete` in `ink3`, failures with `error` in `alert` and an `alert` ring, and a pin
-// made out of the shelf's sight with `keep` in `ink3`. Any other line has no glyph. The tone follows
-// the line's own first words, so every page's lines take it without passing it along; a failure in a
-// provider's own words is marked by the caller.
+// The toast's tone: a glyph before the line says what kind of thing happened before a word is read.
+// Done things lead with `check` in `good`, things taken away with `delete` in `ink3`, failures with
+// `error` in `alert` and an `alert` ring, and a pin made out of the shelf's sight with `keep` in
+// `ink3`. Any other line has no glyph. The tone follows the line's own first words, so every page's
+// lines take it without passing it along. The caller marks a failure in a provider's own words.
 
 export type ToastTone = 'done' | 'gone' | 'failed' | 'pinned';
 

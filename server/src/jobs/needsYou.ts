@@ -1,10 +1,10 @@
-// Answering Needs you (boards 34a–34c), and From history's Dismiss all: pick a
-// candidate or None of these, Assign to…, Track this and Not about a job, each kept for its toast's
-// Undo (./undo.ts), From history's alike.
+// Answering Needs you (boards 34a–34c), and From history's Dismiss all. The answers are pick a
+// candidate or None of these, Assign to…, Track this and Not about a job. Each is kept for its
+// toast's Undo (./undo.ts), and From history's are too.
 //
 // - Dismiss all clears From history: the same as ignoring each item, so those
 //   emails make nothing. Each item is resolved as `dismissed` and kept, with its email's read
-//   untouched (outcome `needs_you`, no application), so it's never offered again; a JD to confirm's
+//   untouched (outcome `needs_you`, no application), so it's never offered again. A JD to confirm's
 //   application keeps its candidates (its detail can still offer them) and nothing is saved.
 // - Undo (the toast's, 6 s) brings back the items Dismiss all named, those still dismissed.
 import type {JobEventKind} from '@setpoint/shared';
@@ -65,7 +65,7 @@ const resolve = (store: Store, ids: number[], resolution: string, now: string) =
 /**
  * POST /api/jobs/applications/:id/jd/pick: a JD to confirm's candidate is the posting (a Needs you
  * item, From history's Choose…, or the detail after Not this posting). Its job reads that posting
- * and saves it (lookup.ts `requestPick`); Undo puts the candidates back as they were.
+ * and saves it (lookup.ts `requestPick`). Undo puts the candidates back as they were.
  */
 export function pickCandidate(store: Store, applicationId: number, candidateId: number): Change {
   return corrected(store, {applications: [applicationId]}, () => {
@@ -91,7 +91,7 @@ export function noneOfThese(store: Store, applicationId: number): Change {
   });
 }
 
-/** POST /api/jobs/needs-you/:id/assign: Assign to… an application; the email becomes its event, and it answers to the role named. */
+/** POST /api/jobs/needs-you/:id/assign: Assign to… an application. The email becomes its event, and it answers to the role named. */
 export function assignItem(store: Store, id: number, applicationId: number): Change {
   const item = openItem(store, id);
   if (item.kind === 'jd_to_confirm') throw invalid('A JD to confirm is answered by picking a candidate.');
@@ -148,7 +148,7 @@ export function trackItem(store: Store, id: number): Change {
   });
 }
 
-/** POST /api/jobs/needs-you/:id/not-a-job: Not about a job; its email makes nothing. */
+/** POST /api/jobs/needs-you/:id/not-a-job: Not about a job. Its email makes nothing. */
 export function notAJob(store: Store, id: number): Change {
   const item = openItem(store, id);
   return corrected(store, {needsYou: [id]}, now => {

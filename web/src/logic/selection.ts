@@ -1,6 +1,6 @@
-// Selecting several emails: ⌘ or Ctrl-click adds a row or takes it out, the first
-// one taking the open email too; ⇧-click adds every email from the last one clicked (or the open one)
-// to this one; and what the selection's tools and menu offer, from its rows.
+// Selecting several emails. ⌘ or Ctrl-click adds a row or takes it out, and the first one takes the
+// open email too. ⇧-click adds every email from the last one clicked (or the open one) to this one.
+// This file also has what the selection's tools and menu offer, from its rows.
 import type {MessageRowOut} from '@setpoint/shared';
 import type {Stop} from './inbox.ts';
 import {readerActions} from './reader.ts';
@@ -18,7 +18,7 @@ function rowIds(stops: Stop[]): number[] {
   return [...new Set(stops.flatMap(stop => (stop.kind === 'row' ? [stop.id] : [])))];
 }
 
-/** ⌘-click on `id`: in, or out if it was in; the first one takes the open email too. */
+/** ⌘-click on `id`: in, or out if it was in. The first one takes the open email too. */
 export function toggled(selection: Selection, id: number, open: number | null): Selection {
   if (!selection.ids.length) return {ids: open !== null && open !== id ? [open, id] : [id], anchor: id};
   const ids = selection.ids.includes(id) ? selection.ids.filter(one => one !== id) : [...selection.ids, id];
@@ -45,8 +45,8 @@ export function inListOrder(ids: readonly number[], stops: Stop[]): number[] {
 }
 
 /**
- * What the selection's tools and menu offer: Done for the emails that can be, how many; Pin
- * unless every one is pinned already; Mark read while any is unread, else Mark unread.
+ * What the selection's tools and menu offer: Done for the emails that can be, and how many. Pin
+ * unless every one is pinned already. Mark read while any is unread, else Mark unread.
  */
 export function selectionOffers(rows: MessageRowOut[]): {done: number; pin: boolean; read: boolean} {
   return {

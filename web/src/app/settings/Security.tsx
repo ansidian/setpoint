@@ -1,7 +1,7 @@
 // Settings › Security (not drawn): the password, how sign-in
 // works (a password or a passkey, or both), passkeys, paired iPhones and recovery codes (new
-// ones shown once); Sign out is the nav's foot. Changes need the password confirmed in the last 10
-// minutes, so the page asks for it first; revoking an iPhone doesn't, since it only takes access away.
+// ones shown once). Sign out is the nav's foot. Changes need the password confirmed in the last 10
+// minutes, so the page asks for it first. Revoking an iPhone doesn't, since it only takes access away.
 import type {AuthMode, DeviceOut, PairingOut, SecurityOut} from '@setpoint/shared';
 import {MIN_PASSWORD_LENGTH} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
@@ -148,7 +148,7 @@ const PAIRED_POLL_MS = 2000;
 
 /**
  * Paired iPhones: + Add iPhone opens the QR inside the group, with its link to copy and
- * how long it lasts; once the phone pairs, the panel closes and its row is there. A code doesn't
+ * how long it lasts. Once the phone pairs, the panel closes and its row is there. A code doesn't
  * outlive its panel: Cancel, or leaving the page, withdraws it.
  */
 function Iphones({security, locked, change, when}: {

@@ -1,7 +1,7 @@
 // The dev provider's .ics attachments, by file name, so `npm run dev`, `npm run try` and the
-// browser checks read a real invitation through Add to calendar. Invented, as every sample is
-// (example domains, Microsoft's fictional companies); any other .ics name serves its name as text,
-// which the import can't read.
+// browser checks read a real invitation through Add to calendar. They're invented, as every sample
+// is (example domains, Microsoft's fictional companies). Any other .ics name serves its name as
+// text, which the import can't read.
 const crlf = (lines: string[]) => `${lines.join('\r\n')}\r\n`;
 
 const header = (method: string) => ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Example Jobs//Interview Scheduler//EN', 'CALSCALE:GREGORIAN', `METHOD:${method}`];

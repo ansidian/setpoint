@@ -1,14 +1,14 @@
 // The command layer (after mantel's `control`). Every change to a
 // provider is a command:
-// - created pending, with the mirror changed at once where the change shows at once (opening an
-//   email drops the unread counts; a moved event sits at its new time at .5 opacity), and `previous`
-//   keeping what Move back restores;
-// - carried out by the source's adapter as a durable job, with the one retry policy for what a
-//   retry can fix;
-// - confirmed when the provider says so, or failed with the provider's own message, staying in
-//   place until Try again or Move back. Nothing quietly reverts.
-// One command per target at a time: a second change waits until the first settles (enforced by a
-// partial unique index too).
+// - It's created pending, with the mirror changed at once where the change shows at once (opening
+//   an email drops the unread counts, a moved event sits at its new time at .5 opacity). `previous`
+//   keeps what Move back restores.
+// - The source's adapter carries it out as a durable job, with the one retry policy for what a
+//   retry can fix.
+// - It's confirmed when the provider says so, or failed with the provider's own message. A failed
+//   one stays in place until Try again or Move back. Nothing quietly reverts.
+// One command per target at a time: a second change waits until the first settles (a partial
+// unique index enforces this too).
 import type {Colour, TodoistColour, CommandKind, CommandOut, CommandTarget, ItemWhen, SourceProvider} from '@setpoint/shared';
 import {and, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -46,8 +46,8 @@ export interface NewCommand {
   sourceId: number | null;
   payload: Record<string, unknown>;
   /**
-   * Runs first, in the command's transaction: changes the mirror where the change shows at once,
-   * and says which target it's about, what Move back restores and what it touched. A change that
+   * Runs first, in the command's transaction. It changes the mirror where the change shows at once.
+   * It says which target it's about, what Move back restores and what it touched. A change that
    * shows only once confirmed (deleting an item) changes nothing here.
    */
   prepare: () => Prepared;
@@ -136,8 +136,8 @@ function transition(store: Store, commandId: number, event: CommandEvent, then: 
 }
 
 /**
- * Effects that show only once the provider confirms: a deleted item goes, and so does a task created
- * with no date, which isn't on the calendar, as a sync leaves undated tasks out; a subtask
+ * Effects that show only once the provider confirms. A deleted item goes. So does a task created
+ * with no date, which isn't on the calendar, because a sync leaves undated tasks out. A subtask
  * with no date stays, in its task's checklist.
  */
 function applyOnConfirm(store: Store, row: CommandRow) {
@@ -197,8 +197,8 @@ export function getCommand(store: Store, commandId: number): CommandRow {
 
 /**
  * Items a change still holds (pending or failed): its target, the item it names, and the rows it
- * created or snapshotted. A sync leaves these as they are, so a pending change isn't undone by the
- * provider's older state and a failed one stays in place until Try again or Move back.
+ * created or snapshotted. A sync leaves these as they are. So the provider's older state doesn't
+ * undo a pending change, and a failed one stays in place until Try again or Move back.
  */
 export function itemsHeldByCommands(store: Store): Set<number> {
   const held = new Set<number>();

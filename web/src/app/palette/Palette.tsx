@@ -1,8 +1,9 @@
-// ⌘K (board 20): commands, not search. ⌘K opens it over everything with the scrim
-// behind; on an open email it lists This email (the reader's, commands.ts), then Go to and
-// Appearance with the current theme ticked (and, from 1100 px, Open or Fold the sidebar). Typing finds every command, the ones that only have a
-// key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill; Enter runs; Esc closes it, and focus
-// goes back where it was. It rises in over 180 ms and closes at once (DESIGN.md › Motion).
+// ⌘K (board 20): commands, not search. ⌘K opens it over everything with the scrim behind. On an
+// open email it lists This email (the reader's, commands.ts), then Go to and Appearance with the
+// current theme ticked (and, from 1100 px, Open or Fold the sidebar). Typing finds every command,
+// the ones that only have a key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill. Enter
+// runs. Esc closes it, and focus goes back where it was. It rises in over 180 ms and closes at once
+// (DESIGN.md › Motion).
 import {useEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {markAllRead} from '../../api/mail.ts';

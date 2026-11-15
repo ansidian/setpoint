@@ -17,11 +17,10 @@ export const JOB_STATUS_SETTERS = ['email', 'user'] as const;
 export type JobStatusSetter = (typeof JOB_STATUS_SETTERS)[number];
 
 /**
- * What an event on the timeline was. The first five set a status; the rest are quiet,
- * added to an application they match and never moving its status or undoing one set by hand:
- * a second confirmation while it's open, account created, a verification code or
- * "verify your email", "one final step", an EEO or screening form, a job board's match, and anything
- * else about it.
+ * What an event on the timeline was. The first five set a status. The rest are quiet: they are added
+ * to an application they match, and never move its status or undo one set by hand. They are a
+ * second confirmation while it's open, account created, a verification code or "verify your email",
+ * "one final step", an EEO or screening form, a job board's match, and anything else about it.
  */
 export const JOB_EVENT_KINDS = [
   'applied', 'assessment', 'interview', 'offer', 'rejection',
@@ -39,19 +38,20 @@ export const STATUS_OF_JOB_EVENT = {
 
 export const isQuietJobEvent = (kind: JobEventKind): kind is QuietJobEventKind => (QUIET_JOB_EVENT_KINDS as readonly string[]).includes(kind);
 
-/** How a JD was found: the email's own link, the hiring platform's API or a web search; or the user pasted it. */
+/** How a JD was found: the email's own link, the hiring platform's API, a web search, or the user pasted it. */
 export const JD_SOURCES = ['email_link', 'platform', 'search', 'pasted'] as const;
 export type JdSource = (typeof JD_SOURCES)[number];
 
 /**
- * Where an application's JD stands, for its row and detail. `found` has a saved posting; `candidates`
- * waits in Needs you as a JD to confirm; `looking` is a lookup under way; `not_found` says "No JD
- * found", or that a picked posting couldn't be read, with Look it up; `none` was never looked up (a closed application from history).
+ * Where an application's JD stands, for its row and detail. `found` has a saved posting.
+ * `candidates` waits in Needs you as a JD to confirm. `looking` is a lookup under way. `not_found`
+ * says "No JD found", or that a picked posting couldn't be read, with Look it up. `none` was never
+ * looked up (a closed application from history).
  */
 export const JD_STATES = ['found', 'candidates', 'looking', 'not_found', 'none'] as const;
 export type JdState = (typeof JD_STATES)[number];
 
-/** A lookup's stored outcome; `found` is the posting itself, so it isn't one of these. */
+/** A lookup's stored outcome. `found` is the posting itself, so it isn't one of these. */
 export const JD_LOOKUPS = ['none', 'looking', 'candidates', 'not_found'] as const satisfies readonly JdState[];
 export type JdLookup = (typeof JD_LOOKUPS)[number];
 
@@ -90,7 +90,7 @@ export type JobReadMode = (typeof JOB_READ_MODES)[number];
 
 /**
  * The history pass: once, when Jobs is turned on. `waiting` is a pass under way that
- * waits for the AI (down, or no key), as the page's reading line does; it goes on once it's back.
+ * waits for the AI (down, or no key), as the page's reading line does. It goes on once it's back.
  */
 export const JOB_HISTORY_STATES = ['not_started', 'running', 'waiting', 'done'] as const;
 export type JobHistoryState = (typeof JOB_HISTORY_STATES)[number];

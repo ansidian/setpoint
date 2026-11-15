@@ -1,6 +1,6 @@
-// The Inbox's rules (DESIGN.md › Interaction rules) as tables over a small Inbox shaped
-// like the seed's: held rows, each row's line, the cursor, and the counts' at-once changes (opening
-// drops unread; only Done drops the pill).
+// The Inbox's rules (DESIGN.md › Interaction rules) as tables over a small Inbox shaped like the
+// seed's: held rows, each row's line, the cursor, and the counts' at-once changes (opening drops
+// unread, and only Done drops the pill).
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {

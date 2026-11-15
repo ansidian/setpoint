@@ -3,9 +3,9 @@
 // beside each reading, so wrong readings can be told apart by the prompt that made them.
 //
 // It's given only the organisations and types in the search's best keyword matches, with counts. A
-// version given every organisation misread more and repeated itself less in a query
-// understanding test. Dates aren't the model's: the grammar reads them (dateChip), the same every
-// time, and the model only says when the words the grammar took for a date are really a name.
+// version given every organisation misread more and repeated itself less in a query understanding
+// test. Dates aren't the model's. The grammar reads them (dateChip), the same every time, and the
+// model only says when the words the grammar took for a date are really a name.
 import {MESSAGE_TYPES} from '@setpoint/shared';
 import type {MessageType} from '@setpoint/shared';
 import {wordsOf} from '../domain/searchChips.ts';
@@ -63,8 +63,8 @@ export interface ReadingFacets {
 const byCount = (counts: Map<string, number>, limit: number): Counted[] => [...counts].sort(([a, one], [b, other]) => other - one || a.localeCompare(b)).slice(0, limit);
 
 /**
- * What the best matches hold, most first, and with no count the organisations whose name has a word
- * starting as a typed word does, for the search that names one its mail doesn't match.
+ * What the best matches hold, most first. Then, with no count, the organisations whose name has a
+ * word starting as a typed word does, for the search that names one its mail doesn't match.
  */
 export function readingFacets(matches: {organisation: string | null; type: string | null}[], organisations: string[], search: string): ReadingFacets {
   const orgs = new Map<string, number>();

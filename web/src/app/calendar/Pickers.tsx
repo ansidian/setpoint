@@ -1,7 +1,7 @@
-// The fields the editor and the proposal card share, each typeable: Project, with its
-// menu of Todoist's projects and New project; the date, with a month to pick from; a time, with its
-// list in 15-minute steps. Each draws in its host's `.field` and `.menu` styles. The mini month is
-// the sidebar's too.
+// The fields the editor and the proposal card share, each typeable. Project has its menu of
+// Todoist's projects and New project. The date has a month to pick from. A time has its list in
+// 15-minute steps. Each draws in its host's `.field` and `.menu` styles. The mini month is the
+// sidebar's too.
 import type {TodoistColour} from '@setpoint/shared';
 import {TODOIST_COLOURS} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
@@ -31,8 +31,8 @@ export const ProjectDot = ({colour}: {colour: TodoistColour | null | undefined})
   <span className="dot sm todoist" style={{'--c': colour ? TODOIST_COLOURS[colour] : 'var(--ink3)'} as CSSProperties} />;
 
 /**
- * A menu that keeps focus in its field: ↑/↓ move `cur`, a click picks; ↵ marks the one Enter picks,
- * and a check the project the field holds.
+ * A menu that keeps focus in its field: ↑/↓ move `cur`, a click picks. ↵ marks the one Enter picks,
+ * and a check marks the project the field holds.
  */
 export function ProjectMenu({choices, projects, cur, value = null, onPick}: {choices: ProjectChoice[]; projects: ProjectOption[]; cur: number; value?: string | null; onPick: (choice: ProjectChoice) => void}) {
   return (
@@ -55,7 +55,7 @@ export const stepCursor = (key: string, cur: number, count: number) =>
 
 /**
  * Project: what's typed, its menu the projects holding it and New project for a name none
- * has; a picked new one shows tagged New and isn't offered again. `line` is the editor's line typing
+ * has. A picked new one shows tagged New and isn't offered again. `line` is the editor's line typing
  * a #project: the menu shows for it, moved by the line's keys.
  */
 export function ProjectField({value, isNew, projects, placeholder, className = '', lead, line = null, noNew = false, onText, onPick}: {
@@ -116,10 +116,10 @@ export function ProjectField({value, isNew, projects, placeholder, className = '
 const HEADS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
- * The mini month: ‹ › step it, a day picks; `cursor` is the one
- * Enter picks. An event's Date shows its days as a band (`range`), following the pointer; the
- * week view's shown week is one band too, and stepping slides the days in from the side they come
- * from. The date picker marks its `value` most strongly.
+ * The mini month: ‹ › step it, a day picks. `cursor` is the one Enter picks. An event's Date shows
+ * its days as a band (`range`), following the pointer. The week view's shown week is one band too,
+ * and stepping slides the days in from the side they come from. The date picker marks its `value`
+ * most strongly.
  */
 export function MiniMonth({month, today, value, cursor = null, range = null, week = null, headClass = '', onMonth, onPick, onHover}: {
   month: string;
@@ -134,7 +134,7 @@ export function MiniMonth({month, today, value, cursor = null, range = null, wee
   onPick: (date: string) => void;
   onHover?: (date: string | null) => void;
 }) {
-  // A month after the last slides in from the right, one before it from the left; the first doesn't.
+  // A month after the last slides in from the right, one before it from the left. The first doesn't.
   const [stepped, setStepped] = useState<{month: string; dir: 'next' | 'prev' | undefined}>({month, dir: undefined});
   if (stepped.month !== month) setStepped({month, dir: month > stepped.month ? 'next' : 'prev'});
   return (
@@ -185,11 +185,10 @@ export interface DateRange {
 }
 
 /**
- * A day field: it takes typing, read when it's left or on Enter (what doesn't read goes
- * back), and focusing it opens the month under it until typing starts. ↑/↓ move a week, Enter
- * picks, Esc closes. With a `range` (an event's) the month picks one end, then the other,
- * either side of it, the days between a band that follows the pointer; a lone day typed
- * keeps the length.
+ * A day field: it takes typing, read when it's left or on Enter (what doesn't read goes back), and
+ * focusing it opens the month under it until typing starts. ↑/↓ move a week, Enter picks, Esc
+ * closes. With a `range` (an event's) the month picks one end, then the other, either side of it,
+ * and the days between are a band that follows the pointer. A lone day typed keeps the length.
  */
 export function DateField({className, label, value, shown, placeholder, today, read, onValue, range, onClear}: {
   className: string;
@@ -202,7 +201,7 @@ export function DateField({className, label, value, shown, placeholder, today, r
   read: (text: string) => string | null;
   onValue: (date: string) => void;
   range?: DateRange;
-  // An × in the field takes the day off (a new task's due date); none without it.
+  // An × in the field takes the day off (a new task's due date). None without it.
   onClear?: () => void;
 }) {
   const [text, setText] = useState<string | null>(null);

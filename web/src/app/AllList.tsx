@@ -1,14 +1,14 @@
-// The Inbox, days first (board 05): Attention, the Pinned shelf,
-// then every email, Noise included, newest first, under day headings, Today first. Unread mail stays
-// in its day, drawn unread. The Inbox's views draw their part of it here too. Each day's rows go by
-// lane, the kind once as a subheading where an FYI run starts, its Noise folded to one line
-// that opens in place. Attention and the shelf are bands with ages, the pattern prompt under Attention, and Unpin under the pointer on the
-// shelf; an email in either leaves its day meanwhile. Today's rows show ages, earlier days'
-// clock times. A live code has Copy and its countdown wherever it is. Pages load as the list nears its
-// end. What shows comes from logic/all.ts; actions are the page's. A trashed row folds out and Undo
-// folds it back in (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles
-// quiet with a Done tag. Each row has mail's slot after its subject (slots.tsx), which another
-// module may fill.
+// The Inbox, days first (board 05). Attention and the Pinned shelf come first. Then every email,
+// Noise included, comes newest first under day headings, Today first. Unread mail stays in its day,
+// drawn unread. The Inbox's views draw their part of it here too. Each day's rows go by lane. The
+// kind shows once as a subheading where an FYI run starts. A day's Noise folds to one line that
+// opens in place. Attention and the shelf are bands with ages. The pattern prompt sits under
+// Attention, and Unpin shows under the pointer on the shelf. An email in either band leaves its day
+// meanwhile. Today's rows show ages, and earlier days' rows show clock times. A live code has Copy
+// and its countdown wherever it is. Pages load as the list nears its end. What shows comes from
+// logic/all.ts, and the actions are the page's. A trashed row folds out and Undo folds it back in
+// (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles quiet with a Done
+// tag. Each row has mail's slot after its subject (slots.tsx), which another module may fill.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, UIEvent} from 'react';
@@ -36,8 +36,8 @@ const BANDS: Record<Band, {label: string; glyph: IconName}> = {
   attention: {label: 'Attention', glyph: GROUP_GLYPHS.attention}, pinned: {label: 'Pinned', glyph: GROUP_GLYPHS.pinned},
 };
 
-// A row's `noise` is the day whose Noise it's under, folded or not; an `aged` row shows its age rather
-// than its clock time (Attention, the shelf, Today).
+// A row's `noise` is the day whose Noise it's under, folded or not. An `aged` row shows its age
+// rather than its clock time (Attention, the shelf, Today).
 type Part = {kind: 'band'; band: Band; count: number} | {kind: 'day'; date: string}
   | {kind: 'lane'; date: string; lane: AllLane; label: string; count: number; note: boolean}
   | {kind: 'kh'; group: InboxGroup} | {kind: 'noise'; date: string; count: number; preview: string; open: boolean}
@@ -112,7 +112,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
     // Triage's note while it's down sits on the newest Unsorted lane, where the mail it couldn't sort is.
     const noted = days.find(day => day.lanes.some(lane => lane.lane === 'unsorted'))?.date ?? null;
     const dayParts = (day: DayView): Entry<Part>[] => {
-      // Today's rows show ages, as Attention's and the shelf's do; an earlier day's, clock times.
+      // Today's rows show ages, as Attention's and the shelf's do. An earlier day's rows show clock times.
       const aged = day.date === today;
       return [
         ...day.lanes.flatMap(lane => [
@@ -149,7 +149,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   const slotRows = useMemo(() => entries.flatMap(entry => (entry.item.kind === 'row' ? [entry.item.row] : [])), [entries]);
   const afterSubject = useRowSlot(slotRows);
   const ticked = useTicked(days);
-  // A row Trash took beats first; rows folding together start one after another.
+  // A row Trash took beats first. Rows folding together start one after another.
   const delays = foldDelays(shown, runOf);
   // Under a health bar the first band keeps its top line (boards 17, 19a).
   const bars = useHealthBars();
@@ -222,7 +222,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
             <span className="from">{line.from}</span>
-            {/* A live code has Copy and its countdown wherever it is; once it's expired the code is inside the subject. */}
+            {/* A live code has Copy and its countdown wherever it is. Once it's expired, the code is inside the subject. */}
             {row.code && !codeExpired(row, now) ? <CodeLine code={row.code} onCopied={() => onCodeCopied?.(row.id)} /> : (
               <span className="subj">
                 {/* The subject a summary stands in for, under the words it replaces rather than the whole row's middle. */}
@@ -232,7 +232,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
                 {line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}
               </span>
             )}
-            {/* A rule's waiting trash, auto_delete and "4 h" before the account; a live code keeps its own countdown. */}
+            {/* A rule's waiting trash, auto_delete and "4 h" before the account. A live code keeps its own countdown. */}
             {row.trash_due_at && !row.pinned && !(row.code && !codeExpired(row, now)) && (
               <span className="trash-in num" data-tip={`Trash in ${trashLeft(row.trash_due_at, now)}`} aria-label={`Trash in ${trashLeft(row.trash_due_at, now)}`}>
                 <Icon name="auto_delete" size={14} />{trashLeft(row.trash_due_at, now)}
@@ -283,8 +283,8 @@ function Prompt({prompt, onAnswer, leaving, fold}: {prompt: PatternPrompt; onAns
 }
 
 /**
- * The rows that turned Done while the list showed them, so each ticks once, in place; a row already
- * Done when it first showed doesn't, and Undo takes the tick away with the Done.
+ * The rows that turned Done while the list showed them, so each ticks once, in place. A row already
+ * Done when it first showed doesn't tick, and Undo takes the tick away with the Done.
  */
 function useTicked(days: DayView[]): ReadonlySet<number> {
   const [state, setState] = useState(() => ({days, seen: doneOf(days), ticked: new Set<number>()}));

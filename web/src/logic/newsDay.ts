@@ -7,7 +7,7 @@ const n = (value: number) => value.toLocaleString('en-US');
 
 /**
  * "Updated 8:40 AM, next around 9:40": the page's last ranking and the next one due, the second
- * without AM or PM when it shares the first's; "Not ranked yet" before the first.
+ * without AM or PM when it shares the first's. "Not ranked yet" before the first.
  */
 export function freshnessLine(day: Pick<NewsDayOut, 'updated_at' | 'next_at'>, timeZone: string): string {
   if (!day.updated_at) return 'Not ranked yet';
@@ -18,7 +18,7 @@ export function freshnessLine(day: Pick<NewsDayOut, 'updated_at' | 'next_at'>, t
   return `Updated ${updated}, next around ${half(next) === half(updated) ? next.slice(0, -3) : next}`;
 }
 
-/** "2 feeds failing", only for feeds failing every attempt for 6 hours; null with none. */
+/** "2 feeds failing", only for feeds failing every attempt for 6 hours. Null with none. */
 export const failingLine = (day: Pick<NewsDayOut, 'feeds_failing'>): string | null =>
   (day.feeds_failing ? `${n(day.feeds_failing)} ${day.feeds_failing === 1 ? 'feed' : 'feeds'} failing` : null);
 

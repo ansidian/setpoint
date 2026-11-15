@@ -1,7 +1,7 @@
-// Where the history pass stands:
-// its one row (./schema.ts jobsHistory) and the progress the page, Settings › Jobs and the `jobs`
-// live event carry: "Reading history · 140 of 330 emails" while it runs, waiting while the AI is
-// down, "Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM" once it's done.
+// Where the history pass stands: its one row (./schema.ts jobsHistory) and its progress, which the
+// page, Settings › Jobs and the `jobs` live event carry. The progress reads
+// "Reading history · 140 of 330 emails" while it runs, and is waiting while the AI is down. Once it's
+// done, it reads "Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM".
 import type {JobsHistoryOut} from '@setpoint/shared';
 import {and, count, gte, lt} from 'drizzle-orm';
 import type {Store} from '../store.ts';

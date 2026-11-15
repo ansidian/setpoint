@@ -12,7 +12,7 @@ import * as j from './schema.ts';
 
 const PREFIX = 'sp_jobs_';
 
-/** A new token (256 random bits), replacing any earlier one. Returned once; only its hash is kept. */
+/** A new token (256 random bits), replacing any earlier one. Returned once. Only its hash is kept. */
 export function issueJobsToken(store: Store): {token: string; createdAt: string} {
   const token = `${PREFIX}${randomBytes(32).toString('base64url')}`;
   const createdAt = store.now().toISOString();
@@ -24,7 +24,7 @@ export function issueJobsToken(store: Store): {token: string; createdAt: string}
   return {token, createdAt};
 }
 
-/** Revokes the token; returns whether there was one. */
+/** Revokes the token. Returns whether there was one. */
 export function revokeJobsToken(store: Store): boolean {
   return jobsDb(store.sqlite).delete(j.jobsCheckToken).returning({id: j.jobsCheckToken.id}).all().length > 0;
 }

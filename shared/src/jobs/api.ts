@@ -24,7 +24,7 @@
 //   POST   /api/jobs/needs-you/:id/track                Track this
 //   POST   /api/jobs/needs-you/:id/not-a-job            Not about a job
 //   PATCH  /api/jobs/applications/:id                   jobsEditInput (the title in place, the company from More, the JD's location)
-//   POST   /api/jobs/applications/:id/status            jobsStatusInput (Set status; null is Let emails decide)
+//   POST   /api/jobs/applications/:id/status            jobsStatusInput (Set status, where null is Let emails decide)
 //   POST   /api/jobs/applications/:id/merge             jobsMergeInput (Merge with…: the other comes into this one)
 //   POST   /api/jobs/applications/:id/pin               jobsPinInput (Pin or Unpin: the Pinned shelf)
 //   POST   /api/jobs/applications/:id/not-this-posting  the JD goes, its other candidates offered
@@ -35,8 +35,8 @@
 //   POST   /api/jobs/undo/:token                        JobsUndoneOut (the toast's Undo: exactly what was there)
 //
 // Every change goes out as a `jobs` live event (JobsLiveEvent). Ages are instants and dates are
-// local; the page words them ("Today", "2h", "no email in 48 days"). Jobs never counts anything in the
-// Inbox.
+// local. The page words them ("Today", "2h", "no email in 48 days"). Jobs never counts anything in
+// the Inbox.
 import {z} from 'zod';
 import {id, instant, localDate} from '../api/common.ts';
 import {
@@ -53,11 +53,11 @@ export const jobStatusSchema = z.enum(JOB_STATUSES);
  */
 export const jdSummarySchema = z.strictObject({
   state: z.enum(JD_STATES),
-  // How it was found and the platform it was found on ("Greenhouse"); null unless found.
+  // How it was found and the platform it was found on ("Greenhouse"). Null unless found.
   source: z.enum(JD_SOURCES).nullable(),
   platform: z.string().nullable(),
   found_at: instant.nullable(),
-  // Candidates waiting in Needs you; 0 unless `candidates`.
+  // Candidates waiting in Needs you. It's 0 unless `candidates`.
   candidates: z.int().nonnegative(),
   // When a lookup last ended (`not_found`: "had nothing for it on Oct 1") or began (`looking`).
   looked_at: instant.nullable(),
@@ -86,9 +86,9 @@ export const applicationRowSchema = z.strictObject({
   id,
   company: z.string(),
   title: z.string(),
-  // The hiring platform, triage's `via` ("Greenhouse", "Indeed"); null when there was none.
+  // The hiring platform, triage's `via` ("Greenhouse", "Indeed"). Null when there was none.
   platform: z.string().nullable(),
-  // The mail account its emails came to; null once that account is gone.
+  // The mail account its emails came to, or null once that account is gone.
   account_id: id.nullable(),
   applied_at: instant,
   applied_on: localDate,
@@ -107,7 +107,7 @@ export const applicationRowSchema = z.strictObject({
   // Made by Track this, so Applied is its email's date.
   first_seen_in_email: z.boolean(),
   jd: jdSummarySchema,
-  // On the Pinned shelf since then, newest first; null when it isn't pinned.
+  // On the Pinned shelf since then, newest first. Null when it isn't pinned.
   pinned_at: instant.nullable(),
 });
 export type ApplicationRowOut = z.infer<typeof applicationRowSchema>;
@@ -126,10 +126,10 @@ export const jdCandidateSchema = z.strictObject({
 export type JdCandidateOut = z.infer<typeof jdCandidateSchema>;
 
 /**
- * A Needs you item. Its email's date, sender and subject are its own copy,
- * so it stands after the email is purged; `message_id` is null once it's gone.
+ * A Needs you item. Its email's date, sender and subject are its own copy, so it stands after the
+ * email is purged. `message_id` is null once it's gone.
  * Line one is what it's about ("Lucerne Publishing · Junior Developer", or the email's subject) and
- * the sender or company; line two words its event and reason.
+ * the sender or company. Line two words its event and reason.
  */
 export const needsYouItemSchema = z.strictObject({
   id,
@@ -140,10 +140,10 @@ export const needsYouItemSchema = z.strictObject({
   // The role it names, if any.
   title: z.string().nullable(),
   platform: z.string().nullable(),
-  // The email's own copy; null for a JD to confirm, which is about the application.
+  // The email's own copy. Null for a JD to confirm, which is about the application.
   subject: z.string().nullable(),
   sender: z.string().nullable(),
-  // What the email was: a rejection to assign, an interview to track; null for a JD to confirm.
+  // What the email was: a rejection to assign, an interview to track. Null for a JD to confirm.
   event_kind: z.enum(JOB_EVENT_KINDS).nullable(),
   line: z.string().nullable(),
   account_id: id.nullable(),
@@ -156,7 +156,7 @@ export const needsYouItemSchema = z.strictObject({
 });
 export type NeedsYouItemOut = z.infer<typeof needsYouItemSchema>;
 
-/** One week of Per week, Sunday to Saturday in the user's zone; the last is this week, unfinished. */
+/** One week of Per week, Sunday to Saturday in the user's zone. The last is this week, unfinished. */
 export const jobWeekSchema = z.strictObject({
   start: localDate,
   end: localDate,
@@ -174,18 +174,18 @@ export const jobCountsSchema = z.strictObject({
 export type JobCountsOut = z.infer<typeof jobCountsSchema>;
 
 /**
- * Jobs's reading of mail (board 38b): emails triage has sorted that Jobs hasn't read
- * yet, and whether the AI is down: "5 emails not read yet, Anthropic unreachable since 8:52 AM,
- * retrying". `waiting` is briefly above 0 as mail arrives; the line shows only while `down`.
+ * Jobs's reading of mail (board 38b): emails triage has sorted that Jobs hasn't read yet, and
+ * whether the AI is down: "5 emails not read yet, Anthropic unreachable since 8:52 AM, retrying".
+ * `waiting` is briefly above 0 as mail arrives. The line shows only while `down`.
  */
 export const jobsReadingSchema = z.strictObject({
   waiting: z.int().nonnegative(),
   state: z.enum(['healthy', 'down']),
-  // The first failure since the last success, and the provider's words; null while healthy.
+  // The first failure since the last success, and the provider's words. Null while healthy.
   since: instant.nullable(),
   reason: z.string().nullable(),
-  // What the page words: unreachable or rate limited, retried; the key refused or missing, waiting
-  // for Settings › AI. Null while healthy.
+  // What the page words: unreachable or rate limited, which are retried, or the key refused or
+  // missing, which waits for Settings › AI. Null while healthy.
   cause: z.enum(JOB_READING_CAUSES).nullable(),
   // False when it waits for a key in Settings › AI rather than retrying.
   retrying: z.boolean(),
@@ -195,14 +195,15 @@ export type JobsReadingOut = z.infer<typeof jobsReadingSchema>;
 /**
  * The history pass (board 38a and Settings › Jobs): "Reading history · 140 of 330 emails" while it
  * runs, "Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM" once it's done.
- * `total` is fixed when it starts (mail arriving meanwhile is the live reader's); `read` counts what
- * it has read so far. `waiting` is a pass held while the AI is down or has no key (the page's `reading` says why and since when).
+ * `total` is fixed when it starts (mail arriving meanwhile is the live reader's). `read` counts what
+ * it has read so far. `waiting` is a pass held while the AI is down or has no key (the page's
+ * `reading` says why and since when).
  */
 export const jobsHistorySchema = z.strictObject({
   state: z.enum(JOB_HISTORY_STATES),
   read: z.int().nonnegative(),
   total: z.int().nonnegative(),
-  // When the pass began and ended; null before it has.
+  // When the pass began and ended. Null before it has.
   started_at: instant.nullable(),
   finished_at: instant.nullable(),
 });
@@ -229,12 +230,12 @@ export const postingSchema = z.strictObject({
   // The three-line what-they-want summary.
   summary: z.string(),
   location: z.string().nullable(),
-  // When the user set the location, which no reading changes; null while it's the reading's.
+  // When the user set the location, which no reading changes. Null while it's the reading's.
   location_set_at: instant.nullable(),
   workplace: z.enum(JOB_WORKPLACES).nullable(),
   // "3 days", after Hybrid.
   workplace_detail: z.string().nullable(),
-  // As stated ("$95,000–$115,000"); null is "Salary not stated".
+  // As stated ("$95,000–$115,000"). Null is "Salary not stated".
   salary: z.string().nullable(),
   must_haves: z.array(z.string()),
   nice_to_haves: z.array(z.string()),
@@ -243,14 +244,14 @@ export const postingSchema = z.strictObject({
   // Null for a posting pasted with no pick behind it.
   link: z.url().nullable(),
   source: z.enum(JD_SOURCES),
-  // The platform it was found on ("Greenhouse"); null for a search or one pasted.
+  // The platform it was found on ("Greenhouse"). Null for a search or one pasted.
   platform: z.string().nullable(),
   found_at: instant,
 });
 export type PostingOut = z.infer<typeof postingSchema>;
 
 /**
- * A timeline event, oldest first. Its date, kind, sender, subject and line are its own copy;
+ * A timeline event, oldest first. Its date, kind, sender, subject and line are its own copy.
  * `message_id` opens the email while it exists and is null once it's gone. A quiet event has no kind
  * on screen and never moved the status.
  */
@@ -300,7 +301,7 @@ export type JobsSearchOut = z.infer<typeof jobsSearchSchema>;
 
 /**
  * GET /api/jobs/nav: what the shell draws of Jobs on every page: whether it's on (no item while
- * it's off) and the Needs you count beside it (today's, not From history's; gone at zero).
+ * it's off) and the Needs you count beside it (today's, not From history's, and gone at zero).
  */
 export const jobsNavSchema = z.strictObject({enabled: z.boolean(), needs_you: z.int().nonnegative()});
 export type JobsNavOut = z.infer<typeof jobsNavSchema>;
@@ -329,11 +330,10 @@ export const jobsMailApplicationSchema = z.strictObject({
 export type JobsMailApplicationOut = z.infer<typeof jobsMailApplicationSchema>;
 
 /**
- * One email with something for mail's slots (boards 37a–37c):
- * `application` is the one it belongs to (the reader's JD chip); `applied_before`, on a job board's
- * match email whose company matches applications (loosely, and by the companies corrections gave
- * them), is the most recent of them, how many there are, and the search that shows them all in Jobs
- * ("contoso pharmaceuticals").
+ * One email with something for mail's slots (boards 37a–37c). `application` is the one it belongs to
+ * (the reader's JD chip). `applied_before`, on a job board's match email whose company matches
+ * applications (loosely, and by the companies corrections gave them), is the most recent of them,
+ * how many there are, and the search that shows them all in Jobs ("contoso pharmaceuticals").
  */
 export const jobsMailMessageSchema = z.strictObject({
   message_id: id,
@@ -346,7 +346,7 @@ export const jobsMailMessageSchema = z.strictObject({
 });
 export type JobsMailMessageOut = z.infer<typeof jobsMailMessageSchema>;
 
-/** GET /api/jobs/mail: only the emails with something to show; none while Jobs is off, and mail's counts never change. */
+/** GET /api/jobs/mail: only the emails with something to show. None while Jobs is off, and mail's counts never change. */
 export const jobsMailSchema = z.strictObject({messages: z.array(jobsMailMessageSchema)});
 export type JobsMailOut = z.infer<typeof jobsMailSchema>;
 
@@ -361,7 +361,7 @@ export const jobsCheckInput = z.strictObject({
 
 /**
  * One posting's answer: the applications for its role and the company's others, each newest first, as
- * Applied before matches companies; `query` is Jobs's search for them all, null when there are none.
+ * Applied before matches companies. `query` is Jobs's search for them all, null when there are none.
  */
 export const jobsCheckPostingSchema = z.strictObject({
   role: z.array(jobsMailApplicationSchema),
@@ -377,7 +377,7 @@ export type JobsCheckPostingOut = z.infer<typeof jobsCheckPostingSchema>;
 export const jobsCheckSchema = z.strictObject({enabled: z.boolean(), postings: z.array(jobsCheckPostingSchema)});
 export type JobsCheckOut = z.infer<typeof jobsCheckSchema>;
 
-/** An account Jobs reads and how; an account not listed is off. */
+/** An account Jobs reads and how. An account not listed is off. */
 export const jobsReadAccountSchema = z.strictObject({account_id: id, reads: z.enum(JOB_READ_MODES)});
 export type JobsReadAccount = z.infer<typeof jobsReadAccountSchema>;
 
@@ -394,7 +394,7 @@ export type JobsSettingsOut = z.infer<typeof jobsSettingsSchema>;
 
 /**
  * PATCH /api/jobs/settings. Turning Jobs on sets when it was turned on and starts the history pass
- * over what it hasn't read from before then; off stops reading. Accounts changed while it's on start
+ * over what it hasn't read from before then. Off stops reading. Accounts changed while it's on start
  * the pass again over what the new list hasn't had read. Each account once, and only mail's own.
  */
 export const jobsSettingsPatchInput = z.strictObject({
@@ -434,7 +434,7 @@ export type JobsUndoDismiss = z.infer<typeof jobsUndoDismissInput>;
 
 /**
  * What an answer or a correction did: `undo` is its toast's Undo, and `application` the one it
- * made or kept (Track this opens the one it made; Merge with… keeps this one), or null.
+ * made or kept (Track this opens the one it made, and Merge with… keeps this one), or null.
  */
 export const jobsChangeSchema = z.strictObject({undo: id, application: id.nullable()});
 export type JobsChangeOut = z.infer<typeof jobsChangeSchema>;
@@ -448,7 +448,7 @@ export const jobsPickInput = z.strictObject({candidate: id});
 /** The most Paste the posting takes: refused, never cut. */
 export const MAX_PASTED_CHARS = 100_000;
 export const PASTED_TOO_LONG = 'That\'s too long for a posting, Jobs keeps 100,000 characters at most.';
-/** Paste the posting: its text, trimmed; how long it may be is the route's to say, in words for the page. */
+/** Paste the posting: its text, trimmed. How long it may be is the route's to say, in words for the page. */
 export const jobsPasteInput = z.strictObject({text: z.string().trim()});
 /** Assign to…: the application an update is about. */
 export const jobsAssignInput = z.strictObject({application: id});
@@ -464,12 +464,12 @@ export const jobsPinInput = z.strictObject({pinned: z.boolean()});
 export const jobsEditInput = z.strictObject({
   company: z.string().trim().min(1).max(200).optional(),
   title: z.string().trim().min(1).max(300).optional(),
-  // The JD's location; empty or null takes it away.
+  // The JD's location. Empty or null takes it away.
   location: z.string().trim().max(200).nullable().optional(),
 }).refine(edit => edit.company !== undefined || edit.title !== undefined || edit.location !== undefined, 'The company, the title or the location.');
 export type JobsEdit = z.infer<typeof jobsEditInput>;
 
-/** Set status: one of the five, set by hand; null is Let emails decide. */
+/** Set status: one of the five, set by hand. Null is Let emails decide. */
 export const jobsStatusInput = z.strictObject({status: jobStatusSchema.nullable()});
 export type JobsStatusSet = z.infer<typeof jobsStatusInput>;
 
@@ -487,9 +487,9 @@ export interface JobsLiveEvent {
 }
 
 /**
- * One application's latest status change: an email that set a new status, turning
- * Ghosted (30 days after its last email, computed) or a status set by hand (the latest only, its `from`
- * the status its emails had set before it). `from` is null for a new application, which reads "Applied".
+ * One application's latest status change: an email that set a new status, turning Ghosted (30 days
+ * after its last email, computed) or a status set by hand (the latest only, its `from` the status
+ * its emails had set before it). `from` is null for a new application, which reads "Applied".
  */
 export interface JobMoveOut {
   application_id: number;
@@ -510,6 +510,6 @@ export interface JobsMovementOut {
   moves: JobMoveOut[];
   // mail's accounts.id, in Settings › Jobs's order.
   accounts: number[];
-  // The earliest email or Applied date Jobs has; null with no applications.
+  // The earliest email or Applied date Jobs has. Null with no applications.
   since: string | null;
 }

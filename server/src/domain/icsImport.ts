@@ -6,9 +6,9 @@
 // RDATE, and its changed occurrences, RECURRENCE-ID), location, description, URL, free/busy and the
 // alarms that fall before its start. What it drops, counted by reason: cancelled events, to-dos and
 // other non-events, events with no start, alarms after the start or at a fixed time, and
-// categories. Times: DTSTART with DTEND or DURATION; an all-day end date is exclusive; with no end
-// an all-day event lasts one day and a timed one has no length; a TZID maps to its IANA zone (an
-// Outlook Windows name too), and a floating time takes the user's zone.
+// categories. Times come from DTSTART with DTEND or DURATION. An all-day end date is exclusive. With
+// no end, an all-day event lasts one day and a timed one has no length. A TZID maps to its IANA zone
+// (an Outlook Windows name too), and a floating time takes the user's zone.
 import {createHash} from 'node:crypto';
 import ICAL from 'ical.js';
 import {ICS_DROP_REASONS} from '@setpoint/shared';
@@ -26,10 +26,10 @@ const MAX_REMINDER_MINUTES = 40_320;
 /** What an imported event, or one changed occurrence of it, carries to Google. */
 export interface IcsEvent extends ItemWhen {
   kind: 'event';
-  // Trimmed; '' when the file gives none.
+  // Trimmed. '' when the file gives none.
   title: string;
   // The IANA zone of a timed event's start when the file names one ('UTC' for a repeating event
-  // written in UTC); null for an all-day event and for a time that takes the user's zone (floating,
+  // written in UTC). Null for an all-day event, and for a time that takes the user's zone (floating,
   // a single event written in UTC, or a zone the file names but nobody knows).
   time_zone: string | null;
   location: string | null;
@@ -39,7 +39,7 @@ export interface IcsEvent extends ItemWhen {
   url: string | null;
   // TRANSP:TRANSPARENT is free time.
   transparency: 'opaque' | 'transparent';
-  // Minutes before the start, nearest first; only the file's own alarms (never the user's default).
+  // Minutes before the start, nearest first. Only the file's own alarms (never the user's default).
   reminders: number[];
 }
 
@@ -163,7 +163,7 @@ export function readIcs(file: string | Uint8Array, options: {timeZone: string}):
       ...fields,
       ical_uid: uid,
       sequence: sequenceOf(master.component),
-      // A repeating event written in UTC repeats in UTC; a single one shows in the user's zone.
+      // A repeating event written in UTC repeats in UTC. A single one shows in the user's zone.
       time_zone: start.kind === 'instant' && start.utc && repeats.rules.length ? 'UTC' : fields.time_zone,
       recurrence: recurrenceLines(repeats, start),
       changes,
@@ -172,7 +172,7 @@ export function readIcs(file: string | Uint8Array, options: {timeZone: string}):
   return {ok: true, drafts, dropped};
 }
 
-/** A VTIMEZONE whose every part has an offset ical.js can read; one that doesn't would read as UTC. */
+/** A VTIMEZONE whose every part has an offset ical.js can read. One that doesn't would read as UTC. */
 function usableZone(component: ICAL.Component): ICAL.Timezone | null {
   const parts = [...component.getAllSubcomponents('standard'), ...component.getAllSubcomponents('daylight')];
   const readable = parts.length > 0 && parts.every(part => ['tzoffsetfrom', 'tzoffsetto'].every(name => safely(() => part.getFirstPropertyValue(name)) instanceof ICAL.UtcOffset));
@@ -196,7 +196,7 @@ function parseCalendars(text: string): ICAL.Component[] | null {
   return calendars.length ? calendars : null;
 }
 
-/** A value ical.js reads only when asked, and throws on when it's malformed: null then. */
+/** A value ical.js reads only when asked, and throws on when it's malformed. Null then. */
 function safely<T>(read: () => T): T | null {
   try {
     return read();
@@ -211,8 +211,8 @@ const textOrNull = (value: unknown): string | null => textOf(value) || null;
 function uidOf(component: ICAL.Component): string {
   const uid = textOf(component.getFirstPropertyValue('uid'));
   if (uid) return uid;
-  // Google needs an iCalUID: one made from the event's start and title, so importing the same
-  // file again still updates rather than duplicates.
+  // Google needs an iCalUID. This one is made from the event's start and title, so importing the
+  // same file again still updates rather than duplicates.
   const start = component.getFirstProperty('dtstart')?.toICALString() ?? '';
   const hash = createHash('sha256').update(`${start}\n${textOf(component.getFirstPropertyValue('summary'))}`).digest('hex');
   return `${hash.slice(0, 32)}@ics-import`;
@@ -250,7 +250,7 @@ function byOriginalStart(changes: {component: ICAL.Component; context: Context}[
   return [...groups].map(([original, copies]) => ({...latest(copies, dropped)!, original}));
 }
 
-/** The fields an event or a changed occurrence carries, and its start; null with no readable start. */
+/** The fields an event or a changed occurrence carries, and its start. Null with no readable start. */
 function eventOf(component: ICAL.Component, context: Context, dropped: IcsDropped): {fields: IcsEvent; start: Moment} | null {
   const startProperty = component.getFirstProperty('dtstart');
   const start = startProperty ? momentOfProperty(startProperty, context) : null;
@@ -303,7 +303,7 @@ function whenOf(component: ICAL.Component, startProperty: ICAL.Property, start: 
   if (endMoment) {
     end = endMoment.kind === 'instant' ? endMoment.at : zonedInstant(endMoment.date, '00:00', start.zone ?? context.userZone);
   } else if (duration instanceof ICAL.Duration && !duration.isNegative) {
-    // Nominal days: a day across a daylight-saving change is the same wall-clock time the next day.
+    // Nominal days. A day across a daylight-saving change is the same wall-clock time the next day.
     const later = (startProperty.getFirstValue() as ICAL.Time).clone();
     later.addDuration(duration);
     const moment = momentOfTime(later, startProperty.getParameter('tzid'), context);
@@ -319,7 +319,7 @@ function remindersOf(component: ICAL.Component, lengthSeconds: number, dropped: 
   for (const alarm of component.getAllSubcomponents('valarm')) {
     const trigger = alarm.getFirstProperty('trigger');
     const value = trigger ? safely(() => trigger.getFirstValue()) : null;
-    // Apple writes ACTION:NONE at a fixed time in 1976 for "no alert": nothing to drop.
+    // Apple writes ACTION:NONE at a fixed time in 1976 for "no alert". There is nothing to drop.
     if (!trigger || textOf(alarm.getFirstPropertyValue('action')).toUpperCase() === 'NONE') continue;
     if (!(value instanceof ICAL.Duration)) {
       dropped.alarm_at_fixed_time++;
@@ -361,7 +361,7 @@ function momentOfTime(time: ICAL.Time, tzid: unknown, context: Context): Moment 
   if (zone) return {kind: 'instant', at: plus(zonedInstant(date, clock, zone), seconds), zone, utc: false};
   const defined = name ? context.zones.get(name) : undefined;
   if (defined) {
-    // A zone only the file defines: its own rules give the instant, and the user's zone stands in.
+    // A zone only the file defines. Its own rules give the instant, and the user's zone stands in.
     const local = time.clone();
     local.zone = defined;
     const seconds = safely(() => local.toUnixTime());
@@ -408,8 +408,8 @@ const isoOfBasic = (basic: string) => `${basic.slice(0, 4)}-${basic.slice(4, 6)}
 const dateOfBasic = (basic: string) => `${basic.slice(0, 4)}-${basic.slice(4, 6)}-${basic.slice(6, 8)}`;
 
 /**
- * A moment in the series' terms, in basic form: a date for an all-day series, a UTC instant for a
- * timed one (a date on a timed series takes the series' start time that day).
+ * A moment in the series' terms, in basic form. It is a date for an all-day series, and a UTC
+ * instant for a timed one (a date on a timed series takes the series' start time that day).
  */
 function basicIn(moment: Moment, start: Moment, context: Context): string | null {
   if (start.kind === 'date') return basicOfDate(moment.kind === 'date' ? moment.date : localDay(moment.at, moment.zone ?? context.userZone));

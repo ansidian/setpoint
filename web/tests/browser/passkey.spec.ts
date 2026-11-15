@@ -1,7 +1,7 @@
-// A full passkey ceremony in the browser: Chromium's virtual authenticator over
-// the DevTools protocol, on http://localhost (WebAuthn won't take an IP address as its relying party).
-// Settings › Security asks for the password first, adds a passkey, turns on "a password and a
-// passkey"; after Sign out the card takes the password, then the passkey; then the passkey alone
+// A full passkey ceremony in the browser: Chromium's virtual authenticator over the DevTools
+// protocol, on http://localhost (WebAuthn won't take an IP address as its relying party).
+// Settings › Security asks for the password first, adds a passkey, and turns on "a password and a
+// passkey". After Sign out the card takes the password, then the passkey. Then the passkey alone
 // signs in once the mode is back to either, and Security then asks for the password before a change.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';

@@ -25,7 +25,7 @@ export function recordSuccess(store: Store, sourceId: number) {
 
 /**
  * A check finished and the provider refused. Refused credentials mean needs reconnect, which only
- * new credentials clear; returns true when that just began.
+ * new credentials clear. Returns true when that just began.
  */
 export function recordFailure(store: Store, sourceId: number, error: ProviderError): boolean {
   const now = isoNow(store);

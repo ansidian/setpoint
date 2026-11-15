@@ -5,7 +5,7 @@
 // A longer pause asks for a suggestion for the field's exact text: the grammar's date at once, then a
 // reading from the model. Results don't wait for it and it never changes them. The first change to
 // the field takes it away and drops whatever was on its way. It says everything accepting needs, so
-// that asks no model and can't rest on a partial search: a click or Tab makes its chips the field's
+// that asks no model and can't rest on a partial search. A click or Tab makes its chips the field's
 // (`read: 'kept'`), and those filter until they're taken off. A chip's × puts its word back, and a
 // suggestion the user turned down doesn't return for those words.
 //
@@ -92,7 +92,7 @@ export function useSearch(plain = false): Search {
   const offered = useRef<SearchSuggestionOut | null>(null);
   // The text a suggestion was turned down for, by taking its chip off, for as long as the page stays.
   const declined = useRef(new Set<string>());
-  // The whole search in the order typed, for Alfred; null once an edit lost it.
+  // The whole search in the order typed, for Alfred. Null once an edit lost it.
   const typed = useRef<string | null>('');
   // The words the chips' "more" number counts from: a suggestion's `typed`, and what's typed after it.
   // And the same less the words a date chip stands for, which × gives back only with the date.

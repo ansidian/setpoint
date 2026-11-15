@@ -1,7 +1,7 @@
 // The status filter: the segmented control holding the counts by
 // status, "All 62", "Applied 31", …, so a count is also the filter. Ghosted counts under Applied and has
-// no segment. A segment never wraps; the thumb slides to the one turned on, and Tab and Shift-Tab step
-// them.
+// no segment. A segment never wraps. The thumb slides to the one turned on, and Tab and Shift-Tab
+// step them.
 import type {JobCountsOut} from '@setpoint/shared';
 import {Segmented} from '../../ui/Segmented.tsx';
 import {FILTERS, STATUS_LABELS} from './words.ts';

@@ -31,7 +31,7 @@ const more = (count: number) => (count > 0 ? ` and ${count} more` : '');
 
 /**
  * Board 08's line for an event: "Free that evening" or "Overlaps Study group · 1h 30m" (the time the
- * two share). A timed event is checked against the day's timed events; an all-day one against any.
+ * two share). A timed event is checked against the day's timed events, and an all-day one against any.
  * `startHour` is the proposal's local start hour, for morning, afternoon or evening. Free events
  * are left out.
  */

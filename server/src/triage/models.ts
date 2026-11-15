@@ -1,5 +1,5 @@
-// Which models triage asks (bring your own key; Settings › AI). A chosen model id needs the Anthropic
-// key; with no choice, triage takes the built-in models. They're Claude Sonnet 5.5 cheap and Claude
+// Which models triage asks (bring your own key, Settings › AI). A chosen model id needs the Anthropic
+// key. With no choice, triage takes the built-in models. They're Claude Sonnet 5.5 cheap and Claude
 // Opus 5.5 strong (ids from the claude-api skill). The one-time history pass has
 // its own choice, Claude Haiku 5.5 by default: a year of mail on Sonnet would cost about 20× as
 // much. A chosen strong model that can't be asked falls back to the cheap model, so escalation still
@@ -54,7 +54,7 @@ export function aiKeys(store: Store): Record<AiProvider, boolean> {
   return {anthropic: listSecrets(store).some(secret => secret.name === KEY_SECRET && secret.set), openai: false};
 }
 
-/** The Anthropic key, decrypted for its client; null when unset or no encryption key is loaded. */
+/** The Anthropic key, decrypted for its client. Null when unset or no encryption key is loaded. */
 export function anthropicKey(store: Store): string | null {
   if (!store.keyring) return null;
   return readSecret(store, KEY_SECRET);

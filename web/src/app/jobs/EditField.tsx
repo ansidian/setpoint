@@ -4,7 +4,7 @@ import {useEffect, useRef, useState} from 'react';
 /**
  * A field in place (35a): the text swapped for a field on the same baseline, focused with its words
  * selected. Enter saves (an empty or unchanged one changes nothing, unless it may be emptied) and Esc
- * cancels, both at once; leaving it cancels too.
+ * cancels, both at once. Leaving it cancels too.
  */
 export function EditField({label, value, small = false, emptied = false, onSave, onCancel}: {
   label: string;

@@ -14,7 +14,7 @@
 .jb-status > * { white-space: nowrap; flex: none; }
 .jb-status .n { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; transition: color var(--dur-fast) var(--ease); }
 .jb-status > .on .n { color: var(--ink2); }
-/* Per week: the last 12 weeks, oldest first; this week's bar an outline, since it isn't over. */
+/* Per week: the last 12 weeks, oldest first. This week's bar is an outline, since it isn't over. */
 .jb-week { position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 10px; color: var(--ink3); font-size: 12px; white-space: nowrap; flex: none;
   transition: background-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-week:hover { background: var(--sub); } }
@@ -65,7 +65,8 @@
 .jb-need .acts .btn.sm { height: 28px; }
 .jb-need .acts .btn .icon.after { color: var(--ink3); margin-right: -4px; }
 /* A JD to confirm's candidates: a sub group of 32 px rows, the last None of these. A row under the
-   pointer or the cursor takes sub2 and its radio ink2; pressed, sub3; picked, the group takes good. */
+   pointer or the cursor takes sub2 and its radio ink2. Pressed, it takes sub3. Picked, the group
+   takes good. */
 .jb-cands { border-radius: 12px; background: var(--sub); overflow: hidden; transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .jb-cand { display: flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 6px 0 0; color: var(--ink2); font-size: 13px; transition: background-color var(--dur-fast) var(--ease); }
 /* A hairline between the candidates, as the group's rows have on 32 and 34a, inside the 32 px. */
@@ -123,8 +124,8 @@
 /* Its columns beside the detail, which is always there (board 32): no Platform, and JD as a
    glyph named in its tip. */
 /* Company, Applied and Status take the widths dragged or fitted at their edges, kept in
-   `--w-co`, `--w-ap` and `--w-st` on `.jb-col` for any row to read; past what the window has room
-   for they give way to their floors (each its heading sorted) before Role goes under 120. Applied
+   `--w-co`, `--w-ap` and `--w-st` on `.jb-col` for any row to read. Past what the window has room
+   for, they give way to their floors (each its heading sorted) before Role goes under 120. Applied
    starts at 80 so "APPLIED ↓" fits. Under 600 px the fractions apply and the dragged widths don't. */
 .jb-tbl { --cols: 12px minmax(86px, var(--w-co, 156px)) minmax(120px, 1fr) minmax(76px, var(--w-ap, 80px)) minmax(70px, var(--w-st, 214px)) 18px; --gap: 12px; }
 @container jbcol (max-width: 599.98px) {
@@ -169,15 +170,15 @@
 .jb-tr.open { background: var(--sub3); transition: none; }
 .jb-tr.open::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
 /* An arrival (a confirmation, Track this, the history pass) or a row an email moved on settles in from
-   sub2 over 900 ms, the arrival rule News uses; its status cell crossfades as it moves (38a). */
+   sub2 over 900 ms, the arrival rule News uses. Its status cell crossfades as it moves (38a). */
 .jb-tr.landed { animation: jb-landed var(--news-landed) var(--ease); }
 @keyframes jb-landed { from { background: var(--sub2); } }
 .jb-tr.moved .st { animation: jb-swap calc(var(--dur-fast) * 2) var(--ease); }
 @keyframes jb-swap { 0%, 50% { opacity: 0; } }
 .jb-tr > span { grid-row: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* A row is 36 px with every cell centred in it. Status alone spans a second row of the grid, so a note
-   that needs it wraps to a second line and makes its row 54, leaving the other cells where they are
-  . Past two lines it ends in an ellipsis. */
+   that needs it wraps to a second line and makes its row 54, leaving the other cells where they
+   are. Past two lines it ends in an ellipsis. */
 .jb-tr .st { grid-row: 1 / span 2; align-self: start; align-items: flex-start; padding-block: 8.5px; line-height: 18px; }
 .jb-tr .st > .sd { margin-top: 5.5px; }
 .jb-tr .st > .sd.ghost { margin-top: 5px; }
@@ -203,7 +204,7 @@
 .jb-none > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-scroll .gh.sr { border-top: 0; }
 
-/* Status: a 7 px mark, the label, then the step. Existing colours, In process in its own cobalt, and Rejected's mark `alert` and Ghosted's ring amber, their labels `ink3`. */
+/* Status: a 7 px mark, the label, then the step. Existing colours, with In process in its own cobalt. Rejected's mark is `alert` and Ghosted's ring amber, their labels `ink3`. */
 .st { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
 .st .sl { flex: none; }
 .st .step { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
@@ -236,8 +237,8 @@
 .jb-co .name { color: var(--ink2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-co .right { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-variant-numeric: tabular-nums; flex: none; }
 .jb-title .rd-subj.none { color: var(--ink3); }
-/* The title in place (35a): under the pointer a sub fill 4 px beyond the text and a pencil after it;
-   a click swaps it for a field on the same baseline, its edgeFocus ring arriving over 120 ms. */
+/* The title in place (35a): under the pointer a sub fill 4 px beyond the text and a pencil after it.
+   A click swaps it for a field on the same baseline, its edgeFocus ring arriving over 120 ms. */
 .jb-tbtn { display: inline-flex; align-items: center; max-width: 100%; padding: 0; font: inherit; letter-spacing: inherit; color: inherit; text-align: left; border-radius: 8px; cursor: text;
   transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .jb-tbtn > span { min-width: 0; }
@@ -276,7 +277,7 @@
 .jb-facts > span, .jb-facts > a { display: inline-flex; align-items: flex-start; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .jb-facts .icon { color: var(--ink3); margin-top: calc((1lh - 16px) / 2); }
 .jb-facts .quiet { color: var(--ink3); }
-/* The location in place: the title's pencil and fill under the pointer; "Add location" in ink3. */
+/* The location in place: the title's pencil and fill under the pointer. "Add location" in ink3. */
 .jb-facts .jb-place { display: inline-flex; align-items: flex-start; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; color: inherit; }
 .jb-facts .jb-place.none { color: var(--ink3); }
 /* The pencil takes no room on the line: it sits 2 px after the place, in the 18 px before the next
@@ -414,7 +415,7 @@
 .jb-before .chev { color: var(--ink3); margin-left: auto; }
 
 /* ---------- A narrow window, 640 to 1099 px (32b) ---------- */
-/* The detail lies over the table, led by Back; it arrives 12 px from the right and Back slides it off
+/* The detail lies over the table, led by Back. It arrives 12 px from the right and Back slides it off
    the same way. The header keeps both numbers: the search field gives way first, then Per week's label. */
 @keyframes jb-slide-off { to { opacity: 0; transform: translateX(12px); } }
 @media (min-width: 640px) and (max-width: 1099px) {
@@ -422,9 +423,9 @@
 }
 
 /* The header keeps both numbers on a narrower window (32b): the search field gives way first, to 180
-   (as at 1024), then Per week's label; where even that won't fit, the field is its glass alone until
-   `/` or a click opens Search, and the chart keeps its bars and its count. By the header's own width,
-   so it holds beside the sidebar as beside the rail. */
+   (as at 1024), then Per week's label. Where even that won't fit, the field is its glass alone until
+   `/` or a click opens Search, and the chart keeps its bars and its count. It goes by the header's
+   own width, so it holds beside the sidebar as beside the rail. */
 .jb-hd { container: jbhd / inline-size; }
 .jb-hd > .search:not(.active) { width: auto; flex: 0 1 var(--mailSearch); min-width: 180px; }
 @container jbhd (max-width: 1019.98px) {
@@ -458,8 +459,8 @@
 @media (hover: hover) { .jb-empty .lnk:hover { background: var(--sub2); } }
 .jb-empty .lnk:active { background: var(--sub3); transform: scale(.97); }
 
-/* Settings › Jobs (39a): each account's dot and label, then a select for what Jobs reads there;
-   the group's foot under it. */
+/* Settings › Jobs (39a): each account's dot and label, then a select for what Jobs reads there.
+   The group's foot sits under it. */
 .settings .jb-reads .acc { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); min-width: 0; }
 
 /* ---------- Menus (34a, 35a, 35b): the reader's menu, from its anchor's corner ---------- */
@@ -492,7 +493,7 @@
 
 /* ---------- In mail (37a–37c): the JD chip and its popover, Applied before ---------- */
 /* The chip draws with the reader's head, under the sender's line and above the actions, with no
-   entrance of its own; it answers the pointer as an outlined control does (sub, edgeHover, 120 ms). */
+   entrance of its own. It answers the pointer as an outlined control does (sub, edgeHover, 120 ms). */
 .jb-chipwrap { position: relative; align-self: flex-start; display: flex; max-width: 100%; min-width: 0; }
 .jb-chip { height: 28px; display: inline-flex; align-items: center; gap: 7px; padding: 0 8px 0 10px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge);
   color: var(--ink2); font-size: 12.5px; white-space: nowrap; min-width: 0; max-width: 100%;
@@ -525,7 +526,7 @@
 .jb-popnojd .spin { color: var(--ink3); margin-left: 0; vertical-align: 0; }
 .jb-pop .ft { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 16px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
 .jb-pop .ft .btn .icon { color: var(--ink3); }
-/* Applied before (37c): 20 px after a row's subject, a Noise row's too; 26 px where the chip sits. */
+/* Applied before (37c): 20 px after a row's subject, a Noise row's too, and 26 px where the chip sits. */
 .jb-badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px 0 6px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge);
   font-size: 11.5px; color: var(--ink2); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums;
   transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
@@ -559,7 +560,7 @@
 .jd-change > .sl.ghost { color: color-mix(in oklch, var(--sunGlyph) var(--textTint), var(--ink)); font-weight: 500; }
 
 /* The Pinned shelf: a small label with the pin in `sun`, the pinned rows as the table's own, then a divider before the rest.
-   The divider is a 6 px hatched band, `ink3` stripes on `panel`: a row's hover, cursor and open fills are flat colours on the `sub` ramp, so a flat band read as part of a highlighted row beside it, and a pattern can't. */
+   The divider is a 6 px hatched band, `ink3` stripes on `panel`. A row's hover, cursor and open fills are flat colours on the `sub` ramp, so a flat band read as part of a highlighted row beside it, and a pattern can't. */
 .jb-pin-h { height: 28px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 16px; border-bottom: 1px solid var(--hair); color: var(--ink3); font-size: 12px; font-weight: 500; }
 .jb-pin-h > .icon { color: var(--sun); }
 .jb-pin-end { height: 6px; flex: none; background: var(--panel) repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink3) 35%, transparent) 0 1px, transparent 1px 4px); border-bottom: 1px solid var(--hair); }

@@ -3,11 +3,11 @@
 //
 // - Turning Jobs on sets `enabled_at` (mail from then on is the live reader's) and starts the history
 //   pass over what came before (./history.ts), once: it never re-reads or re-charges an email.
-// - Off stops reading, the live reader and the pass alike; nothing read is undone.
+// - Off stops reading, the live reader and the pass alike. Nothing read is undone.
 // - On again reads, as history, whatever the listed accounts hold from before then that Jobs hasn't
-//   read (mail that came while it was off among it); with nothing left, the last pass stands.
+//   read (mail that came while it was off among it). With nothing left, the last pass stands.
 // - Accounts changed while it's on start the pass again, over what the new list hasn't had read
-//   from before it was turned on; mail since then is the live reader's, whatever the list.
+//   from before it was turned on. Mail since then is the live reader's, whatever the list.
 import type {JobsSettingsOut, JobsSettingsPatch} from '@setpoint/shared';
 import {count, eq, isNull, and} from 'drizzle-orm';
 import {invalid} from '../errors.ts';

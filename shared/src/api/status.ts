@@ -4,7 +4,7 @@
 //   GET /api/status/ha     Authorization: Bearer <token>     HaStatusOut, or 401 (WWW-Authenticate: Bearer)
 //
 // The token comes from `npm run cli -- ha-token` (shown once; running it again rotates it, and
-// `ha-token --revoke` revokes it). It reads this endpoint and nothing else; no other method or route
+// `ha-token --revoke` revokes it). It reads this endpoint and nothing else. No other method or route
 // takes it. Responses are `Cache-Control: no-store`.
 //
 // What the Home Assistant integration (`setpoint`, in the private ops workspace, in the finance
@@ -14,7 +14,7 @@
 //   read or not: the same number as Setpoint's sidebar pill (one query feeds both).
 // - `unread_fyi`: a sensor for the plain half, "11 FYI".
 // - `attention_emails`: the popover's rows, at most three, newest first (dot from `account.colour`,
-//   `sender`, `subject`, age from `received_at`, a read one's sender in ink2 by `unread`); each row
+//   `sender`, `subject`, age from `received_at`, a read one's sender in ink2 by `unread`). Each row
 //   opens `url`. "Open Setpoint ›" opens `open_url`.
 // - `needs_reconnect`: one alert chip per entry, "<label> needs sign-in", opening
 //   `url` (Settings › Accounts). An account's sources share one sign-in, so Gmail and Calendar on

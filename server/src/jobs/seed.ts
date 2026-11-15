@@ -1,13 +1,13 @@
-// Jobs's sample data as rows, on the seed's clock (Wed Oct 7, 2026, 9:12
-// AM Pacific): the table's 17 applications and 45 more, invented, so the numbers come out
-// right (62 in all; Applied 31 with 18 Ghosted, In process 3, Offer 1, Rejected 25, Withdrawn 2; 3, 5, 4,
-// 6, 2, 4, 7, 5, 3, 6, 8 and 3 a week), Needs you's three items and From history's six (boards 34a,
-// 34b), Northwind's detail (32, 33) and the JDs the table names. Every company is one of Microsoft's
-// fictional ones and every link an example domain.
+// Jobs's sample data as rows, on the seed's clock (Wed Oct 7, 2026, 9:12 AM Pacific). It holds the
+// table's 17 applications and 45 more, invented, so the numbers come out right. That's 62 in all:
+// Applied 31 with 18 Ghosted, In process 3, Offer 1, Rejected 25, Withdrawn 2. By week it's 3, 5, 4,
+// 6, 2, 4, 7, 5, 3, 6, 8 and 3. It also holds Needs you's three items and From history's six (boards
+// 34a, 34b), Northwind's detail (32, 33) and the JDs the table names. Every company is one of
+// Microsoft's fictional ones and every link an example domain.
 //
-// Events and Needs you items keep their own copies, so the emails they name needn't
-// be in mail: only the Northwind and Fabrikam emails are the Inbox's own, linked by message id. Run
-// from the app's seed (src/dev/sample.ts, a wiring point) after mail's sample is in.
+// Events and Needs you items keep their own copies, so the emails they name needn't be in mail.
+// Only the Northwind and Fabrikam emails are the Inbox's own, linked by message id. The app's seed
+// (src/dev/sample.ts, a wiring point) runs this after mail's sample is in.
 import type Database from 'better-sqlite3';
 import {SEED_NOW, SEED_TIME_ZONE, STATUS_OF_JOB_EVENT, isQuietJobEvent} from '@setpoint/shared';
 import type {JdSource, JobEventKind, JobStatus, JobWorkplace, NeedsYouKind, NeedsYouReason} from '@setpoint/shared';
@@ -326,7 +326,7 @@ const TABLE: SeedApplication[] = [
 
 /**
  * The 45 the table leaves out, each [company, title, platform, applied, rejected or withdrawn
- * by hand]. Mostly Ghosted or Rejected; six still at Applied inside 30 days, so 18 of Applied's 31
+ * by hand]. Mostly Ghosted or Rejected. Six are still at Applied inside 30 days, so 18 of Applied's 31
  * are Ghosted. Wingtip Toys' two, Adventure Works' and Margie's Travel's are the ones From history
  * names. The Phone Company's Support Engineer is a pick Jobs couldn't read, below the table's fold.
  */
@@ -415,7 +415,7 @@ function olderApplication([company, title, platform, appliedOn, end]: Older, ind
     company, title, platform,
     events,
     ...(end && 'withdrawn' in end ? {byHand: {status: 'withdrawn' as const, at: [end.withdrawn, '20:00'] as [string, string]}} : {}),
-    // Closed before Jobs looked: none; From history's two wait as candidates; the rest found.
+    // Closed before Jobs looked: none. From history's two wait as candidates. The rest are found.
     jd: failedPick && failedPick.title === title ? {candidates: [failedPick], picked: true} : OLDER_CANDIDATES[company] && !end ? {candidates: OLDER_CANDIDATES[company]} : closedBeforeSeptember ? null
       : posting(company, title, {source, platform: source === 'search' ? null : platform, link: `https://${host}/${slug(title)}-${1000 + index}`, location, workplace, salary}),
   };
@@ -515,7 +515,7 @@ export function seedJobs({sqlite, db: mailDb, usage = false}: {sqlite: Database.
       accounts: [{account_id: accounts.get('Jobs')!, reads: 'every'}, {account_id: accounts.get('Business')!, reads: 'career'}],
     }).run();
     // The history pass ran when Jobs was turned on and finished at 8:14 PM (board 39a), over the 330
-    // emails the Jobs account holds since May; the sample keeps only what it made.
+    // emails the Jobs account holds since May. The sample keeps only what it made.
     db.insert(j.jobsHistory).values({id: 1, state: 'done', before: turnedOn, startedAt: turnedOn, total: 330, read: 330, finishedAt: at('10-01', '20:14')}).run();
 
     // Oldest first, so a re-application's earlier one is there to link to.

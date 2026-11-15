@@ -1,6 +1,7 @@
-// The Todoist adapter against a fake Todoist on 127.0.0.1: the mirror (a Z-suffixed time
-// read as an instant), changes through the command layer, a completed repeating task kept on its day (the
-// tombstone) whether completed here or in Todoist's app, revoked tokens, and OAuth at its registered path.
+// The Todoist adapter against a fake Todoist on 127.0.0.1. It covers the mirror (a Z-suffixed time
+// read as an instant), changes through the command layer, a completed repeating task kept on its day
+// (the tombstone) whether completed here or in Todoist's app, revoked tokens, and OAuth at its
+// registered path.
 import {calendarSearchInput, itemCreateInput, itemScopeInput, itemUpdateInput} from '@setpoint/shared';
 import {and, eq, isNull} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -21,8 +22,8 @@ import {client, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
 
 const ZONE = 'America/Los_Angeles';
-// A description as Todoist's own editor writes one (read from a real task, 2026-11-10): Markdown, single
-// newlines between lines, a blank line around lists.
+// A description as Todoist's own editor writes one (read from a real task, 2026-11-10): Markdown,
+// single newlines between lines, a blank line around lists.
 const TODOIST_DESCRIPTION = '**Bring** the signed form\n*Room 204*\n\n1. *Check in*\n2. Badge\n\n- Laptop\n\n[https://example.com/visit](https://example.com/visit)';
 
 describe('a Todoist due as a day and a time', () => {
@@ -43,8 +44,8 @@ describe('a Todoist due as a day and a time', () => {
 });
 
 describe('a repeat travels with its date', () => {
-  // Todoist reads a bare date as the end of a task's repeat, so a repeating task's new date goes in
-  // one due string with its repeat and time; a task with no repeat sends its day or instant.
+  // Todoist reads a bare date as the end of a task's repeat. So a repeating task's new date goes in
+  // one due string with its repeat and time. A task with no repeat sends its day or instant.
   test.each([
     ['a day', {dueDate: '2026-10-09', dueAt: null}, {due_date: '2026-10-09'}],
     ['a time is an instant', {dueDate: '2026-10-09', dueAt: '2026-10-09T16:30:00.000Z'}, {due_datetime: '2026-10-09T16:30:00Z'}],
@@ -353,7 +354,7 @@ describe('changes through the command layer', () => {
     expect(command(oneOff.id).state).toBe('confirmed');
     expect(todoist.requests.at(-1)!.body).toEqual({due_date: '2026-10-12', due_lang: 'en'});
     expect(day('2026-10-12').find(item => item.title === 'Call Mom')).toMatchObject({recurring: false, repeat: null});
-    // A repeat Todoist sent no words for can't travel with a new date: refused before Todoist.
+    // A repeat Todoist sent no words for can't travel with a new date. It is refused before Todoist.
     w.store.db.update(t.items).set({dueString: null}).where(eq(t.items.id, task('t-plants').id)).run();
     expect(() => updateItem(w.store, task('t-plants').id, itemUpdateInput.parse({changes: {due_date: '2026-10-21'}}))).toThrow(/didn't say how this task repeats/);
   });
@@ -500,7 +501,7 @@ describe('changes through the command layer', () => {
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
     expect(occurrences().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
     expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
-    // The close's move to Oct 14 was skipped while the reopen held the task; the next poll applies it.
+    // The close's move to Oct 14 was skipped while the reopen held the task. The next poll applies it.
     w.advance(5 * 60_000);
     await run();
     expect(task('t-plants').dueDate).toBe('2026-10-14');
@@ -594,8 +595,8 @@ describe('changes through the command layer', () => {
     const reads = () => todoist.requests.filter(request => request.path === '/api/v1/activities' && request.query.get('event_type') === 'completed');
     expect(reads()[0]!.query.get('date_from')).toBe(new Date(w.store.now().getTime() - 6 * DAY).toISOString());
     expect(reads().map(request => request.query.get('cursor'))).toEqual([null, 'o.200']);
-    // Setpoint away for ten days: its next look starts six days back, not at its last, which
-    // Todoist would refuse; the connection stays healthy.
+    // Setpoint away for ten days. Its next look starts six days back, not at its last, which
+    // Todoist would refuse. The connection stays healthy.
     w.advance(10 * DAY);
     await run();
     expect(reads().at(-1)!.query.get('date_from')).toBe(new Date(w.store.now().getTime() - 6 * DAY).toISOString());
@@ -624,7 +625,7 @@ describe('changes through the command layer', () => {
     await run();
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '○ Water plants']);
     expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-plants').id)).all()).toEqual([]);
-    // Completed, a poll (a webhook's) makes the done row, then Undo: the next poll takes it away.
+    // Completed, and a poll (a webhook's) makes the done row. Then Undo: the next poll takes it away.
     todoist.completeInTodoist('t-plants');
     w.advance(2_000);
     engine.pushed(source.id);
@@ -794,7 +795,7 @@ describe('a project\'s colour, written to Todoist', () => {
     const picked = setProjectColour(world.w.store, 'p-home', 'grape');
     await world.run();
     expect(world.command(picked.id)).toMatchObject({state: 'failed', providerMessage: 'Invalid argument value (400 Bad Request)'});
-    // The sync runs and names both projects: School's new colour arrives, while Home keeps the failed grape over Todoist's orange.
+    // The sync runs and names both projects. School's new colour arrives, while Home keeps the failed grape over Todoist's orange.
     world.todoist.addProject({id: 'p-home', name: 'Home', child_order: 1, color: 'orange'});
     world.todoist.addProject({id: 'p-school', name: 'School', child_order: 2, color: 'sky_blue'});
     world.w.advance(5 * 60_000);
@@ -928,7 +929,7 @@ describe('connecting Todoist', () => {
   });
 });
 
-/** Pay rent with three subtasks, the middle one dated; `keys` gives them Todoist's order keys. */
+/** Pay rent with three subtasks, the middle one dated. `keys` gives them Todoist's order keys. */
 async function checklistWorld({keys = true} = {}) {
   const world = await todoistWorld();
   const {todoist} = world;

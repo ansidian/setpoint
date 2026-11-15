@@ -1,7 +1,7 @@
 // Weather: day forecasts at Home for the grid and the right pane, from Pirate Weather (Dark Sky's
-// format), polled every 30 minutes as its own source: the key is read on each check (a new key
-// takes at once), a failed check fails rather than passing old forecasts off as fresh, the
-// provider's timezone decides each day, and the key never appears in an error (it's in the URL's
+// format), polled every 30 minutes as its own source. The key is read on each check (a new key
+// takes at once). A failed check fails rather than passing old forecasts off as fresh. The
+// provider's timezone decides each day. The key never appears in an error (it's in the URL's
 // path). It keeps the days only: Dark Sky's daytime high and overnight low, and four conditions.
 import type {WeatherCondition} from '@setpoint/shared';
 import {and, gte} from 'drizzle-orm';
@@ -18,7 +18,7 @@ import type {HttpOptions} from '../http.ts';
 export const PIRATE_WEATHER_API = 'https://api.pirateweather.net';
 export const WEATHER_TIMEOUT_MS = 10_000;
 
-/** Dark Sky's icons as the four conditions the grid draws; anything unknown is cloud, not sun. */
+/** Dark Sky's icons as the four conditions the grid draws. Anything unknown is cloud, not sun. */
 export function conditionOf(icon: string | undefined): WeatherCondition {
   switch (icon) {
     case 'clear-day':
@@ -83,7 +83,7 @@ export function weatherAdapter(options: WeatherOptions = {}): SourceAdapter {
     if (!days.length) throw new ProviderError('transient', 'Pirate Weather sent no daily forecast.');
     transaction(store, () => {
       const fetchedAt = isoNow(store);
-      // Today's and later forecasts are replaced; past days keep their last forecast.
+      // Today's and later forecasts are replaced. Past days keep their last forecast.
       store.db.delete(t.weatherDays).where(and(gte(t.weatherDays.date, localDay(store.now().getTime(), store.timeZone)))).run();
       for (const day of days) {
         store.db.insert(t.weatherDays).values({...day, fetchedAt}).onConflictDoUpdate({target: t.weatherDays.date, set: {...day, fetchedAt}}).run();

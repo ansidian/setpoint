@@ -1,6 +1,6 @@
 // A Google calendar the user can only read (a subscribed holiday calendar is `reader`).
-// Its role is kept from the calendar list, calendarWritable says whether its events can change, and
-// an ordinary event on it reads as read-only, refused as Google's own kinds of event are.
+// Its role is kept from the calendar list. calendarWritable says whether its events can change. An
+// ordinary event on it reads as read-only and is refused, as Google's own kinds of event are.
 import {icsImportInput, itemUpdateInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';

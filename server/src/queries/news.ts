@@ -1,8 +1,8 @@
 // News's reads (shapes in `@setpoint/shared` src/api/news.ts): All's blocks, a section's list,
 // a story and its sources, an article, the recap (While you were away) and Settings › News.
-// Order is the stored score, biggest first; dots, the leading outlet, the block's size, a
-// story's main section (All's one block for it and the recap's name for it), a section's line
-// and the recap's stories follow src/domain/news.ts. Sorting adds the bar (a story under it never shows:
+// Order is the stored score, biggest first. Dots, the leading outlet, the block's size, a story's
+// main section (All's one block for it and the recap's name for it), a section's line and the
+// recap's stories follow src/domain/news.ts. Sorting adds the bar (a story under it never shows:
 // not on the page, in the recap or in search), and search over the 90-day archive.
 import type {
   AlsoReportedOut, ArticleOut, MissedOut, NewsBlockOut, NewsDayOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
@@ -147,7 +147,7 @@ function lastLookBefore(store: Store, at: string): string | null {
 
 /**
  * While you were away: the stories it was fixed with once on screen, else those that can be in
- * it, biggest first, each named by its main section; then up to two per section, in the
+ * it, biggest first, each named by its main section. Then up to two per section, in the
  * blocks' order. Null when it holds nothing.
  */
 export function newsRecap(store: Store): RecapOut | null {
@@ -255,7 +255,7 @@ export function missed(store: Store): MissedOut {
   };
 }
 
-/** The icon a source's list named for its tile, kept in its config; null takes its adapter's. */
+/** The icon a source's list named for its tile, kept in its config. Null takes its adapter's. */
 const sourceIcon = (config: Record<string, unknown>): NewsSourceIcon | null =>
   (NEWS_SOURCE_ICONS as readonly unknown[]).includes(config.icon) ? config.icon as NewsSourceIcon : null;
 
@@ -303,7 +303,7 @@ export function newsDay(store: Store): NewsDayOut {
 
 /**
  * Search news: stories from the last 90 days, expired ones included, whose headline, one line,
- * summary or sources (an outlet's name or its own headline; never a metered paper's) hold every word
+ * summary or sources (an outlet's name or its own headline, never a metered paper's) hold every word
  * of the search as a prefix. Newest first. A story under the bar, or one nothing can show, isn't found.
  */
 export function newsSearch(store: Store, input: NewsSearchInput): NewsSearchOut {

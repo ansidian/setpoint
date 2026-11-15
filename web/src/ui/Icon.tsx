@@ -4,7 +4,7 @@ import type {CSSProperties} from 'react';
 import {ICON_VIEWBOX, ICONS, type IconName, TASK_GLYPHS} from './glyphs.ts';
 
 /**
- * An icon in currentColor; `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk);
+ * An icon in currentColor. `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk).
  * `className` and `style` add to its own (the editor's rows echoing the line's marks).
  */
 export function Icon({name, size = 18, alfred = false, className, style}: {name: IconName; size?: number; alfred?: boolean; className?: string; style?: CSSProperties}) {

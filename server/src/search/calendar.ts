@@ -1,6 +1,6 @@
-// Calendar search: POST /api/calendar/search reads the
-// items and calendars, and src/domain/calendarSearch.ts finds and orders the hits. Not logged: the
-// search log is mail's (no search log for the calendar).
+// Calendar search: POST /api/calendar/search reads the items and calendars, and
+// src/domain/calendarSearch.ts finds and orders the hits. Not logged, because the search log is
+// mail's (no search log for the calendar).
 import type {CalendarSearchChip, CalendarSearchOut, calendarSearchInput} from '@setpoint/shared';
 import type {z} from 'zod';
 import * as t from '../db/schema.ts';
@@ -17,7 +17,7 @@ export function searchCalendar(store: Store, input: z.output<typeof calendarSear
   const parsed = parseCalendarQuery(input.text, calendars.map(calendar => calendar.name), clock);
   const chips: CalendarSearchChip[] = [];
   for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);
-  // Hidden calendars are left out, as the grid leaves them out.
+  // Search leaves out hidden calendars, as the grid does.
   const shown = new Map(calendars.filter(calendar => calendar.visible).map(calendar => [calendar.id, calendar.name]));
   const hits = searchItems(store.db.select().from(t.items).all().filter(row => row.kind !== 'task' || row.dueDate !== null), shown, chips, parsed.text, clock);
   const present = itemPresenter(store);

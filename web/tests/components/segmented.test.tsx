@@ -1,7 +1,7 @@
-// The one segmented control (ui/Segmented.tsx): its segments say which is on
-// as their role asks, its thumb sits under the segment that's on, and where a page turns it on, Tab
-// and Shift-Tab step it, wrapping, but not in a field, a popover, the editor or a dialog. Whether and
-// how the thumb slides is by eye; the pages' keys are the specs'.
+// The one segmented control (ui/Segmented.tsx). Its segments say which is on as their role asks, and
+// its thumb sits under the segment that's on. Where a page turns it on, Tab and Shift-Tab step it,
+// wrapping, but not in a field, a popover, the editor or a dialog. Whether and how the thumb slides
+// is by eye. The pages' keys are the specs'.
 import {useState} from 'react';
 import {expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';

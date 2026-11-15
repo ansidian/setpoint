@@ -27,8 +27,8 @@
 //
 // Settings › AI's News group (models, the cap, this month and its usage) rides on GET /api/ai (AiOut).
 //
-// Ages are instants; the page words them (DESIGN.md › Copy). A story's order is its stored score,
-// biggest first; a story under the bar never shows. Dots stand alone: there are no counts and no
+// Ages are instants, and the page words them (DESIGN.md › Copy). A story's order is its stored
+// score, biggest first. A story under the bar never shows. Dots stand alone: there are no counts and no
 // "mark all seen".
 import {z} from 'zod';
 import {AI_PROVIDERS, HEALTH_STATES, NEWS_ADAPTERS, NEWS_HAZARDS, NEWS_SECTIONS, NEWS_SOURCE_ICONS, NEWS_SOURCE_KINDS, STORY_STATES} from '../enums.ts';
@@ -67,12 +67,13 @@ export type StoryImageOut = z.infer<typeof storyImageSchema>;
 export const storyLeadSchema = z.strictObject({
   article_id: id,
   outlet: z.string(),
-  // The short name rows use ("NBC LA"); the pane and the article use `outlet` ("NBC Los Angeles").
+  // The short name rows use ("NBC LA"). The pane and the article use `outlet` ("NBC Los Angeles").
   outlet_short: z.string(),
   more: z.int().nonnegative(),
   published_at: instant,
   url: z.url(),
-  // The leading article's hazard source ("nws"), whose glyph stands in for a missing photo; null for an outlet.
+  // The leading article's hazard source ("nws"), whose glyph stands in for a missing photo. Null for
+  // an outlet.
   hazard: z.enum(NEWS_HAZARDS).nullable(),
 });
 export type StoryLeadOut = z.infer<typeof storyLeadSchema>;
@@ -83,7 +84,7 @@ export const storyRowSchema = z.strictObject({
   // Written by the model, plain and neutral.
   headline: z.string(),
   one_line: z.string().nullable(),
-  // In NEWS_SECTIONS order; a story can sit in more than one, its seen state shared.
+  // In NEWS_SECTIONS order. A story can sit in more than one, its seen state shared.
   sections: z.array(newsSectionSchema).min(1),
   state: z.enum(STORY_STATES),
   lead: storyLeadSchema,
@@ -91,9 +92,9 @@ export const storyRowSchema = z.strictObject({
   first_reported_at: instant,
   // The newest fact: "Updated 8:40 AM" on an updated row. The story leaves the page 48 h after it.
   last_new_fact_at: instant,
-  // When the user last saw it; null while it's new.
+  // When the user last saw it, or null while it's new.
   seen_at: instant.nullable(),
-  // When it left the page (48 h after its last new fact); null while it's on the page.
+  // When it left the page (48 h after its last new fact), or null while it's on the page.
   expired_at: instant.nullable(),
 });
 export type StoryRowOut = z.infer<typeof storyRowSchema>;
@@ -115,7 +116,7 @@ export const upcomingSchema = z.strictObject({
 export type UpcomingOut = z.infer<typeof upcomingSchema>;
 
 /**
- * A section's line when the whole section is stale or failing ("Local, as of 9:14 PM"); null while
+ * A section's line when the whole section is stale or failing ("Local, as of 9:14 PM"). Null while
  * any of its sources is fine. One failing feed shows only in Settings › News.
  */
 export const sectionHealthSchema = z.strictObject({
@@ -147,8 +148,8 @@ export type RecapStoryOut = z.infer<typeof recapStorySchema>;
 /**
  * While you were away: each section's biggest stories that left the page unseen since the last
  * recap was put away, up to 2 per section, grouped in the blocks' order. `since` is when that
- * was ("since Fri 6:10 PM"); before any was, the user's last look before the first of them left, or
- * null if they never looked. Fixed once it's on screen, until it's put away.
+ * was ("since Fri 6:10 PM"). Before any was, it's the user's last look before the first of them
+ * left, or null if they never looked. Fixed once it's on screen, until it's put away.
  */
 export const recapSchema = z.strictObject({
   since: instant.nullable(),
@@ -191,7 +192,7 @@ export type AlsoReportedOut = z.infer<typeof alsoReportedSchema>;
 
 export const newsSectionOutSchema = z.strictObject({
   section: newsSectionSchema,
-  // Its written stories; those under the write gate are only in `also_reported`, biggest first.
+  // Its written stories. Those under the write gate are only in `also_reported`, biggest first.
   stories: z.array(storyRowSchema),
   upcoming: z.array(upcomingSchema),
   health: sectionHealthSchema.nullable(),
@@ -208,7 +209,7 @@ export type StoryFactOut = z.infer<typeof storyFactSchema>;
 
 /**
  * One outlet's article in a story's Sources: its own headline and age. `summary_only` is "Summary
- * only" (its page can't be read in-app); `discovery` is one only Google News found, shown with its
+ * only" (its page can't be read in-app). `discovery` is one only Google News found, shown with its
  * link and no text. A metered paper is never listed.
  */
 export const storySourceSchema = z.strictObject({
@@ -225,7 +226,7 @@ export type StorySourceOut = z.infer<typeof storySourceSchema>;
 
 /** The story pane. */
 export const storySchema = storyRowSchema.extend({
-  // One summary from all the sources, rewritten only on new facts; null until it's written.
+  // One summary from all the sources, rewritten only on new facts. Null until it's written.
   summary: z.string().nullable(),
   // "5 outlets": the outlets listed in `sources`.
   outlets: z.int().nonnegative(),
@@ -241,7 +242,7 @@ export type StoryOut = z.infer<typeof storySchema>;
 /**
  * An article opened in the pane (board 26a): its text extracted from the page, with Back and the
  * original link. One that can't be read in-app (board 26b) has `text` null and shows its feed
- * summary and "Read at KTLA"; one only Google News found has neither.
+ * summary and "Read at KTLA". One only Google News found has neither.
  */
 export const articleSchema = z.strictObject({
   id,
@@ -253,7 +254,7 @@ export const articleSchema = z.strictObject({
   headline: z.string(),
   // The original link (`O`).
   url: z.url(),
-  // Paragraphs separated by a blank line; null when summary only, discovery only, or archived.
+  // Paragraphs separated by a blank line. Null when summary only, discovery only, or archived.
   text: z.string().nullable(),
   feed_summary: z.string().nullable(),
   summary_only: z.boolean(),
@@ -280,7 +281,7 @@ export const missedSchema = z.strictObject({
 });
 export type MissedOut = z.infer<typeof missedSchema>;
 
-/** A source's health, as on Settings › Accounts; null until its first check. */
+/** A source's health, as on Settings › Accounts, or null until its first check. */
 export const newsSourceHealthSchema = z.strictObject({
   state: z.enum(HEALTH_STATES),
   as_of: instant.nullable(),
@@ -303,7 +304,7 @@ export const newsSourceSchema = z.strictObject({
   kind: z.enum(NEWS_SOURCE_KINDS),
   // Which adapter reads it, for its icon tile (the hazard APIs each have their own).
   adapter: z.enum(NEWS_ADAPTERS),
-  // The icon its list names for its tile ("live_tv" for a TV station); null takes the adapter's.
+  // The icon its list names for its tile ("live_tv" for a TV station). Null takes the adapter's.
   icon: z.enum(NEWS_SOURCE_ICONS).nullable(),
   reads: z.string(),
   interval_seconds: z.int().positive(),
@@ -315,7 +316,7 @@ export type NewsSourceOut = z.infer<typeof newsSourceSchema>;
 
 /**
  * Settings › News: "312 articles today · 41 stories", then one group per section. The articles are
- * those fetched since local midnight; the stories, those on the page now (a day comes to 30–50).
+ * those fetched since local midnight. The stories are those on the page now (a day comes to 30–50).
  */
 export const newsSourcesSchema = z.strictObject({
   articles_today: z.int().nonnegative(),
@@ -329,10 +330,12 @@ export type NewsSourcesOut = z.infer<typeof newsSourcesSchema>;
  * Today is since the user's midnight, the month since midnight on the 1st. No count of new stories.
  */
 export interface NewsDayOut {
-  // The page's last hourly ranking ("Updated 8:40 AM"), and the next one due ("next around 9:40"); null before the first.
+  // The page's last hourly ranking ("Updated 8:40 AM"), and the next one due ("next around 9:40").
+  // Null before the first.
   updated_at: string | null;
   next_at: string | null;
-  // Feeds that have failed every attempt for 6 hours ("· 2 feeds failing"); intermittent failures never count.
+  // Feeds that have failed every attempt for 6 hours ("· 2 feeds failing"). Intermittent failures
+  // never count.
   feeds_failing: number;
   // Today: the articles read, the stories they made (first reported today) and the outlets they came from.
   articles_today: number;
@@ -350,7 +353,7 @@ export type NewsSeenInput = z.infer<typeof newsSeenInput>;
 export const newsSeenSchema = z.strictObject({stories: z.array(storyRowSchema)});
 export type NewsSeenOut = z.infer<typeof newsSeenSchema>;
 
-/** News on screen; `recap` the recap's stories once it's on screen, which fixes it. */
+/** News on screen. `recap` is the recap's stories once it's on screen, which fixes it. */
 export const newsHereInput = z.strictObject({recap: z.array(id).min(1).max(RECAP_MAX).nullable()});
 export type NewsHereInput = z.infer<typeof newsHereInput>;
 
@@ -370,8 +373,8 @@ export type RecapDoneOut = z.infer<typeof recapDoneSchema>;
  * Why sorting is stopped (board 29a): "12 articles not sorted yet, Anthropic unreachable
  * since 8:52 AM, retrying". `cause` is what the page words: no key in Settings › AI, the provider
  * unreachable (a timeout, a 5xx, overloaded), rate limited, or the key refused. `since` is when this
- * spell began; `reason` is the provider's own words; `retrying` while the one retry policy will ask
- * again by itself (a missing or refused key waits for Settings › AI).
+ * spell began. `reason` is the provider's own words. `retrying` is true while the one retry policy
+ * will ask again by itself (a missing or refused key waits for Settings › AI).
  */
 export const NEWS_SORT_CAUSES = ['no_key', 'unreachable', 'rate_limited', 'refused'] as const;
 export const newsSortDownSchema = z.strictObject({
@@ -385,7 +388,7 @@ export type NewsSortDownOut = z.infer<typeof newsSortDownSchema>;
 
 /**
  * The lines above the list. `unsorted` counts the articles waiting to be sorted (never a metered
- * paper's); the Unsorted line shows while `down` says why they wait. `first_run` is the first fill's
+ * paper's). The Unsorted line shows while `down` says why they wait. `first_run` is the first fill's
  * progress, "Sorting the last 48 hours · 186 of 312 articles, showing what's sorted so far", and is
  * null once it's done (board 29b).
  */
@@ -409,7 +412,7 @@ export const unsortedArticleSchema = z.strictObject({
 });
 export type UnsortedArticleOut = z.infer<typeof unsortedArticleSchema>;
 
-/** Show headlines, newest first. Nothing waiting Unsorted vanishes; it's sorted once the AI is back. */
+/** Show headlines, newest first. Nothing waiting Unsorted vanishes. It's sorted once the AI is back. */
 export const newsUnsortedSchema = z.strictObject({
   count: z.int().nonnegative(),
   articles: z.array(unsortedArticleSchema),

@@ -1,10 +1,10 @@
-// The mail list's motion: a row leaving fades and its height
-// closes over 180 ms while the rows below slide up; a row arriving opens the same way. Its text goes
-// first (by 72 ms) and the height closes after, so a folding row never shows a squashed slice of its
-// lines; arriving, its height opens first and its text comes in after. A row Done or Trash takes
-// first plays a 120 ms beat (its tint and glyph, styles.css); rows of one group folding together, as
-// it opens or closes, start 12 ms apart, at most 60. logic/fold.ts decides which rows fold; this
-// keeps the leaving ones on screen for the motion and draws it.
+// The mail list's motion. A row leaving fades, and its height closes over 180 ms while the rows
+// below slide up. A row arriving opens the same way. Its text goes first (by 72 ms) and the height
+// closes after, so a folding row never shows a squashed slice of its lines. Arriving, its height
+// opens first and its text comes in after. A row that Done or Trash takes first plays a 120 ms beat
+// (its tint and glyph, styles.css). Rows of one group folding together, as it opens or closes,
+// start 12 ms apart, at most 60. logic/fold.ts decides which rows fold. This module keeps the
+// leaving ones on screen for the motion and draws it.
 import {useEffect, useState} from 'react';
 import {motion} from '../tokens.ts';
 import {foldList} from '../logic/fold.ts';
@@ -35,7 +35,7 @@ export const FOLD_HOLD_MS = motion.medium + BEAT_MS;
 /** A row's delay with `index` rows before it in its run: 12 ms each, at most 60. */
 export const staggered = (index: number) => Math.min(index * STAGGER_MS, STAGGER_CAP_MS);
 
-/** `next` as it shows while it changes; the first paint shows as it is. Leaving entries stay `hold` ms. */
+/** `next` as it shows while it changes. The first paint shows as it is. Leaving entries stay `hold` ms. */
 export function useFold<T>(next: Entry<T>[], rules: FoldRules<T>, hold: number = motion.medium): Folded<T>[] {
   const [state, setState] = useState(() => ({next, shown: next.map((entry): Folded<T> => ({...entry, fold: null})), left: [] as number[]}));
   let current = state;
@@ -140,7 +140,7 @@ export function foldDelays<T>(entries: Folded<T>[], groupOf: (entry: Folded<T>) 
 /**
  * A card closed on purpose (Alfred's Answer card, a proposal: ×, Esc, Cancel, Create) folds away as a
  * leaving row does, so what's under it slides back up rather than jumping. The page drops the card at
- * once; a copy of it, taking nothing, stays in its place for the fold, then goes.
+ * once. A copy of it, taking nothing, stays in its place for the fold, then goes.
  */
 export function foldAway(element: Element | null) {
   leaveCopy(element, card => leaving(card.offsetHeight), timing);

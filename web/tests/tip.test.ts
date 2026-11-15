@@ -1,6 +1,6 @@
-// Where the shared tooltip goes, as a table: centred 6 px under what it names, above
-// it near the window's bottom, and 8 px inside the window's sides; and which tips only repeat their
-// element's own words, shown only when those are cut.
+// Where the shared tooltip goes, as a table: centred 6 px under what it names, above it near the
+// window's bottom, and 8 px inside the window's sides. Also which tips only repeat their element's
+// own words, shown only when those are cut.
 import {describe, expect, test} from 'vitest';
 import {placeTip, repeats} from '../src/logic/tip.ts';
 

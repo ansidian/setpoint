@@ -3,10 +3,10 @@
 // then the most recent. Spellings of one place count together, shown as the latest one spells it,
 // with the latest address any of them has. A link is a meeting, not a place to offer.
 //
-// Pure: the caller reads the events' places.
+// Pure. The caller reads the events' places.
 import type {RecentPlaceOut} from '@setpoint/shared';
 
-/** One event's place, with when it starts (an instant or a day; null sorts last). */
+/** One event's place, with when it starts (an instant or a day, and null sorts last). */
 export interface PlaceUse {
   place: string;
   address: string | null;

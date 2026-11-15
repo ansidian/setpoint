@@ -1,9 +1,8 @@
-// Direct manipulation on the month grid: dropping an item on
-// another day, cloning it, copying and pasting, and selecting several. Days move by
-// calendar days and keep the wall-clock time in the owner's zone, so a drag across a
-// daylight-saving change keeps 7 AM at 7 AM; a drop on the same day does
-// nothing; a task moves by whole days, keeping its time if it has one; a repeating task, a done task,
-// Google's own kinds of event and an item whose last change hasn't settled don't move.
+// Direct manipulation on the month grid: dropping an item on another day, cloning it, copying and
+// pasting, and selecting several. Days move by calendar days and keep the wall-clock time in the
+// owner's zone, so a drag across a daylight-saving change keeps 7 AM at 7 AM. A drop on the same
+// day does nothing. A task moves by whole days, keeping its time if it has one. A repeating task, a
+// done task, Google's own kinds of event and an item whose last change hasn't settled don't move.
 import type {CommandOut, ItemChanges, ItemCreateInput, ItemOut, RecurringScope} from '@setpoint/shared';
 import {dayTitle, itemDays, timeRange} from './calendar.ts';
 import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from './format.ts';
@@ -37,7 +36,7 @@ export function dropChange(item: ItemOut, to: string, timeZone: string): ItemCha
   return shiftedBy(item, daysBetween(from, to), timeZone);
 }
 
-/** The drag's tooltip (board 15): "Thu, Oct 8 · 7:00 AM"; an all-day event "Thu, Oct 8 · All day"; a task "Thu, Oct 8". */
+/** The drag's tooltip (board 15): "Thu, Oct 8 · 7:00 AM", an all-day event "Thu, Oct 8 · All day", a task "Thu, Oct 8". */
 export function dropLabel(item: ItemOut, to: string, timeZone: string): string {
   if (item.kind === 'task') return item.due_at ? `${dayTitle(to)} · ${clockTime(item.due_at, timeZone)}` : dayTitle(to);
   if (item.all_day || !item.starts_at) return `${dayTitle(to)} · All day`;
@@ -96,10 +95,10 @@ const startOf = (item: ItemOut) => [item.starts_at && Date.parse(item.starts_at)
 
 /**
  * The items to draw while creates are on their way. A live load can list the server's copy of a new
- * item before its create has answered, and the provider may have confirmed it by then: while any
- * create waits, an item that wasn't listed when it was asked for, isn't one an answered create made,
- * and is one of its drafts (its title, calendar and start) is that copy, and the draft is drawn
- * instead. An answered create's items are the server's own.
+ * item before its create has answered, and the provider may have confirmed it by then. While any
+ * create waits, an item is that copy if it wasn't listed when the create was asked for, isn't one
+ * an answered create made, and is one of its drafts (its title, calendar and start). Then the draft
+ * is drawn instead. An answered create's items are the server's own.
  */
 export function withCreating(items: ItemOut[], creating: Creating[]): ItemOut[] {
   const waiting = creating.filter(one => !one.made);
@@ -144,7 +143,7 @@ export function inverseOf(item: ItemOut, changes: ItemChanges): ItemChanges {
 }
 
 /**
- * A new item like `item`, `days` days later (Clone is 0; Paste is the distance to the day pasted
+ * A new item like `item`, `days` days later (Clone is 0, Paste is the distance to the day pasted
  * on). A copy of one occurrence is an event of its own: it doesn't repeat.
  */
 export function copyOf(item: ItemOut, days: number, timeZone: string): ItemCreateInput {
@@ -166,7 +165,7 @@ export function pasteOn(items: ItemOut[], to: string, timeZone: string): ItemCre
 }
 
 /**
- * The selection after a click: a plain click selects the item alone; ⌘, Ctrl or ⇧ adds it, or takes
+ * The selection after a click. A plain click selects the item alone. ⌘, Ctrl or ⇧ adds it, or takes
  * it out if it was in (multi-select).
  */
 export function selectWith(selected: string[], key: string, additive: boolean): string[] {
@@ -183,7 +182,7 @@ export function failedTitle(item: ItemOut): string {
   return `Couldn't ${verb} ${item.title}`;
 }
 
-/** The failed card's "From Fri, Oct 9" (another day) or "From 7:00 – 9:00 PM" (the same day); null when it didn't move. */
+/** The failed card's "From Fri, Oct 9" (another day) or "From 7:00 – 9:00 PM" (the same day). Null when it didn't move. */
 export function failedFrom(item: ItemOut, timeZone: string): string | null {
   const previous = item.command?.previous;
   if (!previous || item.command?.kind !== 'item_update') return null;

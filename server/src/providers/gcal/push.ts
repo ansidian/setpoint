@@ -1,15 +1,15 @@
 // Google Calendar push: a watch channel per calendar, renewed a day before it runs out, and the
 // notifications Google sends to POST /api/calendar/push. Its protocol
 // rules:
-// - a channel's token is 32 random bytes, kept only as a SHA-256 hash, checked in constant time;
-// - each header must come once, printable and short; the state is sync, exists or not_exists, and a
-//   `sync` is always message 1;
-// - the channel must be live, the resource id must match the one Google gave (a pending channel
+// - A channel's token is 32 random bytes, kept only as a SHA-256 hash, checked in constant time.
+// - Each header must come once, printable and short. The state is sync, exists or not_exists, and a
+//   `sync` is always message 1.
+// - The channel must be live, the resource id must match the one Google gave (a pending channel
 //   takes Google's first `sync`, which can arrive before the watch call returns), and the resource
-//   URI must be the calendar's events;
-// - a replacement is made before the old channel is retired and stopped (make before break), and
-//   a callback address that changed re-registers;
-// - a calendar Google can't watch (400 pushNotSupportedForRequestedResource: holidays) is
+//   URI must be the calendar's events.
+// - A replacement is made before the old channel is retired and stopped (make before break), and
+//   a callback address that changed re-registers.
+// - A calendar Google can't watch (400 pushNotSupportedForRequestedResource: holidays) is
 //   remembered for the channel's lifetime and synced by the sweep instead.
 // Setpoint watches whenever it has a public https address.
 import {createHash, randomBytes, randomUUID, timingSafeEqual} from 'node:crypto';
@@ -73,7 +73,7 @@ export async function reconcileWatches(store: Store, api: GoogleCalendarApi, sou
 
 /**
  * A live channel told at another address (the webhook origin or public URL changed since) is
- * renewed at the next tick, not at its renewal a week on; `reconcileWatches` then makes the new one
+ * renewed at the next tick, not at its renewal a week on. `reconcileWatches` then makes the new one
  * before it retires the old.
  */
 export function renewIfMoved(store: Store, source: SourceRow, address: string) {
@@ -138,7 +138,7 @@ const HEADER_LIMITS = {
 } as const;
 type HeaderName = keyof typeof HEADER_LIMITS;
 
-/** One header, given exactly once, printable ASCII and within its limit; otherwise null. */
+/** One header, given exactly once, printable ASCII and within its limit. Otherwise null. */
 function header(headers: Headers | Record<string, string | string[] | undefined>, name: HeaderName): string | null {
   let value: string | null;
   if (headers instanceof Headers) {
@@ -169,8 +169,8 @@ export function resourceUriMatches(uri: string, apiBase: string, calendarId: str
 export type PushAdmission = {accepted: true; sourceId: number} | {accepted: false};
 
 /**
- * Admits one notification from Google: the channel, its token and its resource checked, and the
- * channel's first `sync` pinning the resource id. The caller queues the sync durably before it
+ * Admits one notification from Google. It checks the channel, its token and its resource, and the
+ * channel's first `sync` pins the resource id. The caller queues the sync durably before it
  * answers 2xx (Google sends again after an error).
  */
 export function admitPush(store: Store, headers: Headers | Record<string, string | string[] | undefined>, apiBase: string): PushAdmission {

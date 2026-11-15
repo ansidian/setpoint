@@ -1,6 +1,6 @@
-// The Inbox's pane with nothing open: how the mail day is going, as one
-// block centred in the pane. The mark; what needs the user ("3 need you, 1 overdue", or All caught up);
-// today's strip (Done, and what triage sorted to FYI and to Noise); and, in the foot over the keys,
+// The Inbox's pane with nothing open: how the mail day is going, as one block centred in the pane.
+// It holds the mark, then what needs the user ("3 need you, 1 overdue", or All caught up), then
+// today's strip (Done, and what triage sorted to FYI and to Noise). In the foot over the keys sit
 // the quiet facts in `ink3`, led by any trouble's chip, each with its fix (EmptyPane).
 import type {MailDayOut, TriageStatusOut} from '@setpoint/shared';
 import {timeZone} from '../api/auth.ts';

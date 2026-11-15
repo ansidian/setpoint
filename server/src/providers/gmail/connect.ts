@@ -60,7 +60,7 @@ function openState(store: Store, sealed: string): State {
 export interface GmailConnectOptions {
   client: GoogleClient;
   redirectUri: string;
-  // Push when Pub/Sub is set up; otherwise Gmail is polled.
+  // Push when Pub/Sub is set up. Otherwise Gmail is polled.
   push: boolean;
 }
 

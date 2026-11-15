@@ -1,19 +1,17 @@
-// The month grid: the weekday row, then weeks as 176 px rows that scroll
-// without end through months. Only the rows in view (and two each side) are drawn, placed by their
-// week, so a row's top is always `row × 176` inside the track: the geometry cards and drags are
-// placed by. Days outside the month the grid shows take `panel` at 60%, weekends 40%, the
-// selected day `sub`. What doesn't fit a cell folds into "+N", whose popover lists the day.
-// Board 15: a chip pressed and moved lifts (tilt −1.5°, scale 1.04, the
-// popover shadow) and follows the pointer, its place becomes a dashed ghost, the day under it is
-// marked and a tooltip names the day and time; letting go on another day drops it there.
+// The month grid: the weekday row, then weeks as 176 px rows that scroll without end through months.
+// Only the rows in view (and two each side) are drawn, placed by their week. So a row's top is
+// always `row × 176` inside the track: the geometry cards and drags are placed by. Days outside the
+// month the grid shows take `panel` at 60%, weekends 40%, the selected day `sub`. What doesn't fit
+// a cell folds into "+N", whose popover lists the day.
+// Board 15: a chip pressed and moved lifts (tilt −1.5°, scale 1.04, the popover shadow) and follows
+// the pointer. Its place becomes a dashed ghost, the day under it is marked and a tooltip names the
+// day and time. Letting go on another day drops it there.
 // A drag held near the grid's top or bottom edge scrolls it (faster nearer the edge), and an
 // item in the "+N" popover drags out of it onto another day.
-// The lift eases in; the day under a drag takes the item's colour
-// and shows the slot it would land in; on the drop the chip settles from where it was lifted into
-// its place.
-// Paging and Today glide the grid to their month over 260 ms (from five rows
-// short when it's further than ten), a new page mid-glide going on from where it is; the wheel, a
-// touch or a press stops it.
+// The lift eases in. The day under a drag takes the item's colour and shows the slot it would land
+// in. On the drop the chip settles from where it was lifted into its place.
+// Paging and Today glide the grid to their month over 260 ms (from five rows short when it's further
+// than ten). A new page mid-glide goes on from where it is. The wheel, a touch or a press stops it.
 import type {CalendarOut, ItemOut, WeatherDayOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, RefObject} from 'react';
@@ -133,7 +131,7 @@ export function MonthGrid(props: MonthGridProps) {
   useEffect(() => () => stopGlide(), []);
   // `landed` runs once it's there (Today's pulse), not when it's stopped or sent elsewhere.
   const glideTo = (element: HTMLElement, to: number, landed?: () => void) => {
-    // Mid-glide it goes on from where it is; from rest, a far month is first brought within reach.
+    // Mid-glide it goes on from where it is. From rest, a far month is first brought within reach.
     const from = gliding.current ? element.scrollTop : glideStart(element.scrollTop, to);
     if (gliding.current) cancelAnimationFrame(gliding.current.frame);
     gliding.current = null;
@@ -190,7 +188,7 @@ export function MonthGrid(props: MonthGridProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // A press on a chip that moves past the threshold lifts it; letting go drops it on the day under
+  // A press on a chip that moves past the threshold lifts it. Letting go drops it on the day under
   // the pointer. The pointer is followed on the document, so a fast move off the chip still counts.
   useEffect(() => {
     let current: Drag | null = null;
@@ -408,7 +406,7 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items: own, 
     <div className={className} data-date={date} onClick={() => onSelectDay(date)} style={dropping ? {'--dc': liftedColour} as CSSProperties : undefined}>
       <div className="dhead">
         <span className={`dn${date === today ? ' today' : ''}${head.monthStart ? ' month' : ''}`}>{head.label}</span>
-        {/* Under the pointer a day offers + to make an event on it; a click on the day only selects it. */}
+        {/* Under the pointer a day offers + to make an event on it. A click on the day only selects it. */}
         <button type="button" className="dadd" aria-label={`New event on ${dayTitle(date)}`} data-tip="New event · C"
           onPointerDown={event => event.stopPropagation()}
           onClick={event => {

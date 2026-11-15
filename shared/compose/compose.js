@@ -130,7 +130,7 @@ var SetpointCompose = (function(exports) {
 	var meridiemOf = (text) => text ? text[0].toLowerCase() : null;
 	/**
 	* A range's two ends. An end missing its am/pm takes the first reading after the start ("9am-5" is
-	* 5 PM); a start missing its own takes the last reading before the end ("7-9pm" is 7 PM, "11-1pm"
+	* 5 PM). A start missing its own takes the last reading before the end ("7-9pm" is 7 PM, "11-1pm"
 	* 11 AM). With am/pm on neither, both need minutes or a 24-hour hour ("9:00-10:30", "13-15"). The
 	* same time twice ("2-2pm", "14:00–14:00") is No end, the end at the start.
 	*/
@@ -252,7 +252,7 @@ var SetpointCompose = (function(exports) {
 			}
 		}
 	];
-	/** A time on its own; "no end" by it is No end, unless a length came first. */
+	/** A time on its own. "no end" by it is No end, unless a length came first. */
 	function single(m, s) {
 		if (s.start !== null) return false;
 		const noEnd = /no\s+end/i.test(m[0]);
@@ -371,7 +371,7 @@ var SetpointCompose = (function(exports) {
 		}
 	};
 	/**
-	* When a repeat ends, only once one is read; the first ending wins. Without a repeat
+	* When a repeat ends, only once one is read. The first ending wins. Without a repeat
 	* "until …" and a count stay words, and "for N days/weeks" is left to the length.
 	*/
 	function ending(s, start, found, orLength = false) {
@@ -485,7 +485,7 @@ var SetpointCompose = (function(exports) {
 	/**
 	* The reminders the phrases read, each checked against the item's moment once the whole line is
 	* read: a phrase with one past 4 weeks either side, or one too many with what the item keeps, stays
-	* words. Approximate in minutes on the clock; reminders.ts turns them into exact offsets.
+	* words. Approximate in minutes on the clock. reminders.ts turns them into exact offsets.
 	*/
 	function resolveReminders(state, days) {
 		const words = /* @__PURE__ */ new Set();
@@ -677,20 +677,20 @@ var SetpointCompose = (function(exports) {
 		};
 	}
 	/**
-	* Reads the title as typed; `today` places weekdays and bare dates, `calendars` are the names "cal …"
+	* Reads the title as typed. `today` places weekdays and bare dates, `calendars` are the names "cal …"
 	* knows, and `picked` is the place text a suggestion was picked for, where the place stops. `hash`
 	* is what "#…" reads (a task's projects or an event's calendars): their names, in the list's order,
 	* with the text a menu pick was made for.
 	*
-	* `edit` is an item's title as it was and its day, when the text is that title edited: only
+	* `edit` is an item's title as it was and its day, when the text is that title edited. Then only
 	* phrases wholly inside what the edit typed are read (`typedSpan`), and a repeat with no day of its
 	* own counts from the item's day rather than today. With no phrase read the title is the text as
-	* typed, spaces and all; phrases that leave no words keep the title as it was.
+	* typed, spaces and all. Phrases that leave no words keep the title as it was.
 	*
-	* A task's line (`hash` its projects) reads no lengths or spans of days; any other, an event's, does.
+	* A task's line (`hash` its projects) reads no lengths or spans of days. Any other, an event's, does.
 	*
-	* `remind` is what the item's reminders count from when the line names no day or time; with
-	* none, reminder phrases stay words.
+	* `remind` is what the item's reminders count from when the line names no day or time. With none,
+	* reminder phrases stay words.
 	*/
 	function parseTitle$1(text, today, calendars = [], picked = null, hash = null, edit = null, remind = null) {
 		const state = fresh(hash?.kind !== "project", remind);
@@ -916,7 +916,7 @@ var SetpointCompose = (function(exports) {
 	function editedWhen(input) {
 		return editedWhen$1(input.item, input.read, input.kind);
 	}
-	/** A "#" or "@" just typed at the line's end, which opens its menu; null when there's none. */
+	/** A "#" or "@" just typed at the line's end, which opens its menu. Null when there's none. */
 	function bareToken(input) {
 		return bareToken$1(input.text, input.trigger);
 	}

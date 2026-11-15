@@ -1,6 +1,6 @@
-// A description's Gmail link, in the form Open in Gmail writes, opens the email in
-// Setpoint's reader when Setpoint has it, its tooltip saying so; otherwise, and for every other
-// link, it opens in a new tab as ever. Which email a link names is asked once and kept (api/client.ts).
+// A description's Gmail link, in the form Open in Gmail writes, opens the email in Setpoint's reader
+// when Setpoint has it, and its tooltip says so. Otherwise, and for every other link, it opens in a
+// new tab as ever. Which email a link names is asked once and kept (api/client.ts).
 import type {GmailLinkOut} from '@setpoint/shared';
 import {getCached, loadingOf, prefetch, useResource} from '../../api/client.ts';
 import {gmailLinkPath} from '../../api/mail.ts';
@@ -14,7 +14,7 @@ const pathOf = (href: string | null) => {
   return link ? gmailLinkPath(link.account, link.id) : null;
 };
 
-/** The email a link names, once it's known; null for one Setpoint doesn't have or that isn't Gmail's. */
+/** The email a link names, once it's known, or null for one Setpoint doesn't have or that isn't Gmail's. */
 export function useLinkedEmail(href: string | null): number | null {
   const {data} = useResource<GmailLinkOut>(pathOf(href));
   return data?.message_id ?? null;

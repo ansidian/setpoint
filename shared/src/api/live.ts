@@ -9,13 +9,13 @@ export type LiveEvent =
   | {type: 'items'; items: number[]; calendars: number[]; commands: number[]}
   | {type: 'health'; sources: number[]}
   // News: `stories` changed in place (their dot, sources or summary: the page updates those rows
-  // without reordering); `sections` gained, lost or re-ranked stories (the page holds its order
-  // behind the "3 new · 1 updated" pill); `sources` are News sources whose health changed (Settings ›
+  // without reordering). `sections` gained, lost or re-ranked stories (the page holds its order
+  // behind the "3 new · 1 updated" pill). `sources` are News sources whose health changed (Settings ›
   // News only: News sources never ride on `health`, which is the accounts' and calendar's). One
   // naming nothing means sorting's state changed (down, back, or the first run done): GET
   // /api/news/status again.
   | {type: 'news'; stories: number[]; sections: NewsSection[]; sources: number[]}
-  // Jobs: a module that can be removed whole; its event is in shared/src/jobs/.
+  // Jobs: a module that can be removed whole. Its event is in shared/src/jobs/.
   | JobsLiveEvent;
 
 // Compile-time check that the union covers LIVE_EVENT_TYPES exactly.
@@ -24,9 +24,9 @@ export type LiveEventCheck = [LiveEvent['type']] extends [LiveEventType] ? ([Liv
 /**
  * The stream's own events, besides LiveEvent's types (each sent as the SSE `event` name with the
  * LiveEvent as JSON `data`, and an `id` to resume from with Last-Event-ID):
- * - `ready` starts each connection, with the id to resume from;
+ * - `ready` starts each connection, with the id to resume from.
  * - `resync` means refetch everything (a reconnect after more than the server kept, a restart, or
- *   another process's write);
+ *   another process's write).
  * - `ping` every 25 s shows an open tab the stream still works.
  */
 export const STREAM_EVENTS = ['ready', 'resync', 'ping'] as const;

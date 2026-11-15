@@ -6,8 +6,8 @@ import {useSyncExternalStore} from 'react';
 import type {Rect} from '../../logic/calendar.ts';
 
 /**
- * Scroll the grid: a month to the top, or a day into view if it isn't. Paging and Today glide there
- *; a jump (Month from Week, a link) lands at once.
+ * Scroll the grid: a month to the top, or a day into view if it isn't. Paging and Today glide there.
+ * A jump (Month from Week, a link) lands at once.
  */
 export type ScrollRequest = {kind: 'month'; month: string; how: MonthMove; seq: number} | {kind: 'day'; date: string; seq: number};
 export type MonthMove = 'page' | 'today' | 'jump';
@@ -28,7 +28,8 @@ export interface CalendarView {
   gliding: string | null;
   // Calendars just toggled: their items fading out before they're hidden, or in as they're shown.
   fade: CalendarFade;
-  // While a calendar search shows all its results, the ids they're of (a recurring event's every occurrence shares one): the rest dim.
+  // While a calendar search shows all its results, the ids they're of. The rest dim. Every
+  // occurrence of a recurring event shares one id.
   matches: ReadonlySet<number> | null;
 }
 
@@ -98,8 +99,8 @@ export function stopGliding() {
 }
 
 /**
- * T always answers: today's disc on the grid, in the week's heads and in the
- * mini-month swells once, as Today lands, so it says "you are here" even with today already in view.
+ * T always answers. Today's disc on the grid, in the week's heads and in the mini-month swells once
+ * as Today lands, so it says "you are here" even with today already in view.
  */
 export function pulseToday() {
   for (const disc of document.querySelectorAll<HTMLElement>('.dn.today, .mini > .t')) {
@@ -113,7 +114,7 @@ export function pulseToday() {
   }
 }
 
-/** The week view shows the week starting `start`: paged keeps the hours' scroll, a jump opens them afresh. */
+/** The week view shows the week starting `start`. Paged keeps the hours' scroll, a jump opens them afresh. */
 export function showWeek(start: string, how: 'page' | 'jump') {
   if (view.week === start && how === 'page') return;
   set({week: start, weekJump: how === 'jump' ? view.weekJump + 1 : view.weekJump});

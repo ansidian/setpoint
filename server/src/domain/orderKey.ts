@@ -1,14 +1,14 @@
-// Todoist's order keys: a task's place among its siblings is a string, and siblings sort by
+// Todoist's order keys. A task's place among its siblings is a string, and siblings sort by
 // comparing them character by character ("a0" < "a0V" < "a1"). Moving one task writes one new key
 // that sorts between its new neighbours', so no other task changes. The keys seen in Todoist's API
-// reference ("a0", "a1V") are fractional indexes in base 62: a head letter saying how many digits
-// the whole part has ("a" one, "b" two; "Z" one below "a0", and so on down), those digits, then
-// any fraction. This is that scheme's usual algorithm (David Greenspan's, public domain).
+// reference ("a0", "a1V") are fractional indexes in base 62. Each is a head letter saying how many
+// digits the whole part has ("a" one, "b" two, "Z" one below "a0", and so on down), those digits,
+// then any fraction. This is that scheme's usual algorithm (David Greenspan's, public domain).
 const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 const ZERO = DIGITS[0]!;
 const LAST = DIGITS[DIGITS.length - 1]!;
 
-/** A fraction between two fractions; `b` null is no upper bound. Neither ends in a zero. */
+/** A fraction between two fractions. `b` null is no upper bound. Neither ends in a zero. */
 function midpoint(a: string, b: string | null): string {
   if (b !== null) {
     let same = 0;
@@ -28,7 +28,7 @@ function wholeLength(head: string): number {
   throw new Error('Not an order key.');
 }
 
-/** A key's whole part and its fraction; throws on a string that isn't a key. */
+/** A key's whole part and its fraction. Throws on a string that isn't a key. */
 function parts(key: string): [string, string] {
   const length = wholeLength(key[0] ?? '');
   const whole = key.slice(0, length);
@@ -76,8 +76,8 @@ function decrement(whole: string): string | null {
 }
 
 /**
- * A key that sorts after `before` and ahead of `after`; null for either is the list's end. Null
- * when the two aren't keys in order, or there's no room, so the caller falls back.
+ * A key that sorts after `before` and ahead of `after`. Null for either is the list's end. Returns
+ * null when the two aren't keys in order, or there's no room, so the caller falls back.
  */
 export function orderKeyBetween(before: string | null, after: string | null): string | null {
   try {
@@ -100,7 +100,7 @@ export function orderKeyBetween(before: string | null, after: string | null): st
   }
 }
 
-/** Siblings in Todoist's order: by their keys where both have one, else by `child_order`. */
+/** Siblings in Todoist's order. By their keys where both have one, else by `child_order`. */
 export function bySiblingOrder<T extends {id: number; orderKey: string | null; childOrder: number | null}>(a: T, b: T): number {
   if (a.orderKey !== null && b.orderKey !== null && a.orderKey !== b.orderKey) return a.orderKey < b.orderKey ? -1 : 1;
   return (a.childOrder ?? 0) - (b.childOrder ?? 0) || a.id - b.id;

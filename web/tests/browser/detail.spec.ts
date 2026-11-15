@@ -1,10 +1,10 @@
-// The floating detail in the browser (boards 12a and
-// 12b): what the card says and the side it takes (Time to Leave is the time-to-leave fixture),
-// then the flows: open and close with Esc or the grid, another item shown in the same card, a drag
-// starting from the card but not its text, and Edit handing over to the right pane. Where the card
-// lies and how it glides are placement.test.ts's and glide.test.ts's tables; the place on screen, the
-// glide and the drag's landing are by eye. An event on a calendar the user can
-// only read (the seed's holiday) changes nowhere, and no picker offers its calendar.
+// The floating detail in the browser (boards 12a and 12b): what the card says and the side it takes
+// (Time to Leave is the time-to-leave fixture). Then the flows: open and close with Esc or the grid,
+// another item shown in the same card, a drag starting from the card but not its text, and Edit
+// handing over to the right pane. Where the card lies and how it glides are placement.test.ts's and
+// glide.test.ts's tables. The place on screen, the glide and the drag's landing are by eye. An event
+// on a calendar the user can only read (the seed's holiday) changes nowhere, and no picker offers
+// its calendar.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
@@ -17,8 +17,8 @@ const card = (page: Page) => page.locator('.fd');
 const chip = (page: Page, date: string, title: string) => page.locator(`.cell[data-date="${date}"] .ev`, {hasText: title});
 
 /**
- * Whether `inner`'s right edge is inside `outer`'s, both read in one frame: they scale in with the card
- * together, so one ending inside the other holds at any frame of its opening.
+ * Whether `inner`'s right edge is inside `outer`'s, both read in one frame. They scale in with the
+ * card together, so one ending inside the other holds at any frame of its opening.
  */
 async function endsInside(inner: Locator, outer: Locator): Promise<boolean> {
   const element = await inner.elementHandle();
@@ -209,7 +209,7 @@ test('an item picked from the agenda opens its card, and so does a link to it on
     assert.equal(await card(page).getAttribute('data-side'), 'left');
     const [at, beside] = [(await rested(() => card(page).locator('.card').boundingBox()))!, (await rested(() => row.boundingBox()))!];
     assert.ok(Math.abs(at.y - beside.y) < 1 && at.x + at.width <= beside.x, `level with the row and left of it: ${JSON.stringify([at, beside])}`);
-    // A second click puts it away, the item still selected; the next opens it again.
+    // A second click puts it away, the item still selected. The next opens it again.
     await row.click();
     await page.getByRole('dialog', {name: 'Study group'}).waitFor({state: 'detached'});
     assert.equal(await page.locator('.ag-item.sel', {hasText: 'Study group'}).count(), 1, 'still selected');

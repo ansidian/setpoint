@@ -1,5 +1,5 @@
-// `npm run seed`'s work: the sample into a database file (and News's images beside it),
-// refusing one that isn't empty unless asked to start over; with a snapshot's directory, real news
+// `npm run seed`'s work: the sample into a database file (and News's images beside it). It refuses
+// one that isn't empty unless asked to start over. With a snapshot's directory, it loads real news
 // in place of the sample's (src/dev/newsSnapshot.ts).
 import fs from 'node:fs';
 import path from 'node:path';

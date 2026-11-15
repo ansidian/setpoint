@@ -14,7 +14,7 @@ import {closeSettings} from './store.ts';
 
 /**
  * A Settings page: its head, then its sections, or, when one of its `loads` failed with nothing to
- * show, why, with Try again. `note` follows the title ("62 applications", 39a);
+ * show, why, with Try again. `note` follows the title ("62 applications", 39a).
  * `actions` sit at the head's end.
  */
 export function Page({title, note, actions, loads = [], children}: {title: string; note?: ReactNode; actions?: ReactNode; loads?: Load[]; children: ReactNode}) {
@@ -60,7 +60,7 @@ export function Switch({on, label, disabled, onChange}: {on: boolean; label: str
 /**
  * The board's select (a 30 px chip with a chevron): it opens the same small menu as a row's options,
  * its choices as items with a check on the current one, never the browser's own list. A choice with a
- * `colour` leads with its dot, as the editor's Calendar menu does; `align` is the menu's.
+ * `colour` leads with its dot, as the editor's Calendar menu does. `align` is the menu's.
  */
 export function Select<T extends string | number>({value, options, label, align, onChange}: {value: T; options: {value: T; label: string; disabled?: boolean; colour?: Colour | null; detail?: string | null}[]; label: string; align?: 'left' | 'right'; onChange: (value: T) => void}) {
   const picked = options.find(option => option.value === value);
@@ -92,9 +92,9 @@ export function Stepper({value, label, onStep}: {value: string; label: string; o
 }
 
 /**
- * A small menu anchored to its button: opens on a click, closes on another, a click elsewhere or
- * Esc (which then goes no further, so Settings stays open, and hands focus back to the button).
- * Opened from the keyboard it focuses its checked item, or its first; ↑ ↓ move between items.
+ * A small menu anchored to its button. It opens on a click, and closes on another, a click elsewhere
+ * or Esc (which then goes no further, so Settings stays open, and hands focus back to the button).
+ * Opened from the keyboard it focuses its checked item, or its first. ↑ ↓ move between items.
  */
 export function Menu({button, label, align = 'right', className, children}: {button: ReactElement<{'aria-expanded'?: boolean; 'aria-haspopup'?: 'menu'}>; label: string; align?: 'left' | 'right'; className?: string; children: (close: () => void) => ReactNode}) {
   const [open, setOpen] = useState<false | 'pointer' | 'keys'>(false);
@@ -158,7 +158,7 @@ export function Prov({text}: {text: string}) {
 /**
  * What a source's state leads with: a 7 px
  * `good` dot when checked, `history` in `ink3` when checks stopped, `warning` in `caution` when
- * failing, `sync_problem` when it needs sign-in; the shared spinner while Check now runs.
+ * failing, `sync_problem` when it needs sign-in. The shared spinner while Check now runs.
  */
 export function HealthGlyph({kind, checking = false}: {kind: HealthKind; checking?: boolean}) {
   if (checking) return <span className="spin hg"><Icon name="progress_activity" size={16} /></span>;
@@ -235,7 +235,7 @@ const LINES = [230, 190, 214, 170, 250, 204];
 /**
  * A group's rows while its answers load, in place of what the page would
  * otherwise say for nothing ("Not connected", "No rules yet"): `count` rows of `sub3` bars, a title
- * over its line (one line with `one`), and the control's place at the end; `tile` leads each with
+ * over its line (one line with `one`), and the control's place at the end. `tile` leads each with
  * the 30 px icon tile (Accounts, News).
  */
 export function SkeletonRows({count, tile = false, one = false}: {count: number; tile?: boolean; one?: boolean}) {

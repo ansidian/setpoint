@@ -1,6 +1,6 @@
-// The shared tooltip (Tip.tsx): a tip that only repeats its element's own words shows
-// only while some of them are cut, so "No reply yet" on a line it fits never shows one, and a long
-// subject cut short on the same line does. How long each kind waits is judged by eye.
+// The shared tooltip (Tip.tsx): a tip that only repeats its element's own words shows only while
+// some of them are cut. So "No reply yet" on a line it fits never shows one, and a long subject cut
+// short on the same line does. How long each kind waits is judged by eye.
 import {afterEach, expect, test} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';

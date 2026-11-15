@@ -1,5 +1,5 @@
-// The .ics import review's rules: which events start ticked, what each row and the
-// list's lines say, what's sent for each, and how a run reads as it goes. Pure; the pane
+// The .ics import review's rules: which events start ticked, what each row and the list's lines
+// say, what's sent for each, and how a run reads as it goes. Pure. The pane
 // (app/calendar/ImportPane.tsx) and its run (app/calendar/importRun.ts) draw and send what these say.
 import type {IcsDropReason, IcsEventOut, IcsImportEvent, IcsReadOut, ItemCreateInput} from '@setpoint/shared';
 import {ICS_DROP_REASONS} from '@setpoint/shared';
@@ -16,11 +16,13 @@ export const ICS_TOO_BIG = 'This file is over 2 MB, the most an import takes';
 export const isIcsFile = (file: {name: string; type: string}) => file.type === 'text/calendar' || /\.ics$/i.test(file.name);
 
 /**
- * What a drag over the grid holds, before the drop. A page sees only each
- * item's kind and type then, not its name or size, so: one file of `text/calendar`, or of a type the
- * browser doesn't know (''), might import ('ics', the drop then judges it by name); one of any other
- * type can't ('other'); more than one file can't ('several'); and a drag that isn't of files is none
- * of these (null), as an item's own drag on the grid.
+ * What a drag over the grid holds, before the drop. A page sees only each item's kind and type
+ * then, not its name or size. So:
+ * - One file of `text/calendar`, or of a type the browser doesn't know (''), might import ('ics',
+ *   the drop then judges it by name).
+ * - One of any other type can't ('other').
+ * - More than one file can't ('several').
+ * - A drag that isn't of files is none of these (null), as an item's own drag on the grid.
  */
 export type FileDrag = 'ics' | 'other' | 'several' | null;
 export function fileDrag(types: readonly string[], items: readonly {kind: string; type: string}[]): FileDrag {
@@ -62,7 +64,7 @@ export function rowMarks(event: Pick<IcsEventOut, 'recurrence' | 'past' | 'exist
   ].filter((mark): mark is string => mark !== false);
 }
 
-/** "2 already on Personal (will update)", for the ticked events the chosen calendar already holds; null for none. */
+/** "2 already on Personal (will update)", for the ticked events the chosen calendar already holds. Null for none. */
 export function alreadyLine(events: IcsEventOut[], ticked: ReadonlySet<string>, calendarId: number | null, calendarName: string | null): string | null {
   if (calendarId === null || !calendarName) return null;
   const count = events.filter(event => ticked.has(event.ical_uid) && event.existing.includes(calendarId)).length;
@@ -113,9 +115,9 @@ export const eventDay = (event: Pick<IcsEventOut, 'all_day' | 'start_date' | 'st
   event.all_day ? event.start_date! : localDate(event.starts_at!, timeZone);
 
 /**
- * Where a read file lands: nothing to import says so in the toast; one event opens the
- * editor as a draft on its day; two or more open the review, on the first upcoming event's day (or the
- * first event's, when all are past), so Calendar from an email shows where they'd go.
+ * Where a read file lands. A file with nothing to import says so in the toast. One event opens the
+ * editor as a draft on its day. Two or more open the review, on the first upcoming event's day (or
+ * the first event's, when all are past), so Calendar from an email shows where they'd go.
  */
 export type IcsLanding = {kind: 'nothing'; line: string} | {kind: 'draft'; event: IcsEventOut; date: string} | {kind: 'review'; date: string};
 export function icsLanding(read: IcsReadOut, timeZone: string): IcsLanding {
@@ -134,7 +136,8 @@ export function importOf(event: IcsEventOut): IcsImportEvent {
 /**
  * One event opened in the editor and created there: the editor's fields over the file's, so it
  * keeps its iCalUID, description, link, free/busy and changed occurrences. A repeat changed in the
- * editor replaces the file's RRULE and keeps its EXDATE and RDATE lines; one taken off drops them.
+ * editor replaces the file's RRULE and keeps its EXDATE and RDATE lines. A repeat taken off drops
+ * them.
  */
 export function editedImport(event: IcsEventOut, input: ItemCreateInput): IcsImportEvent {
   const fileRule = event.recurrence.find(line => line.startsWith('RRULE:')) ?? null;

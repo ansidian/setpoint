@@ -35,7 +35,7 @@ describe('Time to Leave', () => {
   ])('%s', (_, leave, line) => expect(leaveLine(item({time_to_leave: leave}), zone, morning)?.text ?? null).toBe(line));
 
   // Dentist at 2:30 PM, leave by 2:05 PM. The line turns `caution` 15 minutes before
-  // leaving and stays so until the event starts; from then it's gone.
+  // leaving and stays so until the event starts. From then it's gone.
   const dentist = item({starts_at: at('2026-10-07', '14:30'), ends_at: at('2026-10-07', '15:30'),
     time_to_leave: {leave_at: at('2026-10-07', '14:05'), travel_minutes: 18, checked_at: at('2026-10-07', '09:00')}});
   test.each([

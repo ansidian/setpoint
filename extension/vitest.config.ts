@@ -1,6 +1,7 @@
-// Setpoint on LinkedIn's tests: its readers against trimmed LinkedIn pages, its words and its
-// badge's rule, in a real Chromium as the component tests run (web/vitest.components.config.ts), with
-// the same browser and nothing downloaded. One headless page for a few seconds, so they take no lock.
+// Setpoint on job boards' tests: its readers against trimmed LinkedIn and Indeed pages, its words
+// and its badge's rule. They run in a real Chromium as the component tests do
+// (web/vitest.components.config.ts), with the same browser and nothing downloaded. They use one
+// headless page for a few seconds, so they take no lock.
 import {playwright} from '@vitest/browser-playwright';
 import {defineConfig} from 'vitest/config';
 

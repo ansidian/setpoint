@@ -65,7 +65,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     // The shell: Jobs under News, its count the Needs you count.
     assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     const item = page.locator('aside.sb .nav.jobs');
-    // The full sidebar names it in its own words, so it has no tip; the rail's has.
+    // The full sidebar names it in its own words, so it has no tip. The rail's has.
     assert.equal(await item.getAttribute('data-tip'), null);
 
     await page.keyboard.press('4');
@@ -115,8 +115,8 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     assert.equal(await status('Woodgrove Bank', 'Application Developer'), 'Offer· Oct 6');
     const alpine = row(page, await applicationId(setpoint, 'Alpine Ski House', 'Web Developer'));
     assert.equal(await alpine.locator('.st .by').getAttribute('data-tip'), 'Set by you on Sep 10, only an email that sets a status changes it');
-    // The JD column: a glyph, how it was found or where it stands in its tip; nothing for a closed one
-    // from history.
+    // The JD column: a glyph, with how it was found or where it stands in its tip. Nothing for a
+    // closed one from history.
     const jd = async (company: string, title: string) => {
       const cell = row(page, await applicationId(setpoint, company, title)).locator('.jd');
       return [await cell.locator('.icon').count(), await cell.getAttribute('data-tip')];
@@ -167,7 +167,7 @@ test('an application opens where the reading pane sits: its head, its JD, its ti
     assert.deepEqual(await pane.locator('.jb-body > .jb-facts > *').allTextContents(), ['Irvine, CA', 'Hybrid, 3 days', '$95,000–$115,000']);
     assert.deepEqual(await pane.locator('.jb-lists .jb-label').allTextContents(), ['Must-haves 4', 'Nice-to-haves 3']);
     assert.equal(await pane.locator('.jb-src').textContent(), 'Full postingFound on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
-    // The timeline, oldest first; then Applied before at the company.
+    // The timeline, oldest first, then Applied before at the company.
     assert.deepEqual(await pane.locator('.jb-ev').allTextContents(), [
       'Oct 1AppliedThank you for applying to Northwind Talent', 'Oct 1Verify your email, no longer in Gmail', 'TodayInterviewInterview availability for Software Engineer I',
     ]);
@@ -245,7 +245,7 @@ test('Esc goes back a step at a time: it folds the full posting, then closes the
     assert.equal(new URL(page.url()).pathname, '/jobs');
     assert.equal(await page.title(), 'Jobs');
 
-    // `/` turns the header into Search; Esc clears the query, then leaves search.
+    // `/` turns the header into Search. Esc clears the query, then leaves search.
     await page.keyboard.press('/');
     await until('Search', () => page.locator('.hd .hd-title').textContent(), title => title === 'Search');
     assert.equal(await page.locator('.hd .jb-status, .hd .jb-week').count(), 0);
@@ -291,7 +291,7 @@ test('search (36a, 36b): humongous gives both applications, kubernetes Woodgrove
     await page.getByRole('textbox', {name: 'Search jobs'}).fill('wide world');
     await until('Wide World Importers', () => companies(page), found => found.join() === 'Wide World Importers');
     assert.deepEqual(await page.locator('.jb-scroll .jb-tr .co mark.hl').allTextContents(), ['Wide', 'World']);
-    // Enter hands the keys to the results, the cursor on the first; Enter again opens it.
+    // Enter hands the keys to the results, the cursor on the first. Enter again opens it.
     await page.keyboard.press('Enter');
     await until('the cursor on it', () => page.locator('.jb-scroll .jb-tr.cur .co').textContent(), company => company === 'Wide World Importers');
     await page.keyboard.press('Enter');
@@ -376,7 +376,7 @@ test('a failed pick: it says so and Open posting opens it; Paste the posting sav
     await until('the toast', () => toast(page).textContent(), value => value === 'JD saved for The Phone CompanyUndo');
     const full = pane.getByRole('group', {name: 'Full posting'});
     await full.waitFor();
-    // Undo while the toast offers it, its text gone with it; pasted again for the rest.
+    // Undo while the toast offers it, its text gone with it. Pasted again for the rest.
     await undo(page);
     await card.waitFor();
     assert.equal(await card.textContent(), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Aug 12Paste the postingLook it up');
@@ -540,7 +540,7 @@ test('an event opens its email in the mail reader; one whose email is gone says 
     assert.equal(await gone.getAttribute('data-tip'), 'Gmail no longer has this email, so Jobs keeps only its line');
     assert.equal(await gone.locator('.gonetxt').textContent(), ', no longer in Gmail');
     await gone.hover();
-    // Its ··· (shown on hover) has no Open email; the one whose email is there has.
+    // Its ··· (shown on hover) has no Open email. The one whose email is there has.
     await gone.locator('.go .ibtn').click();
     assert.deepEqual(await page.getByRole('menu', {name: 'Event'}).getByRole('menuitem').allTextContents(), ['Move to…', 'Not about this']);
     await page.keyboard.press('Escape');
@@ -775,8 +775,8 @@ test('an update to assign (34a): Assign to… lists Humongous\'s two, a pick mov
   }
 });
 
-// The seed's items have no email in mail's sample: these stand in as theirs, the first two
-// unread, the last from history.
+// The seed's items have no email in mail's sample. These stand in as theirs, the first two unread
+// and the last from history.
 const ITEM_EMAILS = `
   UPDATE jobs_needs_you SET message_id = (SELECT id FROM messages WHERE subject = 'Application received') WHERE subject = 'Thank you for your interest in the Software Engineer II role';
   UPDATE jobs_needs_you SET message_id = (SELECT id FROM messages WHERE subject = 'Interview availability for Software Engineer I') WHERE subject = 'Can we set up a call this week?';
@@ -982,7 +982,7 @@ test('an application in Assign to… opens its first email beside the menu, whic
     await until('the menu closed', () => menu.count(), count => count === 0);
     assert.equal(await page.locator('.jb-pane[aria-label="Email"]:not(.leaving)').count(), 1);
 
-    // → reads the item under the cursor; one with no email says so and the pane stays.
+    // → reads the item under the cursor. One with no email says so and the pane stays.
     await item.getByRole('button', {name: 'Assign to…'}).click();
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowRight');
@@ -1045,7 +1045,7 @@ test('Track this (34c): the application lands at its email\'s date, opens with F
     assert.equal(await pane.locator('.jb-ev .tag').textContent(), 'First seen');
     await until('the toast', () => toast(page).textContent(), text => text === 'Tracking Wide World ImportersUndo');
     await holdToast(page);
-    // It landed at the top, at its date, settling from sub2; the numbers move with it (All 63, In process 4, this week 4).
+    // It landed at the top, at its date, settling from sub2. The numbers move with it (All 63, In process 4, this week 4).
     await until('its row at the top', () => companies(page), all => all[0] === 'Wide World Importers' && all[1] === 'Fabrikam');
     await until('the filter\'s counts', () => page.locator('.hd .jb-status button').allTextContents(), counts => counts.join() === 'All63,Applied31,In process4,Offer1,Rejected25,Withdrawn2');
     await until('Per week', () => page.locator('.jb-week').textContent(), text => text === 'Per week4 this week');
@@ -1339,7 +1339,7 @@ test('P pins the row under the cursor onto the shelf under the headings, newest 
     await page.keyboard.press('j');
     const first = (await table(page))[0]!;
     await until('the table\'s first', () => page.locator('.jb-scroll .jb-tr.cur .co').textContent(), name => name === first);
-    // Every filter and every sort keep the shelf as it is; the filter's counts don't move.
+    // Every filter and every sort keep the shelf as it is. The filter's counts don't move.
     const counts = await page.locator('.hd .jb-status button').allTextContents();
     await page.locator('.hd .jb-status button', {hasText: 'Offer'}).click();
     await until('Offer\'s one row', () => table(page), names => names.join() === 'Woodgrove Bank');
@@ -1396,7 +1396,7 @@ test('Pin from a right-click, the detail\'s tool, More and P with it open; Set t
     await page.keyboard.press('Escape');
     await more.waitFor({state: 'detached'});
 
-    // Rejected by hand: off the shelf, back in its place; Undo brings the pin back with the status.
+    // Rejected by hand: off the shelf, back in its place. Undo brings the pin back with the status.
     await pane.locator('.jb-stchip').click();
     await page.getByRole('menu', {name: 'Set status'}).getByRole('menuitem', {name: 'Rejected'}).click();
     await until('the toast', () => toast(page).textContent(), text => text === 'Set to RejectedUndo');
@@ -1428,7 +1428,7 @@ test('a row\'s right-click: its actions at the pointer, the cursor on it and not
       'Open↵', 'Open postingO', 'PinP', 'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
       'Not an applicationHides it, its emails never make one again', 'DeleteForgets it, a later email can make it again', 'Copy company and role', 'Copy posting link',
     ]);
-    // At the pointer; the cursor on the row, and the row not opened.
+    // At the pointer, the cursor on the row, and the row not opened.
     const at = (await rested(() => menu.boundingBox()))!;
     assert.ok(Math.abs(at.x - (box.x + 60)) < 2, `at the pointer: ${at.x}`);
     assert.match(await target.getAttribute('class') ?? '', /\bcur\b/);

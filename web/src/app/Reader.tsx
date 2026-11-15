@@ -1,11 +1,11 @@
-// The reading pane: 680 px beside the list, there only while an email is
-// open. Tools (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Reply's reserved place, previous, next,
+// The reading pane: 680 px beside the list, there only while an email is open. It holds the tools
+// (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Reply's reserved place, previous, next,
 // More), the head (the protected line, subject, sender, organisation and platform, account, time),
 // security mail's facts card, the actions, then the body: plain text, or HTML in a sandboxed frame
 // with the images-hidden bar, and the attachments. Add to calendar and Add as task open the proposal
-// card at the top (board 08), Ask about this email Alfred's card scoped to it; the button stays held
-// while its card is open. A plain-text body highlights `marks`: the words a search matched in it, or
-// the phrases Alfred's answer rests on. Reading it here doesn't mark it read: opening it
+// card at the top (board 08). Ask about this email opens Alfred's card scoped to it. The button stays
+// held while its card is open. A plain-text body highlights `marks`: the words a search matched in
+// it, or the phrases Alfred's answer rests on. Reading it here doesn't mark it read. Opening it
 // (InboxPage) does. Its head has mail's slot under the sender's line and above the actions
 // (slots.tsx), which another module may fill.
 //
@@ -66,7 +66,7 @@ export interface ReaderActions {
 
 export function Reader({id, travel = null, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen, back = 'Inbox'}: {
   id: number;
-  // How the user stepped to it, for its swap; null for a click.
+  // How the user stepped to it, for its swap, or null for a click.
   travel?: Travel | null;
   // Its row in the list, so the tools are right before the email itself has loaded.
   row: MessageRowOut | undefined;
@@ -86,7 +86,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const {data} = messageLoad;
   const message = data?.id === id ? data : undefined;
   const cards = useCards(id);
-  // The More menu, open for this email; it shows only on Security and Noise mail, where it holds the
+  // The More menu, open for this email. It shows only on Security and Noise mail, where it holds the
   // proposals.
   const [moreFor, setMoreFor] = useState<number | null>(null);
   // Done only on Attention mail not yet Done.
@@ -97,13 +97,13 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const isDone = listed ? listed.lane === 'attention' && listed.done : false;
   // The tools draw from the email's row until the email itself is in, so they're right at once:
   // Unpin on pinned mail, and Open in Gmail on Gmail's mail only (an email has its Gmail link exactly
-  // when its account is Gmail's), its place held while that's unknown.
+  // when its account is Gmail's). Its place is held while that's unknown.
   const pinned = listed?.pinned ?? false;
   const provider = listed ? accounts.get(listed.account_id)?.provider : undefined;
   const gmail = message ? message.open_url !== null : provider === undefined ? null : provider === 'gmail';
   const phone = usePhone();
-  // Mark unread on the phone keeps the email open and offers Mark read; the subject shows the unread
-  // dot meanwhile. Each tap pops the swapped icon in (`toggles` keys it), the first draw doesn't.
+  // Mark unread on the phone keeps the email open and offers Mark read. The subject shows the unread
+  // dot meanwhile. Each tap pops the swapped icon in (`toggles` keys it), but the first draw doesn't.
   const [unreadFor, setUnreadFor] = useState<number | null>(null);
   const [toggles, setToggles] = useState<{id: number; count: number}>({id, count: 0});
   const markedUnread = unreadFor === id;
@@ -113,11 +113,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
     setToggles({id, count: toggled + 1});
     void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message, null, 'failed'));
   };
-  // A copied code reads the email; on the phone after Mark unread, as Mark read would.
+  // A copied code reads the email. On the phone it does so after Mark unread too, as Mark read would.
   const codeCopied = () => (markedUnread ? toggleRead() : actions.codeCopied());
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
-  // the email stays unread; from the email's row too, as the tools are, so it's there at once. The
-  // same list as the row's right-click menu and More (emailActions.ts).
+  // the email stays unread. It draws from the email's row too, as the tools do, so it's there at
+  // once. It is the same list as the row's right-click menu and More (emailActions.ts).
   const handlers = {...actions, propose: cards.propose, ask: cards.ask};
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
   const offered = listed ? emailActions(listed, gmail, handlers, 'palette', rules) : [];
@@ -163,11 +163,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         )}
       </div>
       <Swap id={id} travel={travel}>
-        {/* The head from the email's row at once; only the body waits for the email. */}
+        {/* The head from the email's row at once. Only the body waits for the email. */}
         <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} />
       </Swap>
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
-          email and its account are known, so none moves in or along when the email arrives; until
+          email and its account are known, so none moves in or along when the email arrives. Until
           then the bar stays empty. Done leads, the phone's main job on Attention mail. */}
       {phone && (
         <div className="ph-acts">
@@ -189,10 +189,10 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
 }
 
 /**
- * The pane's scroller. Each email opens at its top, one shown before (straight from the cache) too,
- * and swaps in from the side the user stepped from: up 8 px from below going down the
- * list, down from above going up, a fade for a click; the first email shows at once (in a narrow
- * window it arrives with the pane's slide over the list), not as a swap. The tools stay still.
+ * The pane's scroller. Each email opens at its top, one shown before (straight from the cache) too.
+ * It swaps in from the side the user stepped from: up 8 px from below going down the list, down from
+ * above going up, a fade for a click. The first email shows at once (in a narrow window it arrives
+ * with the pane's slide over the list), not as a swap. The tools stay still.
  */
 function Swap({id, travel, children}: {id: number; travel: Travel | null; children: ReactNode}) {
   const [arrived] = useState(id);
@@ -245,7 +245,7 @@ function useCards(id: number) {
   const [state, setState] = useState<{id: number; panel: Panel}>({id, panel: null});
   // Another email starts with no card.
   const panel = state.id === id ? state.panel : null;
-  // What the user does sets this email's card, whatever another email left open; an answer
+  // What the user does sets this email's card, whatever another email left open. An answer
   // arriving late lands only if this email and its card are still the ones shown.
   const show = (next: Panel) => setState({id, panel: next});
   const settle = (change: (panel: Panel) => Panel) => setState(current => (current.id === id ? {id, panel: change(current.panel)} : current));
@@ -370,9 +370,9 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
 
 /**
  * The email: its head and its body. The head draws from the email's row (`listed`) until the email
- * itself is in, so it's there at once; the body waits, a skeleton meanwhile (with an attachment's
- * card when it has one), or why it couldn't load. With no `cards`, it's
- * the email alone: no slot and no actions.
+ * itself is in, so it's there at once. The body waits: a skeleton meanwhile (with an attachment's
+ * card when it has one), or why it couldn't load. With no `cards`, it's the email alone: no slot
+ * and no actions.
  */
 function Email({listed, message, load, accounts, now, timeZone, marks, cards, unread = false, onCodeCopied}: {
   listed: MessageRowOut | undefined;
@@ -487,9 +487,9 @@ function Actions({listed, cards}: {listed: MessageRowOut; cards: Cards}) {
   );
 }
 
-/** The body, once the email is in: plain text or its frame, the images-hidden bar and the attachments; it fades in after a wait. */
+/** The body, once the email is in: plain text or its frame, the images-hidden bar and the attachments. It fades in after a wait. */
 function Body({message, marks, arrived}: {message: MessageOut; marks: string[]; arrived: boolean}) {
-  // "Show" loads this email's images this time; it lasts while it's open.
+  // "Show" loads this email's images this time. It lasts while it's open.
   const [shown, setShown] = useState(false);
   const images = remoteImages(message.remote_content, hasRemoteContent(message.body_html), shown);
   return (
@@ -518,8 +518,8 @@ function Body({message, marks, arrived}: {message: MessageOut; marks: string[]; 
 
 /**
  * The pane's left edge, dragged (or ← → when focused) to make it wider or narrower, and double-clicked
- * to put it back to 680 (News's story pane shares it). Its grip sits fixed at the edge's middle:
- * one that followed the pointer ran ahead of it under the wide screen's zoom. The pointer moves in the
+ * to put it back to 680 (News's story pane shares it). Its grip sits fixed at the edge's middle. A
+ * grip that followed the pointer ran ahead of it under the wide screen's zoom. The pointer moves in the
  * window's pixels and the pane's width is the page's, so the drag divides by the zoom.
  */
 export function PaneEdge({width}: {width: number}) {

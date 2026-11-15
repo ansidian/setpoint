@@ -1,8 +1,8 @@
-// An item's description. Each provider keeps its own format, a Google event HTML
-// and a Todoist task Markdown, and Setpoint stores what it was given. Here both are read into one
-// short list of formats, which is all the screen ever draws (as elements, never as the provider's
-// markup, so nothing in a description can run or load anything), and written back in the shapes the
-// providers' own editors write (read from a real event and task, 2026-11-10):
+// An item's description. Each provider keeps its own format, a Google event HTML and a Todoist
+// task Markdown, and Setpoint stores what it was given. This file reads both into one short list of
+// formats, which is all the screen ever draws. It draws them as elements, never as the provider's
+// markup, so nothing in a description can run or load anything. It writes them back in the shapes
+// the providers' own editors write (read from a real event and task, 2026-11-10):
 //   Google   <b>, <i>, <u>, lines ended by <br> with no paragraphs, <ol><li>, <ul><li> (a nested
 //            list inside its <li>), <a href>
 //   Todoist  **bold**, *italic*, "1." and "-" lists with a blank line around them (nested by indent),
@@ -12,7 +12,7 @@
 export type Mark = 'bold' | 'italic' | 'underline' | 'strike' | 'code';
 const MARKS: Mark[] = ['bold', 'italic', 'underline', 'strike', 'code'];
 
-/** A stretch of text with one set of formats; `href` makes it a link. */
+/** A stretch of text with one set of formats. `href` makes it a link. */
 export interface Run {
   text: string;
   marks: Mark[];
@@ -30,7 +30,7 @@ export interface List {
   items: Item[];
 }
 
-/** A paragraph is one line; an empty one is a blank line. */
+/** A paragraph is one line, and an empty one is a blank line. */
 export type Block =
   | {type: 'paragraph'; runs: Run[]}
   | {type: 'heading'; level: number; runs: Run[]}
@@ -137,7 +137,7 @@ interface Tag {
   end: number;
 }
 
-/** The tag starting at `at` ("<" there), its end found past any quoted attribute; null when it isn't one. */
+/** The tag starting at `at` ("<" there), its end found past any quoted attribute. Null when it isn't one. */
 function tagAt(html: string, at: number): Tag | null {
   // A name, then a space, a slash or the end: "<sam@example.org>" and "<https://…>" are text, as invites write them.
   const open = /^<(\/?)([a-zA-Z][a-zA-Z0-9]*)(?=[\s/>])/.exec(html.slice(at, at + 40));
@@ -172,10 +172,10 @@ const LINE_BREAKING = new Set(['div', 'p', 'section', 'article', 'header', 'foot
 const BLOCKS = /<(p|div|li|ol|ul|table|tr|h[1-6]|blockquote|pre)[\s/>]/i;
 
 /**
- * HTML as a description. `literal` is the editor's own markup, where white space is kept as typed;
- * a provider's keeps its newlines unless it has paragraphs, lists or other blocks of its own (plain
- * text, as an invite's or an .ics file's, with or without a <br>), where white space folds as a
- * browser folds it.
+ * HTML as a description. `literal` is the editor's own markup, where white space is kept as typed.
+ * A provider's keeps its newlines unless it has paragraphs, lists or other blocks of its own (plain
+ * text, as an invite's or an .ics file's, with or without a <br>). Where it has them, white space
+ * folds as a browser folds it.
  */
 export function readHtml(html: string, {literal = false}: {literal?: boolean} = {}): Description {
   const blocks: Block[] = [];
@@ -234,8 +234,8 @@ export function readHtml(html: string, {literal = false}: {literal?: boolean} = 
     });
   };
 
-  // A list closed: a nested one goes under the item before it, inside that item (Google's) or after
-  // it (the browser's own indent); an outer one is a block.
+  // A list closed. A nested one goes under the item before it, inside that item (Google's) or after
+  // it (the browser's own indent). An outer one is a block.
   const closeList = () => {
     const {ordered, items} = lists.pop()!;
     const parent = lists.at(-1);
@@ -380,7 +380,7 @@ export function writeHtml(blocks: Block[]): string {
 const PUNCTUATION = /[!-/:-@[-`{-~]/;
 const isWord = (char: string | undefined) => char !== undefined && /[\p{L}\p{N}]/u.test(char);
 
-/** One line's Markdown as runs: bold, italic, strikethrough, code, links; anything unclosed is text. */
+/** One line's Markdown as runs: bold, italic, strikethrough, code, links. Anything unclosed is text. */
 export function readInline(text: string, marks: Mark[] = [], href: string | null = null): Run[] {
   const runs: Run[] = [];
   let plain = '';
@@ -611,8 +611,8 @@ export function writeMarkdown(blocks: Block[]): string {
 // ---- Either ----
 
 /**
- * A description as its provider's own editor would write it, for what's pasted in: an event keeps
- * Google's set (bold, italic, underline, lists, links), the rest as plain lines; a task keeps
+ * A description as its provider's own editor would write it, for what's pasted in. An event keeps
+ * Google's set (bold, italic, underline, lists, links), the rest as plain lines. A task keeps
  * everything but underline, which Markdown doesn't have.
  */
 export function fitting(kind: 'event' | 'task', blocks: Block[]): Block[] {
@@ -635,13 +635,13 @@ export function readDescription(format: DescriptionFormat, source: string | null
   return format === 'html' ? readHtml(source) : readMarkdown(source);
 }
 
-/** A description for its provider; null when there's nothing in it, which clears it there. */
+/** A description for its provider. Null when there's nothing in it, which clears it there. */
 export function writeDescription(format: DescriptionFormat, blocks: Block[]): string | null {
   if (isEmpty(blocks)) return null;
   return format === 'html' ? writeHtml(blocks) : writeMarkdown(blocks);
 }
 
-/** A run's text with its bare web addresses as links, for the screen only: the stored text stays as it was. */
+/** A run's text with its bare web addresses as links, for the screen only. The stored text stays as it was. */
 export function withLinks(run: Run): Run[] {
   if (run.href || run.marks.includes('code')) return [run];
   const out: Run[] = [];
@@ -681,7 +681,7 @@ export function gmailLinkOf(href: string | null): {account: string; id: string} 
   }
   if (url.protocol !== 'https:' || url.hostname !== 'mail.google.com' || !/^\/mail\/?$/.test(url.pathname)) return null;
   const account = url.searchParams.get('authuser');
-  // An address-bar link pasted from All Mail has this shape too; its id just isn't found.
+  // An address-bar link pasted from All Mail has this shape too. Its id just isn't found.
   const id = /^#all\/([^/?#]+)$/.exec(url.hash)?.[1];
   if (!account || !id) return null;
   try {

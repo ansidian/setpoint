@@ -1,20 +1,20 @@
-// An HTML email in the reader: a sandboxed frame as wide as the reading
-// pane, radius 14 on white, as tall as the email so the reading pane scrolls it with the head. The
-// frame loads the server's body page by `src` (GET /api/mail/messages/:id/body), which carries its
-// own policy: no scripts but the reader's measuring script, and remote images only when the
-// remote-content rule allows them or the user said Show. The sandbox gives the page no origin of its
-// own, so nothing can reach in to measure it; instead the measuring script posts the page's height
-// as it lays out and as its images load, and the frame takes it. Keys pressed with the email clicked
-// into come the same way, and are pressed again on the frame, so Setpoint's keys still work.
+// An HTML email in the reader: a sandboxed frame as wide as the reading pane, radius 14 on white.
+// It is as tall as the email, so the reading pane scrolls it with the head. The frame loads the
+// server's body page by `src` (GET /api/mail/messages/:id/body), which carries its own policy: no
+// scripts but the reader's measuring script, and remote images only when the remote-content rule
+// allows them or the user said Show. The sandbox gives the page no origin of its own, so nothing can
+// reach in to measure it. Instead the measuring script posts the page's height as it lays out and as
+// its images load, and the frame takes it. Keys pressed with the email clicked into come the same
+// way. They are pressed again on the frame, so Setpoint's keys still work.
 import {useEffect, useRef, useState} from 'react';
 import {emailBodyPath} from '../api/mail.ts';
 
-/** No email is taller than this; a height past it is a fault, not an email. */
+/** No email is taller than this. A height past it is a fault, not an email. */
 const TALLEST = 200_000;
 /** What a frame holds before its page says its height. */
 const RESERVED = 240;
 
-// The height each body page last said, the latest last: an email opened again (the browser keeps its
+// The height each body page last said, the latest last. An email opened again (the browser keeps its
 // page) draws at once at that height instead of fading in, and its page corrects it if the pane changed.
 const KEPT_HEIGHTS = 60;
 const heights = new Map<string, number>();

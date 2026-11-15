@@ -1,6 +1,6 @@
-// Setpoint's mail state for Home Assistant (GET /api/status/ha; `@setpoint/shared`'s status.ts
-// says what the integration reads). It's built from the very queries the web app's sidebar uses,
-// the Inbox and its counts, and accounts and sources with their health, so the chip and the
+// Setpoint's mail state for Home Assistant (GET /api/status/ha, and `@setpoint/shared`'s status.ts
+// says what the integration reads). It's built from the very queries the web app's sidebar uses:
+// the Inbox and its counts, and accounts and sources with their health. So the chip and the
 // sidebar can't drift apart.
 import {deepLinkPath, HA_ATTENTION_EMAILS} from '@setpoint/shared';
 import type {DeepLink, HaReconnect, HaStatusOut, SourceProvider} from '@setpoint/shared';
@@ -20,7 +20,7 @@ export function haStatus(store: Store, origin: string): HaStatusOut {
   const accounts = new Map(accountList(store).map(account => [account.id, account]));
   const attention = view.groups.find(group => group.group === 'attention')?.rows ?? [];
 
-  // One entry per sign-in: an account's sources (Gmail and Calendar on one Google consent) share it.
+  // One entry per sign-in, because an account's sources (Gmail and Calendar on one Google consent) share it.
   const reconnect = new Map<string, {label: string; account_id: number | null; providers: SourceProvider[]}>();
   for (const source of sourceList(store)) {
     if (source.health.state !== 'needs_reconnect') continue;

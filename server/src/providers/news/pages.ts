@@ -1,10 +1,10 @@
-// Page reads: where a lab has no feed, its page is read directly. A news
-// page (Anthropic's, Mistral's) lists links to its posts, each then read like a feed's article; the
-// Claude release notes (`config.layout: "dated_sections"`) are dated sections of one page, each its
-// own article with its own text. The cursor keeps the conditional GET's validators and the posts
-// already seen, so a post is news once, and an undated post first seen on the first read isn't
-// passed off as new. A read that finds no posts at all fails: the
-// page's layout has probably changed, and quiet would hide it.
+// Page reads: where a lab has no feed, its page is read directly. A news page (Anthropic's,
+// Mistral's) lists links to its posts, each then read like a feed's article. The Claude release
+// notes (`config.layout: "dated_sections"`) are dated sections of one page, each its own article
+// with its own text. The cursor keeps the conditional GET's validators and the posts already seen.
+// So a post is news once, and an undated post first seen on the first read isn't passed off as new.
+// A read that finds no posts at all fails, because the page's layout has probably changed, and
+// quiet would hide it.
 import {canonicalUrl, outletOf, postedAt} from '../../domain/newsIngest.ts';
 import {datedSections, listedPosts} from '../../domain/newsPages.ts';
 import type {FetchedArticle, NewsAdapter, NewsFetchResult} from '../../news/adapter.ts';
@@ -19,7 +19,7 @@ const SEEN_KEPT = 300;
 interface PageCursor {
   etag: string | null;
   lastModified: string | null;
-  // The canonical URLs of the posts already read; null before the first read.
+  // The canonical URLs of the posts already read. Null before the first read.
   seen: string[] | null;
 }
 
@@ -52,10 +52,10 @@ export function pageReadAdapter(options: NewsHttpOptions = {}): NewsAdapter {
       const now = store.now().toISOString();
       const firstRead = previous.seen === null;
       const seen = new Set(previous.seen ?? []);
-      // "Anthropic news" is Anthropic; "Claude release notes", Claude.
+      // "Anthropic news" is Anthropic, and "Claude release notes" is Claude.
       const named = outletOf(source.name, source.config);
       const outlet = typeof source.config.outlet === 'string' ? named.outlet : named.outlet.replace(/ (news|release notes)$/i, '').trim();
-      // A section of the page keeps its anchor: the page is the only address it has.
+      // A section of the page keeps its anchor, because the page is the only address it has.
       const found = posts.map(post => ({post, canonical: post.anchor ? `${canonicalUrl(post.url)}#${post.anchor}` : canonicalUrl(post.url)}));
       const articles: FetchedArticle[] = [];
       for (const {post, canonical} of found) {

@@ -6,8 +6,8 @@
 .mini > .cur { box-shadow: inset 0 0 0 1px var(--edgeOn); }
 .menu-anchor > .pop.menu.timelist { min-width: 0; width: max-content; max-height: 248px; overflow-y: auto; }
 .menu-anchor > .pop.menu.timelist > .menu-i { flex: none; }
-/* An event's days as one band, its ends rounded and so each week's edge, as a range picker draws them,
-   in `accent`: the days between at 28%, its first and last day at 50%. */
+/* An event's days as one band in `accent`, as a range picker draws them. Its ends are rounded, and
+   so is each week's edge. The days between are at 28%, its first and last day at 50%. */
 .mini > .in:not(.t) { background: color-mix(in oklch, var(--accent) 28%, transparent); color: var(--ink); border-radius: 0; }
 .mini > .in:nth-child(7n + 1), .mini > .in.rs { border-top-left-radius: 999px; border-bottom-left-radius: 999px; }
 .mini > .in:nth-child(7n), .mini > .in.re { border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
@@ -15,15 +15,15 @@
 .mini > .in.rs:not(.t), .mini > .in.re:not(.t) { background: color-mix(in oklch, var(--accent) 50%, transparent); }
 .mini > .in:not(.t):hover { background: color-mix(in oklch, var(--accent) 38%, transparent); }
 .mini > .in.rs:not(.t):hover, .mini > .in.re:not(.t):hover { background: color-mix(in oklch, var(--accent) 60%, transparent); }
-/* Inside the date picker the chosen day is the strongest mark: a task's due
-   day, or an event's one day, is the `accent` 50% disc at 600; today steps back to a
-   1.5 px `alert` ring around an `ink` number; then the pointer's `sub2`. A chosen today takes both. */
+/* Inside the date picker the chosen day is the strongest mark. A task's due day, or an event's one
+   day, is the `accent` 50% disc at 600. Today steps back to a 1.5 px `alert` ring around an `ink`
+   number. Then comes the pointer's `sub2`. A chosen today takes both. */
 .datepop .mini > .t, .datepop .mini > .t:hover { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--alert); }
 .datepop .mini > .val, .datepop .mini > .val:hover, .datepop .mini > .in.rs.re { width: var(--miniDay); justify-self: center; background: color-mix(in oklch, var(--accent) 50%, transparent); color: var(--ink); font-weight: 600; }
 .datepop .mini > .val.t, .datepop .mini > .in.rs.re.t { box-shadow: inset 0 0 0 1.5px var(--alert); }
-/* Today is a day like the others under the pointer and in a range: alone it takes
-   the pointer's `sub2`; in an event's band it takes the band, its first and last day's pill and their
-   hovers, with its `alert` ring drawn as a circle over them, as the sidebar's week band draws today. */
+/* Today is a day like the others under the pointer and in a range. Alone, it takes the pointer's
+   `sub2`. In an event's band it takes the band, its first and last day's pill and their hovers. Its
+   `alert` ring is drawn as a circle over them, as the sidebar's week band draws today. */
 .datepop .mini > .t:not(.in, .val):hover { background: var(--sub2); }
 .datepop .mini > .in.t {
   --band: color-mix(in oklch, var(--accent) 28%, transparent);

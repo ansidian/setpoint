@@ -1,9 +1,9 @@
-// News's sorting rules: the rules that map a source to a likely section, the noise and politics policy
-// as applied to the model's reading of an article, wire copy, candidate matching and how a grouping
-// answer is applied (new facts versus repeats, and which rewrite the story), what a story's writer is
-// sent, the ranking formula and the bar, the monthly cap, keynote confirmation, and
-// search's matching. Pure, so each is tested as a table; src/news/sorter.ts asks the models and keeps
-// what these decide.
+// News's sorting rules: the rules that map a source to a likely section, the noise and politics
+// policy as applied to the model's reading of an article, wire copy, candidate matching and how a
+// grouping answer is applied (new facts versus repeats, and which rewrite the story), what a story's
+// writer is sent, the ranking formula and the bar, the monthly cap, keynote confirmation, and
+// search's matching. Pure, so each is tested as a table. src/news/sorter.ts asks the models and
+// keeps what these decide.
 import type {NewsHazard, NewsSection} from '@setpoint/shared';
 import {NEWS_HAZARDS, NEWS_SECTIONS} from '@setpoint/shared';
 import {SUBJECT_SECTION} from './news.ts';
@@ -15,28 +15,28 @@ const HOUR = 60 * 60_000;
 
 // ---- Each article: the rules first ----
 
-/** The hazard an adapter reads official data on (always Local, always a hazard; weather counts only as one), else null. */
+/** The hazard an adapter reads official data on (always Local, always a hazard, and weather counts only as one), else null. */
 export const hazardOf = (adapter: string): NewsHazard | null => (NEWS_HAZARDS as readonly string[]).includes(adapter) ? adapter as NewsHazard : null;
 
-/** First-party newsrooms, by the company they speak for: one confirms its own keynote on its own. */
+/** First-party newsrooms, by the company they speak for. One confirms its own keynote on its own. */
 export const FIRST_PARTY = ['apple', 'google', 'samsung', 'microsoft', 'openai', 'anthropic', 'deepmind', 'hugging face', 'mistral', 'meta'] as const;
 
 export interface SourceRule {
   // The section the source's articles most likely belong to.
   section: NewsSection;
-  // Official hazard data: Local, never noise.
+  // Official hazard data. Local, never noise.
   hazard: boolean;
-  // Hacker News: only a tech or AI subject counts.
+  // Hacker News. Only a tech or AI subject counts.
   subjectCheck: boolean;
   // The company a first-party newsroom speaks for ("apple"), else null.
   firstParty: string | null;
 }
 
 /**
- * What the source alone says about its articles, before any model reads them. A newsroom is first-party
- * by its outlet's name (its config's, else its name's before " · "), the company a whole word of it,
- * so The Verge's Apple feed and 9to5Google speak for no company and Claude's release notes, whose
- * outlet is Anthropic, for Anthropic.
+ * What the source alone says about its articles, before any model reads them. A newsroom is
+ * first-party by its outlet's name (its config's, else its name's before " · "), when the company is
+ * a whole word of it. So The Verge's Apple feed and 9to5Google speak for no company. Claude's
+ * release notes, whose outlet is Anthropic, speak for Anthropic.
  */
 export function sourceRule(source: {section: NewsSection; adapter: string; kind: string; name: string; config?: Record<string, unknown>}): SourceRule {
   const hazard = hazardOf(source.adapter) !== null;
@@ -51,9 +51,9 @@ export function sourceRule(source: {section: NewsSection; adapter: string; kind:
 // ---- … then the model's reading, then the policy ----
 
 /**
- * What an article is, as the model reads it. `event` is news (something happened or takes effect);
- * every other kind is left out, `politics_argument` (campaigns, polls,
- * reactions, hearings, bills being debated) unless its subject wins.
+ * What an article is, as the model reads it. `event` is news (something happened or takes effect).
+ * Every other kind is left out. `politics_argument` (campaigns, polls, reactions, hearings, bills
+ * being debated) is left out unless its subject wins.
  */
 export const ARTICLE_KINDS = [
   'event', 'politics_argument', 'sports', 'entertainment', 'opinion', 'sponsored', 'deal', 'weather_forecast',
@@ -81,7 +81,7 @@ export interface ArticleNotes {
   facts: string[];
   // How much it matters, 0–100, against its section's guide.
   importance: number;
-  // Where it happened, for Local's closeness; null when the article doesn't say.
+  // Where it happened, for Local's closeness. Null when the article doesn't say.
   place: {lat: number; lng: number} | null;
   keynote: KeynoteNote | null;
 }
@@ -90,7 +90,7 @@ export type NoiseReason = Exclude<ArticleKind, 'event'> | 'off_subject';
 
 export type Verdict = {keep: true; sections: NewsSection[]} | {keep: false; reason: NoiseReason};
 
-/** Which sections a subject may sit in: Local is the area's, General the US's, and a lab's news can make Tech's. */
+/** Which sections a subject may sit in. Local is the area's, General the US's, and a lab's news can make Tech's. */
 const ALLOWED: Record<ArticleSubject, readonly NewsSection[]> = {
   local: ['local', 'general'],
   tech: ['tech', 'general'],
@@ -108,15 +108,15 @@ const inOrder = (sections: Iterable<NewsSection>) => {
 /**
  * The policy, applied to the model's reading:
  * - Official hazard data is Local and always kept.
- * - Sports, entertainment, opinion, sponsored posts, deals and forecasts are never news; nor is what a
- *   section leaves out (lifestyle and listings, rumors and reviews and buying guides, tutorials and
+ * - Sports, entertainment, opinion, sponsored posts, deals and forecasts are never news. Nor is what
+ *   a section leaves out (lifestyle and listings, rumors and reviews and buying guides, tutorials and
  *   customer stories and funding rounds, world news).
- * - Politics is events, not arguments, but the subject wins: an argument whose subject is tech or AI
- *   ("OpenAI testifies before Congress") is kept in that section; any other is noise. A ruling, a law
- *   taking effect or a council's vote is an event already.
+ * - Politics is events, not arguments, but the subject wins. An argument whose subject is tech or AI
+ *   ("OpenAI testifies before Congress") is kept in that section, and any other is noise. A ruling, a
+ *   law taking effect or a council's vote is an event already.
  * - Hacker News counts only on a tech or AI subject.
- * - The model's sections are kept where the subject allows them; with none left, the subject's own
- *   section, else the source's.
+ * - The model's sections are kept where the subject allows them. With none left, the subject's own
+ *   section is used, else the source's.
  */
 export function judgeArticle(rule: SourceRule, notes: ArticleNotes): Verdict {
   if (rule.hazard) return {keep: true, sections: ['local']};
@@ -138,12 +138,12 @@ export function judgeArticle(rule: SourceRule, notes: ArticleNotes): Verdict {
 // ---- Wire copy ----
 
 /**
- * A wire story's text is recognised by its opening words, which outlets that republish it keep while
- * adding their own tail; a shorter text is too generic to tell.
+ * A wire story's text is recognised by its opening words. Outlets that republish it keep those while
+ * they add their own tail. A shorter text is too generic to tell.
  */
 export const WIRE_MIN_WORDS = 30;
 
-/** The opening words of an article's text, as its wire key; null when it's too short to tell copies apart. */
+/** The opening words of an article's text, as its wire key. Null when it's too short to tell copies apart. */
 export function wireKey(text: string | null | undefined): string | null {
   const words = wordsOf(text ?? '');
   return words.length < WIRE_MIN_WORDS ? null : words.slice(0, WIRE_MIN_WORDS).join(' ');
@@ -151,7 +151,7 @@ export function wireKey(text: string | null | undefined): string | null {
 
 /**
  * How many outlets cover a story, identical wire copy counting once (AP text republished by ABC
- * and PBS is one outlet). Outlets that ran the same text are one; a metered paper counts.
+ * and PBS is one outlet). Outlets that ran the same text are one. A metered paper counts.
  */
 export function outletCount(articles: readonly {outlet: string; wireKey: string | null}[]): number {
   const parent = new Map<string, string>();
@@ -186,9 +186,9 @@ export function significantWords(...texts: (string | null | undefined)[]): Set<s
 }
 
 /**
- * A hazard's incident: the revision of its page ingest made it (Cal Fire's acres and containment, AirNow's
- * day and category) without the revision, so each revision joins the same story. Null for anything
- * else, which only the model can group.
+ * A hazard's incident: the revision of its page that ingest made (Cal Fire's acres and containment,
+ * AirNow's day and category), without the revision, so each revision joins the same story. Null for
+ * anything else, which only the model can group.
  */
 export function incidentKey(canonicalUrl: string, hazard: boolean): string | null {
   if (!hazard) return null;
@@ -196,12 +196,13 @@ export function incidentKey(canonicalUrl: string, hazard: boolean): string | nul
   return at > 0 ? canonicalUrl.slice(0, at) : null;
 }
 
-/** A day: two headlines further apart than this are about different events, whatever they share. */
+/** A day. Two headlines further apart than this are about different events, whatever they share. */
 export const SAME_EVENT_MS = 24 * 60 * 60_000;
 
 const NUMBER_WORDS = ['two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
 
-// Months and days are capitalised too, but name a time, not a place; a figure after a month is its day.
+// Months and days are also capitalised, but they name a time, not a place. A figure after a month is
+// its day.
 const MONTHS = new Set([
   'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
   'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec',
@@ -217,7 +218,8 @@ export interface EventMark {
 
 /**
  * A headline's event mark: its counts from 2 to 999, in figures or words ("8", "eight"), and its
- * capitalised words past the first, folded ("Fabrikam", "Falls", "LA"), its places and names.
+ * capitalised words past the first, folded ("Fabrikam", "Falls", "LA"), which are its places and
+ * names.
  * A figure inside a larger one ("50,000", "5.5", "150-acre"), money, a share or a date ("Oct. 11")
  * isn't a count, and days and months aren't names.
  */
@@ -242,7 +244,7 @@ export function eventMark(headline: string, publishedAt: string): EventMark {
 /**
  * Two headlines likely about the same event: published within a day of each other, giving the same
  * count and naming a place in common ("Rising creek shuts eight Fabrikam Falls streets" and "Flash
- * flood closes 8 roads around Fabrikam Falls"). Only a candidate: the model still confirms.
+ * flood closes 8 roads around Fabrikam Falls"). Only a candidate. The model still confirms.
  */
 export function sameEvent(a: EventMark, b: EventMark): boolean {
   return Math.abs(a.at - b.at) <= SAME_EVENT_MS && [...a.counts].some(count => b.counts.has(count)) && [...a.names].some(name => b.names.has(name));
@@ -255,9 +257,9 @@ export const STORY_SOURCES_SHOWN = 10;
 /**
  * A story as it stands now: its latest facts (given oldest first, as the timeline) and its latest
  * sources by publication. A long story's whole past once made it share enough place words with any
- * local article to be its candidate, and the model, shown hundreds of facts, sometimes joined one,
- * whose facts kept the story on the page for good. New facts are still checked against the
- * whole timeline (freshFacts).
+ * local article to be its candidate. Shown hundreds of facts, the model sometimes joined one, and
+ * that article's facts kept the story on the page for good. New facts are still checked against
+ * the whole timeline (freshFacts).
  */
 export function storyWindow<F, S extends {publishedAt: string}>(facts: readonly F[], sources: readonly S[]): {facts: F[]; sources: S[]} {
   return {
@@ -268,8 +270,8 @@ export function storyWindow<F, S extends {publishedAt: string}>(facts: readonly 
 
 /**
  * What a story's writer is sent: its window, with its current lead and image kept in view so a
- * rewrite can keep them, its sources newest first. A long story's whole past once went to every
- * rewrite, up to 60k tokens a write; its headline and summary carry that past instead.
+ * rewrite can keep them, and its sources newest first. A long story's whole past once went to every
+ * rewrite, up to 60k tokens a write. Its headline and summary carry that past instead.
  */
 export function writerWindow<F, S extends {id: number; publishedAt: string}>(facts: readonly F[], sources: readonly S[], keep: readonly (number | null)[]): {facts: F[]; sources: S[]} {
   const window = storyWindow(facts, sources);
@@ -303,9 +305,9 @@ export interface MatchableArticle {
 
 /**
  * A story the article certainly belongs to without asking a model: the same hazard incident (each
- * revision a new fact), or the same wire text from another outlet (a repeat). An outlet's own opening
- * seen twice is its page around the article (a TV station's latest videos), not wire copy, so it goes
- * to the candidates like any other.
+ * revision a new fact), or the same wire text from another outlet (a repeat). An outlet's own
+ * opening seen twice is its page around the article (a TV station's latest videos), not wire copy.
+ * So it goes to the candidates like any other.
  */
 export function ruleMatch(article: MatchableArticle, stories: readonly MatchableStory[]): {storyId: number; by: 'incident' | 'wire'} | null {
   if (article.incident) {
@@ -324,11 +326,11 @@ export const CANDIDATE_OVERLAP = 0.3;
 export const CANDIDATES_MAX = 3;
 
 /**
- * The likely stories for an article, closest first: those sharing enough of its words (the overlap
- * of the article's headline and facts with the story as it stands now, storyWords), and those whose
- * headlines mark the same event as its own (sameEvent), which come first, as two
- * outlets' facts can be worded too far apart to share enough words. Only these go to the model,
- * which confirms whether one is the same event.
+ * The likely stories for an article, closest first. These are the stories sharing enough of its
+ * words (the overlap of the article's headline and facts with the story as it stands now,
+ * storyWords), and those whose headlines mark the same event as its own (sameEvent). The second
+ * kind come first, because two outlets' facts can be worded too far apart to share enough words.
+ * Only these go to the model, which confirms whether one is the same event.
  */
 export function candidates(article: Pick<MatchableArticle, 'words' | 'event'>, stories: readonly MatchableStory[], max = CANDIDATES_MAX): {id: number; overlap: number}[] {
   return stories.flatMap(story => {
@@ -340,7 +342,7 @@ export function candidates(article: Pick<MatchableArticle, 'words' | 'event'>, s
   }).sort((a, b) => Number(b.event) - Number(a.event) || b.overlap - a.overlap || b.id - a.id).slice(0, max).map(({id, overlap}) => ({id, overlap}));
 }
 
-/** Two fact lines say the same thing: the same words, or nearly all of the shorter one's. */
+/** Two fact lines say the same thing when they have the same words, or nearly all of the shorter one's. */
 export function sameFact(a: string, b: string): boolean {
   const left = significantWords(a);
   const right = significantWords(b);
@@ -365,12 +367,12 @@ export function freshFacts(facts: readonly string[], existing: readonly string[]
 }
 
 /**
- * The model's grouping answer, applied: the story it names, only if it was one of the candidates
- * (else the article starts its own story), and the facts it says the article brings, less those the
- * timeline already has. No fact left is a repeat: "Suspect arrested" is a new fact; a fifth outlet
- * repeating the first four isn't. New facts rewrite the story only when the model says they
- * change its headline or one line: detail joins the timeline and shows as new, and the next
- * rewrite takes it in. An answer that doesn't say rewrites, as before.
+ * The model's grouping answer, applied. It takes the story the answer names, only if it was one of
+ * the candidates (else the article starts its own story). It takes the facts the answer says the
+ * article brings, less those the timeline already has. No fact left is a repeat. "Suspect arrested"
+ * is a new fact, and a fifth outlet repeating the first four isn't. New facts rewrite the story only
+ * when the model says they change its headline or one line. Other detail joins the timeline and
+ * shows as new, and the next rewrite takes it in. An answer that doesn't say rewrites, as before.
  */
 export function applyGrouping(answer: {storyId: number | null; newFacts: string[]; changesHeadline: boolean | null}, candidateIds: readonly number[], existingFacts: readonly string[]): {storyId: number | null; newFacts: string[]; rewrite: boolean} {
   if (answer.storyId === null || !candidateIds.includes(answer.storyId)) return {storyId: null, newFacts: [], rewrite: false};
@@ -388,9 +390,9 @@ export function revisionFacts(notesFacts: readonly string[], headline: string, e
 }
 
 /**
- * When a fact happened on the timeline: when its article was published, unless the user saw the story
- * after that and before Setpoint had the article, when it's the time Setpoint had it, so the fact
- * still reads as new since they looked. Never after Setpoint had it.
+ * When a fact happened on the timeline: when its article was published. If the user saw the story
+ * after that and before Setpoint had the article, it's the time Setpoint had it, so the fact still
+ * reads as new since they looked. Never after Setpoint had it.
  */
 export function factTime(publishedAt: string, fetchedAt: string, seenAt: string | null): string {
   const at = publishedAt > fetchedAt ? fetchedAt : publishedAt;
@@ -399,7 +401,7 @@ export function factTime(publishedAt: string, fetchedAt: string, seenAt: string 
 
 // ---- Ranking ----
 
-/** A story under this never shows: noise is cut before, and the bar leaves a day at roughly 30–50 stories. */
+/** A story under this never shows. Noise is cut before, and the bar leaves a day at roughly 30–50 stories. */
 export const STORY_BAR = 35;
 
 /** Closeness is full within this distance of home and none past CLOSE_NONE_KM. */
@@ -407,7 +409,7 @@ const CLOSE_FULL_KM = 5;
 const CLOSE_NONE_KM = 80;
 
 export interface RankSignals {
-  // The model's judgement, 0–100: Haiku's per article, then the story writer's.
+  // The model's judgement, 0–100. Haiku's per article, then the story writer's.
   importance: number;
   // Outlets, wire copy once.
   outlets: number;
@@ -415,7 +417,7 @@ export interface RankSignals {
   // Distance from the home location, when both are known.
   distanceKm: number | null;
   lastNewFactAt: string;
-  // Articles that joined in the last six hours: growth.
+  // Articles that joined in the last six hours, for growth.
   recentArticles: number;
   now: string;
 }
@@ -424,8 +426,8 @@ export interface RankSignals {
  * "Biggest", 0–100: how much it matters (70), how many outlets cover it (10: one is nothing
  * extra, eight or more is all), how recent its last new fact is (8, gone over 48 hours), how fast it's
  * growing (4: three more articles in six hours), and for Local how close it is (8, full within 5 km
- * and none past 80; a story elsewhere, or one whose place isn't known, gets half). A one-outlet story
- * needs the model's importance at about 33 to clear the bar while it's fresh.
+ * and none past 80). For closeness, a story elsewhere, or one whose place isn't known, gets half. A
+ * one-outlet story needs the model's importance at about 33 to clear the bar while it's fresh.
  */
 export function storyScore(signals: RankSignals): number {
   const importance = Math.min(100, Math.max(0, signals.importance)) * 0.7;
@@ -440,7 +442,7 @@ export function storyScore(signals: RankSignals): number {
   return Math.round(Math.min(100, importance + outlets + recency + growth + closeness));
 }
 
-/** The nearest of a story's places to home, in km; null when neither is known. */
+/** The nearest of a story's places to home, in km. Null when neither is known. */
 export function nearestKm(home: {lat: number; lng: number} | null, places: readonly {lat: number; lng: number}[]): number | null {
   if (!home || !places.length) return null;
   return Math.min(...places.map(place => distanceKm(home, place)));
@@ -454,9 +456,10 @@ export function rankOrder<S extends {id: number; score: number; lastNewFactAt: s
 // ---- Models and cost ----
 
 /**
- * A story isn't written (no model call) while it never has been and its importance, the highest of its
- * articles' Haiku readings, is under this: it shows only under its section's Also reported. An
- * article that lifts it to the gate gets it written as a new story is. Rewrites are unchanged.
+ * A story isn't written (no model call) while it never has been and its importance is under this.
+ * Its importance is the highest of its articles' Haiku readings. Such a story shows only under its
+ * section's Also reported. An article that lifts it to the gate gets it written as a new story is.
+ * Rewrites are unchanged.
  */
 export const WRITE_GATE = 40;
 
@@ -465,7 +468,7 @@ export const belowWriteGate = (story: {writtenAt: string | null; importance: num
 
 export const NEWS_MODELS = {articles: 'claude-haiku-5-5', stories: 'claude-sonnet-5-5'} as const;
 
-/** Which model writes stories and judges their importance: Sonnet, until this month's News spend reaches the cap; then Haiku for the rest of the month. */
+/** Which model writes stories and judges their importance: Sonnet, until this month's News spend reaches the cap. Then Haiku for the rest of the month. */
 export function summaryModel(spentUsd: number, capUsd: number): string {
   return spentUsd >= capUsd ? NEWS_MODELS.articles : NEWS_MODELS.stories;
 }
@@ -494,8 +497,8 @@ export const keynoteName = (company: string) => `${company.trim()} event`;
 
 /**
  * A keynote, once confirmed: an invite reported by a second outlet (wire copy once) or by the company
- * itself. Claims are grouped by company and day; the first confirmed one wins, with the company's own
- * time when it gave one, else the time most claims give, else all day.
+ * itself. Claims are grouped by company and day. The first confirmed one wins. It takes the
+ * company's own time when it gave one, else the time most claims give, else all day.
  */
 export function confirmKeynote(claims: readonly KeynoteClaim[], timeZone: string): {company: string; name: string; startsAt: string; allDay: boolean} | null {
   const groups = new Map<string, KeynoteClaim[]>();

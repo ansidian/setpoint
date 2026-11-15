@@ -151,13 +151,13 @@ describe('confident', () => {
     s.answers({submit_posting_check: match(['match', 'no']), submit_posting_reading: reading(LUCERNE_READING)});
     await s.drain();
 
-    // Greenhouse alone (triage named it), the board by the company's name; then Haiku twice, never Sonnet.
+    // Greenhouse alone (triage named it), the board by the company's name. Then Haiku twice, never Sonnet.
     expect(s.web.asked()).toEqual(['api.greenhouse.example/v1/boards/lucernepublishing/jobs']);
     expect(s.asked()).toEqual(['submit_posting_check', 'submit_posting_reading']);
     const check = s.models.requests[0]!;
     expect(check.model).toBe('claude-haiku-5-5');
     expect(check.input).toContain('thank you for applying to Junior Developer at Lucerne Publishing in New York');
-    // Both titles that could be it, the exact one first; never the Senior Editor.
+    // Both titles that could be it, the exact one first. Never the Senior Editor.
     const exact = check.input.indexOf('https://greenhouse.example/lucernepublishing/jobs/5520391');
     expect(exact).toBeGreaterThan(-1);
     expect(check.input.indexOf('https://greenhouse.example/lucernepublishing/jobs/5520412')).toBeGreaterThan(exact);
@@ -247,7 +247,7 @@ describe('confident', () => {
     });
     await s.drain();
 
-    // Workday: no platform to ask, so search; Sonnet's own verdict, so no check.
+    // Workday: no platform to ask, so search. Sonnet's own verdict, so no check.
     expect(s.asked()).toEqual(['submit_posting_search', 'submit_posting_reading']);
     const search = s.models.requests[0]!;
     expect(search.model).toBe('claude-sonnet-5-5');
@@ -323,7 +323,7 @@ describe('unsure', () => {
     s.answers({submit_posting_search: () => searched([1, 2, 3, 4].map(n => ({url: `https://wideworldimporters.example/careers/jobs/${n}`, title: `Software Developer ${n}`, location: 'Remote', site: 'Wide World Importers', verdict: 'maybe'})))});
     await s.drain();
     expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.link)).toEqual([1, 2, 3].map(n => `https://wideworldimporters.example/careers/jobs/${n}`));
-    // Each of the three is opened before it's offered; these turn Jobs away, so they stay, unread.
+    // Each of the three is opened before it's offered. These turn Jobs away, so they stay, unread.
     expect(s.web.asked()).toEqual([1, 2, 3].map(n => `wideworldimporters.example/careers/jobs/${n}`));
     expect(s.asked()).toEqual(['submit_posting_search']);
   });
@@ -382,7 +382,7 @@ describe('GovernmentJobs, through its site-wide search', () => {
     s.web.serve(`${TEST_GOVERNMENT_JOBS}/jobs/7100901-0/office-assistant-ii`, htmlPage(fixture('governmentjobs-posting.html')));
     s.answers({submit_posting_check: match(['maybe'])});
     await s.drain();
-    // Its own wording of its name; not the city's two, nor Fabrikam's.
+    // Its own wording of its name. Not the city's two, nor Fabrikam's.
     expect(s.web.asked()).toEqual(['governmentjobs.example/jobs', 'governmentjobs.example/jobs/7100901-0/office-assistant-ii']);
     expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.link)).toEqual([`${TEST_GOVERNMENT_JOBS}/jobs/7100901-0/office-assistant-ii`]);
   });
@@ -598,7 +598,7 @@ describe('a search\'s candidates are opened before they\'re offered', () => {
     await s.drain();
     expect(s.posting(id)).toBeUndefined();
     expect(links(s, id)).toEqual([one(1).url, one(2).url]);
-    // One read, so Haiku saw it; one didn't.
+    // One read, so Haiku saw it. One didn't.
     expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.unreadable)).toEqual([false, true]);
   });
 
@@ -979,7 +979,7 @@ describe('the posting pasted in', () => {
     await s.drain();
     await undo(s, titled.body.undo);
     expect(applicationDetail(s.store, id)).toMatchObject({title: 'Data Engineer I', posting: {summary: READ.summary, salary: READ.salary, location: 'Austin, TX'}});
-    // The location goes back to none, as before it was set; the reading kept the user's, so has none to give.
+    // The location goes back to none, as before it was set. The reading kept the user's, so has none to give.
     await undo(s, placed.body.undo);
     expect(applicationDetail(s.store, id).posting).toMatchObject({summary: READ.summary, salary: READ.salary, location: null, location_set_at: null});
 

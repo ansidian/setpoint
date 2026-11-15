@@ -1,7 +1,7 @@
 // Setpoint's own copies of News images: each a file in the data
 // directory's news-images/, recorded in `news_images` with its size, and served from
 // /api/news/images/:id so outlets never see the user's browsing and blocking hotlinks can't break it.
-// Ingest fetches and resizes; this keeps the copies, and the expiry deletes them with their story (the
+// Ingest fetches and resizes. This keeps the copies, and the expiry deletes them with their story (the
 // archive keeps the story's thumbnail).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,7 +27,7 @@ export interface ImageCopy {
 /**
  * Keeps an article's copy of one variant, replacing the one it had under a new id (so a browser never
  * keeps the old one under the same URL). The file is written before the row, so a row always has its
- * file; a file left by a crash between them is overwritten next time. `dir` null records the row
+ * file. A file left by a crash between them is overwritten next time. `dir` null records the row
  * alone (a database with no data directory: the tests' in-memory ones).
  */
 export function saveNewsImage(store: Store, dir: string | null, articleId: number, variant: ImageVariant, copy: ImageCopy) {
@@ -49,13 +49,13 @@ export function saveNewsImage(store: Store, dir: string | null, articleId: numbe
   return store.db.select().from(t.newsImages).where(and(eq(t.newsImages.articleId, articleId), eq(t.newsImages.variant, variant))).get()!;
 }
 
-/** Deletes copies whose rows are gone; one already missing is fine. */
+/** Deletes copies whose rows are gone. One already missing is fine. */
 export function deleteImageFiles(dir: string | null, files: readonly string[]) {
   if (!dir) return;
   for (const file of files) fs.rmSync(path.join(dir, path.basename(file)), {force: true});
 }
 
-/** A copy's bytes, for /api/news/images/:id; null when there's no such image or its file is gone. */
+/** A copy's bytes, for /api/news/images/:id. Null when there's no such image or its file is gone. */
 export function readNewsImage(store: Store, dir: string | null, imageId: number): {bytes: Buffer; mimeType: string} | null {
   const row = store.db.select().from(t.newsImages).where(eq(t.newsImages.id, imageId)).get();
   if (!row || !dir) return null;

@@ -1,9 +1,10 @@
-// The Todoist adapter: one source, polled every 5 minutes (the webhook comes at cutover), with the
-// access token from Todoist's OAuth (stored as the source's key; Todoist's tokens don't expire).
-// Changes go through the command layer: create, change, complete (a repeating task's occurrence),
-// reopen (a repeating task's done occurrence by a Sync command) and delete, and a project's colour, each pending until Todoist answers.
-// `due_lang: en` so a due string reads as English, the occurrence check
-// before a repeating task is closed (src/commands/items.ts), Todoist's own words when it refuses.
+// The Todoist adapter: one source, polled every 5 minutes (Todoist's webhook, ./webhook.ts, only
+// wakes a sync sooner), with the access token from Todoist's OAuth (stored as the source's key, and
+// Todoist's tokens don't expire). Changes go through the command layer: create, change, complete (a
+// repeating task's occurrence), reopen (a repeating task's done occurrence by a Sync command) and
+// delete, and a project's colour. Each is pending until Todoist answers. It sends `due_lang: en` so
+// a due string reads as English. It also comes with the occurrence check before a repeating task is
+// closed (src/commands/items.ts), and with Todoist's own words when Todoist refuses.
 import {and, eq} from 'drizzle-orm';
 import type {CommandRow} from '../../commands/index.ts';
 import type {ItemRow} from '../../commands/itemMirror.ts';
@@ -35,7 +36,7 @@ const dueOf = (store: Store, row: ItemRow) => ({...writeDue({dueDate: row.dueDat
 
 /**
  * The due a reopened occurrence puts back, as the Sync command takes it: the day (with its
- * time, wall-clock in the user's zone), the repeat as Todoist words it.
+ * time, wall-clock in the user's zone) and the repeat as Todoist words it.
  */
 function occurrenceDue(store: Store, row: ItemRow) {
   const date = row.dueAt ? `${localDay(row.dueAt, store.timeZone)}T${localTime(row.dueAt, store.timeZone)}:00` : row.dueDate;
@@ -50,8 +51,8 @@ function takeDue(store: Store, rowId: number, task: TodoistTask) {
 }
 
 /**
- * A project's Todoist id by name; else Settings' default project's (a name too, as the editor and
- * proposals show it); else Todoist's Inbox (by leaving it out).
+ * A project's Todoist id by name. Else Settings' default project's (a name too, as the editor and
+ * proposals show it). Else Todoist's Inbox (by leaving it out).
  */
 function projectId(store: Store, name: string | null): string | undefined {
   return namedProject(store, name) ?? namedProject(store, getSettings(store).todoist.default_project);
@@ -76,7 +77,7 @@ function writeCursor(store: Store, sourceId: number, scope: string, cursor: stri
   store.db.insert(t.syncCursors).values({sourceId, scope, cursor, updatedAt}).onConflictDoUpdate({target: [t.syncCursors.sourceId, t.syncCursors.scope], set: {cursor, updatedAt}}).run();
 }
 
-/** A poll: the sync, then the completed list and the activity log; the sync's next cursor, null to keep the one there is. */
+/** A poll: the sync, then the completed list and the activity log. Returns the sync's next cursor, or null to keep the one there is. */
 async function poll(options: TodoistOptions, context: AdapterContext, cursor: string | null, full: boolean): Promise<string | null> {
   const todoist = api(options, context);
   const next = await syncTodoist(context.store, todoist, full ? null : cursor);
@@ -116,7 +117,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
     }
     case 'item_update': {
       if (!target) return;
-      // A task's subtasks reordered. The one that moved is sent its new order key; subtasks
+      // A task's subtasks reordered. The one that moved is sent its new order key. Subtasks
       // without keys are each sent their place, by the Sync command Todoist is retiring for the keys.
       if (Array.isArray(command.payload.subtask_ids)) {
         const moved = command.payload.moved as {id: number; order_key: string} | undefined;
@@ -134,7 +135,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
       if (changes.title !== undefined) body.content = target.title;
       if (changes.due_date !== undefined || changes.due_at !== undefined || changes.repeat !== undefined) Object.assign(body, dueOf(store, target));
       if (changes.labels !== undefined) body.labels = target.labels ?? [];
-      // Todoist's update takes a string and keeps what's left out; an empty one clears it.
+      // Todoist's update takes a string and keeps what's left out. An empty one clears it.
       if (changes.description !== undefined) body.description = target.description ?? '';
       if (Object.keys(body).length) takeDue(store, target.id, await todoist.updateTask(target.providerId, body, requestId('update')));
       if (changes.project !== undefined) {
@@ -145,7 +146,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
     }
     case 'item_complete': {
       if (!target) return;
-      // A repeating task's occurrence closes the task itself; Todoist moves it on.
+      // A repeating task's occurrence closes the task itself. Todoist moves it on.
       const task: ItemRow | null = target.recurringItemId === null ? target : itemRow(store, target.recurringItemId);
       if (task) await todoist.closeTask(task.providerId, requestId());
       return;
@@ -153,7 +154,7 @@ async function execute(options: TodoistOptions, context: AdapterContext, command
     case 'item_reopen':
       if (!target) return;
       // A repeating task's done occurrence reopens as Todoist's own Undo does, by the Sync
-      // command that puts the task back on that day; Todoist's reopen does nothing on it.
+      // command that puts the task back on that day. Todoist's reopen does nothing on it.
       if (typeof command.payload.occurrence_date === 'string') await todoist.command('item_update_date_complete', {id: target.providerId, due: occurrenceDue(store, target), is_forward: 0}, requestId());
       else await todoist.reopenTask(target.providerId, requestId());
       return;

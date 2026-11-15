@@ -1,15 +1,18 @@
-// The visual net without baselines: the main pages (the Inbox with an email open, with its JD popover open, and with the
-// Contoso Pharmaceuticals match email's Applied before on its row and in the reader, the
-// calendar's month and week, the editor, News
-// with a story open, Jobs with an application open, with a Needs you item's email open, and
-// with its menus open (Assign to…, and More with Merge with…'s submenu), every Settings page, Jobs with its history pass running and the AI down,
-// and Jobs off, the phone's Inbox; Jobs isn't on the phone) in Night, at the design target,
-// 1100 and 820 wide and on the phone. Settings skips 1100, as its fixed modal draws there as at the target,
-// and Assign to…, More, the history pass and Jobs off stay at the target, as they don't change with width.
-// On each, at rest: nothing scrolls sideways, no text is cut by an
-// overflow: hidden box (an ellipsis is meant), nothing interactive is covered at its centre, no image
-// is broken, every font loaded, no request failed and nothing went to the console. Then axe, per
-// theme at the target width and on the phone, by rule and element. Each failure names the element, page, theme and width.
+// The visual net without baselines. It covers the main pages in Night, at the design target, 1100 and
+// 820 wide and on the phone:
+// - the Inbox with an email open, with its JD popover open, and with the Contoso Pharmaceuticals
+//   match email's Applied before on its row and in the reader
+// - the calendar's month and week, the editor, and News with a story open
+// - Jobs with an application open, with a Needs you item's email open, and with its menus open
+//   (Assign to…, and More with Merge with…'s submenu)
+// - every Settings page, Jobs with its history pass running and the AI down, and Jobs off
+// - the phone's Inbox (Jobs isn't on the phone).
+// Settings skips 1100, because its fixed modal draws there as at the target. Assign to…, More, the
+// history pass and Jobs off stay at the target, because they don't change with width.
+// On each, at rest: nothing scrolls sideways, no text is cut by an overflow: hidden box (an ellipsis
+// is meant), nothing interactive is covered at its centre, no image is broken, every font loaded, no
+// request failed and nothing went to the console. Then axe, per theme at the target width and on the
+// phone, by rule and element. Each failure names the element, page, theme and width.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -61,7 +64,7 @@ function sweepPage(): string[] {
     }
   }
 
-  // No text partly cut by a box that hides its overflow; an ellipsis is meant, and text wholly out of
+  // No text partly cut by a box that hides its overflow. An ellipsis is meant, and text wholly out of
   // its box (a fold shut, a clamped line) is put away rather than cut. Text a scrolling box holds is
   // scrolled to, so the walk out stops there.
   const clips = (element: Element) => {
@@ -255,7 +258,7 @@ async function show(page: Page, theme: typeof THEMES[number]) {
   await until(NAMES[theme], () => page.evaluate(() => document.documentElement.dataset.theme), value => value === (theme === 'dark' ? 'night' : 'light'));
 }
 
-/** Night at `width`, at rest, swept; what it found, each line naming where. */
+/** Night at `width`, at rest, swept. Answers what it found, each line naming where. */
 async function sweepAt(page: Page, setpoint: Setpoint, route: Route, width: number, heard: () => string[]): Promise<string[]> {
   if (page.viewportSize()!.width !== width) {
     await page.setViewportSize({width, height: page.viewportSize()!.height});

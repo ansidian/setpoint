@@ -1,6 +1,6 @@
-// A source's stored positions (sync_cursors): the engine keeps the incremental cursor (scope ""),
-// and adapters keep their own beside it, such as the backfill's ("backfill"). Each is a string;
-// structured ones are JSON.
+// A source's stored positions (sync_cursors). The engine keeps the incremental cursor (scope ""),
+// and adapters keep their own beside it, such as the backfill's ("backfill"). Each is a string.
+// Structured ones are JSON.
 import {and, eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {isoNow} from '../store.ts';
@@ -28,8 +28,8 @@ export const BACKFILL_SCOPE = 'backfill';
 
 /**
  * Where a source's backfill stands, persisted after every step so a restart resumes rather than
- * starting over. `cursor` is the provider's own position (Gmail's page token, iCloud's UIDs left);
- * `total` is what there is to fetch (exact for IMAP, Gmail's estimate otherwise) and `fetched`
+ * starting over. `cursor` is the provider's own position (Gmail's page token, iCloud's UIDs left).
+ * `total` is what there is to fetch (exact for IMAP, Gmail's estimate otherwise), and `fetched` is
  * how many have been looked at.
  */
 export interface BackfillState<C = unknown> {

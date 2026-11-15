@@ -28,13 +28,14 @@ const not = {not: z.literal(true).optional()};
 
 /**
  * A recognised word, as a chip in the field: "Org Northwind ×", "Type Rejection ×", "Date Mar 2026
- * ×", an account, a kind. `value` is what it filters on; `label` is what it shows. Chips of one kind
- * are alternatives (Org Northwind or Org Fabrikam); different kinds all apply. A Not chip leaves out
+ * ×", an account, a kind. `value` is what it filters on, and `label` is what it shows. Chips of one
+ * kind are alternatives (Org Northwind or Org Fabrikam). Different kinds all apply. A Not chip leaves out
  * whatever it matches, whatever else is in force.
  */
 export const searchChipSchema = z.discriminatedUnion('kind', [
-  // `value` is the organisation's leading words as typed and capitalised ("Northwind"); it matches
-  // every organisation whose name starts with those words ("Northwind Talent", "Northwind Engineering").
+  // `value` is the organisation's leading words as typed and capitalised ("Northwind"). It matches
+  // every organisation whose name starts with those words ("Northwind Talent", "Northwind
+  // Engineering").
   z.strictObject({kind: z.literal('organisation'), value: z.string().min(1), label: z.string().min(1), ...not}),
   z.strictObject({kind: z.literal('type'), value: z.enum(MESSAGE_TYPES), label: z.string().min(1), ...not}),
   dateChipSchema.extend(not),
@@ -94,8 +95,8 @@ export interface HighlightOut {
 export interface SearchResultOut extends MessageRowOut {
   // Chips first (org, type, date, account, kind), then the text: sender, subject, body.
   reasons: MatchReasonOut[];
-  // The body around the first highlighted word, with "…" where it's cut; the body's start when
-  // no word is in the body.
+  // The body around the first highlighted word, with "…" where it's cut. It's the body's start
+  // when no word is in the body.
   excerpt: string;
   highlights: HighlightOut[];
 }
@@ -116,10 +117,10 @@ export interface SearchOut {
   // Free text left after the chips.
   text: string;
   // "newest" with no words to order by ("2 results · newest first"), or for Alfred's search with a
-  // chip; "match" for words, ordered by how well they matched, each tier newest first. A
+  // chip. "match" for words, ordered by how well they matched, each tier newest first. A
   // reading's chips narrow and keep that order.
   order: 'newest' | 'match';
-  // Every match; `results` is this page of them.
+  // Every match. `results` is this page of them.
   total: number;
   // How many of the matches, from the top, are about the search. The rest only mention it
   // and may be folded away ("12 more mention these words"). `total` when nothing's in the second
@@ -140,7 +141,7 @@ export interface SearchOut {
 /**
  * Asks for a suggestion for the field's exact text. Only this route can reach the model. With
  * `model: false` it says at once what the date grammar alone would suggest, and whether a reading is
- * worth asking for (`reads`); with `model` it answers with both. `chips` are the field's Not chips.
+ * worth asking for (`reads`). With `model` it answers with both. `chips` are the field's Not chips.
  */
 export const searchSuggestionInput = z.strictObject({
   text: z.string().max(500),
@@ -214,7 +215,7 @@ export interface AskStepOut {
   step: AskStep | null;
 }
 
-/** An email Alfred's answer rests on; clicking it opens the email in the reading pane. */
+/** An email Alfred's answer rests on. Clicking it opens the email in the reading pane. */
 export interface AnswerSourceOut {
   message_id: number;
   account_id: number;
@@ -231,10 +232,9 @@ export const PROPOSAL_FIELDS = ['title', 'date', 'time', 'place'] as const;
 export type ProposalField = (typeof PROPOSAL_FIELDS)[number];
 
 /**
- * The item a proposal would create, as POST /api/items takes it, so
- * Create sends it (as the user edited it) and More options opens it in the editor. Fields the email
- * didn't give are null: an event with no time is all day, and one with no date has none yet (the
- * card asks for it). `reminders` is left out, so Settings' default applies.
+ * The item a proposal would create, as POST /api/items takes it, so Create sends it (as the user
+ * edited it) and More options opens it in the editor. Fields the email didn't give are null: an
+ * event with no time is all day, and one with no date has none yet (the card asks for it). `reminders` is left out, so Settings' default applies.
  */
 export interface ProposalItemOut {
   kind: ItemKind;
@@ -264,8 +264,8 @@ export interface ProposalSourceOut {
 }
 
 /**
- * A pre-filled event or task the user reviews before anything is created (board 08). `conflict` is "Free
- * that evening" or "Overlaps Study group · 1h 30m" for an event with a date, null otherwise.
+ * A pre-filled event or task the user reviews before anything is created (board 08). `conflict` is
+ * "Free that evening" or "Overlaps Study group · 1h 30m" for an event with a date, null otherwise.
  * `source` is missing from an Alfred answer saved before proposals carried it.
  */
 export interface ProposalOut {
@@ -289,7 +289,7 @@ export interface AnswerOut {
   turn_id: number;
   // The question this turn answers, for the thread.
   question: string;
-  // One or two lines; null when Alfred couldn't find it ("Couldn't find that in your mail").
+  // One or two lines. Null when Alfred couldn't find it ("Couldn't find that in your mail").
   answer: string | null;
   emphasis: EmphasisOut[];
   sources: AnswerSourceOut[];
@@ -312,9 +312,9 @@ export const proposalInput = z.strictObject({message_id: id, kind: z.enum(ITEM_K
 // ---- Calendar search ----
 
 /**
- * A calendar search's chips: a date or range, as mail's, and a calendar by name ("Classes"; "Todoist"
- * covers every task). `value` is the calendar's name as it writes it; it matches every calendar of
- * that name (one shared with two accounts is on both). Chips of one kind are alternatives.
+ * A calendar search's chips: a date or range, as mail's, and a calendar by name ("Classes", and
+ * "Todoist" covers every task). `value` is the calendar's name as it writes it. It matches every
+ * calendar of that name (one shared with two accounts is on both). Chips of one kind are alternatives.
  */
 export const calendarSearchChipSchema = z.discriminatedUnion('kind', [
   dateChipSchema,
@@ -351,8 +351,8 @@ export interface CalendarSearchResultOut {
   date: string;
   // Under Upcoming (not over yet) or Past.
   upcoming: boolean;
-  // A recurring event's rule ("RRULE:FREQ=WEEKLY;BYDAY=MO,WE") when the row stands for its series;
-  // null for one item, or an occurrence changed on its own.
+  // A recurring event's rule ("RRULE:FREQ=WEEKLY;BYDAY=MO,WE") when the row stands for its series.
+  // Null for one item, or an occurrence changed on its own.
   rule: string | null;
   // Chips first (calendar, date), then free text: title, place, address, attendees, calendar, project, labels.
   reasons: CalendarMatchReasonOut[];
@@ -364,7 +364,7 @@ export interface CalendarSearchOut {
   // Every chip in force, and the free text left after them.
   chips: CalendarSearchChip[];
   text: string;
-  // Every match, for "14 results"; Upcoming come first (soonest first), then Past (most recent first).
+  // Every match, for "14 results". Upcoming come first (soonest first), then Past (most recent first).
   total: number;
   results: CalendarSearchResultOut[];
   next_offset: number | null;

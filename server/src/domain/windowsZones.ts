@@ -1,6 +1,6 @@
 // Windows time zone names, as Outlook and Exchange write them in an .ics file's TZID ("Pacific
-// Standard Time"), to the IANA zone each stands for: CLDR's windowsZones table, its territory-001
-// (main) entry for each.
+// Standard Time"), to the IANA zone each stands for. The source is CLDR's windowsZones table, its
+// territory-001 (main) entry for each.
 
 const WINDOWS_ZONES: Record<string, string> = {
   'Dateline Standard Time': 'Etc/GMT+12',
@@ -149,7 +149,7 @@ const WINDOWS_ZONES: Record<string, string> = {
 
 const byLowerName = new Map(Object.entries(WINDOWS_ZONES).map(([name, zone]) => [name.toLowerCase(), zone]));
 
-/** The IANA zone a Windows zone name stands for, ignoring case; null when it isn't one. */
+/** The IANA zone a Windows zone name stands for, ignoring case. Null when it isn't one. */
 export function windowsZone(name: string): string | null {
   return byLowerName.get(name.trim().toLowerCase()) ?? null;
 }

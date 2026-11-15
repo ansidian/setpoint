@@ -1,8 +1,8 @@
-// Loading in the browser (DESIGN.md › Motion): each page's skeleton while its data is held at the
-// server's door, never a false empty; a load that fails says so in place with Try again; Setpoint starting
-// shows its mark; the reader and the story pane draw their heads from their rows at once; search
-// shows a skeleton, then its results. Every check holds the answer it's about, so "while it loads"
-// is as long as the check needs, and releases it to see the rows replace the skeleton.
+// Loading in the browser (DESIGN.md › Motion). Each page shows its skeleton while its data is held at
+// the server's door, never a false empty. A load that fails says so in place with Try again.
+// Setpoint starting shows its mark. The reader and the story pane draw their heads from their rows at
+// once. Search shows a skeleton, then its results. Every check holds the answer it's about, so "while
+// it loads" is as long as the check needs. Then it releases the answer to see the rows replace the skeleton.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page, Route} from 'playwright-core';
@@ -11,8 +11,8 @@ import {cleanUp, drawn, rested, startSetpoint, test, until} from './harness.ts';
 after(cleanUp);
 
 /**
- * Holds every /api request whose path (and query) matches until the returned release is called;
- * those asked after it pass. Installed before the page asks.
+ * Holds every /api request whose path (and query) matches until the returned release is called.
+ * Requests asked after it pass. Installed before the page asks.
  */
 async function hold(page: Page, pattern: RegExp): Promise<() => Promise<void>> {
   const waiting: Route[] = [];
@@ -31,7 +31,7 @@ async function hold(page: Page, pattern: RegExp): Promise<() => Promise<void>> {
 /** Goes to an address without waiting for its data (the harness's goto waits for it, which a held answer never gives). */
 const visit = (page: Page, url: string) => page.mainFrame().goto(url).then(() => {});
 
-/** Waits until a skeleton has come in after its delay; its fade in is by eye. */
+/** Waits until a skeleton has come in after its delay. Its fade in is by eye. */
 async function shown(page: Page, kind: string) {
   const found = page.locator(`[data-skeleton="${kind}"]`).first();
   await found.waitFor();
@@ -50,7 +50,7 @@ test('Inbox loading: a skeleton, never an empty list, until the rows replace it'
 
     await release();
     await page.locator('.list .row').first().waitFor();
-    // The list's own skeleton; the sidebar's may still be waiting for its answers.
+    // The list's own skeleton. The sidebar's may still be waiting for its answers.
     assert.equal(await page.locator('[data-skeleton="all"]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -103,7 +103,7 @@ test('Settings loading: each page draws its groups\' skeleton rows, never a defa
     // Calendar's Todoist section once it knows Todoist is connected: its projects and default project.
     await page.locator('.settings .set-nav .nav', {hasText: 'Calendar'}).click();
     await main.locator('.set-row', {hasText: 'Default project'}).waitFor();
-    // Connected is the sources' answer; the page's other answers (nothing is held now) are in and drawn too.
+    // Connected is the sources' answer. The page's other answers (nothing is held now) are in and drawn too.
     await setpoint.idle();
     assert.equal(await page.locator('.settings [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -140,7 +140,7 @@ test('Calendar loading: the right pane and Calendars draw skeletons, never "Noth
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
-    // The month's items and the calendars held; the weather comes, so the pane's line waits only for the items.
+    // The month's items and the calendars held. The weather comes, so the pane's line waits only for the items.
     const release = await hold(page, /^\/api\/(items\?|calendars$)/);
     await visit(page, `${setpoint.base}/calendar`);
     await page.locator('.rpane .rp-date', {hasText: 'Wed, Oct 7'}).waitFor();
@@ -154,7 +154,7 @@ test('Calendar loading: the right pane and Calendars draw skeletons, never "Noth
     await release();
     await page.locator('.rpane .ag-item', {hasText: 'Dentist'}).waitFor();
     await page.locator('.sb .calrow').first().waitFor();
-    // The two it held; the sidebar's others may still be waiting for their answers.
+    // The two it held. The sidebar's others may still be waiting for their answers.
     assert.equal(await page.locator('[data-skeleton="agenda"], [data-skeleton="calendars"]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -162,7 +162,7 @@ test('Calendar loading: the right pane and Calendars draw skeletons, never "Noth
   }
 });
 
-/** Answers every matching /api request with the server's 500 while `failing()` says so; the rest pass. */
+/** Answers every matching /api request with the server's 500 while `failing()` says so. The rest pass. */
 async function failWhile(page: Page, pattern: RegExp, failing: () => boolean) {
   await page.route(url => url.pathname.startsWith('/api/') && pattern.test(url.pathname + url.search), route => (failing()
     ? route.fulfill({status: 500, json: {error: {code: 'internal', message: 'Something went wrong.'}}})
@@ -284,7 +284,7 @@ test('News loading: its list\'s skeleton, never "Nothing new", until the stories
     assert.equal(await page.locator('.nw-list :is(.nw-lead, .nw-row, .nw-sec, .nw-empty)').count(), 0, 'no story, and no "Nothing new"');
     await release();
     await page.locator('.nw-lead').first().waitFor();
-    // The list's own skeleton; the sidebar's may still be waiting for its answers.
+    // The list's own skeleton. The sidebar's may still be waiting for its answers.
     assert.equal(await page.locator('[data-skeleton="news"]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

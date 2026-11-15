@@ -1,17 +1,16 @@
 // Calendar changes carried out at Google. The command layer has already changed the mirror
-// (src/commands/itemMirror.ts); this makes the same change at Google, scope by scope, and records
+// (src/commands/itemMirror.ts). This makes the same change at Google, scope by scope, and records
 // the ids Google assigned. Its rules:
-// - a create carries an id Setpoint chose, so a retry after a timeout finds it instead of making a
-//   second event (409 "already exists" → read it back);
-// - writes send If-Match with the etag Setpoint last saw, so a change made elsewhere since is
-//   refused in Google's words rather than overwritten;
-// - "This and following" at the first occurrence is "All events";
-// - deleting one occurrence cancels it; deleting an event Google has already deleted is done;
+// - A create carries an id Setpoint chose, so a retry after a timeout finds it instead of making a
+//   second event (409 "already exists" → read it back).
+// - Writes send If-Match with the etag Setpoint last saw, so Google refuses a change made elsewhere
+//   since in its own words rather than overwriting it.
+// - "This and following" at the first occurrence is "All events".
+// - Deleting one occurrence cancels it. Deleting an event Google has already deleted is done.
 // - Google's own kinds of event (birthdays…) are never written.
-// The new series of a split is created first with a chosen id, then the old one
-// trimmed, so a retry can't lose half; the trim keeps EXDATE lines; "All events" shifts the series
-// by the moved occurrence's change instead of moving its start to that occurrence; times are written
-// in the event's own zone.
+// A split creates the new series first with a chosen id, then trims the old one, so a retry can't
+// lose half. The trim keeps EXDATE lines. "All events" shifts the series by the moved occurrence's
+// change instead of moving its start to that occurrence. Times are written in the event's own zone.
 import {createHash} from 'node:crypto';
 import type {Colour, ItemChanges, RecurringScope} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -37,14 +36,14 @@ export const chosenEventId = (command: CommandRow, itemId: number) => `sp${creat
 const itemRow = (store: Store, id: number) => store.db.select().from(t.items).where(eq(t.items.id, id)).get() ?? null;
 const calendarOf = (store: Store, row: ItemRow) => store.db.select().from(t.calendars).where(eq(t.calendars.id, row.calendarId)).get()!;
 
-// Google's own kinds of event, and calendars the user can only read: a command sent before
-// the role came, or by an older client, fails in place in Setpoint's words rather than Google's 403.
+// Google's own kinds of event, and calendars the user can only read. A command sent before the
+// role came, or by an older client, fails in place in Setpoint's words rather than Google's 403.
 function refuseReadOnly(store: Store, row: ItemRow) {
   if (row.readOnly) throw new ProviderError('permanent', 'Google Calendar doesn\'t let this kind of event be changed here.');
   if (!calendarWritable(calendarOf(store, row).accessRole)) throw new ProviderError('permanent', 'This calendar is read-only.');
 }
 
-/** Inserts with Setpoint's id; a retry that finds it already there takes Google's copy. */
+/** Inserts with Setpoint's id. A retry that finds it already there takes Google's copy. */
 async function insertOnce(api: GoogleCalendarApi, calendarId: string, id: string, body: Partial<GoogleEvent>): Promise<GoogleEvent> {
   try {
     return await api.insertEvent(calendarId, {id, ...body});
@@ -55,7 +54,7 @@ async function insertOnce(api: GoogleCalendarApi, calendarId: string, id: string
 }
 
 /**
- * events.move to `to`, once: it isn't idempotent, so a retry whose first try moved the event but
+ * events.move to `to`, once. It isn't idempotent, so a retry whose first try moved the event but
  * lost Google's answer finds it gone from `from` (404) and takes it from `to` instead.
  * If-Match carries the etag Setpoint last saw.
  */
@@ -101,7 +100,7 @@ export async function executeEventCommand(store: Store, api: GoogleCalendarApi, 
   }
 }
 
-/** The calendar's colour on the user's calendar list; the next sync reads it back as the same swatch. */
+/** The calendar's colour on the user's calendar list. The next sync reads it back as the same swatch. */
 async function setColour(store: Store, api: GoogleCalendarApi, command: CommandRow) {
   const calendar = store.db.select().from(t.calendars).where(eq(t.calendars.id, command.targetId)).get();
   if (!calendar) throw new ProviderError('permanent', 'This calendar is no longer in Google Calendar.');
@@ -110,7 +109,7 @@ async function setColour(store: Store, api: GoogleCalendarApi, command: CommandR
     await api.patchCalendarListEntry(calendar.providerId, {backgroundColor: hex, foregroundColor: foregroundFor(hex)});
   } catch (error) {
     // A consent without calendar-list write (an older consent) refuses only this
-    // optional write: it fails the colour in place, not the account (no needs reconnect).
+    // optional write. It fails the colour in place, not the account (no needs reconnect).
     if (error instanceof ProviderError && error.kind === 'auth' && error.status === 403) {
       throw new ProviderError('permanent', `${error.message}, Reconnect this Google account in Settings › Accounts to allow colour changes`, {status: 403});
     }
@@ -154,7 +153,7 @@ async function update(store: Store, api: GoogleCalendarApi, command: CommandRow)
   const occurrenceStart = payload.occurrence_start ?? itemRow(store, payload.item_id)?.originalStart ?? null;
   // The colour goes to Google only when it's what changed (see colorIdOf).
   const colour = payload.changes.colour !== undefined ? {colorId: colorIdOf(payload.changes.colour)} : {};
-  // The description too goes only when it's what changed; null deletes it at Google.
+  // The description too goes only when it's what changed. null deletes it at Google.
   const description = payload.changes.description !== undefined ? {description: target.description ?? null} : {};
 
   // One occurrence on its own: the target is the exception the mirror made (or already had).
@@ -195,9 +194,9 @@ async function update(store: Store, api: GoogleCalendarApi, command: CommandRow)
   }
 
   // This and following: the mirror ended the series before the occurrence and made a new one from
-  // it. At Google: the trim (If-Match, so a series changed elsewhere is refused before anything
-  // else), then the new series with Setpoint's id. A retry skips a trim already made and finds the
-  // new series already there.
+  // it. At Google, the trim goes first (If-Match, so a series changed elsewhere is refused before
+  // anything else), then the new series with Setpoint's id. A retry skips a trim already made and
+  // finds the new series already there.
   const series = itemRow(store, created[0]!);
   if (!series) return;
   const current = await api.getEvent(calendarId, target.providerId);
@@ -229,7 +228,7 @@ async function remove(store: Store, api: GoogleCalendarApi, command: CommandRow)
     }
   };
 
-  // An exception: this one alone is cancelled; with following or all, its series is.
+  // An exception: this one alone is cancelled. With following or all, its series is.
   if (row.recurringItemId !== null) {
     if (payload.scope === 'this') return gone(api.patchEvent(calendarId, row.providerId, {status: 'cancelled'}, row.etag));
     const master = itemRow(store, row.recurringItemId);
@@ -267,9 +266,9 @@ async function removeSeries(store: Store, api: GoogleCalendarApi, calendarId: st
  * One .ics event by Google's events.import, keyed on its iCalUID, so a calendar that holds it
  * already has it updated rather than a second made, and no invitation is sent. It carries the
  * description, `source.url`, free/busy and the file's own reminders (never the calendar's
- * default); then each changed occurrence, as the series' iCalUID with the start it replaces. A retry
- * imports the same again, which Google takes as the same event. The sync after it brings Google's
- * expansion of the series and its changes into the mirror.
+ * default). Then it imports each changed occurrence, as the series' iCalUID with the start it
+ * replaces. A retry imports the same again, which Google takes as the same event. The sync after it
+ * brings Google's expansion of the series and its changes into the mirror.
  */
 async function importOne(store: Store, api: GoogleCalendarApi, command: CommandRow, event: IcsImportEvent, sourceId: number | undefined) {
   const row = itemRow(store, command.targetId);

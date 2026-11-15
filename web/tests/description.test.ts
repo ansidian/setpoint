@@ -1,6 +1,6 @@
-// A description read from its provider's format into the short list of formats the
-// screen draws, and written back as that provider's own editor writes one. The two long fixtures
-// are the shapes read from a real Google event and Todoist task, with invented text.
+// A description read from its provider's format into the short list of formats the screen draws,
+// and written back as that provider's own editor writes one. The two long fixtures are the shapes
+// read from a real Google event and Todoist task, with invented text.
 import {describe, expect, test} from 'vitest';
 import {fitting, gmailLinkOf, isEmpty, plainText, readDescription, readHtml, readInline, readMarkdown, safeHref, sameDescription, sourceLine, withLinks, writeDescription, writeHtml, writeMarkdown} from '../src/logic/description.ts';
 import type {Block, Item, List, Mark, Run} from '../src/logic/description.ts';

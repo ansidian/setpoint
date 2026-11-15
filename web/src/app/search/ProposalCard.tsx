@@ -2,8 +2,8 @@
 // Calendar's editor draws it: the parsed line with the email's title in it as words, the
 // date and times, place, calendar or project, labels, reminders and repeat, each field the email
 // gave marked "from the email", and the conflict line, worked out again as the day and time change.
-// Nothing is created until the user presses Create, which sends the draft through the command layer:
-// the card waits at .5 until the provider confirms, and a failure stays in the card with the
+// Nothing is created until the user presses Create, which sends the draft through the command layer.
+// The card waits at .5 until the provider confirms, and a failure stays in the card with the
 // provider's words.
 import type {CalendarOut, CommandOut, ItemCreateInput, ProposalOut} from '@setpoint/shared';
 import {useRef, useState} from 'react';
@@ -21,7 +21,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
   proposal: ProposalOut;
   now: number;
   timeZone: string;
-  // The reader's card closes through the reader; one in an answer closes itself.
+  // The reader's card closes through the reader. One in an answer closes itself.
   onClose?: () => void;
   inAnswer?: boolean;
 }) {

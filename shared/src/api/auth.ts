@@ -1,12 +1,12 @@
-// Sign-in and Settings › Security. A single owner signs in with a password (bcrypt) and/or passkeys;
-// the browser keeps an HttpOnly, SameSite=Strict session cookie (Secure over https) whose secret is
+// Sign-in and Settings › Security. A single owner signs in with a password (bcrypt) and/or passkeys.
+// The browser keeps an HttpOnly, SameSite=Strict session cookie (Secure over https). Its secret is
 // stored only as a hash. The first claim needs a setup token from the CLI (`npm run cli --
 // setup-token`).
 import {z} from 'zod';
 import {AUTH_MODES, SESSION_METHODS} from '../enums.ts';
 import type {AuthMode, SessionMethod} from '../enums.ts';
 
-/** New passwords: at least 12 characters; any password checked is at most 1,024. */
+/** New passwords: at least 12 characters. Any password checked is at most 1,024. */
 export const MIN_PASSWORD_LENGTH = 12;
 export const MAX_PASSWORD_LENGTH = 1024;
 const newPassword = z.string().min(MIN_PASSWORD_LENGTH, `At least ${MIN_PASSWORD_LENGTH} characters`).max(MAX_PASSWORD_LENGTH);
@@ -35,11 +35,11 @@ export interface SignInOut {
   passkey_required: boolean;
 }
 
-/** POST /api/auth/passkey/options returns WebAuthn's request options as JSON; verify takes the response. */
+/** POST /api/auth/passkey/options returns WebAuthn's request options as JSON, and verify takes the response. */
 export type WebAuthnOptionsOut = Record<string, unknown>;
 export const passkeyResponseInput = z.strictObject({response: z.record(z.string(), z.unknown())});
 
-/** POST /api/auth/recover: a recovery code and a new password; passkeys are cleared. */
+/** POST /api/auth/recover: a recovery code and a new password. Passkeys are cleared. */
 export const recoverInput = z.strictObject({recovery_code: z.string().min(1).max(200), new_password: newPassword});
 
 /** GET /api/me. A paired iPhone's bearer token reads as `device`. */
@@ -82,7 +82,7 @@ export const registerPasskeyInput = z.strictObject({label: z.string().trim().min
 export const sessionMethodSchema = z.enum(SESSION_METHODS);
 
 /**
- * POST /api/security/pairing (Add iPhone; the password confirmed in the last 10 minutes): a
+ * POST /api/security/pairing (Add iPhone, with the password confirmed in the last 10 minutes): a
  * one-time code for five minutes, replacing any earlier one. The QR holds `link`,
  * `setpoint://pair?server=…&code=…`. DELETE /api/security/pairing withdraws it.
  */
@@ -95,9 +95,9 @@ export interface PairingOut {
 
 /**
  * POST /api/auth/pair, from the iPhone app, needing no session: the code for a device token, sent
- * from then on as `Authorization: Bearer <token>`. It has no idle timeout; it ends when revoked in
+ * from then on as `Authorization: Bearer <token>`. It has no idle timeout. It ends when revoked in
  * Settings › Security, by the app's DELETE /api/device, or at recovery, and then every request is
- * 401. `name` is the phone's model ("iPhone 17 Pro"); "iPhone" when left out.
+ * 401. `name` is the phone's model ("iPhone 17 Pro"), or "iPhone" when left out.
  */
 export const DEVICE_NAME_MAX = 80;
 export const pairInput = z.strictObject({code: z.string().min(1).max(200), name: z.string().trim().max(DEVICE_NAME_MAX).optional()});

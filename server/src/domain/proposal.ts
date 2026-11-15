@@ -1,13 +1,13 @@
 // Proposals (board 08): Add to calendar and Add as task open a proposal pre-filled from the email,
-// its key date, place and title. Pure: what an email
-// gives a proposal, and the conflict line against the day's items.
+// its key date, place and title. Pure: what an email gives a proposal, and the conflict line against
+// the day's items.
 //
 // From the email: the title from its subject ("Final exam schedule · CS 101" → "CS 101 final
 // exam"), the date from triage's key date, and the time and place from the line of the body that
 // names that date ("CS 101 · Software engineering — Wed, Dec 9 · 7:00 – 9:00 PM · Room 214"), read
-// with Chrono. Mail that spreads them over lines is read too: a time on the lines right
-// under the date, an address under those or alone in the next paragraph, never a footer's or a
-// shipping address. A room gets its organisation in front ("Contoso University · Room 214").
+// with Chrono. Mail that spreads them over lines is also read. A time can be on the lines right
+// under the date. An address can be under those or alone in the next paragraph, but never a footer's
+// or a shipping address. A room gets its organisation in front ("Contoso University · Room 214").
 // A date with no time is all day, an end before the start is refused, and the default end is an
 // hour after the start (Google Calendar's own default).
 import * as chrono from 'chrono-node';
@@ -36,8 +36,8 @@ const GENERIC_TAIL = /\s+(schedule|schedules|terms|details|information|info|upda
 const CODE = /^[A-Z]{2,5}\s?\d{2,5}[A-Z]?$/;
 
 /**
- * A title from the subject: "Re:"/"Fwd:" and "Your" dropped, trailing words that name the email
- * dropped, and a course or ticket code ("CS 101") put first: "CS 101 final exam".
+ * A title from the subject. "Re:"/"Fwd:" and "Your" are dropped, trailing words that name the email
+ * are dropped, and a course or ticket code ("CS 101") is put first: "CS 101 final exam".
  */
 export function titleFromSubject(subject: string): string {
   let text = subject.replace(/^\s*((re|fwd?|fw)\s*:\s*)+/i, '').replace(/^your\s+/i, '').trim();
@@ -68,8 +68,8 @@ function namesDay(result: chrono.ParsedResult, date: string): boolean {
   return !start.isCertain('year') || start.get('year') === year;
 }
 
-// A quoted email and the line over it ("On Tue, Nov 17, 2026 at 9:14 AM Jordan wrote:", "Sent: …"): when
-// it was written, not when anything happens.
+// A quoted email and the line over it ("On Tue, Nov 17, 2026 at 9:14 AM Jordan wrote:", "Sent: …").
+// These say when it was written, not when anything happens.
 const QUOTED = /^\s*(>|on\b.*\bwrote:\s*$|(sent|date):)/i;
 
 /** How many lines under the date's own, in its block, a time may be on. */
@@ -77,13 +77,13 @@ const TIME_LINES_BELOW = 2;
 
 export interface KeyLine {
   line: string;
-  // The day and the wall-clock times in the user's zone: a time that names its own zone ("1 am ET")
+  // The day and the wall-clock times in the user's zone. A time that names its own zone ("1 am ET")
   // is moved to the user's, which can be the day before or after the key date.
   date: string;
   start: string | null;
   end: string | null;
   // Where else a place may be: the lines under the date in its block, and the line after the block
-  // when it stands alone.
+  // when that line stands alone.
   near: string[];
 }
 
@@ -103,7 +103,7 @@ function blocksOf(body: string): string[][] {
   return blocks;
 }
 
-/** A time Chrono read, as the user's wall clock; one that names a zone is moved to the user's. */
+/** A time Chrono read, as the user's wall clock. One that names a zone is moved to the user's. */
 function clockIn(component: chrono.ParsedComponents, date: string, timeZone: string | undefined): {date: string; time: string} {
   if (!timeZone || !component.isCertain('timezoneOffset')) return {date, time: clock(component)};
   const instant = component.date().getTime();
@@ -111,9 +111,9 @@ function clockIn(component: chrono.ParsedComponents, date: string, timeZone: str
 }
 
 /**
- * The body's line naming the key date, with its time: the first such line that has a time, on it or
- * on the lines right under it in its block ("Thursday, November 19" over "10 am to 11 am PT"), else
- * the first that names the date at all.
+ * The body's line naming the key date, with its time. It is the first such line that has a time, on
+ * it or on the lines right under it in its block ("Thursday, November 19" over "10 am to 11 am PT").
+ * Else it is the first that names the date at all.
  */
 export function keyLine(body: string, date: string, timeZone?: string): KeyLine | null {
   const blocks = blocksOf(body);
@@ -150,7 +150,8 @@ export function keyLine(body: string, date: string, timeZone?: string): KeyLine 
 }
 
 const ROOM = /\b(room|rm\.?|hall|building|bldg\.?|suite|ste\.?|floor|auditorium|lab)\s*#?\s*[\w-]+/i;
-// A street address, with its unit and its city, state and ZIP when they follow ("12 Main St #4, Springfield, IL 62701").
+// A street address, with its unit and its city, state and ZIP when they follow
+// ("12 Main St #4, Springfield, IL 62701").
 const ADDRESS = /\b\d{2,6}\s+[\w.' ]+?\s(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|way|ln|lane|pl|place|ct|court|pkwy|parkway)\b\.?(?:,?\s+(?:#|(?:suite|ste\.?|apt\.?|unit)\s)\s*[\w-]+)?(?:,\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?)?/i;
 // An address that is where something is sent, not where something happens.
 const POSTAL = /\b(ship(ping|ped|s)?|deliver(y|ed|ing)?|bill(ing|ed)?|mail(ing|ed)?|sent|send)\b/i;
@@ -179,7 +180,7 @@ function addressNear(lines: string[]): string | null {
   return null;
 }
 
-/** What the email gives a proposal; times are in `timeZone`, the user's. */
+/** What the email gives a proposal. Times are in `timeZone`, the user's. */
 export function proposalFields(email: ProposalEmail, timeZone?: string): ProposalFields {
   const title = titleFromSubject(email.subject);
   if (!email.keyDate) return {title, date: null, start: null, end: null, place: null};
@@ -220,7 +221,8 @@ export function fromEmail(email: ProposalEmail, fields: ProposalFields, timeZone
 
 // ---- The conflict line ----
 
-// The rule lives in shared/ (freeBusy.ts), so the web's proposal card works it out again as its day and time change.
+// The rule lives in shared/ (freeBusy.ts), so the web's proposal card works it out again as its day
+// and time change.
 export {proposalConflict as conflictLine, durationLabel} from '@setpoint/shared';
 export type {DayItem} from '@setpoint/shared';
 

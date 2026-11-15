@@ -1,7 +1,7 @@
-// The editor's Reminders row (Reminders.tsx): the presets with Custom…
-// last, a date and a time picked kept as its offset and worded as its moment, refused past 4 weeks
-// either side, a custom chip reopening at its moment, and a task with no date. The save reaching the
-// API stays in editor.spec.ts.
+// The editor's Reminders row (Reminders.tsx): the presets with Custom… last, a date and a time picked
+// kept as its offset and worded as its moment, refused past 4 weeks either side, a custom chip
+// reopening at its moment, and a task with no date. The save reaching the API stays in
+// editor.spec.ts.
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {useState} from 'react';
 import {expect, test} from 'vitest';

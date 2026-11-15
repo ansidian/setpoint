@@ -1,10 +1,10 @@
-// News's models and cost: Claude Haiku 5.5 reads each article
-// and groups, Claude Sonnet 5.5 writes stories and judges how much each matters, on the Anthropic key
-// in Settings › AI (the production key in production). Each call goes in the AI usage ledger with its
-// own purpose (news_articles, news_grouping, news_stories; news_ranking holds the hourly ranking's
-// past calls; it asks none now). Past the monthly cap (`news.monthly_cap_usd`, $40 by
-// default) stories are written by Haiku for the rest of the month, so News asks Sonnet nothing.
-// Settings › AI's News group and "Usage this month" come from here.
+// News's models and cost. Claude Haiku 5.5 reads each article and groups. Claude Sonnet 5.5 writes
+// stories and judges how much each matters. They run on the Anthropic key in Settings › AI (the
+// production key in production). Each call goes in the AI usage ledger with its own purpose
+// (news_articles, news_grouping, news_stories). news_ranking holds the past calls of the hourly
+// ranking, which asks none now. Past the monthly cap (`news.monthly_cap_usd`, $40 by default), Haiku
+// writes stories for the rest of the month, so News asks Sonnet nothing. Settings › AI's News group
+// and "Usage this month" come from here.
 import type {AiPurpose, AiUsageOut, AiOut, NewsAiOut} from '@setpoint/shared';
 import {and, count, gte, inArray, sum} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -52,7 +52,7 @@ export interface NewsClients {
   stories: NewsModel;
 }
 
-/** The clients for News's models with the Anthropic key; null without one. */
+/** The clients for News's models with the Anthropic key. Null without one. */
 export function newsClients(store: Store, endpoints: AiEndpoints, timeoutMs?: number): NewsClients | null {
   const apiKey = anthropicKey(store);
   if (!apiKey) return null;

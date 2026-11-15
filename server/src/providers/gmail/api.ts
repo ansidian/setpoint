@@ -97,7 +97,7 @@ export class GmailApi {
     return response.status === 404 ? null : await response.json() as GmailMessage;
   }
 
-  /** One page of history since a history id; throws HistoryGone when that's too old. */
+  /** One page of history since a history id. Throws HistoryGone when that's too old. */
   async history(startHistoryId: string, pageToken: string | null): Promise<{history: GmailHistoryRecord[]; historyId: string | null; nextPageToken: string | null}> {
     const response = await this.request('history', {
       what: 'Gmail history.list', accept: [404],

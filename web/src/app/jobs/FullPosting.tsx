@@ -1,11 +1,11 @@
-// The full posting (board 33): a 44 px row under the lists,
-// "Full posting", how it was found, the link's host and Show. Show, or Space on its row, turns the row
-// into the section's sticky head and unfolds the text under it over 260 ms (a clip from the top, its
-// paragraphs fading in over 180 ms from 60 ms), while the pane scrolls the head up under the tools, so
-// the summary and lists slide away rather than the text appearing off screen. Collapse, the head or
-// Esc folds it back over 180 ms and scrolls back to the row. The text is the posting's own words,
-// cleaned to markdown and never rewritten. Arriving from mail's JD popover, it's unfolded
-// already, the pane at it, with no motion.
+// The full posting (board 33): a 44 px row under the lists, with "Full posting", how it was found,
+// the link's host and Show. Show, or Space on its row, turns the row into the section's sticky head
+// and unfolds the text under it over 260 ms. The unfold is a clip from the top, and its paragraphs
+// fade in over 180 ms from 60 ms. Meanwhile the pane scrolls the head up under the tools, so the
+// summary and lists slide away rather than the text appearing off screen. Collapse, the head or Esc
+// folds it back over 180 ms and scrolls back to the row. The text is the posting's own words,
+// cleaned to markdown and never rewritten. Arriving from mail's JD popover, it's unfolded already,
+// the pane at it, with no motion.
 import type {PostingOut} from '@setpoint/shared';
 import {Fragment, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState} from 'react';
 import type {ReactNode, Ref} from 'react';
@@ -33,7 +33,7 @@ function ease(t: number): number {
   return at(y1, y2, (lo + hi) / 2);
 }
 
-/** Scrolls `scroller` to `top` over `ms`, on the shared easing; the returned function stops it. */
+/** Scrolls `scroller` to `top` over `ms`, on the shared easing. The returned function stops it. */
 function scrollOver(scroller: HTMLElement, top: number, ms: number): () => void {
   const from = scroller.scrollTop;
   const start = performance.now();
@@ -98,7 +98,7 @@ export function FullPosting({posting, title, company, timeZone, today, arrived =
   // Unfolded as it was drawn: no unfolding, and the pane at it at once.
   const [still, setStill] = useState(arrived);
   const root = useRef<HTMLDivElement>(null);
-  // Where the pane stood before it unfolded, to go back to; and the pane's scroll under way, so a
+  // Where the pane stood before it unfolded, to go back to. And the pane's scroll under way, so a
   // fold started while it unfolds takes over from it.
   const before = useRef(0);
   const scrolling = useRef<() => void>(() => {});

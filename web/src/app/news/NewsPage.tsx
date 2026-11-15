@@ -1,32 +1,33 @@
 // The News page (boards 25–27): the header (News, All | Local | Tech | AI |
 // General, Search news), the list and the story pane. All shows each section's block in a fixed
-// order, with Upcoming in Tech and the new-stories pill; a section its full list. The list's order
-// holds while the page is open: rows on screen take their sources and summary from each new
-// answer, and everything else waits behind the pill, which `N` or a click takes, scrolling to the top
+// order, with Upcoming in Tech and the new-stories pill. A section shows its full list. The list's
+// order holds while the page is open. Rows on screen take their sources and summary from each new
+// answer. Everything else waits behind the pill, which `N` or a click takes, scrolling to the top
 // (logic/news.ts). A story is seen when its row has been fully on screen for about a second, or when
-// it's opened (useSeen below), but its dot stays for the visit: a visit is the page's time on
-// screen, from opening News (from another page, a link or a reload) until leaving it, All and the
-// sections all one visit. An opened story loses its dot at once, and a fact during the visit brings it
-// back as updated.
+// it's opened (useSeen below), but its dot stays for the visit. A visit is the page's time on
+// screen, from opening News (from another page, a link or a reload) until leaving it. All and the
+// sections are all one visit. An opened story loses its dot at once, and a fact during the visit
+// brings it back as updated.
 //
 // All has While you were away, the recap of what left the page unseen, in the empty pane beside
-// it (NewsDay.tsx), never in the list: chosen from the visit's first answer and held for
-// it, its stories never seen by being on screen, only by opening, which opens them in the recap's
+// it (NewsDay.tsx), never in the list. It's chosen from the visit's first answer and held for it.
+// Its stories are never seen by being on screen, only by opening, which opens them in the recap's
 // modal (RecapModal.tsx). The page tells the server when the user is on News, and the recap's stories
-// once the pane shows them (useHere below), so an hour away puts it away, and nothing else on the web
+// once the pane shows them (useHere below). So an hour away puts it away, and nothing else on the web
 // does.
 //
 // The states (boards 29a, 29b): the Unsorted line while sorting is down,
 // with Show headlines listing what waits, and the first run's line, both above the list from
-// /news/status; a whole section's stale or failing line under its header; and a section with nothing
-// to show (logic/news.ts has the rule). Offline is the shell's, as on every page. Search news replaces
-// the list with the stories found, as mail's search replaces its list: the header reads Search,
-// the segmented control goes, and Esc clears it.
+// /news/status. Then a whole section's stale or failing line under its header, and a section with
+// nothing to show (logic/news.ts has the rule). Offline is the shell's, as on every page. Search news
+// replaces the list with the stories found, as mail's search replaces its list. The header reads
+// Search, the segmented control goes, and Esc clears it.
 //
-// Keys: `J` / `K` move the cursor (with a story open, they open the next and previous one), on into
-// a section's Also reported; Enter opens (an Also reported row, its article); `O` opens the original
-// article; `N` takes the new stories; Tab and Shift-Tab step All | Local | Tech | AI | General;
-// Esc goes from an article back to its story, then closes the pane, then clears a search. `1`, `2` and `3` are the shell's (App.tsx).
+// Keys: `J` / `K` move the cursor, on into a section's Also reported. With a story open, they open
+// the next and previous one. Enter opens (an Also reported row, its article). `O` opens the original
+// article. `N` takes the new stories. Tab and Shift-Tab step All | Local | Tech | AI | General. Esc
+// goes from an article back to its story, then closes the pane, then clears a search. `1`, `2` and
+// `3` are the shell's (App.tsx).
 import type {
   AlsoReportedOut, ArticleOut, NewsPageOut, NewsSectionOut, NewsStatusOut, NewsUnsortedOut, RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
@@ -81,7 +82,7 @@ interface Listing {
   // Each section's line, stale or failing, by its shelf.
   health: ReadonlyMap<string, SectionHealthOut | null>;
   recap: RecapOut | null;
-  // A section's stories left unwritten under the write gate; none in All.
+  // A section's stories left unwritten under the write gate. None in All.
   alsoReported: AlsoReportedOut[];
 }
 
@@ -111,7 +112,7 @@ const VIEW_SEGMENTS = NEWS_VIEWS.map(view => ({value: view, label: view === 'all
 
 /**
  * The order held for this visit to a list. What the cache held when the visit began is drawn as it
- * is until the page's own first answer comes; that one is held, so opening the page shows the latest.
+ * is until the page's own first answer comes. That one is held, so opening the page shows the latest.
  * `known` is each row as the latest answer that held it had it, so a row the latest order drops
  * still follows its story.
  */
@@ -123,7 +124,7 @@ interface Hold {
   from: Listing | null;
 }
 
-// The story last opened, so the address following an open doesn't open it twice; a reload or a link opens it.
+// The story last opened, so the address following an open doesn't open it twice. A reload or a link opens it.
 let lastOpened: number | null = null;
 
 export function NewsPage({route}: {route: NewsRoute}) {
@@ -144,7 +145,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   if (current !== hold) setHold(current);
   const held = current.held;
 
-  // The recap held for the visit, from All's first answer of it, across the sections; undefined
+  // The recap held for the visit, from All's first answer of it, across the sections. Undefined
   // until that answer, while the cache's is drawn.
   const [recapHold, setRecapHold] = useState<{stale: unknown; from: RecapOut | null | undefined; held: HeldRecap | null | undefined}>(() => ({stale: getCached(NEWS_PATH), from: undefined, held: undefined}));
   let recapNow = recapHold;
@@ -195,7 +196,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const {data: status} = useResource<NewsStatusOut>(STATUS_PATH);
   const firstRun = Boolean(status?.first_run);
 
-  // The recap, on All while it holds stories; the cache's until the visit's first answer.
+  // The recap, on All while it holds stories. The cache's until the visit's first answer.
   const drawn = recapDrawn(view, searching, firstRun);
   const latestRecap = latest?.recap ?? null;
   const recapHeld = useMemo(() => (recapNow.held === undefined ? holdRecap(undefined, latestRecap) : recapNow.held), [recapNow.held, latestRecap]);
@@ -266,7 +267,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   function close() {
     go({story: null, article: null});
   }
-  /** A story row's right-click: Open, Open at its leading outlet, Copy link; the cursor moves there and nothing opens, so nothing is seen. */
+  /** A story row's right-click: Open, Open at its leading outlet, Copy link. The cursor moves there and nothing opens, so nothing is seen. */
   function onContextMenu(event: ReactMouseEvent) {
     const element = (event.target as Element).closest<HTMLElement>('[data-key][data-story]');
     const row = element ? rows.get(Number(element.dataset.story)) : undefined;
@@ -304,7 +305,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   }
   /**
    * Tab and Shift-Tab (the segmented control steps, wrapping): the next or previous
-   * view. The open story stays open where that view lists it; otherwise the pane closes and the cursor
+   * view. The open story stays open where that view lists it. Otherwise the pane closes and the cursor
    * goes to the view's first story.
    */
   function stepSection(next: NewsView) {
@@ -321,7 +322,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   // The user on News, with the recap's stories once the pane shows them: fixed, and put away an hour after they leave.
   useHere(recapNow.held !== undefined && recapOnScreen(drawn && pane.drawn, open !== null) ? recapShown?.ids ?? null : null);
 
-  // Attached again with each render as it's drawn, before any key can come: a passive effect can
+  // Attached again with each render as it's drawn, before any key can come. A passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
   useLayoutEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -493,7 +494,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
 /**
  * Also reported: what Haiku rated under the write gate, so was never written, under a quiet
  * label after the section's stories. One line each, the headline, outlet and age, with no summary,
- * thumbnail or dot; a row opens the outlet's article, and nothing here is seen.
+ * thumbnail or dot. A row opens the outlet's article, and nothing here is seen.
  */
 function AlsoReported({stories, cursor, now, zone, onPoint}: {stories: AlsoReportedOut[]; cursor: string | null; now: number; zone: string; onPoint: (key: string) => void}) {
   return (
@@ -670,7 +671,7 @@ function useHere(recap: number[] | null) {
 
 /**
  * Seen: a story waiting to be seen (new or updated) whose row has been fully on screen in the
- * list for about a second; flicking past doesn't count, nor does a hidden tab. What's due goes to the
+ * list for about a second. Flicking past doesn't count, nor does a hidden tab. What's due goes to the
  * server together.
  */
 function useSeen(list: RefObject<HTMLDivElement | null>, layout: Layout, rows: ReadonlyMap<number, StoryRowOut>) {

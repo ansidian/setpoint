@@ -34,7 +34,7 @@ const AIRNOW_MODIFIED = 'Wed, 07 Oct 2026 15:25:00 GMT';
 
 type Page = (base: string, request: FakeRequest) => FakeResponse;
 
-/** A fake site: each path's answer, given the site's own address; anything else is a 404. */
+/** A fake site: each path's answer, given the site's own address. Anything else is a 404. */
 async function site(pages: Record<string, Page>): Promise<FakeServer> {
   let base = '';
   const server = await fakeServer([on('GET', /^\/.*$/, request => (pages[request.path]?.(base, request) ?? {status: 404, body: 'Not Found', headers: {'content-type': 'text/html'}}))]);
@@ -108,7 +108,7 @@ describe('feeds', () => {
     expect(articleSchema.parse(articleDetail(w.store, closure!.id))).toMatchObject({text: null, summary_only: true, feed_summary: expect.stringMatching(/^Contoso Avenue is closed/)});
     expect(articleDetail(w.store, fire!.id).text).toBe(fire!.extractedText);
 
-    // The feed's 1200-wide image was enough, so the page's og:image wasn't fetched; both copies are
+    // The feed's 1200-wide image was enough, so the page's og:image wasn't fetched. Both copies are
     // Setpoint's own files at their sizes, cropped to fill.
     expect(paths(station)).not.toContain('/images/fire-og.jpg');
     const copies = imagesOf(w, fire!.id);
@@ -376,7 +376,7 @@ describe('hazards from the home location', () => {
     updateSettings(w.store, {calendar: {home: HOME}});
     await run();
     const outlets = (id: number) => articles(w, id).map(article => article.headline);
-    // NWS: the point's zones, then each zone's alerts; the warning both list is one article.
+    // NWS: the point's zones, then each zone's alerts. The warning both list is one article.
     expect(outlets(sources.nws.id)).toEqual(['Red Flag Warning issued October 7 at 2:14AM PDT until October 8 at 6:00PM PDT by NWS Example Office']);
     expect(articles(w, sources.nws.id)[0]!.extractedText).toMatch(/^AFFECTED AREA/);
     expect(outlets(sources.usgs.id)).toEqual(['M 3.4 - 12 km NE of Example Valley, CA']);
@@ -389,7 +389,7 @@ describe('hazards from the home location', () => {
     expect(api.requests.every(request => /^\/(points|alerts|fdsnws|umbraco|airnow)\//.test(request.path))).toBe(true);
     expect(api.requests.every(request => request.headers['user-agent'] === NEWS_USER_AGENT)).toBe(true);
 
-    // Every 5 minutes; the zones are kept from the first read, so /points isn't asked again.
+    // Every 5 minutes. The zones are kept from the first read, so /points isn't asked again.
     const before = api.requests.length;
     w.advance(4 * MINUTE);
     await run();

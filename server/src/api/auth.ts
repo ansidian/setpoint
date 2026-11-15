@@ -1,6 +1,6 @@
 // The session cookie and the checks around it, for one owner and no agent tokens. The cookie is
 // HttpOnly and SameSite=Strict always, and Secure with the `__Host-` prefix whenever Setpoint's
-// origin is https; over plain http in development it can't be Secure, or the browser wouldn't send
+// origin is https. Over plain http in development it can't be Secure, or the browser wouldn't send
 // it back.
 import type {Context} from 'hono';
 import {deleteCookie, getCookie, setCookie} from 'hono/cookie';

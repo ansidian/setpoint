@@ -61,7 +61,7 @@ describe('the recorded fixture set, with Anthropic\'s models faked', () => {
       expect(row.lane === 'noise' ? row.kind === null : row.kind !== null, fixture.name).toBe(true);
     }
 
-    // Every call is in the ledger with its tokens and cost; triage is healthy and nothing is Unsorted.
+    // Every call is in the ledger with its tokens and cost. Triage is healthy and nothing is Unsorted.
     const ledger = world.store.db.select().from(t.aiUsage).all();
     expect(ledger).toHaveLength(fake.requests.length);
     expect(ledger.every(entry => entry.provider === 'anthropic' && entry.purpose === 'triage' && entry.inputTokens > 0 && entry.outputTokens > 0 && entry.costMicros > 0 && entry.messageId !== null)).toBe(true);

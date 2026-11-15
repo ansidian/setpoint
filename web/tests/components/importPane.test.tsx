@@ -1,6 +1,6 @@
-// The .ics import review's own behaviour (ImportPane.tsx on importRun.ts): past events
-// start unticked, the rows and Tick all tick, the footer counts what's ticked, the calendar picked
-// says how many it already holds and marks them, the checkboxes take its colour, and Cancel closes it.
+// The .ics import review's own behaviour (ImportPane.tsx on importRun.ts). Past events start
+// unticked. The rows and Tick all tick, and the footer counts what's ticked. The calendar picked says
+// how many it already holds and marks them, and the checkboxes take its colour. Cancel closes it.
 // Sending is the browser check's (icsImport.spec.ts), with the server and Google's stand-in.
 import type {CalendarOut, IcsEventOut, IcsReadOut} from '@setpoint/shared';
 import {ICS_DROP_REASONS} from '@setpoint/shared';

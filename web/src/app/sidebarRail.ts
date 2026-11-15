@@ -37,7 +37,7 @@ export const useRail = () => useSyncExternalStore(subscribe, isRail);
 /** Whether `` ` `` and the rail's edge do anything at this width. */
 export const useSidebarFoldable = () => useSyncExternalStore(subscribe, () => sidebarFoldable(window.innerWidth));
 
-/** `` ` `` or the edge: opens the rail or folds the sidebar, and keeps that; false under 1100 px, where it's always the rail. */
+/** `` ` `` or the edge: opens the rail or folds the sidebar, and keeps that. False under 1100 px, where it's always the rail. */
 export function toggleSidebar(): boolean {
   if (!sidebarFoldable(window.innerWidth)) return false;
   choice = isRail() ? 'open' : 'rail';

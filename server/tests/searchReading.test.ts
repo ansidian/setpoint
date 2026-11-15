@@ -1,7 +1,7 @@
-// The server's reading of a whole search, offered as a suggestion, with
-// Haiku faked at the HTTP boundary: what it's given, how its answer becomes chips once accepted, what
-// those leave out, when a suggestion is worth offering, and every way a reading can fail to come. All
-// searches and names here are invented.
+// The server's reading of a whole search, offered as a suggestion, with Haiku faked at the HTTP
+// boundary: what it's given, how its answer becomes chips once accepted, what those leave out, when
+// a suggestion is worth offering, and every way a reading can fail to come. All searches and names
+// here are invented.
 import type {SearchOut} from '@setpoint/shared';
 import {searchInput, searchSuggestionInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';

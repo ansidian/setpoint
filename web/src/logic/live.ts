@@ -1,19 +1,19 @@
-// What a live event refreshes (only what an event names), as
-// paths of the API resources on screen. A `mail` event names emails and accounts: the Inbox and
-// All lists, the counts and triage's health (its Unsorted count) show them, and an open email
-// refreshes only when it's named. An `items` event refreshes the item ranges, and the calendars and
-// Todoist's projects (their colours) when it names a calendar; a `health` event the accounts
-// and sources. A `news` event refreshes News's lists (All with its recap, a section) when it names
-// stories or sections, since a story's row lives in them; the page holds their order and draws only
-// the rows' dots, sources and summaries in place, keeping the rest behind its pill (logic/news.ts). An
-// open story refreshes only when it's named, Settings › News only when sources are, and an article
-// never. Every `news` event refreshes sorting's state and Show headlines: one naming nothing says
-// sorting's state changed (down, back, the first run done), one naming sources brought articles to
-// wait, and one naming stories sorted some.
+// What a live event refreshes (only what an event names), as paths of the API resources on screen.
+// A `mail` event names emails and accounts. The Inbox and All lists, the counts and triage's health
+// (its Unsorted count) show them, and an open email refreshes only when it's named. An `items` event
+// refreshes the item ranges. When it names a calendar, it also refreshes the calendars and Todoist's
+// projects (their colours). A `health` event refreshes the accounts and sources. A `news` event
+// refreshes News's lists (All with its recap, a section) when it names stories or sections, since a
+// story's row lives in them. The page holds their order and draws only the rows' dots, sources and
+// summaries in place, keeping the rest behind its pill (logic/news.ts). An open story refreshes only
+// when it's named, Settings › News only when sources are, and an article never. Every `news` event
+// refreshes sorting's state and Show headlines. One naming nothing says sorting's state changed
+// (down, back, the first run done). One naming sources brought articles to wait, and one naming
+// stories sorted some.
 import type {LiveEvent} from '@setpoint/shared';
 
 /**
- * The keys refused while Setpoint is offline: those that change something, H, E, P, C, D,
+ * The keys refused while Setpoint is offline, those that change something: H, E, P, C, D,
  * Delete and Backspace, ⇧I, ⇧U and ⌘Z. Reading keys go through: J, K, Enter, Esc, /, 1, 2, 3, the
  * arrows, U, O, M, W, T and N.
  */

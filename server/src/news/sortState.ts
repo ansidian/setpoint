@@ -1,9 +1,8 @@
-// News sorting's state: what waits Unsorted
-// and why, and the first run's progress. Like triage's health, it's about the last attempt: sorting is
-// down while its last model call failed (or there was no key to call with), since the spell began,
-// with the provider's words; a success brings it back. Articles keep arriving meanwhile and wait,
-// and nothing vanishes. The first run fills the last 48 hours; it's done once a pass finds nothing
-// left to sort.
+// News sorting's state: what waits Unsorted and why, and the first run's progress. Like triage's
+// health, it's about the last attempt. Sorting is down while its last model call failed (or there was
+// no key to call with), since the spell began, with the provider's words. A success brings it back.
+// Articles keep arriving meanwhile and wait, and nothing vanishes. The first run fills the last 48
+// hours. It's done once a pass finds nothing left to sort.
 import type {NewsStatusOut, NewsUnsortedOut, NewsSortDownOut} from '@setpoint/shared';
 import {and, count, desc, eq, isNotNull, isNull, notExists} from 'drizzle-orm';
 import * as t from '../db/schema.ts';

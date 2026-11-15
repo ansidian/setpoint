@@ -1,18 +1,17 @@
-// Proposals from an email: Add to calendar and Add as
-// task, and Alfred's propose tool, all build one here. A proposal is the item POST /api/items would
-// create, pre-filled, with the fields the email gave marked and, for an event, the conflict line
-// against that day's items. Nothing is created: Create sends the item through the calendar's create
-// command.
+// Proposals from an email. Add to calendar, Add as task and Alfred's propose tool all build one
+// here. A proposal is the item POST /api/items would create, pre-filled. It marks the fields the
+// email gave and, for an event, carries the conflict line against that day's items. Nothing is
+// created: Create sends the item through the calendar's create command.
 //
-// The calendar is where similar items already live: the Google calendar whose items share the most
-// words with the title ("CS 101 final exam" goes where "CS 101 lecture" is: Classes), else the
-// first calendar on the email's account, else the first Google calendar. A task goes to Todoist, in
-// the project whose tasks share the most words with it, else Settings' default project.
+// The calendar is where similar items already live. That's the Google calendar whose items share
+// the most words with the title ("CS 101 final exam" goes where "CS 101 lecture" is: Classes). Else
+// it's the first calendar on the email's account, else the first Google calendar. A task goes to
+// Todoist, in the project whose tasks share the most words with it, else Settings' default project.
 //
-// An email with an invite (a text/calendar attachment, as a scheduler sends) takes its title, time, end and
-// place from the invite rather than its subject and text: the file states them exactly. The
-// invite is read through the account's adapter, so it's the one step here that can wait on a
-// provider; whatever goes wrong there leaves the text's proposal.
+// An email with an invite (a text/calendar attachment, as a scheduler sends) takes its title, time,
+// end and place from the invite rather than its subject and text, because the file states them
+// exactly. The account's adapter reads the invite, so it's the one step here that can wait on a
+// provider. Whatever goes wrong there leaves the text's proposal.
 import type {ItemKind, ProposalField, ProposalOut} from '@setpoint/shared';
 import {asc, eq} from 'drizzle-orm';
 import {readIcs} from '../domain/icsImport.ts';
@@ -137,7 +136,7 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
     fields.end = null;
   }
   if (!fields.title.trim()) throw invalid('A proposal needs a title.');
-  // The invite's instants as they are (an event may end days later); the text's wall clock in the user's zone.
+  // The invite's instants as they are (an event may end days later). The text's wall clock in the user's zone.
   const startsAt = when ? when.starts_at : fields.date && fields.start ? zonedInstant(fields.date, fields.start, zone) : null;
   let endsAt = when?.ends_at ?? (startsAt && fields.end ? zonedInstant(fields.date!, fields.end, zone) : startsAt ? new Date(Date.parse(startsAt) + HOUR).toISOString() : null);
   // "11 PM – 1 AM" ends the next day.

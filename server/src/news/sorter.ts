@@ -2,28 +2,28 @@
 //
 // 1. Each article (Claude Haiku 5.5): the rules map its source to a likely section, the model reads it
 //    (sections, kind and subject, key facts, importance, place, a keynote), and the policy settles
-//    noise (src/domain/newsSorting.ts). Noise is done with; the rest is grouped.
-// 2. Grouping, one article at a time in the order published: the same hazard incident (each revision
-//    a new fact) or another outlet's same wire text (a repeat) joins its story by rule; otherwise cheap candidate
-//    matching finds the likely stories (enough words in common, or a headline a day apart with the
-//    same count and place) and Haiku confirms whether it's the same event, what facts it brings, and
-//    whether they change the story's headline or one line. No match starts a story.
+//    noise (src/domain/newsSorting.ts). Noise is done with. The rest is grouped.
+// 2. Grouping, one article at a time in the order published. The same hazard incident (each
+//    revision a new fact) or another outlet's same wire text (a repeat) joins its story by rule.
+//    Otherwise cheap candidate matching finds the likely stories (enough words in common, or a
+//    headline a day apart with the same count and place). Haiku confirms whether it's the same
+//    event, what facts it brings, and whether they change the story's headline or one line. No match
+//    starts a story.
 // 3. New stories, and stories whose new facts are headline news, are written (Claude Sonnet 5.5,
-//    Haiku past the cap) from their window: the neutral headline, the one line, the summary,
-//    the lead article, the best image and how much the story matters, which becomes its importance.
-//   Facts that only add detail join the timeline and show as new, and wait for the next
-//    rewrite; a fifth outlet repeating the first four rewrites nothing and moves no judgement. A
-//    new story whose articles Haiku rates under the write gate (40) isn't written until one lifts it
-//    there, and meanwhile shows only under its section's Also reported. A
-//    story covered only by a metered paper is never written (it never shows); one only Google News
-//    found shows its headline and link, unwritten, and keeps the importance Haiku read in its
-//    articles.
+//    Haiku past the cap) from their window: the neutral headline, the one line, the summary, the
+//    lead article, the best image and how much the story matters, which becomes its importance.
+//    Facts that only add detail join the timeline and show as new, and wait for the next rewrite. A
+//    fifth outlet repeating the first four rewrites nothing and moves no judgement. A new story
+//    whose articles Haiku rates under the write gate (40) isn't written until one lifts it there.
+//    Meanwhile it shows only under its section's Also reported. A story covered only by a metered
+//    paper is never written (it never shows). One only Google News found shows its headline and
+//    link, unwritten, and keeps the importance Haiku read in its articles.
 // 4. Each touched story is scored by the ranking formula, and a confirmed keynote goes to Upcoming.
 // Every hour (rescoreStories) the stories on the page are scored again, as recency moves with the
-// clock; no model is asked.
+// clock. No model is asked.
 //
 // Every model call goes through `ask`, which the worker gives (the ledger and sorting's health). A
-// provider's refusal stops the pass and is thrown as it came, for the job's retry policy; what was
+// provider's refusal stops the pass and is thrown as it came, for the job's retry policy. What was
 // done stays done, and the rest waits Unsorted.
 import type {NewsSection} from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
@@ -308,7 +308,7 @@ export function scoreStory(store: Store, storyId: number): {score: number; chang
 
 /**
  * Upcoming: a keynote the story's articles report, once confirmed by a second outlet or the company
- * itself, while it's still to come. One event per story; a keynote another story already holds for
+ * itself, while it's still to come. One event per story. A keynote another story already holds for
  * that day isn't added twice.
  */
 export function noteKeynote(store: Store, storyId: number, sources: Map<number, SourceRow>) {
@@ -346,7 +346,7 @@ const announce = (store: Store, storyIds: readonly number[]) => {
   if (storyIds.length) noteLive(store, {type: 'news', stories: [...storyIds], sections: sectionsOf(store, storyIds), sources: []});
 };
 
-/** Runs `work` over the items, a few at a time; the first failure is thrown once the others have stopped. */
+/** Runs `work` over the items, a few at a time. The first failure is thrown once the others have stopped. */
 async function eachAtOnce<T>(items: readonly T[], width: number, work: (item: T) => Promise<void>) {
   const queue = [...items];
   let failure: unknown = null;

@@ -5,7 +5,7 @@
 // does a checkout without a snapshot.
 //
 // Its times move by the gap from when it was taken to the seed's moment, so the news is as fresh
-// against the seed's clock as it was when taken; a keynote's start moves by whole days, keeping its
+// against the seed's clock as it was when taken. A keynote's start moves by whole days, keeping its
 // hour. Every source is a `dev` stand-in, which no adapter fetches. Rows keep their ids, so the
 // images keep their names.
 import fs from 'node:fs';
@@ -42,7 +42,7 @@ export function moved(row: Row, by: number): Row {
     [column, typeof value === 'string' && INSTANT.test(value) ? new Date(Date.parse(value) + by).toISOString() : value]));
 }
 
-/** Loads the snapshot in `dir` into an empty News, its images into `imagesDir`; the stories it holds. */
+/** Loads the snapshot in `dir` into an empty News, its images into `imagesDir`. Returns the stories it holds. */
 export function loadNewsSnapshot(store: Store, dir: string, imagesDir: string | null): {stories: number} {
   const file = path.join(dir, 'news.json');
   if (!fs.existsSync(file)) throw new Error(`No news snapshot at ${file}: take one first (src/dev/exportNews.ts).`);

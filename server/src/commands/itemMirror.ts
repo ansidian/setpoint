@@ -1,8 +1,8 @@
 // Calendar changes as the mirror shows them, including recurring scope (This event, This and
-// following, All events), in Google's model: a recurring item with an RFC 5545 rule, and exceptions
-// for single occurrences (`recurring_item_id` + `original_start`; a deleted occurrence is a
-// cancelled exception). The command layer applies these up front (or, for deletes, on
-// confirmation); a provider adapter makes the same change at the provider.
+// following, All events), in Google's model. That's a recurring item with an RFC 5545 rule, and
+// exceptions for single occurrences (`recurring_item_id` + `original_start`, a deleted occurrence is
+// a cancelled exception). The command layer applies these up front (or, for deletes, on
+// confirmation). A provider adapter makes the same change at the provider.
 import {randomBytes} from 'node:crypto';
 import type {ItemChanges, ItemWhen, RecurringScope} from '@setpoint/shared';
 import {and, eq, inArray, isNotNull, isNull} from 'drizzle-orm';
@@ -62,7 +62,7 @@ function snapshot(store: Store, ids: number[]): ItemSnapshot[] {
 /** Move back: deletes what the change created and puts the changed rows back as they were. */
 /**
  * The done occurrences that reopen: each repeating task's latest, while the task still
- * repeats. Todoist puts the task back on that day; an older one is a record of work done, as Todoist
+ * repeats. Todoist puts the task back on that day. An older one is a record of work done, as Todoist
  * treats it.
  */
 export function reopenableOccurrences(store: Store): Set<number> {
@@ -113,7 +113,7 @@ export interface ItemChangeResult {
  */
 export function changeItemInMirror(store: Store, item: ItemRow, changes: ItemChanges, scope: RecurringScope, occurrenceStart: string | null, timeZone: string): ItemChangeResult {
   const columns = changeColumns(changes);
-  // An exception changed on its own is a plain change; with following or all, its series changes.
+  // An exception changed on its own is a plain change. With following or all, its series changes.
   if (item.recurringItemId !== null && scope !== 'this') {
     const master = store.db.select().from(t.items).where(eq(t.items.id, item.recurringItemId)).get()!;
     return changeItemInMirror(store, master, changes, scope, item.originalStart, timeZone);

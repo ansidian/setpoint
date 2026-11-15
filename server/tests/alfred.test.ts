@@ -1,9 +1,9 @@
-// Alfred over the seed with the model faked at the HTTP boundary (tests/fakeModels.ts): the fake
-// plays a model that uses the tools, reading what Setpoint's real tools returned from the transcript
-// each request carries, so these tests check the tool calls and the sources, not canned text.
+// Alfred over the seed, with the model faked at the HTTP boundary (tests/fakeModels.ts). The fake
+// plays a model that uses the tools. It reads what Setpoint's real tools returned from the transcript
+// that each request carries. So these tests check the tool calls and the sources, not canned text.
 // The seed's sample questions: "When does my lease renewal need to be signed?" → "By Oct 31, 2026, per
-// Parkside's Sep 30 email", with that email as its source; "what's the new rent?" → "$2,140 a month,
-// up from $2,060."
+// Parkside's Sep 30 email", with that email as its source, and "what's the new rent?" → "$2,140 a
+// month, up from $2,060."
 import {searchInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -210,7 +210,7 @@ describe('Alfred\'s other paths', () => {
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'Hi?'}})).body.error.code).toBe('alfred_declined');
     fake.answer(() => ({calls: [{name: 'search_mail', input: {query: 'lease'}}]}));
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'Hi?'}})).body.error.code).toBe('alfred_step_limit');
-    // Nothing was saved by the failures; the refusal and the step limit's calls are in the ledger.
+    // The failures saved nothing. The refusal and the step limit's calls are in the ledger.
     expect(w.store.db.select().from(t.alfredConversations).all()).toEqual([]);
     expect(ledger(w)).toHaveLength(11);
     expect(fake.requests[0]!.body.thinking).toEqual({type: 'between_tools'});

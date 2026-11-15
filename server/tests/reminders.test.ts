@@ -135,7 +135,7 @@ describe('reminders through notify() to ntfy', () => {
     await at('2026-10-07', '14:01');
     expect(sent()).toEqual([['Dentist', '2:30 PM · Smile Dental']]);
     expect(ntfy.published[0]!.body).toMatchObject({topic: 'setpoint-reminders', tags: ['calendar'], click: `https://setpoint.example.com/calendar/item/${item('Dentist').id}`});
-    // Tomorrow 9:00 AM: the car registration (Home); not Gym (Thursday).
+    // Tomorrow 9:00 AM: the car registration (Home), not Gym (Thursday).
     completeItem(w.store, item('Pay rent').id, true);
     await at('2026-10-08', '06:00');
     await at('2026-10-08', '09:00', 30);

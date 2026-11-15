@@ -2,18 +2,18 @@
 // the table under its group header, today's items, and From history folded under them.
 //
 // - A JD to confirm: its candidates as a group, ↑ ↓ choosing and Enter picking while the item has the
-//   cursor; each candidate's arrow opens its posting without picking it; None of these last.
+//   cursor. Each candidate's arrow opens its posting without picking it. None of these comes last.
 // - An update to assign: Assign to… (the company's applications first, Another application…, Not
 //   about a job), and Not about a job. Each application offers its email, opening beside the
 //   menu, which stays, so the update can be told from them before it's assigned.
 // - An email to track: Track this, which makes the application and opens it.
 // - From history: each row's two buttons (Choose… is a menu), and Dismiss all with its Undo.
 // - An item with an email: its subject opens that email where the detail sits. The page holds
-//   which, and the item shows it as the table shows its open row; reading it answers nothing.
+//   which, and the item shows it as the table shows its open row. Reading it answers nothing.
 //
-// Answered (34b, as the Today block's task): the press lands, the item holds its place, taking no
-// more presses, and at 360 ms it folds away (180 ms), the count changing as it starts; the toast says
-// what happened, with Undo, which folds it back. The last item takes the band with it.
+// Answered (34b, as the Today block's task): the press lands, and the item holds its place and takes
+// no more presses. At 360 ms it folds away (180 ms), and the count changes as it starts. The toast
+// says what happened, with Undo, which folds it back. The last item takes the band with it.
 import type {AccountOut, ApplicationRowOut, JdCandidateOut, NeedsYouItemOut} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {age, fullTimestamp, localDate} from '../../logic/format.ts';
@@ -116,7 +116,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   const olds = useFold(historyEntries, FOLDS);
   const live = todays.filter(entry => entry.fold !== 'out');
   const liveHistory = olds.filter(entry => entry.fold !== 'out');
-  // The last item leaving folds the whole band, header and all (180 ms); From history alone keeps its line.
+  // The last item leaving folds the whole band, header and all (180 ms). From history alone keeps its line.
   const band = useHold(live.length || liveHistory.length ? true : null, motion.medium);
   const historyLine = useHold(liveHistory.length ? true : null, motion.medium * 2);
   if (!band.shown) return null;
@@ -135,7 +135,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
     });
   };
 
-  /** Answers an item: the press lands, and at 360 ms it folds away; a refusal brings it back. */
+  /** Answers an item: the press lands, and at 360 ms it folds away. A refusal brings it back. */
   const answer = (item: NeedsYouItemOut, picked: Answered['picked'], send: () => ReturnType<typeof act>, after?: (application: number | null) => void) => {
     if (answered.has(item.id)) return;
     const list = item.from_history ? history : items;
@@ -175,7 +175,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   const choose = (item: NeedsYouItemOut, element: HTMLElement) =>
     openMenu(`choose:${item.id}`, chooseMenu(item.candidates, {pick: candidate => pick(item, candidate), none: () => none(item)}), element);
 
-  // Dismiss all: the rows fold away together, then the line; Undo brings them back.
+  // Dismiss all: the rows fold away together, then the line. Undo brings them back.
   const dismissAll = () => {
     const ids = liveHistory.map(entry => entry.item.id);
     setGone(set => new Set([...set, ...ids]));
@@ -188,7 +188,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
     });
   };
 
-  // The press away has closed any menu; Enter on the subject, with the menu's focus gone, hasn't.
+  // The press away has closed any menu. Enter on the subject, with the menu's focus gone, hasn't.
   const read = (item: NeedsYouItemOut) => {
     setMenu(null);
     onRead(item);

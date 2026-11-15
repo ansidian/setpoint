@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react';
 
 /**
  * `value` as it shows, for what leaves in place (on Jobs, the email's pane, the Needs you band and its
- * From history line; on News, the recap): once it turns null, the last one is kept for `ms` with
+ * From history line; on News, the recap). Once it turns null, the last one is kept for `ms` with
  * `closing` set, while its fold or fade plays.
  */
 export function useHold<T>(value: T | null, ms: number): {shown: T | null; closing: boolean} {

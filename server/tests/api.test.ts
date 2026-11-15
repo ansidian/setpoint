@@ -93,11 +93,11 @@ describe('reads', () => {
     expect(month.items.filter((item: {title: string}) => item.title === 'Dentist')).toMatchObject([{place: 'Smile Dental', address: '1420 Elm St', reminders: [30]}]);
     expect((await c.send('PATCH', '/api/calendars/2', {body: {visible: false}})).body).toMatchObject({name: 'Classes', visible: false, listed: true, command: null});
     expect((await c.send('PATCH', '/api/calendars/2', {body: {listed: false}})).body).toMatchObject({name: 'Classes', visible: false, listed: false});
-    // A colour answers with its command pending; Todoist's has none, and an empty change is refused.
+    // A colour answers with its command pending. Todoist's has none, and an empty change is refused.
     expect((await c.send('PATCH', '/api/calendars/2', {body: {colour: 'sun'}})).body).toMatchObject({name: 'Classes', colour: 'sun', command: {kind: 'calendar_colour', state: 'pending'}});
     expect((await c.send('PATCH', '/api/calendars/4', {body: {colour: 'sun'}})).status).toBe(400);
     expect((await c.send('PATCH', '/api/calendars/2', {body: {}})).status).toBe(400);
-    // A project's colour answers with its command pending; a colour Todoist doesn't have is refused.
+    // A project's colour answers with its command pending. A colour Todoist doesn't have is refused.
     expect((await c.send('PATCH', '/api/todoist/projects/seed-project-3', {body: {colour: 'teal'}})).body).toMatchObject({name: 'Home', colour: 'teal', command: {kind: 'project_colour', state: 'pending'}});
     expect((await c.send('PATCH', '/api/todoist/projects/seed-project-2', {body: {colour: 'sun'}})).status).toBe(400);
     expect((await c.send('GET', '/api/weather?from=2026-10-07&to=2026-10-09')).status).toBe(200);

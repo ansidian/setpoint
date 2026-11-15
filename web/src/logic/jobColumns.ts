@@ -1,5 +1,5 @@
-// The Jobs table's column widths: Company, Applied and Status are dragged by a
-// heading's edge or fitted to their content; Role takes what's left, the gutter and JD stay put.
+// The Jobs table's column widths. Company, Applied and Status are dragged by a heading's edge or
+// fitted to their content. Role takes what's left, and the gutter and JD stay put.
 // Pure: the page measures, this decides.
 
 export type SizedColumn = 'company' | 'applied' | 'status';
@@ -26,13 +26,13 @@ const MAX = 640;
 
 export const START_WIDTHS: ColumnWidths = {company: COLUMN.company.start, applied: COLUMN.applied.start, status: COLUMN.status.start};
 
-/** A width whole and inside its column's bounds; anything unreadable is its start. */
+/** A width whole and inside its column's bounds. Anything unreadable is its start. */
 export function columnWidth(column: SizedColumn, width: unknown): number {
   const value = typeof width === 'number' ? width : typeof width === 'string' && width.trim() ? Number(width) : NaN;
   return Number.isFinite(value) ? Math.round(Math.min(MAX, Math.max(COLUMN[column].min, value))) : COLUMN[column].start;
 }
 
-/** The widths this browser kept (JSON), each read on its own; a missing or unreadable one starts. */
+/** The widths this browser kept (JSON), each read on its own. A missing or unreadable one starts. */
 export function storedWidths(text: string | null): ColumnWidths {
   let kept: Record<string, unknown> = {};
   try {

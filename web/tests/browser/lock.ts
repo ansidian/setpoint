@@ -1,9 +1,10 @@
-// One browser run at a time on this machine: other sessions run the checks too, and two runs
-// side by side slow each other into failing. The lock is a file in /tmp, not the session's own
-// temp directory, so every session sees it; a lock whose process has gone is taken over. Every way
-// in takes it: `npm run test:browser` (run.ts) before its build, a `node --test` with the global
-// setup in its globalSetup, release:check (release.ts) for as long as it runs anything, and anything else (a bare `node --test` of a spec) when
-// it first launches Chromium (harness.ts › launchBrowser). `npm test` doesn't.
+// One browser run at a time on this machine. Other sessions run the checks too, and two runs side by
+// side slow each other into failing. The lock is a file in /tmp, not the session's own temp
+// directory, so every session sees it. A lock whose process has gone is taken over. Every way in
+// takes it: `npm run test:browser` (run.ts) before its build, a `node --test` with the global setup
+// in its globalSetup, release:check (release.ts) for as long as it runs anything, and anything else
+// (a bare `node --test` of a spec) when it first launches Chromium (harness.ts › launchBrowser).
+// `npm test` doesn't.
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 
@@ -39,9 +40,9 @@ function alive(pid: number): boolean {
 }
 
 /**
- * Takes the lock for the run whose process is `owner`, waiting for another run to finish;
- * resolves with how long it waited. A lock `owner` already holds is kept, and so is one held by the
- * run that started this process (release:check's, for the browser runs it starts).
+ * Takes the lock for the run whose process is `owner`, waiting for another run to finish. Resolves
+ * with how long it waited. A lock `owner` already holds is kept, and so is one held by the run that
+ * started this process (release:check's, for the browser runs it starts).
  */
 export async function acquire(owner = process.pid): Promise<number> {
   const started = Date.now();
@@ -93,10 +94,10 @@ export function handDown() {
 let holding = false;
 
 /**
- * The lock for a run that didn't come through run.ts. A spec file under `node --test` belongs to
- * the test runner's run, its parent: the first of the run's files to get here takes the lock for
- * it, the rest find it held, and it's taken over once the runner has gone. Anything else (the
- * runner's global setup) holds it itself until it exits, for what it starts too.
+ * The lock for a run that didn't come through run.ts. A spec file under `node --test` belongs to the
+ * test runner's run, its parent. The first of the run's files to get here takes the lock for it, and
+ * the rest find it held. It's taken over once the runner has gone. Anything else (the runner's
+ * global setup) holds it itself until it exits, for what it starts too.
  */
 export async function holdForRun() {
   const held = Number(process.env[HELD]);

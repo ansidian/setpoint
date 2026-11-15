@@ -1,12 +1,12 @@
 // What Setpoint on job boards reads on Indeed's job pages. Indeed's class names are
 // generated, so it reads its test ids and job keys (README.md › What it reads on Indeed):
 //
-// - The job pane, one header on a search, the home feed and a job's own page: its title in
-//   vj-job-title, its company the first line of company-info-metadata. It carries no job key of its
-//   own, so where the open job's card is on the page it's read only once its title and company are
-//   the card's: a pane still showing the last job isn't read as this one.
-// - A card: an a[data-jk] whose title is #jobTitle-<jk>, its company the company-name in the nearest
-//   ancestor holding one. Indeed hides a made-up card among them, which is skipped.
+// - The job pane, one header on a search, the home feed and a job's own page. Its title is in
+//   vj-job-title, and its company is the first line of company-info-metadata. The pane carries no
+//   job key of its own. So where the open job's card is on the page, the pane is read only once its
+//   title and company are the card's. A pane still showing the last job isn't read as this one.
+// - A card: an a[data-jk] whose title is #jobTitle-<jk>. Its company is the company-name in the
+//   nearest ancestor that holds one. Indeed hides a made-up card among them, which is skipped.
 import {unreadOf} from './posting.ts';
 import type {PageRead, Posting} from './posting.ts';
 
@@ -40,8 +40,8 @@ export function readCards(doc: Document = document): Posting[] {
     // Indeed hides a made-up card among the real ones, out of sight and out of the screen readers'.
     if (!KEY.test(jobId) || link.closest('[aria-hidden="true"]')) continue;
     const title = textOf(link.querySelector(`[id="jobTitle-${jobId}"]`));
-    // The card is the link's nearest ancestor naming a company; one holding other jobs' links has
-    // climbed out of it, as from a carousel's card, which names none.
+    // The card is the link's nearest ancestor that names a company. An ancestor that holds other
+    // jobs' links has climbed out of the card, as from a carousel's card, which names none.
     let card = link.parentElement;
     while (card && !card.querySelector(COMPANY)) card = card.parentElement;
     if (!title || !card || card.querySelectorAll('a[data-jk]').length > 1) continue;

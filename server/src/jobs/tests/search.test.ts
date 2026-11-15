@@ -1,5 +1,5 @@
 // Jobs's search as tables: loose company matching, the ranking of company or role
-// matches, the line a JD's text matched; then the route against the seed (36a, 36b), and the shell's
+// matches, the line a JD's text matched. Then the route against the seed (36a, 36b), and the shell's
 // item (GET /api/jobs/nav).
 import {jobsNavSchema, jobsSearchSchema} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -47,7 +47,7 @@ describe('company or role, best first', () => {
   ];
 
   test.each<[string, number[], number[]]>([
-    // 36a: both Humongous applications, newest first; a JD mentioning it comes after.
+    // 36a: both Humongous applications, newest first. A JD mentioning it comes after.
     ['humongous', [2, 1], [3]],
     // The company before a role that only names it.
     ['insurance', [2, 1, 4], []],

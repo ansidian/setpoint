@@ -1,9 +1,9 @@
 // Todoist's webhook at POST /api/todoist/webhook (the path the app's registration in Todoist's
 // console names). Its rules:
-// - the signature is HMAC-SHA256 of the raw body with the app's client secret, base64, compared in
-//   constant time after a length check; no secret or no signature is refused;
-// - X-Todoist-Delivery-Id is required and taken once (a redelivery queues nothing), kept 30 days;
-// - the payload is never applied: a delivery only wakes the Todoist source's sync.
+// - The signature is HMAC-SHA256 of the raw body with the app's client secret, base64, compared in
+//   constant time after a length check. No secret or no signature is refused.
+// - X-Todoist-Delivery-Id is required and taken once (a redelivery queues nothing), kept 30 days.
+// - The payload is never applied. A delivery only wakes the Todoist source's sync.
 // The engine's job key and 5-minute poll do the debounce, coalescing and backstop.
 import {createHmac, timingSafeEqual} from 'node:crypto';
 import {and, eq, isNull, lt} from 'drizzle-orm';

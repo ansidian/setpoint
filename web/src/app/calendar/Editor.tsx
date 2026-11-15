@@ -1,16 +1,17 @@
-// The editor in the right pane (boards 13 and 14). A new event or task starts
-// from one line that parses as it's typed ("Dinner with Sam fri 7-9pm @Blue Door": date, time and
-// end, place, calendar, each parsed part marked), with the fields under it to check or change: the
-// title, the date and times, the place with Places suggestions, the calendar, reminders (Settings ›
-// Notifications' default; presets and Custom…, Reminders.tsx), the repeat, then the conflict preview, a small timeline of
-// the day. Batch drafts add more events ("Create 2 events ⌘Enter"). A Todoist task uses the same
-// editor with its due date, project, labels and repeat (Todoist's words, sent with the date).
-// Opened from an email (the proposal card's More options), the fields hold what the card held, and
-// those the email gave keep the card's "from the email" mark until they're changed; opened from
-// News's Upcoming (its Add to calendar), the keynote's proposal, as an email's is, its calendar picked
-// the same way, but with no "from the email" marks. Editing an item shows its fields directly (board 14), says
-// what it was ("Was 7:00 – 8:00 AM"), and a recurring event asks This event, This and following or
-// All events in place of the footer before it saves. Nothing is created or changed until ⌘Enter.
+// The editor in the right pane (boards 13 and 14). A new event or task starts from one line that
+// parses as it's typed ("Dinner with Sam fri 7-9pm @Blue Door": date, time and end, place, calendar,
+// each parsed part marked). The fields under it are there to check or change: the title, the date
+// and times, the place with Places suggestions, the calendar, reminders (Settings › Notifications'
+// default, presets and Custom…, Reminders.tsx), the repeat, then the conflict preview, a small
+// timeline of the day. Batch drafts add more events ("Create 2 events ⌘Enter"). A Todoist task uses
+// the same editor with its due date, project, labels and repeat (Todoist's words, sent with the date).
+// Opened from an email (the proposal card's More options), the fields hold what the card held. Those
+// the email gave keep the card's "from the email" mark until they're changed. Opened from News's
+// Upcoming (its Add to calendar), it holds the keynote's proposal, as an email's is, its calendar
+// picked the same way, but with no "from the email" marks. Editing an item shows its fields directly
+// (board 14) and says what it was ("Was 7:00 – 8:00 AM"). A recurring event asks This event, This and
+// following or All events in place of the footer before it saves. Nothing is created or changed
+// until ⌘Enter.
 import type {CalendarOut, Colour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ItemsOut, PlaceSuggestionOut, ProposalField, ProposalOut, RecentPlaceOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
 import {isFree, proposalConflict, TODOIST_COLOURS} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
@@ -87,15 +88,15 @@ interface Draft {
   // Phrases clicked back to title words, which the line no longer reads until they're typed into.
   plain: Span[];
   date: string;
-  // A new task's date taken off with its ×; `date` stays, for a day picked again.
+  // A new task's date taken off with its ×. `date` stays, for a day picked again.
   undated: boolean;
   // The day it was put on (opened on, or a grid day clicked): its date when the line names none.
   day: string;
-  // Minutes after the date's midnight; null is all day (an event) or no time (a task). A timed
+  // Minutes after the date's midnight. Null is all day (an event) or no time (a task). A timed
   // event's end may be days on.
   start: number | null;
   end: number | null;
-  // An all-day event's days, its date the first; 1 otherwise.
+  // An all-day event's days, its date the first, or 1 otherwise.
   days: number;
   // The time it was put at on the week view (a range dragged, a slot clicked): its time when the
   // line names none, as `day` is its date.
@@ -108,12 +109,12 @@ interface Draft {
   // Null: the first calendar shown (events).
   calendarId: number | null;
   // Null: Settings › Notifications' default, which the server applies too. Picked in
-  // the editor (or an edited item's own); the line's sit beside them.
+  // the editor (or an edited item's own). The line's sit beside them.
   reminders: number[] | null;
   // The line's reminder phrases: they replace the default and sit beside what's
   // picked, as offsets from the item's moment as it stands (`remindersOf`).
   lineReminders: ReminderRead[];
-  // Time to Leave, added from the reminder menu; never by default.
+  // Time to Leave, added from the reminder menu, never by default.
   leaveReminder: boolean;
   recurrence: string | null;
   project: string | null;
@@ -126,13 +127,13 @@ interface Draft {
   // A task's Todoist labels and repeat (Todoist's words).
   labels: string[];
   repeat: string | null;
-  // Fields an email gave (More options on its proposal card), marked until they're changed; the
-  // description's From: line among them, a mark the server's list doesn't carry.
+  // Fields an email gave (More options on its proposal card), marked until they're changed. The
+  // description's From: line is among them, a mark the server's list doesn't carry.
   fromEmail: Marked[];
   // Fields set by hand: the line's parse no longer changes them.
   manual: Manual[];
   // The description as the field reads it (logic/description.ts), written in its provider's
-  // format on save; `descriptionLossy` when the item's own held formatting that reading drops.
+  // format on save. `descriptionLossy` when the item's own held formatting that reading drops.
   description: Block[];
   descriptionLossy: boolean;
   // What it opened with (an email's or a keynote's proposal), which the line falls back to where it
@@ -178,7 +179,7 @@ function emptyDraft(kind: ItemKind, date: string, slot: Slot | null = null): Dra
 
 /**
  * The instant a draft's reminders count from: its start or due time, an all-day event's
- * midnight, or a dated task's Settings' task time (`taskTime`, minutes); a task with no date has none.
+ * midnight, or a dated task's Settings' task time (`taskTime`, minutes). A task with no date has none.
  */
 const anchorOf = (draft: Draft, taskTime: number, timeZone: string) => (draft.kind === 'task' && draft.undated ? null
   : Date.parse(instantAt(draft.date, draft.start ?? (draft.kind === 'task' ? taskTime : 0), timeZone)));
@@ -190,7 +191,7 @@ const remindersOf = (draft: Draft, taskTime: number, timeZone: string) =>
 /**
  * What the line's reminder phrases count from when it names no day or time: the item's day
  * and its start, the slot's or 9:00 AM for a new event, an all-day one's midnight, a task's Settings'
- * task time; an edited item's own. A task with no date has none, so its phrases stay words.
+ * task time, or an edited item's own. A task with no date has none, so its phrases stay words.
  */
 function reminderBase(draft: Draft, original: Draft | null, taskTime: number): ReminderBase | null {
   if (draft.kind === 'task' && draft.undated) return null;
@@ -209,7 +210,7 @@ const withDefaults = (draft: Draft, calendar: number | null, reminders: number[]
 /**
  * An .ics file's one event as a new draft: its title as words only, none of them read,
  * its day and time in the user's zone, place, repeat, and its own reminders, never Settings'
- * default; the calendar already holding it, if one does. The fields are set, so the line's parse
+ * default, and the calendar already holding it, if one does. The fields are set, so the line's parse
  * leaves them be.
  */
 function fromIcs(event: IcsEventOut, timeZone: string): Draft {
@@ -234,7 +235,7 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
   const days = item.kind === 'event' && !timed && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
   const description = readDescription(formatOf(item.kind), item.description);
   return {
-    // A subtask can have no date; it opens with none, and a day picked gives it one.
+    // A subtask can have no date. It opens with none, and a day picked gives it one.
     id: nextDraft++, kind: item.kind, text: item.title, title: item.title, plain: [], date, undated: item.kind === 'task' && !item.due_date, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
     calendarId: item.calendar_id, reminders: item.reminders, lineReminders: [], leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
     description: description.blocks, descriptionLossy: description.lossy, fromEmail: [], manual: [], base: NO_BASE,
@@ -243,14 +244,14 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
 
 /**
  * An email's or a keynote's proposal as a new draft: its title in the line as words only,
- * none of them read, as the iPhone's typeTitle; its day, time, place, calendar and project
+ * none of them read, as the iPhone's typeTitle. Its day, time, place, calendar and project
  * are what the line falls back to, so the line still reads what's typed after it. With no day from
  * the email it starts with none, which Create then asks for.
  */
 function fromProposal(draft: Draft, {proposal, reminders, newProject}: Handed, timeZone: string): Draft {
   const item = proposal.item;
   const date = item.kind === 'task' ? item.due_date : item.start_date ?? (item.starts_at ? localDate(item.starts_at, timeZone) : null);
-  // No time from the email: all day (an event) or no time (a task); an hour when it gave no end.
+  // No time from the email: all day (an event) or no time (a task). An hour when it gave no end.
   const start = item.starts_at ? minutesOf(item.starts_at, timeZone) : item.due_at ? minutesOf(item.due_at, timeZone) : null;
   const end = item.starts_at ? start! + (item.ends_at ? Math.round((Date.parse(item.ends_at) - Date.parse(item.starts_at)) / 60_000) : DEFAULT_LENGTH) : null;
   const days = item.kind === 'event' && item.all_day && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
@@ -271,7 +272,7 @@ const lineHash = (draft: Draft, projects: string[], calendars: CalendarOut[]) =>
   : {kind: 'calendar' as const, names: calendars.map(calendar => calendar.name), picked: draft.pickedCalendar});
 
 /**
- * A draft's line as parsed; an edited item's (`original`) reads only what the edit typed.
+ * A draft's line as parsed. An edited item's (`original`) reads only what the edit typed.
  * Its plain phrases are hidden from the parser and come back as title words.
  */
 function readLine(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], original: Draft | null, taskTime: number): ParsedTitle {
@@ -286,7 +287,7 @@ function readLine(draft: Draft, text: string, today: string, calendars: Calendar
 /**
  * The Title typed into an edited item: what the edit typed changes the item's own fields,
  * as on a new item's line, and a phrase taken out again puts back what the item had. Fields set by
- * hand stay; a time typed after the date was set by hand keeps the days picked. A reminder phrase
+ * hand stay. A time typed after the date was set by hand keeps the days picked. A reminder phrase
  * typed adds to the item's reminders.
  */
 function retypeEdit(draft: Draft, text: string, original: Draft, today: string, calendars: CalendarOut[], projects: string[], taskTime: number): Draft {
@@ -297,7 +298,7 @@ function retypeEdit(draft: Draft, text: string, original: Draft, today: string, 
   if (by('reminders')) next.lineReminders = parsed.reminders ?? [];
   const base = by('date') && by('time') ? original : draft;
   Object.assign(next, editedWhen({date: by('date') ? original.date : draft.date, start: base.start, end: base.end, days: base.days},
-    // A span of days (all day) needs both its day and time; a length only its time.
+    // A span of days (all day) needs both its day and time. A length needs only its time.
     {date: by('date') ? parsed.date : null, start: by('time') ? parsed.start : null, end: by('time') ? parsed.end : null,
       days: by('date') && by('time') ? parsed.days : null, length: by('time') ? parsed.length : null}, draft.kind));
   if (by('place') && draft.kind === 'event') {
@@ -468,8 +469,7 @@ const markClass: Record<Mark['kind'], string> = {when: 'tok-d', place: 'tok-p', 
 /**
  * The line's text with its marks: a #calendar in its calendar's colour, a #project in its project's
  * (`ink2` while it names no project yet, or a new one). The mark still being typed, its menu
- * open, is `live`, only a dashed underline; the one just picked lands, its tint brightening once
- *.
+ * open, is `live`, only a dashed underline. The one just picked lands, its tint brightening once.
  */
 function Marked({text, marks, calendarColour, projectColour, live = null, landed = null, over = null}: {
   text: string;
@@ -567,7 +567,7 @@ interface EditorProps {
   onDirty?: (dirty: boolean) => void;
   // The drafts as they stand, after every change, for the page to keep if it's left.
   onKeep?: (kept: KeptDrafts) => void;
-  // A day clicked on the grid for the active new draft; on the week view's hours, its time too.
+  // A day clicked on the grid for the active new draft. On the week view's hours, its time too.
   place?: {day: string; at?: number};
   // The editor as an email's proposal card.
   card?: EditorCard;
@@ -625,7 +625,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const [menu, setMenu] = useState<'calendar' | 'repeat' | 'reminder' | 'labels' | 'more' | null>(null);
   const menuRef = useMenuRef(menu, () => setMenu(null));
   const [places, setPlaces] = useState<{query: string; list: PlaceSuggestionOut[]; cur: number} | null>(null);
-  // The Place field was focused, so it offers the recent places; and the recent list's cursor, or Esc.
+  // The Place field was focused, so it offers the recent places. And the recent list's cursor, or Esc.
   const [placeAsked, setPlaceAsked] = useState(false);
   const [recentMenu, setRecentMenu] = useState<{query: string; cur: number; closed: boolean} | null>(null);
   // The line's #project menu: its cursor, and whether Esc closed it, for the project typed.
@@ -673,7 +673,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   }, [filled, draft.date, editing, timeZone, todoist, defaultProject, onPreview]);
   useEffect(() => () => onPreview([], null), [onPreview]);
 
-  // Places for the place as it's typed (in the line or the field), until one is picked; a link has none.
+  // Places for the place as it's typed (in the line or the field), until one is picked. A link has none.
   // The place a proposal came with isn't searched until it's changed.
   const placeQuery = draft.kind === 'event' && draft.address === null && !PLACE_URL.test(draft.place.trim()) && draft.place.trim() !== draft.base.place.trim() ? draft.place.trim() : '';
   useEffect(() => {
@@ -786,7 +786,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     return edited.length ? {...next, fromEmail: next.fromEmail.filter(field => !edited.includes(field))} : next;
   };
   // Each draft's phrases made words since it was last typed into, as its line and words were before
-  // each: ⌘Z in the line takes them back, newest first, and then it's the line's own undo again.
+  // each. ⌘Z in the line takes them back, newest first, and then it's the line's own undo again.
   const madePlain = useRef(new Map<number, {text: string; plain: Span[]}[]>());
   const typeLine = (text: string) => {
     madePlain.current.delete(draft.id);
@@ -797,7 +797,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     madePlain.current.set(draft.id, [...madePlain.current.get(draft.id) ?? [], {text: draft.text, plain: draft.plain}]);
     setDrafts(list => list.map(one => (one.id === draft.id ? reread({...one, plain: [...one.plain, {start: mark.start, end: mark.end}]}, one.text) : one)));
   };
-  /** The last phrase made words taken back, if the line is still as it was then; false if none. */
+  /** The last phrase made words taken back, if the line is still as it was then, or false if none. */
   const unmakePlain = () => {
     const steps = madePlain.current.get(draft.id) ?? [];
     const last = steps.at(-1);
@@ -862,7 +862,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     setPlaceAsked(false);
     // A recent place comes with its address, and isn't Google's.
     if (!place.place_id) return;
-    // A suggestion's second line can leave out the street number; Place Details has the address in
+    // A suggestion's second line can leave out the street number. Place Details has the address in
     // full. It ends Google's session, so the next place typed starts a new one.
     const id = draft.id;
     setSessionToken(crypto.randomUUID());
@@ -947,7 +947,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       event.preventDefault();
       submit();
     } else if (event.key === 'Backspace' && event.altKey && !event.metaKey && !event.ctrlKey && event.target === line.current && line.current.selectionStart === line.current.selectionEnd) {
-      // ⌥⌫ inside a lit phrase makes it words; at its edge it deletes a word, as ever.
+      // ⌥⌫ inside a lit phrase makes it words. At its edge it deletes a word, as ever.
       const inside = markInside(parsed.marks, line.current.selectionStart ?? 0);
       if (inside) {
         event.preventDefault();
@@ -977,7 +977,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       const delta = event.key === 'ArrowDown' ? 1 : -1;
       setPlaces({...places, cur: (places.cur + delta + places.list.length) % places.list.length});
     } else if (placesOpen && (event.key === 'Enter' || accepts(event))) {
-      // Tab picks as Enter does; from the Place field it goes on to the next field.
+      // Tab picks as Enter does. From the Place field it goes on to the next field.
       if (event.key === 'Enter' || event.target === line.current) event.preventDefault();
       pick(places.list[places.cur]!);
     } else if (lineOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
@@ -992,7 +992,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const calendar = (calendars ?? []).find(one => one.id === draft.calendarId);
   // An event's last day: its date for a one-day event and every task.
   const lastDay = kind === 'event' ? addDays(draft.date, extraDays(draft.start, draft.end, draft.days)) : draft.date;
-  // Each row whose value the line gave takes its mark's colour on its glyph; set by hand, it's `ink3`
+  // Each row whose value the line gave takes its mark's colour on its glyph. Set by hand, it's `ink3`
   // again.
   const fromLine = (kind: Mark['kind'], ...fields: Manual[]) => parsed.marks.some(one => one.kind === kind) && !fields.some(field => draft.manual.includes(field));
   const echo = {
@@ -1020,13 +1020,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     : null;
 
   // What the reminders count from: the start or due time, an all-day event's midnight, or a
-  // dated task's Settings' task time (9:00 AM at None); a task with no date has none.
+  // dated task's Settings' task time (9:00 AM at None). A task with no date has none.
   const untimedTask = kind === 'task' && !draft.undated && draft.start === null;
   const reminderFrom = anchorOf(draft, taskTime, timeZone);
   const countsFrom = untimedTask && reminderFrom !== null ? `Counts from ${clockTime(reminderFrom, timeZone)}` : null;
 
   // The card's conflict line (board 08), worked out again by the server's rule as the day and time
-  // change; the email's own until the day's items load.
+  // change. It shows the email's own until the day's items load.
   const conflictDay = card && kind === 'event' && !draft.undated ? draft.date : null;
   const {data: dayList} = useResource<ItemsOut>(conflictDay ? itemsPath(conflictDay, addDays(conflictDay, 1)) : null);
   const proposal = card?.proposal;
@@ -1074,7 +1074,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
       <div className="ed-scroll">
         <div className="ed-line">
-          {/* An edited item's Title is a line too, reading only what's typed into it; a new item's
+          {/* An edited item's Title is a line too, reading only what's typed into it. A new item's
               title is its line's title words, with no Title field under it. */}
           <label className={`field big nl${titleMark ? ' src' : ''}${overMark !== null ? ' over' : ''}`}>
             <span ref={lineMarks} className="nl-marks" aria-hidden="true">
@@ -1112,8 +1112,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               shown={draft.undated ? '' : lastDay === draft.date ? dayTitle(draft.date) : `${dayTitle(draft.date)} – ${dayTitle(lastDay)}`}
               today={today} read={text => parseDay(text, today)} onValue={date => change({date, undated: false}, ['date'])}
               range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change({...spanTo(from, to, draft.start, draft.end), undated: false}, ['date'])} : undefined}
-              // A new task can go to Todoist with no date, its time going with it; a day picked brings one back.
-              // An edited subtask's too, which stays in its task's checklist; a task's date stays on.
+              // A new task can go to Todoist with no date, its time going with it. A day picked brings one back.
+              // An edited subtask's too, which stays in its task's checklist. A task's date stays on.
               onClear={kind === 'task' && (!editing || editing.parent_id !== null) ? () => {
                 change({undated: true, start: null, ...(editing ? {reminders: [], repeat: null} : {})}, ['date', 'time']);
                 form.current?.focus();
@@ -1251,7 +1251,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           ) : (
             <>
               <Icon name="work" size={17} className={`g-proj ${echo.project ?? ''}`} style={projectTodoist ? {'--c': TODOIST_COLOURS[projectTodoist]} as CSSProperties : undefined} />
-              {/* A subtask is in its task's project; moved to another, Todoist would take it out from under its task. */}
+              {/* A subtask is in its task's project. Moved to another, Todoist would take it out from under its task. */}
               {editing?.parent_id != null ? <span className="ink2 sub-project" data-tip="A subtask is in its task's project">{draft.project}</span> : (
               <ProjectField value={draft.project ?? ''} isNew={draft.newProject} projects={projects ?? []} noNew={!!editing}
                 placeholder={settings?.todoist.default_project ?? projects?.find(one => one.inbox)?.name ?? 'Inbox'}
@@ -1295,7 +1295,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           <RemindersRow reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today} glyph={`g-remind ${echo.reminder ?? ''}`}
             menuOpen={menu === 'reminder'} menuRef={menuRef} onMenu={open => setMenu(open ? 'reminder' : null)}
             onChange={list => {
-              // Ticked beside the line's they're picked; one the line set taken out sets them by hand.
+              // Ticked beside the line's they're picked. One the line set, taken out, sets them by hand.
               const {reminders, byHand} = rowReminders(list, raw.reminders, lineOffsets(raw.lineReminders, reminderFrom, timeZone));
               change(byHand ? {reminders, lineReminders: []} : {reminders}, byHand ? ['reminders'] : []);
             }}

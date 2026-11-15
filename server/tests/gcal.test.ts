@@ -1,6 +1,6 @@
-// The Google Calendar adapter against a fake Google on 127.0.0.1: the mirror from the calendar list
-// and sync tokens; create, a recurring move with each scope, a 409 failed in place, deletes; and
-// Google's errors (revoked consent, 410, 412, 429, timeouts).
+// The Google Calendar adapter against a fake Google on 127.0.0.1. It covers the mirror from the
+// calendar list and sync tokens, then create, a recurring move with each scope, a 409 failed in place
+// and deletes, then Google's errors (revoked consent, 410, 412, 429, timeouts).
 import {itemCreateInput, itemScopeInput, itemUpdateInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -22,8 +22,8 @@ const CLASSES = 'classes@group.calendar.google.com';
 import {fakeNtfy} from './fakeNtfy.ts';
 import {liveEvents, world} from './helpers.ts';
 
-// A description as Google Calendar's own editor writes one (read from a real event, 2026-11-10): lines joined by
-// <br> with no paragraphs, lists straight after a line, and an empty tag left behind.
+// A description as Google Calendar's own editor writes one (read from a real event, 2026-11-10):
+// lines joined by <br> with no paragraphs, lists straight after a line, and an empty tag left behind.
 const GOOGLE_DESCRIPTION = '<b>Bring</b> the signed form<br><i>Room 204</i><br><u>Arrive early</u><br><ol><li><i>Check in</i></li><li>Badge</li></ol><ul><li>Laptop</li></ul><br><a href="https://example.com/visit">https://example.com/visit</a><i></i>';
 
 const conflict = {status: 409, body: {error: {code: 409, message: 'The requested event was modified by another client.', errors: [{domain: 'global', reason: 'conflict'}]}}};
@@ -405,14 +405,14 @@ describe('changes through the command layer', () => {
     const {w, google, run, item, calendar, command, day} = await calendarWorld();
     google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, colorId: '1'});
     await run();
-    // Lavender (1) reads as violet; Gym has none, so it takes its calendar's.
+    // Lavender (1) reads as violet. Gym has none, so it takes its calendar's.
     expect(day('2026-10-09').map(entry => [entry.title, entry.colour])).toEqual([['Gym', null], ['Dinner with Sam', 'violet']]);
     // Another change leaves Google's Lavender alone (violet would write back as Grape, 3).
     const renamed = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {title: 'Dinner with Sam and Jo'}}));
     await run();
     expect(command(renamed.id).state).toBe('confirmed');
     expect(google.event(PERSONAL, 'dinner')!.colorId).toBe('1');
-    // Colour: Blueberry (9) for cool; none again clears it.
+    // Colour: Blueberry (9) for cool. None again clears it.
     const coloured = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {colour: 'cool'}}));
     await run();
     expect(command(coloured.id).state).toBe('confirmed');
@@ -606,7 +606,7 @@ describe('changes through the command layer', () => {
     expect(day('2026-10-09').find(entry => entry.id === dinnerId)).toMatchObject({calendar_id: calendar(CLASSES).id, command: {state: 'failed', can_move_back: true}});
     moveBackCommand(w.store, stale.id);
     expect(day('2026-10-09').find(entry => entry.id === dinnerId)!.calendar_id).toBe(calendar(PERSONAL).id);
-    // Setpoint catches up with the change made elsewhere, then a 409 fails the next move; Try again takes it.
+    // Setpoint catches up with the change made elsewhere, then a 409 fails the next move. Try again takes it.
     w.advance(16 * 60_000);
     await run();
     google.fault({method: 'POST', path: /\/events\/dinner\/move/, response: conflict});
@@ -734,7 +734,7 @@ describe('a calendar\'s colour, written to Google', () => {
     await run();
     expect(command(renamed.id).state).toBe('confirmed');
     expect(google.event(PERSONAL, 'dinner')!.summary).toBe('Dinner at Blue Door');
-    // Change back restores the colour; after a reconnect, Try again would send it again.
+    // Change back restores the colour. After a reconnect, Try again would send it again.
     moveBackCommand(w.store, picked.id);
     expect(calendar(PERSONAL).colour).toBe('cool');
   });

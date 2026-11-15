@@ -1,6 +1,6 @@
-// `npm run extension:build`: Setpoint on LinkedIn's TypeScript bundled by esbuild into
-// extension/dist/, with its manifest and options page beside it. dist/ is the folder Chrome loads
-// unpacked (README.md › Building and loading it), and stays out of git.
+// `npm run extension:build`: esbuild bundles Setpoint on job boards' TypeScript into
+// extension/dist/, with its manifest and options page beside it. Chrome loads dist/ unpacked
+// (README.md › Building and loading it). dist/ stays out of git.
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -18,7 +18,7 @@ await build({
   // The content script is a classic script, and the service worker and the options page are kept the same.
   format: 'iife',
   target: 'chrome120',
-  // Zod's `z` brings every locale, about 770 KB of the service worker's 790 unminified; the maps keep
+  // Zod's `z` brings every locale, about 770 KB of the service worker's 790 unminified. The maps keep
   // DevTools readable.
   minify: true,
   sourcemap: 'linked',

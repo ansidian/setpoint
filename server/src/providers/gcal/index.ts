@@ -1,8 +1,8 @@
 // The Google Calendar adapter: one source per Google account, made by Connect Gmail on the same
 // consent (src/providers/gmail/connect.ts), with its tokens from the shared Google helper.
-// - sync: the calendar list, then each calendar from its sync token (a push, or a check);
-// - sweep: the same, with a full read of each calendar once a day (the reconciliation sweep);
-// - watch: a push channel per calendar, only when Setpoint has a public https address to be told at;
+// - sync: the calendar list, then each calendar from its sync token (a push, or a check).
+// - sweep: the same, with a full read of each calendar once a day (the reconciliation sweep).
+// - watch: a push channel per calendar, only when Setpoint has a public https address to be told at.
 // - execute: creates, changes (with recurring scope) and deletes events (./mutations.ts).
 import type {AdapterContext, SourceAdapter} from '../../sync/adapter.ts';
 import {ProviderError} from '../../sync/errors.ts';
@@ -17,7 +17,7 @@ import {applyCalendarList, fullReadDue, syncCalendar} from './sync.ts';
 export interface GoogleCalendarOptions extends CalendarApiOptions {
   // The one Google OAuth client (Config.google), which refreshes the source's tokens.
   client: GoogleClient;
-  // Setpoint's public origin; push needs an https one Google can reach.
+  // Setpoint's public origin. Push needs an https one Google can reach.
   publicUrl?: string | null;
   // Where Google posts instead, when the pages' origin isn't public (SETPOINT_WEBHOOK_ORIGIN).
   webhookOrigin?: string | null;

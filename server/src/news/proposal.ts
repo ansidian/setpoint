@@ -1,6 +1,7 @@
-// Upcoming's Add to calendar opens a proposal, as from an email: the keynote as the event POST
-// /api/items would create, pre-filled from the news, with its calendar chosen as an email's is and
-// the conflict line against that day. Nothing is created: Create sends the item through the calendar's create command, as an email's proposal does.
+// Upcoming's Add to calendar opens a proposal, as from an email. It holds the keynote as the event
+// POST /api/items would create, pre-filled from the news, with its calendar chosen as an email's is
+// and the conflict line against that day. Nothing is created: Create sends the item through the
+// calendar's create command, as an email's proposal does.
 import type {NewsProposalOut, ProposalField} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {calendarFor} from '../alfred/proposals.ts';

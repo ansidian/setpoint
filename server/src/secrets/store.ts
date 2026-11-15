@@ -1,4 +1,4 @@
-// Credentials and instance secrets, encrypted at rest and write-only through the API: nothing here
+// Credentials and instance secrets, encrypted at rest and write-only through the API. Nothing here
 // returns a value to a caller outside the server (adapters and notify() read them in process).
 import {credentialsInput, SECRET_NAMES} from '@setpoint/shared';
 import type {Credentials, SecretName, SecretOut} from '@setpoint/shared';
@@ -20,7 +20,7 @@ const secretContext = (name: SecretName) => ({table: 'secrets', field: 'cipherte
 
 /**
  * Stores new credentials for a source (a connection or a reconnect), which clears needs-reconnect.
- * A dev source never takes credentials: the dev provider is never attached to a real account.
+ * A dev source never takes credentials, because the dev provider is never attached to a real account.
  */
 export function writeSourceCredentials(store: Store, sourceId: number, credentials: Credentials) {
   const ciphertext = encryptSecret(keyring(store), JSON.stringify(credentials), sourceContext(sourceId));
@@ -32,7 +32,7 @@ export function writeSourceCredentials(store: Store, sourceId: number, credentia
   });
 }
 
-/** A source's credentials, for its adapter; null when it has none. */
+/** A source's credentials, for its adapter. Null when it has none. */
 export function readSourceCredentials(store: Store, sourceId: number): Credentials | null {
   const source = store.db.select({credentials: t.sources.credentials}).from(t.sources).where(eq(t.sources.id, sourceId)).get();
   if (!source?.credentials) return null;

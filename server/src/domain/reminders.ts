@@ -1,16 +1,16 @@
 // When reminders go off, and what they say (Settings › Notifications: events some minutes before,
 // tasks at a time on the due day, each None by default). Each reminder is derived from the item as
-// it is now, so a moved, cancelled or completed item needs no bookkeeping, and the dedupe key (the
+// it is now, so a moved, cancelled or completed item needs no bookkeeping. The dedupe key (the
 // occurrence's start, the minutes) sends each once.
-// - a reminder may go late, within a grace, but never long after (1 hour, as a "10 min before" is
-//   no use later);
-// - a reminder an item moved into the past doesn't fire: only moments after the scheduler's last
-//   pass count;
-// - all-day events count from local midnight; a dated task reminds at Settings' time
-//   on its day, a timed one at its time (and never at a UTC instant read as wall-clock time); with
-//   Settings' task time at None, a task reminds only at the reminders it has itself.
-// An offset may be negative, after the item's moment, and a dated task's own
-// reminders count from Settings' time on its day, or 9:00 AM at None.
+// - a reminder may go late, within a grace, but never long after (1 hour, because a "10 min before"
+//   is no use later).
+// - a reminder an item moved into the past doesn't fire. Only moments after the scheduler's last
+//   pass count.
+// - all-day events count from local midnight. A dated task reminds at Settings' time on its day,
+//   and a timed one at its time (never at a UTC instant read as wall-clock time). With Settings'
+//   task time at None, a task reminds only at the reminders it has itself.
+// An offset may be negative, after the item's moment. A dated task's own reminders count from
+// Settings' time on its day, or 9:00 AM at None.
 import {zonedInstant} from './time.ts';
 
 const MINUTE = 60_000;
@@ -42,7 +42,7 @@ export interface Reminder {
 /** A dated task without a time counts from this when Settings' task time is None. */
 export const UNTIMED_TASK_ANCHOR = '09:00';
 
-/** Every reminder an item (or occurrence) has, at its moment; a negative offset is after it. */
+/** Every reminder an item (or occurrence) has, at its moment. A negative offset is after it. */
 export function remindersOf(item: ReminderItem, settings: {taskTime: string | null; timeZone: string}): Reminder[] {
   const at = (anchor: string, minutes: number) => new Date(Date.parse(anchor) - minutes * MINUTE).toISOString();
   const fromAnchor = (anchor: string, offsets: number[]) => offsets.map(minutes => ({at: at(anchor, minutes), key: `reminder:${item.id}@${anchor}:${minutes}`, minutes}));
@@ -58,7 +58,7 @@ export function remindersOf(item: ReminderItem, settings: {taskTime: string | nu
   return anchor ? fromAnchor(anchor, item.reminders) : [];
 }
 
-/** Whether a reminder goes now: its moment has come since the last pass, within the grace. */
+/** Whether a reminder goes now: when its moment has come since the last pass, within the grace. */
 export function reminderDue(at: string, now: string, lastPass: string, retrying = false): boolean {
   const atMs = Date.parse(at);
   const nowMs = Date.parse(now);

@@ -1,5 +1,5 @@
-// Lane corrections kept in triage_evidence count toward the pattern prompts beside Done (decisions
-// 27, 28): out of Attention as cleared unopened, into it as opened first.
+// Lane corrections kept in triage_evidence count toward the pattern prompts beside Done:
+// out of Attention as cleared unopened, into it as opened first.
 import {eq} from 'drizzle-orm';
 import {expect, test} from 'vitest';
 import {setDone} from '../src/commands/mail.ts';

@@ -1,6 +1,6 @@
-// A fake Google on 127.0.0.1: OAuth's token endpoint, Calendar v3 (calendar list and its colours, events with sync
-// tokens, instances, insert/patch/delete with etags, import by iCalUID, watch channels), Places (New) autocomplete and
-// Routes. It answers in Google's shapes and with Google's errors: 401 for a token it didn't issue,
+// A fake Google on 127.0.0.1: OAuth's token endpoint, Calendar v3 (calendar list and its colours,
+// events with sync tokens, instances, insert/patch/delete with etags, import by iCalUID, watch
+// channels), Places (New) autocomplete and Routes. It answers in Google's shapes and with Google's errors: 401 for a token it didn't issue,
 // invalid_grant for a revoked refresh token, 409 for an id that exists, 410 for a sync token it
 // dropped or an event already deleted, 412 when If-Match doesn't match, 400 for a calendar that
 // can't be watched. Recurring series are expanded with Setpoint's own rule reader, which is what
@@ -63,7 +63,7 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
   const accessTokens = new Map<string, string>();
   const refreshTokens = new Set<string>(['refresh-personal', 'refresh-work']);
   const calendars: (GoogleCalendarEntry & {timeZone: string})[] = [];
-  // A calendar on only some accounts' lists, by refresh token; every account lists the others.
+  // A calendar on only some accounts' lists, by refresh token. Every account lists the others.
   const listedFor = new Map<string, string[]>();
   const events = new Map<string, Map<string, Stored>>();
   // Sync tokens Google has dropped (a 410 next time).
@@ -225,8 +225,8 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       return {status: 200, body: publicEvent(store(calendarId, inserted))};
     }),
     // events.import: a private copy keyed on its iCalUID. One the calendar holds (deleted
-    // ones too, taken back as Google does) is replaced in place, keeping its id; an exception is the
-    // series' iCalUID with the start it replaces. No invitations; only `default` events.
+    // ones too, taken back as Google does) is replaced in place, keeping its id. An exception is the
+    // series' iCalUID with the start it replaces. No invitations, and only `default` events.
     on('POST', /^\/calendar\/v3\/calendars\/([^/]+)\/events\/import$/, (request, match) => {
       if (!authorized(request)) return unauthorized();
       const calendarId = decodeURIComponent(match[1]!);

@@ -1,6 +1,7 @@
-// The floating detail's glide as pure rules (design-export/motion/glide.json; board 12c): its duration by distance, the position curve with its ~3% overshoot, the overshoot
-// shrinking to the room left at the grid's edges, a retarget that keeps
-// the card's position and velocity, and the new content's 6 px slide in the direction of travel.
+// The floating detail's glide as pure rules (design-export/motion/glide.json, board 12c): its
+// duration by distance, the position curve with its ~3% overshoot, the overshoot shrinking to the
+// room left at the grid's edges, a retarget that keeps the card's position and velocity, and the
+// new content's 6 px slide in the direction of travel.
 // Every figure comes from the token module; the motion itself runs in app/calendar/detail/.
 import {glide} from '../tokens.ts';
 import type {Rect} from './calendar.ts';

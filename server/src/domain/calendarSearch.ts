@@ -1,15 +1,15 @@
-// Calendar search: the field's words become
-// date chips (mail's grammar) and calendar chips (a calendar's name; "Todoist" is every task's), and
-// the rest is free text over each item's title, place and address, attendees, calendar, and Todoist
-// project and labels, with mail's matching (every word as a prefix with its plural, then any word but
-// filler). Results come Upcoming soonest first, then Past most recent first.
+// Calendar search. The field's words become date chips (mail's grammar) and calendar chips (a
+// calendar's name, and "Todoist" is every task's). The rest is free text over each item's title,
+// place and address, attendees, calendar, and Todoist project and labels. It uses mail's matching:
+// every word as a prefix with its plural, then any word but filler. Results come Upcoming soonest
+// first, then Past most recent first.
 //
 // A recurring event is one row: its next occurrence, or its last once it has ended (within the date
 // chips, when there are any). An occurrence changed on its own gets its own row only when the change
-// is what matched, that is when it matches and its series doesn't. Hidden calendars are left out, as
-// the grid leaves them out.
+// is what matched, that is when it matches and its series doesn't. Search leaves out hidden
+// calendars, as the grid does.
 //
-// Pure: the caller reads the items and calendars and presents the hits.
+// Pure. The caller reads the items and calendars and presents the hits.
 import type {CalendarMatchReasonOut, CalendarSearchChip} from '@setpoint/shared';
 import {occurrenceDates, parseRule} from './recurrence.ts';
 import {bareMonth, dateChip, dayLabel, fold, parseChips, wordsOf} from './searchChips.ts';
@@ -51,7 +51,8 @@ export function parseCalendarQuery(text: string, calendars: string[], {now, time
   const today = localDay(now, timeZone);
   return parseChips<CalendarSearchChip>(text, (words, raw) => {
     const date = dateChip(words, raw, today);
-    // A month's name alone, other than this month, is both its last and its coming one: two chips, either of which matches.
+    // A month's name alone, other than this month, is both its last and its coming one. That makes
+    // two chips, and either one matches.
     if (date && bareMonth(words) && date.from.slice(0, 7) !== today.slice(0, 7)) {
       const coming = String(Number(date.from.slice(0, 4)) + 1);
       return [{kind: 'date', ...date}, {kind: 'date', ...dateChip([...words, coming], `${raw} ${coming}`, today)!}];
@@ -213,7 +214,7 @@ function collect<R extends SearchItem>(rows: R[], calendars: Map<number, string>
       if (pick) add(pick, reasons, isSeries(top) ? top.recurrence : null);
       continue;
     }
-    // The series doesn't match: an occurrence changed on its own may, by what changed.
+    // The series doesn't match. An occurrence changed on its own may match by what changed.
     for (const child of own) {
       if (child.cancelled) continue;
       const childReasons = matchOf(child);

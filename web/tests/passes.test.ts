@@ -25,7 +25,6 @@ describe('reads', () => {
   it.each([
     ['AGENTS.md', []],
     ['docs/media/board.png', []],
-    ['reviews/2026-10-15-single-value-checks.md', []],
     ['server/src/jobs/README.md', ['unit', 'image', 'browser']],
     ['design-export/boards/11-calendar.html', []],
     ['design-export/styles/setpoint.css', ['unit', 'browser']],

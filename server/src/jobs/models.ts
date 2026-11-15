@@ -1,8 +1,8 @@
-// Jobs's models and cost: Claude Haiku 5.5 reads each email; Sonnet 5.5 with web search finds a
-// JD and Haiku again reads it. They run on the Anthropic key in
-// Settings › AI, with no cap. Each call goes in the AI usage ledger as Jobs, in its part:
-// `jobs_emails` for the emails, `jobs_finding_jds` and `jobs_reading_jds` for the JDs. Settings › AI's Jobs group
-// reads them back (board 39b): the three models by name, and this month's spend in its parts.
+// Jobs's models and cost. Claude Haiku 5.5 reads each email. Sonnet 5.5 with web search finds a JD,
+// and Haiku again reads it. They run on the Anthropic key in Settings › AI, with no cap. Each call
+// goes in the AI usage ledger as Jobs, in its part: `jobs_emails` for the emails, `jobs_finding_jds`
+// and `jobs_reading_jds` for the JDs. Settings › AI's Jobs group reads them back (board 39b): the
+// three models by name, and this month's spend in its parts.
 import type {AiPurpose, JobsAiOut, JobsUsageOut} from '@setpoint/shared';
 import {and, count, gte, inArray, sum} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -21,7 +21,7 @@ export type JobsPurpose = (typeof JOBS_PURPOSES)[number];
 
 export const NO_JOBS_KEY = 'Jobs needs an Anthropic key in Settings › AI.';
 
-/** Writes a Jobs model call to the AI usage ledger, with the email it read; a search's cost takes in its web searches. */
+/** Writes a Jobs model call to the AI usage ledger, with the email it read. A search's cost takes in its web searches. */
 export function recordJobsUsage(store: Store, answer: ModelAnswer, purpose: JobsPurpose, messageId: number | null) {
   store.db.insert(t.aiUsage).values({
     at: isoNow(store), provider: answer.provider, model: answer.model, purpose, messageId,
@@ -30,14 +30,14 @@ export function recordJobsUsage(store: Store, answer: ModelAnswer, purpose: Jobs
   }).run();
 }
 
-/** The client for one of Jobs's models with the Anthropic key; null without one. */
+/** The client for one of Jobs's models with the Anthropic key. Null without one. */
 export function jobsModelClient(store: Store, endpoints: AiEndpoints, work: keyof typeof JOBS_MODELS, timeoutMs?: number): {client: ModelClient; model: string} | null {
   const apiKey = anthropicKey(store);
   if (!apiKey) return null;
   return {client: anthropicClient({apiKey, baseUrl: endpoints.anthropic, timeoutMs}), model: JOBS_MODELS[work]};
 }
 
-/** The client for reading emails with the Anthropic key; null without one. */
+/** The client for reading emails with the Anthropic key. Null without one. */
 export const jobsEmailClient = (store: Store, endpoints: AiEndpoints, timeoutMs?: number) => jobsModelClient(store, endpoints, 'emails', timeoutMs);
 
 /** What Jobs's calls for these parts have cost since `since`, from the ledger. */

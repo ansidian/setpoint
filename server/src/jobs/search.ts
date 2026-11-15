@@ -1,6 +1,6 @@
 // Jobs's search: company or role first, then a match only in a
 // JD's text with the line it matched. Pure, so its ranking and its loose company matching are tested
-// as tables; queries.ts runs it over the store. It's Jobs's own: mail's search and ⌘K never see it.
+// as tables. queries.ts runs it over the store. It's Jobs's own: mail's search and ⌘K never see it.
 
 /** Words as search compares them: case and punctuation ignored ("City Power & Light" is city power light). */
 export const searchWords = (text: string): string[] => text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
@@ -88,7 +88,7 @@ export interface Searchable {
 }
 
 /**
- * The search's answer: company or role matches by rank, newest first within each; then the ones
+ * The search's answer: company or role matches by rank, newest first within each. Then come the ones
  * whose JD alone matched, newest first, each with its line.
  */
 export function searchApplications(applications: Searchable[], q: string): {companyOrRole: number[]; inJd: {id: number; line: string}[]} {

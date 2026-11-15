@@ -2,7 +2,7 @@
 //
 //   GET    /api/mail/triage                 TriageStatusOut (the Unsorted line: "Triage is down, as of 9:09 AM",
 //                                           and the history extraction pass's progress)
-//   GET    /api/mail/prompts                PatternPromptOut[] (newest first; the Inbox shows the first)
+//   GET    /api/mail/prompts                PatternPromptOut[] (newest first, and the Inbox shows the first)
 //   POST   /api/mail/prompts/:id            {answer: 'yes' | 'no'}     PatternPromptOut[] (the prompts left)
 //   GET    /api/mail/rules                  RuleOut[] (written by position, then learned, newest first)
 //   POST   /api/mail/rules                  RuleInput                  RuleOut (201; a written rule, last)
@@ -12,17 +12,18 @@
 //   GET    /api/ai                          AiOut (Settings › AI: keys set, models in use, the catalogue, 30 days of
 //                                           cost, News's group and this month's usage)
 //
-// AI keys stay write-only secrets (PUT /api/secrets/anthropic_api_key, …/openai_api_key); model
-// choices are settings (`ai.triage_model`, `ai.triage_strong_model`; null uses the built-in one).
+// AI keys stay write-only secrets (PUT /api/secrets/anthropic_api_key, …/openai_api_key). Model
+// choices are settings (`ai.triage_model` and `ai.triage_strong_model`, where null uses the built-in
+// one).
 import {z} from 'zod';
 import {KINDS, LANES, MESSAGE_TYPES} from '../enums.ts';
 import type {AiProvider, Kind, Lane, MessageType} from '../enums.ts';
 import {id} from './common.ts';
 
 /**
- * Why an email is protected: it always goes to Attention and no rule or prompt moves
- * it. Password, recovery or two-step changes; an account deleted or locked; "critical" alerts; a
- * "was this you?" from a device or place the user doesn't use; money leaving an account.
+ * Why an email is protected: it always goes to Attention and no rule or prompt moves it. Password,
+ * recovery or two-step changes, an account deleted or locked, "critical" alerts, a "was this you?"
+ * from a device or place the user doesn't use, and money leaving an account.
  */
 export const PROTECTED_REASONS = [
   'password_changed', 'recovery_changed', 'two_step_changed', 'account_deleted', 'account_locked',
@@ -37,7 +38,7 @@ export type ProtectedReason = (typeof PROTECTED_REASONS)[number];
 export const TRIAGE_SOURCES = ['rule', 'learned_rule', 'cheap_model', 'strong_model', 'unsure', 'history'] as const;
 export type TriageSource = (typeof TRIAGE_SOURCES)[number];
 
-/** Triage is healthy while its last model call succeeded; down (mail waits in Unsorted) otherwise. */
+/** Triage is healthy while its last model call succeeded. Otherwise it's down (mail waits in Unsorted). */
 export const TRIAGE_STATES = ['healthy', 'down'] as const;
 export type TriageState = (typeof TRIAGE_STATES)[number];
 
@@ -56,7 +57,7 @@ export interface TriageStatusOut {
 /**
  * The extraction pass over backfilled history: backfilled emails the cheap model has read (`done`)
  * of all backfilled emails. It starts when every backfill has finished and a key is set (or from the
- * CLI); it waits while there's no key.
+ * CLI). It waits while there's no key.
  */
 export interface HistoryExtractionOut {
   state: 'not_started' | 'waiting_for_key' | 'running' | 'done';
@@ -67,9 +68,9 @@ export interface HistoryExtractionOut {
 /**
  * "You've cleared 4 Northwind newsletters without opening them. Send these to FYI from now on?"
  * The same organisation and type marked Done from the row, unopened, `count` times running
- * (`message_ids`, newest first; imported corrections count but have no id). Never offered for
+ * (`message_ids`, newest first, and imported corrections count but have no id). Never offered for
  * protected mail, so `protected` is always false. Yes makes a learned rule sending them to `lane`
- * as `kind`; No keeps this prompt quiet for good. `id` stays the same for an organisation and
+ * as `kind`. No keeps this prompt quiet for good. `id` stays the same for an organisation and
  * type, while the count grows.
  */
 export interface PatternPromptOut {
@@ -99,10 +100,11 @@ const pattern = z.string().min(1).max(500).refine(value => {
 }, 'Not a valid regular expression');
 
 /**
- * What a rule matches. Sender keys are alternatives (any one matching is enough); every other key
- * present must match too. Text matches ignore case. `from_domains` matches the domain and its subdomains ("woodgrovebank.example" matches
- * "alerts.woodgrovebank.example"). `organisation` and `type` match what triage extracted, so a rule with either
- * applies once the model has read the email.
+ * What a rule matches. Sender keys are alternatives (any one matching is enough). Every other key
+ * present must match too. Text matches ignore case. `from_domains` matches the domain and its
+ * subdomains ("woodgrovebank.example" matches "alerts.woodgrovebank.example"). `organisation` and
+ * `type` match what triage extracted, so a rule with either applies once the model has read the
+ * email.
  */
 // The keys that only rule mail out: a match needs at least one key besides these.
 const NARROWING_KEYS = new Set(['none_includes', 'from_name_excludes', 'subject_excludes', 'body_excludes']);
@@ -154,7 +156,7 @@ export type RuleInput = z.infer<typeof ruleInput>;
 
 /**
  * What becomes of a rule's waiting trashes when it's turned off or deleted: cancel clears
- * their due times, so the emails stay; run lets them go to the trash as planned. Left out, they run.
+ * their due times, so the emails stay, and run lets them go to the trash as planned. Left out, they run.
  */
 export const RULE_WAITING = ['cancel', 'run'] as const;
 export type RuleWaiting = (typeof RULE_WAITING)[number];
@@ -166,7 +168,7 @@ export const ruleUpdateInput = z.strictObject({
   enabled: z.boolean(),
   mark_read: z.boolean(),
   trash: z.enum(RULE_TRASH),
-  // Only with `enabled: false`; an edit leaves the waiting trashes alone.
+  // Only with `enabled: false`. An edit leaves the waiting trashes alone.
   waiting: z.enum(RULE_WAITING),
 }).partial().refine(changes => Object.keys(changes).length > 0, 'Nothing to change')
   .refine(changes => changes.waiting === undefined || changes.enabled === false, 'Only turning a rule off decides its waiting trashes');
@@ -184,10 +186,10 @@ export interface RuleOut {
   match: RuleMatch;
   lane: Lane;
   kind: Kind | null;
-  // Written rules' order; learned rules apply after every written one.
+  // Written rules' order. Learned rules apply after every written one.
   position: number;
   enabled: boolean;
-  // A written rule's actions; a learned rule's are always false and 'never'.
+  // A written rule's actions. A learned rule's are always false and 'never'.
   mark_read: boolean;
   trash: RuleTrash;
   // Brought in by an import.
@@ -216,10 +218,10 @@ export interface AiOut {
   keys: Record<AiProvider, boolean>;
   // Null when no key fits: triage can't use a model (Unsorted, unless a rule decides).
   triage: {cheap: AiModelChoiceOut | null; strong: AiModelChoiceOut | null; history: AiModelChoiceOut | null};
-  // The model Alfred asks (`ai.alfred_model`, or the default for the key that's set); null without a key.
+  // The model Alfred asks (`ai.alfred_model`, or the default for the key that's set). Null without a key.
   alfred: AiModelChoiceOut | null;
   // The model each setting's Default stands for with the keys that are set, whatever is chosen, so
-  // the picker can say "Default (Claude Sonnet 5.5)"; null without a key.
+  // the picker can say "Default (Claude Sonnet 5.5)". Null without a key.
   defaults: {triage_model: string | null; triage_strong_model: string | null; history_model: string | null; alfred_model: string | null};
   models: AiModelOut[];
   usage_30_days: {calls: number; input_tokens: number; output_tokens: number; cost_usd: number};
@@ -247,8 +249,9 @@ export interface AiUsageOut {
 /**
  * News's models and cost: Claude Haiku 5.5 reads each article and groups ("Articles and
  * grouping"), Claude Sonnet 5.5 writes stories and ranks them ("Stories and ranking"), on the
- * Anthropic key. Past the monthly cap (the `news.monthly_cap_usd` setting, $40 by default) story summaries
- * use Haiku for the rest of the month: `capped`, and `summaries_model` names what writes them now.
+ * Anthropic key. Past the monthly cap (the `news.monthly_cap_usd` setting, $40 by default) story
+ * summaries use Haiku for the rest of the month: `capped`, and `summaries_model` names what writes
+ * them now.
  * The meter reads "$18.40 of $40" from `this_month_usd` and `monthly_cap_usd`.
  */
 export interface NewsAiOut {
@@ -258,7 +261,7 @@ export interface NewsAiOut {
   capped: boolean;
   monthly_cap_usd: number;
   this_month_usd: number;
-  // Why News can't sort ("News needs an Anthropic key in Settings › AI."); null when it can.
+  // Why News can't sort ("News needs an Anthropic key in Settings › AI."). Null when it can.
   missing: string | null;
 }
 

@@ -1,8 +1,7 @@
-// How triage learns: never from
-// per-email labels, only from Done. Done from the row without opening says the email probably
-// didn't need attention; opened then Done says it did. When the same organisation and type are
-// cleared unopened enough times running, Attention offers one pattern prompt; Yes makes a learned
-// rule, No keeps it quiet. Protected mail never gets a prompt.
+// How triage learns: never from per-email labels, only from Done. Done from the row without opening
+// says the email probably didn't need attention. Opened then Done says it did. When the same
+// organisation and type are cleared unopened enough times running, Attention offers one pattern
+// prompt. Yes makes a learned rule, and No keeps it quiet. Protected mail never gets a prompt.
 import type {Kind, MessageType} from '@setpoint/shared';
 import {organisationKey} from './triageRules.ts';
 
@@ -10,8 +9,8 @@ import {organisationKey} from './triageRules.ts';
 export const PROMPT_THRESHOLD = 4;
 
 /**
- * One verdict on an attention email: Done opened or unopened, or a correction imported at cutover (out of
- * Attention counts as unopened, into it as opened).
+ * One verdict on an attention email: Done opened or unopened, or a correction imported at cutover
+ * (out of Attention counts as unopened, into it as opened).
  */
 export interface Verdict {
   organisation: string;
@@ -31,17 +30,17 @@ export interface Prompt {
   count: number;
   messageIds: number[];
   kind: Kind;
-  // The newest verdict behind it: the most recent prompt is offered first.
+  // The newest verdict behind it. The most recent prompt is offered first.
   latestAt: string;
 }
 
 export const promptKey = (organisation: string, type: MessageType) => `${organisationKey(organisation)}\u0000${type}`;
 
 /**
- * The pattern prompts there are, newest first. Per organisation and type, the run of unopened
- * verdicts since the last opened one; a run of `threshold` or more is a prompt, unless it's quiet
- * (answered already, or a learned rule covers it). Protected mail is left out entirely: no prompt
- * is ever offered for it, and no rule could move it anyway.
+ * The pattern prompts there are, newest first. Per organisation and type, it takes the run of
+ * unopened verdicts since the last opened one. A run of `threshold` or more is a prompt, unless it's
+ * quiet (answered already, or a learned rule covers it). Protected mail is left out entirely. No
+ * prompt is ever offered for it, and no rule could move it anyway.
  */
 export function patternPrompts(verdicts: readonly Verdict[], quiet: ReadonlySet<string>, threshold = PROMPT_THRESHOLD): Prompt[] {
   const groups = new Map<string, Verdict[]>();

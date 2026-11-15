@@ -1,8 +1,8 @@
-// Calendar search's results in the right pane, in place of the day's agenda: the
-// one-line hint before typing; then the results line, Upcoming and
-// Past, each row as the agenda draws it plus why it matched (`ink3`, matches highlighted); 50 at a
-// time with Show more; and the no-results line with each chip removable. The rules are
-// logic/search.ts's and the state is search/state.ts's; CalendarPage selects what's clicked.
+// Calendar search's results in the right pane, in place of the day's agenda. It shows the one-line
+// hint before typing. Then it shows the results line, Upcoming and Past, each row as the agenda
+// draws it plus why it matched (`ink3`, matches highlighted), 50 at a time with Show more. It also
+// has the no-results line, with each chip removable. The rules are logic/search.ts's and the state
+// is search/state.ts's. CalendarPage selects what's clicked.
 import type {CalendarOut, CalendarSearchResultOut} from '@setpoint/shared';
 import {Fragment} from 'react';
 import type {CSSProperties} from 'react';

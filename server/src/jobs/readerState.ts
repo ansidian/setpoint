@@ -1,8 +1,8 @@
 // Where Jobs's reading of mail stands: what it reads (on, the accounts it lists, mail received
-// since it was turned on), and its health, kept as triage's is (src/triage/health.ts): down while its
-// last model call failed or there was no key to call with, as of its last success. Emails wait while
-// it's down, counted for the page ("5 emails not read yet, Anthropic unreachable since 8:52 AM,
-// retrying"), and are read once it's back.
+// since it was turned on), and its health. Its health is kept as triage's is (src/triage/health.ts).
+// It's down while its last model call failed or there was no key to call with, as of its last
+// success. Emails wait while it's down, counted for the page ("5 emails not read yet, Anthropic
+// unreachable since 8:52 AM, retrying"), and are read once it's back.
 import type {JobReadingCause, JobsReadingOut} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import type {ProviderErrorKind} from '../domain/retry.ts';
@@ -75,7 +75,7 @@ export function readingStatus(store: Store): JobsReadingOut {
     since: down ? health.failingSince : null,
     reason: down ? health.lastError : null,
     cause: down ? causeOf(health) : null,
-    // A refused or missing key waits for Settings › AI; anything else is retried.
+    // A refused or missing key waits for Settings › AI. Anything else is retried.
     retrying: down && health.lastErrorKind !== 'auth' && health.lastErrorKind !== 'permanent',
   };
 }

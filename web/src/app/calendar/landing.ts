@@ -1,7 +1,7 @@
-// A change visibly arrives: when an item's change goes from
-// waiting for its provider to done, or an item comes back (Undo, ⌘Z, a create the server now lists),
-// its chip's tint brightens once and settles (`.landed`, 420 ms). Drawn on the element itself, so a
-// re-render meanwhile doesn't restart it.
+// A change visibly arrives. When an item's change goes from waiting for its provider to done, or an
+// item comes back (Undo, ⌘Z, a create the server now lists), its chip's tint brightens once and
+// settles (`.landed`, 420 ms). It's drawn on the element itself, so a re-render meanwhile doesn't
+// restart it.
 import {useLayoutEffect, useRef} from 'react';
 import type {ItemOut} from '@setpoint/shared';
 

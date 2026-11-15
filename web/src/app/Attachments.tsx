@@ -1,10 +1,9 @@
-// An email's attachments: 44 px cards, radius 14, 280 wide, with the type's
-// tile (its colour and glyph), the name and "PDF · 184 KB". PDF, image and CSV open a preview
-// over the reading pane, which Esc or × closes. Every card and the preview's head offer Download; a
-// card with no preview is one Download link. An invitation (.ics) has Add to calendar, which
-// reads the stored attachment on the server into the same review as an import from Calendar; one
-// that can't be read says so in place of its size. Desktop only: on the phone (its layout frozen)
-// it stays a Download link.
+// An email's attachments: 44 px cards, radius 14, 280 wide, with the type's tile (its colour and
+// glyph), the name and "PDF · 184 KB". PDF, image and CSV open a preview over the reading pane.
+// Esc or × closes it. Every card and the preview's head offer Download. A card with no preview is
+// one Download link. An invitation (.ics) has Add to calendar. It reads the stored attachment on the
+// server into the same review as an import from Calendar. An invitation that can't be read says so
+// in place of its size. Desktop only: on the phone (its layout frozen) it stays a Download link.
 import type {AttachmentOut} from '@setpoint/shared';
 import {useEffect, useState} from 'react';
 import {timeZone} from '../api/auth.ts';
@@ -23,7 +22,7 @@ import {failureLine} from './toast.ts';
 
 const CSV_ROWS = 500;
 
-/** Each type's glyph on its tile; the tile's colour is the stylesheet's, by `data-type`. */
+/** Each type's glyph on its tile. The tile's colour is the stylesheet's, by `data-type`. */
 const TYPE_GLYPHS: Record<AttachmentType, IconName> = {
   pdf: 'picture_as_pdf', image: 'image', sheet: 'table_chart', doc: 'description', archive: 'folder_zip', calendar: 'calendar_month', other: 'draft',
 };
@@ -49,7 +48,7 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
             </>
           );
           return kind ? (
-            // A right-click offers Preview and Download; a card that's only a Download link keeps the browser's menu for it.
+            // A right-click offers Preview and Download. A card that's only a Download link keeps the browser's menu for it.
             <div key={file.id} className="attach" data-id={file.id} data-type={type} onContextMenu={event => openContextMenu(event, event.currentTarget, [
               {id: 'preview', label: 'Preview', icon: 'visibility', run: () => setOpen(file)},
               {id: 'download', label: 'Download', icon: 'download', run: () => download(attachmentUrl(messageId, file.id), file.filename)},

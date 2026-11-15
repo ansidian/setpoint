@@ -1,8 +1,8 @@
-// Which occurrences of a recurring event a change applies to (boards 14
-// and 15b): This event (the default), This and following, or All events, each with
-// its consequence. Moving Gym from Wed, Oct 7 to Thu, Oct 8 reads "Thu, Oct 8 only", "Wed → Thu
-// from Oct 7 on", "Wed → Thu, past ones too"; a change that keeps its weekday reads "Wed, Oct 7
-// only", "From Wed, Oct 7 on", "Past ones too".
+// Which occurrences of a recurring event a change applies to (boards 14 and 15b): This event (the
+// default), This and following, or All events, each with its consequence. Moving Gym from
+// Wed, Oct 7 to Thu, Oct 8 reads "Thu, Oct 8 only", "Wed → Thu from Oct 7 on", "Wed → Thu, past ones
+// too". A change that keeps its weekday reads "Wed, Oct 7 only", "From Wed, Oct 7 on", "Past ones
+// too".
 import type {RecurringScope} from '@setpoint/shared';
 import {dayTitle} from './calendar.ts';
 import {clockTime} from './format.ts';
@@ -32,9 +32,9 @@ export function scopeChoices(from: string, to: string): ScopeChoice[] {
 }
 
 /**
- * The choices when a recurring event also moves to another calendar: Google moves a whole
- * series (events.move) and can't move one occurrence ("cannotChangeOrganizerOfInstance"), so This
- * event isn't offered; This and following starts a new series there.
+ * The choices when a recurring event also moves to another calendar. Google moves a whole series
+ * (events.move) and can't move one occurrence ("cannotChangeOrganizerOfInstance"), so This event
+ * isn't offered. This and following starts a new series there.
  */
 export function calendarMoveChoices(from: string, calendar: string): ScopeChoice[] {
   return [

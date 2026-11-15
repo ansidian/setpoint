@@ -1,13 +1,15 @@
-// Search, Alfred and proposals in the browser, at the design target on a fresh
-// seed each: words staying words as they're typed, a suggestion on a pause against a fake Anthropic,
-// nothing moving as it comes and goes, click and Tab accepting it, results replacing the list
-// with the reader and J / K / Enter working the same, each open logged with its position, a chip
-// removed, what the chips left out, a reading slow, failed or overtaken, no results, Esc back to the
-// Inbox; Alfred's Answer card from ⌘Enter with a follow-up, and from the reader (Ask about this
-// email), against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key;
-// the proposal card (Calendar's editor) and its Create through the command layer, and the More menu on Security
-// mail. Calendar search, from the header's button, `/` or ⌘F, with its results in the right
-// pane; a click, Enter, ↓ and J / K selecting results on the grid; E to the editor and back; Esc.
+// Search, Alfred and proposals in the browser, at the design target on a fresh seed each:
+// - words staying words as they're typed, a suggestion on a pause against a fake Anthropic, nothing
+//   moving as it comes and goes, and click and Tab accepting it
+// - results replacing the list with the reader, J / K / Enter working the same, each open logged
+//   with its position, a chip removed, what the chips left out, a reading slow, failed or
+//   overtaken, no results, and Esc back to the Inbox
+// - Alfred's Answer card from ⌘Enter with a follow-up, and from the reader (Ask about this email),
+//   against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key
+// - the proposal card (Calendar's editor) and its Create through the command layer, and the More
+//   menu on Security mail.
+// Calendar search, from the header's button, `/` or ⌘F, with its results in the right pane. A click,
+// Enter, ↓ and J / K select results on the grid. E goes to the editor and back. Then Esc.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from '@setpoint/shared';
@@ -21,14 +23,14 @@ import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
 
-// The pages whose clock the check has stopped (load's `clock: 'stopped'`): their typing pause runs only
-// when the check runs it, so typeWords runs it.
+// The pages whose clock the check has stopped (load's `clock: 'stopped'`). Their typing pause runs
+// only when the check runs it, so typeWords runs it.
 const stoppedClocks = new WeakSet<Page>();
 
 /**
- * The Inbox, its rows in. `clock` installs the page's own clock first: `running` runs on with real
+ * The Inbox, its rows in. `clock` installs the page's own clock first. `running` runs on with real
  * time, so a check can jump it past the suggestion's pause (`fastForward`) to prove nothing came of
- * it; `stopped` stops it once the page is in, so the field's pauses (TYPING_MS, SUGGESTION_PAUSE_MS)
+ * it. `stopped` stops it once the page is in, so the field's pauses (TYPING_MS, SUGGESTION_PAUSE_MS)
  * run only as the check runs them (`runFor`), however the machine is doing, and "not yet" holds.
  */
 async function load(setpoint: Setpoint, {clock}: {clock?: 'running' | 'stopped'} = {}): Promise<Page> {
@@ -100,9 +102,9 @@ function searchesOf(page: Page): SearchRequest[] {
 /**
  * Puts words in the field at once, and waits for their results to be on screen. Keys typed one by one
  * can sit a pause apart on a busy machine, and a pause is what asks for a suggestion. On a stopped
- * clock it runs the typing pause, so the search goes, and no further: the suggestion's is the
- * check's to run. Then every request is answered (`idle`), unless `held`: a route of the check's
- * holds a request, which `idle` would wait for, so it waits for the search's own answer only.
+ * clock it runs the typing pause, so the search goes, and no further. The suggestion's pause is the
+ * check's to run. Then every request is answered (`idle`), unless `held`. With `held`, a route of the
+ * check's holds a request, which `idle` would wait for, so it waits for the search's own answer only.
  */
 async function typeWords(page: Page, setpoint: Setpoint, text: string, {held = false}: {held?: boolean} = {}) {
   const answered = page.waitForResponse(response => new URL(response.url()).pathname === '/api/search' && (JSON.parse(response.request().postData()!) as SearchRequest).text.endsWith(text));
@@ -182,7 +184,7 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     assert.equal(await page.locator('.arow.result').first().locator('.from mark.hl').textContent(), 'Northwind Talent');
     assert.equal(await page.locator('.ask').textContent(), 'Ask Alfred · Northwind Talent · Rejection · Mar 2026⌘Enter');
     assert.deepEqual(fake.read, ['northwind rejection march'], 'accepting asks no model');
-    // Enter hands the keys to the results: the cursor starts on the first; J, K move it; Enter opens it and logs its position.
+    // Enter hands the keys to the results. The cursor starts on the first, J and K move it, and Enter opens it and logs its position.
     await page.keyboard.press('Enter');
     await page.locator('.arow.result.cur', {hasText: 'Update on your application'}).waitFor();
     assert.notEqual(await focused(page), 'Search mail');
@@ -202,7 +204,7 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     // The reader's next steps through the results.
     await page.locator('.rd-tools [aria-label="Next email"]').click();
     await page.locator('.rd-subj', {hasText: 'Your application for Data Engineer Intern'}).waitFor();
-    // `/` with the search open selects the whole query, chips too; End keeps it to add a word.
+    // `/` with the search open selects the whole query, chips too. End keeps it to add a word.
     await page.keyboard.press('/');
     assert.equal(await page.locator('.search .qchip.sel').count(), 3);
     await page.keyboard.press('End');
@@ -237,8 +239,8 @@ test('a suggestion comes only on a pause: none while typing and no reading of a 
     await page.keyboard.press('/');
     // Key by key, with no time passing between them on the page's clock, however far apart they come here.
     await page.keyboard.type('renewal');
-    // Nothing is asked until the keys stop for the whole pause: a moment short of it, the words' search
-    // has gone and come, and no suggestion.
+    // Nothing is asked until the keys stop for the whole pause. A moment short of it, the words'
+    // search has gone and come, and no suggestion.
     const searched = page.waitForResponse(response => new URL(response.url()).pathname === '/api/search');
     await page.clock.runFor(SUGGESTION_PAUSE_MS - 1);
     await drawn(page, await searched);
@@ -285,7 +287,7 @@ test('a suggestion belongs to its text: an answer for older text is dropped, and
     await setpoint.idle();
     assert.equal(await suggestion(page).textContent(), rent);
     assert.equal(await field(page).inputValue(), 'rent');
-    // The first keystroke takes it away, before any answer; and going back takes the pause again.
+    // The first keystroke takes it away, before any answer. Going back takes the pause again.
     await page.keyboard.type('s');
     assert.equal(await suggestion(page).count(), 0);
     await page.keyboard.press('Backspace');
@@ -575,7 +577,7 @@ test('the "more" line: what the chips hid, under the fold and apart from it, a s
     assert.deepEqual(await page.locator('.search-list .mentions').evaluateAll(lines => lines.map(element => element.classList.contains('left-out'))), [false, true]);
     assert.deepEqual(await titles(page), ['Lease renewal terms', 'October rent received']);
     assert.equal(await page.locator('.search-list .bar').textContent(), '1 result');
-    // J stops on it past the fold and its row; Enter opens it, from what the chips left out.
+    // J stops on it past the fold and its row. Enter opens it, from what the chips left out.
     await page.keyboard.press('Enter');
     await page.locator('.arow.result.cur').waitFor();
     await page.keyboard.press('j');
@@ -605,7 +607,7 @@ test('the "more" line: what the chips hid, under the fold and apart from it, a s
     await line.click();
     await until('its rows back', () => titles(page), shown => shown.length === 4);
     assert.equal(searches.filter(search => search.read === 'left_out').length, 1);
-    // A word more under the chip, and its own number; the chip off, and no line.
+    // A word more under the chip, and its own number. The chip off, and no line.
     await page.keyboard.press('/');
     await page.keyboard.press('End');
     await page.keyboard.type(' policy');
@@ -682,8 +684,8 @@ test('chips go with their search: `/` or ⌘F and a new word, Backspace, Esc and
     const page = await load(setpoint);
     const searches = searchesOf(page);
     const take = async (text: string, shown: string) => {
-      // Its first key replaces what's selected, chips too, and the rest come at once: keys one by one
-      // can sit a pause apart, and a suggestion would come for a word on its way.
+      // Its first key replaces what's selected, chips too, and the rest come at once. Keys one by
+      // one can sit a pause apart, and a suggestion would come for a word on its way.
       await page.keyboard.type(text[0]!);
       await typeWords(page, setpoint, text);
       await suggestion(page).waitFor();
@@ -763,7 +765,7 @@ test('under a suggestion a later page keeps its chips, and the fold works as it 
     const rows = page.locator('.arow.result');
     const fold = page.locator('.search-list .mentions:not(.left-out)');
     // Tall once the chip's first page is answered and drawn, so its next comes, and the words' never
-    // does: the words' own rows, still on screen until then, would page in too.
+    // does. The words' own rows, still on screen until then, would page in too.
     await setpoint.idle();
     await rows.nth(49).waitFor();
     await page.setViewportSize(TALL);
@@ -913,7 +915,7 @@ test('search\'s fold across pages: what\'s above it pages in, nothing under it i
     await page.waitForTimeout(300);
     await setpoint.idle();
     assert.deepEqual(searches.map(search => search.offset ?? 0).filter(offset => offset > 0), [50]);
-    // J from the last row above stops on the fold; Enter opens it, and the rows loaded with the last page show at once.
+    // J from the last row above stops on the fold. Enter opens it, and the rows loaded with the last page show at once.
     await rows.last().hover();
     await page.locator('.arow.result.cur').waitFor();
     await page.keyboard.press('j');
@@ -1085,7 +1087,7 @@ test('search results show what was done to them: an opened one loses its dot, Do
     await page.locator('.rd-subj').waitFor();
     // Opened: its dot goes.
     await until('the dot goes', () => page.locator(`.arow.result[data-id="${id}"].unread`).count(), count => count === 0);
-    // H: Done, and the next opens; the Done row says so, and the next one loses its dot too.
+    // H: Done, and the next opens. The Done row says so, and the next one loses its dot too.
     await page.keyboard.press('h');
     await page.locator(`.arow.result[data-id="${id}"].done .tag`, {hasText: 'Done'}).waitFor();
     const next = Number(await page.locator('.arow.result.open').getAttribute('data-id'));
@@ -1094,7 +1096,7 @@ test('search results show what was done to them: an opened one loses its dot, Do
     // Undo: Done comes off.
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await until('Done off', () => page.locator(`.arow.result[data-id="${id}"].done`).count(), count => count === 0);
-    // E: Trash takes the open one out of the results; Undo brings it back.
+    // E: Trash takes the open one out of the results. Undo brings it back.
     await page.locator(`.arow.result[data-id="${id}"]`).click();
     await page.keyboard.press('e');
     await until('out of the results', () => page.locator(`.arow.result[data-id="${id}"]`).count(), count => count === 0);
@@ -1133,7 +1135,7 @@ test('Alfred: ⌘Enter answers above the results with its source, a follow-up go
     await until('the second answer', () => page.locator('.answer .ans').count(), count => count === 2);
     assert.equal(await page.locator('.answer .ans').nth(1).innerHTML(), '<b>$2,140</b> a month, up from $2,060.');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Ask a follow-up');
-    // Esc in the follow-up closes the card (a copy that takes nothing folds away in its place); the results stay.
+    // Esc in the follow-up closes the card (a copy that takes nothing folds away in its place). The results stay.
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.answer:not([aria-hidden])').count(), 0);
     await page.locator('.ask').waitFor();
@@ -1264,7 +1266,7 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     await until('the search it runs', () => waiting.textContent(), text => text === 'Searching “the”…');
     fake.release();
     await until('the email it reads', () => waiting.textContent(), text => Boolean(text?.startsWith('Reading ') && text.endsWith('’s email…')));
-    // Its trail: the search it ran stays above; two bars hold the answer's place.
+    // Its trail: the search it ran stays above. Two bars hold the answer's place.
     const trail = page.locator('.answer .trail .done-step');
     await until('the search it ran', () => trail.allTextContents(), lines => lines.join() === 'Searched “the”');
     await until('the answer\'s place', () => page.locator('.answer [data-skeleton="answer"] .sk-bar').count(), count => count === 2);
@@ -1275,7 +1277,7 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     assert.equal(await page.locator('.answer [data-skeleton]').count(), 0);
     const total = Number((await page.locator('.answer .ans').textContent())!.split(' ')[0]);
     assert.ok(total > 5, `${total} sources`);
-    // The first five, and Show all; then every one, and Show fewer.
+    // The first five, and Show all. Then every one, and Show fewer.
     assert.equal(await page.locator('.answer .src').count(), 5);
     await page.locator('.answer .more', {hasText: `Show all ${total}`}).click();
     assert.equal(await page.locator('.answer .src').count(), total);
@@ -1376,7 +1378,7 @@ test('the proposal card\'s Place, emptied, offers the places events have used; a
     const card = page.locator('.pane .prop:not([aria-hidden])');
     const place = card.locator('input[aria-label="Place"]');
     await place.waitFor();
-    // Its own place from the email offers nothing; emptied, the recent places show.
+    // Its own place from the email offers nothing. Emptied, the field shows the recent places.
     await place.focus();
     const places = card.getByRole('listbox', {name: 'Places'});
     assert.equal(await places.count(), 0);
@@ -1400,7 +1402,7 @@ test('the proposal card\'s Place, emptied, offers the places events have used; a
 });
 
 test('a free event that evening leaves the proposal card\'s conflict line free', async () => {
-  // Exam review drop-in, 7 – 8 PM on Wed, Dec 9, is marked free; a busy one would read "Overlaps Exam review drop-in · 1h".
+  // Exam review drop-in, 7 – 8 PM on Wed, Dec 9, is marked free. A busy one would read "Overlaps Exam review drop-in · 1h".
   const setpoint = await startSetpoint({fixtures: ['free-review']});
   try {
     const page = await load(setpoint);
@@ -1442,7 +1444,7 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     assert.ok(question.top >= field.top && question.bottom <= field.bottom, `the ? at ${question.top}–${question.bottom}, inside the line's ${field.top}–${field.bottom}`);
     assert.ok(question.right < field.right && question.right > mark.right, 'the ? inside the line, after the mark');
     assert.equal(await page.locator('.rd-acts .btn.ghost').textContent(), 'Add to calendar');
-    // A press outside the reminder menu closes it; the card stays.
+    // A press outside the reminder menu closes it. The card stays.
     await card.locator('button[aria-label="Add reminder"]').click();
     await card.locator('.pop.menu').waitFor();
     await card.locator('.card-h').click();
@@ -1455,7 +1457,7 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     const exams = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-12-01&to=2027-01-01')).items.filter(item => item.title === 'CS 101 final exam');
     assert.equal((await exams()).length, 0);
     // Create: pending (.5) until Google Calendar confirms, then the card goes and the toast says where.
-    // The day takes typing: moved to Friday, the email's mark goes, and the conflict line is
+    // The day takes typing. Moved to Friday, the email's mark goes, and the conflict line is
     // Friday's.
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     await card.waitFor();
@@ -1492,7 +1494,7 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     await line.fill('Study for the final dec 8');
     await until('the line\'s day', () => card.locator('input[aria-label="Due date"]').inputValue(), day => day === 'Tue, Dec 8');
     assert.deepEqual(await card.locator('.nl [data-start]').allTextContents(), ['dec 8']);
-    // The title and day changed lose their marks; the description's From: line, left alone, keeps its own.
+    // The title and day changed lose their marks. The description's From: line, left alone, keeps its own.
     assert.deepEqual(await card.locator('.srcm').evaluateAll(marks => marks.map(mark => !!mark.closest('.desc-field'))), [true]);
     // A phrase taken out puts the email's day back.
     await line.fill('Study for the final');
@@ -1578,7 +1580,7 @@ test('calendar search: the header turns into Search, chips and results in the ri
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Search calendar');
     assert.equal(await page.locator('.cs-hint').textContent(), 'Search events and tasks by title, place, people or calendar, or a date like ‘march’');
     await page.locator('.cal-grid .ev').first().waitFor();
-    // Words become chips; Enter goes to the first result, selected on the grid with its card.
+    // Words become chips. Enter goes to the first result, selected on the grid with its card.
     await page.keyboard.type('classes october');
     await page.locator('.cal-search .cs-result').first().waitFor();
     await page.keyboard.press('Enter');
@@ -1604,14 +1606,14 @@ test('calendar search: the header turns into Search, chips and results in the ri
     assert.equal(await page.locator('.search .qchip.sel').count(), 2);
     await page.keyboard.type('blue');
     await until('the rows', () => calendarRows(page), rows => rows.join() === 'Dinner with Sam');
-    // An answer to the half-typed word ("blu") has the same rows; its mark is the half word.
+    // An answer to the half-typed word ("blu") has the same rows. Its mark is the half word.
     await until('the whole word marked', () => page.locator('.cs-result .why mark.hl').textContent(), text => text === 'Blue');
     assert.equal(await page.locator('.cs-result .why').textContent(), 'Place Blue Door');
     // A click scrolls to its day and selects it there.
     await page.locator('.cs-result', {hasText: 'Dinner with Sam'}).click();
     await detailOf(page, 'Dinner with Sam').waitFor();
     await until('the chip on the grid', () => page.locator('.cell[data-date="2026-10-09"] .ev.sel').allTextContents(), shown => shown.join() === '7 PMDinner with Sam');
-    // E hands it to the editor; Esc (Cancel) brings the results back.
+    // E hands it to the editor. Esc (Cancel) brings the results back.
     await page.keyboard.press('e');
     await page.locator('.editor.handed').waitFor();
     assert.equal(await page.locator('.cal-search').count(), 0);
@@ -1672,7 +1674,7 @@ test('calendar search: the button and ⌘F, Todoist as every task under Upcoming
     await page.keyboard.press('ArrowDown');
     await detailOf(page, 'CS 101 lab report').waitFor();
     await until('the marked row', () => selectedRow(page), rows => rows.join() === 'CS 101 lab report');
-    // `/` with the search open selects the whole query, chips too; End keeps it to add a word.
+    // `/` with the search open selects the whole query, chips too. End keeps it to add a word.
     await page.keyboard.press('/');
     assert.equal(await page.locator('.search .qchip.sel').count(), 1);
     await page.keyboard.press('End');

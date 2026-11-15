@@ -1,9 +1,9 @@
-// Reading a new News article: its page for
-// the readable text and its og:image, and the best image copied at Setpoint's two sizes, cropped to
-// fill, so outlets never see the user's browsing and a blocked hotlink can't break a row. The best image
-// is the feed's (Media RSS or an enclosure); the page's og:image stands in when the feed has none,
-// or when the feed's is smaller than the large copy and the page's is bigger. Nothing is ever
-// generated. Whatever can't be read is left out quietly: the article keeps its feed summary.
+// Reading a new News article: its page for the readable text and its og:image. The best image is
+// copied at Setpoint's two sizes, cropped to fill, so outlets never see the user's browsing and a
+// blocked hotlink can't break a row. The best image is the feed's (Media RSS or an enclosure). The
+// page's og:image stands in when the feed has none, or when the feed's is smaller than the large
+// copy and the page's is bigger. Nothing is ever generated. Whatever can't be read is left out
+// quietly, and the article keeps its feed summary.
 import sharp from 'sharp';
 import {IMAGE_SIZES} from '../../domain/news.ts';
 import type {ImageVariant} from '../../domain/news.ts';
@@ -26,7 +26,7 @@ interface Picture {
   height: number;
 }
 
-/** An image's bytes and size, when it's a photo worth copying; null otherwise. */
+/** An image's bytes and size, when it's a photo worth copying. Null otherwise. */
 async function fetchPicture(options: NewsHttpOptions, context: NewsReadContext, url: string): Promise<Picture | null> {
   try {
     const response = await newsGet(options, {url, userAgent: context.userAgent, signal: context.signal, accept: 'image/avif,image/webp,image/jpeg,image/png,image/*;q=0.8', maxBytes: IMAGE_MAX_BYTES});

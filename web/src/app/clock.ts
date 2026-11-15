@@ -5,7 +5,7 @@ import {serverNow} from '../api/auth.ts';
 const TICK_MS = 15_000;
 
 /**
- * Now, moving on every 15 s, and at `at` too: the next moment something on screen changes by
+ * Now, moving on every 15 s, and at `at` too. `at` is the next moment something on screen changes by
  * itself (a code's countdown, its leaving at expiry), so it changes then rather than on a later tick.
  */
 export function useNow(at: number | null = null): number {

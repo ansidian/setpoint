@@ -20,27 +20,27 @@
 .editor .field .clear { width: 22px; height: 22px; margin-right: -4px; }
 .editor .flabel { font-size: 12px; color: var(--ink3); }
 
-/* The line that parses as it's typed: the text shows through a mirror holding the marks, under an
-   input whose own text is clear, so the caret stays on its letter. */
+/* The line that parses as it's typed. The text shows through a mirror that holds the marks. The
+   mirror sits under an input whose own text is clear, so the caret stays on its letter. */
 .editor .nl { position: relative; display: block; line-height: 48px; white-space: pre; overflow: hidden; }
 .editor .nl-marks { position: absolute; left: 12px; right: 40px; top: 0; bottom: 0; font-size: 16px; font-weight: 500; color: var(--ink); white-space: pre; overflow: hidden; pointer-events: none; }
 .editor .nl .nl-input { position: absolute; left: 12px; right: 40px; top: 0; width: calc(100% - 52px); height: 48px; color: transparent; caret-color: var(--ink); font-size: 16px; font-weight: 500; }
 .editor .nl .nl-input::placeholder { color: var(--ink3); }
 .editor .nl .nl-input::selection { color: transparent; background: color-mix(in oklch, var(--accent) 30%, transparent); }
 /* A line longer than the field scrolls inside the input, and the marks move with it
-   (Editor.tsx's useMirror); a side cut short fades over 14 px, so the cut reads as more. */
+   (Editor.tsx's useMirror). A side cut short fades over 14 px, so the cut reads as more. */
 .editor .nl-text { display: inline-block; }
 .editor .nl-marks[data-clip-left] { mask-image: linear-gradient(to right, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-right] { mask-image: linear-gradient(to left, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-left][data-clip-right] { mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
 /* A new item's title is the line's, so an email's title mark sits at its trailing edge, before
-   the ?, the text stopping 8 px before it; a mark under the pointer, which a click makes
-   words, deepens. */
+   the ?, and the text stops 8 px before it. A mark under the pointer deepens. A click makes it
+   words. */
 .editor .nl.src .nl-marks { right: 62px; }
 .editor .nl.src .nl-input { right: 62px; width: calc(100% - 74px); }
 .editor .nl > .srcm { position: absolute; right: 40px; top: 0; bottom: 0; align-content: center; }
-/* The ? at the line's trailing edge, 8 px in from it, and What the line reads under it,
-   its right edge on the line's. */
+/* The ? sits at the line's trailing edge, 8 px in from it. What the line reads sits under it,
+   with its right edge on the line's. */
 .editor .ed-line { position: relative; }
 .editor .line-ref { position: absolute; right: 28px; top: 0; height: 48px; display: grid; align-content: center; }
 .editor .lr-q { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); font-size: 13px; font-weight: 600;
@@ -65,7 +65,7 @@
 .editor .tok-d, .editor .tok-p, .editor .tok-c, .editor .tok-j, .editor .tok-r { border-radius: 4px; padding: 0 2px; margin: 0 -2px; }
 .editor .tok-d { background: color-mix(in oklch, var(--cool) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--cool) 60%, transparent); }
 .editor .tok-p { background: color-mix(in oklch, var(--comf) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--comf) 60%, transparent); }
-/* A reminder phrase: its own hue, not the when's, as it doesn't move the item. */
+/* A reminder phrase takes its own hue, not the when's, because it doesn't move the item. */
 .editor .tok-r { background: color-mix(in oklch, var(--remind) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--remind) 60%, transparent); }
 .editor .tok-j { --c: var(--ink2); } /* a project's own colour comes inline */
 .editor .tok-c, .editor .tok-j { background: color-mix(in oklch, var(--c) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--c) 60%, transparent); }
@@ -76,12 +76,12 @@
 .editor .eg { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 10px; row-gap: 8px; align-items: center; padding: 16px 20px 0; }
 .editor .eg > .icon { color: var(--ink3); justify-self: center; transition: color var(--dur-fast) var(--ease); }
 /* Each row's glyph is always in its mark's colour: the day and time `cool`, the place
-   `comf`, reminders `remind`, the calendar its colour and a task's project its Todoist colour; the
-   repeat, labels and description stay `ink3`, having no mark. Each word typed lands in its field:
-   a row the line filled pulses its glyph once as it lands; the mark
-   still being typed, its menu open, is only a dashed underline, and a picked one brightens once as
-   it lands; a field another's change moved flashes `cardOn` back to its own fill, and an End on a
-   later day says "+1". */
+   `comf`, reminders `remind`, the calendar its colour and a task's project its Todoist colour. The
+   repeat, labels and description have no mark, so they stay `ink3`. Each word typed lands in its
+   field. A row the line filled pulses its glyph once as it lands. The mark still being typed, with
+   its menu open, is only a dashed underline, and a picked one brightens once as it lands. A field
+   that another field's change moved flashes `cardOn` back to its own fill. An End on a later day
+   says "+1". */
 .editor .eg > .icon.g-when { color: var(--cool); }
 .editor .eg > .icon.g-place { color: var(--comf); }
 .editor .eg > .icon.g-remind { color: var(--remind); }
@@ -116,7 +116,7 @@
 .editor .qchip .icon { color: var(--ink2); }
 .editor .qchip .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); }
 .editor .qchip .x:hover { background: var(--sub3); color: var(--ink); }
-/* Reminders wrap when a custom one runs long; a custom chip reopens its picker, its offset quiet. */
+/* Reminders wrap when a custom one runs long. A custom chip reopens its picker, its offset quiet. */
 .editor .prow.reminders { flex-wrap: wrap; row-gap: 6px; }
 .editor .qchip-open { display: inline-flex; align-items: center; gap: 6px; height: 100%; }
 .editor .custom-reminder .custom-date { display: contents; }
@@ -125,7 +125,7 @@
 /* Menus under a field: places, calendars, repeats, reminders, projects. */
 .editor .menu-host { position: relative; display: block; min-width: 0; }
 .editor .prow .menu-host { display: inline-block; }
-/* Each the app's one menu (styles.css), hanging under its field. */
+/* Each is the app's one menu (styles.css) and hangs under its field. */
 .editor .menu { position: absolute; left: 0; top: calc(100% + 4px); min-width: 220px; z-index: 5; }
 .editor .menu.right { left: auto; right: 0; min-width: 160px; }
 .editor .menu[data-up] { top: auto; bottom: calc(100% + 4px); }
@@ -136,7 +136,7 @@
 :is(.editor, .prop) .place-name { color: var(--ink); }
 :is(.editor, .prop) .place-name b { font-weight: 600; }
 :is(.editor, .prop) .place-address { font-size: 12px; }
-/* A picked place's address, under the Place field; why a project can't be sent. */
+/* A picked place's address, under the Place field. Why a project can't be sent. */
 .editor .eg > .place-address, .editor .eg > .field-note { padding: 0 10px; margin-top: -4px; font-size: 12px; }
 
 /* The conflict preview: a small timeline of the day. */
@@ -180,11 +180,11 @@
 .editor .scope-pop { animation-name: pop-in-up; transform-origin: bottom left; }
 
 /* "From the email" marks (the proposal card's, board 08) on the fields an email gave, and its
-   legend in the footer; the labels row's empty line. */
+   legend in the footer. The labels row's empty line. */
 .editor .srcm { color: var(--ink3); display: grid; flex: none; }
 .editor .prow .srcm { margin-left: auto; }
 .editor .ed-foot .legend { margin-left: auto; display: inline-flex; white-space: nowrap; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; min-width: 0; }
-/* In a narrow editor the legend gives way, its words cut short, inside the footer's padding. */
+/* In a narrow editor the legend gives way inside the footer's padding, its words cut short. */
 .editor .ed-foot .legend > span { overflow: hidden; text-overflow: ellipsis; }
 .editor .ed-foot .btn { flex: none; }
 .editor .prow .none { font-size: 12.5px; }
@@ -213,8 +213,8 @@
 .editor.card > .failed-line { padding: 12px 16px 0 46px; }
 .editor.card .ed-foot { border-top: 0; padding: 14px 16px 16px 46px; }
 
-/* The Description field: one line while empty ("Add description"), growing with its
-   text to 8 lines and scrolling inside from there, its formatting bar under the text while it has
+/* The Description field is one line while empty ("Add description"). It grows with its text to
+   8 lines and scrolls inside from there. Its formatting bar sits under the text while it has
    focus, so the text doesn't move when it's clicked into. */
 .editor .eg > .icon.desc-glyph { align-self: start; margin-top: 8px; }
 .editor .desc-field { min-width: 0; border-radius: 10px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); transition: box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }

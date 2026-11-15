@@ -1,8 +1,7 @@
-// The state lines as they show while they change: a line that
-// arrives folds in, as a row does, and one that goes folds out at once, whether its source is
-// healthy again or it went otherwise. The one that says something as it goes, Jobs's history pass
-// with "Read 330 emails", keeps its place for 1.2 s first. app/states/States.tsx keeps the time and
-// draws the motion.
+// The state lines as they show while they change. A line that arrives folds in, as a row does. One
+// that goes folds out at once, whether its source is healthy again or it went otherwise. The one
+// that says something as it goes, Jobs's history pass with "Read 330 emails", keeps its place for
+// 1.2 s first. app/states/States.tsx keeps the time and draws the motion.
 
 /** How a line shows: folding in, here, done (its last words showing), folding out. */
 export type LinePhase = 'in' | 'here' | 'done' | 'out';
@@ -20,7 +19,7 @@ export const DONE_MS = 1200;
 /**
  * The lines after a change: `next` in its order, each line gone from `shown` kept after the line it
  * followed, done if `holds` says it has last words to show (else folding out), and each new line
- * folding in. A line back while it showed its last words stays as it is; one back while folding out
+ * folding in. A line back while it showed its last words stays as it is. One back while folding out
  * folds in again, its element still closed.
  */
 export function nextLines<T>(shown: ShownLine<T>[], next: {key: string; line: T}[], holds: (line: T) => boolean): ShownLine<T>[] {
@@ -45,7 +44,7 @@ export function nextLines<T>(shown: ShownLine<T>[], next: {key: string; line: T}
   return result;
 }
 
-/** A moment on for one line: done, it folds out; folded out, it goes. */
+/** A moment on for one line: done, it folds out. Folded out, it goes. */
 export function lineMovesOn<T>(shown: ShownLine<T>[], key: string, from: 'done' | 'out'): ShownLine<T>[] {
   return shown.flatMap(entry => (entry.key !== key || entry.phase !== from ? [entry] : from === 'done' ? [{...entry, phase: 'out' as const}] : []));
 }

@@ -1,7 +1,7 @@
 // Mail's slots: two places mail draws that another module fills, without mail
 // knowing which. The reader's head has one under the sender's line and above the actions, and each
 // of the Inbox's rows one after its subject. A module fills them once from its wiring point, before
-// Setpoint first draws; unfilled, they draw nothing and leave no gap. This file names no module, so it
+// Setpoint first draws. Unfilled, they draw nothing and leave no gap. This file names no module, so it
 // stays when one is removed.
 import type {MessageRowOut} from '@setpoint/shared';
 import type {ComponentType, ReactNode} from 'react';

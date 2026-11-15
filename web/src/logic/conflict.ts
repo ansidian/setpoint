@@ -1,5 +1,5 @@
-// Overlaps (boards 12b, 13 and 14): the editor's small
-// timeline of the day ("Overlaps Study group · 1h 30m", or "No conflicts") and the agenda's line
+// Overlaps (boards 12b, 13 and 14): the editor's small timeline of the day
+// ("Overlaps Study group · 1h 30m", or "No conflicts") and the agenda's line
 // under an event that starts during another ("Overlaps Study group until 8:30 PM"). Free events are
 // never a clash in either (shared/src/freeBusy.ts).
 import type {ItemOut} from '@setpoint/shared';
@@ -22,7 +22,7 @@ export interface Overlap {
   end: number;
 }
 
-/** A timed event's span; null for all-day events, tasks, events without times and, taking no time, one with no end. */
+/** A timed event's span. Null for all-day events, tasks, events without times and, taking no time, one with no end. */
 export function spanOf(item: ItemOut): Span | null {
   if (item.kind !== 'event' || item.all_day || !item.starts_at || !item.ends_at) return null;
   const span = {start: Date.parse(item.starts_at), end: Date.parse(item.ends_at)};
@@ -30,7 +30,7 @@ export function spanOf(item: ItemOut): Span | null {
 }
 
 /**
- * The busy timed events `span` shares time with (touching isn't overlapping), earliest first;
+ * The busy timed events `span` shares time with (touching isn't overlapping), earliest first.
  * `except` is the event itself. Free events are left out, and a free `span` overlaps nothing, so a
  * conference's overlapping free sessions aren't clashes.
  */

@@ -1,5 +1,5 @@
-// Accounts and sources with their health (Settings › Accounts; the sidebar's needs-reconnect glyph).
-// Credentials never leave: only whether a source has any.
+// Accounts and sources with their health (Settings › Accounts, the sidebar's needs-reconnect glyph).
+// Credentials never leave. Only whether a source has any does.
 import type {AccountOut, HealthOut, SourceOut} from '@setpoint/shared';
 import {SOURCE_PROVIDERS} from '@setpoint/shared';
 import {eq, inArray} from 'drizzle-orm';

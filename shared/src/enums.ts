@@ -5,7 +5,7 @@
 export const LANES = ['attention', 'fyi', 'noise'] as const;
 export type Lane = (typeof LANES)[number];
 
-/** What an email is; groups FYI. Career and People, not Work and Personal. */
+/** What an email is. It groups FYI. Career and People, not Work and Personal. */
 export const KINDS = ['deliveries', 'money', 'career', 'security', 'updates', 'people', 'other'] as const;
 export type Kind = (typeof KINDS)[number];
 
@@ -19,7 +19,7 @@ export const MESSAGE_TYPES = [
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
-/** The Inbox's group order; `pinned` and `unsorted` only when they have mail. */
+/** The Inbox's group order, with `pinned` and `unsorted` only when they have mail. */
 export const INBOX_GROUPS = ['pinned', 'attention', 'unsorted', 'security', 'deliveries', 'money', 'career', 'people', 'updates', 'other', 'noise'] as const;
 export type InboxGroup = (typeof INBOX_GROUPS)[number];
 
@@ -56,7 +56,7 @@ export type IcsDropReason = (typeof ICS_DROP_REASONS)[number];
 export const WEATHER_CONDITIONS = ['sun', 'partly_cloudy', 'cloud', 'rain'] as const;
 export type WeatherCondition = (typeof WEATHER_CONDITIONS)[number];
 
-/** The 11 swatches; accounts and calendars pick one (DESIGN.md › Colour). */
+/** The 11 swatches. Accounts and calendars pick one (DESIGN.md › Colour). */
 export const COLOURS = ['ink2', 'ink3', 'cool', 'warm', 'caution', 'comf', 'good', 'sun', 'alert', 'violet', 'cyan'] as const;
 export type Colour = (typeof COLOURS)[number];
 
@@ -78,17 +78,17 @@ export type EventColour = (typeof EVENT_COLOURS)[number];
 export const HEALTH_STATES = ['healthy', 'stale', 'failing', 'needs_reconnect'] as const;
 export type HealthState = (typeof HEALTH_STATES)[number];
 
-/** Which occurrences of a recurring event a change applies to; This event is the default. */
+/** Which occurrences of a recurring event a change applies to. This event is the default. */
 export const RECURRING_SCOPES = ['this', 'following', 'all'] as const;
 export type RecurringScope = (typeof RECURRING_SCOPES)[number];
 
-/** The typed live events, one stream; `news` after 2.0, `jobs` after News. */
+/** The typed live events, one stream, with `news` after 2.0 and `jobs` after News. */
 export const LIVE_EVENT_TYPES = ['mail', 'items', 'health', 'news', 'jobs'] as const;
 export type LiveEventType = (typeof LIVE_EVENT_TYPES)[number];
 
 /**
  * Every provider connection Setpoint keeps (DESIGN.md › Vocabulary: source). A mail account is a
- * source; so are Google Calendar (per Google account, on the same consent as Gmail), Todoist and
+ * source. So are Google Calendar (per Google account, on the same consent as Gmail), Todoist and
  * weather.
  */
 export const SOURCE_PROVIDERS = ['gmail', 'icloud', 'google_calendar', 'todoist', 'weather'] as const;
@@ -99,8 +99,7 @@ export const SYNC_MODES = ['push', 'poll'] as const;
 export type SyncMode = (typeof SYNC_MODES)[number];
 
 /**
- * A change sent to a provider, through one command layer. `reverted` is
- * Move back: the user abandoned a failed change, and the mirror shows the provider's own state again.
+ * A change sent to a provider, through one command layer. `reverted` is Move back: the user abandoned a failed change, and the mirror shows the provider's own state again.
  */
 export const COMMAND_STATES = ['pending', 'confirmed', 'failed', 'reverted'] as const;
 export type CommandState = (typeof COMMAND_STATES)[number];
@@ -141,7 +140,8 @@ export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
  * Bring your own key: the model providers, and what each call was for (the AI usage ledger). News has
  * its own rows: each article read, grouping, stories written, and the hourly ranking, which asks
  * no model now and keeps its earlier calls. Jobs (a wiring point) adds its three parts: each email
- * read, finding JDs and reading JDs, named together so the ledger's table is rebuilt once. Removing Jobs may leave them.
+ * read, finding JDs and reading JDs, named together so the ledger's table is rebuilt once. Removing
+ * Jobs may leave them.
  */
 export const AI_PROVIDERS = ['anthropic', 'openai'] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
@@ -163,7 +163,7 @@ export type SearchChipKind = (typeof SEARCH_CHIP_KINDS)[number];
 
 /**
  * A search with chips a suggestion made. `kept` applies the chips given, with no model
- * call (accepting it, a later page, a chip removed); `left_out` lists what they left out ("6 more
+ * call (accepting it, a later page, a chip removed). `left_out` lists what they left out ("6 more
  * emails match your words"). The model is reached only by POST /api/search/suggestion.
  */
 export const SEARCH_READS = ['kept', 'left_out'] as const;

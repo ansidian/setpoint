@@ -6,7 +6,7 @@ import {describe, expect, test} from 'vitest';
 import {COMMAND_EVENTS, isActive, nextCommandState} from '../src/domain/commandStates.ts';
 import type {CommandEvent} from '../src/domain/commandStates.ts';
 
-// Every state × every event; null is a refused transition.
+// Every state × every event. null is a refused transition.
 const TABLE: Record<CommandState, Record<CommandEvent, CommandState | null>> = {
   pending: {confirm: 'confirmed', fail: 'failed', retry: null, move_back: null},
   failed: {confirm: null, fail: null, retry: 'pending', move_back: 'reverted'},

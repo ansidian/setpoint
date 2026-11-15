@@ -1,7 +1,7 @@
 // An email for a Needs you item, its own or that of an application
 // in its Assign to…: where the detail sits and as wide, so the item and its menu stay beside it. The
-// email alone: reading it here turns nothing read and changes nothing in mail, and Open in
-// Inbox is the way to everything else mail does with it. A press in it leaves an open menu open.
+// email alone: reading it here turns nothing read and changes nothing in mail. Open in Inbox is the
+// way to everything else mail does with it. A press in it leaves an open menu open.
 import type {AccountOut} from '@setpoint/shared';
 import type {CSSProperties} from 'react';
 import {Icon} from '../../ui/Icon.tsx';
@@ -11,9 +11,9 @@ import {useReadingPaneWidth} from '../readingPane.ts';
 
 export function ItemEmail({id, of, travel, accounts, now, timeZone, leaving, canStep, onStep, onClose, onInbox}: {
   id: number;
-  // The application it's the email of; null for the item's own.
+  // The application it's the email of. Null for the item's own.
   of: string | null;
-  // How the user stepped to it, for its swap; null for a click.
+  // How the user stepped to it, for its swap. Null for a click.
   travel: Travel | null;
   accounts: Map<number, AccountOut>;
   now: number;

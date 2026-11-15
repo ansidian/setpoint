@@ -1,10 +1,10 @@
 // The web's title parser as one JS file for the iPhone app (setpoint-ios), which runs it in
-// JavaScriptCore, with a table of what it parses for the app's tests to run. Both
-// live in shared/compose/, beside the contract (`npm run contract:record` clears shared/contract/),
-// and setpoint-ios copies them in at a pinned commit as it does the contract. This builds the bundle
-// from web/src/logic/composeApp.ts with the repo's Vite, runs the committed one with no module loader
-// and no DOM, and fails when either file is stale against compose.ts. `npm run compose:record`
-// rewrites them, deliberately, once setpoint-ios handles the change.
+// JavaScriptCore, with a table of what it parses for the app's tests to run. Both live in
+// shared/compose/, beside the contract (`npm run contract:record` clears shared/contract/).
+// setpoint-ios copies them in at a pinned commit, as it does the contract. This test builds the
+// bundle from web/src/logic/composeApp.ts with the repo's Vite, and runs the committed one with no
+// module loader and no DOM. It fails when either file is stale against compose.ts.
+// `npm run compose:record` rewrites them, deliberately, once setpoint-ios handles the change.
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
@@ -98,15 +98,15 @@ const CASE_LIST: Case[] = [
   line('Dinner tmr at 7:30pm'),
   // An end at its start, and "no end" by a time, are No end; only an end before it is the next day's.
   ...['event at 2pm to 2pm', 'Call 2-2pm', 'Call 14:00–14:00', 'Call Sam 2pm no end', 'Call Sam no end 2pm', 'Call Sam no end'].map(text => line(text)),
-  // An event's length after "for": digits, decimals and compounds; with no time,
-  // `length` alone; the first of a length or an end wins; bare lengths, number words and "wk" stay.
+  // An event's length after "for": digits, decimals and compounds. With no time, it sets
+  // `length` alone. The first of a length or an end wins. Bare lengths, number words and "wk" stay.
   ...['Run fri 7am for 15 min', 'Call 2pm for 1.5h', 'Meeting 2pm for 1 hour 20mins', 'Meeting 2pm for 1h30', 'Meeting 2pm for 1 hr 1 minute',
     'Party 11pm for 2 hours', 'Trip fri 9am for 2 days', 'Gym 7am for 3 weeks', 'Gym 7-8am for 3 weeks', 'Retreat sat 9am for 1 week', 'Trip 9am for 1d', 'Shift for 90 minutes 3pm', 'Lunch fri for 1h',
     '30 min run', 'Run for one hour', 'Run for 1 wk', 'Run for 2 dogs', 'Run for 0 min', 'Call 2-3pm for 2h', 'Call 2pm no end for 1h',
     'Call for 1h 2-3pm', 'Call for 1h 2pm no end'].map(text => line(text)),
   line('Study fri 3pm for 1h', 'task'),
-  // An event's span of days: all day with no time, one event with a time at each end,
-  // a daily repeat until the last day with one time; backwards stays words, and a task's line keeps it.
+  // An event's span of days: all day with no time, one event with a time at each end, and a daily
+  // repeat until the last day with one time. Backwards stays words, and a task's line keeps it.
   ...['Trip oct 23–25', 'Trip oct 23 to 25', 'Trip oct 30 – nov 2', 'Trip dec 30 - jan 2', 'Trip fri to sun', 'Trip fri through sun', 'Trip from fri to sun',
     'Trip fri to mon', 'Trip 10/23 - 10/25', 'Trip fri 7pm to sun 3pm', 'Conference oct 23–25 9am–5pm', 'Camp fri to sun 9am', 'Camp fri 9am to sun',
     'Camp oct 23–25 for 2h', 'Standup weekly nov 2 to nov 30 9am', 'Trip oct 25–23', 'Trip oct 25 – oct 23', 'Trip 10/25/2026 - 10/23/2026',
@@ -181,9 +181,9 @@ const CASE_LIST: Case[] = [
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: '2026-10-23', start: null, end: null, days: 3, length: null}, kind: 'event'}},
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: null, start: null, end: null, days: null, length: 60}, kind: 'event'}},
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: null, end: null, days: 2}, read: {date: null, start: null, end: null, days: null, length: 90}, kind: 'event'}},
-  // Reminder phrases after "remind", "remind me" or "reminder": offsets in minutes, hours, days and weeks,
-  // several joined, and moments, read before the item's day; past 4 weeks, past 10, a task with no
-  // date and other words stay words.
+  // Reminder phrases after "remind", "remind me" or "reminder": offsets in minutes, hours, days and
+  // weeks, several joined, and moments, read before the item's day. Past 4 weeks, past 10, a task with
+  // no date and other words stay words.
   ...['Call mom remind me 1h before', 'Call mom remind 30 mins before', 'Call mom reminder 2 hours after', 'Call mom remind at start',
     'Call mom remind 1 day and 10 mins before', 'Call mom remind 1 day, 1h and 10 min before', 'Call mom remind 1h before and 30 min after',
     'Call mom remind 1.5h before', 'Call mom remind 1 hour 20mins before', 'Call mom remind 1h30 before', 'Call mom remind 2 hrs before',
@@ -224,8 +224,8 @@ const CASE_LIST: Case[] = [
   ...['Trip fri for 3 days', 'Retreat for 1 week', 'Camp this weekend for 3 days', 'Trip fri for 1.5 days', 'Trip fri for 1 day 3h'].map(text => lineOn(text, '2026-10-26')),
   line('Work remind at 8am', 'event', {edit: {before: 'Work', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
   line('Call remind 1h before fri', 'event', {edit: {before: 'Call remind 1h before', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
-  // What the line reads (reference.json), each example as lineReference.test.ts reads it; a
-  // row with a phrase kept as words needs the client's own hiding of it, so it isn't a case here.
+  // What the line reads (reference.json), each example as lineReference.test.ts reads it. A row
+  // with a phrase kept as words needs the client's own hiding of it, so it isn't a case here.
   ...LINE_REFERENCE.flatMap(section => section.rows).filter(row => !row.plain).map(row => remind(row.example, row.kind)),
 ];
 

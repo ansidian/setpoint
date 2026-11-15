@@ -8,10 +8,10 @@ import {isTyping} from '../../ui/keys.ts';
 import {candidateWhere, CANT_READ} from './menus.ts';
 
 /**
- * A JD's candidates (34a): a group of radios, the last None of these, each candidate's arrow opening
+ * A JD's candidates (34a): a group of radios, the last None of these. Each candidate's arrow opens
  * its posting without picking it. ↑ ↓ choose and Enter picks, in the group or, while its item has the
- * page's cursor (`active`), from the page. Picked, the group takes `good` and the row its check. One
- * Jobs can't read says so after its line, which gives way to it.
+ * page's cursor (`active`), from the page. Picked, the group takes `good` and the row its check. A
+ * candidate Jobs can't read says so after its line, which gives way to it.
  */
 export function CandidatePicker({candidates, active, picked, onPick, onNone}: {
   candidates: JdCandidateOut[];

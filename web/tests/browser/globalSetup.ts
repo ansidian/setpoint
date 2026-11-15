@@ -1,5 +1,5 @@
-// The browser checks' global setup (`npm run test:browser`, or `node --test` given it): the run's
-// lock (lock.ts), which run.ts already holds, and one directory of seeded templates
+// The browser checks' global setup (`npm run test:browser`, or `node --test` given it). It holds the
+// run's lock (lock.ts), which run.ts already holds, and makes one directory of seeded templates
 // (harness.ts › template) for every spec file in the run, removed when the run ends.
 import fs from 'node:fs';
 import os from 'node:os';

@@ -1,13 +1,13 @@
 // Alfred's tools, run for the model (the same queries and commands the UI uses).
-// search_mail is the search field's own query (unlogged), get_email the reader's record, list_items
-// the calendar's range read (an event's place and address as one location, the line Google keeps),
-// and propose_item builds the same proposal as Add to calendar / Add as task. None of them changes
-// anything.
+// search_mail is the search field's own query (unlogged). get_email is the reader's record.
+// list_items is the calendar's range read (an event's place and address as one location, the line
+// Google keeps). propose_item builds the same proposal as Add to calendar / Add as task. None of
+// them changes anything.
 //
-// One result shape per tool as JSON, failures as a short reason the model can act on (without
-// provider bodies), date ranges
-// checked and capped (92 days, 366 with a query), email text fenced as untrusted, and a proposal only
-// when the tool quotes one of the user's own messages, one per question.
+// Each tool has one result shape as JSON. A failure is a short reason the model can act on (without
+// provider bodies). Date ranges are checked and capped (92 days, 366 with a query). Email text is
+// fenced as untrusted. A proposal comes only when the tool quotes one of the user's own messages,
+// one per question.
 import type {ItemKind, ProposalOut} from '@setpoint/shared';
 import {searchInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -42,7 +42,7 @@ export interface ToolContext {
   questions: string[];
   proposals: ProposalOut[];
   // The invite of an email a proposal is asked for, read before the tool runs (the tools
-  // themselves don't wait on a provider); an email with none has null or no entry.
+  // themselves don't wait on a provider). An email with none has null or no entry.
   invites?: Map<number, Invite | null>;
 }
 

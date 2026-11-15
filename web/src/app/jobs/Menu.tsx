@@ -3,8 +3,8 @@
 // submenus (Set status ›, Merge with… ›, Move to… ›). Each is the reader's menu (`.pop`, `.menu-i`)
 // growing over 180 ms from its anchor's corner: under a button from its bottom-left corner, More and
 // an event's ··· from their top-right, a right-click at the pointer. Items are 32 px, or 44 px with a
-// second line; a label names a company's group; a search field leads Merge with… and Another
-// application…, its items following what's typed.
+// second line. A label names a company's group. A search field leads Merge with… and Another
+// application…, and its items follow what's typed.
 //
 // Keys: ↑ ↓ move the cursor, Enter (or Space) picks, → opens a submenu and ← or Esc closes it, Esc
 // closes the menu and gives focus back to what opened it, and Tab closes it. A submenu opens to the
@@ -136,7 +136,7 @@ export function JobsMenu({spec, anchor, onClose}: {
       event.stopPropagation();
       latest.current();
     };
-    // A scroll that moves what it hangs from closes it; one that was already under way as it opened
+    // A scroll that moves what it hangs from closes it. One that was already under way as it opened
     // (a button scrolled into view, then pressed) leaves it be.
     const was = 'element' in anchor ? anchor.element.getBoundingClientRect() : null;
     const opened = performance.now();
@@ -176,7 +176,7 @@ function Level({spec, tree, place, onBack, onClose}: {
   spec: MenuSpec;
   tree: string;
   place: (size: {width: number; height: number}) => {left: number; top: number; up: boolean; right: boolean};
-  // A submenu's way back to its parent (← or Esc); null for the menu itself.
+  // A submenu's way back to its parent (← or Esc). Null for the menu itself.
   onBack: (() => void) | null;
   onClose: (giveBack: boolean) => void;
 }) {
@@ -196,7 +196,7 @@ function Level({spec, tree, place, onBack, onClose}: {
     item.look?.();
   };
 
-  // Placed once measured, before it's drawn; then it takes the keys.
+  // Placed once measured, before it's drawn. Then it takes the keys.
   useLayoutEffect(() => {
     const element = box.current;
     if (!element) return;

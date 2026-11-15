@@ -1,7 +1,7 @@
-// The month grid's and the day agenda's rules: weeks as rows that scroll
-// through months, which items a day cell fits before "+N", the chips' times, past and dimmed items,
-// the agenda's lines and the now-line, the mini-month, and where the "+N" popover hangs. Local
-// days are `YYYY-MM-DD` in the owner's zone; weeks start on Sunday.
+// The month grid's and the day agenda's rules: weeks as rows that scroll through months, which
+// items a day cell fits before "+N", the chips' times, past and dimmed items, the agenda's lines
+// and the now-line, the mini-month, and where the "+N" popover hangs. Local days are `YYYY-MM-DD`
+// in the owner's zone. Weeks start on Sunday.
 import type {CalendarOut, ItemOut, SubtaskOut, WeatherCondition, WeatherDayOut} from '@setpoint/shared';
 import {layout, monthPaging} from '../tokens.ts';
 import {addDays, clockTime, daysBetween, localDate, startsIn, timeLeft} from './format.ts';
@@ -9,7 +9,7 @@ import {placeLink, placeName} from './place.ts';
 
 // ---------- Weeks and months ----------
 
-/** Week 0 starts on Sunday, Jan 4, 1970; every week is a row of the grid. */
+/** Week 0 starts on Sunday, Jan 4, 1970. Every week is a row of the grid. */
 const EPOCH_SUNDAY = '1970-01-04';
 /** The grid scrolls from the first week of 2000 to the end of 2099: "infinite" for a calendar. */
 export const FIRST_WEEK = weekIndex('2000-01-02');
@@ -45,7 +45,7 @@ export const monthTopRow = (month: string) => weekIndex(firstOfMonth(month)) - F
  * The month the grid is showing at a scroll position in a view `height` tall: the month most of the
  * row at the middle of the view falls in (its Wednesday's), never less than a row below the top. A
  * row or so of the month before showing at the top never flips it while the month's own rows fill
- * the view; paging puts a month's 1st in the top row, and the rows under it are wholly that month.
+ * the view. Paging puts a month's 1st in the top row, and the rows under it are wholly that month.
  */
 export function monthAtScroll(scrollTop: number, height: number, rowHeight: number = layout.monthRow): string {
   const row = Math.max(0, Math.floor((scrollTop + Math.max(height / 2, rowHeight)) / rowHeight));
@@ -53,9 +53,9 @@ export function monthAtScroll(scrollTop: number, height: number, rowHeight: numb
 }
 
 /**
- * Where paging's glide sets out from: where
- * the grid is, or, when the month is more than `farRows` away, `leadRows` short of it on the side
- * it's coming from, so Today from a year away still glides in from that side.
+ * Where paging's glide sets out from: where the grid is. When the month is more than `farRows`
+ * away, it sets out `leadRows` short of it on the side it's coming from, so Today from a year away
+ * still glides in from that side.
  */
 export function glideStart(from: number, to: number, rowHeight: number = layout.monthRow): number {
   if (Math.abs(to - from) <= monthPaging.farRows * rowHeight) return from;
@@ -115,9 +115,9 @@ export interface MiniDay {
 export const MINI_WEEKS = 6;
 
 /**
- * The mini-month: today a disc, the selected day a `sub3` disc, no
- * other marks; an event's Date shows its `range` as a band instead; the week view marks its
- * shown `week` as one band. Six weeks, whatever the month.
+ * The mini-month: today a disc, the selected day a `sub3` disc, no other marks. An event's Date
+ * shows its `range` as a band instead. The week view marks its shown `week` as one band. Six weeks,
+ * whatever the month.
  */
 export function miniMonth(month: string, today: string, selected: string | null, range: {from: string; to: string} | null = null, week: string | null = null): MiniDay[][] {
   const inWeek = (date: string) => !range && week !== null && date >= week && daysBetween(week, date) < 7;
@@ -131,8 +131,8 @@ export function miniMonth(month: string, today: string, selected: string | null,
 }
 
 /**
- * A day picked in an event's Date, as the first click or the next: the first starts it on
- * that day alone; the next ends it there, or, before the first, starts it there and ends it on the
+ * A day picked in an event's Date, as the first click or the next. The first starts it on that day
+ * alone. The next ends it there, or, if it is before the first, starts it there and ends it on the
  * first.
  */
 export function rangePick(phase: 'start' | 'end', from: string, day: string): {from: string; to: string; done: boolean} {
@@ -250,14 +250,14 @@ export function hiddenOn(day: string, items: ItemOut[], calendars: CalendarOut[]
   return itemsByDay(items.filter(item => hidden.has(item.calendar_id)), undefined, timeZone).get(day)?.length ?? 0;
 }
 
-/** Whether an event is over (past items show at .55 on the grid); tasks never are, done or not. */
+/** Whether an event is over (past items show at .55 on the grid). Tasks never are, done or not. */
 export function isPast(item: ItemOut, now: number, timeZone: string): boolean {
   if (item.kind === 'task') return false;
   if (item.all_day) return !!item.end_date && item.end_date <= localDate(now, timeZone);
   return !!item.ends_at && Date.parse(item.ends_at) <= now;
 }
 
-/** A chip's time: "7 AM", "2:30 PM"; all-day events have none. */
+/** A chip's time: "7 AM", "2:30 PM". All-day events have none. */
 export function chipTime(item: ItemOut, timeZone: string): string | null {
   if (item.kind === 'task' || item.all_day || !item.starts_at) return null;
   return clockTime(item.starts_at, timeZone).replace(':00 ', ' ');
@@ -276,8 +276,8 @@ export function timeRange(item: ItemOut, timeZone: string): string {
 }
 
 /**
- * A dated subtask's date after its title: its weekday within the coming week, "Fri";
- * its month and day further off or past, "Nov 24"; its time after either, "Fri 3:00 PM". Null undated.
+ * A dated subtask's date after its title: its weekday within the coming week ("Fri"), its month
+ * and day further off or past ("Nov 24"), and its time after either ("Fri 3:00 PM"). Null undated.
  */
 export function subtaskDue(subtask: Pick<SubtaskOut, 'due_date' | 'due_at'>, today: string, timeZone: string): string | null {
   if (!subtask.due_date) return null;
@@ -352,7 +352,7 @@ export interface Agenda {
   events: AgendaEvent[];
   tasks: ItemOut[];
   // Where the now-line goes among the events (before events[index]): after what has ended, so an
-  // event under way is the one at it, and carries it in its row; null on other days.
+  // event under way is the one at it, and carries it in its row. Null on other days.
   nowAt: number | null;
 }
 
@@ -365,10 +365,10 @@ export function agendaPlace(item: Pick<ItemOut, 'place' | 'address'>): AgendaPla
 }
 
 /**
- * The selected day's agenda: its events with their times and lines, the
- * now-line after what has ended (today only), so one under way carries it, the next event today
- * lifted with "in 5h" or, under way, "45m left", then its tasks, the timed
- * ones by their time and the untimed after, a done one keeping its place.
+ * The selected day's agenda. It has its events with their times and lines, and the now-line after
+ * what has ended (today only), so one under way carries it. The next event today is lifted with
+ * "in 5h" or, under way, "45m left". Then come its tasks: the timed ones by their time and the
+ * untimed after, a done one keeping its place.
  */
 export function agenda(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, now: number, timeZone: string): Agenda {
   const names = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.name]));
@@ -411,8 +411,8 @@ export const POPOVER = {offset: 2, margin: 8} as const;
 
 /**
  * Where the day's popover goes (board 11b): it hangs from the "+N", its left edge 2 px left of it
- * and 2 px below, over the cells underneath; with no room below it opens above, and it stays
- * inside the grid.
+ * and 2 px below, over the cells underneath. With no room below it opens above. It stays inside
+ * the grid.
  */
 export function hangFrom(anchor: Rect, size: {width: number; height: number}, bounds: Rect): {left: number; top: number} {
   const maxLeft = bounds.left + bounds.width - POPOVER.margin - size.width;
@@ -435,7 +435,7 @@ export const itemKey = (id: number, at: string | null) => (at ? `${id}@${at}` : 
 /**
  * A calendar's name as a list shows it (the sidebar's Calendars, Into, the editor's Calendar
  * menu). A name that appears more than once in `all` (one holiday calendar subscribed from two Google
- * accounts) carries its account's label, shown after it in `ink3`; a name that appears once doesn't.
+ * accounts) carries its account's label, shown after it in `ink3`. A name that appears once doesn't.
  */
 export function calendarLabel(calendar: Pick<CalendarOut, 'name' | 'account_id'>, all: Pick<CalendarOut, 'name'>[], accounts: {id: number; label: string}[]): {name: string; account: string | null} {
   const twice = all.filter(one => one.name === calendar.name).length > 1;

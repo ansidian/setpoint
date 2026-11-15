@@ -72,7 +72,7 @@ export function currentPrompts(store: Store): PatternPromptOut[] {
 
 /**
  * Yes or No to a prompt Attention shows. Yes adds a learned rule (organisation and type to FYI, as
- * the kind they mostly had), applied to new mail from now on; No keeps the prompt quiet for good.
+ * the kind they mostly had), applied to new mail from now on. No keeps the prompt quiet for good.
  * Either way the prompts left come back.
  */
 export function answerPrompt(store: Store, id: number, answer: 'yes' | 'no'): PatternPromptOut[] {
@@ -123,7 +123,7 @@ function presentRules(store: Store, rows: RuleRow[]): RuleOut[] {
 
 /**
  * Turning a rule off or deleting it with Cancel them: its waiting trashes' due times go, so the
- * emails stay; a code email's goes back to its code's later expiry.
+ * emails stay. A code email's goes back to its code's later expiry.
  */
 function cancelWaiting(store: Store, ruleId: number) {
   const cancelled = store.db.update(t.messages).set({trashDueAt: sql`case when ${t.messages.codeTrash} then ${t.messages.codeExpiresAt} end`}).where(waitingOf([ruleId]))
@@ -141,7 +141,7 @@ export function listRules(store: Store): RuleOut[] {
   return presentRules(store, [...written, ...learned]);
 }
 
-/** A written rule, after every other written rule. It sorts and acts on new mail; mail already sorted stays. */
+/** A written rule, after every other written rule. It sorts and acts on new mail. Mail already sorted stays. */
 export function createRule(store: Store, input: RuleInput): RuleOut {
   return transaction(store, () => {
     const last = store.db.select({position: sql<number>`max(${t.triageRules.position})`}).from(t.triageRules).where(eq(t.triageRules.origin, 'written')).get();
@@ -175,7 +175,7 @@ export function updateRule(store: Store, id: number, changes: RuleUpdateInput): 
 
 /**
  * Deletes a rule. Undoing a learned rule also says No to its prompt, so it isn't offered again the
- * moment the rule is gone. Its waiting trashes are cancelled first if asked; otherwise they
+ * moment the rule is gone. Its waiting trashes are cancelled first if asked. Otherwise they
  * keep their due times, which the pass carries out with the rule gone (the email's rule goes null).
  */
 export function deleteRule(store: Store, id: number, waiting: RuleWaiting = 'run') {

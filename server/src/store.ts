@@ -1,6 +1,6 @@
 // Everything an operation needs besides its input: the database, the clock, the owner's zone, the
 // live feed and the key for credentials. Tests build one over an in-memory database with a fixed
-// clock; the CLI has no live feed.
+// clock. The CLI has no live feed.
 import type Database from 'better-sqlite3';
 import {SEED_NOW} from '@setpoint/shared';
 import type {LiveEvent} from '@setpoint/shared';
@@ -13,19 +13,19 @@ export interface Store {
   db: Db;
   timeZone: string;
   now(): Date;
-  // Real time, beside a development clock (storeClock): what has to run on real time whatever `now`
-  // reads, as the password budget does. Left out where `now` is real time already (production).
+  // Real time, beside a development clock (storeClock), for what has to run on real time whatever
+  // `now` reads, as the password budget does. Left out where `now` is real time already (production).
   realNow?(): Date;
   live?: LiveFeed;
-  // Null when no key is configured: credentials can then be neither written nor read.
+  // Null when no key is configured. Credentials can then be neither written nor read.
   keyring: Keyring | null;
 }
 
 export const isoNow = (store: Store) => store.now().toISOString();
 
 /**
- * The clocks for SETPOINT_CLOCK (config.ts): real time; the seed's moment, running on from when
- * Setpoint started (`npm run dev`, `npm run try`); or held there (the browser checks' screenshots).
+ * The clocks for SETPOINT_CLOCK (config.ts): real time, the seed's moment running on from when
+ * Setpoint started (`npm run dev`, `npm run try`), or held there (the browser checks' screenshots).
  * A development clock starts again at every restart, so real time goes beside it.
  */
 export function storeClock(clock: 'real' | 'seed' | 'frozen', started = Date.now()): Pick<Store, 'now' | 'realNow'> {
@@ -54,7 +54,7 @@ export function transaction<T>(store: Store, operation: () => T): T {
   return result;
 }
 
-/** Notes what a write changed, for the live stream; outside a transaction it goes out at once. */
+/** Notes what a write changed, for the live stream. Outside a transaction it goes out at once. */
 export function noteLive(store: Store, event: LiveEvent) {
   if (!store.live) return;
   store.live.note(event);

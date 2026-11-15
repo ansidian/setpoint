@@ -1,15 +1,15 @@
-// Alfred: a question, answered by a model that
-// uses Setpoint's own queries as tools, with the emails the answer rests on as its sources, and
-// follow-up turns in a short thread held here by id. "Ask about this email" scopes a thread to one
-// email. When the mail doesn't say, the answer is null and `searched` says what Alfred searched
-// ("Couldn't find that in your mail"). Anything Alfred would create is a proposal.
+// Alfred: a question, answered by a model that uses Setpoint's own queries as tools. The emails
+// the answer rests on are its sources. Follow-up turns go in a short thread held here by id. "Ask
+// about this email" scopes a thread to one email. When the mail doesn't say, the answer is null and
+// `searched` says what Alfred searched ("Couldn't find that in your mail"). Anything Alfred would
+// create is a proposal.
 //
 // Every model call goes in the AI usage ledger (purpose `alfred`). A failed call saves nothing: the
 // thread stays as it was before the question, so asking again works.
 //
-// The tool loop has a step limit,
-// one reminder when a turn ends without the expected tool call, the provider and model bound when the
-// thread starts, the transcript restored on failure, and threads that end after four idle hours.
+// The tool loop has a step limit and one reminder when a turn ends without the expected tool call.
+// The provider and model are bound when the thread starts. A failure restores the transcript.
+// Threads end after four idle hours.
 import type {AnswerOut, AnswerSourceOut, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
 import {asc, eq, inArray, lt} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -31,16 +31,16 @@ import {runTool} from './tools.ts';
 import type {ToolContext} from './tools.ts';
 
 export interface AlfredOptions {
-  // The provider's base URL; tests point it at a fake on 127.0.0.1.
+  // The provider's base URL. Tests point it at a fake on 127.0.0.1.
   endpoints?: AiEndpoints;
   timeoutMs?: number;
-  // Reads an email's invite for a proposal; without it a proposal is the text's.
+  // Reads an email's invite for a proposal. Without it, a proposal is the text's.
   engine?: SyncEngine | null;
 }
 
 /** Model turns per question before Alfred gives up */
 const MAX_STEPS = 10;
-/** A thread ends after this long idle (four hours); a follow-up then starts over. */
+/** A thread ends after this long idle (four hours). A follow-up then starts over. */
 const THREAD_IDLE_MS = 4 * 60 * 60_000;
 /** Threads are kept a week, then deleted. */
 const THREAD_KEPT_MS = 7 * 24 * 60 * 60_000;
@@ -209,7 +209,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
           } else {
             const step = input.ask_id ? stepOf(store, call.name, call.input) : null;
             if (step) steps.set(input.ask_id!, step);
-            // A proposal takes what the email's invite says, read here since the tools don't wait.
+            // A proposal takes what the email's invite says. It's read here because the tools don't wait.
             const proposed = call.name === 'propose_item' ? Number(call.input?.message_id) : null;
             if (proposed && context.seen.has(proposed) && !context.invites!.has(proposed)) context.invites!.set(proposed, await inviteOf(store, options.engine ?? null, proposed));
             const outcome = runTool(context, call.name, call.input);
@@ -234,12 +234,12 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   }
   if (!final) throw new SetpointError('alfred_step_limit', 'Alfred ran out of steps before answering. Try a narrower question.', 422);
 
-  // Sources: the emails the answer names that this thread has seen; else the email it's about, or
-  // the ones it read for this answer.
+  // Sources are the emails the answer names that this thread has seen. Otherwise they are the email
+  // it's about, or the ones it read for this answer.
   const found = final.found && Boolean(final.text);
   let sourceIds = found ? [...new Set(final.sourceIds.filter(id => context.seen.has(id)))] : [];
   if (found && !sourceIds.length) sourceIds = scope !== null ? [scope] : context.read;
-  // What it searched; for a question about one email that it couldn't answer without searching, that email.
+  // What it searched. For a question about one email that it couldn't answer without searching, that email.
   const searched = found || context.searched.length || scope === null ? context.searched : sourcesOf(store, [scope]).map(source => source.subject);
   const proposals: ProposalOut[] = context.proposals;
 

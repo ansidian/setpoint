@@ -34,7 +34,8 @@ function matchesQuery(row: ApplicationRowOut, query: string): boolean {
 
 /**
  * Another application… (and Merge with…): a search over every application but these, by company or
- * role; before a word is typed, the company's own first (when there's a company), then the six newest.
+ * role. Before a word is typed, the company's own come first (when there's a company), then the six
+ * newest.
  */
 export function searchApplications(label: string, rows: ApplicationRowOut[], {except, company, today, placeholder, run, look}: {
   except: number[];
@@ -112,7 +113,7 @@ export function chooseMenu(candidates: JdCandidateOut[], on: {pick: (candidate: 
 const STATUSES: JobStatus[] = ['applied', 'in_process', 'offer', 'rejected', 'withdrawn'];
 
 /**
- * Set status: the five in their colours, the current one checked; while it's set by
+ * Set status: the five in their colours, the current one checked. While it's set by
  * hand, Let emails decide ends it. Ghosted isn't one: it's a flag.
  */
 export function statusMenu(row: Pick<ApplicationRowOut, 'status' | 'status_set_by'>, on: {set: (status: JobStatus | null) => void}): MenuSpec {
@@ -140,9 +141,9 @@ export interface CorrectionActions {
 }
 
 /**
- * More's list (35b, 300 wide), which a row's right-click shares: Pin or Unpin `P`, the two edits, Set status ›, Merge
- * with… ›; Not this posting and Look up the JD again; then the two that remove it, each saying how
- * it differs. Condensed (the Jobs pane's rows) leaves out the JD's two.
+ * More's list (35b, 300 wide), which a row's right-click shares: Pin or Unpin `P`, the two edits,
+ * Set status ›, Merge with… ›. Then Not this posting and Look up the JD again. Then the two that
+ * remove it, each saying how it differs. Condensed (the Jobs pane's rows) leaves out the JD's two.
  */
 export function moreEntries(row: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: CorrectionActions, condensed = false): MenuEntry[] {
   const saved = row.jd.state === 'found';

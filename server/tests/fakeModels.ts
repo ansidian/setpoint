@@ -1,7 +1,7 @@
 // A fake Anthropic on 127.0.0.1, answering as its Messages API does (a tool_use block, usage with
 // cache reads and writes; 401 authentication_error, 429 rate_limit_error with retry-after, 529
 // overloaded_error). Tests answer each request themselves, or make it hang, leave out the tool call,
-// or send broken arguments; for a conversation (Alfred) they answer with tool calls, text or a
+// or send broken arguments. For a conversation (Alfred) they answer with tool calls, text or a
 // refusal, reading the transcript the request carries. No test reaches a real model provider.
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';

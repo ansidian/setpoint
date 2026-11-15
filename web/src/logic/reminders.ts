@@ -1,13 +1,13 @@
-// Reminders as the editor and the detail word them:
-// each is minutes from the item's moment, a negative one after it, 4 weeks either side. The
-// moment is a timed event's start, a timed task's due time, an all-day event's midnight, and a dated
-// task's Settings' task time on its day (9:00 AM at None); a task with no date has none. A preset's
-// offset keeps its words ("10 min before"); any other reads as the moment it goes off, the offset
-// quiet beside it ("Sun, Oct 25, 8:00 PM" · "1 day 18 hrs before").
+// Reminders as the editor and the detail word them. Each is minutes from the item's moment, a
+// negative one after it, 4 weeks either side. The moment is a timed event's start, a timed task's
+// due time, an all-day event's midnight, and a dated task's Settings' task time on its day
+// (9:00 AM at None). A task with no date has none. A preset's offset keeps its words
+// ("10 min before"). Any other reads as the moment it goes off, the offset quiet beside it
+// ("Sun, Oct 25, 8:00 PM" · "1 day 18 hrs before").
 //
-// The line's reminders become offsets here, a moment counted in real minutes from the
-// item's in its time zone. On a new item they replace Settings' default and sit beside what's ticked
-// in the editor; on an edited item they add to its own. Taking the phrase out takes out only them.
+// The line's reminders become offsets here, a moment counted in real minutes from the item's in its
+// time zone. On a new item they replace Settings' default and sit beside what's ticked in the
+// editor. On an edited item they add to its own. Taking the phrase out takes out only them.
 import type {ItemOut} from '@setpoint/shared';
 import {REMINDER_LIMIT_MINUTES} from '@setpoint/shared';
 import {dayTitle} from './calendar.ts';
@@ -73,7 +73,7 @@ export function customProblem(minutes: number): string | null {
   return `That's more than 4 weeks ${minutes > 0 ? 'before' : 'after'}: a reminder goes within 4 weeks either side.`;
 }
 
-/** One reminder's words: a preset's, or its moment with the offset quiet beside it; with no anchor, the offset. */
+/** One reminder's words: a preset's, or its moment with the offset quiet beside it. With no anchor, the offset. */
 export function reminderWords(minutes: number, anchor: number | null, timeZone: string): {text: string; quiet: string | null; custom: boolean} {
   if (isPreset(minutes)) return {text: remindersLine([minutes])!, quiet: null, custom: false};
   if (anchor === null) return {text: relativeLine(minutes), quiet: null, custom: true};
@@ -97,7 +97,7 @@ export function reminderLines(reminders: number[], anchor: number | null, timeZo
   return [...(presets ? [{text: presets, quiet: null}] : []), ...others];
 }
 
-/** The line's reminders as offsets from `anchor`, the same one once; past 4 weeks they go, and with no anchor all do. */
+/** The line's reminders as offsets from `anchor`, the same one once. Past 4 weeks they go, and with no anchor all do. */
 export function lineOffsets(reads: ReminderRead[], anchor: number | null, timeZone: string): number[] {
   if (anchor === null) return [];
   const offsets = reads.map(read => ('minutes' in read ? read.minutes : offsetAt(anchor, Date.parse(instantAt(read.date, read.time, timeZone)))));
@@ -106,7 +106,7 @@ export function lineOffsets(reads: ReminderRead[], anchor: number | null, timeZo
 
 /**
  * An item's reminders with the line's: what was picked (null, Settings' default) and the line's
- * beside it, 10 at most, what was picked first; with none from the line, what was picked.
+ * beside it, 10 at most, what was picked first. With none from the line, what was picked.
  */
 export function withLine(picked: number[] | null, line: number[]): number[] | null {
   if (!line.length) return picked;

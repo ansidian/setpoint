@@ -1,8 +1,8 @@
-// Sender authentication: whether the receiving provider says the From domain is authentic. Remote content
-// loads for an authenticated, non-Noise sender, and Settings' trust is per domain.
+// Sender authentication: whether the receiving provider says the From domain is authentic. Remote
+// content loads for an authenticated, non-Noise sender, and Settings' trust is per domain.
 //
 // It reads only the verdict the receiver added (Gmail's Authentication-Results from
-// mx.google.com, iCloud's anchored block), never a sender-supplied copy: anything ambiguous,
+// mx.google.com, iCloud's anchored block), never a sender-supplied copy. Anything ambiguous,
 // duplicated or malformed is "unavailable", which never counts as a pass. Pure: headers in, the
 // stored projection out.
 
@@ -42,7 +42,7 @@ function normalizedDomain(value: unknown): string | null {
 function addressDomain(value: unknown): string | null {
   const from = String(value || "").trim();
   // Match one whole mailbox. A quoted display name can itself contain an email
-  // address; only the angle-bracket address supplies the authenticated identity.
+  // address. Only the angle-bracket address supplies the authenticated identity.
   const bracketed = from.match(/^(?:(?:"(?:[^"\\\r\n]|\\[^\r\n])*"|[^"<>@,;:\\\r\n]+)\s*)?<[^<>\s@,;:"\\()]+@([a-z0-9.-]+)>$/i);
   const bare = from.match(/^[^<>\s@,;:"\\()]+@([a-z0-9.-]+)$/i);
   return normalizedDomain(bracketed?.[1] || bare?.[1]);
@@ -118,13 +118,13 @@ export function evaluateGmailSenderAuthentication(
   const spf = spfResult ? { result: spfResult.result, domain: spfDomain, aligned: spfDomain === claimedDomain } : null;
   const dmarcResult = results.find((entry) => entry.method === "dmarc");
   const headerFromDomain = dmarcResult ? strictSigningDomain(dmarcResult.properties["header.from"]) : claimedDomain;
-  // Gmail names the DMARC record's domain in header.from: the From domain, or for a subdomain sender
-  // the parent its policy sits on (email.informeddelivery.usps.com → usps.com). Either way the
+  // Gmail names the DMARC record's domain in header.from. It is the From domain, or for a subdomain
+  // sender the parent its policy sits on (email.informeddelivery.usps.com → usps.com). Either way the
   // result is Gmail's evaluation of this From header, so a parent on a label boundary aligns.
   const dmarc = dmarcResult ? { result: dmarcResult.result, domain: headerFromDomain, aligned: dmarcCovers(headerFromDomain, claimedDomain) } : null;
   // Exact DKIM d= alignment authenticates the Author Domain (RFC 9989 §4.4.1).
   // This is sender authority, not an invented DMARC evaluation. An explicit
-  // DMARC result of any kind always controls; SPF alone is never this fallback.
+  // DMARC result of any kind always controls. SPF alone is never this fallback.
   const status: SenderAuthenticationStatus = dmarc
     ? ["pass", "fail", "none"].includes(dmarc.result)
       ? !dmarc.aligned || dmarc.result === "fail" ? "fail" : dmarc.result === "pass" ? "pass" : "none"
@@ -187,7 +187,7 @@ function strictSigningDomain(value: string | undefined): string | null {
     ? value.toLowerCase() : null;
 }
 
-/** Whether Gmail's DMARC domain is the From domain or a parent of it (never a bare suffix: it has a dot). */
+/** Whether Gmail's DMARC domain is the From domain or a parent of it (never a bare suffix, because it has a dot). */
 function dmarcCovers(dmarcDomain: string | null, fromDomain: string | null): boolean {
   return !!dmarcDomain && !!fromDomain && (fromDomain === dmarcDomain || fromDomain.endsWith(`.${dmarcDomain}`));
 }
@@ -233,7 +233,7 @@ function gmailDkimSigningDomain(properties: Record<string, string>, headers: Aut
     signatures.push(tags);
   }
   // RFC 6008 §4: header.b is a case-sensitive, >=8-character signature prefix.
-  // Require one original signature; adding a colliding copy cannot select an
+  // Require one original signature, so adding a colliding copy cannot select an
   // arbitrary unverified d=. The selector and AUID must also agree when given.
   const matched = signatures.filter((signature) => signature.b?.replace(/\s/g, "").startsWith(prefix));
   if (matched.length !== 1) return null;
@@ -366,7 +366,7 @@ export function evaluateICloudSenderAuthentication(
     const segments = value.split(";").slice(1).map((segment) => segment.trim()).filter(Boolean);
     if (segments.length !== 1 || !segments[0]?.toLowerCase().startsWith(`${mechanisms[index]}=`)) return unavailable();
   }
-  // Exactly one syntactically valid Header-From property; comment text and
+  // Exactly one syntactically valid Header-From property. Comment text and
   // repeated properties cannot supply or override the DMARC identity.
   if (!/^dmarc=(?:pass|fail|none|temperror|permerror)\s+header\.from=[a-z0-9.-]+\s*$/i.test((cleanResults[2]?.split(";")[1] || "").trim())) return unavailable();
   const fromHeaders = normalized.filter((header) => header.name === "from");
@@ -376,8 +376,8 @@ export function evaluateICloudSenderAuthentication(
 }
 
 /**
- * The record's `sender_authenticated`: true on a pass, false on a fail or a "none"
- * (no DMARC policy, nothing aligned), null while unknown. Only true loads remote content.
+ * The record's `sender_authenticated`: true on a pass, false on a fail or a "none" (no DMARC
+ * policy, nothing aligned), and null while unknown. Only true loads remote content.
  */
 export function senderAuthenticated(projection: SenderAuthentication | null): boolean | null {
   if (!projection || projection.status === 'unavailable') return null;

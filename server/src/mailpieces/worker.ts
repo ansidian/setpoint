@@ -1,9 +1,10 @@
 // USPS's mail, kept 30 days for the agenda rail. Each digest the mirror marks
-// (src/sync/mailMirror.ts) is a durable `mailpieces` job: its source is fetched again through its
-// account's adapter, its mailpieces' pictures read (src/providers/mime.ts › readDigest, ads left out)
-// and kept under the day it's for. Every ten minutes the worker queues digests from the last 30 days
-// that have no day yet (the ones already mirrored when this shipped, a job that gave up) and drops
-// days older than 30. A digest the provider no longer has is left without a day.
+// (src/sync/mailMirror.ts) is a durable `mailpieces` job. The job fetches its source again through
+// its account's adapter and reads its mailpieces' pictures (src/providers/mime.ts › readDigest, ads
+// left out). It keeps them under the day it's for. Every ten minutes the worker queues digests from
+// the last 30 days that have no day yet (the ones already mirrored when this shipped, a job that
+// gave up). It also drops days older than 30. A digest the provider no longer has is left without a
+// day.
 import {and, eq, gte, isNull, lt} from 'drizzle-orm';
 import {mailSourceId} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';

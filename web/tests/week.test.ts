@@ -1,6 +1,6 @@
-// The week view's rules as tables: the week and its title, the all-day row's
-// bars, tasks and "+N", each day's blocks and lanes, the opening scroll, and what a drag makes of a
-// pointer (create, move, resize), with the lines the toast and assistive tech read.
+// The week view's rules as tables: the week and its title, the all-day row's bars, tasks and "+N",
+// each day's blocks and lanes, the opening scroll, and what a drag makes of a pointer (create,
+// move, resize), with the lines the toast and assistive tech read.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';

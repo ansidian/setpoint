@@ -1,11 +1,10 @@
-// Signing in. Setpoint
-// asks GET /api/me once at start: with a session it shows the app, else the sign-in card, which
-// claims Setpoint with the CLI's setup token the first time and signs in with the password or a
-// passkey after. When Setpoint can't be reached at all (a deploy, a restart: no connection, or the
-// proxy's 5xx), it says so and asks again until it answers (Root).
+// Signing in. Setpoint asks GET /api/me once at start. With a session it shows the app, else the
+// sign-in card. The first time, the card claims Setpoint with the CLI's setup token. After that it
+// signs in with the password or a passkey. When Setpoint can't be reached at all (a deploy, a
+// restart: no connection, or the proxy's 5xx), it says so and asks again until it answers (Root).
 // Any 401 later swaps the app for the card and keeps the address. /api/me also gives the owner's
-// time zone and the server's clock, which the dev server runs from the seed's moment, so the app's
-// "now" is the server's.
+// time zone and the server's clock, so the app's "now" is the server's. The dev server runs that
+// clock from the seed's moment.
 import type {AuthStatusOut, MeOut, RecoveryCodesOut, SignInOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {ApiFailure, clearCache, getJson, onUnauthorized, refreshAll, sendJson} from './client.ts';
@@ -31,8 +30,8 @@ function set(next: AuthState) {
 
 export const useAuth = () => useSyncExternalStore(subscribe, () => state);
 
-// A refusal asks /me whether the session is still there (a change in Settings › Security replaces it, and
-// refuses what left under the old one): it shows the sign-in card if it isn't.
+// A refusal asks /me whether the session is still there, and shows the sign-in card if it isn't. (A
+// change in Settings › Security replaces the session and refuses what left under the old one.)
 onUnauthorized(async () => {
   await checkSession();
   return state === 'in';
@@ -56,9 +55,9 @@ const unreachable = (error: unknown) => error instanceof ApiFailure && (error.co
 let checking: Promise<void> | null = null;
 
 /**
- * Asks whether this browser is signed in: a 401 (or any refusal) shows the sign-in card. Setpoint
- * not answering is no sign-out: at launch it shows the boot screen's pill until an answer comes,
- * and while signed in the app stays, under the live stream's offline pill. One ask at a time.
+ * Asks whether this browser is signed in. A 401 (or any refusal) shows the sign-in card. Setpoint
+ * not answering is no sign-out. At launch the boot screen's pill shows until an answer comes. While
+ * signed in, the app stays, under the live stream's offline pill. One ask at a time.
  */
 export function checkSession(): Promise<void> {
   checking ??= (async () => {

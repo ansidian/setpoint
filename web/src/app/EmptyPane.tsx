@@ -1,15 +1,16 @@
-// The pane beside the Inbox, News and Jobs with nothing open in it: always there on a
+// The pane beside the Inbox, News and Jobs with nothing open in it. It is always there on a
 // desktop, at the dragged width, so the list and header never move as an item opens or closes. Each
 // page fills it: the Inbox's mail day (InboxDay.tsx), News's recap (NewsDay.tsx) and
 // Jobs's recent movement (JobsDay.tsx).
 //
-// In a narrow window an open item covers the list, and the empty pane comes over it only from a
-// 30 px `right_panel_open` button before search, as Calendar's day does: lit while showing,
-// closed by the button again or Esc, on every load, and when an item opens.
+// In a narrow window an open item covers the list. The empty pane comes over it only from a 30 px
+// `right_panel_open` button before search, as Calendar's day does. The button is lit while the pane
+// shows. The button again or Esc closes the pane, and it also closes on every load and when an item
+// opens.
 //
-// While its page is up, the pane's answers stay on screen even with an item open, so a
-// change to the mail meanwhile refreshes them rather than forgetting them, and closing the item brings
-// the pane back as it was. Its mark settles in only the first time the pane shows in a visit.
+// While its page is up, the pane's answers stay on screen even with an item open. So a change to
+// the mail meanwhile refreshes them rather than forgetting them, and closing the item brings the
+// pane back as it was. Its mark settles in only the first time the pane shows in a visit.
 import {useState} from 'react';
 import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
 import {useResources} from '../api/client.ts';
@@ -32,7 +33,7 @@ export interface EmptyPaneState {
 }
 
 /**
- * The empty pane's state for a page; `open` is whether an item has the pane, and `keep` the paths
+ * The empty pane's state for a page. `open` is whether an item has the pane, and `keep` the paths
  * the pane reads, kept on screen while the page is up.
  */
 export function useEmptyPane(open: boolean, keep: string[]): EmptyPaneState {
@@ -77,10 +78,10 @@ export interface PaneTrouble {
 }
 
 /**
- * The pane's trouble, folded under one `warning` chip in `alert` at the start of the foot's facts line,
- * so the block above never moves: the pointer over it, or focus, shows a card
- * above it listing each in `alert` with its fix, which the pointer can move into; leaving it or Esc
- * puts it away. Nothing shows without trouble.
+ * The pane's trouble, folded under one `warning` chip in `alert` at the start of the foot's facts
+ * line, so the block above never moves. The pointer over the chip, or focus, shows a card above it.
+ * The card lists each trouble in `alert` with its fix, and the pointer can move into it. Leaving it
+ * or Esc puts it away. Nothing shows without trouble.
  */
 function TroubleChip({trouble}: {trouble: PaneTrouble[]}) {
   const [open, setOpen] = useState(false);

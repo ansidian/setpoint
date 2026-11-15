@@ -1,11 +1,11 @@
-// The week view (board 16, Sunday first): the day heads and the all-day row
-// held at the top while 24 hours scroll under them, each day's events as blocks in lanes, today's
-// now-line, and the selected day's column in `sub`. A drag over empty hours makes a new event's range
-// (over the all-day row, its days), a drag on a block moves it in 15-minute steps to any day (a bar or
-// a task by whole days), and a block's top or bottom edge (a bar's ends) resizes it; held at the
-// left or right edge a drag pages the week, at the top or bottom it scrolls. The page says what each
-// drop does (CalendarPage); the floating detail and the anchored cards are drawn here as the month's
-// are, and find their items by the same marks (geometry.ts).
+// The week view (board 16, Sunday first): the day heads and the all-day row held at the top while
+// 24 hours scroll under them, each day's events as blocks in lanes, today's now-line, and the
+// selected day's column in `sub`. A drag over empty hours makes a new event's range (over the
+// all-day row, its days). A drag on a block moves it in 15-minute steps to any day (a bar or a task
+// by whole days). A block's top or bottom edge (a bar's ends) resizes it. Held at the left or right
+// edge, a drag pages the week. At the top or bottom it scrolls. The page says what each drop does
+// (CalendarPage). The floating detail and the anchored cards are drawn here as the month's are, and
+// find their items by the same marks (geometry.ts).
 import type {CalendarOut, ItemChanges, ItemOut, WeatherDayOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode, WheelEvent as ReactWheelEvent} from 'react';
@@ -153,7 +153,7 @@ export function WeekGrid(props: WeekGridProps) {
 
   // ---------- Scrolling ----------
   const hoursHeight = () => (scroller.current?.clientHeight ?? 0) - (top.current?.offsetHeight ?? 0);
-  // The hours open where openingScroll says on the first paint and whenever the week is shown afresh; paging keeps them.
+  // The hours open where openingScroll says on the first paint and whenever the week is shown afresh. Paging keeps them.
   useLayoutEffect(() => {
     const element = scroller.current;
     if (!element) return;
@@ -171,7 +171,7 @@ export function WeekGrid(props: WeekGridProps) {
     if (!weekDays(latest.current.week).includes(date)) onWeek(weekStart(date), 'jump');
   }, [scroll, onWeek]);
 
-  // Paging slides the days in from the side they come from; the first paint doesn't.
+  // Paging slides the days in from the side they come from. The first paint doesn't.
   const [paged, setPaged] = useState<{week: string; slide: 'next' | 'prev' | undefined}>({week, slide: undefined});
   if (paged.week !== week) setPaged({week, slide: week > paged.week ? 'next' : 'prev'});
   const slide = paged.slide;
@@ -268,7 +268,7 @@ export function WeekGrid(props: WeekGridProps) {
       edgeTimer = 0;
       edgeSide = 0;
     };
-    // While held near the hours' top or bottom the grid scrolls; at the left or right edge, it pages.
+    // While held near the hours' top or bottom the grid scrolls. At the left or right edge, it pages.
     const edge = () => {
       frame = 0;
       const host = section.current;
@@ -384,7 +384,7 @@ export function WeekGrid(props: WeekGridProps) {
   };
 
   // Where a press on empty hours would start: the 15-minute step under the
-  // pointer, as a 30-minute slot holding + and its time; gone over a block, off the hours, on a press.
+  // pointer, as a 30-minute slot holding + and its time. It's gone over a block, off the hours, on a press.
   const [hovered, setHovered] = useState<{date: string; minutes: number; shown: boolean} | null>(null);
   const hoverSlot = (date: string, event: ReactPointerEvent<HTMLElement>) => {
     if (event.pointerType !== 'mouse' || press.current || event.target !== event.currentTarget) {
@@ -591,7 +591,7 @@ interface TimedBlockProps {
   onPress: (event: ReactPointerEvent<HTMLElement>, edge?: Edge) => void;
 }
 
-/** One event's block in its day (board 16's `.wb`): the title, then its times and place; short ones on one line. */
+/** One event's block in its day (board 16's `.wb`): the title, then its times and place. Short ones on one line. */
 function TimedBlock({block, calendar, selected, look, lifted, now, timeZone, onSelect, onPress}: TimedBlockProps) {
   const {item} = block;
   const box = blockBox(block.start, block.end);
@@ -599,7 +599,7 @@ function TimedBlock({block, calendar, selected, look, lifted, now, timeZone, onS
   const pending = item.command?.state === 'pending';
   const failed = item.command?.state === 'failed';
   const time = timeRange(item, timeZone);
-  // Sharing its column, it gives its start alone and its title may take two lines; nothing is drawn half cut.
+  // Sharing its column, it gives its start alone and its title may take two lines. Nothing is drawn half cut.
   const narrow = block.lanes > 1;
   const lines = blockLines(box.height, narrow);
   const fade = useCalendarFade()(item.calendar_id);

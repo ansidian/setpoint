@@ -1,10 +1,11 @@
-// An .ics file's review in the right pane, in place of the day's agenda as the editor
-// and search take it. The file's name and its count; one calendar picker (the user's Google
-// calendars) and "N already on <calendar> (will update)"; a row per event with its checkbox (in the
-// chosen calendar's colour, as the sidebar's), title, day and time, and "repeats", "past" or "will
-// update" after it, past events unticked; what the file had that's left out, last. The footer's
-// Import N events runs them one at a time, the button giving way to "Importing 12 of 35"; a refused
-// event stays in the list with Google's words and Retry. Esc or Cancel closes it.
+// An .ics file's review in the right pane, in place of the day's agenda as the editor and search
+// take it. It shows the file's name and its count, then one calendar picker (the user's Google
+// calendars) and "N already on <calendar> (will update)". Then a row per event with its checkbox (in
+// the chosen calendar's colour, as the sidebar's), title, day and time, and "repeats", "past" or
+// "will update" after it. Past events are unticked. What the file had that's left out comes last.
+// The footer's Import N events runs them one at a time, and the button gives way to
+// "Importing 12 of 35". A refused event stays in the list with Google's words and Retry. Esc or
+// Cancel closes it.
 import type {CalendarOut} from '@setpoint/shared';
 import type {CSSProperties} from 'react';
 import {calendarLabel} from '../../logic/calendar.ts';

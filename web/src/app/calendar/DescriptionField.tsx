@@ -1,9 +1,9 @@
 // The editor's Description field: the browser's editable
 // field under a small bar of formats, with no library. What's in it is only ever read through
 // logic/description.ts's reader, so whatever is typed, pasted or dropped comes out as the short list
-// of formats and nothing else; a paste goes in already read that way. An event has underline, a
+// of formats and nothing else. A paste goes in already read that way. An event has underline, a
 // task doesn't (Markdown has none). Its links open on ⌘-click (Ctrl on Windows), as a typed field
-// can't open them on a plain one; a Gmail link to an email Setpoint has opens in the reader.
+// can't open them on a plain one. A Gmail link to an email Setpoint has opens in the reader.
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {ClipboardEvent, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {fitting, isEmpty, readHtml, safeHref, writeHtml} from '../../logic/description.ts';
@@ -113,7 +113,7 @@ export function linkTarget(typed: string): string | null {
 }
 
 export interface DescriptionFieldProps {
-  // What it opens with; after that the field holds its own text and says what it reads as.
+  // What it opens with. After that the field holds its own text and says what it reads as.
   blocks: Block[];
   kind: 'event' | 'task';
   // Under the field once it's changed, when its source held formatting the list can't.
@@ -157,7 +157,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
       setFocused(false);
       return;
     }
-    // The click comes after the press ends, on what was pressed; one that never comes (released elsewhere) ends with the next press.
+    // The click comes after the press ends, on what was pressed. One that never comes (released elsewhere) ends with the next press.
     const done = () => {
       document.removeEventListener('click', done, true);
       document.removeEventListener('pointerdown', done, true);
@@ -253,7 +253,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
 
   // Tab and Shift-Tab in a list nest its item under the one before or bring it out a level, as
   // Google Calendar's editor does. A first item has nothing to nest under and a top-level
-  // one nothing to come out of, so there they do nothing; outside a list Tab moves on as ever.
+  // one nothing to come out of, so there they do nothing. Outside a list Tab moves on as ever.
   const tab = (event: KeyboardEvent) => {
     const selection = document.getSelection();
     const anchor = selection?.anchorNode;

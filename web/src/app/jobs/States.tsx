@@ -3,10 +3,10 @@
 //   `caution`, led by `warning`, at the top of the column. It folds in as it comes and out once the AI
 //   is back, as mail's health lines do.
 // - The history pass (38a): the shared spinner and "Reading history · 140 of 330 emails ·
-//   showing what’s read so far", muted, its progress along its foot easing over 260 ms; each
+//   showing what’s read so far", muted, its progress along its foot easing over 260 ms. Each
 //   application lands at its date's place (JobsPage). Done, it shows its check and "Read 330 emails"
 //   for 1.2 s, then folds away (180 ms).
-// - Jobs off (38c): the one-line empty state, the 20 px `work` over "Jobs is off · Turn on"; Turn on
+// - Jobs off (38c): the one-line empty state, the 20 px `work` over "Jobs is off · Turn on". Turn on
 //   opens Settings › Jobs with its switch focused.
 // No JD found, Ghosted and a status set by hand are the table's and the detail's, never animated.
 import type {JobsHistoryOut, JobsPageOut} from '@setpoint/shared';
@@ -20,14 +20,14 @@ import {historyLine, historyRead, historyRuns, historyShare, readingLine} from '
 
 type JobsLine = {kind: 'down'; text: string} | {kind: 'history'; history: Pick<JobsHistoryOut, 'read' | 'total'>};
 
-/** The column's lines: the AI down, then the history pass; null while there are none. */
+/** The column's lines: the AI down, then the history pass. Null while there are none. */
 export function JobsLines({page, now, timeZone}: {page: JobsPageOut; now: number; timeZone: string}) {
   const down = readingLine(page.reading, page.history, now, timeZone);
   const lines: {key: string; line: JobsLine}[] = [
     ...(down ? [{key: 'down', line: {kind: 'down' as const, text: down}}] : []),
     ...(historyRuns(page.history) ? [{key: 'history', line: {kind: 'history' as const, history: {read: page.history.read, total: page.history.total}}}] : []),
   ];
-  // The pass says it's done before it goes; the AI's line just folds out.
+  // The pass says it's done before it goes. The AI's line just folds out.
   const {shown, moveOn} = useShownLines(lines, line => line.kind === 'history');
   if (!shown.length) return null;
   return (
@@ -49,7 +49,7 @@ function DownLine({text, phase, onMoveOn}: {text: string; phase: LinePhase; onMo
   );
 }
 
-/** The pass's line; `done` is the page's latest, whose count the last words say. */
+/** The pass's line. `done` is the page's latest, whose count the last words say. */
 function HistoryLine({history, done, phase, onMoveOn}: {history: Pick<JobsHistoryOut, 'read' | 'total'>; done: JobsHistoryOut; phase: LinePhase; onMoveOn: (from: 'done' | 'out') => void}) {
   const ref = useLinePhase(phase, onMoveOn);
   if (phase === 'done' || phase === 'out') {

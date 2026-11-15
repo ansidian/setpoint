@@ -2,12 +2,12 @@
 // already read the email: Jobs passes on its organisation, platform (`via`), type, kind and summary,
 // and asks only for what triage doesn't keep: the event, the company it names, the role, the
 // requisition ID and the one line ("Interview Tue Oct 13, 2:00 PM"). The answer is read leniently,
-// field by field, as triage's is; an answer with no usable event is null (read, making nothing).
+// field by field, as triage's is. An answer with no usable event is null (read, making nothing).
 import type {ToolSpec} from '../providers/ai/index.ts';
 
 /**
  * What an email is to Jobs. The first five set a status ("interview" takes a scheduling
- * request too); the next six are quiet; a recruiter's cold email and mail that isn't
+ * request too). The next six are quiet. A recruiter's cold email and mail that isn't
  * about the user's applications are out.
  */
 export const JOB_EMAIL_EVENTS = [

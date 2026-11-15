@@ -1,5 +1,5 @@
-// Local days and wall-clock times in the owner's zone. Instants are ISO 8601 UTC strings; dates are
-// `YYYY-MM-DD`; times are 24-hour `HH:MM`.
+// Local days and wall-clock times in the owner's zone. Instants are ISO 8601 UTC strings. Dates are
+// `YYYY-MM-DD`. Times are 24-hour `HH:MM`.
 
 const formats = new Map<string, Intl.DateTimeFormat>();
 function partsFormat(timeZone: string): Intl.DateTimeFormat {

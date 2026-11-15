@@ -1,8 +1,8 @@
-// The one list's rules (DESIGN.md › Copy) as tables: days at midnight Pacific, their headings,
-// clock times, each day's lanes with the kind where an FYI run starts and its Noise folded,
-// pinned email on the shelf rather than its day, Attention above the days and unread mail in
-// its day, each row's text (codes, security facts, protected mail), and the views'
-// parts with Unread's hold.
+// The one list's rules (DESIGN.md › Copy) as tables:
+// days at midnight Pacific, their headings, clock times, each day's lanes with the kind where an FYI
+// run starts and its Noise folded, pinned email on the shelf rather than its day, Attention above
+// the days and unread mail in its day, each row's text (codes, security facts, protected mail), and
+// the views' parts with Unread's hold.
 import type {MessageRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';

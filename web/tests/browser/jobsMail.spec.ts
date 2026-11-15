@@ -1,11 +1,11 @@
-// Jobs in mail (boards 37a–37c) against the seed: the Northwind
-// interview email's JD chip in the reader and its popover; Open in Jobs arriving with the application
-// open; Full posting arriving scrolled to the posting, unfolded; the
-// Contoso Pharmaceuticals match email's Applied before on its Noise row and in the reader, opening
-// Jobs searched for the company; one request for the list's rows, not one per row; and, with Jobs
-// turned off or on the phone, neither slot drawn. The chip's, the popover's and the badge's own behaviour (their
-// words, Esc, a click away) are the component tests' (web/tests/components/jobs.test.tsx); the company
-// matching the server's (server/src/jobs/tests/reading.test.ts, inMail.test.ts).
+// Jobs in mail (boards 37a–37c) against the seed: the Northwind interview email's JD chip in the
+// reader and its popover, Open in Jobs arriving with the application open, and Full posting arriving
+// scrolled to the posting, unfolded. Then the Contoso Pharmaceuticals match email's Applied before on
+// its Noise row and in the reader, opening Jobs searched for the company. Then one request for the
+// list's rows, not one per row. With Jobs turned off or on the phone, neither slot is drawn. The
+// chip's, the popover's and the badge's own behaviour (their words, Esc, a click away) are the
+// component tests' (web/tests/components/jobs.test.tsx). The company matching is the server's
+// (server/src/jobs/tests/reading.test.ts, inMail.test.ts).
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AllOut, ApplicationOut, JobsPageOut} from '@setpoint/shared';
@@ -117,8 +117,8 @@ test('37c: Applied before on the Contoso Pharmaceuticals match email, on its Noi
     // After the subject, before the account.
     const [subject, at, account] = await rested(() => Promise.all([row.locator('.subj'), badge, row.locator('.ac')].map(each => each.boundingBox())));
     assert.ok(subject!.x + subject!.width <= at!.x && at!.x + at!.width <= account!.x);
-    // One request answered the rows the list first drew, not one per row; opening the day's Noise asked
-    // about its one row alone. (The page taking focus refreshes what it shows, the same request again.)
+    // One request answered the rows the list first drew, not one per row. Opening the day's Noise
+    // asked about its one row alone. (The page taking focus refreshes what it shows, the same request again.)
     const sets = [...new Set(asked)];
     assert.equal(sets.length, 2, JSON.stringify(asked));
     assert.ok(sets[0]!.split(',').length > 20, sets[0]);

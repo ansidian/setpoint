@@ -1,6 +1,6 @@
 // The places a bare "@" and an empty Place field offer. The rule as a table: most used
-// first, then most recent; spellings counted together under the latest; the latest address; no
-// links; six at most. Then the route over the seed.
+// first, then most recent, spellings counted together under the latest, the latest address, no
+// links, and six at most. Then the route over the seed.
 import type {RecentPlaceOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {recentPlaces} from '../src/domain/recentPlaces.ts';

@@ -1,13 +1,12 @@
-// The floating detail's lines (boards 12a and 12b): the date and
-// time, Time to Leave, attendees and reminders, worded as the boards word them. Time to Leave reads
-// the same in the day agenda, and in both it turns `caution` when it's
-// time to go and is gone once the event has started.
+// The floating detail's lines (boards 12a and 12b): the date and time, Time to Leave, attendees and
+// reminders, worded as the boards word them. Time to Leave reads the same in the day agenda. In
+// both it turns `caution` when it's time to go and is gone once the event has started.
 import type {ItemOut} from '@setpoint/shared';
 import {timeRange, dayTitle} from './calendar.ts';
 import {describeRule} from './compose.ts';
 import {addDays, clockTime, localDate} from './format.ts';
 
-/** A recurring event's repeat, as the editor's repeat field words it: "Weekly on Mon, Wed, Fri"; null for any other item. */
+/** A recurring event's repeat, as the editor's repeat field words it: "Weekly on Mon, Wed, Fri". Null for any other item. */
 export function repeatLine(item: Pick<ItemOut, 'kind' | 'recurrence' | 'all_day' | 'starts_at' | 'start_date'>, timeZone: string): string | null {
   if (item.kind !== 'event' || !item.recurrence) return null;
   const day = item.all_day ? item.start_date : item.starts_at && localDate(item.starts_at, timeZone);
@@ -45,8 +44,8 @@ export function travelTime(minutes: number): string {
 export const LEAVE_DUE_MINUTES = 15;
 
 /**
- * Where an event's Time to Leave stands at `now`: `later`; `due` from 15 minutes before leaving
- * until the event starts; `gone` once it has, when it isn't shown. Null without Time to Leave.
+ * Where an event's Time to Leave stands at `now`: `later`, `due` from 15 minutes before leaving
+ * until the event starts, or `gone` once it has, when it isn't shown. Null without Time to Leave.
  */
 export type LeaveState = 'later' | 'due' | 'gone';
 export function leaveState(item: ItemOut, now: number): LeaveState | null {
@@ -55,14 +54,14 @@ export function leaveState(item: ItemOut, now: number): LeaveState | null {
   return now >= Date.parse(item.time_to_leave.leave_at) - LEAVE_DUE_MINUTES * 60_000 ? 'due' : 'later';
 }
 
-/** Time to Leave's two parts, "Leave by 2:05 PM" and "18 min", and its state; null without one or once the event has started. */
+/** Time to Leave's two parts, "Leave by 2:05 PM" and "18 min", and its state. Null without one or once the event has started. */
 export function leaveBy(item: ItemOut, timeZone: string, now: number): {at: string; travel: string; state: Exclude<LeaveState, 'gone'>} | null {
   const state = leaveState(item, now);
   if (!item.time_to_leave || !state || state === 'gone') return null;
   return {at: `Leave by ${clockTime(item.time_to_leave.leave_at, timeZone)}`, travel: travelTime(item.time_to_leave.travel_minutes), state};
 }
 
-/** "Leave by 2:05 PM · 18 min" and its state; null without Time to Leave or once the event has started. */
+/** "Leave by 2:05 PM · 18 min" and its state. Null without Time to Leave or once the event has started. */
 export function leaveLine(item: ItemOut, timeZone: string, now: number): {text: string; state: Exclude<LeaveState, 'gone'>} | null {
   const leave = leaveBy(item, timeZone, now);
   return leave && {text: `${leave.at} · ${leave.travel}`, state: leave.state};
@@ -82,7 +81,7 @@ function offset(minutes: number): string {
   return parts.join(' ');
 }
 
-/** "30 min before", "1 hour before", "10 min, 1 hour before"; null with none. */
+/** "30 min before", "1 hour before", "10 min, 1 hour before". Null with none. */
 export function remindersLine(reminders: number[]): string | null {
   const sorted = [...new Set(reminders)].sort((a, b) => a - b);
   if (!sorted.length) return null;
@@ -92,7 +91,7 @@ export function remindersLine(reminders: number[]): string | null {
   return `${atStart ? 'At the start, ' : ''}${before.join(', ')} before`;
 }
 
-/** "Sam Lee", "Sam Lee, Jo Park", "Sam Lee, Jo Park and 3 more"; null with none. */
+/** "Sam Lee", "Sam Lee, Jo Park", "Sam Lee, Jo Park and 3 more". Null with none. */
 export function attendeesLine(attendees: string[]): string | null {
   if (!attendees.length) return null;
   if (attendees.length <= 3) return attendees.join(', ');

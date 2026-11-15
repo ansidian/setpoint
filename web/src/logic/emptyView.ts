@@ -12,8 +12,9 @@ export const EMPTY_HEADLINES: Record<EmptyInboxView, string> = {
 };
 
 /**
- * The quiet line under the headline, from the list itself so it never repeats the pane beside it: when
- * the last email needing the user came (Attention's newest, Done or not), or the last new email.
+ * The quiet line under the headline, from the list itself so it never repeats the pane beside it.
+ * It says when the last email needing the user came (Attention's newest, Done or not), or the last
+ * new email.
  */
 export function quietLine(view: EmptyInboxView, newest: string | null, now: number, timeZone: string): string | null {
   if (!newest) return null;

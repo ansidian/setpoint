@@ -1,18 +1,19 @@
-// Jobs in mail (boards 37a–37c): what Jobs draws in mail's
-// slots (app/slots.tsx), filled from App.tsx, a wiring point, so mail never imports Jobs.
+// Jobs in mail (boards 37a–37c): what Jobs draws in mail's slots (app/slots.tsx). App.tsx, a wiring
+// point, fills them, so mail never imports Jobs.
 //
 // - The reader's head: the JD chip on an email that belongs to an application ("Software Engineer I
-//   · Applied Oct 1 · In process"), opening its JD in a popover that grows from the chip: the head,
+//   · Applied Oct 1 · In process"). It opens its JD in a popover that grows from the chip: the head,
 //   What they want, the facts and both lists, and a foot with how it was found, Full posting and Open
 //   in Jobs. Esc, a click away or the chip closes it at once. Open in Jobs arrives with the
-//   application open, the pane simply there; Full posting arrives scrolled to it, unfolded.
+//   application open, the pane simply there. Full posting arrives scrolled to it, unfolded.
 //   Or, on a job board's match email whose company matches applications, Applied before at 26 px
 //   where the chip sits.
 // - Each of the Inbox's rows: Applied before at 20 px after the subject, a Noise row's too.
 // Both badges open Jobs searched for the company, showing every application there.
 //
-// One request answers the rows the list shows, and one the email open (GET /api/jobs/mail); being
-// under /jobs, a `jobs` event refreshes both (logic/live.ts). Nothing here touches mail's counts.
+// One request answers the rows the list shows, and one the email open (GET /api/jobs/mail). Both
+// are under /jobs, so a `jobs` event refreshes both (logic/live.ts). Nothing here touches mail's
+// counts.
 // Desktop only: on the phone neither slot draws, and nothing is asked.
 import type {ApplicationOut, JobsMailApplicationOut, JobsMailMessageOut, JobsMailOut, JobsNavOut, MessageRowOut} from '@setpoint/shared';
 import {JOBS_MAIL_MAX} from '@setpoint/shared';
@@ -63,7 +64,7 @@ const MOST_REQUESTS = 4;
 /**
  * The requests the list's rows are asked about in: one for the rows it first draws, then one for
  * each set it adds (a page loaded, a day's Noise opened, mail arriving), never one per row. A request
- * none of whose rows are shown any more goes.
+ * goes once none of its rows are shown.
  */
 function useChunks(rows: readonly MessageRowOut[], shown: boolean): number[][] {
   const [chunks, setChunks] = useState<number[][]>([]);
@@ -129,7 +130,7 @@ export const jobsMailSlots: MailSlots = {useRows, Reader};
 
 /**
  * Applied before (37c): "Applied Sep 16 · Rejected Oct 5", the most recent application at the
- * company; 20 px on the row, 26 px in the reader. It opens Jobs searched for the company.
+ * company. It's 20 px on the row, 26 px in the reader. It opens Jobs searched for the company.
  */
 export function AppliedBefore({before, today, large = false}: {before: NonNullable<JobsMailMessageOut['applied_before']>; today: string; large?: boolean}) {
   const company = before.latest.company;

@@ -1,10 +1,10 @@
-// The right-click menu: an email's row offers its actions at
-// the pointer, moving the cursor there and opening nothing; Mark read reads it in place with Undo,
-// its keys run its items, Add as task opens the email with the card, and ⌥ or an open popover leave
-// the browser's own. On Calendar an event's menu selects it without the floating detail, Colour's
-// swatches take the menu's place, and empty grid offers New event here (at a week slot's time) and
-// Paste here on the day clicked. News's rows, the sidebar and the Today block have theirs. Add to
-// rule lists New rule from the sender and the rules it can join in the menu's place.
+// The right-click menu. An email's row offers its actions at the pointer. It moves the cursor there
+// and opens nothing. Mark read reads it in place with Undo, its keys run its items, and Add as task
+// opens the email with the card. ⌥ or an open popover leave the browser's own. On Calendar an event's
+// menu selects it without the floating detail, and Colour's swatches take the menu's place. Empty
+// grid offers New event here (at a week slot's time) and Paste here on the day clicked. News's rows,
+// the sidebar and the Today block have theirs. Add to rule lists New rule from the sender and the
+// rules it can join in the menu's place.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
@@ -59,7 +59,7 @@ test('an email\'s right-click: its actions at the pointer, the cursor there, not
     await menu(page).waitFor({state: 'detached'});
     assert.match((await row.getAttribute('class'))!, /\bcur\b/, 'Esc closed only the menu');
 
-    // A read row offers Mark unread in Mark read's place; a code row, Copy code.
+    // A read row offers Mark unread in Mark read's place, and a code row offers Copy code.
     const code = page.locator('.list .row', {hasText: '482'}).first();
     await rightClick(code);
     assert.ok((await items(page)).includes('Copy code'));
@@ -82,7 +82,7 @@ test('an email\'s menu: Mark read in place with Undo, P by its key, Add as task 
     const id = Number(await row.getAttribute('data-id'));
     const before = await counts(setpoint);
 
-    // Mark read: read where it is, Attention keeping it, Attention's count as it was; Undo or ⌘Z takes it back.
+    // Mark read: read where it is, Attention keeping it, Attention's count as it was. Undo or ⌘Z takes it back.
     await rightClick(row);
     await item(page, 'Mark read').click();
     await page.locator('.toast', {hasText: 'Marked as read'}).waitFor();
@@ -236,8 +236,8 @@ test('a calendar item\'s right-click selects it without the card; its colours in
     await chip(page, '2026-10-14', 'Dentist').waitFor();
     await until('pasted there', () => titlesOn(setpoint, '2026-10-14'), titles => titles.includes('Dentist'));
 
-    // On the week (Oct 14's, the day Paste here selected), empty hours: New event here at the step
-    // under the pointer, an hour long.
+    // On the week (Oct 14's, the day Paste here selected), empty hours offer New event here at the
+    // step under the pointer, an hour long.
     await page.keyboard.press('w');
     const column = page.locator('.wk-col[data-date="2026-10-17"]');
     await page.locator('.wk-col[data-date="2026-10-14"] .wb', {hasText: 'Dentist'}).waitFor();

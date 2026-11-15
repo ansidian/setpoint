@@ -21,10 +21,10 @@
 .list > .hbar.caution .act:hover { background: var(--sub); }
 .list > .hbar.muted { min-height: 32px; color: var(--ink3); font-size: 12.5px; }
 .list > .hbar.failing { min-height: 32px; color: var(--caution); font-size: 12.5px; }
-/* The fix on the line: Check now after a stale or failing line's words, no dot before it
-   since the pill and the gap set it apart, in the `.act` look of the bar's Reconnect but
-   `ink2`, 12.5 and 24 px tall, `sub` and `ink` under the pointer; "Checking…" in its place until the
-   check lands. The Inbox's lines and the calendar pane's. */
+/* The fix on the line: Check now after a stale or failing line's words. No dot comes before it,
+   since the pill and the gap set it apart. It has the `.act` look of the bar's Reconnect but in
+   `ink2`, 12.5 and 24 px tall, with `sub` and `ink` under the pointer. "Checking…" takes its place
+   until the check lands. The Inbox's lines and the calendar pane's. */
 .check-now { flex: none; height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; color: var(--ink2); font-size: 12.5px; white-space: nowrap;
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 button.check-now:hover { background: var(--sub); color: var(--ink); }
@@ -39,7 +39,7 @@ button.check-now:hover { background: var(--sub); color: var(--ink); }
 .offline-pill .retry { height: 26px; padding: 0 10px 0 8px; border-radius: 999px; background: color-mix(in oklch, var(--onAlert) 14%, transparent); display: inline-flex; align-items: center; gap: 6px; }
 .offline-pill .retry:hover { background: color-mix(in oklch, var(--onAlert) 22%, transparent); }
 /* Everything under the pill: dimmed, lighter, so what's on screen can still be read, scrolled and
-   opened; only what would change something is held back, its keys refused (States.tsx)
+   opened. Only what would change something is held back, its keys refused (States.tsx)
    and its writes too (client.ts). The dim comes and goes over 180 ms. */
 .main > .content { transition: opacity var(--dur-medium) var(--ease), filter var(--dur-medium) var(--ease); }
 .main.offline > .content { opacity: .62; filter: grayscale(.5); }

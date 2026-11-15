@@ -1,5 +1,5 @@
-// The CLI line `npm run try` prints: pasted into a shell, it reaches the dev copy, though
-// `npm run cli` runs in server/ (npm runs a workspace's script there), where a relative data dir
+// The CLI line that `npm run try` prints. Pasted into a shell, it reaches the dev copy, even though
+// `npm run cli` runs in server/ (npm runs a workspace's script there). There, a relative data dir
 // would open a new server/data/dev.
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';

@@ -31,8 +31,8 @@ export type TestSearch = z.output<typeof searchTest>['searches'][number];
 const termsLine = z.object({id: z.number().int(), terms: z.array(z.string())});
 
 /**
- * Writes files of search terms into the database as the job would, one {id, terms} a line, the
- * triggers indexing them. A later line for an email wins. Returns how many emails got terms.
+ * Writes files of search terms into the database as the job would, one {id, terms} a line. The
+ * triggers index them. A later line for an email wins. Returns how many emails got terms.
  */
 export function loadTerms(sqlite: Database.Database, files: string[]): number {
   const terms = new Map<number, string | null>();
@@ -49,7 +49,7 @@ export function loadTerms(sqlite: Database.Database, files: string[]): number {
 export interface SearchScore {
   group: SearchGroup;
   text: string;
-  // Where the first right email came, from 1; null when none did.
+  // Where the first right email came, from 1. Null when none did.
   firstRight: number | null;
   reciprocalRank: number;
   // Share of the top 5 rows that are right, of 5 whatever the list's length.
@@ -64,7 +64,7 @@ export interface SearchScore {
   rightInFirst: number;
 }
 
-/** One search's list against its right emails; its first `section` rows are the first section. */
+/** One search's list against its right emails. Its first `section` rows are the first section. */
 export function scoreList(search: TestSearch, ids: number[], section = ids.length): SearchScore {
   const wanted = new Set(search.wanted);
   const rightIn = (rows: number[]) => rows.filter(id => wanted.has(id)).length;
@@ -115,7 +115,7 @@ export function scoreSearches(store: Store, searches: TestSearch[]): SearchScore
   });
 }
 
-/** One search's prompt for the model, built by the real code: `null` when it wouldn't ask. */
+/** One search's prompt for the model, built by the real code. `null` when it wouldn't ask. */
 export function readingPrompts(store: Store, searches: Pick<TestSearch, 'text'>[]): {text: string; input: string | null}[] {
   return searches.map(({text}) => ({text, input: planReading(store, searchInput.parse({text})).prompt}));
 }

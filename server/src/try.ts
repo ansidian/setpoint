@@ -1,16 +1,16 @@
-// The one dev Setpoint, in one step (launch.json's setpoint-dev): Vite on its port, with hot
-// reload, proxying /api to the dev server on the next port (SETPOINT_PUBLIC_URL is Vite's, so
-// pairing links and sign-in name it); with --build, the web app built into data/dev/web (not
-// web/dist, which may be stale, and which a browser run in this checkout may be serving) and served
-// by the dev server itself, as prod serves it. It seeds data/dev with the sample the first time, makes its owner with the password
-// "dev", starts the dev server on its own port, then prints how to sign in and a
-// link that pairs the iPhone app with it. Sessions share it and may change its data.
+// The one dev Setpoint, in one step (launch.json's setpoint-dev). It runs Vite on its port, with
+// hot reload, proxying /api to the dev server on the next port (SETPOINT_PUBLIC_URL is Vite's, so
+// pairing links and sign-in name it). With --build, the dev server itself serves the web app built
+// into data/dev/web (not web/dist, which may be stale, and which a browser run in this checkout may
+// be serving), as prod serves it. It seeds data/dev with the sample the first time and makes its
+// owner with the password "dev". It starts the dev server on its own port, then prints how to sign
+// in and a link that pairs the iPhone app with it. Sessions share it and may change its data.
 //
-// From a git worktree it's that worktree's web app in front of setpoint-dev's API: only
-// its Vite, on the next free port from 7460, proxying to the API on 7451 and passing its own page's
-// changes on as setpoint-dev's page's, so sign-in works, the data is the shared one, and a cookie
-// from either port serves both (cookies don't keep to a port). The API is the main checkout's code;
-// a slice that changes the server runs --own: a whole Setpoint of its own on a copy of data/dev in a
+// From a git worktree it's that worktree's web app in front of setpoint-dev's API. Only its Vite
+// runs, on the next free port from 7460. It proxies to the API on 7451 and passes its own page's
+// changes on as setpoint-dev's page's. So sign-in works, the data is the shared one, and a cookie
+// from either port serves both (cookies don't keep to a port). The API is the main checkout's code.
+// A slice that changes the server runs --own: a whole Setpoint of its own on a copy of data/dev in a
 // temporary directory, on free ports, the copy removed when it stops.
 //
 //   npm run try                     http://localhost:7450, data/dev
@@ -21,8 +21,9 @@
 //   npm run try                     (in a worktree) this worktree's web app on setpoint-dev's data
 //   npm run try -- --own [--reset] [--build]   (in a worktree) its own Setpoint on a copy of data/dev
 //
-// Its data is the sample's, nothing real, but for News, which is data/news-snapshot/'s real news when
-// the checkout has one (src/dev/newsSnapshot.ts). DEV_PASSWORD is a test value for this local copy only.
+// Its data is the sample's, nothing real, apart from News. News is data/news-snapshot/'s real news
+// when the checkout has one (src/dev/newsSnapshot.ts). DEV_PASSWORD is a test value for this local
+// copy only.
 import {spawn, spawnSync} from 'node:child_process';
 import type {ChildProcess} from 'node:child_process';
 import fs from 'node:fs';
@@ -49,8 +50,8 @@ if (unknown.length) fail(`Unknown argument: ${unknown.join(' ')}. Usage: npm run
 const worktree = fs.statSync(path.join(ROOT, '.git'), {throwIfNoEntry: false})?.isFile() ?? false;
 const own = args.includes('--own');
 if (own && !worktree) fail('--own is for a worktree; here, npm run try is the one dev Setpoint.', 2);
-// Before any package is imported: in a worktree inside the main checkout they'd come from its node_modules,
-// @setpoint/shared included, which is the main checkout's shared/.
+// Before any package is imported, because in a worktree inside the main checkout they'd come from
+// its node_modules, @setpoint/shared included, which is the main checkout's shared/.
 if (worktree && !fs.existsSync(path.join(ROOT, 'node_modules', 'vite'))) fail(`This worktree has no node_modules of its own. Run npm ci in ${ROOT}, then npm run try again.`);
 const {default: Database} = await import('better-sqlite3');
 const {cliLine} = await import('./dev/cliLine.ts');
@@ -145,8 +146,8 @@ ${pairingLink()}`);
 
 /**
  * setpoint-dev's data copied for a worktree's own Setpoint: its database whole (VACUUM INTO, so a
- * write in flight on the live one can't tear it), its key and News's images. Without data/dev, none:
- * the caller seeds the copy.
+ * write in flight on the live one can't tear it), its key and News's images. Without data/dev, it
+ * copies none, and the caller seeds the copy.
  */
 function copyOfShared(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-try-'));

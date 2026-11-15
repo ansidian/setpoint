@@ -2,7 +2,7 @@
    (design-export/styles/setpoint.css › .qchip, mark.hl, .bar, .card, .field) and the boards' own. */
 
 /* ---------- The field ---------- */
-/* While it holds a search, the field widens to 520 (boards 06 and 07) and its hint reads Esc; it grows
+/* While it holds a search, the field widens to 520 (boards 06 and 07) and its hint reads Esc. It grows
    leftward over 180 ms, with the panes, rather than jumping. */
 .search.active { width: 520px; }
 .hd > .search { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
@@ -14,7 +14,7 @@
 .search.pending .glass > .icon { animation: glass-off 0s var(--skel-delay) both; }
 @keyframes glass-on { from { visibility: hidden; } }
 @keyframes glass-off { to { visibility: hidden; } }
-/* Waiting for its first answer, the list it replaces stays, dimmed; its results fade in, and a
+/* Waiting for its first answer, the list it replaces stays, dimmed. Its results fade in, and a
    refinement on its way dims the results it replaces once it's taken a moment. */
 .list.search-wait { opacity: .55; transition: opacity var(--dur-fast) var(--ease); }
 .search-list.arrive { animation: sk-arrive var(--dur-fast) var(--ease); }
@@ -25,7 +25,7 @@
 .search .qchip .k { color: var(--ink3); font-size: 11px; }
 .search .qchip .x, .no-results .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); flex: none; }
 .search .qchip .x:hover, .no-results .x:hover { background: var(--sub3); color: var(--ink); }
-/* A chip answers as a whole when its × is under the pointer, so it's clear which one goes; a word that
+/* A chip answers as a whole when its × is under the pointer, so it's clear which one goes. A word that
    becomes a chip pops in over 120 ms (Search.tsx collapses a removed one away). */
 .search .qchip { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); animation: qchip-in var(--dur-fast) var(--ease); }
 @keyframes qchip-in { from { opacity: 0; transform: scale(.92); } }
@@ -39,10 +39,10 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .search-list .bar.after-card { border-top: 1px solid var(--hair); }
 .search-list .bar.failing { color: var(--caution); }
 /* A suggestion: the end of the results line, its filters in ink2 and its count in ink3, so it
-   reads as an offer rather than as what's in force; `sub` under the pointer, as the fold's line is. It
-   takes the line's height and no more. The line stays one line whatever comes: its own words give way
-   first by an ellipsis and, in a list too narrow for both, beside an open email, altogether, so the
-   suggestion's filters stay whole. Tab is said only while the field has the keys. */
+   reads as an offer rather than as what's in force. It takes `sub` under the pointer, as the fold's
+   line does. It takes the line's height and no more. The line stays one line whatever comes. Its own
+   words give way first by an ellipsis and, in a list too narrow for both, beside an open email,
+   altogether, so the suggestion's filters stay whole. Tab is said only while the field has the keys. */
 .search-list .bar.muted { container-type: inline-size; }
 .search-list .bar > .num { flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .search-list .bar > span:not(.num, .spin) { flex: none; }
@@ -70,14 +70,14 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .arow.result.done .from, .arow.result.done .l2, .arow.result.done .l3 { color: var(--ink3); }
 .arow .why { grid-column: 2 / 4; font-size: 12px; color: var(--ink3); display: flex; align-items: center; gap: 6px; padding-top: 2px; white-space: nowrap; overflow: hidden; }
 .arow .why b { font-weight: 400; color: var(--ink2); }
-/* Ask Alfred reads in ink, his mark in its gradient; no tinted hover, as the AI has no hue of its own. */
+/* Ask Alfred reads in ink, his mark in its gradient. No tinted hover, as the AI has no hue of its own. */
 .ask { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px 0 24px; color: var(--ink); border-bottom: 1px solid var(--hair); flex: none; text-align: left; }
 .ask:hover { background: var(--sub); }
 .no-results { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px 16px 16px 24px; color: var(--ink2); flex: none; border-bottom: 1px solid var(--hair); }
 /* Nothing found leads with search_off, 20 px in ink3, 12 px before the words. */
 .no-results > .icon { color: var(--ink3); margin-right: 4px; }
 /* Each part is the field's own chip: 22 px, `sub2`, `ink` at 400, its × and its whole-chip
-   answer; a Not chip keeps its "Not" in `ink3`, as the field's label is. */
+   answer. A Not chip keeps its "Not" in `ink3`, as the field's label is. */
 .no-results .part { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap;
   transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .no-results .part .k { color: var(--ink3); font-size: 11px; }
@@ -110,7 +110,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .ans-none .ans { color: var(--ink2); }
 .ans-none .searched { color: var(--ink3); font-size: 12.5px; }
 /* The sources share their columns, so each account and age lines up with the rest however long
-   the longest is ("Business (Studio)", "Dec 20, 2025"); the sender and subject take what's left. */
+   the longest is ("Business (Studio)", "Dec 20, 2025"). The sender and subject take what's left. */
 .srcs { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 10px; row-gap: 4px; }
 .src { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; height: 34px; padding: 0 12px 0 10px; border-radius: var(--r-row); background: var(--sub); color: var(--ink2); text-align: left; min-width: 0; }
 .src:hover, .src.open { background: var(--sub2); }
@@ -125,8 +125,8 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .turn-sep { height: 1px; background: var(--hair); margin: 4px 0 2px; flex: none; }
 .q { align-self: flex-end; max-width: 70%; padding: 6px 12px; border-radius: var(--r-card); background: var(--sub2); color: var(--ink); user-select: text; -webkit-user-select: text; }
 .waiting { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; height: 22px; }
-/* Alfred's trail while it works: each step done a 20 px row, its tool's 14 px glyph, in ink3;
-   what it's doing now shimmers, ink sweeping through ink3; two bars hold the answer's place. Once
+/* Alfred's trail while it works: each step done is a 20 px row, its tool's 14 px glyph, in ink3.
+   What it's doing now shimmers, ink sweeping through ink3. Two bars hold the answer's place. Once
    answered the trail folds away over 180 ms as the answer fades up (styles.css › turn-in). The
    header's glyph twinkles. */
 .answer .trail { display: grid; grid-template-rows: 1fr; }

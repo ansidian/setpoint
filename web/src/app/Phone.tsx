@@ -39,8 +39,8 @@ const TABS: {label: string; icon: 'inbox' | 'calendar_today'; page: Route['page'
 ];
 
 /**
- * The tab bar: the current tab in its filled glyph; the Inbox tab badged with the attention
- * count while Attention waits and the Inbox isn't showing (its header has the pill); a tap on the
+ * The tab bar. The current tab shows in its filled glyph. The Inbox tab is badged with the attention
+ * count while Attention waits and the Inbox isn't showing (its header has the pill). A tap on the
  * current tab takes its list back to the top (the agenda to today), as the page's inner scroller is
  * out of reach of iOS's tap on the status bar.
  */

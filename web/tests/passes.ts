@@ -1,16 +1,17 @@
-// Passing runs recorded by the content they ran on, so a release runs only what hasn't
-// already passed on its exact content (release.ts). Each check is keyed on what it reads:
-// INPUTS names whole directories, less what that check never reads, so a boards-only commit leaves
-// npm test and the browser checks passed, a docs-only one leaves everything passed, and a new file
-// under a directory a check reads counts without being listed. The browser checks are kept per spec
-// file: a pass records each file it ran with its content, under a key of everything the spec files
-// share (the app, the harness, the lockfile), so changing one spec file re-runs only that file.
+// Passing runs recorded by the content they ran on, so a release runs only what hasn't already
+// passed on its exact content (release.ts). Each check is keyed on what it reads. INPUTS names
+// whole directories, less what that check never reads. So a boards-only commit leaves npm test and
+// the browser checks passed, and a docs-only one leaves everything passed. A new file under a
+// directory a check reads counts without being listed. The browser checks are kept per spec file.
+// A pass records each file it ran with its content, under a key of everything the spec files share
+// (the app, the harness, the lockfile), so changing one spec file re-runs only that file.
 //
 // The content is the working tree as a git tree: tracked and untracked files, ignored ones left out,
-// written through a scratch index, so it equals HEAD^{tree} once that content is committed and a run
-// before the commit counts for it. A pass also carries the Node version and the installed lockfile
-// (`env`), which change what runs without changing the tree. Records live in the repository's common
-// git directory, so a run in a worktree counts in the main checkout too, and go after 30 days.
+// written through a scratch index. So it equals HEAD^{tree} once that content is committed, and a
+// run before the commit counts for it. A pass also carries the Node version and the installed
+// lockfile (`env`), which change what runs without changing the tree. Records live in the
+// repository's common git directory, so a run in a worktree counts in the main checkout too. They
+// go after 30 days.
 import {execFileSync} from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -31,8 +32,8 @@ interface Inputs {
 
 const under = (...dirs: string[]) => (file: string) => dirs.some(dir => file.startsWith(`${dir}/`));
 const named = (...files: string[]) => (file: string) => files.includes(file);
-// Prose no check reads: the docs at the top, docs/ and reviews/.
-const prose = (file: string) => (!file.includes('/') && /\.md$|^LICENSE$/.test(file)) || under('docs', 'reviews')(file);
+// Prose no check reads: the docs at the top and docs/.
+const prose = (file: string) => (!file.includes('/') && /\.md$|^LICENSE$/.test(file)) || under('docs')(file);
 // The export, less what the app builds from (its stylesheet and fonts) and the glyphs' tests read.
 const boards = (file: string) => under('design-export')(file) && !under('design-export/styles', 'design-export/glyphs')(file);
 // What only npm test runs: Vitest's files, the contract it records, its fakes and component tests.

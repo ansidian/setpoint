@@ -28,7 +28,7 @@ import {historyChanges, stateFromLabels} from './history.ts';
 
 export interface GmailAdapterOptions {
   client: GoogleClient;
-  // The Pub/Sub topic users.watch publishes to; null without push (the source is then polled).
+  // The Pub/Sub topic users.watch publishes to. Null without push (the source is then polled).
   topic: string | null;
   // Backfill: ids per page and pages per job.
   pageSize?: number;
@@ -43,7 +43,7 @@ export interface GmailAdapterOptions {
 const MAX_HISTORY_PAGES = 20;
 // Renew a watch a day before it lapses (watches last about a week).
 const WATCH_RENEWAL_LEAD_MS = 24 * 60 * 60_000;
-// A sweep re-reads at most this many messages' labels; the next sweep carries on.
+// A sweep re-reads at most this many messages' labels. The next sweep carries on.
 const MAX_SWEEP_REREADS = 500;
 // Gmail's batchModify takes up to 1,000 ids.
 const BATCH_MODIFY_MAX = 1000;
@@ -70,7 +70,7 @@ const afterQuery = (since: number) => `after:${Math.floor(since / 1000)}`;
 export class GmailAdapter implements SourceAdapter {
   private readonly options: Required<Omit<GmailAdapterOptions, 'topic'>> & {topic: string | null};
   private readonly tokens: GoogleTokens;
-  // One sync, sweep or backfill step per source at a time: they share the cursor.
+  // One sync, sweep or backfill step per source at a time, because they share the cursor.
   private readonly locks = new Map<number, Promise<unknown>>();
 
   constructor(options: GmailAdapterOptions) {
@@ -180,7 +180,7 @@ export class GmailAdapter implements SourceAdapter {
     upsertMessages(context.store, this.accountId(context), fetched.filter((message): message is FetchedMessage => message !== null), {backfill});
   }
 
-  /** Re-reads known messages' labels and applies them; one Gmail no longer has is removed. */
+  /** Re-reads known messages' labels and applies them. One Gmail no longer has is removed. */
   private async reread(api: GmailApi, context: AdapterContext, ids: string[]) {
     if (!ids.length) return;
     const labels = await mapLimit(ids, this.options.concurrency, id => api.labels(id));
@@ -198,7 +198,7 @@ export class GmailAdapter implements SourceAdapter {
 
   /**
    * The reconciliation: the inbox and its unread mail over a window, compared with the record.
-   * Messages that differ are re-read (bounded per sweep); inbox mail the record lacks is fetched,
+   * Messages that differ are re-read (bounded per sweep). Inbox mail the record lacks is fetched,
    * unless the backfill hasn't reached it yet.
    */
   private async reconcile(api: GmailApi, context: AdapterContext, days: number) {
@@ -222,7 +222,7 @@ export class GmailAdapter implements SourceAdapter {
     await this.fetchNew(api, context, inbox.ids.filter(id => !known.has(id)).slice(0, MAX_SWEEP_REREADS), false);
   }
 
-  /** A few pages of the backfill, newest first; queues the next step if there's more. */
+  /** A few pages of the backfill, newest first. Queues the next step if there's more. */
   private async backfillStep(api: GmailApi, context: AdapterContext) {
     let state = readBackfill<string>(context.store, context.source.id);
     if (!state || state.done) return;

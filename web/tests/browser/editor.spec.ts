@@ -1,6 +1,5 @@
-// The editor in the right pane (boards 13 and 14): boards
-// 13 and 14 built and checked (board 13's Dinner with Sam isn't on the calendar yet, the no-dinner
-// fixture), then the flows:
+// The editor in the right pane (boards 13 and 14). Boards 13 and 14 are built and checked (board
+// 13's Dinner with Sam isn't on the calendar yet, the no-dinner fixture). Then the flows:
 // creating the board's two events at once, an edit asking which occurrences (This event, then All
 // events), a Todoist task from the same editor, the editor opened from an email's proposal at
 // /calendar/new, an edited item's Title read as a line, and a new item's one line, its lit
@@ -56,7 +55,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     assert.equal(await page.locator('.editor').getByLabel('Title', {exact: true}).count(), 0, 'no Title field');
     assert.equal(await page.locator('.editor .conflict').count(), 0, 'no conflict preview for an empty draft');
     await line.pressSequentially('Dinner with Sam fri 7-9pm @Blue Door');
-    // Each parsed part is marked; the fields follow the line.
+    // Each parsed part is marked. The fields follow the line.
     await page.locator('.nl .tok-d', {hasText: 'fri 7-9pm'}).waitFor();
     await page.locator('.nl .tok-p', {hasText: '@Blue Door'}).waitFor();
     assert.equal(await titleWords(page), 'Dinner with Sam');
@@ -73,7 +72,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await line.pressSequentially('Gym sat 9am');
     await page.locator('.cell[data-date="2026-10-10"] .ev.ghost', {hasText: 'Gym'}).waitFor();
     await page.getByRole('button', {name: 'Expand draft: Dinner with Sam fri 7-9pm @Blue Door'}).click();
-    // Time to Leave is never there by default; the menu offers it with Settings' buffer.
+    // Time to Leave is never there by default. The menu offers it with Settings' buffer.
     assert.equal(await page.locator('.editor .qchip.ttl').count(), 0);
     await page.getByRole('button', {name: 'Add reminder'}).click();
     await page.getByRole('menuitem', {name: 'Time to Leave 5 min buffer'}).click();
@@ -83,7 +82,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.locator('.places .menu-i.cur', {hasText: 'Blue Door'}).waitFor();
     await page.getByRole('button', {name: 'Create 2 events'}).waitFor();
 
-    // ⌘Enter creates both; they wait for the provider in place, then settle.
+    // ⌘Enter creates both. They wait for the provider in place, then settle.
     await page.keyboard.press('Meta+Enter');
     await page.locator('.editor').waitFor({state: 'detached'});
     await page.locator('.cell[data-date="2026-10-09"] .ev', {hasText: 'Dinner with Sam'}).waitFor();
@@ -211,7 +210,7 @@ test('choice 14: clicks on the grid keep the draft; E doesn\'t replace it; Esc c
     await page.locator('.cell[data-date="2026-10-13"]').click({position: {x: 70, y: 150}});
     await page.locator('.cell[data-date="2026-10-13"].sel').waitFor();
     await intact();
-    // An item: its card opens beside it, the draft untouched; E doesn't replace the draft.
+    // An item: its card opens beside it, the draft untouched. E doesn't replace the draft.
     await chip(page, '2026-10-07', 'Dentist').click();
     await page.locator('.fd').waitFor();
     await intact();
@@ -281,7 +280,7 @@ test('a click on a day moves a new draft there, empty or started, unless its lin
       await page.locator(`.cell[data-date="${day}"]`).click({position: {x: 70, y: 150}});
       await page.locator(`.cell[data-date="${day}"].sel`).waitFor();
     };
-    // An empty draft follows the click; D replaces it with a task there, and C with an event again.
+    // An empty draft follows the click. D replaces it with a task there, and C with an event again.
     await page.keyboard.press('c');
     const line = page.getByLabel('Describe the event');
     await line.waitFor();
@@ -350,7 +349,7 @@ test('New, C and D leave a started draft be and say so; a folded draft goes with
       await page.clock.fastForward(UNDO_MS);
       await toast.waitFor({state: 'detached'});
     }
-    // Add another makes a batch on purpose; × takes a folded draft out, its ghost with it.
+    // Add another makes a batch on purpose. × takes a folded draft out, its ghost with it.
     await page.getByRole('button', {name: 'Add another'}).click();
     await line.pressSequentially('Gym 7am');
     await page.getByRole('button', {name: 'Create 2 events'}).waitFor();
@@ -375,7 +374,7 @@ test('an event\'s days picked in its sheet reach the event, the End list its las
     const date = page.getByLabel('Date', {exact: true});
     await date.click();
     // The sheet itself (Sunday first, the band following the pointer either way, its fills, typing)
-    // is tests/components/dateRange.test.tsx's; here, the days picked reach the event.
+    // is tests/components/dateRange.test.tsx's. Here, the days picked reach the event.
     await page.getByRole('dialog', {name: 'Date: pick the first day'}).getByRole('button', {name: '2026-10-13'}).click();
     await page.getByRole('dialog', {name: 'Date: pick the last day'}).getByRole('button', {name: '2026-10-16'}).click();
     await page.locator('.datepop').waitFor({state: 'detached'});
@@ -467,7 +466,7 @@ test('a description shows formatted in the detail; an edit that leaves it alone 
     await page.locator('.fd').getByRole('button', {name: 'More'}).waitFor();
     assert.deepEqual(await page.locator('.fd .card-b .fact').evaluateAll(facts => facts.map(fact => fact.className)), ['fact description', 'fact', 'fact cal']);
 
-    // The editor opens on it; another field's change leaves it out of what's sent, and as it was.
+    // The editor opens on it. Another field's change leaves it out of what's sent, and as it was.
     await page.keyboard.press('e');
     await page.locator('.editor[aria-label="Edit event"]').waitFor();
     const field = page.getByRole('textbox', {name: 'Description'});
@@ -637,7 +636,7 @@ test('a task\'s #project in the line: suggestions under Project, a pick ends it,
     const menu = page.getByRole('listbox', {name: 'Projects'});
     const mark = page.locator('.nl .tok-j');
     const markColour = () => mark.evaluate(element => getComputedStyle(element).getPropertyValue('--c').trim());
-    // Typed in the line, the menu shows under Project; Enter picks, and what follows is the title's again.
+    // Typed in the line, the menu shows under Project. Enter picks, and what follows is the title's again.
     await line.pressSequentially('Pay bills #hom');
     await mark.filter({hasText: '#hom'}).waitFor();
     assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Home↵', 'New project “hom”']);
@@ -740,7 +739,7 @@ test('a task\'s lone # shows every project before anything is typed; a pick goes
     await openCalendar(page, setpoint.base);
     const names = (menu: ReturnType<typeof page.getByRole>) => menu.getByRole('option').evaluateAll(options => options.map(option => option.textContent!.replace('↵', '')));
 
-    // A task's "#": every project, in Todoist's order; Enter takes the first into the line and the field.
+    // A task's "#": every project, in Todoist's order. Enter takes the first into the line and the field.
     await page.keyboard.press('d');
     const task = page.getByLabel('Describe the task');
     await task.waitFor();
@@ -776,7 +775,7 @@ test('an event\'s lone # shows every calendar, and a lone @ or an empty Place th
     await page.keyboard.press('Space');
     await until('the menu closes', () => calendars.count(), count => count === 0);
 
-    // "@": the places events have used, the latest first; a letter narrows them, Enter takes one with its address.
+    // "@": the places events have used, the latest first. A letter narrows them, and Enter takes one with its address.
     await event.fill('');
     await event.pressSequentially('Lunch @');
     const places = page.getByRole('listbox', {name: 'Places'});
@@ -789,7 +788,7 @@ test('an event\'s lone # shows every calendar, and a lone @ or an empty Place th
     await page.locator('.editor .place-address', {hasText: '2118 Sunset Blvd'}).waitFor();
     assert.equal(await places.count(), 0);
 
-    // The Place field, emptied and focused, offers them too; Tab through it goes on without picking.
+    // The Place field, emptied and focused, offers them too. Tab through it goes on without picking.
     await page.getByRole('button', {name: 'Clear place'}).click();
     await event.fill('Lunch');
     await page.getByLabel('Place', {exact: true}).focus();
@@ -845,7 +844,7 @@ test('the date and time pickers: a month under the date, 15-minute lists (End\'s
     await page.keyboard.press('c');
     await page.getByLabel('Describe the event').pressSequentially('Standup fri 10am');
     const [date, start, end] = ['Date', 'Start', 'End'].map(label => page.getByLabel(label, {exact: true}));
-    // The date: a month under it, a click picks the first day, then the last: the same day
+    // The date: a month under it. A click picks the first day, then the last, and the same day
     // again is one day. ↓ moves a week and Enter picks as a click does.
     await date!.click();
     const month = page.getByRole('dialog', {name: 'Date: pick the first day'});
@@ -864,7 +863,7 @@ test('the date and time pickers: a month under the date, 15-minute lists (End\'s
     await last.waitFor({state: 'detached'});
     assert.equal(await date!.inputValue(), 'Wed, Oct 21');
 
-    // Start: the day in 15-minute steps, scrolled to its value; ↓ and Enter pick, and the end keeps the length.
+    // Start: the day in 15-minute steps, scrolled to its value. ↓ and Enter pick, and the end keeps the length.
     await start!.click();
     const starts = page.getByRole('listbox', {name: 'Start times'});
     const at10 = starts.getByRole('option', {name: '10:00 AM', exact: true});
@@ -933,7 +932,7 @@ test('No end in the End list makes an event that ends as it starts; it says its 
     await settled(setpoint, '2026-10-09');
     const call = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Call Mom')!;
     assert.equal(call.ends_at, call.starts_at);
-    // The agenda and the card say its start alone; the agenda finds no overlap.
+    // The agenda and the card say its start alone. The agenda finds no overlap.
     await page.goto(`${setpoint.base}/calendar/2026-10-09`);
     const row = page.locator('.ag-item', {hasText: 'Call Mom'});
     assert.match((await row.locator('.line').textContent())!, /^7:45 PM · /);
@@ -1131,7 +1130,7 @@ test('"remind me 1h before" in a new event\'s line replaces Settings\' default, 
     await page.locator('.nl .tok-d', {hasText: 'fri 2pm'}).waitFor();
     await until('the line\'s reminder in place of the default', () => reminderChips(page), list => list.join() === '1 hour before');
 
-    // Ticked beside the line's; taking the phrase out takes only what it set.
+    // Ticked beside the line's. Taking the phrase out takes only what it set.
     await page.getByRole('button', {name: 'Add reminder'}).click();
     await page.getByRole('menuitem', {name: '30 min before'}).click();
     await until('the one ticked beside it', () => reminderChips(page), list => list.join() === '30 min before,1 hour before');
@@ -1163,7 +1162,7 @@ test('a moment in the line, "reminder fri 8pm", is the reminder\'s and not the e
     await page.locator('.nl .tok-r', {hasText: 'reminder fri 8pm'}).waitFor();
     await until('the chip at its moment, the offset beside it', () => reminderChips(page), list => list.join() === 'Fri, Oct 9, 8:00 PM19 hrs before');
     assert.match(await page.getByLabel('Date', {exact: true}).inputValue(), /Oct 10/);
-    // Kept as words (⌥⌫ inside it), the phrase drops its reminder for Settings' default; typed into again, it's back.
+    // Kept as words (⌥⌫ inside it), the phrase drops its reminder for Settings' default. Typed into again, it's back.
     await line.press('ArrowLeft');
     await line.press('Alt+Backspace');
     await page.locator('.nl .tok-r').waitFor({state: 'detached'});
@@ -1299,7 +1298,7 @@ test('an event moves to another calendar of its account; a repeating one goes as
 });
 
 // The row's own behaviour (Custom…'s fields, the 4 weeks, a chip reopening it) is in
-// web/tests/components/reminders.test.tsx; this is the journey to the API and the detail.
+// web/tests/components/reminders.test.tsx. This is the journey to the API and the detail.
 test('Custom… picks a moment after the start, which the event keeps and its card reads as that moment; a task without a time counts from 9:00 AM', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -1358,7 +1357,7 @@ test('the editor\'s keys after a pick from one of its menus: ⌘Enter saves, Esc
     await openCalendar(page, setpoint.base);
     const calendars = await setpoint.api<{id: number; name: string}[]>('GET', '/calendars');
     const classes = calendars.find(calendar => calendar.name === 'Classes')!.id;
-    // An event: the calendar, then a reminder, picked from their menus; ⌘Enter creates it.
+    // An event: the calendar, then a reminder, picked from their menus. ⌘Enter creates it.
     await page.keyboard.press('c');
     const line = page.getByLabel('Describe the event');
     await line.waitFor();
@@ -1428,8 +1427,8 @@ test('/calendar/new?message=: the editor opens pre-filled from the email\'s prop
     const proposal = await setpoint.api<{item: {title: string}; from_email: string[]}>('POST', '/proposals/from-message', {message_id: sam.id, kind: 'event'});
     assert.equal(await line.inputValue(), proposal.item.title);
     assert.equal(await page.locator('.nl [data-start]').count(), 0, 'nothing in the title lit');
-    // The fields the email gave carry the card's "from the email" mark, until they're changed;
-    // the title's sits at the line's trailing edge.
+    // The fields the email gave carry the card's "from the email" mark until they're changed.
+    // The title's mark sits at the line's trailing edge.
     const marked = async () => {
       const rows = {title: '.ed-line .nl', date: '.eg .prow:has(input[aria-label="Date"])', place: '.eg label.field:has(input[aria-label="Place"])'};
       const found: string[] = [];
@@ -1445,8 +1444,8 @@ test('/calendar/new?message=: the editor opens pre-filled from the email\'s prop
     assert.ok(question!.right <= field!.right && field!.right - question!.right < 16, `the ? at ${question!.left}–${question!.right}, the line ${field!.right}`);
     assert.ok(question!.top >= field!.top && question!.bottom <= field!.bottom, `the ? at ${question!.top}–${question!.bottom}, inside the line's ${field!.top}–${field!.bottom}`);
     assert.ok(mark!.right <= question!.left && input!.right <= mark!.left, `the mark at ${mark!.left}–${mark!.right}, the ? from ${question!.left}, the text to ${input!.right}`);
-    // The ? opens What the line reads under it, its right edge on the line's; Esc
-    // closes it, not the editor (the rest is in components/lineReference.test.tsx).
+    // The ? opens What the line reads under it, its right edge on the line's. Esc closes it, not
+    // the editor (the rest is in components/lineReference.test.tsx).
     await page.getByRole('button', {name: 'What the line reads'}).click();
     const reference = page.getByRole('dialog', {name: 'What the line reads'});
     await reference.getByText('Standup 9am for 15 mins').waitFor();
@@ -1545,7 +1544,7 @@ test('a click on a lit phrase, or ⌥⌫ inside it, makes it title words, and wh
     // The title has May in it, and the draft is back on the day it opened on.
     assert.deepEqual([await titleWords(page), await date.inputValue()], ['Lunch with May 12', 'Wed, Oct 7']);
     assert.equal(await line.getAttribute('data-tip'), null);
-    // It stays words as the line goes on; a phrase typed after it lights.
+    // It stays words as the line goes on. A phrase typed after it lights.
     await line.press('End');
     await line.pressSequentially(' fri 1pm');
     await page.locator('.nl .tok-d', {hasText: 'fri 1pm'}).waitFor();
@@ -1666,7 +1665,7 @@ test('what an edit types into a Title reads as a new item\'s line does; the word
     const dentist = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Dentist')!;
     assert.deepEqual([dentist.starts_at, dentist.ends_at, dentist.calendar_id], ['2026-10-09T22:45:00.000Z', '2026-10-09T23:45:00.000Z', classes]);
 
-    // A repeating Gym: the time typed asks which occurrences, as the Start field does; This event moves Wednesday's.
+    // A repeating Gym: the time typed asks which occurrences, as the Start field does. This event moves Wednesday's.
     await chip(page, '2026-10-07', 'Gym').click();
     await page.locator('.fd').waitFor();
     await page.keyboard.press('e');

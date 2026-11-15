@@ -92,7 +92,7 @@ function itemImage(item: Element, html: string, base: string): string | null {
     ?? firstInlineImage(html, base);
 }
 
-/** RSS's author is "email (Name)" or an email; a name is a byline, an address isn't. */
+/** RSS's author is "email (Name)" or an email. A name is a byline, and an address isn't. */
 function byline(raw: string): string | null {
   const text = raw.replace(/\s+/g, ' ').trim();
   if (!text) return null;
@@ -116,7 +116,8 @@ function rssItem(item: Element, base: string): FeedItem | null {
   return {
     url, guid, headline, summary,
     byline: byline(textOf(child(item, 'dc:creator')) || textOf(child(item, 'author'))),
-    // An air district's feed dates its items in <startDate>; without it, each would count as published when read.
+    // An air district's feed dates its items in <startDate>. Without it, each would count as
+    // published when read.
     published: textOf(child(item, 'pubDate')) || textOf(child(item, 'dc:date')) || textOf(child(item, 'atom:updated')) || textOf(child(item, 'startDate')) || null,
     imageUrl: itemImage(item, content || description, base),
     source: sourceElement && textOf(sourceElement) ? {name: plainText(textOf(sourceElement)), url: absolute(attr(sourceElement, 'url'), base)} : null,
@@ -151,7 +152,7 @@ export function parseFeed(xml: string, feedUrl: string): Feed {
     return {title: plainText(textOf(child(root, 'title'))) || null, items: children(root, 'entry').flatMap(entry => atomEntry(entry, feedUrl) ?? [])};
   }
   const channel = child(root, 'channel');
-  // RSS 2.0 keeps its items in the channel; RSS 1.0 beside it.
+  // RSS 2.0 keeps its items in the channel. RSS 1.0 keeps them beside it.
   const items = [...(channel ? children(channel, 'item') : []), ...children(root, 'item')];
   return {title: channel ? plainText(textOf(child(channel, 'title'))) || null : null, items: items.flatMap(item => rssItem(item, feedUrl) ?? [])};
 }

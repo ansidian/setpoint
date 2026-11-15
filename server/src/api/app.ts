@@ -85,13 +85,13 @@ import type {NewsApiOptions} from './news.ts';
 import {triageApi} from './triage.ts';
 
 // A request is signed in by the browser's session cookie or a paired iPhone's bearer token, never
-// both; `alive` says whether it still is, for the live stream's checks.
+// both. `alive` says whether it still is, for the live stream's checks.
 type Env = {Variables: {session: Session | null; device: Device | null; alive: () => boolean}};
 
 /**
  * Connecting mail accounts (Settings › Accounts), from the providers: Gmail's OAuth consent and
- * callback, and iCloud's app password checked against IMAP. Absent where a provider isn't set up
- * (no Google client configured): those routes then answer 503.
+ * callback, and iCloud's app password checked against IMAP. It's absent where a provider isn't set
+ * up (no Google client configured), and those routes then answer 503.
  */
 export interface MailConnectors {
   gmail?: {
@@ -108,7 +108,7 @@ export const GMAIL_CALLBACK_PATH = '/api/ea/accounts/gmail/callback';
 
 export interface AppOptions {
   store: Store;
-  // The built web app (web/dist); served when it holds an index.html.
+  // The built web app (web/dist), served when it holds an index.html.
   webDir?: string | null;
   publicUrl?: string | null;
   production?: boolean;
@@ -282,8 +282,8 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   });
 
   // The iPhone app's side of pairing: the code from Settings › Security's QR for a device
-  // token. The code is the proof, and the app sends no Origin, so there is no origin check; a wrong
-  // code spends no password attempt, since it's 256 random bits and lives five minutes.
+  // token. The code is the proof, and the app sends no Origin, so there is no origin check. A wrong
+  // code spends no password attempt, because it's 256 random bits and lives five minutes.
   app.post('/api/auth/pair', async c => {
     const input = parse(pairInput, await body(c));
     return c.json(pairDevice(store, input.code, input.name) satisfies PairOut, 201);
@@ -302,7 +302,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   });
 
   // ---- Google's return from Connect Gmail: a cross-site redirect, so no session cookie comes
-  // with it; the sealed state is its proof (src/providers/gmail/connect.ts) ----
+  // with it. The sealed state is its proof (src/providers/gmail/connect.ts) ----
 
   const gmailRedirect = (c: Context) => `${origin(c)}${GMAIL_CALLBACK_PATH}`;
   const checkConnected = (connected: Connected) => {
@@ -325,7 +325,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   // ---- Providers calling back: no session ----
 
   // Google Calendar's watch notifications: bodyless, authenticated by the channel's token. The sync
-  // is queued durably before Google hears 204; if it can't be, Google hears 503 and sends again.
+  // is queued durably before Google hears 204. If it can't be, Google hears 503 and sends again.
   app.post('/api/calendar/push', c => {
     const admitted = admitPush(store, c.req.raw.headers, providers.calendarApi ?? CALENDAR_API);
     if (!admitted.accepted) return c.body(null, 401);
@@ -339,8 +339,8 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   });
 
   // Todoist's webhook: signed with the app's client secret, and only ever wakes a sync (the payload
-  // isn't read). Queued durably before Todoist hears 200; 503 if it can't be, and Todoist retries.
-  // The body is never logged.
+  // isn't read). The sync is queued durably before Todoist hears 200. If it can't be, Todoist hears
+  // 503 and retries. The body is never logged.
   app.post(WEBHOOK_PATH, async c => {
     const secret = providers.todoistOAuth?.client?.clientSecret;
     if (!secret) return c.body(null, 503);
@@ -385,7 +385,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   // Mail's state for mantel's chip, read-only: the counts, up to three attention emails and the
   // sources needing reconnect (`@setpoint/shared`'s status.ts documents what the HA integration
-  // reads). Only GET takes the token; any other method falls through to the session's rules, and
+  // reads). Only GET takes the token. Any other method falls through to the session's rules, and
   // the token opens nothing else. The header is never logged.
   app.get('/api/status/ha', c => {
     if (!haTokenMatches(store, c.req.header('authorization'))) {
@@ -514,7 +514,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     afterChange(c, deletePasskey(store, session.securityGeneration, id(c.req.param('id'))), session.passwordAt);
     return c.body(null, 204);
   });
-  // Add iPhone mints a token that never idles out, so it needs the recent password; withdrawing the
+  // Add iPhone mints a token that never idles out, so it needs the recent password. Withdrawing the
   // code and Revoke only take access away, so they don't. None of them is a security
   // transition: sessions carry on.
   app.post('/api/security/pairing', c => {
@@ -543,11 +543,11 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     const input = parse(gmailLinkInput, c.req.query());
     return c.json(gmailLink(store, input.account, input.id));
   });
-  // The HTML body as its own page, for the reader's sandboxed frame: its own policy, not the app's
-  // (?frame=app is the iPhone app's, with no script). Plain-text email has none. ?images=show loads
-  // its images (the rule's or the images bar's Show), ?images=hide doesn't, and without it the rule
-  // decides. The web's, named either way, is always the same page, so the browser keeps it a while
-  // and an email opened again shows without asking (sign-out clears it).
+  // The HTML body as its own page, for the reader's sandboxed frame. It has its own policy, not the
+  // app's (?frame=app is the iPhone app's, with no script). Plain-text email has none. ?images=show
+  // loads its images (the rule's or the images bar's Show), ?images=hide doesn't, and without it the
+  // rule decides. The web's page, named either way, is always the same page. So the browser keeps
+  // it a while, and an email opened again shows without asking (sign-out clears it).
   app.get('/api/mail/messages/:id/body', c => {
     const images = c.req.query('images');
     const frame = c.req.query('frame') === 'app' ? 'app' : 'web';
@@ -667,7 +667,8 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     }
   });
 
-  // One place with its coordinates, for Home in Settings › Calendar; the dev runs' invented places likewise.
+  // One place with its coordinates, for Home in Settings › Calendar, and the dev runs'
+  // invented places likewise.
   app.get('/api/places/:place_id', async c => {
     const input = parse(placeInput, c.req.query());
     const placeId = parse(z.string().min(1).max(300), c.req.param('place_id'));
@@ -700,7 +701,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json({url: begun.url} satisfies TodoistConnectOut);
   });
   app.get('/api/todoist/projects', c => c.json(todoistProjects(store)));
-  // A project's colour is a command to Todoist; the project answers with it pending.
+  // A project's colour is a command to Todoist. The project answers with it pending.
   app.patch('/api/todoist/projects/:id', async c => {
     const providerId = c.req.param('id');
     setProjectColour(store, providerId, parse(todoistProjectUpdateInput, await body(c)).colour);
@@ -736,7 +737,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
       setCalendarShown(store, calendarId, {visible: input.visible, listed: input.listed});
       noteLive(store, {type: 'items', items: [], calendars: [calendarId], commands: []});
     }
-    // A colour is a command to Google; the calendar answers with it pending.
+    // A colour is a command to Google. The calendar answers with it pending.
     if (input.colour !== undefined) setCalendarColour(store, calendarId, input.colour);
     return c.json(calendarList(store).find(calendar => calendar.id === calendarId)!);
   });
@@ -839,10 +840,10 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   // ---- The live stream ----
 
-  // Server-Sent Events of LiveEvents: `ready` starts each connection with the id to resume from;
-  // `mail`, `items`, `health` and `news` name what changed; `resync` means refetch everything; a comment
-  // and a `ping` every 25 s keep it open. It ends once the session or the iPhone's token stops working,
-  // or the server stops.
+  // Server-Sent Events of LiveEvents. `ready` starts each connection with the id to resume from.
+  // `mail`, `items`, `health` and `news` name what changed. `resync` means refetch everything. A
+  // comment and a `ping` every 25 s keep it open. It ends once the session or the iPhone's token
+  // stops working, or the server stops.
   let streams = 0;
   app.get('/api/events', c => {
     const feed = store.live;
@@ -901,7 +902,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
       c.header('Cache-Control', value);
       await next();
     };
-    // Vite's hashed assets never change; a missing one is a 404, not the app.
+    // Vite's hashed assets never change. A missing one is a 404, not the app.
     app.get('/assets/*', secure, cache('public, max-age=31536000, immutable'), serveStatic({root: webDir}));
     app.get('/assets/*', c => c.text('Not found', 404));
     // Any other page is a file, or else one of the single-page app's routes.

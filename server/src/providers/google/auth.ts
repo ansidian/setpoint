@@ -1,10 +1,11 @@
-// Google over plain HTTPS, shared by Gmail and Google Calendar: the one OAuth client and its
-// consent (Gmail and Calendar on one sign-in; Connect Gmail writes it to both sources), access
-// tokens refreshed per source, and requests that turn Google's errors into ProviderErrors with
+// Google over plain HTTPS, shared by Gmail and Google Calendar. It holds the one OAuth client and
+// its consent (Gmail and Calendar on one sign-in, and Connect Gmail writes it to both sources). It
+// refreshes access tokens per source, and its requests turn Google's errors into ProviderErrors with
 // Google's own words. Every base URL is configurable so tests point them at a fake on 127.0.0.1.
 //
-// For Calendar as for Gmail: refresh five minutes before expiry, a missing expires_in counts as an hour, a new refresh token
-// or scope in the answer is kept, and `invalid_grant` means the consent was revoked: needs reconnect.
+// For Calendar as for Gmail: refresh five minutes before expiry, and a missing expires_in counts as
+// an hour. A new refresh token or scope in the answer is kept. `invalid_grant` means the consent was
+// revoked: needs reconnect.
 import {writeSourceCredentials} from '../../secrets/store.ts';
 import type {Store} from '../../store.ts';
 import type {AdapterContext} from '../../sync/adapter.ts';
@@ -26,7 +27,7 @@ export const GOOGLE_ENDPOINTS: GoogleEndpoints = {
 
 /**
  * The combined consent: Gmail (read, labels, trash) and Calendar on one sign-in. The calendar list
- * is read and written: Settings › Calendar writes each calendar's colour to it.
+ * is read and written, because Settings › Calendar writes each calendar's colour to it.
  */
 export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/gmail.modify',
@@ -162,7 +163,7 @@ export interface RequestOptions {
 
 /**
  * An authorised request for a source. A 401 refreshes the token once and tries again (the token
- * may have been revoked early); a second 401 is a refused sign-in.
+ * may have been revoked early). A second 401 is a refused sign-in.
  */
 export async function googleRequest(client: GoogleClient, tokens: GoogleTokens, context: AdapterContext, url: string, options: RequestOptions): Promise<Response> {
   const target = new URL(url);

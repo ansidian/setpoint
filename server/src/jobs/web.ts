@@ -1,10 +1,9 @@
-// How the JD lookup reads the web: the hiring platforms' public job APIs
-// (Greenhouse's job board API, Lever's postings API, Ashby's posting API), GovernmentJobs' site-wide
-// search and posting pages, each request with Setpoint's honest, named User-Agent, through
-// News's one way to GET (redirects followed by hand, never to the home network, a cap on what's read,
-// failures classified for the retry policy). Only production is given the real hosts (server.ts): a
-// dev run, `npm run try`, the seed and every test get none, or example domains served by a fake on
-// 127.0.0.1.
+// How the JD lookup reads the web: the hiring platforms' public job APIs (Greenhouse's job board
+// API, Lever's postings API, Ashby's posting API), GovernmentJobs' site-wide search and posting
+// pages. Each request carries Setpoint's honest, named User-Agent and goes through News's one way to
+// GET (redirects followed by hand, never to the home network, a cap on what's read, failures
+// classified for the retry policy). Only production is given the real hosts (server.ts). A dev run,
+// `npm run try`, the seed and every test get none, or example domains served by a fake on 127.0.0.1.
 import type {NewsHttpOptions} from '../providers/news/http.ts';
 import {hostOf, newsGet, newsGetJson, responseText} from '../providers/news/http.ts';
 import {ProviderError} from '../sync/errors.ts';
@@ -61,7 +60,7 @@ const iso = (value: unknown): string | null => {
   return Number.isFinite(at) ? new Date(at).toISOString() : null;
 };
 
-/** GETs JSON; null when the source says it isn't there (404, 403, 410). Throws a failure to retry. */
+/** GETs JSON. Null when the source says it isn't there (404, 403, 410). Throws a failure to retry. */
 async function getJson(web: JobsWeb, url: string, signal: AbortSignal): Promise<unknown> {
   try {
     return await newsGetJson<unknown>(web.http, {url, userAgent: web.userAgent, signal});
@@ -146,7 +145,7 @@ function ashbyJob(job: unknown): (FoundPosting & {id: string | null}) | null {
 }
 
 /**
- * A board's open postings on one platform; null when the platform has no board by that name. Throws
+ * A board's open postings on one platform. Null when the platform has no board by that name. Throws
  * a failure to retry (the network, a 5xx, a 429).
  */
 export async function boardPostings(web: JobsWeb, platform: JobPlatform, board: string, signal: AbortSignal): Promise<FoundPosting[] | null> {
@@ -259,7 +258,7 @@ export interface GovernmentJob extends PostingCandidate {
 
 const hasClass = (element: Element, name: string) => attr(element, 'class')?.split(/\s+/).includes(name) ?? false;
 
-/** The results in the search's HTML; none in markup it doesn't recognise, so a change on the site is a miss and search still runs. */
+/** The results in the search's HTML. None in markup it doesn't recognise, so a change on the site is a miss and search still runs. */
 export function governmentJobsResults(html: string, base: string): GovernmentJob[] {
   const items = findAll(node => node.name === 'li' && hasClass(node, 'job-item'), parseDocument(html).children);
   return items.flatMap((item): GovernmentJob[] => {
@@ -277,7 +276,7 @@ export function governmentJobsResults(html: string, base: string): GovernmentJob
 
 /**
  * The first page of GovernmentJobs' search for a title, ten results across every employer on the
- * site; none when it says no (a 404, a 403) or answers with something else. Throws a failure to retry.
+ * site. None when it says no (a 404, a 403) or answers with something else. Throws a failure to retry.
  */
 export async function governmentJobsSearch(web: JobsWeb, keyword: string, signal: AbortSignal): Promise<GovernmentJob[]> {
   try {
@@ -295,7 +294,7 @@ export async function governmentJobsSearch(web: JobsWeb, keyword: string, signal
 }
 
 /**
- * What opening a link found: its posting; `gone` (a 404, a 410, a platform that says it isn't there);
+ * What opening a link found: its posting, `gone` (a 404, a 410, a platform that says it isn't there),
  * or `unreadable`, there but not for Jobs (a 403, a non-HTML answer, a page with no posting Jobs can
  * read, such as one drawn by script), which the user can still open in a browser.
  */
@@ -336,7 +335,7 @@ export async function openLink(web: JobsWeb, link: string, signal: AbortSignal):
   }
 }
 
-/** A link's posting; null when it isn't there or isn't a posting. Throws a failure to retry. */
+/** A link's posting. Null when it isn't there or isn't a posting. Throws a failure to retry. */
 export async function readLink(web: JobsWeb, link: string, signal: AbortSignal): Promise<FoundPosting | null> {
   const result = await openLink(web, link, signal);
   return result.is === 'read' ? result.posting : null;

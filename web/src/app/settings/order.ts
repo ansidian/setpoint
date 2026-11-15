@@ -1,6 +1,6 @@
-// Reordering by drag, live: while a row is dragged the
-// others make room as it passes, easing over 180 ms; letting go saves the order
-// shown, and letting go elsewhere eases everything back. ↑ ↓ on a handle slide the rows the same way.
+// Reordering by drag, live. While a row is dragged the others make room as it passes, easing over
+// 180 ms. Letting go saves the order shown, and letting go elsewhere eases everything back. ↑ ↓ on a
+// handle slide the rows the same way.
 import {useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, DragEvent, RefObject} from 'react';
 import {dropIndex, placed, shifts} from '../../logic/settings.ts';
@@ -51,7 +51,7 @@ interface Drag {
 /**
  * A list reordered by drag: the group's props and each row's. The rows stay in the list's order in
  * the page while they're dragged (moving the dragged row's element would end the drag) and show the
- * new order by sliding; `type` names the drag's data.
+ * new order by sliding. `type` names the drag's data.
  */
 export function useLiveOrder<T extends {id: number}>(list: T[], type: string, save: (ids: number[]) => void, className = 'set-group') {
   const [drag, setDrag] = useState<Drag | null>(null);

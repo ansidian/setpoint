@@ -1,9 +1,9 @@
-// The dev provider: an in-process stand-in for Gmail, iCloud, Google Calendar,
-// Todoist and weather, serving only the seed's dev sources. The seed is its whole state, so a sync
-// finds nothing new, and a command is confirmed locally after a short delay, so `npm run dev` shows
-// pending, confirmed and (by rule) failed changes and their live events end to end.
+// The dev provider: an in-process stand-in for Gmail, iCloud, Google Calendar, Todoist and weather,
+// serving only the seed's dev sources. The seed is its whole state, so a sync finds nothing new. It
+// confirms a command locally after a short delay, so `npm run dev` shows pending, confirmed and (by
+// rule) failed changes and their live events end to end.
 //
-// It never touches a real account: the registry gives it only sources marked `dev`, a dev source
+// It never touches a real account. The registry gives it only sources marked `dev`, a dev source
 // can't hold credentials (a database check), and it refuses anything else itself.
 import type {PlaceOut, PlaceSuggestionOut} from '@setpoint/shared';
 import type {SourceAdapter, AdapterContext, CommandRow} from '../../sync/adapter.ts';
@@ -56,7 +56,7 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
         .where(and(eq(t.messages.providerId, message.providerId), eq(t.attachments.providerId, attachmentId))).get();
       return row ? devAttachment(row.filename, row.mimeType) : null;
     },
-    // A seed digest's source, invented (src/dev/digest.ts); other seed mail has none.
+    // A seed digest's source, invented (src/dev/digest.ts). Other seed mail has none.
     async source(context, message) {
       assertDev(context);
       const digest = DEV_DIGESTS.find(one => one.providerId === message.providerId);
@@ -89,12 +89,12 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
 const refusedImports = new Set<number>();
 
 export function boardRefusals(store: Store, command: CommandRow): string | null {
-  // A failed calendar colour, for Settings › Calendar: Google refuses `sun` as a calendar's colour (one
+  // A failed calendar colour, for Settings › Calendar. Google refuses `sun` as a calendar's colour (one
   // Settings offers, which `alert` no longer is).
   if (command.kind === 'calendar_colour') return command.payload.colour === 'sun' ? 'The caller does not have permission (403 Forbidden)' : null;
   // A failed project colour, for Settings › Calendar's Todoist projects: Todoist refuses taupe as a project's colour.
   if (command.kind === 'project_colour') return command.payload.colour === 'taupe' ? 'Insufficient permissions (403 Forbidden)' : null;
-  // A refused .ics import, left in the review with Retry: Google refuses "Poster session" the first
+  // A refused .ics import, left in the review with Retry. Google refuses "Poster session" the first
   // time it's sent, and takes it on Retry.
   const imported = (command.payload.import as {event?: {title?: string}} | undefined)?.event;
   if (imported) {
@@ -114,9 +114,10 @@ export function boardRefusals(store: Store, command: CommandRow): string | null 
 }
 
 /**
- * Places for the seed's dev runs (the dev provider's stand-in, as for the calendar): invented places matched
- * by name or address, so the editor's place suggestions (board 13) work without a Maps key and never
- * reach Google. Served only while the database holds the seed's dev sources and no key is set.
+ * Places for the seed's dev runs (the dev provider's stand-in, as for the calendar). Invented places
+ * are matched by name or address, so the editor's place suggestions (board 13) work without a Maps
+ * key and never reach Google. Served only while the database holds the seed's dev sources and no
+ * key is set.
  */
 export const DEV_PLACES: PlaceSuggestionOut[] = [
   {place_id: 'dev-blue-door', name: 'Blue Door', address: '2118 Sunset Blvd'},

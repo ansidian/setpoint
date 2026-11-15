@@ -1,10 +1,10 @@
-// Direct manipulation on the month grid (boards 15, 15b and 19b):
-// the boards built and checked, then the flows: a drop with each scope, a
-// single event and a task moved at once (pending with a spinner until the provider confirms), a
-// change that fails in place with Try again and Move back, Clone, Copy and Paste, Colour, Delete (and
-// a recurring one asking which), multi-select, and the drag, the drop prompt and the failed card
-// under the 1.25 wide-screen zoom. The dev provider confirms after 600 ms and refuses moving
-// Dinner with Sam to Saturday with Google's 409 (board 19b, by rule).
+// Direct manipulation on the month grid (boards 15, 15b and 19b). The boards are built and checked.
+// Then the flows: a drop with each scope, a single event and a task moved at once (pending with a
+// spinner until the provider confirms), a change that fails in place with Try again and Move back,
+// Clone, Copy and Paste, Colour, Delete (and a recurring one asking which), multi-select, and the
+// drag, the drop prompt and the failed card under the 1.25 wide-screen zoom. The dev provider
+// confirms after 600 ms. It refuses moving Dinner with Sam to Saturday with Google's 409 (board 19b,
+// by rule).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -44,9 +44,9 @@ async function openCalendar(page: Page, base: string) {
 }
 
 /**
- * Runs the page's clock (a check that installs one) past the Undo of a delete, as 6 s waited out are
- * the most a check here spends, then sees its items off the grid. The delete goes with its
- * toast, so this goes from that; the clock may be stopped (pauseClock), the chips' fold being on it too.
+ * Runs the page's clock (a check that installs one) past the Undo of a delete, because 6 s waited out
+ * are the most a check here spends. Then it sees its items off the grid. The delete goes with its
+ * toast, so this goes from that. The clock may be stopped (pauseClock), and the chips' fold is on it too.
  */
 async function passUndo(page: Page, ...deleted: [date: string, title: string][]) {
   await page.locator('.toast:not(.leaving)', {hasText: /Deleted /}).waitFor();
@@ -82,7 +82,7 @@ test('boards 15 and 15b: Gym dragged from Wednesday to Thursday, then the drop a
     await page.locator('.cell[data-date="2026-10-08"].drop').waitFor();
     await page.locator('.cell[data-date="2026-10-07"] .ev.ghost', {hasText: 'Gym'}).waitFor();
 
-    // Board 15b: let go; the prompt sits beside the dropped chip, This event chosen.
+    // Board 15b: let go. The prompt sits beside the dropped chip, This event chosen.
     await page.mouse.up();
     const prompt = page.locator('.scope-card');
     await prompt.waitFor();
@@ -153,7 +153,7 @@ test('an event and a task move at once, waiting with a spinner until the provide
     await openCalendar(page, setpoint.base);
     await drag(page, chip(page, '2026-10-07', 'Dentist'), '2026-10-08');
     // No prompt for a single event: pending where it landed, then confirmed.
-    // The spinner shows only after a second: it's there, not yet seen.
+    // The spinner shows only after a second. It's there, not yet seen.
     await page.locator('.cell[data-date="2026-10-08"] .ev.pending .spin').waitFor({state: 'attached'});
     fs.rmSync(hold);
     await page.locator('.cell[data-date="2026-10-08"] .ev:not(.pending)', {hasText: 'Dentist'}).waitFor();
@@ -197,7 +197,7 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     const box = (await rested(() => card.boundingBox()))!;
     assert.ok(box.x + box.width <= failed.x, `the card ends at ${box.x + box.width}, beside the chip from ${failed.x}`);
 
-    // Try again: pending once more at once, before the server has it (held here at its door), then
+    // Try again: pending once more at once, before the server has it (held here at its door). Then
     // the provider refuses again, in place.
     let release = () => {};
     const held = new Promise<void>(resolve => {
@@ -231,7 +231,7 @@ test('a drag the provider refuses fails in place, and its card says so', async (
     await drag(page, chip(page, '2026-10-09', 'Dinner with Sam'), '2026-10-10');
     await page.locator('.cell[data-date="2026-10-10"] .ev.failed', {hasText: 'Dinner with Sam'}).waitFor();
     await page.locator('.failed-card', {hasText: 'Couldn\'t move Dinner with Sam'}).waitFor();
-    // Closing the card leaves the failure outlined; clicking the chip brings the card back.
+    // Closing the card leaves the failure outlined. Clicking the chip brings the card back.
     await page.locator('.failed-card').getByRole('button', {name: 'Close'}).click();
     await page.locator('.failed-card').waitFor({state: 'detached'});
     await chip(page, '2026-10-10', 'Dinner with Sam').click();
@@ -268,8 +268,8 @@ test('Copy and Paste (Copy and ⌘C say what they took) and Delete from the card
     await passUndo(page, ['2026-10-13', 'Dentist']);
     await until('the delete, once its Undo has gone', () => dentists('2026-10-13'), list => list.length === 0, AFTER_UNDO);
 
-    // Multi-select: ⌘ alone puts the card away and keeps Dinner selected; ⌘-click a second;
-    // ⌘C and ⌘V on Tue, Oct 20 keeps their distance; Delete takes both copies.
+    // Multi-select: ⌘ alone puts the card away and keeps Dinner selected. ⌘-click a second. ⌘C and
+    // ⌘V on Tue, Oct 20 keeps their distance. Delete takes both copies.
     await chip(page, '2026-10-09', 'Dinner with Sam').click();
     await page.locator('.fd').waitFor();
     await page.keyboard.press('Meta');
@@ -293,7 +293,7 @@ test('Copy and Paste (Copy and ⌘C say what they took) and Delete from the card
     await passUndo(page, ['2026-10-20', 'Dinner with Sam'], ['2026-10-26', 'Career fair']);
     await until('both copies gone', async () => [...await items(setpoint, '2026-10-20'), ...await items(setpoint, '2026-10-26')].filter(item => !item.recurring), list => list.length === 0, AFTER_UNDO);
 
-    // Deleting one Gym asks which; This event takes Friday's alone.
+    // Deleting one Gym asks which. This event takes Friday's alone.
     await chip(page, '2026-10-16', 'Gym').click();
     await page.locator('.fd').getByRole('button', {name: 'Delete'}).click();
     await page.locator('.scope-card', {hasText: 'Delete recurring event'}).waitFor();
@@ -364,7 +364,7 @@ test('a delete and a completion show at once, before the server has them', async
     const held = new Promise<void>(resolve => {
       release = resolve;
     });
-    // The completion is held at the server's door; the delete needs no holding, as it waits out
+    // The completion is held at the server's door. The delete needs no holding, because it waits out
     // its Undo in the browser first.
     await page.route(/\/api\/items\/\d+\/complete$/, async route => {
       await held;
@@ -379,7 +379,7 @@ test('a delete and a completion show at once, before the server has them', async
     // A moment short of the Undo's end: off the grid, its fold run.
     await page.clock.runFor(UNDO_MS - 1);
     await until('Dinner leaves the grid', () => chip(page, '2026-10-09', 'Dinner with Sam').count(), count => count === 0);
-    // Whatever the browser has sent has landed, and the server has no delete: a delete it has lists
+    // Whatever the browser has sent has landed, and the server has no delete. A delete it has lists
     // the item, pending, until the provider confirms.
     await setpoint.idle();
     const dinner = (await items(setpoint, '2026-10-09')).find(item => item.title === 'Dinner with Sam');
@@ -421,7 +421,7 @@ test('Delete or Backspace says what it deleted and offers Undo, which keeps it; 
     await page.locator('.fd').waitFor();
     await page.keyboard.press('Backspace');
     await page.locator('.toast', {hasText: 'Deleted Dentist'}).waitFor();
-    // It folds away first; a moment short of the Undo's end, it's still offered.
+    // It folds away first. A moment short of the Undo's end, it's still offered.
     await page.clock.runFor(UNDO_MS - 1);
     await until('off the grid', () => chip(page, '2026-10-07', 'Dentist').count(), count => count === 0);
     assert.doesNotMatch(new URL(page.url()).pathname, /\/item\//);
@@ -627,7 +627,7 @@ test('a task\'s subtasks: its chip\'s count, the card\'s checklist checking one 
     const checklist = (task: Awaited<ReturnType<typeof report>>) => task.subtasks.map(subtask => `${subtask.done ? '●' : '○'} ${subtask.title}`);
     const card = page.locator('.fd');
 
-    // The seed's checklist, one of it done; its subtasks have no date, so the day doesn't list them.
+    // The seed's checklist, one of it done. Its subtasks have no date, so the day doesn't list them.
     assert.deepEqual(checklist(await report()), ['● Plot the timing data', '○ Write the analysis', '○ Proofread', '○ Submit on the portal']);
     assert.deepEqual((await items(setpoint, '2026-10-07')).filter(item => item.kind === 'task').map(item => item.title), ['CS 101 lab report', 'Pay rent']);
     assert.equal(await chip(page, '2026-10-07', 'CS 101 lab report').locator('.count').textContent(), '1/4');
@@ -678,7 +678,7 @@ test('subtasks added from the card land in Todoist in the order typed; one opens
     const card = page.locator('.fd');
     const menu = page.locator('.ctx-menu');
 
-    // The add row, a field in place; Enter adds and keeps it for the next; Esc puts the row back, the card staying.
+    // The add row, a field in place. Enter adds and keeps it for the next. Esc puts the row back, the card staying.
     await chip(page, '2026-10-07', 'CS 101 lab report').click();
     await card.getByRole('button', {name: 'Add subtask'}).click();
     const field = card.getByRole('textbox', {name: 'New subtask'});
@@ -692,7 +692,7 @@ test('subtasks added from the card land in Todoist in the order typed; one opens
     assert.deepEqual(added.subtasks.slice(-2).map(subtask => subtask.title), ['Print the cover page', 'Email the TA']);
     await card.locator('.fd-subtasks .fact', {hasText: 'Subtasks 1/6'}).waitFor();
 
-    // Its title opens it in the editor, the card staying; a date saved shows after its title and puts it on its day.
+    // Its title opens it in the editor, the card staying. A date saved shows after its title and puts it on its day.
     await card.getByRole('button', {name: 'Edit Print the cover page'}).click();
     const due = page.getByLabel('Due date', {exact: true});
     assert.deepEqual([await due.inputValue(), await due.getAttribute('placeholder')], ['', 'No date']);
@@ -724,7 +724,7 @@ test('subtasks added from the card land in Todoist in the order typed; one opens
     const cloned = await until('cloned', report, task => task.subtasks.length === 7 && quiet(task), 10_000);
     assert.deepEqual(cloned.subtasks.map(subtask => subtask.title).slice(-2), ['Email the TA', 'Email the TA']);
 
-    // Its date comes off in the editor; it leaves its day, stays in the checklist, and Undo puts it back.
+    // Its date comes off in the editor. It leaves its day, stays in the checklist, and Undo puts it back.
     await card.getByRole('button', {name: 'Edit Print the cover page'}).click();
     await page.getByRole('button', {name: 'Remove due date'}).click();
     const toast = await holdToast(page);
@@ -740,7 +740,7 @@ test('subtasks added from the card land in Todoist in the order typed; one opens
   }
 });
 
-// A drag held at the grid's edge scrolling it on is edgeScroll's, a table in manipulate.test.ts; the
+// A drag held at the grid's edge scrolling it on is edgeScroll's, a table in manipulate.test.ts. The
 // scroll it makes is by eye.
 test('an item drags out of the "+3" popover onto another day', async () => {
   const setpoint = await startSetpoint({fixtures: ['busy-saturday'], clock: 'frozen'});

@@ -1,37 +1,38 @@
 // The Jobs page (boards 32, 32b, 33, 36a, 36b, 40): the header (Jobs, the status
 // filter with its counts, Per week, Search jobs `/`), Needs you above the table,
-// the table and the application's detail where the reading pane sits. Search (`/` or a click) turns the
-// header into Search: its results replace the table's rows as the user types, company or role first,
-// then a match only in a JD's text with its line; Needs you folds away while a query is in.
+// the table and the application's detail where the reading pane sits. Search (`/` or a click) turns
+// the header into Search. Its results replace the table's rows as the user types, company or role
+// first, then a match only in a JD's text with its line. Needs you folds away while a query is in.
 //
-// Needs you's answers and the corrections, each with its toast and Undo (act.ts); a row's
-// right-click opens its actions at the pointer, and More's Edit company and Edit title (or the
+// Needs you's answers and the corrections, each with its toast and Undo (act.ts). A row's
+// right-click opens its actions at the pointer. More's Edit company and Edit title (or the
 // right-click's) open the application with that field in edit.
 //
 // A Needs you item's subject opens its email where the detail sits (ItemEmail.tsx), and an
-// application in its Assign to… opens that application's first email there. Held here rather
-// than in the address: it's a look at an email, and nothing comes back to it on a reload.
+// application in its Assign to… opens that application's first email there. It's held here rather
+// than in the address, because it's a look at an email and nothing comes back to it on a reload.
 //
 // The Pinned shelf sits under the headings, newest pin first under every filter and
-// sort; search replaces it with the table, a pinned application found among the results.
+// sort. Search replaces it with the table, a pinned application found among the results.
 //
-// Keys: `J` / `K` move through Needs you's items, the shelf's rows and then the table's (with an application open,
-// they open the next and previous one; with an item's email open, the next and previous email of its
-// list); Enter opens; `P` pins or unpins the open application, else the one under the cursor; `O` opens the posting; `/` searches; Esc folds an unfolded posting, then closes
-// the detail or the email (in a narrow window, Back), then clears the query, then leaves search. `4` is
-// the shell's (App.tsx).
+// Keys: `J` / `K` move through Needs you's items, the shelf's rows and then the table's. With an
+// application open, they open the next and previous one. With an item's email open, they open the
+// next and previous email of its list. Enter opens. `P` pins or unpins the open application, else
+// the one under the cursor. `O` opens the posting. `/` searches. Esc folds an unfolded posting, then
+// closes the detail or the email (in a narrow window, Back), then clears the query, then leaves
+// search. `4` is the shell's (App.tsx).
 //
-// The states (States.tsx; 38a–38c): the AI down and the history pass's lines at the top of the column,
+// The states (States.tsx, 38a–38c): the AI down and the history pass's lines at the top of the column,
 // and Jobs off's one line, its header "Jobs" alone. Settings › Jobs's Show arrives at
 // /jobs/from-history, From history unfolded.
 //
 // From mail: an application open as the page mounts (Open in Jobs, Full posting, a reload)
-// arrives with its pane simply there, no slide; /jobs/12/posting arrives scrolled to its full posting
-// and unfolded; /jobs?q=… arrives searched, the query in the field (Applied before). The
+// arrives with its pane simply there, no slide. /jobs/12/posting arrives scrolled to its full posting
+// and unfolded. /jobs?q=… arrives searched, the query in the field (Applied before). The
 // address then drops what it carried, so a reload or Back doesn't do it again.
 //
 // Live: a `jobs` event refreshes what's on screen (logic/live.ts). An application that lands takes its
-// place by the sort and settles from `sub2` over 900 ms; a row an email moves on crossfades its status
+// place by the sort and settles from `sub2` over 900 ms. A row an email moves on crossfades its status
 // and settles the same way. In a filtered view a row stays put until the next visit.
 import type {ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut, JobsPageOut, JobsSearchOut, NeedsYouItemOut} from '@setpoint/shared';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -173,7 +174,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   // Pinned ones are on the shelf, under every filter, and not again in the table.
   const {shelf, table} = useMemo(() => shelfAndTable(rows, filtered, sort), [rows, filtered, sort]);
 
-  // What J / K move through: Needs you's items, then the rows; in search, its results in order.
+  // What J / K move through: Needs you's items, then the rows. In search, its results in order.
   const corRows = useMemo(() => (results ? sortRows(results.company_or_role, sort) : []), [results, sort]);
   const jdRows = useMemo(() => (results ? sortRows(results.in_jd.map(each => each.row), sort) : []), [results, sort]);
   const lines = useMemo(() => new Map(results?.in_jd.map(each => [each.row.id, each.line]) ?? []), [results]);
@@ -202,8 +203,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
     document.title = tabTitle(open === null ? null : titled ?? null);
   }, [open, titled]);
 
-  // The item whose email is open where the detail sits. An application opening takes the pane, and an
-  // item answered takes its email with it once it's left the page's answer; refused, it never left.
+  // The item whose email is open where the detail sits. An application opening takes the pane. An
+  // item answered takes its email with it once it's left the page's answer. Refused, it never left.
   const [reading, setReading] = useState<{item: number; message: number; history: boolean; travel: Travel | null; of: string | null} | null>(null);
   if (reading && page && (open !== null || ![...page.needs_you, ...page.from_history].some(item => item.id === reading.item))) setReading(null);
   const email = useHold(reading, compact ? motion.medium : motion.fast);
@@ -347,7 +348,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   if (editing && editing.id !== open) setEditing(null);
   const [rowMenuOpen, setRowMenuOpen] = useState<{spec: MenuSpec; anchor: MenuAnchor} | null>(null);
   const columnWidths = useColumnWidths();
-  /** A row a correction takes away folds out; refused, it stays, and once gone it's forgotten. */
+  /** A row a correction takes away folds out. Refused, it stays, and once gone it's forgotten. */
   const takeAway = (id: number, send: () => ReturnType<typeof act>) => {
     takenAway.add(id);
     void send().then(change => {
@@ -378,7 +379,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
       takeAway(row.id, () => act(() => deleteApplication(row.id), {done: `Deleted ${row.company}`, tone: 'gone', failed: 'Couldn\'t delete it'}));
     },
   });
-  /** The title or company in place: shown at once, then saved; refused, it's what it was. */
+  /** The title or company in place: shown at once, then saved. Refused, it's what it was. */
   const save = (field: 'company' | 'title', value: string) => {
     if (open === null) return;
     const id = open;
@@ -399,7 +400,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
       ? act(() => pickCandidate(open, candidate.id), pickWords(candidate, company))
       : act(() => noneOfThese(open), {done: `None of these for ${company}`, failed: 'Couldn\'t turn them down'}));
   };
-  // A row's right-click: its actions at the pointer; the cursor moves to it, and it doesn't open.
+  // A row's right-click: its actions at the pointer. The cursor moves to it, and it doesn't open.
   const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;
   const onRowMenu = (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>, condensed = false) => {
     if (!takesContextMenu(event, event.currentTarget)) return;

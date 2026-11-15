@@ -1,13 +1,17 @@
-// Jobs's widgets: Per week's chart, the status filter and the full posting
-// unfolding in place (board 33); the menus with their keys and submenus, the candidate picker and the
-// title's field (boards 34a, 35a, 35b); the JD chip with its popover and Applied before, as mail's
-// slots draw them (boards 37a–37c); and the states' and Settings' words, as tables: the history pass's and the AI down's
-// lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b); a JD's long facts
-// wrapping in their boxes; the area that takes a pasted posting and a candidate Jobs can't
-// read; an item's subject, which opens its email; Setpoint on LinkedIn's chip saying an
-// application's standing as mail does; the empty pane's rows of recent movement and their words,
-// and a row's menu condensed for them. What they do with the props and the pointer or keys they're
-// given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
+// Jobs's widgets:
+// - Per week's chart, the status filter and the full posting unfolding in place (board 33)
+// - the menus with their keys and submenus, the candidate picker and the title's field (boards 34a,
+//   35a, 35b)
+// - the JD chip with its popover and Applied before, as mail's slots draw them (boards 37a–37c)
+// - the states' and Settings' words, as tables: the history pass's and the AI down's lines (38a,
+//   38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b)
+// - a JD's long facts wrapping in their boxes, the area that takes a pasted posting, and a candidate
+//   Jobs can't read
+// - an item's subject, which opens its email
+// - Setpoint on LinkedIn's chip, which says an application's standing as mail does
+// - the empty pane's rows of recent movement and their words, and a row's menu condensed for them.
+// These tests check what the widgets do with the props and the pointer or keys they're given. The
+// page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
 // This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
   ApplicationOut, ApplicationRowOut, JdCandidateOut, JobMoveOut, JobCountsOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobStatus, JobWeekOut, NeedsYouItemOut, PostingOut,

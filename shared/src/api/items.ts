@@ -27,7 +27,7 @@ import type {CommandOut, ItemWhen} from './common.ts';
 
 /**
  * One item on the calendar, or one occurrence of a recurring one. `key` is unique in a range read
- * ("12" or "3@2026-10-07T14:00:00.000Z"); `occurrence_start` names the occurrence for a change with
+ * ("12" or "3@2026-10-07T14:00:00.000Z"). `occurrence_start` names the occurrence for a change with
  * a recurring scope.
  */
 export interface ItemOut extends ItemWhen {
@@ -45,7 +45,7 @@ export interface ItemOut extends ItemWhen {
   attendees: string[];
   // Minutes before the start.
   reminders: number[];
-  // Time to Leave for this event, added among its notifications; never by default.
+  // Time to Leave for this event, added among its notifications, never by default.
   leave_reminder: boolean;
   // A task's Todoist project.
   project: string | null;
@@ -57,12 +57,12 @@ export interface ItemOut extends ItemWhen {
   command: CommandOut | null;
   // Google's own kinds of event (birthdays, focus time, out of office): shown, never changed here.
   read_only: boolean;
-  // A Todoist task's due as Todoist words it ("every mon"); `recurring` is true for a repeating task.
+  // A Todoist task's due as Todoist words it ("every mon"). `recurring` is true for a repeating task.
   due_string: string | null;
   // "Leave by 2:05 PM · 18 min": from Home by live routes, with Settings' buffer, when the event has
   // Time to Leave (`leave_reminder`) and there is one.
   time_to_leave: TimeToLeaveOut | null;
-  // An event's own colour (Google's event colour, as a swatch); null takes its calendar's.
+  // An event's own colour (Google's event colour, as a swatch). Null takes its calendar's.
   colour: Colour | null;
   // A task's Todoist labels, by name. Events have none.
   labels: string[];
@@ -75,12 +75,12 @@ export interface ItemOut extends ItemWhen {
   // editor's conflict preview. Tasks have none.
   transparency: Transparency | null;
   // The description as its provider wrote it: HTML on an event (Google's), Markdown on
-  // a task (Todoist's); null for none. Never drawn as raw HTML: web/src/logic/description reads it.
+  // a task (Todoist's). Null for none. Never drawn as raw HTML: web/src/logic/description reads it.
   description: string | null;
   // A Todoist task's subtasks, in Todoist's order, for its checklist. Each completes
-  // and reopens by its own id (POST /api/items/:id/complete); none of it completes the task.
+  // and reopens by its own id (POST /api/items/:id/complete). None of it completes the task.
   subtasks: SubtaskOut[];
-  // A subtask's task, by its id here; null for a task of its own.
+  // A subtask's task, by its id here, or null for a task of its own.
   parent_id: number | null;
 }
 
@@ -132,20 +132,20 @@ const editable = {
   place: z.string().max(300).nullable(),
   address: z.string().max(500).nullable(),
   attendees: z.array(z.string().min(1).max(200)).max(100),
-  // Minutes before the item's moment; a negative one is after it, 4 weeks either side.
+  // Minutes before the item's moment. A negative one is after it, 4 weeks either side.
   reminders: z.array(z.int().min(-REMINDER_LIMIT_MINUTES).max(REMINDER_LIMIT_MINUTES)).max(10),
   // An event's Time to Leave, sent while Settings › Notifications has it on. Tasks have none.
   leave_reminder: z.boolean(),
   project: z.string().min(1).max(200).nullable(),
-  // An event's own colour; null takes its calendar's. Tasks have none.
+  // An event's own colour. Null takes its calendar's. Tasks have none.
   colour: z.enum(EVENT_COLOURS).nullable(),
   // A task's Todoist labels, by name (Todoist's own key for them). Events have none.
   labels: z.array(z.string().trim().min(1).max(60)).max(50),
-  // A task's repeat in Todoist's words ("every mon"); null for none. Sent to Todoist with the
+  // A task's repeat in Todoist's words ("every mon"), or null for none. Sent to Todoist with the
   // due day and time as one due string, so a date change never drops the repeat.
   repeat: z.string().trim().min(1).max(100).nullable(),
   // The description in its provider's own format (HTML for an event, Markdown for a task),
-  // sent only when the user changed it; null or an empty one clears it. Each provider keeps its own
+  // sent only when the user changed it. Null or an empty one clears it. Each provider keeps its own
   // limit and refuses in its own words.
   description: z.string().max(65_536).nullable().transform(text => text || null),
 };
@@ -188,8 +188,8 @@ export const itemCreateInput = z.strictObject({
   // Never on unless asked for.
   leave_reminder: editable.leave_reminder.default(false),
   project: editable.project.default(null),
-  // A task's project that Todoist doesn't have yet is made only when this says so: the user picked "New
-  // project"; otherwise an unknown name goes to the default project.
+  // A task's project that Todoist doesn't have yet is made only when this says so: the user picked
+  // "New project". Otherwise an unknown name goes to the default project.
   create_project: z.boolean().optional(),
   // A subtask of this task, added at the end of its checklist. It goes in the task's project.
   parent_id: id.optional(),
@@ -221,7 +221,7 @@ export const itemScopeInput = z.strictObject({
 });
 export type ItemScopeInput = z.infer<typeof itemScopeInput>;
 
-/** Complete or reopen a task; a recurring task names its occurrence by its due date. */
+/** Complete or reopen a task. A recurring task names its occurrence by its due date. */
 export const itemCompleteInput = z.strictObject({done: z.boolean(), occurrence_date: localDate.nullable().default(null)});
 export const subtaskOrderInput = z.strictObject({subtask_ids: z.array(id).min(1).max(500)});
 
@@ -242,7 +242,7 @@ export interface CalendarOut {
   // False for a calendar the user can only read (Google's accessRole reader or freeBusyReader,
   // as a subscribed holiday calendar is): its events are read-only and no picker offers it.
   writable: boolean;
-  // The colour change waiting for Google, or failed in place with its words; null otherwise.
+  // The colour change waiting for Google, or failed in place with its words. Null otherwise.
   command: CommandOut | null;
 }
 export const calendarProviderSchema = z.enum(CALENDAR_PROVIDERS);
@@ -267,7 +267,7 @@ export interface PlaceSuggestionOut {
   address: string;
 }
 
-/** A place the user's events have used, offered before anything is typed; its address when one had it. */
+/** A place the user's events have used, offered before anything is typed, with its address when one had it. */
 export interface RecentPlaceOut {
   name: string;
   address: string | null;
@@ -301,7 +301,7 @@ export interface TodoistProjectOut {
   inbox: boolean;
   // Null when Todoist named a colour Setpoint doesn't know.
   colour: TodoistColour | null;
-  // The colour change waiting for Todoist, or failed in place with its words; null otherwise.
+  // The colour change waiting for Todoist, or failed in place with its words. Null otherwise.
   command: CommandOut | null;
 }
 /** Pick a project's colour, written to Todoist. */
@@ -314,7 +314,7 @@ export interface TodoistLabelOut {
   name: string;
 }
 
-/** Connect Todoist: the web app sends the browser to `url`; Todoist comes back to the callback. */
+/** Connect Todoist: the web app sends the browser to `url`. Todoist comes back to the callback. */
 export interface TodoistConnectOut {
   url: string;
 }

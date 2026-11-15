@@ -2,8 +2,8 @@
 // replace the list: Alfred's Answer card above them, the results line, each result with why it
 // matched and its matches highlighted, the fold over those that only mention the search, the line of
 // what a suggestion's chips left out, the suggestion itself in the results line, and the no-results
-// line with each chip removable. Kept thin: the rules are logic/search.ts's, and the state is mailSearch.ts's and
-// state.ts's.
+// line with each chip removable. Kept thin: the rules are logic/search.ts's, and the state is
+// mailSearch.ts's and state.ts's.
 import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {Fragment, useEffect, useId, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode} from 'react';
@@ -64,14 +64,15 @@ export function selectSearch() {
 }
 
 /**
- * The header's field. `/` or ⌘F focuses it, selecting the query; Enter hands the keys to the results (J, K, Enter), the
- * cursor on the first; Tab takes a suggestion that's showing, and otherwise moves on as it does anywhere; ⌘Enter asks
- * Alfred; Esc clears the search; Backspace in an empty field removes the last chip.
+ * The header's field. `/` or ⌘F focuses it, selecting the query. Enter hands the keys to the results
+ * (J, K, Enter), the cursor on the first. Tab takes a suggestion that's showing, and otherwise moves
+ * on as it does anywhere. ⌘Enter asks Alfred. Esc clears the search. Backspace in an empty field
+ * removes the last chip.
  */
 export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus}: SearchFieldProps<R>) {
   const input = useRef<HTMLInputElement>(null);
   const field = useRef<HTMLLabelElement>(null);
-  // A chip removed (its × or Backspace) collapses away over 120 ms, and the rest close up after it; a
+  // A chip removed (its × or Backspace) collapses away over 120 ms, and the rest close up after it. A
   // new one pops in (search.css).
   const removeChip = (index: number) => {
     leaveCopy(field.current?.querySelectorAll(':scope > .qchip')[index] ?? null,
@@ -79,7 +80,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
       {duration: motion.fast, easing: motion.ease});
     search.removeChip(index);
   };
-  // The field is a label for its words: a click on a chip, the glyph or the hint goes to them, and
+  // The field is a label for its words. A click on a chip, the glyph or the hint goes to them, and
   // its hover lights no chip's ×, which, as the label's first button, would otherwise be its control.
   const inputId = useId();
   // The chips are selected with the words (selectSearch) until the next key, click or blur.
@@ -101,7 +102,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   }, []);
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     setWhole(false);
-    // Typing or deleting over the whole query replaces its chips too; the input replaces its words.
+    // Typing or deleting over the whole query replaces its chips too. The input replaces its words.
     if (whole && search.chips.length && (event.key === 'Backspace' || event.key === 'Delete' || (event.key.length === 1 && !event.metaKey && !event.ctrlKey))) {
       search.clear();
       return;
@@ -172,7 +173,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
 
 /**
  * "No emails match", then each chip and the words as the same chips the field draws, each knocked off
- * by its ×; a Not chip keeps its "Not" label.
+ * by its ×. A Not chip keeps its "Not" label.
  */
 export function NoResults({lead, search, children}: {lead: string; search: Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, unknown>, 'chips' | 'text' | 'removeChip' | 'clearText'>; children?: ReactNode}) {
   return (
@@ -235,13 +236,13 @@ export function SearchResults(props: ResultsProps) {
   const {search, sections, card} = props;
   const {out} = search;
   const end = useRef<HTMLDivElement>(null);
-  // The next page as the list nears its end, which is the fold while it's folded: the rows under it
+  // The next page as the list nears its end, which is the fold while it's folded. The rows under it
   // aren't asked for until they'd show.
   const ask = nextAsk(out, search.mentions, search.results.length, search.moreLeftOut);
   useEffect(() => {
     const target = end.current;
     if (!target || !ask) return;
-    // The list is the root: its margin means nothing for a box scrolling inside the page, and at the
+    // The list is the root. Its margin means nothing for a box scrolling inside the page, and at the
     // very end a fraction of a pixel can leave the empty marker just outside what the list shows.
     const observer = new IntersectionObserver(entries => {
       if (entries.some(entry => entry.isIntersecting)) (ask === 'more' ? search.loadMore : search.loadLeftOut)();
@@ -252,7 +253,7 @@ export function SearchResults(props: ResultsProps) {
   const indexing = out ? indexingLine(out.indexing) : null;
   const indexed = out?.indexing ? `${Math.round(out.indexing.progress * 1000) / 10}%` : null;
   const parts = queryParts(search.chips, search.text);
-  // It shows once the first answer is in (InboxPage keeps the list until then), and fades in; a
+  // It shows once the first answer is in (InboxPage keeps the list until then), and fades in. A
   // refinement on its way dims what it replaces, once it's taken a moment.
   return (
     <section className={search.pending ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
@@ -327,7 +328,7 @@ function Folding({line: lineKey, rows, open, toggle, words, ...props}: FoldingPr
   const shown = useFold(entries, FOLD_RULES[lineKey], FOLD_HOLD_MS);
   const delays = foldDelays(shown, entry => (entry.item.kind === 'row' ? lineKey : null));
   const line = useRef<HTMLButtonElement>(null);
-  // Opened at the foot of the list, its rows come into view once they're in; a search that
+  // Opened at the foot of the list, its rows come into view once they're in. A search that
   // starts open leaves the list where it is.
   const wasOpen = useRef(open);
   useEffect(() => {
@@ -372,7 +373,7 @@ function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, o
       </div>
       <div className="l2"><Marked parts={fieldSegments(result, 'subject')} /></div>
       {result.excerpt && <div className="l3"><Marked parts={fieldSegments(result, 'excerpt')} /></div>}
-      {/* Only what the row doesn't already show; none left, no line. */}
+      {/* Only what the row doesn't already show. None left, no line. */}
       {reasons.length > 0 && (
         <div className="why">
           {reasons.map((reason, index) => {

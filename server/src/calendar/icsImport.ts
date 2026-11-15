@@ -2,9 +2,9 @@
 // - readImport: the file read into drafts (src/domain/icsImport.ts), in start order, each
 //   saying whether it's over and which calendars already hold its iCalUID. Nothing goes to Google.
 // - importEvent: one draft as a command, carried out by Google's events.import
-//   (src/providers/gcal/mutations.ts): `item_create` with a new row for an event the calendar doesn't
-//   hold, `item_update` of the row it does (Google updates it in place). The mirror shows it at once,
-//   pending, as any change; Move back takes a new one off and puts an updated one back.
+//   (src/providers/gcal/mutations.ts). It's `item_create` with a new row for an event the calendar
+//   doesn't hold, or `item_update` of the row it does (Google updates it in place). The mirror shows
+//   it at once, pending, as any change. Move back takes a new one off and puts an updated one back.
 // Add to calendar on an email's .ics reads the attachment's bytes through readImport too.
 import type {IcsEventOut, IcsImportEvent, IcsImportInput, IcsReadOut} from '@setpoint/shared';
 import {and, eq, inArray, isNull} from 'drizzle-orm';
@@ -68,7 +68,7 @@ function columnsOf(store: Store, event: IcsImportEvent): Partial<ItemRow> {
     dueDate: null, dueAt: null,
     // A series keeps its wall-clock time in a zone: the file's, else the user's.
     timeZone: event.all_day ? null : event.time_zone ?? (rule ? store.timeZone : null),
-    // Until Google answers, the mirror expands the rule itself; the sync after brings its EXDATEs and changes.
+    // Until Google answers, the mirror expands the rule itself. The sync after brings its EXDATEs and changes.
     recurrence: rule, expanded: false, place: event.place, address: event.address, attendees: [],
     reminders: event.reminders, leaveReminder: event.leave_reminder, colour: event.colour, sourceUrl: event.url, transparency: event.transparency,
     icalUid: event.ical_uid, readOnly: false, description: event.description,
@@ -77,7 +77,8 @@ function columnsOf(store: Store, event: IcsImportEvent): Partial<ItemRow> {
 
 /**
  * One event into a Google calendar by its iCalUID. Refused, changing nothing, for a calendar that
- * isn't Google's or that the user can only read, or while the event the calendar holds for it has a change of its own on its way.
+ * isn't Google's or that the user can only read. Also refused while the event the calendar holds
+ * for it has a change of its own on its way.
  */
 export function importEvent(store: Store, input: IcsImportInput): CommandRow {
   const calendar = store.db.select().from(t.calendars).where(eq(t.calendars.id, input.calendar_id)).get();

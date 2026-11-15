@@ -31,7 +31,7 @@ type Bar = {kind: 'reconnect'; text: string} | ({kind: 'line'} & SourceLine);
 
 /**
  * "Business needs sign-in · Reconnect", then "Personal, as of 9:14 PM · Check now" for each stale or
- * failing account, folding in as they come and out as they go; null while there are none.
+ * failing account, folding in as they come and out as they go. Null while there are none.
  */
 export function useHealthBars() {
   const {list} = useAccounts();
@@ -54,7 +54,7 @@ export function useHealthBars() {
 
 /**
  * The lines as they show while they change (logic/stateLines.ts): one that arrives folds
- * in, one that goes folds out, after 1.2 s of its last words if `holds` says it has any. The first
+ * in, and one that goes folds out, after 1.2 s of its last words if `holds` says it has any. The first
  * paint shows them as they are.
  */
 export function useShownLines<T>(next: {key: string; line: T}[], holds: (line: T) => boolean = () => false) {
@@ -71,7 +71,7 @@ export function useShownLines<T>(next: {key: string; line: T}[], holds: (line: T
 
 /**
  * A line's motion by its phase: the ref that folds it in or out (app/fold.ts, as rows fold), and its
- * time: done, it folds out after 1.2 s; folded out, it goes.
+ * time. Done, it folds out after 1.2 s. Folded out, it goes.
  */
 export function useLinePhase(phase: LinePhase, onMoveOn: (from: 'done' | 'out') => void) {
   const moveOn = useRef(onMoveOn);
@@ -153,7 +153,7 @@ function Pill({text, onRetry, leaves = false}: {text: string; onRetry: () => voi
 export function OfflinePill() {
   const since = useOfflineSince();
   // Changes are refused, not queued, from the moment the stream drops (asked as each key comes, so one
-  // pressed with the drop is caught too): the keys that change something reach nothing, while reading
+  // pressed with the drop is caught too). The keys that change something reach nothing, while reading
   // goes on (J, K, Enter, the arrows). A field's typing, Settings and ⌘K keep their keys
   // (their changes are refused, client.ts).
   useEffect(() => {
@@ -169,7 +169,7 @@ export function OfflinePill() {
 }
 
 /**
- * Back online, the pill fades out over 120 ms where it was rather than vanishing; it came
+ * Back online, the pill fades out over 120 ms where it was rather than vanishing. It came
  * in from 8 px above over 180 ms (states.css).
  */
 const fadeWhenGone = (pill: HTMLDivElement | null) => {
@@ -179,7 +179,7 @@ const fadeWhenGone = (pill: HTMLDivElement | null) => {
 
 /**
  * Setpoint unreachable at launch (a deploy, a restart): the mark, dimmed, where the sign-in card's
- * top sits, and the offline pill under it, not the sign-in card. Root asks again every few seconds;
+ * top sits, and the offline pill under it, not the sign-in card. Root asks again every few seconds.
  * Retry now asks at once.
  */
 export function Unreachable() {

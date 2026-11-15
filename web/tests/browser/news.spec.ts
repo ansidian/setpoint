@@ -1,10 +1,10 @@
-// News (boards 25–27) against the seed's sample:
-// All's blocks, Upcoming and the pill; the empty pane with the recap, its panel and News's facts; the story pane, its Sources, an article
-// (26a) and one that can't be read here (26b); a section (27) with Also reported; While you were away with Done
-// and Undo; seen; the held order with the pill; Add to calendar; the keys; and board 31, board 25 in
-// Light; Tab and Shift-Tab between the views. A change to News arrives as ingest's will: the
-// server's database changes, then a `news` live event names stories (here, seeing one already seen
-// sends it, as nothing else in the server writes News yet).
+// News (boards 25–27) against the seed's sample: All's blocks, Upcoming and the pill, the empty pane
+// with the recap, its panel and News's facts, and the story pane, its Sources, an article (26a) and
+// one that can't be read here (26b). Then a section (27) with Also reported, While you were away
+// with Done and Undo, seen, the held order with the pill, Add to calendar, the keys, board 31
+// (board 25 in Light), and Tab and Shift-Tab between the views. A change to News arrives as ingest's
+// will: the server's database changes, then a `news` live event names stories. Here, seeing one
+// already seen sends it, because nothing else in the server writes News yet.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -32,8 +32,8 @@ async function storyId(setpoint: Setpoint, headline: string): Promise<number> {
 const stateOf = async (setpoint: Setpoint, id: number) => (await setpoint.api<StoryOut>('GET', `/news/stories/${id}`)).state;
 
 /**
- * All without its recap, as it is once an hour away has put it away: for the checks about the blocks
- * under it, whose rows it would push down. The route stays for the iPhone app.
+ * All without its recap, as it is once an hour away has put it away. This is for the checks about
+ * the blocks under it, whose rows it would push down. The route stays for the iPhone app.
  */
 const putRecapAway = (setpoint: Setpoint) => setpoint.api('POST', '/news/recap/done');
 
@@ -43,8 +43,7 @@ const recapShown = (page: Page) => page.waitForResponse(response => response.url
 
 /**
  * Waits until the server has seen every story whose row is wholly in the list's view with a dot
- * (about a second); the dots stay for the visit. Resolves with
- * those stories.
+ * (about a second). The dots stay for the visit. Resolves with those stories.
  */
 async function seenSettled(page: Page, setpoint: Setpoint): Promise<number[]> {
   const ids = await rested(() => list(page).evaluate(scroller => {
@@ -66,7 +65,7 @@ const glyphs = async (icons: Locator) => (await icons.evaluateAll(all => all.map
 
 /**
  * Changes News as ingest and ranking would, in the server's own database, then sends a `news` event
- * naming a story: seeing Council's story, which the user saw on Monday, changes nothing else.
+ * naming a story. Seeing Council's story, which the user saw on Monday, changes nothing else.
  */
 async function newsChange(setpoint: Setpoint, sql: string) {
   const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
@@ -103,7 +102,7 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     assert.equal(await page.locator('aside.sb .nav.on').textContent(), 'News');
     assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['All', 'Local', 'Tech', 'AI', 'General']);
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');
-    // The blocks in their fixed order; the recap is the pane's.
+    // The blocks in their fixed order. The recap is the pane's.
     assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
     // Each block ends after its stories, with no "N more in ‹section›".
     assert.equal(await page.getByText(/ more in /).count(), 0);
@@ -202,7 +201,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     assert.deepEqual(await pane.locator('.src-row .o').allTextContents(), ['KTLASummary only', 'NBC Los Angeles', 'CBS Los Angeles', 'ABC7', 'FOX 11']);
     assert.deepEqual(await pane.locator('.src-row .fav').allTextContents(), ['K', 'NBC', 'CBS', '7', '11']);
     // The pane's body as one 600 px column at the reading measure is by eye.
-    // Opening it saw it: its dot goes at once, and the server has it.
+    // Opening it saw it. Its dot goes at once, and the server has it.
     const fireId = await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres');
     await until('seen on the server', () => stateOf(setpoint, fireId), state => state === 'seen');
     assert.match(await fire.getAttribute('class') ?? '', /\bseen\b/);
@@ -293,8 +292,8 @@ test('a section (27): the header\'s Local opens Local\'s full list, biggest firs
     // Shown now, Water main is seen after its second on screen.
     await until('Water main seen', () => stateOf(setpoint, water), state => state === 'seen', 5000);
     await seenSettled(page, setpoint);
-    // Also reported ends the list: the stories never written, headline, outlet and age, each a
-    // link to its outlet's article; none is a story row, so none has a dot or is seen.
+    // Also reported ends the list: the stories never written, with headline, outlet and age, each a
+    // link to its outlet's article. None is a story row, so none has a dot or is seen.
     const also = page.locator('.nw-also');
     assert.equal(await also.locator('.nw-also-hd').textContent(), 'Also reported');
     assert.deepEqual(await also.locator('a .hl').allTextContents(), ['Central library hosts a fall book sale this weekend', 'Street sweeping resumes on the usual routes after the holiday']);
@@ -333,7 +332,7 @@ test('While you were away: All\'s empty pane holds the recap, each section\'s bi
     await seenSettled(page, setpoint);
     assert.equal(await stateOf(setpoint, fixed.recap[0]!), 'new');
 
-    // A bigger story leaves the page unseen: fixed once on screen, the recap takes nothing in, here or on the server.
+    // A bigger story leaves the page unseen. Fixed once on screen, the recap takes nothing in, here or on the server.
     // What the open asked is answered first, so the answer waited for is the change's.
     await setpoint.idle();
     const asked = page.waitForResponse(response => response.url().endsWith('/api/news') && response.request().method() === 'GET');
@@ -375,7 +374,7 @@ test('a recap story opens in a panel over the list\'s column, the pane live besi
     // Opened, it's seen.
     await until('the tornado seen', () => stateOf(setpoint, tornadoId), state => state === 'seen');
 
-    // J and → step on, K and ← back, within the recap; the page's own keys wait.
+    // J and → step on, K and ← back, within the recap. The page's own keys wait.
     await page.keyboard.press('j');
     await panel.locator('.rd-subj', {hasText: 'Amtrak derailment'}).waitFor();
     assert.equal(await panel.locator('.nw-modal-at').textContent(), '8 of 8');
@@ -466,8 +465,8 @@ test('seen: the stories on screen as the page loads, or opened, even off screen;
     await row(page, 'Brush fire near the 210').waitFor();
     await seenSettled(page, setpoint);
     assert.equal(await stateOf(setpoint, hurricane), 'new', 'below the fold');
-    // How long on screen counts, and flicking past not, are sight's, dueSeen's and nextSeen's, tables in
-    // news.test.ts; the scrolls they needed here went.
+    // How long on screen counts, and flicking past not, are sight's, dueSeen's and nextSeen's, tables
+    // in news.test.ts. The scrolls they needed here went.
     // The rows seen on arrival keep their dots for the visit.
     assert.match(await row(page, 'Red Flag Warning').getAttribute('class') ?? '', /\bnew\b/);
     // A reload is a new visit: the stories seen have no dot.
@@ -505,7 +504,7 @@ test('the order holds: a change updates rows on screen in place, the rest waits 
     await row(page, 'Red Flag Warning').locator('.sm', {hasText: 'Gusts to 60 mph, humidity under 8%'}).waitFor();
     await until('the car wash turns updated in place', () => carWash.getAttribute('class'), value => /\bupd\b/.test(value ?? ''));
     assert.deepEqual(await order(), before, 'nothing moved');
-    // N takes the new order; its scroll to the top is by eye.
+    // N takes the new order. Its scroll to the top is by eye.
     await page.keyboard.press('n');
     await until('the new order', () => page.locator('.nw-list [data-story]').first().textContent(), text => text?.startsWith('Water main break floods an intersection') ?? false);
     const arrived = [...new Set((await order()).filter(id => !before.includes(id)))].sort();
@@ -591,7 +590,7 @@ test('Tab and Shift-Tab step All | Local | Tech | AI | General, wrapping, after 
     await page.waitForURL(/\/news\/local$/);
     await until('the cursor on Local\'s first story', () => page.locator('.nw-list .cur').textContent(), text => text?.startsWith('Brush fire near the 210') ?? false);
 
-    // J goes on past the stories into Also reported; Enter there opens the article, not the pane.
+    // J goes on past the stories into Also reported. Enter there opens the article, not the pane.
     for (let press = 0; press < 25; press += 1) await page.keyboard.press('j');
     await until('the cursor on Also reported\'s last row', () => page.locator('.nw-also .cur .hl').textContent(), text => text === 'Street sweeping resumes on the usual routes after the holiday');
     await page.keyboard.press('Enter');

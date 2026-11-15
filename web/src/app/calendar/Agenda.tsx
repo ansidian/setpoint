@@ -1,6 +1,6 @@
 // Calendar on the phone (board 21): a read-only agenda of today and the next 7
 // days, empty days collapsed (logic/phone.ts). The routes are Calendar's: /calendar/item/3?at=…
-// opens that item's detail, read-only, over the agenda; /calendar/2026-10-07 brings that day into
+// opens that item's detail, read-only, over the agenda. /calendar/2026-10-07 brings that day into
 // view (or starts the agenda there when it's further out).
 import type {CalendarOut, ItemOut, ItemsOut, WeatherDayOut} from '@setpoint/shared';
 import {Fragment, useEffect} from 'react';
@@ -88,7 +88,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
                 {section.kind === 'day' && section.lines.map(({item, when, past}, at) => {
                   const calendar = colours.get(item.calendar_id);
                   const to: CalendarRoute = {page: 'calendar', date: null, item: item.id, at: item.occurrence_start};
-                  // Events are their calendar's chip, as on the grids; tasks keep their ring.
+                  // Events are their calendar's chip, as on the grids. Tasks keep their ring.
                   const chip = item.kind === 'event';
                   return (
                     <Fragment key={item.key}>

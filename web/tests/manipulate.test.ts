@@ -1,7 +1,8 @@
-// The grid's pure rules as tables: recurring scope and its consequences (boards 14 and 15b), overlaps
-// (the editor's conflict preview, board 13, and the agenda's line, board 12b), and direct
-// manipulation (drop targets and their tooltip, board 15; clone, copy and paste; multi-select; the
-// failed card's lines, board 19b), with quick actions and deadlines.
+// The grid's pure rules as tables:
+// - recurring scope and its consequences (boards 14 and 15b)
+// - overlaps (the editor's conflict preview, board 13, and the agenda's line, board 12b)
+// - direct manipulation: drop targets and their tooltip (board 15), clone, copy and paste,
+//   multi-select, and the failed card's lines (board 19b), with quick actions and deadlines.
 import type {CommandOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';

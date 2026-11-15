@@ -1,26 +1,26 @@
 // The model provider over plain HTTPS (bring your own key, set in Settings › AI): Anthropic's
-// Messages API, asked to answer through one forced tool. Triage uses it; Alfred uses its
+// Messages API, asked to answer through one forced tool. Triage uses it. Alfred uses its
 // conversation form at the end. The base URL is configurable so tests point it at a fake on
-// 127.0.0.1; no test or dev run reaches a real provider.
+// 127.0.0.1. No test or dev run reaches a real provider.
 //
 // The forced tool, thinking off on Anthropic
 // (Sonnet 5 and Opus 5 think by default, which conflicts with a forced tool), the cacheable system
 // and tool prefix, a long wedge-breaker timeout, and usage read from every answer. Refusals become
-// ProviderErrors for the one retry policy: a refused key (401, 403) needs a new key, 429 waits
-// (Retry-After), 529 (Anthropic overloaded), 5xx and timeouts are transient, the rest permanent.
+// ProviderErrors for the one retry policy. A refused key (401, 403) needs a new key. 429 waits
+// (Retry-After). 529 (Anthropic overloaded), 5xx and timeouts are transient. The rest are permanent.
 // An answer without a usable tool call isn't an error: `toolInput` is null and triage treats it as
 // unsure.
 //
 // The newest Claude models changed what a request may say (the claude-api skill's model notes,
-// 2026-10): Claude Sonnet 5.5, Opus 5.5, Fable 5.1 and Mythos 5.1 refuse a forced `tool_choice` (400),
-// so they get `auto` and the system prompt's instruction to answer with the tool; Sonnet 5.5 refuses
-// `thinking: disabled` and turns thinking off with `between_tools` instead; Opus 5.5 and the Fable
+// 2026-10). Claude Sonnet 5.5, Opus 5.5, Fable 5.1 and Mythos 5.1 refuse a forced `tool_choice` (400),
+// so they get `auto` and the system prompt's instruction to answer with the tool. Sonnet 5.5 refuses
+// `thinking: disabled` and turns thinking off with `between_tools` instead. Opus 5.5 and the Fable
 // and Mythos models can't turn thinking off at all, so it's left out. Haiku 5.5 and older models keep
 // the forced tool with thinking off.
 //
-// A call may also allow Claude's web search (Jobs's JD lookup): the server tool goes beside the
-// answer's tool, the model chooses when to answer (`auto`), a turn the API pauses (`pause_turn`) is
-// sent back to go on, and the searches are counted for the ledger, which prices them.
+// A call may also allow Claude's web search (Jobs's JD lookup). The server tool goes beside the
+// answer's tool, and the model chooses when to answer (`auto`). A turn the API pauses (`pause_turn`)
+// is sent back to go on. The searches are counted for the ledger, which prices them.
 import type {AiProvider} from '@setpoint/shared';
 import {kindOfStatus, ProviderError} from '../../sync/errors.ts';
 
@@ -56,7 +56,7 @@ export interface ModelUsage {
   outputTokens: number;
   cachedTokens: number;
   cacheWriteTokens: number;
-  // Web searches run (billed per search, src/domain/aiCost.ts); only on a call that allowed them.
+  // Web searches run (billed per search, src/domain/aiCost.ts). Only on a call that allowed them.
   webSearches?: number;
 }
 
@@ -76,7 +76,7 @@ export interface ModelClient {
 export interface ClientOptions {
   apiKey: string;
   baseUrl?: string;
-  // 120 s: models legitimately run long; this breaks a wedged connection, it isn't a budget.
+  // 120 s: models legitimately run long. This breaks a wedged connection. It isn't a budget.
   timeoutMs?: number;
 }
 
@@ -178,7 +178,7 @@ export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeo
         const usage = isRecord(body.usage) ? body.usage : {};
         const cachedTokens = count(usage.cache_read_input_tokens);
         const cacheWriteTokens = count(usage.cache_creation_input_tokens);
-        // Anthropic's input_tokens leaves out cache reads and writes; count them all as input.
+        // Anthropic's input_tokens leaves out cache reads and writes. Count them all as input.
         total.inputTokens += count(usage.input_tokens) + cachedTokens + cacheWriteTokens;
         total.outputTokens += count(usage.output_tokens);
         total.cachedTokens += cachedTokens;
@@ -204,13 +204,13 @@ export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeo
 
 // ---- Conversations with tools (Alfred) ----
 //
-// Alfred talks with a model over several turns: the model asks for tools, Setpoint runs them and
-// sends back their results, until it answers. Same key, endpoint, refusals and usage as
-// the one-shot call above; the tool choice is the model's own (`auto`, which every model accepts),
+// Alfred talks with a model over several turns. The model asks for tools, and Setpoint runs them and
+// sends back their results, until it answers. It uses the same key, endpoint, refusals and usage as
+// the one-shot call above. The tool choice is the model's own (`auto`, which every model accepts),
 // and thinking is off where the model allows it, as above.
 //
-// The transcript is the provider's own message list, kept by the caller and only ever appended to:
-// each turn's output goes back exactly as it came (thinking blocks included), which the newest
+// The transcript is the provider's own message list, kept by the caller and only ever appended to.
+// Each turn's output goes back exactly as it came (thinking blocks included), which the newest
 // models require.
 
 export interface ToolCall {

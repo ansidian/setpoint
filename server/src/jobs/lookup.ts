@@ -1,38 +1,37 @@
 // The JD lookup.
 //
-// - When: a confirmation the reader reads leaves its application at `jd_lookup = 'looking'`, and Jobs's
+// - When: a confirmation the reader reads leaves its application at `jd_lookup = 'looking'`. Jobs's
 //   worker queues a durable lookup for each one still open, right after reading and on its
-//   five-minute rescan (`queueDueLookups`). The history pass's applications wait for its end, when
-//   the open ones are marked `looking` with their unsure candidates bound for From history.
-//   Look it up by hand and Track this call `requestLookup`, which looks on any application,
-//   open or closed, whoever asks. Each
-//   lookup is its own `jobs_read` job on the sync engine, keyed `jobs_jd:<application>`, so one
-//   that fails waits out its own backoff.
+//   five-minute rescan (`queueDueLookups`). The history pass's applications wait for its end. Then
+//   the open ones are marked `looking`, with their unsure candidates bound for From history.
+//   Look it up by hand and Track this call `requestLookup`, which looks on any application, open or
+//   closed, whoever asks. Each lookup is its own `jobs_read` job on the sync engine, keyed
+//   `jobs_jd:<application>`, so one that fails waits out its own backoff.
 // - Where, in order: the email's own links, then Greenhouse, Lever and Ashby's public job APIs, or
-//   GovernmentJobs' site-wide search for an application through it, then Sonnet 5.5 with
+//   GovernmentJobs' site-wide search for an application through it. Then comes Sonnet 5.5 with
 //   Claude's web search, only when those cleanly missed (./lookupRules.ts).
-// - The check: Haiku 5.5 weighs what a link or a platform found; Sonnet's search judges its own.
-//   Confident is saved silently; unsure saves nothing and offers up to three candidates as a JD to
-//   confirm in Needs you; nothing is "No JD found", never retried on its own. A lookup that
-//   failed (the network, a 5xx, a 429, a timeout, the AI down) is retried with backoff by the one
-//   retry policy and never shown as not found.
+// - The check: Haiku 5.5 weighs what a link or a platform found. Sonnet's search judges its own.
+//   Confident is saved silently. Unsure saves nothing and offers up to three candidates as a JD to
+//   confirm in Needs you. Finding nothing is "No JD found", never retried on its own. The one retry policy
+//   retries a lookup that failed (the network, a 5xx, a 429, a timeout, the AI down) with backoff.
+//   It is never shown as not found.
 // - Opening what the search offers: a sole match that reads is saved with no check. Otherwise
-//   each candidate is opened: gone is dropped, one Jobs can't read or couldn't reach stays offered,
-//   and one that reads goes to Haiku, who can only drop it, never save it. One that came back
-//   `unreadable` is recorded so, and the picker says so; one it couldn't reach isn't.
+//   each candidate is opened. One that's gone is dropped. One Jobs can't read or couldn't reach stays
+//   offered. One that reads goes to Haiku, who can only drop it, never save it. One that came back
+//   `unreadable` is recorded so, and the picker says so. One it couldn't reach isn't.
 // - The saved JD: its full text as markdown, its link (none for one pasted with no
 //   pick), when and how it was found, and what Haiku 5.5 read in it. It's never overwritten: only Not
 //   this posting takes one away.
-// - Picks: a candidate the user picks is read and saved without a check (`requestPick`); what the user
-//   turned down is never saved or offered again, and a lookup writes only while its application is
-//   still `looking` (./stick.ts). One that can't be read stays `not_found` with its link,
-//   and Look it up turns that link down before it starts, so it can't fail the same way.
-// - Pasted: the user's own copy is saved at once as the JD, whatever the models are doing,
-//   the pick's link kept (`savePasted`), and its own job, keyed `jobs_pasted:<posting>`, has Haiku
-//   fill the reading (`readPasted`). A reading that fails leaves it saved without one.
-// - Stopped: the user would rather paste the posting than wait, so `stopLookup` ends the
-//   lookup at once as `not_found`, marked stopped, and the job running it aborts its calls when it
-//   sees its application no longer `looking` (./reader.ts).
+// - Picks: a candidate the user picks is read and saved without a check (`requestPick`). What the
+//   user turned down is never saved or offered again. A lookup writes only while its application is
+//   still `looking` (./stick.ts). One that can't be read stays `not_found` with its link. Look it up
+//   turns that link down before it starts, so it can't fail the same way.
+// - Pasted: the user's own copy is saved at once as the JD, whatever the models are doing, and the
+//   pick's link is kept (`savePasted`). Its own job, keyed `jobs_pasted:<posting>`, has Haiku fill the
+//   reading (`readPasted`). A reading that fails leaves it saved without one.
+// - Stopped: the user would rather paste the posting than wait, so `stopLookup` ends the lookup at
+//   once as `not_found`, marked stopped. The job running it aborts its calls when it sees its
+//   application is no longer `looking` (./reader.ts).
 // - Cost: no cap. Search is the ledger's `jobs_finding_jds`, the check and the reading
 //   `jobs_reading_jds`. Every change sends the `jobs` live event.
 import {OPEN_JOB_STATUSES} from '@setpoint/shared';
@@ -104,11 +103,11 @@ function queueLookup(store: Store, applicationId: number) {
 }
 
 /**
- * Starts a lookup on any application, open or closed, whoever asks (Look it up, Track
- * this): it's `looking` at once, its unanswered candidates go, and the job runs as
- * soon as the engine takes it. A saved JD is never replaced: Not this posting
- * comes first, so this answers `saved` and changes nothing. A pick Jobs couldn't read is turned down
- * first, so this search can't offer it again and fail the same way.
+ * Starts a lookup on any application, open or closed, whoever asks (Look it up, Track this). The
+ * application is `looking` at once, its unanswered candidates go, and the job runs as soon as the
+ * engine takes it. A saved JD is never replaced: Not this posting comes first, so this answers
+ * `saved` and changes nothing. A pick Jobs couldn't read is turned down first, so this search can't
+ * offer it again and fail the same way.
  */
 export function requestLookup(store: Store, applicationId: number): 'looking' | 'saved' {
   const db = jobsDb(store.sqlite);
@@ -132,9 +131,9 @@ export function requestLookup(store: Store, applicationId: number): 'looking' | 
 
 /**
  * Stop: a lookup under way ends now as `not_found`, marked stopped, so Paste the posting is
- * there and nothing is queued again; its job aborts its model calls at this change (./reader.ts). A
- * pick being read is let go, so it isn't taken for one Jobs couldn't read. Refused over a JD saved
- * meanwhile; a lookup that has already ended is left as it is.
+ * there and nothing is queued again. Its job aborts its model calls at this change (./reader.ts). A
+ * pick being read is let go, so it isn't taken for one Jobs couldn't read. Stop is refused over a JD
+ * saved meanwhile. A lookup that has already ended is left as it is.
  */
 export function stopLookup(store: Store, applicationId: number): 'stopped' | 'ended' {
   const db = jobsDb(store.sqlite);
@@ -155,7 +154,7 @@ export function stopLookup(store: Store, applicationId: number): 'stopped' | 'en
 /**
  * A candidate picked (a JD to confirm, Choose…, or the detail after Not this posting): it's the
  * posting, so the application is `looking` at once and its job reads that one link and saves it
- * without a check; its JD to confirm is answered. The other candidates stay, for Not this posting.
+ * without a check. Its JD to confirm is answered. The other candidates stay, for Not this posting.
  * Without a web (a dev run) it stays `looking`, as any lookup does there.
  */
 export function requestPick(store: Store, applicationId: number, candidateId: number): number[] {
@@ -255,7 +254,7 @@ function emailsOf(store: Store, application: Application) {
 
 /**
  * Looks up one application's JD, from whichever source answers first, and keeps what it finds.
- * Throws a ProviderError when it failed, for the job to retry; nothing is written but the ledger.
+ * Throws a ProviderError when it failed, for the job to retry. Nothing is written but the ledger.
  */
 export async function lookUpJd(store: Store, applicationId: number, {web, endpoints, timeoutMs, signal}: LookupOptions): Promise<'saved' | 'candidates' | 'not_found' | 'already' | 'gone'> {
   const db = jobsDb(store.sqlite);
@@ -405,10 +404,10 @@ async function fromPlatforms(
 }
 
 /**
- * GovernmentJobs' search for the title: the employer's results are read as any page, and Haiku
- * checks them, with their dates and text, since an employer posts a title more than once. A result
- * keeps the address the search gave, which what the user turns down is compared with, and the place
- * it gave, since the page's own repeats the state ("Contoso, WA, WA").
+ * GovernmentJobs' search for the title. The employer's results are read as any page is. Haiku
+ * checks them, with their dates and text, because an employer posts a title more than once. A result
+ * keeps the address the search gave, and what the user turns down is compared with it. It also keeps
+ * the place the search gave, because the page's own repeats the state ("Contoso, WA, WA").
  */
 async function fromGovernmentJobs(
   store: Store, haiku: {client: ModelClient; model: string}, context: JdApplication, application: Application, web: JobsWeb, fresh: (link: string) => boolean, signal: AbortSignal,
@@ -429,7 +428,7 @@ async function fromGovernmentJobs(
 
 /**
  * A search candidate opened. One that failed (the network, a 5xx, a 429, a timeout) stays offered, as
- * one Jobs can't read does, rather than paying for the search again over one page, but it's `failed`,
+ * one Jobs can't read does, rather than paying for the search again over one page. But it's `failed`,
  * which says nothing about the page, so it isn't marked as one Jobs can't read.
  */
 async function openCandidate(web: JobsWeb, link: string, signal: AbortSignal): Promise<OpenedLink | {is: 'failed'}> {
@@ -504,10 +503,10 @@ export function savePosting(store: Store, applicationId: number, found: FoundPos
 }
 
 /**
- * The posting the user pasted, inside its correction: saved at once as the JD with an empty
- * reading, the pick's link if there is one, so it never waits on a model. It's refused over a saved
- * JD, a lookup still running can't write over it (`savePosting`), and its job reads it. The other
- * candidates stay for Not this posting. Returns the JD to confirm it answered.
+ * The posting the user pasted, inside its correction. It's saved at once as the JD with an empty
+ * reading and the pick's link, if there is one, so it never waits on a model. It's refused over a
+ * saved JD. A lookup still running can't write over it (`savePosting`), and its job reads it. The
+ * other candidates stay for Not this posting. Returns the JD to confirm it answered.
  */
 export function savePasted(store: Store, applicationId: number, text: string, now: string): number[] {
   const db = jobsDb(store.sqlite);
@@ -528,7 +527,7 @@ export function savePasted(store: Store, applicationId: number, text: string, no
 /**
  * Haiku reads a pasted posting, filling in only what it read (the text is never touched).
  * A JD taken away meanwhile (Undo, Not this posting) is left alone. Throws a ProviderError when it
- * failed, for the job to retry; the JD stays saved without its reading.
+ * failed, for the job to retry. The JD stays saved without its reading.
  */
 export async function readPasted(store: Store, postingId: number, {endpoints, timeoutMs, signal}: Omit<LookupOptions, 'web'>): Promise<void> {
   const db = jobsDb(store.sqlite);
@@ -554,8 +553,8 @@ export async function readPasted(store: Store, postingId: number, {endpoints, ti
 }
 
 /**
- * Unsure: nothing saved; up to three candidates wait in Needs you as a JD to confirm,
- * in From history when the history pass's end started the lookup.
+ * Unsure: nothing is saved. Up to three candidates wait in Needs you as a JD to confirm, or in From
+ * history when the history pass's end started the lookup.
  */
 function saveCandidates(store: Store, applicationId: number, offers: Offer[]) {
   const db = jobsDb(store.sqlite);
@@ -577,7 +576,7 @@ function saveCandidates(store: Store, applicationId: number, offers: Offer[]) {
   });
 }
 
-/** Not found: "No JD found", with Look it up by hand; never retried on its own. */
+/** Not found: "No JD found", with Look it up by hand. It's never retried on its own. */
 function markNotFound(store: Store, applicationId: number) {
   const db = jobsDb(store.sqlite);
   transaction(store, () => {

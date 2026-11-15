@@ -1,6 +1,6 @@
-// The command layer's states (after mantel's `control`; DESIGN.md › Interaction rules). A change is
-// pending until its provider confirms it; otherwise it fails with the provider's own message and
-// stays failed, in place, until the user tries again or moves it back. Nothing quietly reverts: a
+// The command layer's states (after mantel's `control`, and DESIGN.md › Interaction rules). A change
+// is pending until its provider confirms it. Otherwise it fails with the provider's own message and
+// stays failed, in place, until the user tries again or moves it back. Nothing quietly reverts. A
 // failure never undoes the change by itself, and only Move back does.
 import type {CommandState} from '@setpoint/shared';
 
@@ -20,9 +20,9 @@ export const isActive = (state: CommandState) => state === 'pending' || state ==
  * | reverted  | –         | –      | –       | –         |
  *
  * A confirmation that arrives after a failure (a slow provider answering a timed-out request) is
- * refused here; the next sync brings the provider's truth. Move back restores what the mirror held
- * before the change: the failed card's Move back on a calendar item (board 19b), and the way out of
- * any other failed change (a failed Trash goes back to the Inbox).
+ * refused here. The next sync brings the provider's truth. Move back restores what the mirror held
+ * before the change. It is the failed card's Move back on a calendar item (board 19b), and the way
+ * out of any other failed change (a failed Trash goes back to the Inbox).
  */
 export function nextCommandState(state: CommandState, event: CommandEvent): CommandState | null {
   switch (state) {

@@ -1,9 +1,9 @@
 // Settings › News (board 30a): "312 articles today · 41 stories" in the
 // head, then one group per section with its count, each source a 44 px row: its icon, its name and
-// what's read, how often, and its state as on Accounts. The tile is the icon the source's list names
-// (a TV station's `live_tv`), else its adapter's (logic/news.ts). ("Checked 9:10 AM", or "Failing, 404 since
-// 6:02 AM" in `caution` on a `caution` 7% row). Read-only until the tuning round: no handles, no
-// switches. No key row: AirNow's air quality comes from its keyless file.
+// what's read, how often, and its state as on Accounts ("Checked 9:10 AM", or "Failing, 404 since
+// 6:02 AM" in `caution` on a `caution` 7% row). The tile is the icon the source's list names (a TV
+// station's `live_tv`), else its adapter's (logic/news.ts). Read-only until the tuning round: no
+// handles, no switches. No key row: AirNow's air quality comes from its keyless file.
 import type {NewsSourceOut, NewsSourcesOut} from '@setpoint/shared';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';

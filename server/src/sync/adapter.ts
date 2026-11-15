@@ -1,6 +1,6 @@
-// The adapter interface every provider implements: the
-// engine schedules and records; adapters talk to their provider: Gmail, iCloud, Google Calendar,
-// Todoist and weather; the dev provider serves the seed.
+// The adapter interface every provider implements. The engine schedules and records. Adapters talk
+// to their provider: Gmail, iCloud, Google Calendar, Todoist and weather. The dev provider serves
+// the seed.
 import type {Credentials} from '@setpoint/shared';
 import type * as t from '../db/schema.ts';
 import type {Store} from '../store.ts';
@@ -11,7 +11,7 @@ export type CommandRow = typeof t.commands.$inferSelect;
 export interface AdapterContext {
   store: Store;
   source: SourceRow;
-  // Decrypted on demand; null for a source without credentials (the dev provider's).
+  // Decrypted on demand. Null for a source without credentials (the dev provider's).
   credentials(): Credentials | null;
   // Aborted when the check times out or the engine stops.
   signal: AbortSignal;
@@ -25,13 +25,13 @@ export interface AttachmentBytes {
 }
 
 export interface SyncResult {
-  // The cursor to resume from next time; null keeps the one there is.
+  // The cursor to resume from next time. Null keeps the one there is.
   cursor: string | null;
 }
 
 export interface SourceAdapter {
   /**
-   * Incremental sync from the stored cursor (Gmail's history id, IMAP UIDs, a sync token); a null
+   * Incremental sync from the stored cursor (Gmail's history id, IMAP UIDs, a sync token). A null
    * cursor is the first run. Writes what changed to the mirror, noting live events.
    */
   sync(context: AdapterContext, cursor: string | null): Promise<SyncResult>;
@@ -49,10 +49,10 @@ export interface SourceAdapter {
    */
   heartbeat?(context: AdapterContext): Promise<void>;
   /**
-   * Carries out a command (src/commands/). Resolves once the provider confirms it; throws a
-   * ProviderError with the provider's own message otherwise. The mirror already shows the change
-   * where the command layer applies it up front; an adapter may record what the provider assigned
-   * (a new item's id).
+   * Carries out a command (src/commands/). Resolves once the provider confirms it. Otherwise throws
+   * a ProviderError with the provider's own message. The mirror already shows the change where the
+   * command layer applies it up front. An adapter may record what the provider assigned (a new
+   * item's id).
    */
   execute(context: AdapterContext, command: CommandRow): Promise<void>;
   /**

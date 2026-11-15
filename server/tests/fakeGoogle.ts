@@ -239,7 +239,7 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
   const fake = {
     url, requests, mailboxes,
     historyPageSize: 500,
-    // Gmail's resultSizeEstimate is rough; this skews it.
+    // Gmail's resultSizeEstimate is rough. This skews it.
     estimateSkew: 0,
     endpoints: {consent: `${url}/o/oauth2/v2/auth`, token: `${url}/token`, gmail: url, pubsub: url},
     client(): GoogleClient {
@@ -265,7 +265,7 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
       for (const [token, owner] of refreshTokens) if (owner === address) revoked.add(token);
       for (const [token, owner] of accessTokens) if (owner === address) accessTokens.delete(token);
     },
-    /** Access tokens stop working (expired early); refreshing still works. */
+    /** Access tokens stop working (expired early). Refreshing still works. */
     expireAccessTokens() {
       accessTokens.clear();
     },

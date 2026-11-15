@@ -1,6 +1,6 @@
 // An item's description on screen: drawn from
 // the short list of formats logic/description.ts reads, as elements, never as the provider's own
-// markup. Links open in a new tab; a bare web address in the text is one too. A Gmail link to an
+// markup. Links open in a new tab. A bare web address in the text is one too. A Gmail link to an
 // email Setpoint has opens it in the reader instead, "Opens in Setpoint".
 import {useLayoutEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
@@ -55,7 +55,7 @@ export function DescriptionText({blocks}: {blocks: Block[]}) {
 
 /**
  * The description in the floating detail: up to 6 lines, then it fades under More, which
- * opens it in place to 320 px and lets it scroll inside from there; Less folds it again.
+ * opens it in place to 320 px and lets it scroll inside from there. Less folds it again.
  *
  * Whether it runs past 6 lines is written to the row itself (`data-long`, which description.css
  * reads to draw the fade and More), not kept as state: a state would draw More one render after the

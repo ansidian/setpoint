@@ -77,7 +77,7 @@ describe('the mirror', () => {
     expect(row(w, a!).unread).toBe(false);
     expect(row(w, b!).archivedAt).not.toBeNull();
     expect(row(w, c!).unread).toBe(false);
-    // Archived mail leaves the Inbox, but All still has it; Unsorted mail stays, read or not.
+    // Archived mail leaves the Inbox, but All still has it. Unsorted mail stays, read or not.
     const unsorted = inbox(w.store).groups.find(group => group.group === 'unsorted')!.rows.map(message => message.subject);
     expect(unsorted).toEqual(['Three', 'Your beans shipped']);
     expect(allMail(w.store, {limit: 500}).days.flatMap(day => day.rows).map(message => message.subject)).toContain('Two');

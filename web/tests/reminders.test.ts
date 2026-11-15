@@ -1,6 +1,6 @@
-// Reminders' anchors and words as tables: what an item's reminders count
-// from, a preset's words, any other offset as its moment with the offset quiet beside it, the order
-// they're shown in, and the 4 weeks either side.
+// Reminders' anchors and words as tables: what an item's reminders count from, a preset's words,
+// any other offset as its moment with the offset quiet beside it, the order they're shown in, and
+// the 4 weeks either side.
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';

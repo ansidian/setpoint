@@ -1,9 +1,9 @@
-// News's sources that are APIs: official data for hazards (National Weather
-// Service alerts for the home location's zones, hazards only; USGS earthquakes, Cal Fire incidents
-// and AirNow's air quality, each kept within its distance of the home point), whose data is the
-// article's text, so they're never read as pages; and Hacker News stories over their points. Each
-// source's JSON (AirNow's pipe-delimited file) comes in as documented; anything missing or malformed
-// is left out rather than guessed at. Pure: JSON or text in, articles out.
+// News's sources that are APIs. The hazard sources are official data: National Weather Service
+// alerts for the home location's zones (hazards only), and USGS earthquakes, Cal Fire incidents and
+// AirNow's air quality, each kept within its distance of the home point. Their data is the
+// article's text, so they're never read as pages. The other source is Hacker News stories over
+// their points. Each source's JSON (AirNow's pipe-delimited file) comes in as documented. Anything
+// missing or malformed is left out rather than guessed at. Pure: JSON or text in, articles out.
 import type {IngestedArticle} from './newsIngest.ts';
 import {canonicalUrl, clip, distanceKm, inWindow, plainText, publishedInstant, revisionUrl, SUMMARY_MAX} from './newsIngest.ts';
 import {zonedInstant} from './time.ts';
@@ -26,7 +26,7 @@ export interface Point {
 
 /**
  * The home point's zones, from /points/{lat},{lon}: its public forecast zone, its county and its
- * fire weather zone (Red Flag Warnings are issued for those), each once. Empty when the point is
+ * fire weather zone (NWS issues Red Flag Warnings for those), each once. Empty when the point is
  * outside NWS's area.
  */
 export function nwsZones(json: unknown): string[] {
@@ -38,7 +38,7 @@ export function nwsZones(json: unknown): string[] {
   return [...new Set(zones)];
 }
 
-/** NWS's coordinates: at most four decimals (more is a redirect), without trailing zeros. */
+/** NWS's coordinates: at most four decimals (more is a redirect), and no trailing zeros. */
 export const nwsPoint = (home: Point) => `${Number(home.lat.toFixed(4))},${Number(home.lng.toFixed(4))}`;
 
 // Warnings and watches about the weather that aren't hazards (fire, flood, storms,
@@ -46,9 +46,9 @@ export const nwsPoint = (home: Point) => `${Number(home.lat.toFixed(4))},${Numbe
 const NOT_HAZARDS = /\b(frost|freeze|small craft|gale|hazardous seas|brisk wind|lake wind|marine|test)\b/i;
 
 /**
- * Whether an alert is a hazard (weather counts only as a hazard): every
- * warning, watch and emergency but crops' and the sea's, and an advisory or statement only when NWS
- * rates it severe or extreme.
+ * Whether an alert is a hazard (weather counts only as a hazard). Every warning, watch and emergency
+ * is one, but not crops' and the sea's. An advisory or statement is one only when NWS rates it
+ * severe or extreme.
  */
 export function isHazardAlert(event: string, severity: string): boolean {
   if (!event || NOT_HAZARDS.test(event)) return false;
@@ -56,12 +56,12 @@ export function isHazardAlert(event: string, severity: string): boolean {
   return severity === 'Severe' || severity === 'Extreme';
 }
 
-/** NWS writes its text hard-wrapped, paragraphs apart: as paragraphs separated by a blank line. */
+/** NWS writes its text hard-wrapped, paragraphs apart. This returns paragraphs separated by a blank line. */
 const nwsParagraphs = (raw: string) => raw.split(/\n\s*\n/).map(paragraph => clip(paragraph.replace(/^\*\s*/, ''))).filter(Boolean).join('\n\n');
 
 /**
  * The active alerts that are hazards: actual (not a test, exercise or draft), not a cancellation,
- * not yet over. Each update is its own alert with its own id, so a changed warning is a new
+ * and not yet over. Each update is its own alert with its own id, so a changed warning is a new
  * article. The alert's description and instructions are its text.
  */
 export function nwsAlerts(json: unknown, now: string): IngestedArticle[] {
@@ -130,8 +130,8 @@ function calFireTime(raw: string, now: string): string | null {
 }
 
 /**
- * Cal Fire's incidents with where each is: the GeoJSON list's features (GeoJsonList, the one read)
- * are the list's fields as properties with a Point at [lng, lat], and the older List is the fields
+ * Cal Fire's incidents with where each is. The GeoJSON list's features (GeoJsonList, the one read)
+ * are the list's fields as properties with a Point at [lng, lat]. The older List is the fields
  * alone, as an array or under Incidents. A feature without a usable Point falls back to its own
  * Latitude and Longitude, and one with neither isn't placed.
  */
@@ -155,7 +155,7 @@ function calFireList(json: unknown): {incident: Json; lat: number | null; lng: n
 /**
  * Active incidents from Cal Fire's list within the radius of home, updated in the last 48 hours.
  * A fire's acres and containment change in place, so each change is its own article (one revision
- * of the incident's page), which sorting groups into the fire's story as a new fact.
+ * of the incident's page). Sorting groups it into the fire's story as a new fact.
  */
 export function calFireIncidents(json: unknown, home: Point, {radiusKm}: {radiusKm: number}, listUrl: string, now: string): IngestedArticle[] {
   return calFireList(json).flatMap(({incident, lat, lng}) => {
@@ -195,7 +195,7 @@ const US_ZONES: Record<string, string> = {
   AKST: '-09:00', AKDT: '-08:00', HST: '-10:00', UTC: 'Z', GMT: 'Z',
 };
 
-/** The AQI's categories, in order: a category's number is its place here, from 1. */
+/** The AQI's categories, in order. A category's number is its place here, from 1. */
 const AQI_CATEGORIES = ['Good', 'Moderate', 'Unhealthy for Sensitive Groups', 'Unhealthy', 'Very Unhealthy', 'Hazardous'];
 const AQI_BREAKS = [50, 100, 150, 200, 300];
 
@@ -251,7 +251,7 @@ function airNowReading(line: string, now: string): AirNowReading | null {
 export const isAirNowFile = (file: string) => file.split(/\r?\n/).some(line => line.split('|').length >= 14);
 
 /**
- * Unhealthy air near home from AirNow's reporting-area file (pipe-delimited, hourly; a byte-order
+ * Unhealthy air near home from AirNow's reporting-area file (pipe-delimited, hourly, and a byte-order
  * mark and CRLF line endings are allowed). Only current hourly observations count. Each reporting
  * area within the radius is taken at its latest hour and its worst pollutant then, and is news when
  * that AQI is at least the minimum. One article per area, day and AQI category, so a worsening day is
@@ -283,9 +283,9 @@ export function airNowReportingAreas(file: string, home: Point, {radiusKm, minAq
 // ---- Hacker News ----
 
 /**
- * Stories from Algolia's Hacker News search with at least the points, in the last 48 hours: the
- * story's own link (or its discussion, for a text post), and its points and comments as its summary.
- * Whether one is about tech or AI is sorting's to judge.
+ * Stories from Algolia's Hacker News search with at least the points, in the last 48 hours. Each has
+ * the story's own link (or its discussion, for a text post), and its points and comments as its
+ * summary. Sorting judges whether one is about tech or AI.
  */
 export function hnStories(json: unknown, {minPoints}: {minPoints: number}, now: string): IngestedArticle[] {
   const hits = record(json)?.hits;
@@ -300,7 +300,7 @@ export function hnStories(json: unknown, {minPoints}: {minPoints: number}, now: 
     const discussion = `https://news.ycombinator.com/item?id=${encodeURIComponent(id)}`;
     const url = /^https?:\/\//i.test(text(hit.url)) ? text(hit.url) : discussion;
     const comments = number(hit.num_comments);
-    // A text post (Ask HN) is its own text; a link's is read from its page.
+    // A text post (Ask HN) is its own text. A link's text is read from its page.
     const storyText = plainText(text(hit.story_text));
     return [{
       url, canonicalUrl: canonicalUrl(url), outlet: 'Hacker News', outletShort: 'HN', byline: null, headline: plainText(title), publishedAt, imageUrl: null,

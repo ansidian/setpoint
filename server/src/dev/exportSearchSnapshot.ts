@@ -7,9 +7,9 @@
 // SETPOINT_DB moves it off the container's database. The host's own steps live in the private ops
 // workspace, not here.
 //
-// The copy is an SQLite memory database, not a file: the database outgrows the container's /tmp, and
-// this way a run that dies leaves nothing behind. Tables are kept by name, so one this file has never
-// heard of goes out empty, whatever it holds. The kept ones are what search reads and what the
+// The copy is an SQLite memory database, not a file, because the database outgrows the container's
+// /tmp, and this way a run that dies leaves nothing behind. Tables are kept by name, so one this
+// file has never heard of goes out empty, whatever it holds. The kept ones are what search reads and what the
 // migrations need to carry on from here. Of those, only `messages.code` is a credential. It's
 // blanked, but the email's own text keeps a code as it keeps any link, because that's the mail.
 import {DatabaseSync} from 'node:sqlite';
@@ -18,7 +18,7 @@ import {gzipSync} from 'node:zlib';
 const KEPT = new Set(['__drizzle_migrations', 'jobs_migrations', 'accounts', 'messages', 'attachments', 'triage_rules']);
 const isKept = (table: string) => KEPT.has(table) || table.startsWith('messages_fts');
 
-// What must be gone. These tables are emptied like any other; this is the check that they were.
+// What must be gone. These tables are emptied like any other. This is the check that they were.
 const CREDENTIALS = [
   ['secrets', 'ciphertext'], ['sources', 'credentials'], ['owner', 'password_hash'], ['sessions', 'hash'], ['devices', 'hash'], ['ha_token', 'hash'],
   ['recovery_codes', 'hash'], ['passkeys', 'credential_id'], ['calendar_channels', 'token_hash'],

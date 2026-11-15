@@ -1,6 +1,6 @@
 // The sync engine, driven by a fake adapter through every health state, and the
-// command layer run through it: confirmed, retried, failed in place; and the dev provider, which
-// serves only dev sources.
+// command layer run through it: confirmed, retried, failed in place. It also covers the dev
+// provider, which serves only dev sources.
 import {eq} from 'drizzle-orm';
 import {describe, expect, onTestFinished, test, vi} from 'vitest';
 import {openMessage} from '../src/commands/mail.ts';

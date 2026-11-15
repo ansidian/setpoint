@@ -1,8 +1,8 @@
 // The Jobs pane's recent movement against an ephemeral database: each application's
 // latest status change, newest first, the last eight. An email changes it only when it sets a status
-// the application didn't have; a hand move comes from what its emails had set; turning Ghosted comes
-// from Applied at the start of the day 30 days after the last email of any kind; and a new
-// application has no `from`. The quiet line's accounts and earliest month come with it.
+// the application didn't have. A hand move comes from what its emails had set. Turning Ghosted comes
+// from Applied at the start of the day 30 days after the last email of any kind. A new application
+// has no `from`. The quiet line's accounts and earliest month come with it.
 import type {JobEventKind, JobStatus} from '@setpoint/shared';
 import {expect, test} from 'vitest';
 import {world} from '../../../tests/helpers.ts';

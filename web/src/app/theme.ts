@@ -65,7 +65,7 @@ export const useThemeChoice = () => useSyncExternalStore(listener => {
   return () => listeners.delete(listener);
 }, () => choice);
 
-/** ⌘J: Light and Night trade places; on System it does nothing, leaving the browser in charge. */
+/** ⌘J: Light and Night trade places. On System it does nothing, leaving the browser in charge. */
 export function flipTheme() {
   const next = flippedTheme(choice);
   if (next) setThemeChoice(next);

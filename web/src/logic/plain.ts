@@ -10,8 +10,8 @@ export interface Span {
 }
 
 /**
- * The plain spans once `before` is typed into `after`: a span the change didn't touch stays, moved
- * with the text after the change; one typed into is read again.
+ * The plain spans once `before` is typed into `after`. A span the change didn't touch stays, moved
+ * with the text after the change. One typed into is read again.
  */
 export function retyped(plain: Span[], before: string, after: string): Span[] {
   if (!plain.length || before === after) return plain;
@@ -83,7 +83,7 @@ export const markInside = (marks: Mark[], caret: number): Mark | null => marks.f
 
 /**
  * What E selects in the line: its first run of title words, the words outside its marks, so
- * typing replaces them and the phrases stay; with no title words, the caret at the line's start.
+ * typing replaces them and the phrases stay. With no title words, the caret at the line's start.
  */
 export function titleRun(text: string, marks: Mark[]): Span {
   let at = 0;

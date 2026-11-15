@@ -5,7 +5,7 @@ import type {IconName} from '../ui/glyphs.ts';
 import type {SettingsPage} from './route.ts';
 import {repeats} from './tip.ts';
 
-/** Settings' pages as its nav names them, each with its glyph; ⌘K's "Settings › Mail" carries the same. */
+/** Settings' pages as its nav names them, each with its glyph. ⌘K's "Settings › Mail" carries the same. */
 export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}> = {
   accounts: {label: 'Accounts', icon: 'alternate_email'},
   calendar: {label: 'Calendar', icon: 'calendar_month'},
@@ -21,8 +21,8 @@ export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}>
 const WORST: HealthState[] = ['needs_reconnect', 'failing', 'stale', 'healthy'];
 
 /**
- * Google Calendar as one row (board 17), though each Google account has its own source: the worst
- * state of them, last checked at the earliest check.
+ * Google Calendar as one row (board 17), though each Google account has its own source. The row
+ * shows the worst state of them, last checked at the earliest check.
  */
 export function mergeSources(sources: SourceOut[]): SourceOut | null {
   if (!sources.length) return null;
@@ -259,7 +259,7 @@ export const todoistConnected = (sources: SourceOut[]) => sources.some(source =>
 
 /**
  * What a provider's return to Settings says (Connect Gmail's callback: ?connected=<id> or
- * ?error=<code>; Todoist's, to Accounts: ?todoist=1 or 0), for a toast; null for a plain link.
+ * ?error=<code>; Todoist's, to Accounts: ?todoist=1 or 0), for a toast. Null for a plain link.
  */
 export function connectNote(search: string): string | null {
   const query = new URLSearchParams(search);

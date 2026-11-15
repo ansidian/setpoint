@@ -1,6 +1,7 @@
 // The options page: Setpoint's address and the Jobs token, kept in chrome.storage.local
 // (never synced). Saving asks Chrome for access to that address, which is how the service worker
-// reaches Setpoint, then tries a check so a wrong address or token shows here rather than on a job board.
+// reaches Setpoint. Then it tries a check, so a wrong address or token shows here rather than on a
+// job board.
 import type {CheckReply, Message} from './reply.ts';
 
 const form = document.querySelector<HTMLFormElement>('#form')!;
@@ -28,8 +29,8 @@ form.addEventListener('submit', event => {
     return;
   }
   const token = tokenField.value.trim();
-  // Asked straight away, while the click still counts as the user's: Chrome refuses it after an await.
-  // The manifest offers https addresses and localhost's, so another http one is refused.
+  // Ask straight away, while the click still counts as the user's. Chrome refuses it after an await.
+  // The manifest offers https addresses and localhost's, so Chrome refuses another http one.
   chrome.permissions.request({origins: [`${url.protocol}//${url.hostname}/*`]}).then(async granted => {
     if (!granted) {
       say('Chrome wasn\'t given access to Setpoint\'s address, so the extension can\'t reach it', true);

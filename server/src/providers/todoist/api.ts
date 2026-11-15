@@ -1,8 +1,8 @@
 // Todoist's unified API (v1) over plain fetch: the Sync endpoint for the mirror (and a repeating
 // task's undo, a Sync command), the completed-tasks list for one-off tasks completed in Todoist's
 // own apps, the activity log for a repeating task's occurrences completed there, and the task
-// endpoints for changes. Errors carry Todoist's own words; 401 and 403 mean the connection was
-// revoked, 429 waits.
+// endpoints for changes. Errors carry Todoist's own words. 401 and 403 mean the connection was
+// revoked, and 429 waits.
 import {createHash} from 'node:crypto';
 import {kindOfStatus, ProviderError} from '../../sync/errors.ts';
 import {reasonPhrase, requestJson} from '../http.ts';
@@ -25,7 +25,7 @@ export interface TodoistTask {
   order_key?: string | null;
   // Label names.
   labels?: string[];
-  // Markdown; an empty string when the task has none.
+  // Markdown. An empty string when the task has none.
   description?: string;
 }
 
@@ -34,7 +34,7 @@ export interface TodoistProject {
   name: string;
   child_order?: number;
   inbox_project?: boolean;
-  // A colour name ("berry_red"; shared's TODOIST_COLOURS).
+  // A colour name ("berry_red", shared's TODOIST_COLOURS).
   color?: string;
   is_deleted?: boolean;
   is_archived?: boolean;
@@ -55,7 +55,7 @@ export interface SyncAnswer {
   labels?: TodoistLabel[];
 }
 
-/** One activity log event (GET /api/v1/activities); `extra_data` holds what changed. */
+/** One activity log event (GET /api/v1/activities). `extra_data` holds what changed. */
 export interface TodoistActivity {
   id?: number | null;
   object_type: string;
@@ -112,7 +112,7 @@ export class TodoistApi {
   }
 
   /**
-   * One Sync command, its uuid the command's request id so Todoist drops a repeat. Todoist
+   * One Sync command. Its uuid is the command's request id, so Todoist drops a repeat. Todoist
    * answers 200 either way: `sync_status[uuid]` is "ok", or its refusal with Todoist's own words.
    */
   async command(type: string, args: Record<string, unknown>, uuid: string): Promise<void> {

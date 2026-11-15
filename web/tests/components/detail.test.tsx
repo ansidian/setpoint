@@ -1,9 +1,9 @@
-// The floating detail's link (DetailContent.tsx): an
-// event whose place has no link but which has its own (Google's source.url) gets a line of its own,
-// `link` and the host with the whole link as its tip, and Open taking it to a new tab. A place that is
-// a link keeps its place line and its one Open, and a task or an event with no link has none. `O` and the
-// card on the seed's Career fair stay in detail.spec.ts. A read-only
-// event says so on its calendar's line, with why as its tip, and leaves out what it can't do.
+// The floating detail's link (DetailContent.tsx). An event whose place has no link but which has its
+// own (Google's source.url) gets a line of its own: `link` and the host, with the whole link as its
+// tip, and Open taking it to a new tab. A place that is a link keeps its place line and its one Open.
+// A task or an event with no link has none. `O` and the card on the seed's Career fair stay in
+// detail.spec.ts. A read-only event says so on its calendar's line, with why as its tip, and leaves
+// out what it can't do.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {expect, test} from 'vitest';
@@ -151,10 +151,10 @@ test('on the 360 px card a read-only holiday\'s calendar line fits on one line',
   expect(box('.fact.cal > span').height).toBeLessThanOrEqual(box('.fact.cal .icon').height + 4);
 });
 
-// With actions, a task's ring beside its title is its Complete, its done check
-// Reopen, through actions.complete; a repeating task's latest done occurrence reopens too,
-// and an older one and a task waiting on Todoist keep it disabled with their tips, and the footer has no Complete. Without actions (the phone's read-only
-// card) the ring stays a mark and the footer keeps its unavailable Complete.
+// With actions, a task's ring beside its title is its Complete, and its done check is Reopen,
+// through actions.complete. A repeating task's latest done occurrence reopens too. An older one and a
+// task waiting on Todoist keep it disabled with their tips, and the footer has no Complete. Without
+// actions (the phone's read-only card) the ring stays a mark and the footer keeps its unavailable Complete.
 function task(fields: Partial<ItemOut>): ItemOut {
   return event({key: '8', id: 8, kind: 'task', title: 'Pay rent', place: null, starts_at: null, ends_at: null, due_date: '2026-10-07', project: 'Home', ...fields});
 }

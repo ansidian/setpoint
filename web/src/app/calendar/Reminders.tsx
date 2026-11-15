@@ -1,9 +1,9 @@
-// The editor's Reminders row: a chip for each, a
-// preset in its words ("10 min before") and any other as the moment it goes off with the offset
-// quiet beside it, and Add reminder's menu of presets with Custom… last. Custom… opens a date and a
-// time under the row, the moment picked kept as its offset from the item's moment so it moves with
-// the item; past 4 weeks either side it's refused, saying why. A custom chip reopens it at its
-// moment. A task with no date has no Custom…, and says reminders need one.
+// The editor's Reminders row: a chip for each, and Add reminder's menu of presets with Custom… last.
+// A preset's chip shows its words ("10 min before"). Any other shows the moment it goes off, with
+// the offset quiet beside it. Custom… opens a date and a time under the row. The moment picked is
+// kept as its offset from the item's moment, so it moves with the item. Past 4 weeks either side
+// it's refused, saying why. A custom chip reopens it at its moment. A task with no date has no
+// Custom…, and says reminders need one.
 import {useEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {dayTitle} from '../../logic/calendar.ts';
@@ -15,7 +15,7 @@ import {DateField, TimeField} from './Pickers.tsx';
 
 export interface RemindersRowProps {
   reminders: number[];
-  // The instant (ms) they count from; null for a task with no date.
+  // The instant (ms) they count from, or null for a task with no date.
   anchor: number | null;
   // What Custom… counts from, said for a task without a time ("Counts from 9:00 AM").
   countsFrom: string | null;
@@ -67,7 +67,7 @@ export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, me
     close();
   };
   const onKeyDown = (event: ReactKeyboardEvent) => {
-    // The fields' own lists take Esc first; then it closes the picker, not the editor.
+    // The fields' own lists take Esc first. Then it closes the picker, not the editor.
     if (event.key === 'Escape' && !event.defaultPrevented) {
       event.preventDefault();
       event.stopPropagation();
@@ -137,7 +137,7 @@ export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, me
             <button type="button" className="ibtn sm" aria-label="Cancel custom reminder" data-tip="Cancel · Esc" onClick={close}><Icon name="close" size={16} /></button>
           </div>
           <span />
-          {/* How far the moment is from the item's, and what that counts from; or why it can't be. */}
+          {/* How far the moment is from the item's, and what that counts from. Or why it can't be. */}
           <span className={`field-note num${problem ? ' alert' : ' ink3'}`} role={problem ? 'alert' : undefined}>
             {problem ?? [offset !== null ? relativeLine(offset) : null, countsFrom].filter(Boolean).join(' · ')}
           </span>

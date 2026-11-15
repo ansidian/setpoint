@@ -2,10 +2,10 @@
 //
 //   sp2:<key id>:<iv>:<ciphertext>:<tag>       base64url parts; the key id is 8 hex characters
 //
-// A 256-bit key given as 64 hex characters or base64; a fresh 96-bit IV per value;
-// additional authenticated data binding each value to where it's stored (table, field, record), so
-// a ciphertext copied to another row or field won't decrypt; one error for anything that doesn't
-// decrypt, without saying why; and the key's id in each value, so a value written under another key
+// The key is 256 bits, given as 64 hex characters or base64. Each value gets a fresh 96-bit IV.
+// Additional authenticated data binds each value to where it's stored (table, field, record), so a
+// ciphertext copied to another row or field won't decrypt. Anything that doesn't decrypt gets one
+// error, without saying why. Each value carries the key's id, so a value written under another key
 // says so instead of failing as "tampered". Only `sp2:` values are read.
 import {createCipheriv, createDecipheriv, createHash, randomBytes} from 'node:crypto';
 import fs from 'node:fs';
@@ -20,7 +20,7 @@ export interface Keyring {
   key: Buffer;
 }
 
-/** Where a value is stored; it's bound into the ciphertext. */
+/** Where a value is stored. It's bound into the ciphertext. */
 export interface SecretContext {
   table: string;
   field: string;
@@ -71,7 +71,7 @@ export function decryptSecret(keyring: Keyring, ciphertext: string, context: Sec
 /**
  * The key, from SETPOINT_KEY (the value) or SETPOINT_KEY_FILE (a file holding it). Outside
  * production with neither, a key is made once in the data folder (`setpoint.key`, mode 600), so
- * `npm run dev` works with no setup; in production one must be given, so the key never sits beside
+ * `npm run dev` works with no setup. In production one must be given, so the key never sits beside
  * the database in its backups by accident.
  */
 export function loadKeyring(env: NodeJS.ProcessEnv, dataDir: string): {keyring: Keyring; from: string} {

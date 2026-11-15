@@ -1,5 +1,5 @@
-// The job boards Setpoint on job boards reads, each by its own readers,
-// picked by the page's host. The manifest's content script matches the same hosts.
+// The job boards Setpoint on job boards reads. Each has its own readers, picked by the page's
+// host. The manifest's content script matches the same hosts.
 import * as indeed from './indeed.ts';
 import * as linkedin from './linkedin.ts';
 import type {PageRead} from './posting.ts';

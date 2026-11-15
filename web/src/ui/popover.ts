@@ -1,6 +1,6 @@
 // A menu hanging under its button opens upward instead when it would run past the bottom of what
-// clips or scrolls it (Settings' page, the editor's pane) and there's more room above,
-// and lines up with its anchor's right edge when it would run past the right (the End list).
+// clips or scrolls it (Settings' page, the editor's pane) and there's more room above.
+// It lines up with its anchor's right edge when it would run past the right (the End list).
 import {useCallback, useEffect, useRef} from 'react';
 import {opensUp} from '../logic/contextMenu.ts';
 
@@ -31,7 +31,7 @@ const placed = new WeakSet<HTMLElement>();
 export function placeMenu(menu: HTMLElement | null) {
   if (!menu?.parentElement || placed.has(menu)) return;
   placed.add(menu);
-  // Measured as it will rest, not as its entrance starts it (smaller and higher); the entrance then
+  // Measured as it will rest, not as its entrance starts it (smaller and higher). The entrance then
   // starts from the side it opens to.
   menu.style.animation = 'none';
   const rect = menu.getBoundingClientRect();

@@ -1,10 +1,11 @@
 // Settings (boards 17, 18a, 18b, 30a, 30b, 39a): a 1040 × 720 modal over the page,
 // the scrim behind, not in the address bar. The 220 px nav holds the pages in three groups with a gap
-// between them (Accounts · Mail, Calendar, News, Jobs · Notifications, AI, Appearance, Security), Accounts marked while a
-// source needs sign-in and News while a feed fails, and Sign out at its foot. ↑ ↓ in the nav change page; Esc closes the
-// topmost thing (a menu first, then Settings); keys inside never reach the page under it, and
-// focus goes back where it was. Opening it loads every page's answers, so a page switched to shows
-// at once; until a group's answers come it draws skeleton rows, never a default as a fact.
+// between them (Accounts · Mail, Calendar, News, Jobs · Notifications, AI, Appearance, Security).
+// Accounts is marked while a source needs sign-in and News while a feed fails, and Sign out is at its
+// foot. ↑ ↓ in the nav change page. Esc closes the topmost thing (a menu first, then Settings). Keys
+// inside never reach the page under it, and focus goes back where it was. Opening it loads every
+// page's answers, so a page switched to shows at once. Until a group's answers come it draws skeleton
+// rows, never a default as a fact.
 import type {AccountOut, NewsSourcesOut} from '@setpoint/shared';
 import {useEffect, useRef} from 'react';
 import type {JSX, KeyboardEvent} from 'react';
@@ -70,7 +71,7 @@ function Open({page}: {page: SettingsPage}) {
   }, []);
 
   function onKeyDown(event: KeyboardEvent) {
-    // ⌘K and ⌘, still work from here; nothing else reaches the page underneath (the browser's own
+    // ⌘K and ⌘, still work from here. Nothing else reaches the page underneath (the browser's own
     // keys, copy and paste among them, still do what they do).
     if ((event.metaKey || event.ctrlKey) && ['k', ','].includes(event.key.toLowerCase())) return;
     event.stopPropagation();

@@ -173,7 +173,7 @@ describe('calendar search over the seed', () => {
       'Upcoming 2026-10-07 CS 101 lab report · Calendar Todoist', 'Upcoming 2026-10-07 Pay rent · Calendar Todoist',
       'Upcoming 2026-10-08 Renew car registration · Calendar Todoist', 'Past 2026-10-05 Return library books · Calendar Todoist',
     ]);
-    // A chip's reason isn't highlighted (every row would be); a free word's is.
+    // A chip's reason isn't highlighted (every row would be). A free word's is.
     expect(find(w, 'todoist').results[0]!.reasons).toEqual([{field: 'calendar', key: 'Calendar', value: 'Todoist', runs: []}]);
     expect(rows(find(w, 'blue door'))).toEqual(['Upcoming 2026-10-09 Dinner with Sam · Place Blue Door']);
     expect(find(w, 'blue door').results[0]!.reasons[0]!.runs).toEqual([{start: 0, end: 4}, {start: 5, end: 9}]);

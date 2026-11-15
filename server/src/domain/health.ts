@@ -1,5 +1,5 @@
-// A source's health. Healthy means the last check
-// succeeded, not that data changed: a quiet night with no new mail is healthy.
+// A source's health. Healthy means the last check succeeded, not that data changed. A quiet night
+// with no new mail is healthy.
 //
 // Each source has a heartbeat (its poll, or the sweep behind a push), and the threshold comes from
 // that schedule: twice the interval plus a grace.
@@ -11,7 +11,7 @@ export const HEALTH_GRACE_SECONDS = 60;
 export interface HealthInput {
   now: string;
   intervalSeconds: number;
-  // When the source was added: a new source has until the threshold for its first check.
+  // When the source was added. A new source has until the threshold for its first check.
   createdAt: string;
   lastCheckAt: string | null;
   lastSuccessAt: string | null;

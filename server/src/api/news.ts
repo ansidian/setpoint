@@ -1,9 +1,10 @@
-// News's routes (shapes and the list in `@setpoint/shared` src/api/news.ts): All, a section, a story,
-// an article, the iPhone app's Catch up, Settings › News, Setpoint's image copies, and stories seen;
-// sorting's state (Unsorted and the first run), Show headlines, search, and Upcoming's Add to
-// calendar; and the recap's state: News on screen, Done and its Undo. Mounted under /api behind
-// the session, like the rest of the API. Read-only but for seen and the recap; ingest and sorting
-// write the rest, and every change goes out as a `news` live event.
+// News's routes (shapes and the list in `@setpoint/shared` src/api/news.ts). They cover All, a
+// section, a story, an article, the iPhone app's Catch up, Settings › News, Setpoint's image copies,
+// and stories seen. They cover sorting's state (Unsorted and the first run), Show headlines, search,
+// and Upcoming's Add to calendar. They cover the recap's state: News on screen, Done and its Undo.
+// They're mounted under /api behind the session, like the rest of the API. They're read-only apart
+// from seen and the recap. Ingest and sorting write the rest, and every change goes out as a `news`
+// live event.
 import {newsHereInput, newsSearchInput, newsSectionSchema, newsSeenInput, recapUndoSchema} from '@setpoint/shared';
 import type {NewsSeenOut, RecapDoneOut} from '@setpoint/shared';
 import {Hono} from 'hono';
@@ -29,7 +30,7 @@ async function body(c: Context): Promise<unknown> {
 }
 
 export interface NewsApiOptions {
-  // The data directory's news-images/; null serves no images (tests without a data directory).
+  // The data directory's news-images/. Null serves no images (tests without a data directory).
   imagesDir?: string | null;
   // Setpoint's public origin, which a keynote proposal's link to its story is made absolute on.
   origin?: (c: Context) => string;

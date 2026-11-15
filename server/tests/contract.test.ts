@@ -1,10 +1,10 @@
 // The iPhone app's contract. The app (setpoint-ios) decodes these responses with hand-written
-// Codable types, and an installed build stays older than the server, so what it reads is recorded
-// from the seed into shared/contract/ and every run checks the API still answers in a way that build
-// can decode: no key gone or renamed, no new kind at a path, no status changed, and no enum value it
-// doesn't know. A new key passes. `npm run contract:record` re-records, deliberately,
-// and its index lists what each fixture can't speak for. setpoint-ios copies the folder in at a
-// pinned commit of this repository, and its decoding tests read the same files.
+// Codable types, and an installed build stays older than the server. So what it reads is recorded
+// from the seed into shared/contract/, and every run checks that the API still answers in a way that
+// build can decode: no key gone or renamed, no new kind at a path, no status changed, and no enum
+// value it doesn't know. A new key passes. `npm run contract:record` re-records, deliberately, and
+// its index lists what each fixture can't speak for. setpoint-ios copies the folder in at a pinned
+// commit of this repository, and its decoding tests read the same files.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -31,7 +31,7 @@ import type {World} from './helpers.ts';
 const DIR = fileURLToPath(new URL('../../shared/contract/', import.meta.url));
 const RECORDING = process.env.SETPOINT_UPDATE_CONTRACT === '1';
 
-// The literal unions the app reads that shared/ doesn't export as a list; `satisfies` and the
+// The literal unions the app reads that shared/ doesn't export as a list. `satisfies` and the
 // checks below keep each one equal to its type.
 const SEARCH_ORDERS = ['newest', 'match'] as const satisfies readonly SearchOut['order'][];
 const HIGHLIGHT_FIELDS = ['from_name', 'organisation', 'subject', 'excerpt'] as const satisfies readonly HighlightOut['field'][];
@@ -145,7 +145,7 @@ const NEWS_STATES = [
 async function recordAll() {
   const imagesDir = newsImages();
   const w = world({seed: true, newsImagesDir: imagesDir});
-  // The dev provider serves the seed's attachment bytes; nothing ticks the engine, so commands stay
+  // The dev provider serves the seed's attachment bytes. Nothing ticks the engine, so commands stay
   // as the steps below leave them.
   const engine = new SyncEngine({store: w.store, adapters: new Adapters({}, devProvider())});
   const browser = await signedIn(w, {keepAliveMs: 20, engine, news: {imagesDir}});
@@ -191,13 +191,13 @@ async function recordAll() {
   await app.record('mail-pin', 'MessageOut', 'POST', '/api/mail/messages/:id/pin', '/api/mail/messages/3/pin', {pinned: true});
   const trashed = await app.record('mail-trash', 'CommandOut', 'POST', '/api/mail/messages/:id/trash', '/api/mail/messages/4/trash') as {id: number};
   // Undo while the provider still holds the trash is refused, and the app sends it again, as the
-  // web's afterPending does; once the trash settles, Undo goes through.
+  // web's afterPending does. Once the trash settles, Undo goes through.
   await app.record('error-command-pending', 'ApiError', 'POST', '/api/mail/messages/:id/untrash', '/api/mail/messages/4/untrash');
   confirmCommand(w.store, trashed.id);
   await app.record('mail-untrash', 'CommandOut', 'POST', '/api/mail/messages/:id/untrash', '/api/mail/messages/4/untrash');
   await app.record('mail-mark-all-read', 'MarkAllReadOut', 'POST', '/api/mail/mark-all-read', '/api/mail/mark-all-read', {account_id: 1});
 
-  // A command that failed, left failed in the Inbox; another failed and tried again.
+  // A command that failed, left failed in the Inbox. Another failed and tried again.
   failCommand(w.store, marked.id, 'Gmail answered 503.');
   await app.record('command', 'CommandOut', 'GET', '/api/commands/:id', `/api/commands/${marked.id}`);
   failCommand(w.store, opened.command.id, 'Gmail answered 503.');
@@ -211,7 +211,7 @@ async function recordAll() {
   await app.send('POST', '/api/items/8/complete', {done: true});
 
   // What only the server's own work sends: a source's health, News, and Jobs (which the app doesn't
-  // show; it ignores an event type it doesn't handle).
+  // show: it ignores an event type it doesn't handle).
   noteLive(w.store, {type: 'health', sources: [1]});
   noteLive(w.store, {type: 'news', stories: [1], sections: ['local'], sources: [1]});
   noteLive(w.store, {type: 'jobs', applications: [1], needs_you: [1]});
@@ -257,8 +257,9 @@ async function recordAll() {
   await app.record('places-recent', 'RecentPlaceOut[]', 'GET', '/api/places/recent', '/api/places/recent');
   await app.record('todoist-labels', 'TodoistLabelOut[]', 'GET', '/api/todoist/labels', '/api/todoist/labels');
   await app.record('settings', 'Settings', 'GET', '/api/settings', '/api/settings');
-  // Creating: a timed event with a place, Time to Leave and its own colour; an all-day event; a task due
-  // at a time in a project with a label; a task with no date; a task in a new project; a repeating task.
+  // Creating: a timed event with a place, Time to Leave and its own colour, then an all-day event, a
+  // task due at a time in a project with a label, a task with no date, a task in a new project and a
+  // repeating task.
   await app.record('item-create-event', 'CommandOut', 'POST', '/api/items', '/api/items', {
     kind: 'event', calendar_id: 1, title: 'Coffee with Priya', all_day: false, starts_at: '2026-10-09T16:00:00.000Z', ends_at: '2026-10-09T17:00:00.000Z',
     time_zone: 'America/Los_Angeles', place: 'Blue Door Coffee', address: '77 Elm Ave, Glendale', reminders: [10], leave_reminder: true, colour: 'violet',
@@ -294,8 +295,9 @@ async function recordAll() {
   await app.record('error-item-when', 'ApiError', 'POST', '/api/items', '/api/items', {kind: 'event', calendar_id: 1, title: 'Lunch', starts_at: '2026-10-09T19:00:00.000Z'});
   await app.record('error-item-nothing-to-change', 'ApiError', 'PATCH', '/api/items/:id', '/api/items/2', {changes: {}});
 
-  // News. All, with the recap and the Missed strip it feeds the app, a hazard's lead (Local's Red Flag Warning) and Tech's block
-  // holding Upcoming (the Apple event); a section with more than its block shows, and Tech's with Upcoming.
+  // News. All, with the recap and the Missed strip it feeds the app, a hazard's lead (Local's Red Flag
+  // Warning) and Tech's block holding Upcoming (the Apple event). A section with more than its block
+  // shows, and Tech's with Upcoming.
   const page = await app.record('news', 'NewsPageOut', 'GET', '/api/news', '/api/news') as NewsPageOut;
   await app.record('news-section', 'NewsSectionOut', 'GET', '/api/news/sections/:section', '/api/news/sections/local');
   await app.record('news-section-upcoming', 'NewsSectionOut', 'GET', '/api/news/sections/:section', '/api/news/sections/tech');
@@ -317,7 +319,7 @@ async function recordAll() {
   // Upcoming's Add to calendar: the event it would create, nothing created yet.
   await app.record('news-proposal', 'NewsProposalOut', 'POST', '/api/news/events/:id/proposal', '/api/news/events/1/proposal');
   // While you were away, for the app's own recap: News on screen with the recap's stories
-  // shown, which fixes it; Done puts it away, with what Undo puts back; Undo sends that back, so the
+  // shown, which fixes it. Done puts it away, with what Undo puts back. Undo sends that back, so the
   // recap is as it was for what follows.
   await app.record('news-here', '(no body)', 'POST', '/api/news/here', '/api/news/here', {recap: page.recap!.stories.map(story => story.id)});
   const done = await app.record('news-recap-done', 'RecapDoneOut', 'POST', '/api/news/recap/done', '/api/news/recap/done') as RecapDoneOut;

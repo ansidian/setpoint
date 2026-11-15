@@ -1,16 +1,16 @@
-// Importing an .ics file from Calendar, with Google's stand-in (the dev
-// provider, which refuses "Poster session" the first time it's sent). The journey: a conference's
-// schedule dropped on the grid, reviewed in the right pane (its past event unticked, the Career fair
-// already on Jobs), imported one at a time, a refused event retried, the events on the grid, and
-// Undo taking back only the ones the import made. Then one event from the header's Import .ics…,
-// opened in the editor and created there; and ⌘K's Import .ics… with files that can't be imported.
-// The same from an email's .ics tile, Add to calendar reading the stored attachment on the
-// server (the dev provider serves src/dev/icsFiles.ts by name): the seed's interview invite into the
-// editor, and, linked to that email by SQL, a schedule into the review, one that only cancels, and
-// one that can't be read, said in place.
-// While a file is dragged over the grid it lights and says whether it will import:
-// leaving, Esc or the drop clears it; a PDF or several files are refused before the drop; the
-// review takes none; and at 820 wide the pill centres beside the open review.
+// Importing an .ics file from Calendar, with Google's stand-in (the dev provider, which refuses
+// "Poster session" the first time it's sent). The journey: a conference's schedule dropped on the
+// grid, reviewed in the right pane (its past event unticked, the Career fair already on Jobs),
+// imported one at a time, a refused event retried, the events on the grid, and Undo taking back
+// only the ones the import made. Then one event from the header's Import .ics…, opened in the editor
+// and created there. Then ⌘K's Import .ics… with files that can't be imported.
+// The same from an email's .ics tile, with Add to calendar reading the stored attachment on the
+// server (the dev provider serves src/dev/icsFiles.ts by name). The seed's interview invite goes
+// into the editor. Linked to that email by SQL: a schedule into the review, one that only cancels,
+// and one that can't be read, said in place.
+// While a file is dragged over the grid, the grid lights and says whether the file will import.
+// Leaving, Esc or the drop clears it. A PDF or several files are refused before the drop. The review
+// takes none. At 820 wide the pill centres beside the open review.
 // The list's own behaviour (ticks, counts, the picker) is the component test's (importPane.test.tsx).
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -73,7 +73,7 @@ const ics = (name: string, text: string): Dragged => ({name, text, type: 'text/c
 /**
  * One drag event on `target` carrying `files`, as the browser hands it over (a real drag shows only
  * each file's kind and type before the drop, which is all the page reads then). `to` is where a
- * dragleave goes; null is out of the window, or Esc. Says what the page answered: the drop effect,
+ * dragleave goes. Null is out of the window, or Esc. Says what the page answered: the drop effect,
  * and whether it took the event.
  */
 async function dragEvent(target: Locator, type: 'dragenter' | 'dragover' | 'dragleave' | 'drop', files: Dragged[], to: Locator | null = null) {
@@ -119,7 +119,7 @@ test('a schedule dropped on the grid is reviewed, imported one at a time, a refu
     await drop(page, 'northwind-devcon.ics', SCHEDULE);
     const pane = page.getByRole('region', {name: 'Import events'});
     await pane.getByText('Import northwind-devcon.ics').waitFor();
-    // The past mixer starts unticked; nothing went to Google.
+    // The past mixer starts unticked. Nothing went to Google.
     assert.equal(await row(page, 'Welcome mixer').locator('.imp-row').getAttribute('aria-pressed'), 'false');
     await row(page, 'Welcome mixer').getByText('Wed, Sep 30 · 6:00 – 8:00 PM · past').waitFor();
     await pane.getByText('Left out: 1 event cancelled, categories on 5 events').waitFor();
@@ -153,7 +153,7 @@ test('a schedule dropped on the grid is reviewed, imported one at a time, a refu
     // The past mixer, unticked, wasn't sent.
     assert.ok(!(await lines(setpoint, '2026-09-30')).some(line => line.startsWith('Welcome mixer')));
 
-    // Undo: the three it made go; the Career fair it updated stays as it now is.
+    // Undo: the three it made go. The Career fair it updated stays as it now is.
     await page.locator('.toast').getByRole('button', {name: 'Undo'}).click();
     await until('Undo on Oct 15', () => lines(setpoint, '2026-10-15'), now => now.length === 2);
     assert.deepEqual(await lines(setpoint, '2026-10-15'), ['Career fair 10:00 AM – 3:00 PM', 'CS 101 lecture 6:00 PM – 7:15 PM']);
@@ -242,7 +242,7 @@ test('a file dragged over the grid says it will import, leaving or Esc clears it
     assert.deepEqual(await enter(grid, agenda), {effect: 'none', taken: true});
     await dropTip(page, 'Only an .ics file imports').waitFor();
     assert.equal(await grid.getAttribute('data-file-drop'), 'other');
-    // A browser sends no drop after "none"; one sent anyway imports nothing and says nothing.
+    // A browser sends no drop after "none". One sent anyway imports nothing and says nothing.
     await dragEvent(grid, 'drop', agenda);
     await dropTip(page, 'Only an .ics file imports').waitFor({state: 'detached'});
     // Nothing should open or be said: a pause for it to have done so.
@@ -353,7 +353,7 @@ test('an email\'s schedule opens the review on its first day, one that only canc
     const page = await setpoint.page('target');
     await openEmail(page, setpoint.base, interviewEmail(setpoint, ['notes.ics', 'cancelled.ics', 'northwind-devcon.ics']));
 
-    // The parser's line, in place of the file's size; nothing else moves.
+    // The parser's line, in place of the file's size. Nothing else moves.
     await invitation(page, 'notes.ics').getByRole('button', {name: 'Add to calendar'}).click();
     await invitation(page, 'notes.ics').getByRole('alert').filter({hasText: 'This file can\'t be read, it isn\'t an .ics calendar'}).waitFor();
     await invitation(page, 'cancelled.ics').getByRole('button', {name: 'Add to calendar'}).click();

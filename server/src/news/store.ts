@@ -1,6 +1,6 @@
 // News's writes: a source's heartbeat, the articles a fetch brought, stories seen, and the
 // expiry that moves a story from the page to the archive (48 h after its last new fact) and drops the
-// archive after 90 days (src/domain/news.ts has the rules). Each is one transaction; image files go
+// archive after 90 days (src/domain/news.ts has the rules). Each is one transaction. Image files go
 // once it commits.
 import type {NewsSection, NewsSourceHealthOut} from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
@@ -44,7 +44,7 @@ export function recordNewsCheck(store: Store, sourceId: number, error: ProviderE
 }
 
 /**
- * Keeps what a fetch brought, once per source and canonical URL (a feed repeats its items); the
+ * Keeps what a fetch brought, once per source and canonical URL (a feed repeats its items). The
  * source's own flags carry to its articles. Text a source gave with an article (official data) is
  * kept as its text, never a metered or discovery article's. Returns the new articles' ids, which
  * wait Unsorted until sorting puts them into stories.
@@ -67,7 +67,7 @@ export function storeArticles(store: Store, source: NewsSourceRow, articles: rea
 /**
  * What reading a new article gave: its page's text, and its image's copies, saved through
  * saveNewsImage. A page that was read and yielded no text marks the article summary only, so the
- * pane shows its feed summary and the link; that isn't an error.
+ * pane shows its feed summary and the link. That isn't an error.
  */
 export function storeArticleReading(store: Store, imagesDir: string | null, articleId: number, plan: ReadingPlan, reading: ArticleReading) {
   const article = store.db.select().from(t.newsArticles).where(eq(t.newsArticles.id, articleId)).get();
@@ -91,7 +91,7 @@ function sectionsOf(store: Store, storyIds: number[]): NewsSection[] {
 
 /**
  * Stories seen: a row fully on screen for about a second, or opened. Per story, never per
- * article; seeing an updated story clears its dot until the next new fact. Returns the stories that
+ * article. Seeing an updated story clears its dot until the next new fact. Returns the stories that
  * exist.
  */
 export function markSeen(store: Store, storyIds: readonly number[]): number[] {

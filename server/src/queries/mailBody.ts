@@ -1,6 +1,7 @@
 // An email's HTML body as its own page, and an attachment's bytes, for the reader. The body page
-// carries its own policy, so the sandboxed frame that loads it by `src` doesn't inherit the app's: remote images load (https only) when the remote-content rule allows
-// it, or when the user pressed Show; otherwise they're placeholders and nothing leaves the page.
+// carries its own policy, so the sandboxed frame that loads it by `src` doesn't inherit the app's.
+// Remote images load (https only) when the remote-content rule allows it, or when the user pressed
+// Show. Otherwise they're placeholders and nothing leaves the page.
 import {and, eq} from 'drizzle-orm';
 import {mailSourceId} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
@@ -28,7 +29,7 @@ export function messageBody(store: Store, messageId: number, images: boolean | n
   return {html: emailPage(safeEmail(message.body_html, load), frame), policy: emailPolicy(load, frame), load};
 }
 
-/** Types the browser may show as themselves (the previews'); anything else downloads as bytes. */
+/** Types the browser may show as themselves (the previews'). Anything else downloads as bytes. */
 const SHOWN_AS_IS = /^(application\/pdf|image\/(png|jpeg|gif|webp)|text\/csv)$/;
 
 export interface AttachmentFile {

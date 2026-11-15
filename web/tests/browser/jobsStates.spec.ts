@@ -39,7 +39,7 @@ async function poke(setpoint: Setpoint) {
   await setpoint.api('POST', `/jobs/applications/${trey}/lookup`);
 }
 
-// The seed's moment is 9:12 AM; the pass started at 9:00, reading the mail from before Jobs was turned on.
+// The seed's moment is 9:12 AM. The pass started at 9:00, reading the mail from before Jobs was turned on.
 const STARTED = '2026-10-07T16:00:00.000Z';
 /** Marks `n` more emails read by the pass: emails from before it, read since it started. */
 const readMore = (n: number) => `INSERT INTO jobs_emails_read (message_id, read_at, outcome, at)
@@ -234,13 +234,13 @@ test('board 39b: Settings › AI\'s Jobs group: three models by name, its spend 
     const main = settings.getByRole('region', {name: 'AI'});
     const jobs = main.locator('.set-sec', {has: page.locator('.set-label', {hasText: /^Jobs$/})});
     await jobs.locator('.set-row').first().waitFor();
-    // Names, not selects; no key yet, so each says one is needed, as News's do.
+    // Names, not selects. No key yet, so each says one is needed, as News's do.
     assert.deepEqual(await jobs.locator('.set-row').evaluateAll(rows => rows.map(row => [row.querySelector('.t')!.textContent, row.querySelector('.s')!.textContent, row.lastElementChild!.textContent])), [
       ['Each email', 'Role title, requisition ID, the event, the match, needs a key', 'Claude Haiku 5.5'],
       ['Finding the JD', 'When the email\'s link and the platforms miss, needs a key', 'Claude Sonnet 5.5 with web search'],
       ['Reading the JD', 'Summary, must-haves and nice-to-haves, salary and setting, needs a key', 'Claude Haiku 5.5'],
     ]);
-    // No cap, so no meter and nothing to choose; the spend shows once, on Usage this month's Jobs line.
+    // No cap, so no meter and nothing to choose. The spend shows once, on Usage this month's Jobs line.
     assert.equal(await jobs.locator('.meter, .select, [role="meter"]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

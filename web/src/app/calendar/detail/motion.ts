@@ -2,7 +2,7 @@
 // that opens from its item, glides to the next one (FLIP translate on its own curve, the overshoot
 // clamped at the grid's edges, retargeting mid-glide from its position and velocity), swaps its
 // content and height as it goes, lifts and follows a drag, and closes or hands over to the editor.
-// The rules are pure (logic/placement.ts, logic/glide.ts); this drives them frame by frame on the
+// The rules are pure (logic/placement.ts, logic/glide.ts). This drives them frame by frame on the
 // card's elements, and React renders what it publishes (the phase, the content layers, the side).
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import type {Rect} from '../../../logic/calendar.ts';
@@ -14,7 +14,7 @@ import {glide, layout, motion} from '../../../tokens.ts';
 import {CAL_ITEMS, findItem, heightOf, pointIn, rectIn} from '../geometry.ts';
 
 /**
- * What the card shows: an item, the day it was picked on, and its calendar; `pane` when it was
+ * What the card shows: an item, the day it was picked on, and its calendar. `pane` when it was
  * clicked in the right pane, where the card then sits beside that row.
  */
 export interface DetailTarget {
@@ -29,7 +29,7 @@ export type DetailExit = 'close' | 'edit';
 
 export type Phase = 'closed' | 'opening' | 'rest' | 'glide' | 'drag' | 'closing';
 
-/** One item's content in the card; during a glide the old one fades out over the new one. */
+/** One item's content in the card. During a glide the old one fades out over the new one. */
 export interface Layer {
   id: number;
   target: DetailTarget;
@@ -120,8 +120,8 @@ export class DetailMotion {
     const section = this.section;
     if (!section) return null;
     const item = `[data-key="${CSS.escape(target.item.key)}"]`;
-    // Its row in the right pane when picked there; its chip in the day's open "+N" popover;
-    // else the chip on the day it was picked, an item folded into "+N" anchoring on its "+N".
+    // Its row in the right pane when picked there. Its chip in the day's open "+N" popover.
+    // Else the chip on the day it was picked, an item folded into "+N" anchoring on its "+N".
     return (target.pane ? document.querySelector<HTMLElement>(`.rpane ${item}`) : null)
       ?? section.querySelector<HTMLElement>(`.daypop[data-date="${target.date}"] ${item}`)
       ?? findItem(section, target.date, target.item.key, true);
@@ -137,7 +137,7 @@ export class DetailMotion {
     if (!section || !scroller || !element) return null;
     this.scrollTop = scroller.scrollTop;
     const grid = rectIn(scroller, section);
-    // Clear of the compact tier's editor as far as the card fits; a narrower grid keeps it inside.
+    // Clear of the compact tier's editor as far as the card fits. A narrower grid keeps it inside.
     this.bounds = {...grid, width: Math.max(Math.min(grid.width, this.size.width + 2 * EDGE_MARGIN), grid.width - this.room)};
     // The open "+N" popover counts as one thing not to cover, its own chips with it.
     const popover = section.querySelector('.daypop');
@@ -278,7 +278,7 @@ export class DetailMotion {
     const anchorElement = from ? this.anchorOf(from) : null;
     const anchor = anchorElement && this.section ? rectIn(anchorElement, this.section) : null;
     const edit = exit === 'edit';
-    // Edit: shrinks and fades toward the right pane, over 220 ms; close: toward its item, 120 ms.
+    // Edit: shrinks and fades toward the right pane, over 220 ms. Close: toward its item, 120 ms.
     card.style.transformOrigin = edit ? 'right center' : this.originToward(anchor);
     const to = edit ? `translateX(${glide.editorSlidePx}px) scale(${glide.editScale})` : `scale(${glide.closeScale})`;
     const animation = card.animate([{opacity: 1, transform: 'none'}, {opacity: 0, transform: to}], {duration: edit ? glide.editMs : glide.closeMs, easing: motion.ease, fill: 'forwards'});
@@ -330,7 +330,7 @@ export class DetailMotion {
     const segment = this.segment;
     if (!segment) return;
     const elapsed = now - this.started;
-    // The overshoot is already shrunk to the room at the edges; this only guards the momentum.
+    // The overshoot is already shrunk to the room at the edges. This only guards the momentum.
     this.pos = clampInto(glidePosition(segment, elapsed), this.size, this.bounds, 0);
     this.apply();
     if (elapsed >= segment.duration) {
@@ -366,8 +366,8 @@ export class DetailMotion {
   }
 
   /**
-   * Old content out over 0–120 ms; new content in over 70–220 ms with its 6 px slide, the two
-   * crossfading (the old layer lies over the new), so the card is never blank mid-flight; height over 220.
+   * Old content out over 0–120 ms, new content in over 70–220 ms with its 6 px slide. The two
+   * crossfade (the old layer lies over the new), so the card is never blank mid-flight. Height over 220.
    */
   private swapContent(from: Point, to: Point, incoming: HTMLElement | null) {
     const outgoing = this.layerElement('out');
@@ -390,7 +390,7 @@ export class DetailMotion {
       body.style.height = '';
       const animation = body.animate([{height: `${height}px`}, {height: `${next}px`}], {duration: glide.heightMs, easing: motion.ease});
       animation.onfinish = () => {
-        // The old content has gone; only what's showing stays.
+        // The old content has gone. Only what's showing stays.
         if (this.snapshot.layers.some(layer => layer.role === 'out')) this.publish({layers: this.snapshot.layers.filter(layer => layer.role === 'in')});
       };
     }
@@ -438,7 +438,7 @@ export class DetailMotion {
     outer.style.visibility = inView || !this.anchored ? '' : 'hidden';
   }
 
-  /** The grid changed size: beside its item it's placed again; dropped, it's kept inside. */
+  /** The grid changed size: beside its item it's placed again. Dropped, it's kept inside. */
   onResize() {
     const target = this.target;
     if (!target || this.snapshot.phase !== 'rest') return;
@@ -495,9 +495,10 @@ export class DetailMotion {
   private roomAnimation: Animation | null = null;
 
   /**
-   * Out of the editor's way and back: the browser runs the move (a transform animation), so the
-   * editor drawing itself meanwhile doesn't stall it, on the standard curve with no overshoot; the
-   * card stays at rest throughout. A move under way is taken on from where it has got to.
+   * Out of the editor's way and back. The browser runs the move (a transform animation), so the
+   * editor drawing itself meanwhile doesn't stall it. It runs on the standard curve with no
+   * overshoot, and the card stays at rest throughout. A move under way is taken on from where it has
+   * got to.
    */
   private slideTo(to: Point) {
     const outer = this.outer;

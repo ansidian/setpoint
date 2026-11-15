@@ -1,5 +1,6 @@
 // A Google calendar's colour as one of Setpoint's swatches (DESIGN.md › Colour: accounts and
-// calendars pick from the 11). The swatches are oklch tokens, so the match is by hue in OKLCH, and a colour with almost no chroma (Graphite, Google's greys) is `ink2`.
+// calendars pick from the 11). The swatches are oklch tokens, so the match is by hue in OKLCH. A
+// colour with almost no chroma (Graphite, Google's greys) is `ink2`.
 import type {Colour, EventColour} from '@setpoint/shared';
 
 // The Night tokens' hues (web/src/tokens.ts).
@@ -29,21 +30,21 @@ export function oklch(hex: string): {l: number; c: number; h: number} | null {
 }
 
 /**
- * What Setpoint writes as a calendar's colour at Google (calendarList.patch with
- * colorRgbFormat), each swatch's Night token in sRGB, so Google's own app shows the swatch. Each reads
- * back as its swatch: exactly (ink3 is a grey, which hue alone would read as ink2).
+ * What Setpoint writes as a calendar's colour at Google (calendarList.patch with colorRgbFormat):
+ * each swatch's Night token in sRGB, so Google's own app shows the swatch. Each reads back as its
+ * swatch exactly (ink3 is a grey, which hue alone would read as ink2).
  */
 export const CALENDAR_HEX: Record<Colour, string> = {
   ink2: '#a3a4a8', ink3: '#8b8d92', cool: '#71c9fa', warm: '#f5ab77', caution: '#ff865b', comf: '#73d4ac', good: '#7cd591', sun: '#f7cd3a', alert: '#fd736d', violet: '#c8aefa', cyan: '#74e9d6',
 };
-/** What earlier builds wrote for a swatch since moved: calendars already carrying it read back as it. */
+/** What earlier builds wrote for a swatch since moved. Calendars already carrying it read back as it. */
 const WRITTEN_BEFORE: Record<string, Colour> = {'#707277': 'ink3', '#7d7f84': 'ink3', '#57d4d4': 'cyan'};
 const WRITTEN = new Map([...Object.entries(WRITTEN_BEFORE), ...Object.entries(CALENDAR_HEX).map(([swatch, hex]) => [hex, swatch as Colour] as const)]);
 
 /** Text on a calendar's colour in Google's app: black on a light colour, white on a dark one. */
 export const foregroundFor = (hex: string) => ((oklch(hex)?.l ?? 1) > 0.6 ? '#000000' : '#ffffff');
 
-/** The swatch Setpoint wrote, else the one nearest a Google colour by hue; greys and anything unreadable are `ink2`. */
+/** The swatch Setpoint wrote, else the one nearest a Google colour by hue. Greys and anything unreadable are `ink2`. */
 export function swatchFor(hex: string | null | undefined): Colour {
   const written = hex ? WRITTEN.get(hex.trim().toLowerCase()) : undefined;
   if (written) return written;
@@ -60,7 +61,7 @@ export function swatchFor(hex: string | null | undefined): Colour {
 
 /**
  * Google Calendar's eleven event colours (the API's `colors.get` event palette), by colorId. An
- * event's own colour reads as the nearest swatch; several of Google's fall on one swatch (Lavender
+ * event's own colour reads as the nearest swatch. Several of Google's fall on one swatch (Lavender
  * and Grape are both `violet`, Flamingo and Tomato both `alert`).
  */
 export const GOOGLE_EVENT_COLOURS: Record<string, string> = {
@@ -72,7 +73,7 @@ export const EVENT_COLOUR_IDS: Record<EventColour, string> = {
   ink2: '8', cool: '9', warm: '6', comf: '2', good: '10', sun: '5', alert: '11', violet: '3', cyan: '7',
 };
 
-/** An event's own colour from Google's colorId; null for none (it takes its calendar's) or one Google doesn't define. */
+/** An event's own colour from Google's colorId. Null for none (it takes its calendar's) or one Google doesn't define. */
 export function eventColourOf(colorId: string | null | undefined): Colour | null {
   const hex = colorId ? GOOGLE_EVENT_COLOURS[colorId] : undefined;
   return hex ? swatchFor(hex) : null;

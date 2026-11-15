@@ -18,7 +18,7 @@ import type {Store} from '../store.ts';
 type ItemRow = typeof t.items.$inferSelect;
 
 /**
- * The calendars the user can only read (a subscribed holiday calendar): every event on one is
+ * The calendars the user can only read (a subscribed holiday calendar). Every event on one is
  * read-only, as Google's own kinds of event are, so nothing in Setpoint offers to change it.
  */
 function readOnlyCalendars(store: Store): Set<number> {
@@ -94,7 +94,7 @@ function occurrences(row: ItemRow, from: string, to: string, fromAt: string, toA
   const duration = Date.parse(row.endsAt!) - Date.parse(row.startsAt!);
   const first = localDay(row.startsAt!, zone);
   const rule = parseRule(row.recurrence!, until => localDay(until, zone));
-  // A rule this expander doesn't cover shows its first occurrence; the provider's expansion takes over.
+  // A rule this expander doesn't cover shows its first occurrence. The provider's expansion takes over.
   const dates = rule ? occurrenceDates(rule, first, from < first ? first : addDayBefore(from), to) : [first];
   const time = localTime(row.startsAt!, zone);
   return dates
@@ -134,7 +134,7 @@ export function itemsInRange(store: Store, from: string, to: string): ItemsOut {
       const doneHere = row.recurringItemId === null && replaced.get(row.id)?.has(row.dueDate!);
       if (row.dueDate >= from && row.dueDate < to && !doneHere) items.push(present(row, command, locked, reopenable, subtasks));
     } else if (row.expanded && row.recurringItemId === null) {
-      // Google expands this series: its occurrences are rows.
+      // Google expands this series, so its occurrences are rows.
       continue;
     } else if (row.allDay) {
       if (row.startDate! < to && row.endDate! > from) items.push(present(row, command, locked, reopenable, subtasks));

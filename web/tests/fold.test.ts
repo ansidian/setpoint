@@ -11,7 +11,7 @@ const written = (key: string): Folded<string> => {
 };
 const shown = (list: Folded<string>[]) => list.map(item => `${item.key}${item.fold === 'out' ? '-' : item.fold === 'in' ? '+' : ''}`);
 
-// Rows of a collapsed group just go; a row may fold in unless its group was collapsed before.
+// Rows of a collapsed group just go. A row may fold in unless its group was collapsed before.
 const collapsedAfter = new Set(['noise']);
 const rules = {
   folds: (gone: Folded<string>) => !collapsedAfter.has(gone.key.split(':')[gone.id === null ? 1 : 0]!),

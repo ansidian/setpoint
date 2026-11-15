@@ -2,8 +2,8 @@
 // faked on 127.0.0.1 (Haiku and Sonnet answering as the Messages API does). A recorded set of
 // invented articles, across outlets and sections, groups and ranks as expected: wire copies count
 // once, a developing story gains facts (a hazard's revisions among them) and is rewritten only when
-// they're headline news, a repeat changes nothing, noise never becomes a story, a metered-only story never shows, a Google
-// News one shows its headline alone, a keynote confirmed by a second outlet goes to Upcoming, the
+// they're headline news, a repeat changes nothing, noise never becomes a story, a metered-only
+// story never shows, a Google News one shows its headline alone, a keynote confirmed by a second outlet goes to Upcoming, the
 // order follows the importance each story is judged as it's written, and the hour re-scores
 // without asking a model. Then the cost and the cap, Unsorted while the AI is down or has no key,
 // the first run and the recap, search and Add to calendar.
@@ -316,7 +316,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     const haiku = s.storyOf('Introducing Claude Haiku 5.5')!;
     expect(s.storyOf('Anthropic releases Claude Haiku 5.5')).toBe(haiku);
 
-    // A metered paper's story never shows and is never written; a Google News one shows its headline and link alone.
+    // A metered paper's story never shows and is never written. A Google News one shows its headline and link alone.
     const parking = s.storyOf('Council weighs new parking rules downtown')!;
     expect(s.story(parking)).toMatchObject({writtenAt: null, needsWriting: false, headline: 'Council weighs new parking rules downtown'});
     const water = s.storyOf('Water main break floods an intersection in Example Park')!;
@@ -324,7 +324,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
       headline: 'Water main break floods an intersection in Example Park', one_line: null, summary: null,
       lead: {outlet: 'LAist', more: 0}, sources: [{outlet: 'LAist', discovery: true}],
     });
-    // A story under the bar never shows; rated under the write gate, it's never written either.
+    // A story under the bar never shows. Rated under the write gate, it's never written either.
     const library = s.storyOf('Library branch extends weekend hours')!;
     expect(s.story(library)).toMatchObject({writtenAt: null, belowGate: true, needsWriting: false, headline: 'Library branch extends weekend hours'});
     expect(s.story(library).score).toBeLessThan(35);
@@ -333,7 +333,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     // Each story is judged as it's written, so the order follows Sonnet's judgement at once, not Haiku's
     // reading of the articles: Haiku put the Pixel Watch over Apple's event, and Anthropic's
     // release level with the shooting.
-    // Anthropic's release is in AI and General; All shows it once, in AI's block, its subject's.
+    // Anthropic's release is in AI and General. All shows it once, in AI's block, its subject's.
     expect(headlines(w, 'general')).toEqual(['Four killed in a warehouse shooting in Ohio']);
     expect(listed(w, 'general')).toEqual(['Four killed in a warehouse shooting in Ohio', 'Anthropic releases Claude Haiku 5.5']);
     expect(headlines(w, 'tech')).toEqual(['Apple sends invites for an Oct 20 event', 'Pixel Watch 5 goes on sale with two-day battery life']);
@@ -349,16 +349,16 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     });
     expect(s.story(fire).imageArticleId).toBe(ktla);
     const writes = () => s.calls('submit_news_story').map(request => STORIES.find(([pattern]) => pattern.test(request.input))![0].source);
-    // Six stories written; the metered, Google News and library ones weren't.
+    // Six stories were written. The metered, Google News and library ones weren't.
     expect(writes()).toHaveLength(6);
 
-    // The user sees the fire and the shooting; half an hour on, both develop.
+    // The user sees the fire and the shooting. Half an hour on, both develop.
     w.advance(30 * MINUTE);
     markSeen(w.store, [fire, shooting]);
     w.advance(15 * MINUTE);
     s.deliver(SECOND);
     await s.drain();
-    // Cal Fire's next revision joined by its incident, without asking the model; its numbers are a new fact.
+    // Cal Fire's next revision joined by its incident, without asking the model. Its numbers are a new fact.
     expect(s.storyOf('Foothill Fire: 400 acres, 10% contained')).toBe(fire);
     expect(s.calls('submit_news_grouping').map(request => headlineIn(request.input)).slice(4)).toEqual(['Brush fire grows to 400 acres; evacuation warnings issued', 'Ohio warehouse shooting suspect in custody']);
     const pane = storySchema.parse(storyDetail(w.store, fire));
@@ -419,7 +419,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     expect(s.story(s.storyOf('Pixel Watch 5 goes on sale with two-day battery life')!).backfill).toBe(true);
 
     expect(newsSearchSchema.parse(newsSearch(w.store, {q: 'warehouse ohio', limit: 50})).stories.map(story => story.headline)).toEqual(['Four killed in a warehouse shooting in Ohio']);
-    // By a source's outlet; never by a metered paper's; never a story under the bar.
+    // By a source's outlet, never by a metered paper's, and never a story under the bar.
     expect(newsSearch(w.store, {q: 'pbs', limit: 50}).stories.map(story => story.headline)).toEqual(['Four killed in a warehouse shooting in Ohio']);
     expect(newsSearch(w.store, {q: 'fabrikam', limit: 50}).total).toBe(0);
     expect(newsSearch(w.store, {q: 'parking', limit: 50}).total).toBe(0);
@@ -509,7 +509,7 @@ describe('a story is rewritten only on headline news', () => {
     const written = s.story(flood);
     expect(written.headline).toBe('Flash flood closes 8 roads around Fabrikam Falls');
 
-    // The user looks; then a second station adds a shelter, which changes neither the headline nor the one line.
+    // The user looks. Then a second station adds a shelter, which changes neither the headline nor the one line.
     w.advance(30 * MINUTE);
     markSeen(w.store, [flood]);
     w.advance(15 * MINUTE);

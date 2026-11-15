@@ -1,7 +1,7 @@
-// What the line reads (LineReference.tsx): the ? at the editor's line opens the
-// reference under it, every example with what it reads; Esc closes it and not the editor, focus
-// going back to the ?; a press outside closes it. That the examples read so is lineReference.test.ts;
-// the ? on the line, beside the email's mark, is editor.spec.ts.
+// What the line reads (LineReference.tsx). The ? at the editor's line opens the reference under it,
+// every example with what it reads. Esc closes it and not the editor, and focus goes back to the ?.
+// A press outside closes it. That the examples read so is lineReference.test.ts. The ? on the line,
+// beside the email's mark, is editor.spec.ts.
 import {useState} from 'react';
 import {flushSync} from 'react-dom';
 import {expect, test} from 'vitest';
@@ -26,7 +26,7 @@ function Line() {
   );
 }
 
-// The editor draws again as the pointer crosses a lit phrase (its hover); here, on call.
+// The editor draws again as the pointer crosses a lit phrase (its hover). Here it draws on call.
 let redraw = () => {};
 function Redrawing() {
   const [, setTimes] = useState(0);

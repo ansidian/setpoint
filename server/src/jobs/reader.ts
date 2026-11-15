@@ -2,16 +2,16 @@
 //
 // - The hook: triage tells the server when it has sorted an email (TriageWorker's `onSorted`, wired in
 //   server.ts), and the server nudges this worker. A nudge only queues the one durable `jobs_read`
-//   job on the sync engine; the job finds what to read itself, so a missed nudge or a restart loses
-//   nothing, and every five minutes it looks again anyway.
+//   job on the sync engine. The job finds what to read itself, so a missed nudge or a restart loses
+//   nothing. Every five minutes it looks again anyway.
 // - What it reads: emails triage has sorted in the accounts Jobs lists (all of the Jobs account, only
-//   Career elsewhere), received since Jobs was turned on, not in jobs_emails_read, oldest first, one
-//   at a time, so a confirmation is read before its update. Older mail is the history pass's
-//   (./history.ts), which this worker reads the same way, keyed `jobs_history`, with its own window
-//   and `fromHistory`.
+//   Career elsewhere), received since Jobs was turned on and not in jobs_emails_read. It reads them
+//   oldest first, one at a time, so a confirmation is read before its update. Older mail is the
+//   history pass's (./history.ts). This worker reads it the same way, keyed `jobs_history`, with its
+//   own window and `fromHistory`.
 // - Each email is read once by Haiku 5.5 (./prompt.ts), written to the ledger as Jobs's "emails", and
 //   never charged for again. The rules (./rules.ts planEmail) decide what it does.
-// - The AI down: the job fails by the one retry policy and the emails wait, counted on the page; a
+// - The AI down: the job fails by the one retry policy and the emails wait, counted on the page. A
 //   missing or refused key waits for Settings › AI. They're read once it's back.
 // - Passive: every change sends the `jobs` live event, and nothing else: no
 //   notification, nothing added to mail, nothing in the calendar.
@@ -127,7 +127,7 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
           company: plan.company, title: reading!.title ?? '', titleKey: key ?? '', requisitionId: role.requisitionId,
           platform: platformOf(email, plan.company), accountId: email.accountId, appliedAt: at, status: 'applied', statusSetBy: 'email', statusSetAt: at,
           reappliedFromId: plan.reappliedFrom, companyUnknown: plan.companyUnknown,
-          // Its JD lookup is due; the history pass's waits for its end,
+          // Its JD lookup is due. The history pass's waits for its end,
           // when only the ones still open are looked up.
           jdLookup: fromHistory ? 'none' : 'looking', jdLookupAt: fromHistory ? null : now, createdAt: now, updatedAt: now,
         }).returning({id: j.jobsApplications.id}).get();
@@ -238,7 +238,7 @@ export class JobsReader implements JobWorker {
 
   /**
    * Something may want reading (the hook: triage sorted an email): queue the job if Jobs is on and an
-   * email waits. A job already queued or running takes it; one waiting out a retry keeps its time.
+   * email waits. A job already queued or running takes it. One waiting out a retry keeps its time.
    */
   nudge() {
     // The history pass may have been waiting for this email's triage.
@@ -271,7 +271,7 @@ export class JobsReader implements JobWorker {
     if (!window) return finishJob(store, job.id);
     const chosen = jobsEmailClient(store, this.endpoints, this.timeoutMs);
     if (!chosen) {
-      // Nothing to retry until a key arrives; the rescan queues it again.
+      // Nothing to retry until a key arrives. The rescan queues it again.
       if (recordReadFailure(store, 'auth', NO_JOBS_KEY)) announce(store);
       failJob(store, job, new ProviderError('auth', NO_JOBS_KEY));
       return;
@@ -292,8 +292,8 @@ export class JobsReader implements JobWorker {
 
   /**
    * The history pass (./history.ts): reads what's left of it, oldest first, then ends it and looks
-   * up the open applications' JDs; the AI down fails the job by the one retry policy, and the pass
-   * waits. Turned off, or replaced by a new pass, it stops where it is.
+   * up the open applications' JDs. An AI that's down fails the job by the one retry policy, and the
+   * pass waits. Turned off, or replaced by a new pass, it stops where it is.
    */
   private async readHistory(job: Job, signal: AbortSignal) {
     const store = this.store;
@@ -360,7 +360,7 @@ export class JobsReader implements JobWorker {
 /**
  * Reads what waits in the window, oldest first, until nothing does. Returns the provider's refusal
  * that stopped it (the rest wait), if one did. An email the provider refuses outright (a 400) is
- * passed over this time rather than holding up the rest, and returned; the rescan tries it again.
+ * passed over this time rather than holding up the rest, and returned. The rescan tries it again.
  */
 export async function readWindowEmails(store: Store, ask: AskJobs, window: ReadWindow, options: ReadOptions = {}): Promise<{failed: ProviderError | null; passed: Set<number>}> {
   const passed = new Set<number>();
@@ -382,7 +382,7 @@ export async function readWindowEmails(store: Store, ask: AskJobs, window: ReadW
 
 /**
  * Reads what's left of the history pass that started at `startedAt`, oldest first, while Jobs is on
- * and that pass runs, checking before each email so turning Jobs off (or a new pass) stops it at
+ * and that pass runs. It checks before each email, so turning Jobs off (or a new pass) stops it at
  * once. Returns as `readWindowEmails` does.
  */
 export async function readHistoryEmails(store: Store, ask: AskJobs, startedAt: string): Promise<{failed: ProviderError | null; passed: Set<number>}> {

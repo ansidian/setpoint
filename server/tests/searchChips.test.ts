@@ -1,6 +1,5 @@
-// The chip grammar: words become organisation, type, date, account and kind
-// chips; everything else stays free text. Dates resolve in the owner's zone against the clock,
-// preferring the past.
+// The chip grammar: words become organisation, type, date, account and kind chips. Everything else
+// stays free text. Dates resolve in the owner's zone against the clock, preferring the past.
 import type {SearchChip} from '@setpoint/shared';
 import {SEED_NOW} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -12,7 +11,7 @@ const VOCABULARY = {
 };
 const TIME_ZONE = 'America/Los_Angeles';
 
-/** Chips as "Org Northwind" strings, for compact tables; dates also show their range. */
+/** Chips as "Org Northwind" strings, for compact tables. Dates also show their range. */
 function show(chip: SearchChip): string {
   const name = `${chip.not ? 'Not ' : ''}${{organisation: 'Org', type: 'Type', date: 'Date', account: 'Account', kind: 'Kind'}[chip.kind]}`;
   return chip.kind === 'date' ? `${name} ${chip.label} [${chip.from}, ${chip.to})` : `${name} ${chip.label}`;

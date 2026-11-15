@@ -1,10 +1,13 @@
 // The history pass, against an ephemeral database holding a recorded invented history
 // (./history.ts) in three accounts, with Anthropic (Haiku for each email, the JD's check and reading,
 // Sonnet's search) and the hiring platforms (./fakeWeb.ts) faked at the HTTP boundary. Jobs is turned
-// on through its route. What it covers: the history makes the expected applications, updates
-// finding the confirmations read before them, closed ones without JDs, old silent ones Ghosted and
-// the unsure in From history; a pass stopped halfway goes on after a restart, reading and charging
-// nothing twice; a second turn-on reads nothing; the progress counts; Dismiss all and its Undo.
+// on through its route. What it covers:
+// - the history makes the expected applications: updates finding the confirmations read before
+//   them, closed ones without JDs, old silent ones Ghosted and the unsure in From history
+// - a pass stopped halfway goes on after a restart, reading and charging nothing twice
+// - a second turn-on reads nothing
+// - the progress counts
+// - Dismiss all and its Undo
 import {jobsDismissedSchema, jobsPageSchema, jobsSettingsSchema} from '@setpoint/shared';
 import type {JobsHistoryOut} from '@setpoint/shared';
 import {and, asc, eq, isNull, like, lte} from 'drizzle-orm';
@@ -37,7 +40,7 @@ const subjectOf = (request: FakeRequest) => /^Subject: (.*)$/m.exec(request.inpu
 const companyOf = (request: FakeRequest) => /^Company: (.*)$/m.exec(request.input)?.[1] ?? '';
 
 /**
- * What the pass reads: every email in Jobs; in Business, Career (City Power & Light's, the backfill's
+ * What the pass reads: every email in Jobs, and in Business, Career (City Power & Light's, the backfill's
  * rejection) and the backfill's confirmation and its hiring platform's interview.
  */
 const READ = HISTORY_EMAILS.filter(email => email.jobs !== null);
@@ -48,7 +51,7 @@ const PROSEWARE_READING = {
   location: 'Seattle, WA', workplace: 'on_site', workplace_detail: null, salary: null, must_haves: ['A portfolio of shipped work'], nice_to_haves: ['Figma'],
 };
 
-/** Haiku's answer for an email, as recorded; one Jobs should never ask about fails its request. */
+/** Haiku's answer for an email, as recorded. One Jobs should never ask about fails its request. */
 function emailAnswer(email: HistoryEmail | undefined): FakeAnswer {
   if (!email?.jobs) return {status: 400, body: {type: 'error', error: {type: 'invalid_request_error', message: `Jobs asked about "${email?.subject}"`}}};
   return {tool: email.jobs, usage: {input: 700, output: 60}};
@@ -72,8 +75,8 @@ function lookupAnswer(request: FakeRequest): FakeAnswer {
 }
 
 /**
- * A fresh install holding the recorded history in Jobs, Business and Personal, Jobs off; the clock
- * at TURNED_ON. Mail is stored newest first, so its ids run against its dates and only the pass's
+ * A fresh install holding the recorded history in Jobs, Business and Personal, Jobs off, and the
+ * clock at TURNED_ON. Mail is stored newest first, so its ids run against its dates and only the pass's
  * own order puts each confirmation before its update.
  */
 async function setup() {
@@ -242,7 +245,7 @@ describe('a recorded history', () => {
     expect(looked.some(job => closed.includes(job.key))).toBe(false);
     expect(looked.every(job => job.createdAt >= page.history.finished_at!)).toBe(true);
 
-    // Each email read once, through the live reader's read; never the mail Jobs mustn't read.
+    // Each email read once, through the live reader's read. Never the mail Jobs mustn't read.
     expect(s.answered.sort()).toEqual(READ.map(email => email.subject).sort());
     expect(s.ledger('jobs_emails')).toHaveLength(READ.length);
     for (const key of NEVER_READ) expect(s.read(key)).toBeUndefined();
@@ -250,7 +253,7 @@ describe('a recorded history', () => {
     expect(s.read('graphic-interview')).toMatchObject({outcome: 'needs_you', event: 'interview'});
     expect(s.read('contoso-recruiter')).toMatchObject({outcome: 'ignored'});
 
-    // A JD to confirm the history pass's lookup made is From history's; Look it up by hand makes today's.
+    // A JD to confirm the history pass's lookup made is From history's. Look it up by hand makes today's.
     const lucerne = apps.at(-1)!.id;
     expect(requestLookup(s.store, lucerne)).toBe('looking');
     await s.drain();
@@ -323,7 +326,7 @@ describe('durable, with its progress', () => {
     s.store1(arrival);
     expect((await s.page()).history).toMatchObject({read: 10, total: READ.length});
 
-    // The process dies while the pass's job is running; a new one takes it up once its lease runs out.
+    // The process dies while the pass's job is running. A new one takes it up once its lease runs out.
     s.store.db.update(t.jobs).set({state: 'running', leaseUntil: new Date(s.store.now().getTime() + LEASE_MS).toISOString()})
       .where(eq(t.jobs.key, HISTORY_KEY)).run();
     s.models.answer(request => {

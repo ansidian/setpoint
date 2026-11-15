@@ -1,6 +1,6 @@
-// A news image as it loads: its box is
-// there at once, a skeleton's fill breathing in it, and the image fades in over it once loaded, a
-// hairline edge on it so a white image doesn't run into the Light page. In the story pane the row's
+// A news image as it loads. Its box is there at once, a skeleton's fill breathing in it. The image
+// fades in over it once loaded, with a hairline edge so a white image doesn't run into the Light
+// page. In the story pane the row's
 // thumbnail, already loaded for the list, stands in blurred until the large copy comes.
 import {useState} from 'react';
 

@@ -9,7 +9,7 @@
 //   POST  /api/sources/:id/check                 204 (check now)
 //   POST  /api/accounts/gmail/authorize   GmailAuthorizeInput  GmailAuthorizeOut (Connect Gmail / Reconnect)
 //   GET   /api/ea/accounts/gmail/callback?code=&state=   302 to /settings/accounts?connected=<id> or ?error=<code>
-//         (Google's redirect, outside the session: the signed state is its proof; the path is
+//         (Google's redirect, outside the session: the signed state is its proof. The path is
 //         kept so the Google client's registration still matches)
 //   POST  /api/accounts/icloud            ICloudConnectInput   AccountOut (201; Connect iCloud)
 //   GET   /api/settings                          Settings
@@ -47,7 +47,7 @@ export const accountOrderInput = z.strictObject({account_ids: z.array(id).min(1)
 /**
  * A provider connection with its health (Settings › Accounts): each account, and Google Calendar,
  * Todoist and weather. `name` is the account's label or the provider's name. Credentials are never
- * returned; `has_credentials` says whether there are any.
+ * returned. `has_credentials` says whether there are any.
  */
 export interface SourceOut {
   id: number;
@@ -102,7 +102,7 @@ export const icloudConnectInput = z.strictObject({
 });
 export type ICloudConnectInput = z.infer<typeof icloudConnectInput>;
 
-/** An instance secret's state; its value is never returned. */
+/** An instance secret's state. Its value is never returned. */
 export interface SecretOut {
   name: SecretName;
   set: boolean;

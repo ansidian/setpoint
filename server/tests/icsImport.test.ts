@@ -51,7 +51,7 @@ describe('readIcs: files shaped like real ones', () => {
       ends_at: '2026-11-10T19:30:00.000Z',
       time_zone: 'America/New_York',
       location: 'https://meet.example.com/j/482-193-775',
-      // The folded lines joined and the \n escapes read; its links stay in the description.
+      // The folded lines joined and the \n escapes read. Its links stay in the description.
       description: 'Your interview with Contoso is confirmed.\n\nJoin: https://meet.example.com/j/482-193-775\nNeed to reschedule? https://jobs.example.com/interviews/7f3a9c/reschedule\nCancel: https://jobs.example.com/interviews/7f3a9c/cancel',
       reminders: [30],
     }]);
@@ -338,7 +338,7 @@ describe('readIcs: what\'s dropped, and why', () => {
     const result = read(calendar(...event('UID:x@example.com', 'DTSTART:20261110T200000Z', 'DTEND:20261110T210000Z',
       ...alarm(':-P1D'), ...alarm(':-PT10M'), ...alarm(':PT0S'), ...alarm(':-PT10M'), ...alarm(';RELATED=END:-PT90M'), ...alarm(';RELATED=END:-PT30M'),
       ...alarm(':-PT2H'), ...alarm(':-PT3H'), ...alarm(':-P5W'))));
-    // -PT90M from a one-hour event's end is 30 minutes before its start; -PT30M from the end is after the start.
+    // -PT90M from a one-hour event's end is 30 minutes before its start. -PT30M from the end is after the start.
     expect(only(result).reminders).toEqual([0, 10, 30, 120, 180]);
     expect(dropped(result)).toEqual({alarm_after_start: 1, alarm_over_limit: 2});
   });

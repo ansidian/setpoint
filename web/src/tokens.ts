@@ -1,12 +1,13 @@
 // Setpoint's design tokens, defined once for Night and Light. They mirror DESIGN.md › Tokens and
-// design-export/styles/setpoint.css, so change the two together; nothing checks they agree. applyTokens() publishes the
-// theme-free ones as CSS custom properties (`--r-card`, `--dur-fast`, `--sidebar`, `--a-business`…), applyTheme() a
-// theme's colours, shadows and tints, under the export's names (`--page`, `--shadow-pop`, `--evtint`).
+// design-export/styles/setpoint.css, so change the two together. Nothing checks they agree.
+// applyTokens() publishes the theme-free ones as CSS custom properties (`--r-card`, `--dur-fast`,
+// `--sidebar`, `--a-business`…), and applyTheme() a theme's colours, shadows and tints, under the
+// export's names (`--page`, `--shadow-pop`, `--evtint`).
 import type {Colour} from '@setpoint/shared';
 
 export type Theme = 'night' | 'light';
 
-/** Night. Keys are DESIGN.md's token names; `panel`, `ink3` and `cyan` depart from the export's. */
+/** Night. Keys are DESIGN.md's token names. `panel`, `ink3` and `cyan` depart from the export's. */
 export const colour = {
   page: '#050506',
   panel: '#0b0c0e',
@@ -47,7 +48,7 @@ export const colour = {
   navOnEdge: 'rgba(255,255,255,.07)',
   // The HTML email frame's ring: none in Night, a hairline in Light, where white meets the page.
   mailEdge: 'transparent',
-  // Search's match highlight: Night's 26% `sun` mix; Light's own, a real highlighter.
+  // Search's match highlight: Night's 26% `sun` mix. Light's own, a real highlighter.
   hl: 'color-mix(in oklch, var(--sun) 26%, transparent)',
   // A focused field's border, at least as strong as hover's `edgeHover`.
   edgeFocus: 'rgba(255,255,255,.2)',
@@ -136,7 +137,7 @@ export const lightColour: Record<ColourToken, string> = {
   kindNoise: 'oklch(0.55 0.06 250)',
 };
 
-/** Overlay shadows; shadows only on overlays. */
+/** Overlay shadows. Shadows only on overlays. */
 export const shadow = {
   pop: '0 18px 50px rgba(0,0,0,.4)',
   modal: '0 30px 80px rgba(0,0,0,.35)',
@@ -149,7 +150,7 @@ export const lightShadow: Record<keyof typeof shadow, string> = {
   pill: '0 10px 30px rgba(15,20,28,.14)',
 };
 
-/** The sample's accounts (`--a-*`) and calendars (`--c-*`); Settings lets each pick a swatch. */
+/** The sample's accounts (`--a-*`) and calendars (`--c-*`). Settings lets each pick a swatch. */
 export const accountColour = {business: 'warm', personal: 'cool', work: 'comf', jobs: 'violet', icloud: 'ink2'} as const satisfies Record<string, Colour>;
 export const calendarColour = {personal: 'cool', classes: 'cyan', jobs: 'violet'} as const satisfies Record<string, Colour>;
 
@@ -161,13 +162,13 @@ export const evhover = {night: 18, light: 14} as const;
 export const evland = {night: 34, light: 26} as const;
 /**
  * Coloured text on its own tint (calendar chips, week blocks, the editor's timeline) caps its
- * lightness at `--tintL`: Light's hues are tuned for text on the page and wash out on a tint;
+ * lightness at `--tintL`. Light's hues are tuned for text on the page and wash out on a tint.
  * Night's aren't capped.
  */
 export const tintL = {night: 1, light: 0.43} as const;
-/** Attention's band: `caution` mixed into its `panel` at this share; 8% reads salmon in Light. */
+/** Attention's band: `caution` mixed into its `panel` at this share. 8% reads salmon in Light. */
 export const attTint = {night: 8, light: 6} as const;
-/** The Inbox's empty pane's glow: the mark's colours mixed in at this share at its heart; Light's darker colours need more to show on its page. */
+/** The Inbox's empty pane's glow: the mark's colours mixed in at this share at its heart. Light's darker colours need more to show on its page. */
 export const paneGlow = {night: 10, light: 18} as const;
 /** FYI's cell in that pane's strip: `cool` mixed into `panel` at this share, faint enough not to read as `accent`. */
 export const fyiWash = {night: 4, light: 9} as const;
@@ -200,7 +201,7 @@ export const font = {
 export const radius = {pill: 999, modal: 26, popover: 18, card: 14, bar: 12, row: 10, segment: 8, chip: 6, hint: 5} as const;
 
 /**
- * mantel's timings; a press going in (its release takes `fast`); a lifted
+ * mantel's timings, a press going in (its release takes `fast`), and a lifted
  * calendar chip's tilt and scale.
  */
 export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04} as const;
@@ -208,7 +209,7 @@ export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubi
 /**
  * A segmented control's thumb: a damped spring (ratio .8) over `ms`, 95% of the way there by
  * about 125 ms and 1.5% past it before it settles. The label it lands on takes `ink` over `inkMs`
- * after `inkDelayMs`, as the thumb arrives; the one it leaves lets go at once.
+ * after `inkDelayMs`, as the thumb arrives. The one it leaves lets go at once.
  */
 export const thumb = {
   ms: 380,
@@ -218,11 +219,11 @@ export const thumb = {
 } as const;
 
 /**
- * Loading (DESIGN.md › Motion): a skeleton's bars are `sub2` on the
- * page and `sub3` inside a `sub` group (Settings, cards); a skeleton appears only after `delayMs`,
- * so a fast answer never flashes one, fades in over motion.medium, then breathes, every bar in
- * phase, its opacity down to `breatheLow` and back over `breatheMs`. What replaces it fades in over
- * motion.fast. The one loop beside the spinner's 900 ms turn.
+ * Loading (DESIGN.md › Motion): a skeleton's bars are `sub2` on the page and `sub3` inside a `sub`
+ * group (Settings, cards). A skeleton appears only after `delayMs`, so a fast answer never flashes
+ * one. It fades in over motion.medium, then breathes, every bar in phase, its opacity down to
+ * `breatheLow` and back over `breatheMs`. What replaces it fades in over motion.fast. The one loop
+ * beside the spinner's 900 ms turn.
  */
 export const skeleton = {fill: 'sub2', fillOnSub: 'sub3', delayMs: 200, breatheMs: 1600, breatheLow: 0.45, breatheEase: 'cubic-bezier(.4,0,.6,1)'} as const;
 
@@ -237,7 +238,7 @@ export const glide = {
   stepPx: 400,
   capMs: 380,
   heightMs: 220,
-  // The contents crossfade, overlapping by 50 ms, so the card never travels blank;
+  // The contents crossfade, overlapping by 50 ms, so the card never travels blank.
   // glide.json still says 0–90 out and 90–220 in.
   oldContentOutMs: 120,
   newContentInFromMs: 70,
@@ -269,8 +270,8 @@ export const drag = {thresholdPx: 4, tipOffset: {left: 18, top: 30}} as const;
 /**
  * The shared tooltip: how long the pointer rests before it shows, quick on what it
  * reveals where you've stopped to read (`data-tip-quick`) and patient elsewhere, on controls and on what
- * the mouse passes over; how far it sits from what it names, and how close it may come to the
- * window's edges.
+ * the mouse passes over. It also sets how far it sits from what it names, and how close it may
+ * come to the window's edges.
  */
 export const tip = {quickMs: 80, patientMs: 500, gapPx: 6, marginPx: 8} as const;
 
@@ -311,7 +312,7 @@ export const week = {
 
 /**
  * The month grid's paging: P, N and Today
- * glide the grid over `slow`; more than `farRows` away it first jumps to `leadRows` short of the
+ * glide the grid over `slow`. More than `farRows` away, it first jumps to `leadRows` short of the
  * month, on the side it comes from, and glides those. The header's title swaps as it goes, rising
  * (or falling, or sliding with the week) `titleShiftPx` over `fast`.
  */
@@ -319,7 +320,7 @@ export const monthPaging = {glideMs: motion.slow, farRows: 10, leadRows: 5, titl
 
 /**
  * News: how long a row stays fully on screen before its story
- * is seen; and how long a story N brings onto the list takes to settle in (DESIGN.md › Motion).
+ * is seen, and how long a story N brings onto the list takes to settle in (DESIGN.md › Motion).
  */
 export const news = {seenAfterMs: 1000, landedMs: 900} as const;
 
@@ -354,7 +355,7 @@ export const layout = {
  * The design target, the phone layout's breakpoint, the compact tier's (the rail always, panes over
  * what they'd squeeze), the width below which the sidebar starts as the rail, and the page's
  * zoom steps (1.075 from 1440 px for a MacBook, 1.25 from 2200). CSS media queries spell
- * them out; Phone.tsx's hooks and sidebarRail.ts read the breakpoints from here.
+ * them out. Phone.tsx's hooks and sidebarRail.ts read the breakpoints from here.
  */
 export const viewport = {target: {width: 1677, height: 1050}, phoneBelow: 640, compactBelow: 1100, railBelow: 1600, zoom: [{from: 1440, zoom: 1.075}, {from: 2200, zoom: 1.25}]} as const;
 

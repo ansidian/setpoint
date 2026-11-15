@@ -1,7 +1,8 @@
-// Jobs reading mail: the rules as tables, with prod's shapes invented over: loose company names, normalised titles and requisition IDs, a confident match, what
-// each email does (Indeed's pairs, a re-application after a rejection, a confirmation twice, the
-// same title under two IDs, a rejection with no confirmation, a Business email that isn't Career),
-// a status set by hand, blocked emails, and the model's answer read leniently.
+// Jobs reading mail: the rules as tables, invented over prod's shapes. They cover loose company
+// names, normalised titles and requisition IDs, a confident match, and what each email does
+// (Indeed's pairs, a re-application after a rejection, a confirmation twice, the same title under
+// two IDs, a rejection with no confirmation, a Business email that isn't Career). They also cover a
+// status set by hand, blocked emails, and the model's answer read leniently.
 import type {JobReadMode, JobStatus, Kind} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {emailBody} from '../mail.ts';
@@ -92,7 +93,7 @@ describe('statuses', () => {
 });
 
 describe('what corrections give an application to answer to', () => {
-  // Merged with Fabrikam's Data Analyst; given the Software Engineer II email by Assign to…; retitled by hand.
+  // Merged with Fabrikam's Data Analyst. Given the Software Engineer II email by Assign to… and retitled by hand.
   const merged = app('Contoso', 'Software Engineer I', 'applied', {aliases: [
     {company: 'Fabrikam', titleKey: titleKey('Data Analyst'), requisitionId: null},
     {company: 'Contoso', titleKey: titleKey('Software Engineer II'), requisitionId: null},

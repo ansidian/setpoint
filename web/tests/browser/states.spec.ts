@@ -1,10 +1,10 @@
-// Health and states in the browser: board 19a built and checked
-// (fixtures needs-reconnect, stale-icloud and triage-down, the stream cut), then the flows: offline
-// dims the page and refuses changes, Retry now tries again and the stream's return clears it, the
-// reconnect bar opens Settings › Accounts, a failing account's line says why, and the first
-// backfill's indexing line holds in search; then the calendar's own stale and failing lines.
-// Setpoint unreachable at launch shows the mark and the pill, not the
-// sign-in card, and asks again until it answers.
+// Health and states in the browser: board 19a built and checked (fixtures needs-reconnect,
+// stale-icloud and triage-down, the stream cut). Then the flows: offline dims the page and refuses
+// changes, Retry now tries again and the stream's return clears it, the reconnect bar opens
+// Settings › Accounts, a failing account's line says why, and the first backfill's indexing line
+// holds in search. Then the calendar's own stale and failing lines.
+// Setpoint unreachable at launch shows the mark and the pill, not the sign-in card, and asks again
+// until it answers.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
@@ -90,7 +90,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await page.locator('.settings').waitFor();
     await page.keyboard.press('Escape');
     await page.locator('.settings').waitFor({state: 'detached'});
-    // Retry now tries a fresh stream at once; with no network it stays offline.
+    // Retry now tries a fresh stream at once. With no network it stays offline.
     const tried = page.waitForRequest(request => request.url().includes('/api/events'));
     await pill.locator('.retry').click();
     await tried;
@@ -130,10 +130,10 @@ test('Setpoint unreachable at launch: the mark and the offline pill, not the sig
     assert.equal(await page.locator('.sign-in').count(), 0, 'no sign-in card: nothing says the user was signed out');
     await page.locator('.boot svg.mark').waitFor();
 
-    // No connection at all is the same; it asks again on its own, with no click.
+    // No connection at all is the same. It asks again on its own, with no click.
     me = 'refused';
     await page.waitForRequest(request => request.url().endsWith('/api/me'));
-    // Retry now asks at once; still nothing answers, so the pill stays.
+    // Retry now asks at once. Still nothing answers, so the pill stays.
     const asked = page.waitForRequest(request => request.url().endsWith('/api/me'));
     await pill.locator('.retry').click();
     await asked;
@@ -214,7 +214,7 @@ test('the calendar\'s own sources, Todoist stale and Weather failing, atop the r
     assert.deepEqual(await lines.evaluateAll(all => all.map(line => line.className)), ['rp-health stale', 'rp-health failing']);
     // Each line carries Check now, whole after its words.
     assert.deepEqual(await lines.locator('.check-now').allTextContents(), ['Check now', 'Check now']);
-    // A failing line shows the provider's words in full, wrapping rather than cutting them off; each line's title holds it too.
+    // A failing line shows the provider's words in full, wrapping rather than cutting them off. Each line's title holds it too.
     assert.equal(await lines.nth(1).locator('.num').evaluate(text => text.scrollWidth <= text.clientWidth && text.scrollHeight <= text.clientHeight), true);
     assert.deepEqual(await lines.locator('.num').evaluateAll(all => all.map(text => text.getAttribute('data-tip'))), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
     // The lines stay above the day as another day is picked.

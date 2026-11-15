@@ -83,7 +83,7 @@ describe('triage down and back', () => {
     ['a timeout', 'hang', 'Anthropic didn\'t answer in time.', true],
     ['a refused key', {status: 401, body: {type: 'error', error: {type: 'authentication_error', message: 'invalid x-api-key'}}}, 'Anthropic: invalid x-api-key (401). Check the Anthropic key in Settings › AI.', false],
   ])('%s: Unsorted with the provider\'s words, and re-sorted once triage recovers', async (_, failure, reason, retried) => {
-    // A hang needs a request limit short enough to reach in the test; the other rows keep the world's.
+    // A hang needs a request limit short enough to reach in the test. The other rows keep the world's.
     const {fake, world, deliver} = await setup([], failure === 'hang' ? 1500 : undefined);
     setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
     fake.answer(() => decision());
@@ -101,7 +101,7 @@ describe('triage down and back', () => {
     expect(world.job(second)).toMatchObject(retried ? {state: 'queued', attempts: 1} : {state: 'failed', attempts: 1});
     expect(world.message(first).lane).toBe('fyi');
 
-    // The provider is back. A refused key waits for a new key (or the next resort); a transient
+    // The provider is back. A refused key waits for a new key (or the next resort). A transient
     // failure retries on its own after the policy's backoff.
     fake.answer(() => decision());
     world.advance(5 * 60_000);
@@ -117,7 +117,7 @@ describe('triage down and back', () => {
     const ids = [deliver({subject: 'One'}), deliver({subject: 'Two'}), deliver({subject: 'Three'})];
     await world.drain();
     expect(ids.map(id => world.message(id).lane)).toEqual([null, null, null]);
-    // A new email gets through first; its success brings the others forward.
+    // A new email gets through first. Its success brings the others forward.
     fake.answer(() => decision());
     const fresh = deliver({subject: 'Four'});
     await world.drain();
@@ -206,7 +206,7 @@ describe('a written rule\'s actions', () => {
     [{mark_read: true, trash: 'now'}, {unread: false, trashed: true}, {kind: 'trash', payload: {mark_read: true}}],
     [{mark_read: false, trash: 'now'}, {unread: true, trashed: true}, {kind: 'trash', payload: {mark_read: false}}],
     [{mark_read: true, trash: 'never'}, {unread: false, trashed: false}, {kind: 'mark_read', payload: {unread: false}}],
-    // A delay only stores when it's due; the minute pass sends the trash.
+    // A delay only stores when it's due. The minute pass sends the trash.
     [{mark_read: false, trash: '1d'}, {unread: true, trashed: false}, null],
     [{mark_read: true, trash: '1h'}, {unread: false, trashed: false}, {kind: 'mark_read', payload: {unread: false}}],
   ] as const)('new mail a rule with %j sorts ends %j, by the command %j', async (actions, state, command) => {
@@ -704,7 +704,7 @@ describe('the learning loop', () => {
     expect(listRules(world.store).filter(rule => rule.origin === 'learned')).toMatchObject([
       {match: {organisation: 'Northwind Engineering', type: 'newsletter'}, lane: 'fyi', kind: 'updates', matches_this_month: 0},
     ]);
-    // The cheap model would put the next digest in Attention; the learned rule sends it to FYI.
+    // The cheap model would put the next digest in Attention. The learned rule sends it to FYI.
     fake.answer(() => decision({lane: 'attention', confidence: 0.95}));
     const id = deliver({subject: 'Northwind Engineering Digest · October 7'});
     await world.drain();

@@ -1,8 +1,9 @@
-// `npm run release:check`: the release checks, each run only where it hasn't already
-// passed on what it reads in HEAD (passes.ts): npm test, the image build, each
-// browser spec file, in that order. There's no stress run: a check is deterministic on its own (AGENTS.md › Tests own behaviour). It says what it skipped and why, and ends by saying whether HEAD is ready to release.
-// What's left to run waits for the browser lock (lock.ts) and holds it to the end, so it never runs
-// beside another session's browser run, and a release:check started while another runs on the same
+// `npm run release:check`: the release checks, each run only where it hasn't already passed on what
+// it reads in HEAD (passes.ts). They are npm test, the image build and each browser spec file, in
+// that order. There's no stress run: a check is deterministic on its own (AGENTS.md › Tests own
+// behaviour). It says what it skipped and why, and ends by saying whether HEAD is ready to release.
+// What's left to run waits for the browser lock (lock.ts) and holds it to the end. So it never runs
+// beside another session's browser run. A release:check started while another runs on the same
 // content waits for it and then finds everything passed. With nothing left, it takes no lock and
 // answers at once.
 //
@@ -57,11 +58,11 @@ type State = {passed: string} | {running: string; run: () => number; recorded: (
 
 const npm = (...rest: string[]) => () => spawnSync('npm', rest, {cwd: ROOT, stdio: 'inherit'}).status ?? 1;
 
-// The image, built as OPERATIONS.md's deploy builds it, from `git archive` on stdin. A
-// tarball context skips .dockerignore, so the web stage's typecheck reads web/tests too, and a file
-// they import from outside what it copies fails here rather than at the deploy (as
-// extension/src/words.ts once did). It exports nothing, so no image is left behind; this Mac's own
-// platform, which a build failure of this kind doesn't depend on.
+// The image, built as OPERATIONS.md's deploy builds it, from `git archive` on stdin. A tarball
+// context skips .dockerignore, so the web stage's typecheck reads web/tests too. A file they import
+// from outside what it copies fails here rather than at the deploy (as extension/src/words.ts once
+// did). It exports nothing, so no image is left behind. It builds for this Mac's own platform, which
+// a build failure of this kind doesn't depend on.
 function buildImage(): number {
   const {status} = spawnSync('bash', ['-o', 'pipefail', '-c', 'git archive --format=tar HEAD | docker build --progress=quiet --output type=cacheonly -'], {cwd: ROOT, stdio: 'inherit'});
   if (status === 0) record(tree, 'image');
@@ -98,8 +99,8 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(signal
 for (const step of steps) {
   let now = state(step);
   if (!('passed' in now) && !locked) {
-    // What's left waits for any other browser run, which may be a release:check of the same content;
-    // what it recorded meanwhile is then skipped.
+    // What's left waits for any other browser run, which may be a release:check of the same content.
+    // What that run recorded meanwhile is then skipped.
     const waited = await acquire();
     if (waited > 2000) console.log(`Waited ${clock(waited)} for the test lock.`);
     handDown();

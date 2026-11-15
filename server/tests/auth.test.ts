@@ -70,7 +70,7 @@ describe('the password budget', () => {
   });
 
   // A development run's clock starts again from the seed's moment at every restart (SETPOINT_CLOCK=seed),
-  // or holds there (frozen), so a window measured on it would never end; the budget runs on real time.
+  // or holds there (frozen), so a window measured on it would never end. The budget runs on real time.
   test('on a development clock it refills on real time, though the clock starts again at each restart', async () => {
     const w = world();
     await claim(w);

@@ -1,11 +1,11 @@
-// An item on the grid and in the "+N" popover: an event as a tinted chip
-// in its colour (its own, else its calendar's: "7 AM Gym"), solid when selected, grey when past; a
-// task with its ring or done glyph. A change waiting for its provider shows at .5 with a spinner, and
-// a failed one outlined in `alert` with an error glyph (board 19b). A task's ring takes its Todoist
-// project's colour. While dragged, or while a drop
-// waits on its scope, the item's own place shows a dashed ghost (boards 15 and 15b), as a new draft
-// does (board 13). A click selects it (⌘, Ctrl or ⇧ adds it to the selection) and hands over the
-// chip's box for the floating detail; a press starts a drag (MonthGrid).
+// An item on the grid and in the "+N" popover. An event is a tinted chip in its colour (its own,
+// else its calendar's: "7 AM Gym"), solid when selected, grey when past. A task has its ring or done
+// glyph. A change waiting for its provider shows at .5 with a spinner, and a failed one is outlined
+// in `alert` with an error glyph (board 19b). A task's ring takes its Todoist project's colour.
+// While dragged, or while a drop waits on its scope, the item's own place shows a dashed ghost
+// (boards 15 and 15b), as a new draft does (board 13). A click selects it (⌘, Ctrl or ⇧ adds it to
+// the selection) and hands over the chip's box for the floating detail. A press starts a drag
+// (MonthGrid).
 import type {CalendarOut, ItemOut, TodoistProjectOut} from '@setpoint/shared';
 import {TODOIST_COLOURS} from '@setpoint/shared';
 import type {CSSProperties, MouseEvent, PointerEvent} from 'react';
@@ -71,7 +71,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   const ghost = ghostly(look) ? ` ghost${look === 'faded' ? ' faded' : ''}` : look ? ` ${look}` : '';
   const plain = !ghostly(look);
   if (item.kind === 'task') {
-    // A task with subtasks ends in their count, done of all; its title gives way to it.
+    // A task with subtasks ends in their count, done of all. Its title gives way to it.
     const counted = item.subtasks.length > 0;
     return (
       <div className={`tk${counted ? ' counted' : ''}${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>

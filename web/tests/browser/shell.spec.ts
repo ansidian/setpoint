@@ -1,7 +1,7 @@
 // The shell in the browser: signing in (claiming with a setup token, then the password, or a
-// recovery code), the layout's fixed sizes at the desktop size, no focus
-// rings, the account filter, the page keys, the tab title, the sidebar folding to its rail and its
-// next-up slot, and live updates from a change made elsewhere.
+// recovery code), the layout's fixed sizes at the desktop size, no focus rings, the account filter,
+// the page keys, the tab title, the sidebar folding to its rail and its next-up slot, and live
+// updates from a change made elsewhere.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -29,7 +29,7 @@ test('the sign-in card claims Setpoint with the setup token, then signs in with 
     await page.locator('.sign-in-line.failed', {hasText: 'At least 12 characters'}).waitFor();
     await page.getByLabel('New password').fill('a long enough password');
     await page.getByRole('button', {name: 'Claim Setpoint'}).click();
-    // The recovery codes, once; then the app, at the address it was asked for.
+    // The recovery codes, once. Then the app, at the address it was asked for.
     await page.locator('.recovery').waitFor();
     assert.equal((await page.locator('.recovery').textContent())!.trim().split('\n').length, 8);
     await page.getByRole('button', {name: 'Continue'}).click();
@@ -71,8 +71,8 @@ test('the sign-in card answers: a refusal selects what was typed; Use a passkey 
     const passkey = page.getByRole('button', {name: 'Use a passkey'});
     const signIn = page.getByRole('button', {name: 'Sign in'});
     await passkey.waitFor();
-    // Nothing typed: Use a passkey is the solid button and Sign in the ghost; a character
-    // turns them back.
+    // Nothing typed: Use a passkey is the solid button and Sign in the ghost. A character turns
+    // them back.
     const kinds = async () => [await passkey.getAttribute('class'), await signIn.getAttribute('class')];
     assert.deepEqual(await kinds(), ['btn', 'btn ghost']);
     // Three don't fit the card's row: Use a recovery code goes under the other two, inside the card.
@@ -130,7 +130,7 @@ test('a recovery code signs in when the password is lost: a new password, then n
     await page.getByRole('button', {name: 'Continue'}).click();
     await page.locator('.list .row').first().waitFor();
 
-    // The new password is the password now; Back returns to it from the code.
+    // The new password is the password now. Back returns to it from the code.
     await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
     await page.reload();
     await page.getByRole('button', {name: 'Use a recovery code'}).click();
@@ -224,7 +224,7 @@ test('the Today block names its tasks, tomorrow\'s under their own label, and a 
     assert.deepEqual(await page.locator('.sb .today .sb-label').allTextContents(), ['Today', 'Tomorrow']);
     assert.equal(await page.locator('.sb .today > *').evaluateAll(children => children.findIndex(child => child.textContent === 'Tomorrow')), 4);
 
-    // The card opens over the open email, which stays behind it; where it sits and its motion (which
+    // The card opens over the open email, which stays behind it. Where it sits and its motion (which
     // reduce motion doesn't change, DESIGN.md › Principles) are by eye.
     await lines.filter({hasText: 'Renew car registration'}).click();
     const card = page.locator('.today-card');
@@ -234,7 +234,7 @@ test('the Today block names its tasks, tomorrow\'s under their own label, and a 
     assert.deepEqual(await card.locator('.card-acts button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') ?? button.textContent)),
       ['EditE', 'Open in Calendar', 'Delete']);
     assert.equal(await card.locator('.card-h').getByRole('button', {name: 'Complete'}).count(), 1);
-    // Another line moves the same card; Esc closes it and leaves the email open.
+    // Another line moves the same card. Esc closes it and leaves the email open.
     await lines.filter({hasText: 'Dentist'}).click();
     await card.locator('.fd-title', {hasText: 'Dentist'}).waitFor();
     await page.keyboard.press('Escape');
@@ -248,7 +248,7 @@ test('the Today block names its tasks, tomorrow\'s under their own label, and a 
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await until('Pay rent back', () => lines.allTextContents(), texts => texts.includes('Pay rent'));
 
-    // E on the card edits its item on Calendar; the open email isn't trashed.
+    // E on the card edits its item on Calendar. The open email isn't trashed.
     await lines.filter({hasText: 'Renew car registration'}).click();
     await card.waitFor();
     await page.keyboard.press('e');
@@ -330,7 +330,7 @@ test('a repeating task completed from Today has Undo, which puts it back open on
 test('a timed task shows its time and takes its place by it, among the Today block\'s events and in the day pane\'s tasks', async () => {
   const setpoint = await startSetpoint();
   try {
-    // Pay rent at 8:00 AM, before the seed's 9:12 AM; tomorrow's Renew car registration at 9:30 AM.
+    // Pay rent at 8:00 AM, before the seed's 9:12 AM, and tomorrow's Renew car registration at 9:30 AM.
     const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
     try {
       database.exec('PRAGMA busy_timeout = 5000');
@@ -347,7 +347,7 @@ test('a timed task shows its time and takes its place by it, among the Today blo
     assert.deepEqual(await lines.allTextContents(),
       ['Pay rent8:00 AM', 'Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Renew car registration9:30 AM', 'CS 101 lecture6:00 PM']);
 
-    // The day pane keeps its Events and Tasks apart; its tasks by time, the untimed last.
+    // The day pane keeps its Events and Tasks apart, its tasks by time and the untimed last.
     await page.goto(`${setpoint.base}/calendar/2026-10-07`);
     const tasks = page.locator('.rpane .ag-task');
     await until('the day\'s tasks', () => tasks.allTextContents(), texts => texts.length === 2);
@@ -384,7 +384,7 @@ test('below 1600 px the sidebar starts as the rail with its next-up slot; [, its
     await page.keyboard.press('Escape');
     await until('the card closes', () => card.count(), count => count === 0);
 
-    // [ opens it, kept on reload; its edge folds it, kept too.
+    // [ opens it, kept on reload. Its edge folds it, kept too.
     await page.keyboard.press('`');
     await name.waitFor();
     assert.equal(await page.locator('.sb .next-up').count(), 0);
@@ -402,7 +402,7 @@ test('below 1600 px the sidebar starts as the rail with its next-up slot; [, its
     assert.equal(await command.locator('.kbd').textContent(), '`');
     await page.keyboard.press('Escape');
 
-    // Resting on the rail brings the whole sidebar out over the page, nothing under it moving; off it, it folds back.
+    // Resting on the rail brings the whole sidebar out over the page, nothing under it moving. Off it, it folds back.
     const main = (await rested(() => page.locator('.main').boundingBox()))!;
     await page.mouse.move(sidebar.x + sidebar.width / 2, sidebar.y + sidebar.height - 120);
     await page.locator('.sb.peek').waitFor();
@@ -411,7 +411,7 @@ test('below 1600 px the sidebar starts as the rail with its next-up slot; [, its
     await page.mouse.move(main.x + main.width / 2, main.y + main.height / 2);
     await rail.waitFor();
 
-    // At 1600 it starts open; under 1100 it's always the rail, with no edge, and [ changes nothing kept.
+    // At 1600 it starts open. Under 1100 it's always the rail, with no edge, and [ changes nothing kept.
     await page.evaluate(() => localStorage.removeItem('setpoint.sidebarRail'));
     await page.setViewportSize({width: 1600, height: 900});
     await page.reload();
@@ -447,7 +447,7 @@ test('live updates: an email read elsewhere loses its dot and leaves the counts 
     await page.waitForURL(/\/calendar/);
     await page.keyboard.press('1');
     await until('still in its day, read', () => signInRow.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
-    // Done elsewhere drops Attention's count; the title counts unread.
+    // Done elsewhere drops Attention's count. The title counts unread.
     const google = inbox.groups.flatMap(group => group.rows).find(item => item.subject.startsWith('Your recovery email'))!;
     await setpoint.api('POST', `/mail/messages/${google.id}/done`, {done: true});
     await until('Attention\'s count drops', () => page.locator('.hd .ib-views .n').textContent(), text => text === '2');

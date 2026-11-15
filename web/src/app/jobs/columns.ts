@@ -44,6 +44,6 @@ const subscribe = (listener: () => void) => {
 
 export const useColumnWidths = () => useSyncExternalStore(subscribe, () => widths);
 
-/** The widths as the variables the wide layout's columns read (jobs.css); the narrow one ignores them. */
+/** The widths as the variables the wide layout's columns read (jobs.css). The narrow one ignores them. */
 export const columnVars = (each: ColumnWidths) =>
   ({'--w-co': `${each.company}px`, '--w-ap': `${each.applied}px`, '--w-st': `${each.status}px`}) as CSSProperties;

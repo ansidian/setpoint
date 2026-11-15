@@ -1,24 +1,25 @@
-// Every email's search terms: Claude Haiku 5.5 reads the email once and writes, in the user's
-// everyday words, what it's about, because search only knows an email's own words and the user often
-// searches by meaning. It's apart from triage since rules-sorted mail may never reach a model, and
-// terms are for finding mail, not sorting it. Modelled on the history pass (src/triage/history.ts):
+// Every email's search terms. Claude Haiku 5.5 reads the email once and writes what it's about, in
+// the user's everyday words, because search only knows an email's own words and the user often
+// searches by meaning. It's apart from triage, because rules-sorted mail may never reach a model
+// and terms are for finding mail, not sorting it. Modelled on the history pass
+// (src/triage/history.ts):
 //
-// - Each email is a durable `search_terms` job on the engine (key `search_terms:<id>`), retried by the
-//   one policy. Every few minutes, and as soon as triage sorts an email, the worker queues what's left
-//   from the newest down, so it resumes after a restart and new mail never waits behind old.
-// - It waits until the email is settled, since it reads what triage left: sorted, and for backfilled
-//   mail through the history pass too. Trashed mail is never read, and comes back into the queue if
-//   it leaves the trash.
+// - Each email is a durable `search_terms` job on the engine (key `search_terms:<id>`), retried by
+//   the one policy. Every few minutes, and as soon as triage sorts an email, the worker queues what's
+//   left from the newest down. So it resumes after a restart, and new mail never waits behind old.
+// - It waits until the email is settled, because it reads what triage left. Settled means sorted,
+//   and for backfilled mail also through the history pass. Trashed mail is never read, and comes
+//   back into the queue if it leaves the trash.
 // - `search_terms_version` is written with the terms and the ledger's row, after the call, in one
-//   transaction, and a job for an email already read finishes without a call: each email is charged
-//   for at most once per prompt version. An answer with no usable terms still counts as read (it was
-//   paid for).
-// - New mail is read on its own. Mail from before this job, or read by an older prompt, costs money in
-//   bulk, so it waits until `search-terms --apply` records the go-ahead for this prompt version, and
-//   keeps the terms it has until it's read again.
-// - No Anthropic key: nothing is queued, terms stay empty and search works from the email's own words.
-//   It's always Haiku 5.5, whatever Settings › AI chooses for triage, so a dearer model can't turn
-//   this into a dearer pass. Every call is in the AI usage ledger, purpose `search_terms`.
+//   transaction. A job for an email already read finishes without a call. So each email is charged
+//   for at most once per prompt version. An answer with no usable terms still counts as read (it
+//   was paid for).
+// - New mail is read on its own. Mail from before this job, or read by an older prompt, costs money
+//   in bulk. So it waits until `search-terms --apply` records the go-ahead for this prompt version,
+//   and keeps the terms it has until it's read again.
+// - With no Anthropic key, nothing is queued, terms stay empty and search works from the email's own
+//   words. It's always Haiku 5.5, whatever Settings › AI chooses for triage, so a dearer model can't
+//   turn this into a dearer pass. Every call is in the AI usage ledger, purpose `search_terms`.
 import {and, count, desc, eq, isNotNull, isNull, ne, or} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {AI_ENDPOINTS, anthropicClient} from '../providers/ai/index.ts';
@@ -38,14 +39,14 @@ import {
 export const NO_SEARCH_TERMS_KEY = 'Search terms need an Anthropic key in Settings › AI.';
 export const searchTermsKey = (messageId: number) => `search_terms:${messageId}`;
 
-// The go-ahead is for one prompt version: a later prompt asks again.
+// The go-ahead is for one prompt version. A later prompt asks again.
 const PASS_MARK = `search_terms_pass:v${SEARCH_TERMS_PROMPT_VERSION}`;
 // Jobs queued at a time. A round of the whole mailbox would stand in front of new mail's triage.
 const BATCH = 500;
 
 const passStarted = (store: Store) => store.db.select().from(t.scheduleMarks).where(eq(t.scheduleMarks.name, PASS_MARK)).get() !== undefined;
 
-// Settled and not in the trash: mail that terms are for.
+// Settled and not in the trash: the mail that terms are for.
 const readable = and(isNotNull(t.messages.lane), isNull(t.messages.trashedAt), or(eq(t.messages.backfill, false), isNotNull(t.messages.extractedAt)));
 const isNew = isNull(t.messages.searchTermsVersion);
 const isBehind = and(isNotNull(t.messages.searchTermsVersion), ne(t.messages.searchTermsVersion, SEARCH_TERMS_PROMPT_VERSION));
@@ -62,7 +63,7 @@ export interface SearchTermsProgress {
   // Read by this prompt, of all the mail terms are for.
   done: number;
   total: number;
-  // Waiting for the go-ahead: from before terms, or read by an older prompt.
+  // Waiting for the go-ahead: mail from before terms, or read by an older prompt.
   behind: number;
   started: boolean;
   key: boolean;
@@ -112,7 +113,7 @@ export class SearchTermsWorker implements JobWorker {
     this.timeoutMs = timeoutMs;
   }
 
-  /** Triage sorted an email: queue on the next tick. A missed nudge costs a few minutes, nothing else. */
+  /** Triage sorted an email, so queue on the next tick. A missed nudge costs a few minutes, nothing else. */
   nudge() {
     this.lastCheckAt = Number.NEGATIVE_INFINITY;
   }
@@ -138,7 +139,7 @@ export class SearchTermsWorker implements JobWorker {
   private async read(job: Job, signal: AbortSignal) {
     const store = this.store;
     const message = job.messageId === null ? undefined : store.db.select().from(t.messages).where(eq(t.messages.id, job.messageId)).get();
-    // Gone, trashed since it was queued, or read already: never charged for.
+    // Gone, trashed since it was queued, or read already. Never charged for.
     if (!message || message.trashedAt || message.searchTermsVersion === SEARCH_TERMS_PROMPT_VERSION) return finishJob(store, job.id);
     const apiKey = anthropicKey(store);
     if (!apiKey) return failJob(store, job, new ProviderError('auth', NO_SEARCH_TERMS_KEY));
@@ -149,7 +150,7 @@ export class SearchTermsWorker implements JobWorker {
         signal,
       });
       transaction(store, () => {
-        // The email may have gone during the call; its cost stays in the ledger.
+        // The email may have gone during the call. Its cost stays in the ledger.
         const written = store.db.update(t.messages).set({searchTerms: termsText(termsOf(answer.toolInput)) ?? message.searchTerms, searchTermsVersion: SEARCH_TERMS_PROMPT_VERSION})
           .where(eq(t.messages.id, message.id)).run();
         recordUsage(store, answer, written.changes ? message.id : null, 'search_terms');

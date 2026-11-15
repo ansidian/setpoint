@@ -8,7 +8,7 @@ import type {Toast} from './toast.ts';
 
 const TONE_GLYPHS = {done: 'check', gone: 'delete', failed: 'error', pinned: 'keep'} as const;
 
-// A swipe: past this far, let go, and the toast goes; short of it, it snaps back.
+// A swipe: past this far, let go, and the toast goes. Short of it, it snaps back.
 const SWIPE_PX = 72;
 // A press moves this far before it's a drag, so a click on its button stays a click.
 const DRAG_PX = 4;
@@ -18,7 +18,7 @@ const FADED = 0.35;
 const WHEEL_REST_MS = 160;
 
 /**
- * The one toast, over every page and above Settings; its action runs once, then it goes. Keyed by
+ * The one toast, over every page and above Settings. Its action runs once, then it goes. Keyed by
  * its id, so one replacing another drops in afresh.
  */
 export function ToastPill() {
@@ -30,7 +30,7 @@ export function ToastPill() {
 /**
  * It leads with its tone's glyph, and a line with an action shows its time draining as a hairline.
  * Swiped left or right, by a drag or two fingers on a trackpad, it follows and fades, and goes once
- * past SWIPE_PX; there's no ×, and no hint that it swipes.
+ * past SWIPE_PX. There's no ×, and no hint that it swipes.
  */
 function Pill({toast}: {toast: Toast}) {
   const {action, tone} = toast;
@@ -88,8 +88,8 @@ function Pill({toast}: {toast: Toast}) {
 
   /**
    * A press on the pill, followed on the window, so a flick that leaves the pill in one move still
-   * drags it. It's a drag once it has moved DRAG_PX, so a click on the button stays a click; let go
-   * past SWIPE_PX it goes, short of it (or cancelled) it snaps back.
+   * drags it. It's a drag once it has moved DRAG_PX, so a click on the button stays a click. Let go
+   * past SWIPE_PX, it goes. Short of it (or cancelled), it snaps back.
    */
   const press = (down: ReactPointerEvent) => {
     // The phone's toast doesn't swipe (the phone's layout is frozen).

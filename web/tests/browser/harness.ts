@@ -1,14 +1,13 @@
 // The browser checks' harness (`npm run test:browser`).
-// Each check gets its own Setpoint: a copy of a fresh seed in a scratch data directory, the real
-// server on a free port serving the production build (web/dist) with the seed's clock, claimed in
-// its template so the browser starts signed in. Under run.ts the server is a bundle of the source
-// (bundle.ts), which is a third of the boot. Spec files run side by side (eight at
-// once, run.ts), each check on its own port and data. Chromium comes from playwright-core:
-// the browser Playwright keeps in its cache, else the installed Google Chrome;
-// nothing is downloaded.
-// A check that fails, or that its timeout cancels, runs again with a trace of its pages (run.ts),
-// kept under test-results/browser/traces/, saying where in the run's output, to open with
-// `npx playwright-core show-trace <file>`.
+// Each check gets its own Setpoint. That is a copy of a fresh seed in a scratch data directory, and
+// the real server on a free port serving the production build (web/dist) with the seed's clock. The
+// Setpoint is claimed in its template, so the browser starts signed in. Under run.ts the server is a
+// bundle of the source (bundle.ts), which is a third of the boot. Spec files run side by side (eight
+// at once, run.ts), each check on its own port and data. Chromium comes from playwright-core: the
+// browser Playwright keeps in its cache, else the installed Google Chrome. Nothing is downloaded.
+// A check that fails, or that its timeout cancels, runs again with a trace of its pages (run.ts).
+// The trace is kept under test-results/browser/traces/, and the run's output says where. Open it
+// with `npx playwright-core show-trace <file>`.
 // `rested` takes a one-shot read of a computed style or box once nothing on the check's pages is
 // moving (the lint asks).
 import {spawn, spawnSync} from 'node:child_process';
@@ -28,7 +27,7 @@ import {viewport} from '../../src/tokens.ts';
 
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const WEB_DIST = path.join(ROOT, 'web', 'dist');
-/** Where a failed check's traces go (run.ts empties it at the start of a run; git ignores it). */
+/** Where a failed check's traces go (run.ts empties it at the start of a run, and git ignores it). */
 export const TRACES = path.join(ROOT, 'test-results', 'browser', 'traces');
 
 /** The sizes every check runs at: the design target and an iPhone. */
@@ -74,10 +73,10 @@ export async function closeBrowser() {
 }
 
 // Each check with the contexts and pages it opened, for its traces and for `rested`. A spec file's
-// checks run side by side, so the check a page belongs to is the one whose body is running,
-// kept in async context rather than in one variable. SETPOINT_BROWSER_TRACE=1 has each context record
-// a trace, a failed or timed-out check's being kept. Traces were a third of a run's CPU, so none is
-// the default, with what failed run again with one (run.ts).
+// checks run side by side, so the check a page belongs to is the one whose body is running. It is
+// kept in async context rather than in one variable. SETPOINT_BROWSER_TRACE=1 has each context
+// record a trace, and a failed or timed-out check's trace is kept. Traces were a third of a run's
+// CPU, so the default is none, and what failed runs again with one (run.ts).
 const TRACE = (process.env.SETPOINT_BROWSER_TRACE ?? '0') !== '0';
 // Where a failed check is noted, for run.ts.
 const FAILED = process.env.SETPOINT_BROWSER_FAILED;
@@ -96,7 +95,7 @@ const checks = new AsyncLocalStorage<Check>();
 async function asCheck(t: TestContext, body: (t: TestContext) => unknown): Promise<void> {
   const check: Check = {name: t.fullName, title: t.name, file: t.filePath, contexts: new Set(), pages: new Set(), finished: false, kept: null};
   const close = () => Promise.all([...check.contexts].map(context => context.close().catch(() => {})));
-  // node --test cancels a check at its timeout by aborting its signal; it aborts the signal after
+  // node --test cancels a check at its timeout by aborting its signal. It aborts the signal after
   // every check too, so a finished one is left alone. Closing the contexts ends what the body still
   // waits on.
   t.signal.addEventListener('abort', () => {
@@ -114,16 +113,16 @@ async function asCheck(t: TestContext, body: (t: TestContext) => unknown): Promi
   }
 }
 
-// How many of a spec file's checks run at once: run.ts sets it from how many files it runs, so a run
+// How many of a spec file's checks run at once. run.ts sets it from how many files it runs, so a run
 // of one file uses every slot and a whole run stays at about eight checks at a time.
 const WIDTH = Math.max(1, Number(process.env.SETPOINT_FILE_CONCURRENCY ?? 1));
 const queued: (() => void)[] = [];
 let replaying = false;
 
 /**
- * Holds a file's top-level checks and suites until it has loaded, then registers them in one suite of
- * WIDTH, named for the spec file: the reporters see harness.ts as every check's file, so the slowest
- * list (slowest.ts) takes each check's from the suite that ends after it.
+ * Holds a file's top-level checks and suites until it has loaded. Then it registers them in one suite
+ * of WIDTH, named for the spec file. The reporters see harness.ts as every check's file, so the
+ * slowest list (slowest.ts) takes each check's file from the suite that ends after it.
  */
 function register(entry: () => void) {
   if (replaying) {
@@ -183,9 +182,9 @@ function keepTraces(check: Check): Promise<string[]> {
 
 /**
  * Reads once nothing on the check's pages is moving (`still`), for a one-shot read of a computed
- * style or box: an element mid-entrance, mid-fade or mid-slide measures as it passes, not where it
- * rests (the lint asks). A read that polls until a value holds (`until`) needs no rest; one
- * meant to catch motion says so on the line before it.
+ * style or box. An element mid-entrance, mid-fade or mid-slide measures as it passes, not where it
+ * rests (the lint asks). A read that polls until a value holds (`until`) needs no rest. A read meant
+ * to catch motion says so on the line before it.
  */
 export async function rested<T>(read: () => Promise<T>): Promise<T> {
   for (const page of checks.getStore()?.pages ?? []) if (!page.isClosed()) await still(page);
@@ -193,8 +192,8 @@ export async function rested<T>(read: () => Promise<T>): Promise<T> {
 }
 
 // Every Setpoint a check started and hasn't stopped. A check that fails or times out (node --test
-// --test-timeout cancels it) may never reach its own `stop()`; each spec's `after(cleanUp)` stops
-// what's left, and if the process exits anyway its servers are killed with it.
+// --test-timeout cancels it) may never reach its own `stop()`. Each spec's `after(cleanUp)` stops
+// what's left, and if the process exits anyway, its servers are killed with it.
 const running = new Map<ChildProcess, () => Promise<void>>();
 process.on('exit', () => {
   for (const server of running.keys()) server.kill('SIGKILL');
@@ -240,7 +239,7 @@ export interface Setpoint {
   stop: () => Promise<void>;
 }
 
-// The bundles of this run, from run.ts (bundle.ts); anything else runs the source.
+// The bundles of this run, from run.ts (bundle.ts). Anything else runs the source.
 const BUNDLE = process.env.SETPOINT_BROWSER_BUNDLE;
 const SERVER = BUNDLE ? path.join(BUNDLE, 'server.mjs') : 'server/src/server.ts';
 const TEMPLATE = BUNDLE ? path.join(BUNDLE, 'template.mjs') : 'server/src/dev/template.ts';
@@ -251,10 +250,10 @@ function run(args: string[], env: NodeJS.ProcessEnv): string {
   return result.stdout;
 }
 
-// Seeded data directories to copy, one per set of fixtures, each with its setup token issued: the
+// Seeded data directories to copy, one per set of fixtures, each with its setup token issued. The
 // seed, the fixtures and the token are the same every time, so they run once per set rather than
 // once per check. The run's global setup (globalSetup.ts) shares one directory of them across spec
-// files; a spec run on its own keeps its own, removed when it exits.
+// files. A spec run on its own keeps its own, removed when it exits.
 let templateRoot = process.env.SETPOINT_BROWSER_TEMPLATES ?? null;
 const templates = new Map<string, Template>();
 
@@ -278,13 +277,13 @@ function template(fixtures: string[], claim: boolean, env: NodeJS.ProcessEnv): T
     // Built aside and renamed into place, so spec files building the same set at once don't collide.
     const building = fs.mkdtempSync(`${dir}.building-`);
     const buildEnv = {...env, SETPOINT_DATA_DIR: path.join(building, 'data')};
-    // The sample's News, never the checkout's snapshot of real news: the checks are the sample's.
-    // Claimed here, so a check has its signed-in session without a claim of its own.
+    // The sample's News, never the checkout's snapshot of real news, because the checks are the
+    // sample's. Claimed here, so a check has its signed-in session without a claim of its own.
     fs.writeFileSync(path.join(building, 'template.json'), run([TEMPLATE, ...(claim ? ['--claim', PASSWORD] : []), ...fixtures], buildEnv));
     try {
       fs.renameSync(building, dir);
     } catch {
-      // Another spec file got there first; its copy is the same.
+      // Another spec file got there first. Its copy is the same.
       fs.rmSync(building, {recursive: true, force: true});
     }
   }
@@ -298,7 +297,7 @@ export interface StartOptions {
   claim?: boolean;
   // Board fixtures layered on the seed (server/src/dev/fixtures/).
   fixtures?: string[];
-  // `seed` runs on from the seed's moment; `frozen` holds there.
+  // `seed` runs on from the seed's moment, and `frozen` holds there.
   clock?: 'seed' | 'frozen';
   // More of the server's environment (SETPOINT_DEV_AI_URL for a fake model).
   env?: Record<string, string>;
@@ -321,7 +320,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
   const {setupToken} = seeded;
 
   // Ready when it says it's listening on its port. Spec files run side by side, so another's server
-  // can take the port between freePort and the listen; that start is retried on a new one. The
+  // can take the port between freePort and the listen. Then the start is retried on a new port. The
   // limit is a backstop for a server that hangs, not a measure: a start took up to 30 s on two busy
   // cores with the browser slowed 4× (the timing report, 2026-10-11), against 2–3 s alone.
   let port = 0;
@@ -381,7 +380,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
   const pageErrors: string[] = [];
   const stop = async () => {
     running.delete(server);
-    // Its pages close before the server goes, so nothing asks a port that's gone; within a check the
+    // Its pages close before the server goes, so nothing asks a port that's gone. Within a check the
     // contexts stay open, with their traces, for its end (asCheck), which keeps a failed check's and
     // closes them. Outside one (cleanUp) they close here.
     if (checks.getStore()) await Promise.all(contexts.flatMap(context => context.pages()).map(page => page.close().catch(() => {})));
@@ -467,12 +466,12 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
 }
 
 /**
- * Resolves once a page that just loaded is ready to read: no /api request in flight (the live
- * stream aside) across two drawn frames, so what the first answers asked for has come too, and
- * every web font loaded, so text has its real widths. The fonts are loaded rather than
- * awaited: `document.fonts.ready` is already settled before the first text asks for them. A font
- * that fails to load still fails the check, its error carrying `trail` and each face's state, so it
- * names its cause, not only that some font request failed.
+ * Resolves once a page that just loaded is ready to read. No /api request is in flight (the live
+ * stream aside) across two drawn frames, so what the first answers asked for has come too. Every web
+ * font is loaded, so text has its real widths. The fonts are loaded rather than awaited, because
+ * `document.fonts.ready` is already settled before the first text asks for them. A font that fails
+ * to load still fails the check. Its error carries `trail` and each face's state, so it names its
+ * cause, not only that some font request failed.
  */
 async function ready(page: Page, loading: Set<Request>, trail: () => string[]) {
   await answered(page, loading, 'the page\'s first data');
@@ -493,9 +492,10 @@ async function answered(page: Page, loading: Set<Request>, what = 'the page\'s r
 }
 
 /**
- * Two frames drawn. Under a clock the check has installed (page.clock) requestAnimationFrame fires
- * only as the clock runs, which a paused one doesn't, so there it's two turns of the page's own task
- * queue instead, which React's renders are scheduled on (a MessageChannel, which the clock leaves alone).
+ * Two frames drawn. Under a clock the check has installed (page.clock), requestAnimationFrame fires
+ * only as the clock runs, and a paused one doesn't run. So there it's two turns of the page's own
+ * task queue instead, which React's renders are scheduled on (a MessageChannel, which the clock
+ * leaves alone).
  */
 async function drawnTwice(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -510,8 +510,8 @@ async function drawnTwice(page: Page): Promise<void> {
 }
 
 /**
- * A response the check waited for (`waitForResponse`, `page.on('response')`) read whole and drawn:
- * those resolve on its headers, before the app has its body, so a read straight after can find the
+ * A response the check waited for (`waitForResponse`, `page.on('response')`), read whole and drawn.
+ * Those resolve on its headers, before the app has its body, so a read straight after can find the
  * page as it was.
  */
 export async function drawn(page: Page, response: Response): Promise<void> {
@@ -520,11 +520,11 @@ export async function drawn(page: Page, response: Response): Promise<void> {
 }
 
 /**
- * Stops the page's clock, installed by the check (page.clock.install), at about now, so what it
- * reads by the minute ("in 10m", the now-line's time) or a window such as the toast's Undo doesn't
- * run on with real time on a busy machine. The check then moves it on itself (`runFor`,
- * `fastForward`). pauseAt stops the clock and then runs it on to the time given; a time real time
- * has already passed is refused, and is asked again from the stopped clock's own now.
+ * Stops the page's clock, installed by the check (page.clock.install), at about now. So what it reads
+ * by the minute ("in 10m", the now-line's time) or a window such as the toast's Undo doesn't run on
+ * with real time on a busy machine. The check then moves it on itself (`runFor`, `fastForward`).
+ * pauseAt stops the clock and then runs it on to the time given. If real time has already passed
+ * that time, it is refused, and asked again from the stopped clock's own now.
  */
 export async function pauseClock(page: Page): Promise<void> {
   for (let tries = 0; ; tries++) {
@@ -538,10 +538,10 @@ export async function pauseClock(page: Page): Promise<void> {
 }
 
 /**
- * Holds the toast showing so its time (and its Undo) waits while the check reads the server before
- * pressing Undo: its 6 s run on real time otherwise, which a busy machine can use up. The
- * toast no longer waits under the pointer, so this sets the app's test-only hold, which the
- * toast's going clears. Answers the toast.
+ * Holds the toast showing, so its time (and its Undo) waits while the check reads the server before
+ * pressing Undo. Otherwise its 6 s run on real time, which a busy machine can use up. The toast no
+ * longer waits under the pointer, so this sets the app's test-only hold, which the toast's going
+ * clears. Answers the toast.
  */
 export async function holdToast(page: Page): Promise<Locator> {
   const toast = page.locator('.toast:not(.leaving)');
@@ -550,7 +550,7 @@ export async function holdToast(page: Page): Promise<Locator> {
   return toast;
 }
 
-/** Waits until `check` holds, polling; throws with what it last saw. */
+/** Waits until `check` holds, polling. Throws with what it last saw. */
 export async function until<T>(what: string, read: () => Promise<T>, check: (value: T) => boolean, timeoutMs = 5000): Promise<T> {
   const ends = Date.now() + timeoutMs;
   let value = await read();
@@ -563,7 +563,7 @@ export async function until<T>(what: string, read: () => Promise<T>, check: (val
 }
 
 /**
- * Points at a mail row (or group header) as the user would before a key that acts on the cursor: the
+ * Points at a mail row (or group header) as the user would before a key that acts on the cursor. The
  * hover moves the cursor in a later render than the key's, so this waits until the row is it.
  */
 export async function point(row: Locator): Promise<void> {
@@ -572,11 +572,11 @@ export async function point(row: Locator): Promise<void> {
 }
 
 /**
- * Resolves once nothing on the page is moving: every entrance, exit, fold and fade (a finite
- * animation or transition under 2 s; the toast's Undo clock and spinners aside) has run its course,
- * and the page has drawn twice since, so what `rested` reads is where it rests
- * (an overlay mid-entrance is scaled and offset, and drawn on a layer of its own). Not for a check to
- * call: a check doesn't wait out a motion it started.
+ * Resolves once nothing on the page is moving. Every entrance, exit, fold and fade (a finite
+ * animation or transition under 2 s, the toast's Undo clock and spinners aside) has run its course,
+ * and the page has drawn twice since. So what `rested` reads is where it rests (an overlay
+ * mid-entrance is scaled and offset, and drawn on a layer of its own). Not for a check to call: a
+ * check doesn't wait out a motion it started.
  */
 async function still(page: Page): Promise<void> {
   await until('nothing moving', () => page.evaluate(() => document.getAnimations()
@@ -586,8 +586,8 @@ async function still(page: Page): Promise<void> {
 }
 
 /**
- * Opens every unread Security email through the API: Mark all as read leaves Security, so a
- * check that wants an empty Inbox reads those first.
+ * Opens every unread Security email through the API. Mark all as read leaves Security, so a check
+ * that wants an empty Inbox reads those first.
  */
 export async function readSecurity(setpoint: Setpoint): Promise<void> {
   const inbox = await setpoint.api<{groups: {group: string; rows: {id: number; unread: boolean}[]}[]}>('GET', '/mail/inbox');

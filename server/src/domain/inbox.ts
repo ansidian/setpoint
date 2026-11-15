@@ -1,9 +1,9 @@
-// The Inbox is a view of state:
-// Attention until Done, read or not; FYI and Noise until read, from any day; Unsorted while triage
-// hasn't sorted it; Pinned until unpinned, whatever its lane or read state. Trashed mail is out of
-// every view, Done mail out of the Inbox, and a code's row leaves at its expiry. Mail archived at
-// its provider (Gmail's Archive, moved out of iCloud's INBOX) leaves the Inbox too: it was handled
-// there, and providers are the truth (All and search still show it).
+// The Inbox is a view of state. Attention mail stays until Done, read or not. FYI and Noise stay
+// until read, from any day. Unsorted mail stays while triage hasn't sorted it. Pinned mail stays
+// until unpinned, whatever its lane or read state. Trashed mail is out of every view, Done mail is
+// out of the Inbox, and a code's row leaves at its expiry. Mail archived at its provider (Gmail's
+// Archive, moved out of iCloud's INBOX) also leaves the Inbox, because it was handled there and
+// providers are the truth (All and search still show it).
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroup, Kind, Lane} from '@setpoint/shared';
 
@@ -22,7 +22,7 @@ export interface InboxCandidate {
   codeExpiresAt: string | null;
   // Left the provider's inbox without Setpoint.
   archivedAt?: string | null;
-  // A change to it failed: it stays where it was, failed in place, until Try again or Move back
+  // A change to it failed. It stays where it was, failed in place, until Try again or Move back
   // (a failed Trash or Mark read must not look like it worked).
   held?: boolean;
 }
@@ -50,7 +50,7 @@ export interface Group<T> {
 
 /**
  * The groups in INBOX_GROUPS's order, empty ones left out. A pinned email is on the shelf and also in
- * its group, so the shelf never hides it from where it belongs. Every group starts expanded;
+ * its group, so the shelf never hides it from where it belongs. Every group starts expanded, and
  * the list keeps what the user collapses.
  */
 export function inboxGroups<T extends InboxCandidate>(messages: T[], now: string): Group<T>[] {
@@ -79,9 +79,9 @@ export interface Counts {
 }
 
 /**
- * The counts the Inbox shows: attention not Done, read or not (the pill); every unread
- * email in the Inbox, Noise included; unread FYI; and unread per account. Opening drops the unread
- * counts; only Done drops the pill.
+ * The counts the Inbox shows: attention not Done, read or not (the pill), every unread email in the
+ * Inbox (Noise included), unread FYI, and unread per account. Opening drops the unread counts. Only
+ * Done drops the pill.
  */
 export function inboxCounts(messages: InboxCandidate[], now: string): Counts {
   const counts: Counts = {attention: 0, unread: 0, unreadFyi: 0, byAccount: new Map()};
@@ -107,9 +107,9 @@ export function nextInboxChange(messages: InboxCandidate[], now: string): string
 
 /**
  * Mark all as read's emails: every unread email outside Attention and Security, Noise included.
- * Attention mail not yet Done keeps its read state, and so does Security, so
- * a live code or a sign-in alert isn't swept away with the newsletters; trashed and archived
- * mail, which the Inbox doesn't show, isn't touched.
+ * Attention mail not yet Done keeps its read state, and so does Security, so a live code or a
+ * sign-in alert isn't swept away with the newsletters. Trashed and archived mail, which the Inbox
+ * doesn't show, isn't touched.
  */
 export function markAllReadTargets<T extends InboxCandidate>(messages: T[]): T[] {
   return messages.filter(message => message.unread && !message.trashedAt && !message.archivedAt
@@ -133,10 +133,11 @@ export interface MailDay {
 const OVERDUE_MS = 24 * 60 * 60 * 1000;
 
 /**
- * How the mail day is going since `dayStart` (the user's midnight): Done today; what
- * needs the user (Attention not Done, the attention pill's number) and how much of it has waited
- * over 24 hours since arriving; and what triage sorted today out of Attention, to FYI and to Noise.
- * The pass over backfilled history isn't today's sorting, and trashed mail counts nowhere.
+ * How the mail day is going since `dayStart` (the user's midnight). It counts Done today. It counts
+ * what needs the user (Attention not Done, the attention pill's number), and how much of that has
+ * waited over 24 hours since arriving. It counts what triage sorted today out of Attention, to FYI
+ * and to Noise. The pass over backfilled history isn't today's sorting, and trashed mail counts
+ * nowhere.
  */
 export function mailDay(messages: DayCandidate[], now: string, dayStart: string): MailDay {
   const day: MailDay = {done: 0, needYou: 0, overdue: 0, sortedFyi: 0, sortedNoise: 0};

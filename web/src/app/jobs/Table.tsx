@@ -1,11 +1,11 @@
-// The table (boards 32, 34a, 36a, 36b): a header row whose labels
-// sort it (newest first by Applied, by default; a second click flips it), and a 36 px row per
-// application, 54 when its status's note wraps: company, role, Applied, the status with its
-// mark and step, and how its JD was found as a glyph, named in its tip. They're the columns beside the
-// detail, which is always there. Closed and Ghosted rows step down a shade. Search's rows
-// highlight what matched, and a match only in a JD's text adds the line it matched under its row. A row a correction takes away
-// (Merge with…'s other, Not an application, Delete) folds out over 180 ms, and folds back on Undo; a
-// right-click opens its actions at the pointer.
+// The table (boards 32, 34a, 36a, 36b). A header row's labels sort it (newest first by Applied, by
+// default, and a second click flips it). Each application has a 36 px row, 54 when its status's note
+// wraps: company, role, Applied, the status with its mark and step, and how its JD was found as a
+// glyph, named in its tip. They're the columns beside the detail, which is always there. Closed and
+// Ghosted rows step down a shade. Search's rows highlight what matched, and a match only in a JD's
+// text adds the line it matched under its row. A row a correction takes away (Merge with…'s other,
+// Not an application, Delete) folds out over 180 ms, and folds back on Undo. A right-click opens its
+// actions at the pointer.
 import type {ApplicationRowOut} from '@setpoint/shared';
 import type {KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent} from 'react';
 import {useMemo, useRef, useState} from 'react';
@@ -23,9 +23,9 @@ import type {Sort, SortKey} from './words.ts';
 export const rowKey = (id: number) => `r:${id}`;
 
 /**
- * The applications a correction is taking away just now, so their rows fold out rather than vanish;
- * set by the page as it sends one, and cleared if it's refused. Rows leaving for any other reason (a
- * filter, a search) simply go.
+ * The applications a correction is taking away just now, so their rows fold out rather than vanish.
+ * The page sets them as it sends one, and clears them if it's refused. Rows leaving for any other
+ * reason (a filter, a search) simply go.
  */
 export const takenAway = new Set<number>();
 
@@ -64,7 +64,7 @@ const CELL: Record<SizedColumn, string> = {company: '.co', applied: '.ap', statu
 const NAME: Record<SizedColumn, string> = {company: 'Company', applied: 'Applied', status: 'Status'};
 const TRACK: Record<SizedColumn, number> = {company: 1, applied: 3, status: 4};
 const ROLE_TRACK = 2;
-// A heading's arrow (14 px after a 3 px gap) when it isn't the sorted one; and the 6 px of its button
+// A heading's arrow (14 px after a 3 px gap) when it isn't the sorted one, and the 6 px of its button
 // that sit out in the gap before its column.
 const ARROW = 17;
 const BLEED = 6;
@@ -73,8 +73,8 @@ const BLEED = 6;
 const tracks = (header: Element) => getComputedStyle(header).gridTemplateColumns.split(' ').map(parseFloat);
 
 /**
- * The widest cell of `column` among the rows the table has, and its heading sorted; Status measured on
- * one line, as it would be with room (the note wraps only for want of it).
+ * The widest cell of `column` among the rows the table has, and its heading sorted. Status is
+ * measured on one line, as it would be with room (the note wraps only for want of it).
  */
 function measure(header: HTMLElement, column: SizedColumn): {cells: number[]; heading: number} {
   const table = header.closest('.jb-tbl') ?? header.parentElement!;
@@ -153,7 +153,7 @@ export interface RowState {
 export function Row({row, state, query, line, now, timeZone, today, fold = null, onPoint, onClick, onMenu, onUnpin}: {
   row: ApplicationRowOut;
   state: RowState;
-  // Search's query, to highlight what it matched; and the JD line a match only there quotes.
+  // Search's query, to highlight what it matched. And the JD line a match only there quotes.
   query: string | null;
   line?: string;
   now: number;
@@ -215,9 +215,9 @@ const shelfKey = (id: number) => `p:${id}`;
 /**
  * The table's rows under the Pinned shelf, as one list that folds as the Inbox's
  * does: under the headings "Pinned" with its pin, the pinned rows as the table's own (its columns and
- * widths), a divider, then the rest; nothing of the shelf with nothing pinned. A shelf row has its own
- * key, so Pin folds the row out of the table and onto the shelf, where it lands holding `sub3`
- * (foldInLanding); Unpin and Undo fold it back. The label and the divider fold with the shelf.
+ * widths), a divider, then the rest. With nothing pinned, nothing of the shelf shows. A shelf row has
+ * its own key, so Pin folds the row out of the table and onto the shelf, where it lands holding
+ * `sub3` (foldInLanding). Unpin and Undo fold it back. The label and the divider fold with the shelf.
  */
 export function TableRows({shelf, rows, rowState, onUnpin, ...rest}: {
   shelf: ApplicationRowOut[];
@@ -263,7 +263,7 @@ export function TableRows({shelf, rows, rowState, onUnpin, ...rest}: {
   );
 }
 
-/** Rows in order, each with its state; `lines` holds a JD match's quoted line. */
+/** Rows in order, each with its state. `lines` holds a JD match's quoted line. */
 export function Rows({rows, lines, rowState, ...rest}: {
   rows: ApplicationRowOut[];
   lines?: Map<number, string>;

@@ -1,7 +1,7 @@
-// Placement as tables: right of an item in the
-// grid's left half, left of one in its right half, 8 px off it, inside the month grid, whatever is
-// around it. The month is October 2026 on the seed as boards 12a and 12b draw it; the boards' own
-// counts ("right 5, left 3, above 4 and it doesn't fit, below 6") still check each side's candidate.
+// Placement as tables: right of an item in the grid's left half, left of one in its right half,
+// 8 px off it, inside the month grid, whatever is around it. The month is October 2026 on the seed,
+// as boards 12a and 12b draw it. The boards' own counts ("right 5, left 3, above 4 and it doesn't
+// fit, below 6") still check each side's candidate.
 import {describe, expect, test} from 'vitest';
 import type {Rect} from '../src/logic/calendar.ts';
 import {besidePopover, besideRow, candidates, clampInto, placeBeside} from '../src/logic/placement.ts';

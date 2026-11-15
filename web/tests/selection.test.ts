@@ -1,5 +1,5 @@
-// Selecting several emails as tables: ⌘-click in and out, the first taking the open
-// email; ⇧-click's range from the anchor; the selection in list order; and what its tools offer.
+// Selecting several emails as tables: ⌘-click in and out, the first taking the open email,
+// ⇧-click's range from the anchor, the selection in list order, and what its tools offer.
 import type {MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Stop} from '../src/logic/inbox.ts';

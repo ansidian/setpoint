@@ -1,9 +1,9 @@
-// Where new mail meets triage: every new email is triaged once. The mail mirror
-// hands over the emails it inserted: new mail gets a durable triage job on the engine (retried by the
-// one policy while models are down, Unsorted meanwhile); backfilled history is sorted at once by the
-// rules-only pass, so a year of history never waits in Unsorted or costs a model call. Unsorted
-// mail is queued again every few minutes and whenever triage recovers or its keys change, so it's
-// re-sorted once triage is back.
+// Where new mail meets triage: every new email is triaged once. The mail mirror hands over the
+// emails it inserted. New mail gets a durable triage job on the engine (retried by the one policy
+// while models are down, Unsorted meanwhile). The rules-only pass sorts backfilled history at once,
+// so a year of history never waits in Unsorted or costs a model call. Unsorted mail is queued again
+// every few minutes and whenever triage recovers or its keys change, so it's re-sorted once triage
+// is back.
 import {and, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {ruleActions} from '../commands/mail.ts';
@@ -33,7 +33,7 @@ export function triageEmailOf(store: Store, message: MessageRow): TriageEmail {
  * job for it, or a late answer, changes nothing). Returns whether it was written. The deciding
  * written rule's actions go with it, in the same transaction, on new mail that arrived since the
  * rule was saved and isn't protected. New mail sorted with a code row, while
- * the code is still live, is due for the trash at its expiry; a rule's earlier delay wins.
+ * the code is still live, is due for the trash at its expiry. A rule's earlier delay wins.
  * If the email already has a change of its own waiting, the actions can't queue: the whole decision
  * is refused and the job retries.
  */
@@ -47,7 +47,7 @@ export function applyOutcome(store: Store, messageId: number, outcome: Outcome):
       triageSource: outcome.source, triageRuleId: outcome.ruleId, triagedAt: isoNow(store),
     }).where(and(eq(t.messages.id, messageId), isNull(t.messages.lane))).returning().get();
     if (!updated) return false;
-    // A protected email never has a code row; history and a code that expired before triage sorted
+    // A protected email never has a code row. History and a code that expired before triage sorted
     // it (its row was never in the Inbox to be seen) are left as they were.
     if (updated.codeExpiresAt !== null && !updated.backfill && updated.codeExpiresAt > isoNow(store)) {
       store.db.update(t.messages).set({codeTrash: true, trashDueAt: updated.codeExpiresAt}).where(eq(t.messages.id, messageId)).run();

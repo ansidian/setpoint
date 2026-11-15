@@ -30,7 +30,7 @@ export interface Fault {
   path: RegExp;
   // An answer, or 'hang' to never answer (a timeout).
   response: FakeResponse | 'hang';
-  // How many requests it answers; Infinity until cleared.
+  // How many requests it answers. Infinity until cleared.
   times: number;
 }
 

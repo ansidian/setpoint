@@ -1,21 +1,20 @@
-// Triage's policy: pure rules
-// that turn what the rules and models said into the record's lane, kind, organisation, type, key
-// date, summary, security facts, protection and code.
+// Triage's policy: pure rules that turn what the rules and models said into the record's lane,
+// kind, organisation, type, key date, summary, security facts, protection and code.
 //
-// - Unsure defaults to FYI, never Attention: a model below the confidence floor, or a
+// - Unsure defaults to FYI, never Attention. A model below the confidence floor, or a
 //   reading that didn't parse, decides nothing.
-// - The protected class always goes to Attention and nothing moves it: settle()
+// - The protected class always goes to Attention and nothing moves it. settle()
 //   applies it after every rule and model, and it can't be configured.
-// - Backfilled history never enters Attention, protected or not: only mail that
+// - Backfilled history never enters Attention, protected or not. Only mail that
 //   arrives after an account's first sync can be Attention. Protected history keeps `protected` and
 //   sits in FYI, where no rule can move it either.
-// - A verification code is never Attention: it sits in Security with its code until it expires.
+// - A verification code is never Attention. It sits in Security with its code until it expires.
 //   Protected mail is never a code row, because a code row leaves the Inbox at its expiry.
-// - Noise has no kind; FYI and Attention always have one.
+// - Noise has no kind. FYI and Attention always have one.
 import type {Kind, Lane, MessageType, ProtectedReason, SecurityFacts} from '@setpoint/shared';
 import type {DetectedCode} from './verificationCode.ts';
 
-/** The floor: a cheap answer less sure than this goes to the strong model; a strong one is unsure. */
+/** The floor. A cheap answer less sure than this goes to the strong model, and a strong one is unsure. */
 export const CONFIDENCE_FLOOR = 0.72;
 
 /** What a model (or the rules-only history pass) read in an email, normalised. */
@@ -37,9 +36,10 @@ export const isSure = (reading: Reading | null): reading is Reading =>
   reading !== null && reading.confidence !== null && reading.confidence >= CONFIDENCE_FLOOR;
 
 /**
- * Why the cheap model's reading goes to the strong model, or null to accept it: it didn't parse,
- * it's unsure, it says Attention (the lane that costs the user, so it's checked; escalating only risk
- * categories lets precision fall), or it claims the protected class.
+ * Why the cheap model's reading goes to the strong model, or null to accept it. It goes when it
+ * didn't parse, when it's unsure, when it says Attention, or when it claims the protected class.
+ * Attention is the lane that costs the user, so it's checked (escalating only risk categories lets
+ * precision fall).
  */
 export function escalation(cheap: Reading | null): 'malformed' | 'unsure' | 'attention' | 'protected' | null {
   if (!cheap) return 'malformed';
@@ -53,8 +53,8 @@ export function escalation(cheap: Reading | null): 'malformed' | 'unsure' | 'att
 
 /**
  * The protected class in plain words, read from the subject and body. Past tense on purpose: "your
- * password was changed" is protected, "reset your password" (asked for) is not. The model can claim
- * the rest (an unfamiliar device or place, money the user didn't send); these need no model.
+ * password was changed" is protected, and "reset your password" (asked for) is not. The model can
+ * claim the rest (an unfamiliar device or place, money the user didn't send). These need no model.
  */
 const PROTECTED_PATTERNS: [ProtectedReason, RegExp][] = [
   ['password_changed', /\bpassword (?:was|has been|had been) (?:changed|reset|updated)\b|\bpassword (?:changed|updated)\b|\bwe(?:'ve| have)? (?:changed|reset|updated) your password\b/i],
@@ -63,9 +63,9 @@ const PROTECTED_PATTERNS: [ProtectedReason, RegExp][] = [
   ['account_deleted', /\baccount (?:was |has been |is |will be )?(?:deleted|closed|scheduled for deletion)\b|\bdelet(?:ed|ion of) your account\b/i],
   ['account_locked', /\baccount (?:was |has been |is |is temporarily |has been temporarily )?(?:locked|suspended|disabled|deactivated|restricted|frozen)\b/i],
   ['critical_alert', /\bcritical (?:security )?alert\b/i],
-  // "Activity" only on the user's account or as something the sender found: bare "suspicious
-  // activity" is footer and advice copy ("report suspected suspicious activity", "protection
-  // against suspicious activity"), on statements, scam tips and job confirmations alike.
+  // "Activity" counts only on the user's account or as something the sender found. Bare
+  // "suspicious activity" is footer and advice copy ("report suspected suspicious activity",
+  // "protection against suspicious activity"), on statements, scam tips and job confirmations alike.
   ['unfamiliar_sign_in', /\b(?:suspicious|unrecogni[sz]ed|unusual|unfamiliar) (?:sign-?in|log-?in|login|sign-?in attempt|device|location)\b|\b(?:suspicious|unusual|unrecogni[sz]ed) activity (?:on|in|with|from) (?:your|the) account\b|\bwe(?:'ve| have)? (?:detected|noticed|spotted|seen) (?:some )?(?:suspicious|unusual) activity\b|\bsomeone (?:may )?(?:has |have )?(?:tried to )?(?:sign(?:ed)? in|log(?:ged)? in) to your account\b/i],
   ['money_leaving', /\bunauthori[sz]ed (?:charge|transaction|payment|transfer|withdrawal)\b|\b(?:withdrawal|transfer|wire) of [$€£][\d,.]+ (?:was |has been )?(?:made |sent |initiated )?(?:from|out of) your\b/i],
 ];
@@ -79,20 +79,20 @@ export function protectedFromText(subject: string, body: string): ProtectedReaso
 // ---- Settling a decision ----
 
 export interface SettleInput {
-  // The lane a rule or a sure model decided; null when nothing was sure (FYI).
+  // The lane a rule or a sure model decided. Null when nothing was sure (FYI).
   lane: Lane | null;
   // A rule's kind and type, which win over the reading's.
   kind?: Kind | null;
   type?: MessageType | null;
-  // What was read (model or history pass); null when nothing was.
+  // What was read (model or history pass). Null when nothing was.
   reading: Reading | null;
   code: DetectedCode | null;
   // From protectedFromText.
   textProtected: ProtectedReason | null;
-  // The body was cut short for the model: what it couldn't see can't make it Noise (incomplete
+  // The body was cut short for the model. What it couldn't see can't make it Noise (incomplete
   // evidence can't establish an email needs nothing).
   incomplete?: boolean;
-  // Backfilled history: never Attention.
+  // Backfilled history. Never Attention.
   history?: boolean;
 }
 
@@ -123,10 +123,10 @@ const PROTECTED_WHAT: Record<ProtectedReason, string> = {
 };
 
 /**
- * The record's triage fields. Order matters and is the policy: protection first (nothing outranks
- * it, and a model's protected claim doesn't count on a code email, whose own words would have to
- * say it), then codes (never Attention), then the decided lane or FYI when unsure. History is never
- * Attention: its protected mail is fixed at FYI instead, and a rule's Attention becomes FYI.
+ * The record's triage fields. Order matters and is the policy. Protection comes first: nothing
+ * outranks it, and a model's protected claim doesn't count on a code email, whose own words would
+ * have to say it. Then codes (never Attention), then the decided lane, or FYI when unsure. History
+ * is never Attention. Its protected mail is fixed at FYI instead, and a rule's Attention becomes FYI.
  */
 export function settle(input: SettleInput): Settled {
   const reading = input.reading;
@@ -193,8 +193,8 @@ export function organisationFromDomain(address: string): string | null {
 
 /**
  * Who it's from without a model (the history pass): the display name without "via Greenhouse" and
- * generic tails ("Woodgrove Bank Alerts" → "Woodgrove Bank"), or the domain's name when there's no display name or a
- * person's name on a no-reply address.
+ * generic tails ("Woodgrove Bank Alerts" → "Woodgrove Bank"). It is the domain's name when there's
+ * no display name or a person's name on a no-reply address.
  */
 export function organisationFromSender(fromName: string, fromAddress: string): {organisation: string | null; via: string | null} {
   let name = fromName.replace(/^["']|["']$/g, '').trim();
@@ -206,10 +206,11 @@ export function organisationFromSender(fromName: string, fromAddress: string): {
   }
   name = name.replace(GENERIC_NAME_SUFFIX, '').trim();
   const fromDomain = organisationFromDomain(fromAddress);
-  // Through a platform, the domain is the platform's, never the organisation.
+  // Through a platform, the domain is the platform's, never the organisation's.
   if (!name || name.includes('@')) return {organisation: via ? name || null : fromDomain, via};
-  // "Priya Raman" <no-reply@northwind.example>: a person writing through the company's system,
-  // when neither word of the name is in the domain ("Tailspin Toys" <news@tailspintoys.example> isn't).
+  // "Priya Raman" <no-reply@northwind.example> is a person writing through the company's system,
+  // when neither word of the name is in the domain ("Tailspin Toys" <news@tailspintoys.example>
+  // isn't).
   const domainCompact = (fromDomain ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const person = /^[A-Z][a-z]+ [A-Z][a-z]+$/.test(name) && !name.toLowerCase().split(' ').some(word => domainCompact.includes(word));
   if (!via && fromDomain && isBulkSender(fromAddress) && person) return {organisation: fromDomain, via};
@@ -241,8 +242,8 @@ const KIND_OF_TYPE: Partial<Record<MessageType, Kind>> = {
 
 /**
  * A reading without a model, for backfilled history: organisation from the sender, type from the
- * words, and Noise only for bulk mail with an unsubscribe footer and no important subject (strict,
- * as history is read, not triaged into a queue).
+ * words, and Noise only for bulk mail with an unsubscribe footer and no important subject. It is
+ * strict, because history is read, not triaged into a queue.
  */
 export function historyReading(email: {fromName: string; fromAddress: string; subject: string; bodyText: string}): Reading {
   const {organisation, via} = organisationFromSender(email.fromName, email.fromAddress);

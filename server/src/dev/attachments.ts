@@ -1,4 +1,4 @@
-// The dev provider's attachment bytes: the seed and its fixtures record attachments by name, type
+// The dev provider's attachment bytes. The seed and its fixtures record attachments by name, type
 // and size only, so `npm run dev` and the browser checks preview a small stand-in of the same type
 // (a one-page PDF naming the file, a grey PNG, a two-line CSV, an invented .ics by its name, else the
 // name as text).

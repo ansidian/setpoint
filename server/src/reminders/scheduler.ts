@@ -1,8 +1,8 @@
 // Reminders and Time to Leave, sent through notify() (never ntfy directly). Each pass:
 // 1. Time to Leave: routes from Home are checked for the day's events with a place and Time to Leave,
-//   on its cadence (src/domain/timeToLeave.ts), each answer kept only if Home, the place
-//    and the start are still what was asked about; one due to go is checked once more first.
-// 2. Reminders and Time to Leave that are due go out, each once (notify()'s dedupe key); one that
+//    on its cadence (src/domain/timeToLeave.ts). Each answer is kept only if Home, the place and the
+//    start are still what was asked about. One due to go is checked once more first.
+// 2. Reminders and Time to Leave that are due go out, each once (notify()'s dedupe key). One that
 //    failed to send is tried again on later passes, within the grace.
 // 3. The pass's moment is kept, so a restart catches up on what it missed (within the grace) and
 //    an item moved into the past doesn't fire.
@@ -59,7 +59,7 @@ export class ReminderScheduler {
     this.timer = null;
   }
 
-  /** One pass; a pass already running is joined rather than doubled. */
+  /** One pass. A pass already running is joined rather than doubled. */
   tick(): Promise<void> {
     this.running ??= this.pass().catch(error => console.error('Reminders', error)).finally(() => (this.running = null));
     return this.running;
@@ -122,7 +122,7 @@ export class ReminderScheduler {
       let estimate = this.estimate(item.id, start);
       const stale = !estimate || estimate.inputs !== inputs;
       const checkDue = stale || (estimate!.nextCheckAt !== null && Date.parse(estimate!.nextCheckAt) <= nowMs);
-      // About to go out on an estimate older than its leave time: check once more first.
+      // About to go out on an estimate older than its leave time, so check once more first.
       const beforeSending = !stale && estimate!.leaveAt !== null && Date.parse(estimate!.leaveAt) <= nowMs && (!estimate!.checkedAt || estimate!.checkedAt < estimate!.leaveAt) && !estimate!.error;
       if ((checkDue || beforeSending) && checks < ROUTE_CHECKS_PER_PASS) {
         checks += 1;
@@ -156,7 +156,7 @@ export class ReminderScheduler {
       const leave = leaveAt(ask.start, route.durationSeconds, ask.buffer);
       values = {durationSeconds: route.durationSeconds, distanceMeters: route.distanceMeters, leaveAt: leave, checkedAt: isoNow(store), nextCheckAt: nextRouteCheck(isoNow(store), leave, ask.start), error: null};
     } catch (error) {
-      // The last estimate stands; try again in at least 5 minutes.
+      // The last estimate stands. Try again in at least 5 minutes.
       values = {
         durationSeconds: ask.previous?.durationSeconds ?? null, distanceMeters: ask.previous?.distanceMeters ?? null, leaveAt: ask.previous?.leaveAt ?? null,
         checkedAt: ask.previous?.checkedAt ?? null, nextCheckAt: retryRouteCheck(isoNow(store), ask.previous?.leaveAt ?? null, ask.start),

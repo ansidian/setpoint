@@ -1,7 +1,10 @@
-// USPS Informed Delivery's digest. Its rules as tables; its scans read from an
-// invented digest's source (src/dev/digest.ts), ads left out; the mirror keeping it out of triage,
-// the Inbox, All and Mark all as read; the worker keeping each day's scans 30 days, fetching the
-// source through a stand-in for the adapter; and the routes the agenda rail reads.
+// USPS Informed Delivery's digest. It tests:
+// - its rules, as tables
+// - its scans, read from an invented digest's source (src/dev/digest.ts), ads left out
+// - the mirror, which keeps it out of triage, the Inbox, All and Mark all as read
+// - the worker, which keeps each day's scans 30 days and fetches the source through a stand-in for
+//   the adapter
+// - the routes the agenda rail reads.
 import {readFileSync} from 'node:fs';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -157,7 +160,7 @@ describe('the worker', () => {
     w.events.length = 0;
     await runDue();
     const digest = digestOf(id)!;
-    // Two scans; the source's campaign is neither kept nor counted.
+    // Two scans. The source's campaign is neither kept nor counted.
     expect(digest).toMatchObject({day: '2026-10-08', pieces: 2});
     expect(scansOf(digest.id).map(scan => scan.position)).toEqual([0, 1]);
     expect(jobOf(id).state).toBe('done');

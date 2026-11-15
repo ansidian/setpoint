@@ -3,10 +3,10 @@
 //
 // - The job pane: the job's id in the address (`currentJobId`, or /jobs/view/<id>/), the company's
 //   "Company, …" label, whose componentkey ends in that id, and the page's title, "<title> |
-//   <company> | LinkedIn". LinkedIn sets the title after it draws the pane, so a pane whose title
+//   <company> | LinkedIn". LinkedIn sets the title after it draws the pane. So a pane whose title
 //   still names the last job isn't read until it names this one.
-// - A card: the innermost element keyed job-card-component-ref-<id> (each card is keyed twice), its
-//   title from its "Dismiss <title> job" button, its company the line after the title's.
+// - A card: the innermost element keyed job-card-component-ref-<id> (each card is keyed twice). Its
+//   title comes from its "Dismiss <title> job" button, and its company is the line after the title's.
 
 import {unreadOf} from './posting.ts';
 import type {PageRead, Posting} from './posting.ts';
@@ -41,8 +41,9 @@ export function readPane(jobId: string, doc: Document = document): Posting | nul
   if (!company || !page.endsWith(` | ${company}`)) return null;
   const title = page.slice(0, -` | ${company}`.length).trim();
   if (!title) return null;
-  // The pane's top is the label's nearest ancestor holding the title. One that holds the list's cards
-  // has climbed out of the pane: the title is still the last job's at the same company, found on its card.
+  // The pane's top is the label's nearest ancestor that holds the title. An ancestor that holds the
+  // list's cards has climbed out of the pane: the title is still the last job's at the same company,
+  // found on its card.
   let top = label.parentElement;
   while (top && !top.textContent?.includes(title)) top = top.parentElement;
   if (!top || top.querySelector(CARDS)) return null;
@@ -60,8 +61,8 @@ export function readCards(doc: Document = document): Posting[] {
     const dismiss = card.querySelector('[aria-label^="Dismiss "][aria-label$=" job"]')?.getAttribute('aria-label');
     const title = dismiss?.slice('Dismiss '.length, -' job'.length).trim();
     if (!title) continue;
-    // The title's line holds it twice, the screen readers' copy with more ("Selected, …", "… (Verified
-    // job)"); the company's line comes next.
+    // The title's line holds the title twice. The screen readers' copy has more ("Selected, …",
+    // "… (Verified job)"). The company's line comes next.
     const lines = [...card.querySelectorAll('p')];
     const at = lines.findIndex(line => line.textContent?.includes(title));
     const line = at >= 0 ? lines[at + 1] : undefined;

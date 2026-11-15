@@ -1,7 +1,7 @@
-// The iCloud adapter against a fake IMAP server on 127.0.0.1:
-// Connect iCloud, a resumable backfill with progress, new mail by polling, read elsewhere (\Seen),
-// opening in Setpoint, Mark all as read in one STORE, trash with undo (Deleted Messages and back),
-// moved away in Apple Mail, a new UIDVALIDITY, a dropped connection, and a revoked app password.
+// The iCloud adapter against a fake IMAP server on 127.0.0.1: Connect iCloud, a resumable backfill
+// with progress, new mail by polling, read elsewhere (\Seen), opening in Setpoint, Mark all as read
+// in one STORE, trash with undo (Deleted Messages and back), moved away in Apple Mail, a new
+// UIDVALIDITY, a dropped connection, and a revoked app password.
 import {SEED_NOW} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
@@ -100,7 +100,7 @@ describe('iCloud: an attachment for the reader\'s preview', () => {
     const html = await api.send('GET', `/api/mail/messages/${message.id}/attachments/${row[1]!.id}`);
     expect(html.headers.get('content-type')).toBe('application/octet-stream');
     expect(html.headers.get('content-disposition')).toMatch(/^attachment; filename="notes.html"/);
-    // Another email's attachment id, or none, is not found; signed out is refused.
+    // Another email's attachment id, or none, is not found. Signed out is refused.
     expect((await api.send('GET', `/api/mail/messages/${message.id}/attachments/999`)).status).toBe(404);
     expect((await client(w).send('GET', `/api/mail/messages/${message.id}/attachments/${row[0]!.id}`)).status).toBe(401);
   });
@@ -127,7 +127,7 @@ describe('iCloud: a mailbox through backfill, new mail, read state, Mark all as 
     const source = icloudSource(w);
     expect(source).toMatchObject({syncMode: 'poll', intervalSeconds: 120});
 
-    // The backfill, three at a time, newest first, with progress; resumable from the UIDs left.
+    // The backfill, three at a time, newest first, with progress. It resumes from the UIDs left.
     await env.engine.tick();
     await env.engine.settled();
     expect(readBackfill(w.store, source.id)).toMatchObject({total: 5, fetched: 3, done: false});
@@ -172,7 +172,7 @@ describe('iCloud: a mailbox through backfill, new mail, read state, Mark all as 
     await poll();
     expect(w.store.db.select().from(t.messages).all().filter(message => message.unread)).toEqual([]);
 
-    // Trash to Deleted Messages, and Undo back to the inbox under a new UID; polls agree.
+    // Trash to Deleted Messages, and Undo back to the inbox under a new UID. Polls agree.
     await api.send('POST', `/api/mail/messages/${bill.id}/trash`);
     await drain();
     expect(imap.folder(ADDRESS, 'Deleted Messages').messages).toHaveLength(1);

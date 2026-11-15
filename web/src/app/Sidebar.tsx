@@ -1,13 +1,14 @@
-// The sidebar: the mark and Setpoint; Inbox with the red unread badge,
-// its only count, and no account rows under it; Calendar; News, with no count ever;
-// Jobs while it's on (jobs/, a wiring point); the page's section (Today on mail pages and News, the mini-month and Calendars on Calendar);
-// Settings pinned to the bottom.
+// The sidebar holds the mark and Setpoint, then Inbox with the red unread badge (its only count) and
+// no account rows under it. Then come Calendar, News with no count ever, and Jobs while it's on
+// (jobs/, a wiring point). Then the page's section: Today on mail pages and News, the mini-month and
+// Calendars on Calendar. Settings is pinned to the bottom.
 //
 // Folded it's a 56 px rail: the mark, then Inbox, Calendar, News, Jobs and Settings as icons, each
-// named in its tooltip, with the unread badge on Inbox. The page's section gives way to the next-up slot
-// (TodayBlock's); ⌘K still toggles calendars. Always the rail from 640 to 1099 px (the compact tier); from 1100 it starts as the rail
-// below 1600 px, and `` ` `` or a click on its edge opens and folds it, kept by this browser (sidebarRail.ts);
-// the pointer resting on the rail brings the whole sidebar out over the page until it leaves.
+// named in its tooltip, with the unread badge on Inbox. The page's section gives way to the next-up
+// slot (TodayBlock's). ⌘K still toggles calendars. It is always the rail from 640 to 1099 px (the
+// compact tier). From 1100 it starts as the rail below 1600 px, and `` ` `` or a click on its edge
+// opens and folds it, kept by this browser (sidebarRail.ts). The pointer resting on the rail brings
+// the whole sidebar out over the page until it leaves.
 import type {MailCountsOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from 'react';
@@ -28,7 +29,7 @@ import {toggleSidebar, useRail, useSidebarFoldable} from './sidebarRail.ts';
 import {toastFailure} from './toast.ts';
 import {toInbox} from './toInbox.ts';
 
-/** A link that the app follows itself; ⌘-click still opens a new tab. `tip` names it, in its tooltip and for a screen reader. */
+/** A link that the app follows itself. ⌘-click still opens a new tab. `tip` names it, in its tooltip and for a screen reader. */
 function Link({to, className, style, tip, onContextMenu, children}: {
   to: Route;
   className: string;
@@ -47,7 +48,7 @@ function Link({to, className, style, tip, onContextMenu, children}: {
 
 /**
  * Mark all as read from Inbox's right-click: the Inbox page's own, with its Undo,
- * while it shows; otherwise as ⌘K's is.
+ * while it shows. Otherwise it works as ⌘K's does.
  */
 function markAllReadNow(): () => void {
   const page = offered().commands.find(command => command.id === 'mark-all-read');
@@ -63,9 +64,9 @@ const PEEK_CLOSE_MS = 100;
 const PEEK_PARTS = '.sb, .sb-edge, .today-card, .pop';
 
 /**
- * The rail brought out by the pointer (from 1100 px): a mouse resting on it for 200 ms shows the
- * whole sidebar over the page, and 100 ms anywhere else, or out of the window, folds it back, once
- * no Today card is open from it. On the rail's next-up slot, or with its card open, it stays the rail,
+ * The rail brought out by the pointer (from 1100 px). A mouse resting on it for 200 ms shows the
+ * whole sidebar over the page. 100 ms anywhere else, or out of the window, folds it back, once no
+ * Today card is open from it. On the rail's next-up slot, or with its card open, it stays the rail,
  * so the slot can be clicked.
  */
 function usePeek(enabled: boolean) {
@@ -125,7 +126,7 @@ export function Sidebar({route}: {route: Route}) {
   const foldable = useSidebarFoldable();
   const {peek, onPointerOver, onPointerLeave} = usePeek(folded && foldable);
   const rail = folded && !peek;
-  // The rail names each icon in its tooltip and for a screen reader; the full sidebar shows the names.
+  // The rail names each icon in its tooltip and for a screen reader. The full sidebar shows the names.
   const named = (label: string) => (rail ? label : undefined);
 
   return (
@@ -154,7 +155,7 @@ export function Sidebar({route}: {route: Route}) {
         <JobsNavItem current={route.page === 'jobs'} />
         {rail ? <TodayBlock rail /> : route.page === 'calendar' ? <CalendarSidebar route={route} /> : <TodayBlock />}
         <div className="sb-foot">
-          {/* Settings opens over the page (settings/store.ts); its address still works in a new tab. */}
+          {/* Settings opens over the page (settings/store.ts). Its address still works in a new tab. */}
           <a className="nav" aria-label={named('Settings')} data-tip={named('Settings · ⌘,')} href={routePath({page: 'settings', section: 'accounts'})} onClick={event => {
             if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
             event.preventDefault();
@@ -172,9 +173,9 @@ export function Sidebar({route}: {route: Route}) {
 }
 
 /**
- * The sidebar's right edge, from 1100 px up: a click opens the rail or folds the sidebar, as `` ` `` does;
- * on the sidebar the pointer brought out, it keeps it open.
- * At rest it's only the border; under the pointer, as the reading pane's edge (styles.css), a 2 px
+ * The sidebar's right edge, from 1100 px up. A click opens the rail or folds the sidebar, as `` ` ``
+ * does. On the sidebar the pointer brought out, it keeps it open.
+ * At rest it's only the border. Under the pointer, as the reading pane's edge (styles.css), a 2 px
  * `accent` line covers it and a pill at its middle shows which way it goes. It sits beside the sidebar,
  * not in it, since the sidebar clips.
  */

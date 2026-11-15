@@ -1,7 +1,7 @@
-// The browser extension's check through its one route, against the seed: each posting's role
-// and the company's other applications, in the order asked, a page of cards in one request, nothing
-// while Jobs is off, and only the extension's own token reads it, which opens nothing else. The
-// matching itself is reading.test.ts's table.
+// The browser extension's check through its one route, against the seed. It answers each posting's
+// role and the company's other applications, in the order asked, a page of cards in one request. It
+// answers nothing while Jobs is off. Only the extension's own token reads it, and that token opens
+// nothing else. The matching itself is reading.test.ts's table.
 import {jobsCheckSchema} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {signedIn, world} from '../../../tests/helpers.ts';

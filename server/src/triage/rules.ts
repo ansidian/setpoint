@@ -23,7 +23,7 @@ const defaultRuleSchema = z.strictObject({
   reason: z.string().min(1),
 });
 
-/** The shipped defaults, in priority order; throws (naming the rule) on a broken catalogue. */
+/** The shipped defaults, in priority order. Throws (naming the rule) on a broken catalogue. */
 export function loadDefaultRules(file: URL | string = DEFAULT_RULES_FILE): Rule[] {
   let raw: unknown;
   try {
@@ -52,7 +52,7 @@ type RuleRow = typeof t.triageRules.$inferSelect;
 
 export const ruleOf = (row: RuleRow): Rule => ({
   id: row.id, key: `${row.origin}:${row.id}`, source: row.origin, match: row.match, lane: row.lane, kind: row.kind, type: null,
-  // Only a written rule acts; learned rules only sort.
+  // Only a written rule acts. Learned rules only sort.
   actions: row.origin === 'written' && (row.markRead || row.trash !== 'never')
     ? {markRead: row.markRead, trash: row.trash, since: row.changedAt ?? row.createdAt} : null,
 });

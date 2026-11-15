@@ -1,19 +1,19 @@
-// How free text matches an email, and how a result says why it matched. Pure: the
-// search query (src/search/search.ts) runs these over the full-text index's candidates.
+// How free text matches an email, and how a result says why it matched. Pure. The search query
+// (src/search/search.ts) runs these over the full-text index's candidates.
 //
-// The field's search requires every word but filler, a word's prefix or plural anywhere in
-// the index, so ranking only orders and sections what today's every-word search finds. How well a
-// word matched decides its tier (matchTier): an email about the search comes before one that only
+// The field's search requires every word but filler, as a word's prefix or plural anywhere in the
+// index. So ranking only orders and sections what today's every-word search finds. How well a word
+// matched decides its tier (matchTier). An email about the search comes before one that only
 // mentions it, newest first within each, with no importance boost.
 //
 // Alfred's broad search takes the query's words as prefix terms with their singular or plural form
-// (pluralVariants), and a zero-result ladder, so one stray word degrades a search instead of
-// emptying it: every word must match, and when none do, any word but filler ("When does my lease
+// (pluralVariants). It has a zero-result ladder, so one stray word degrades a search instead of
+// emptying it. Every word must match, and when none do, any word but filler ("When does my lease
 // renewal need to be signed?" finds lease, renewal or signed, as board 07's results show). There is
-// no middle step (every word but filler): a question's words broaden the search for Alfred's card
-// rather than narrow it. Lane, urgency and deadlines never rank above the match. Broad free text
-// alone ranks by the best field any word matched,
-// sender (and organisation) before subject before body, then newest first.
+// no middle step (every word but filler), because a question's words broaden the search for
+// Alfred's card rather than narrow it. Lane, urgency and deadlines never rank above the match. Broad
+// free text alone ranks by the best field any word matched: sender (and organisation) before
+// subject before body, then newest first.
 import type {MatchField, MessageType} from '@setpoint/shared';
 import {fold, NEGATED, TYPE_CHIP_WORDS, TYPE_WORDS, wordsOf} from './searchChips.ts';
 
@@ -33,8 +33,8 @@ export function textTerms(text: string): string[] {
 }
 
 /**
- * Free text's "!word"s, whose words leave out the mail that has any of them, and the text
- * left to match: `invoice !proseware` matches invoice and leaves out Proseware's.
+ * Free text's "!word"s, whose words leave out the mail that has any of them, and the text left to
+ * match. `invoice !proseware` matches invoice and leaves out Proseware's.
  */
 export function withoutExcluded(text: string): {text: string; excluded: string[]} {
   const kept: string[] = [];
@@ -64,7 +64,7 @@ export type LadderStep = 'all' | 'any_but_filler';
 
 /**
  * The full-text queries to try in order until one matches: every word, then any word but filler
- * (left out when it would repeat the first).
+ * (left out when it would repeat the first query).
  */
 export function textLadder(text: string): {step: LadderStep; terms: string[]; mode: 'and' | 'or'}[] {
   const all = textTerms(text);
@@ -87,13 +87,14 @@ export interface SearchWord {
   type: MessageType | null;
 }
 
-// Words that name a type without being a chip's: only for ranking, so nothing joins the list by them.
+// Words that name a type without being a chip's. They are only for ranking, so nothing joins the list
+// by them.
 const RANKING_TYPE_WORDS: Record<string, MessageType> = {bill: 'statement', bills: 'statement'};
 
 /**
  * The words the field's search requires: all but filler, once each. A word in capitals isn't filler
- * ("IT Specialist"), unless the whole search is in capitals. A search of filler alone requires it
- * all, or, with `dropAllFiller` (a chip already says what's wanted), nothing.
+ * ("IT Specialist"), unless the whole search is in capitals. A search of filler alone requires all
+ * of it. With `dropAllFiller` (a chip already says what's wanted), it requires nothing.
  */
 export function searchWords(text: string, {typing = false, dropAllFiller = false} = {}): SearchWord[] {
   const typed = text.match(/[\p{L}\p{N}]+/gu) ?? [];
@@ -123,8 +124,8 @@ export function ftsExpression(terms: string[], mode: 'and' | 'or', columns?: str
 const typeForms = (type: MessageType) => TYPE_CHIP_WORDS[type].flatMap(word => formsOf(word));
 
 /**
- * What a reading's type chip finds beyond the classified type: one of the type's words, whole,
- * in the subject, summary or search terms. Never the body, or newsletters that mention it come back.
+ * What a reading's type chip finds beyond the classified type: one of the type's words, whole, in
+ * the subject, summary or search terms. Never the body, or newsletters that mention it come back.
  */
 export const typeWordsExpression = (types: MessageType[]) => `{subject summary search_terms} : (${[...new Set(types.flatMap(typeForms))].map(form => `"${form}"`).join(' OR ')})`;
 
@@ -141,9 +142,9 @@ export function typeWordsIn(row: Pick<TextRow, 'subject' | 'summary' | 'searchTe
 }
 
 /**
- * The index's columns for each field, in order of preference. A row's summary and search
- * terms rank with its body for now: they're words about the email, and a match there has no place
- * of its own in a result.
+ * The index's columns for each field, in order of preference. A row's summary and search terms rank
+ * with its body for now. They're words about the email, and a match there has no place of its own
+ * in a result.
  */
 export const FIELD_TIERS: {field: 'sender' | 'subject' | 'body'; columns: string[]}[] = [
   {field: 'sender', columns: ['from_name', 'from_address', 'organisation']},
@@ -160,7 +161,7 @@ export function hasTerm(value: string | null, term: string): boolean {
   return wordStarts(value).some(({folded}) => forms.some(form => folded.startsWith(form)));
 }
 
-/** Runs in `value` where a word starts with a term's form: the form's length, or the whole word. */
+/** Runs in `value` where a word starts with a term's form. Each run is the form's length, or the whole word. */
 export function termRuns(value: string | null, terms: string[]): {start: number; end: number}[] {
   if (!value || !terms.length) return [];
   const runs: {start: number; end: number}[] = [];
@@ -203,7 +204,7 @@ export type RankedRow = TextRow & {type: MessageType | null};
 // Words between two a search has for them to still read as one thing, in the body.
 const NEAR_WORDS = 8;
 
-/** The field's tiers, best first; each is newest first. */
+/** The field's tiers, best first. Each is newest first. */
 export const TIER = {
   sender: 0,
   phrase: 1,
@@ -222,7 +223,7 @@ const isWhole = (token: string, word: SearchWord) => (word.typing ? startsWithFo
 /** Tokens that hold the word, its start being enough. */
 const hasStart = (tokens: string[], word: SearchWord) => tokens.some(token => startsWithForm(token, word));
 
-/** Tokens that hold the word whole; the word being typed may still be only its start. */
+/** Tokens that hold the word whole. The word being typed may still be only its start. */
 const hasWhole = (tokens: string[], word: SearchWord) => tokens.some(token => isWhole(token, word));
 
 /** Two or more words side by side in order, each by its start: "follow up" in "following up". */
@@ -253,7 +254,7 @@ function isNear(tokens: string[], words: SearchWord[]): boolean {
 
 /**
  * How well an email matches the words: the best of TIER that holds. The sender and subject take a
- * word's start; the summary, search terms and body want it whole, since an ending there is how a
+ * word's start. The summary, search terms and body want it whole, because an ending there is how a
  * short word lands in unrelated mail. A phrase is rare enough by itself to take each word's start.
  * A word that's one email's only evidence isn't a phrase or a search term's whole point, so one
  * word needs the subject or the sender for the top tiers, and is a mention in the body alone.
@@ -278,15 +279,15 @@ export function matchTier(row: RankedRow, words: SearchWord[]): number {
 /** Whether the word names the email's type. */
 export const namesType = (word: SearchWord, row: Pick<RankedRow, 'type'>) => word.type !== null && word.type === row.type;
 
-/** Whether some word is only in what a link left: `said` is the body without its links. */
+/** Whether some word is only in what a link left. `said` is the body without its links. */
 export function isLinkOnly(row: RankedRow, words: SearchWord[], said: string): boolean {
   const text = fold([row.fromName, row.fromAddress, row.organisation, row.subject, row.summary, row.searchTerms, said].filter(Boolean).join(' '));
   return words.some(word => !namesType(word, row) && !word.starts.test(text));
 }
 
 /**
- * Which fields each term matched, in order of preference: sender (and organisation), subject, body. These
- * are the index's words, so a link's path never reads as a match, and body takes the summary and
+ * Which fields each term matched, in order of preference: sender (and organisation), subject, body.
+ * These are the index's words, so a link's path never reads as a match. Body takes the summary and
  * search terms as FIELD_TIERS does.
  */
 export function textMatches(row: TextRow, terms: string[]): {field: Extract<MatchField, 'sender' | 'organisation' | 'subject' | 'body'>; terms: string[]}[] {
@@ -303,8 +304,8 @@ const EXCERPT_LENGTH = 160;
 const EXCERPT_LEAD = 50;
 
 /**
- * The body around the first run, about 160 characters, cut at word edges with "…"; the body's
- * start when no run is in it.
+ * The body around the first run, about 160 characters, cut at word edges with "…". The body's start
+ * when no run is in it.
  */
 export function excerptOf(body: string, runsIn: (text: string) => {start: number; end: number}[]): string {
   const text = body.replace(/\s+/g, ' ').trim();

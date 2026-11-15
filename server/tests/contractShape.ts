@@ -1,4 +1,4 @@
-// The rule the iPhone app's contract test applies. A fixture is a recorded response; its shape
+// The rule the iPhone app's contract test applies. A fixture is a recorded response. Its shape
 // is what an app decoding it by hand relies on: the keys every object at a path has, and the JSON
 // kinds each path has taken (merged across an array's elements). A live response breaks an older
 // app when a key goes, or a path takes a kind the fixture never showed. A new key never does.
@@ -9,7 +9,7 @@ export interface Shape {
   kinds: Set<Kind>;
   // Each key seen in the objects at this path, and whether every one of them had it.
   keys: Map<string, {shape: Shape; always: boolean}>;
-  // The elements of the arrays at this path; null while none had any.
+  // The elements of the arrays at this path. null while none had any.
   items: Shape | null;
 }
 
@@ -50,8 +50,8 @@ export function shapeOf(samples: unknown[]): Shape {
   return shape;
 }
 
-// A string field may come back looking like a date; a date field coming back as free text breaks
-// a date decoder. A number field may hold a whole number; an integer field holding 0.5 breaks Int.
+// A string field may come back looking like a date. A date field coming back as free text breaks
+// a date decoder. A number field may hold a whole number. An integer field holding 0.5 breaks Int.
 const ACCEPTS: Partial<Record<Kind, Kind[]>> = {string: ['instant', 'date'], number: ['integer']};
 const accepts = (kinds: Set<Kind>, kind: Kind) => kinds.has(kind) || [...kinds].some(known => ACCEPTS[known]?.includes(kind));
 const isNullOnly = (shape: Shape) => shape.kinds.size === 1 && shape.kinds.has('null');

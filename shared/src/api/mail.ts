@@ -43,7 +43,7 @@ export interface MessageRowOut {
   fact: string | null;
   // A verification code, and when its row leaves the Inbox ("Expires in 11 min").
   code: {value: string; expires_at: string} | null;
-  // When a written rule's delayed trash takes it ("Trash in 3 h"); null when none
+  // When a written rule's delayed trash takes it ("Trash in 3 h"). Null when none
   // waits, a pinned email's included.
   trash_due_at: string | null;
   attachment_count: number;
@@ -51,7 +51,7 @@ export interface MessageRowOut {
   command: CommandOut | null;
 }
 
-/** One Inbox group, in INBOX_GROUPS' order; empty groups are left out. */
+/** One Inbox group, in INBOX_GROUPS' order. Empty groups are left out. */
 export interface InboxGroupOut {
   group: InboxGroup;
   count: number;
@@ -60,8 +60,8 @@ export interface InboxGroupOut {
 }
 
 /**
- * The counts, which change at once: opening an unread email drops `unread` and its
- * account's; only Done drops `attention`. They count what the Inbox shows, so an expired code's row leaves them too.
+ * The counts, which change at once. Opening an unread email drops `unread` and its account's. Only
+ * Done drops `attention`. They count what the Inbox shows, so an expired code's row leaves them too.
  */
 export interface MailCountsOut {
   // Attention not Done, read or not: the sidebar's pill and mantel's attention half.
@@ -87,7 +87,7 @@ export interface MailDayOut {
   sorted_fyi: number;
   sorted_noise: number;
   // Every email kept (trashed mail aside), their size in bytes (text, HTML and attachments), and the
-  // oldest one's arrival; null with none.
+  // oldest one's arrival, null with none.
   total: number;
   bytes: number;
   oldest_at: string | null;
@@ -130,10 +130,10 @@ export interface AttachmentOut {
 
 /**
  * Why remote content loads or not:
- * - `trusted`: the sender's domain is in Settings › Mail's trusted domains;
- * - `authenticated`: the sender passed DMARC (or aligned DKIM) and the email isn't Noise;
- * - `noise`: authenticated, but Noise never loads by itself;
- * - `not_authenticated`: the provider's verdict was a fail or no policy;
+ * - `trusted`: the sender's domain is in Settings › Mail's trusted domains.
+ * - `authenticated`: the sender passed DMARC (or aligned DKIM) and the email isn't Noise.
+ * - `noise`: authenticated, but Noise never loads by itself.
+ * - `not_authenticated`: the provider's verdict was a fail or no policy.
  * - `unknown`: there was no verdict to read (an unrecognised header layout, an older email).
  */
 export const REMOTE_CONTENT_REASONS = ['trusted', 'authenticated', 'noise', 'not_authenticated', 'unknown'] as const;
@@ -141,7 +141,7 @@ export type RemoteContentReason = (typeof REMOTE_CONTENT_REASONS)[number];
 
 /**
  * Remote content loads when the sender passed DMARC and the email isn't Noise, or its domain is
- * trusted; otherwise "Images hidden", Show and Always show from contosocoffee.example.
+ * trusted. Otherwise "Images hidden", Show and Always show from contosocoffee.example.
  */
 export interface RemoteContentOut {
   // The sender's domain (accounts.google.com), as the reader's head shows it.
@@ -159,12 +159,12 @@ export interface MessageOut extends MessageRowOut {
   thread_id: string;
   body_text: string;
   body_html: string | null;
-  // Pre-fills proposals; never shown on its own.
+  // Pre-fills proposals, and is never shown on its own.
   key_date: string | null;
   security: SecurityFacts | null;
   attachments: AttachmentOut[];
   remote_content: RemoteContentOut;
-  // Open in Gmail (`O`); null for iCloud.
+  // Open in Gmail (`O`), or null for iCloud.
   open_url: string | null;
 }
 
@@ -178,7 +178,7 @@ export interface MarkAllReadOut {
 
 /**
  * The email an Open in Gmail address names, by its account's address and Gmail's
- * message id, so a description's link opens it in the reader; null when Setpoint doesn't have it.
+ * message id, so a description's link opens it in the reader. Null when Setpoint doesn't have it.
  */
 export const gmailLinkInput = z.strictObject({account: z.string().min(1), id: z.string().min(1)});
 export interface GmailLinkOut {
@@ -196,7 +196,7 @@ export interface TrustedDomainOut {
 
 /**
  * The first backfill (365 days per account), for search's status line: "Indexing · 62% · showing
- * what's indexed so far". `progress` is 0–1 across the accounts still backfilling; `indexing` is
+ * what's indexed so far". `progress` is 0–1 across the accounts still backfilling. `indexing` is
  * null once every account has finished (or none has started).
  */
 export interface IndexingOut {
@@ -215,7 +215,7 @@ export interface MailpiecesOut {
   day: string;
   // Null on a day with no digest (a Sunday, a holiday, a day before the 30 kept): no section.
   digest: {
-    // What USPS said is coming; 0 is "No mail today". It can be more than `scans`, the pictures.
+    // What USPS said is coming, where 0 is "No mail today". It can be more than `scans`, the pictures.
     pieces: number;
     scans: MailScanOut[];
   } | null;

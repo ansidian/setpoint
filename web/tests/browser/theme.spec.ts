@@ -1,6 +1,5 @@
-// Light, System and Night: boards 22a and 22b (boards 01 and 11 in Light), then the
-// switch itself: System follows the browser and a
-// choice is kept per browser.
+// Light, System and Night: boards 22a and 22b (boards 01 and 11 in Light), then the switch itself.
+// System follows the browser, and a choice is kept per browser.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
@@ -31,7 +30,7 @@ test('board 22b: October 2026 in Light, chosen in this browser', async () => {
   const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
   try {
     const page = await setpoint.page('target');
-    // The browser prefers dark (the harness's colour scheme); the choice stored here wins.
+    // The browser prefers dark (the harness's colour scheme). The choice stored here wins.
     await page.addInitScript(() => localStorage.setItem('setpoint.theme', 'light'));
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();

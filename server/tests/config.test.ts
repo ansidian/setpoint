@@ -1,4 +1,4 @@
-// The mail providers' configuration from the environment: Connect Gmail needs the Google client;
+// The mail providers' configuration from the environment. Connect Gmail needs the Google client.
 // Gmail push needs its topic, subscription and service account together, or Gmail is polled.
 import {describe, expect, test} from 'vitest';
 import {loadConfig} from '../src/config.ts';

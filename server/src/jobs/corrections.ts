@@ -1,18 +1,18 @@
 // Corrections: clicks on an application that stick. Each runs in one transaction, keeps what it touched for
-// its toast's Undo (./undo.ts) and sends the `jobs` live event. What keeps each from being undone by a
-// later email, re-run or lookup is ./stick.ts.
+// its toast's Undo (./undo.ts) and sends the `jobs` live event. ./stick.ts keeps each from being
+// undone by a later email, re-run or lookup.
 //
-// - The company and title in place: set by hand, and kept; the application still answers to its old
+// - The company and title in place: set by hand, and kept. The application still answers to its old
 //   name, so a later email naming that finds it. The JD's location too: no reading writes it again.
 // - Set status: set by hand, until an email that sets one comes. Let emails decide hands
 //   it back to what the emails make it.
-// - Merge with…: the other application comes into this one, its emails and all, and goes; this one
+// - Merge with…: the other application comes into this one, its emails and all, and goes. This one
 //   answers to its company and role from then on.
 // - An event's Move to… takes its email to another application (which answers to its role from then
-//   on); Not about this takes it off, back into Needs you.
+//   on). Not about this takes it off, back into Needs you.
 // - Not an application: gone, its emails blocked with its company and role. Delete:
 //   gone, so a later email can make it again.
-// - Not this posting: the JD goes and its link is turned down; the other candidates are offered again,
+// - Not this posting: the JD goes and its link is turned down. The other candidates are offered again,
 //   or it's No JD found.
 // - Paste the posting: the user's copy is the JD, read afterwards.
 // - Pin and Unpin: on the table's Pinned shelf or off it. A pin goes when the status
@@ -54,7 +54,7 @@ export function eventOf(store: Store, id: number) {
 }
 
 /**
- * Runs a correction in one transaction: what the scope covers is kept for Undo first, then `change`
+ * Runs a correction in one transaction. It first keeps what the scope covers for Undo, then `change`
  * writes and says what it made. Sends the `jobs` event naming what changed.
  */
 export function corrected(store: Store, scope: UndoScope, change: (now: string) => {application?: number | null; created?: {applications?: number[]; needsYou?: number[]}; changed?: {applications?: number[]; needsYou?: number[]}}): Change {
@@ -93,9 +93,9 @@ function writeEmailsStatus(store: Store, applicationId: number, now: string) {
 }
 
 /**
- * An email has just come to this application by the user's hand (Assign to…, Move to…, a merge): one
- * that sets a status no older than the status there takes over, as it would have on arrival;
- * then the status is what the emails make it, unless the user still holds it.
+ * An email has just come to this application by the user's hand (Assign to…, Move to…, a merge). If
+ * it sets a status no older than the status there, it takes over, as it would have on arrival. Then
+ * the status is what the emails make it, unless the user still holds it.
  */
 export function takeEmail(store: Store, applicationId: number, kind: JobEventKind, at: string, now: string) {
   const application = applicationOf(store, applicationId);
@@ -103,7 +103,7 @@ export function takeEmail(store: Store, applicationId: number, kind: JobEventKin
   settleStatus(store, applicationId, now);
 }
 
-/** PATCH /api/jobs/applications/:id: the title in place, the company from More, or the JD's location; set by hand and kept. */
+/** PATCH /api/jobs/applications/:id: the title in place, the company from More, or the JD's location. Each is set by hand and kept. */
 export function editApplication(store: Store, id: number, edit: JobsEdit): Change {
   return corrected(store, {applications: [id]}, now => {
     const db = jobsDb(store.sqlite);
@@ -286,7 +286,7 @@ export function offerCandidates(store: Store, application: Application, now: str
   }).returning({id: j.jobsNeedsYou.id}).get().id;
 }
 
-/** POST /api/jobs/applications/:id/not-this-posting: the JD goes, never to be saved again; its other candidates are offered, or No JD found. */
+/** POST /api/jobs/applications/:id/not-this-posting: the JD goes, never to be saved again. Its other candidates are offered, or No JD found. */
 export function notThisPosting(store: Store, id: number): Change {
   return corrected(store, {applications: [id]}, now => {
     const db = jobsDb(store.sqlite);
@@ -301,9 +301,10 @@ export function notThisPosting(store: Store, id: number): Change {
 }
 
 /**
- * POST /api/jobs/applications/:id/jd/paste: the user's own copy of the posting, saved at once as its
- * JD with Undo, then read by its job (lookup.ts `savePasted`). It's cleaned as a page's text is but
- * never cut: past the most it takes, or too little to be a posting, it's refused in words for the page.
+ * POST /api/jobs/applications/:id/jd/paste: the user's own copy of the posting. It's saved at once as
+ * its JD with Undo, then its job reads it (lookup.ts `savePasted`). It's cleaned as a page's text is
+ * but never cut. Past the most it takes, or too little to be a posting, it's refused in words for the
+ * page.
  */
 export function pastePosting(store: Store, id: number, pasted: string): Change {
   if (pasted.length > MAX_PASTED_CHARS) throw invalid(PASTED_TOO_LONG);

@@ -1,8 +1,7 @@
-// A verification code's parts, shared by the list's code row and the reader's
-// code card: Copy, which confirms in `good` for a second and a half and says
-// so when the clipboard refuses, and the countdown, which moves on as its words change, each
-// second through its last minute ("Expires in 42 sec", in `caution`). A code copied reads its
-// email: `onCopied` runs once the clipboard has it.
+// A verification code's parts, shared by the list's code row and the reader's code card. Copy
+// confirms in `good` for a second and a half, and says so when the clipboard refuses. The countdown
+// moves on as its words change, each second through its last minute ("Expires in 42 sec", in
+// `caution`). A code copied reads its email: `onCopied` runs once the clipboard has it.
 import {useEffect, useState} from 'react';
 import type {MouseEvent} from 'react';
 import {serverNow} from '../api/auth.ts';
@@ -13,7 +12,7 @@ import {showToast} from './toast.ts';
 
 const COPIED_MS = 1500;
 
-/** Copy: the code without its space onto the clipboard; "Copied" in `good` for 1.5 s. */
+/** Copy: the code without its space onto the clipboard, then "Copied" in `good` for 1.5 s. */
 export function CodeCopy({value, onCopied}: {value: string; onCopied?: () => void}) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -59,8 +58,8 @@ export function useCountdown(at: string): {text: string; soon: boolean; expired:
 
 /**
  * The reader's code card, after the sender: the code in Geist Mono at 22 px in two groups,
- * Copy, and at the right its countdown on the clock, not the email's own words; once expired it says
- * so and the code steps back to `ink3`.
+ * Copy, and at the right its countdown on the clock, not the email's own words. Once expired, it
+ * says so and the code steps back to `ink3`.
  */
 export function CodeCard({code, onCopied}: {code: {value: string; expires_at: string}; onCopied?: () => void}) {
   const countdown = useCountdown(code.expires_at);

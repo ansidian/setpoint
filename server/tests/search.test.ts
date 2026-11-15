@@ -1,8 +1,8 @@
-// Search over the seed (boards 06 and 07): chips filter exactly and come newest
-// first; free text alone ranks by how well the words matched, newest first within each tier, with
-// no importance boost, and counts what's about the search; each result says why it matched and what
-// to highlight; All's mail is covered (archived in, trashed out); and the log keeps each search and
-// the position of the result opened. Alfred's broad search is here too: it isn't to change.
+// Search over the seed (boards 06 and 07). Chips filter exactly and come newest first. Free text
+// alone ranks by how well the words matched, newest first within each tier, with no importance
+// boost, and counts what's about the search. Each result says why it matched and what to
+// highlight. All's mail is covered (archived in, trashed out). The log keeps each search and the
+// position of the result opened. Alfred's broad search is here too: it isn't to change.
 import type {SearchOut, SearchResultOut} from '@setpoint/shared';
 import {searchInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -111,7 +111,7 @@ describe('search over the seed: the sample\'s and the boards\' examples', () => 
     const out = search(w, 'zebra lease renewal');
     expect(out).toMatchObject({partial: true});
     expect(subjects(out).slice(0, 2)).toEqual(['Lease renewal terms', 'October rent received']);
-    // What has the rarest word and says it well is about the search; what has less only follows.
+    // What has the rarest word and says it well is about the search. What has less only follows.
     expect(subjects(out).slice(out.first_section)).toEqual(expect.arrayContaining(['Car registration renewal notice', 'Your renters policy renewal is coming up']));
     expect(out.first_section).toBeGreaterThan(0);
     expect(search(w, 'zebra quokka')).toMatchObject({partial: false, total: 0, first_section: 0});
@@ -190,7 +190,7 @@ describe('search over the seed: the sample\'s and the boards\' examples', () => 
     const application = search(w, 'application !northwind');
     expect(application).toMatchObject({order: 'match', text: 'application'});
     expect(subjects(application)).toEqual(['Application received']);
-    // A word: the mail that has it anywhere is left out; the field keeps it as typed.
+    // A word: the mail that has it anywhere is left out. The field keeps it as typed.
     const renewal = search(w, 'renewal !lease');
     expect(renewal).toMatchObject({text: 'renewal !lease', order: 'match'});
     expect(subjects(renewal)).toEqual(['Car registration renewal notice', 'Your renters policy renewal is coming up']);

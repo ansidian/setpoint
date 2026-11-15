@@ -1,13 +1,14 @@
 // One way to call a provider over HTTP(S), shared by Google Calendar, Places, Routes, Todoist and
-// weather: JSON in and out, a per-request timeout on top of the engine's signal, and every failure
-// turned into a ProviderError the one retry policy understands, carrying the provider's own words.
+// weather. It sends JSON in and out, with a per-request timeout on top of the engine's signal. It
+// turns every failure into a ProviderError the one retry policy understands, carrying the
+// provider's own words.
 // Base URLs are injected, so tests point every adapter at a fake server on 127.0.0.1.
 import {STATUS_CODES} from 'node:http';
 import {kindOfStatus, ProviderError} from '../sync/errors.ts';
 import type {ProviderErrorKind} from '../domain/retry.ts';
 
 export interface HttpOptions {
-  // The network: tests pass nothing and use fake servers' base URLs; the default is fetch.
+  // The network. Tests pass nothing and use fake servers' base URLs. The default is fetch.
   fetch?: typeof fetch;
   // One request's limit, within the engine's own.
   timeoutMs?: number;
@@ -17,7 +18,7 @@ export interface Request {
   method?: string;
   url: string;
   headers?: Record<string, string>;
-  // An object is sent as JSON; URLSearchParams as a form.
+  // An object is sent as JSON, URLSearchParams as a form.
   body?: unknown;
   signal?: AbortSignal;
 }
@@ -35,7 +36,7 @@ export const DEFAULT_TIMEOUT_MS = 30_000;
 /** "Conflict" for 409: the reason phrase, whatever the transport sent. */
 export const reasonPhrase = (status: number) => STATUS_CODES[status] ?? 'Error';
 
-/** Retry-After in seconds or as a date, as ms; null without one. */
+/** Retry-After in seconds or as a date, as ms. Null without one. */
 export function retryAfterMs(header: string | null, now = Date.now()): number | null {
   if (!header) return null;
   const seconds = Number(header);

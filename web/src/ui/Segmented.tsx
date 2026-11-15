@@ -1,7 +1,7 @@
-// The one segmented control: Month | Week, Event |
-// Task, News's views, Jobs's status filter and Code expiry draw it. It owns the markup, the sliding
-// thumb (seg.ts) and, where a page turns it on, Tab and Shift-Tab stepping its segments from anywhere
-// on the page, wrapping at the ends, with "Tab · ⇧Tab" as its tooltip.
+// The one segmented control. Month | Week, Event | Task, News's views, Jobs's status filter and
+// Code expiry draw it. It owns the markup and the sliding thumb (seg.ts). Where a page turns it on,
+// Tab and Shift-Tab step its segments from anywhere on the page and wrap at the ends. Its tooltip
+// is "Tab · ⇧Tab".
 import {useEffect, useLayoutEffect, useRef} from 'react';
 import type {CSSProperties, ReactNode, RefObject} from 'react';
 import {motion} from '../tokens.ts';
@@ -16,9 +16,9 @@ export type SegmentRole = 'pressed' | 'radio' | 'tab';
 const GROUP_ROLE = {pressed: 'group', radio: 'radiogroup', tab: 'tablist'} as const;
 
 /**
- * Whether a key steps a page's segmented control, and which way: Tab or Shift-Tab, but not in a text
- * field, not with a popover, menu, dialog or the editor open, and not inside a form or dialog, where
- * Tab is the browser's.
+ * Whether a key steps a page's segmented control, and which way. Only Tab or Shift-Tab steps it. It
+ * doesn't in a text field, or with a popover, menu, dialog or the editor open. It doesn't inside a
+ * form or dialog either, where Tab is the browser's.
  */
 export function tabStep(event: KeyboardEvent): 1 | -1 | null {
   if (event.key !== 'Tab' || event.metaKey || event.ctrlKey || event.altKey || event.isComposing) return null;

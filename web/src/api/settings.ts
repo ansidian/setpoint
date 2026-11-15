@@ -1,5 +1,5 @@
 // Settings' resources and changes (shared/src/api/sources.ts, triage.ts and auth.ts have the
-// routes). Each change shows its answer at once and refreshes what else it touches; secrets are
+// routes). Each change shows its answer at once and refreshes what else it touches. Secrets are
 // write-only, so only whether one is set ever comes back.
 import type {
   AccountOut, AuthMode, GmailAuthorizeOut, PairingOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleMatch, RuleOut, RuleWaiting, SecretName,
@@ -18,7 +18,7 @@ export const AI_PATH = '/ai';
 export const SECRETS_PATH = '/secrets';
 export const SECURITY_PATH = '/security';
 
-/** Changes some settings, shown at once; the answer is every setting (a refusal loads them again). */
+/** Changes some settings, shown at once. The answer is every setting (a refusal loads them again). */
 export async function patchSettings(patch: SettingsPatch): Promise<Settings> {
   if (getCached<Settings>(SETTINGS_PATH)) updateCached<Settings>(SETTINGS_PATH, settings => withPatch(settings, patch));
   let settings: Settings;
@@ -67,7 +67,7 @@ export async function connectIcloud(input: ICloudConnectInput): Promise<AccountO
   return account;
 }
 
-/** Check now: the source's scheduled check, at once; its health follows by the live stream. */
+/** Check now: the source's scheduled check, at once. Its health follows by the live stream. */
 export const checkSource = (id: number) => sendJson<void>('POST', `/sources/${id}/check`);
 
 /** A place with its coordinates (Home), closing the suggestions' session. */
@@ -93,7 +93,7 @@ export async function createRule(input: RuleInput): Promise<RuleOut> {
   return rule;
 }
 
-/** Deletes a rule; `waiting` answers for its waiting trashes, if it has any. */
+/** Deletes a rule. `waiting` answers for its waiting trashes, if it has any. */
 export async function deleteRule(id: number, waiting?: RuleWaiting): Promise<void> {
   updateCached<RuleOut[]>(RULES_PATH, list => list.filter(rule => rule.id !== id));
   try {
@@ -103,7 +103,7 @@ export async function deleteRule(id: number, waiting?: RuleWaiting): Promise<voi
   }
 }
 
-/** Turns a rule on or off; turning it off, `waiting` answers for its waiting trashes, if it has any. */
+/** Turns a rule on or off. When it turns off, `waiting` answers for its waiting trashes, if it has any. */
 export async function setRuleEnabled(id: number, enabled: boolean, waiting?: RuleWaiting): Promise<void> {
   updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, enabled, ...(waiting === 'cancel' ? {trashes_waiting: 0} : {})} : rule)));
   try {
@@ -221,7 +221,7 @@ export async function deletePasskey(id: number): Promise<void> {
   }
 }
 
-// ---- Paired iPhones: Add iPhone needs the recent password; Cancel and Revoke don't ----
+// ---- Paired iPhones: Add iPhone needs the recent password, but Cancel and Revoke don't ----
 
 /** A one-time pairing code for the QR, five minutes, replacing any earlier one. */
 export const startPairing = () => sendJson<PairingOut>('POST', '/security/pairing');

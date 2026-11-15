@@ -1,8 +1,8 @@
 // News's resources and its changes, seen and the recap's (shared/src/api/news.ts has the routes).
-// Seen shows at once wherever the story is loaded, its dot gone, then the server's answer and its
-// `news` event take over. An opened story is loaded before it's marked seen, so the pane still has
-// what was new since the user last looked. Also sorting's state and Show headlines, Settings ›
-// News, search, Upcoming's proposal, the user on News and the recap on screen.
+// Seen shows at once wherever the story is loaded, with its dot gone. Then the server's answer and
+// its `news` event take over. An opened story is loaded before it's marked seen, so the pane still
+// has what was new since the user last looked. This file also has sorting's state and Show
+// headlines, Settings › News, search, Upcoming's proposal, the user on News and the recap on screen.
 import type {NewsPageOut, NewsProposalOut, NewsSearchOut, NewsSection, NewsSectionOut, NewsSeenOut, StoryOut, StoryRowOut} from '@setpoint/shared';
 import {serverNow} from './auth.ts';
 import {cachedPaths, getCached, getJson, refresh, refreshIfShown, sendJson, updateCached} from './client.ts';
@@ -51,8 +51,8 @@ export async function markSeen(ids: number[]): Promise<NewsSeenOut> {
 }
 
 /**
- * Opens a story: loaded as it stands, then seen. Resolves with the story as it was before, whose
- * "New since you looked" and Updated tag the pane keeps while it's open.
+ * Opens a story: loaded as it stands, then seen. Resolves with the story as it was before. The pane
+ * keeps that story's "New since you looked" and Updated tag while it's open.
  */
 export async function openStory(id: number, onFailed: (error: Error) => void): Promise<StoryOut | null> {
   await refresh(storyPath(id));
@@ -63,8 +63,8 @@ export async function openStory(id: number, onFailed: (error: Error) => void): P
 }
 
 /**
- * The user is on News, with the recap's stories once it's on screen, which fixes it there: the
- * server puts it away once it has shown and they've then been away an hour.
+ * The user is on News, with the recap's stories once the recap is on screen, which fixes it there.
+ * The server puts the recap away once it has shown and the user has then been away an hour.
  */
 export const noteHere = (recap: number[] | null) => sendJson<void>('POST', '/news/here', {recap});
 
@@ -72,7 +72,7 @@ export const noteHere = (recap: number[] | null) => sendJson<void>('POST', '/new
 export const searchNews = (text: string) => getJson<NewsSearchOut>(`/news/search?q=${encodeURIComponent(text)}`);
 
 /**
- * Add to calendar on an Upcoming keynote: the event Calendar's editor opens on, its calendar picked
- * as an email's proposal picks it. Nothing is created until Create.
+ * Add to calendar on an Upcoming keynote: the event Calendar's editor opens on. Its calendar is
+ * picked as an email's proposal picks it. Nothing is created until Create.
  */
 export const newsProposal = (eventId: number) => sendJson<NewsProposalOut>('POST', `/news/events/${eventId}/proposal`);

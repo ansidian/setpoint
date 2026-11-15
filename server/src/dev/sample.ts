@@ -284,7 +284,7 @@ export const SAMPLE_EMAILS: SampleEmail[] = [
     unread: false, lane: 'noise', type: 'newsletter'},
   // An interview confirmed with its invite attached (src/dev/icsFiles.ts has the file), for
   // Add to calendar on its .ics tile. Done and dated weeks back, so it's out of the lanes and below the
-  // Inbox's first screen, as the boards have it; last, so the emails above keep their ids.
+  // Inbox's first screen, as the boards have it. Last, so the emails above keep their ids.
   {account: 'Jobs', at: ['2026-09-29', '10:30'], from: ['Trey Research Recruiting', 'recruiting@treyresearch.example'], organisation: 'Trey Research', via: 'Breezy',
     subject: 'Interview confirmed: Data Engineer I', summary: 'Tue, Oct 20 · 2:00 PM · video call', body: TREY_INTERVIEW,
     unread: false, lane: 'fyi', kind: 'career', type: 'confirmation', done: {at: ['2026-09-29', '10:41'], opened: true},
@@ -297,7 +297,7 @@ const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'holidays' | 'todoist';
   {key: 'jobs', name: 'Jobs', provider: 'google', colour: 'violet', account: 'Jobs', accessRole: 'owner'},
   {key: 'todoist', name: 'Todoist', provider: 'todoist', colour: null, account: null},
   // A subscribed holiday calendar, which Google lets the user only read. Last, so the others
-  // keep the ids the iPhone app's recorded contract names; listed before Todoist all the same.
+  // keep the ids the iPhone app's recorded contract names. Listed before Todoist all the same.
   {key: 'holidays', name: 'Holidays in United States', provider: 'google', colour: 'good', account: 'Personal', accessRole: 'reader'},
 ];
 
@@ -345,7 +345,7 @@ export const SAMPLE_ITEMS: SampleItem[] = [
   {calendar: 'todoist', kind: 'task', title: 'Return library books', due: '2026-10-05', project: 'Inbox', done: ['2026-10-05', '17:30']},
   // An all-day event on the read-only holiday calendar, after October's busy weeks.
   {calendar: 'holidays', kind: 'day', title: 'Veterans Day', date: '2026-11-11'},
-  // A task's checklist, one of it done; last, so the items before keep their ids.
+  // A task's checklist, one of it done. Last, so the items before keep their ids.
   {calendar: 'todoist', kind: 'task', title: 'Plot the timing data', project: 'School', parent: 'CS 101 lab report', done: ['2026-10-06', '20:15']},
   {calendar: 'todoist', kind: 'task', title: 'Write the analysis', project: 'School', parent: 'CS 101 lab report'},
   {calendar: 'todoist', kind: 'task', title: 'Proofread', project: 'School', parent: 'CS 101 lab report'},
@@ -362,12 +362,12 @@ export const SAMPLE_WEATHER: {date: string; condition: WeatherCondition; highF: 
 const snippetOf = (text: string) => text.replace(/\s+/g, ' ').trim().slice(0, 140);
 
 /**
- * Loads the sample into an empty database; refuses one that already holds anything. News's images go
- * to `newsImagesDir` (the data directory's news-images/); without one only their rows are kept.
- * `newsSnapshot` loads real news from a snapshot's directory in place of the sample's (src/dev/newsSnapshot.ts);
- * one that won't load (taken before a schema change it can't follow) says so, and the sample's is loaded.
- * `usage` adds this month's AI usage (board 30b): `npm run seed` has it, while the tests' worlds start
- * with an empty ledger, so each reads only the calls it made.
+ * Loads the sample into an empty database and refuses one that already holds anything. News's
+ * images go to `newsImagesDir` (the data directory's news-images/). Without one, only their rows are
+ * kept. `newsSnapshot` loads real news from a snapshot's directory in place of the sample's
+ * (src/dev/newsSnapshot.ts). One that won't load (taken before a schema change it can't follow) says
+ * so, and the sample's is loaded. `usage` adds this month's AI usage (board 30b). `npm run seed` has
+ * it, while the tests' worlds start with an empty ledger, so each reads only the calls it made.
  */
 export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null, usage = false, newsSnapshot = null}: {newsImagesDir?: string | null; usage?: boolean; newsSnapshot?: string | null} = {}) {
   const tables = [t.accounts, t.messages, t.attachments, t.calendars, t.items, t.weatherDays, t.sources, t.newsSources];
@@ -378,7 +378,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
   const iso = ([date, time]: [string, string]) => zoned(date, time);
 
   db.transaction(tx => {
-    // The sample's own reminder defaults, as the boards draw them; a fresh install starts at None.
+    // The sample's own reminder defaults, as the boards draw them. A fresh install starts at None.
     tx.insert(t.settings).values({section: 'reminders', value: {event_minutes_before: 10, task_time: '09:00'}, updatedAt: createdAt}).run();
     const accountIds = new Map<AccountLabel, number>();
     ACCOUNTS.forEach((account, position) => {
@@ -386,7 +386,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
       accountIds.set(account.label, row.id);
     });
 
-    // Every source is a dev source, served by the in-process dev provider; each last checked a
+    // Every source is a dev source, served by the in-process dev provider. Each last checked a
     // minute before SEED_NOW, so all are healthy then.
     const checked = new Date(Date.parse(SEED_NOW) - MINUTE).toISOString();
     const source = (provider: SourceProvider, account: AccountLabel | null) => {

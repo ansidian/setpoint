@@ -1,11 +1,11 @@
 // Google Calendar into the mirror: the calendar list, then each calendar's events from its sync
-// token (or a full read), applied in one transaction per calendar:
-// no orderBy (or no sync token comes back), the token from the last page, a 410 means a
-// full read, deleted events come too (showDeleted), and holiday calendars, whose tokens Google
-// refuses straight away, are re-read whole at most once a day instead.
+// token (or a full read), applied in one transaction per calendar. There's no orderBy (or no sync
+// token comes back), and the token comes from the last page. A 410 means a full read. Deleted events
+// come too (showDeleted). Google refuses holiday calendars' tokens straight away, so those are
+// re-read whole at most once a day instead.
 //
 // It reads series and their exceptions (singleEvents off) rather than expanded instances, so
-// the mirror holds one recurring item and expands it itself; a series it can't expand (EXDATE, an
+// the mirror holds one recurring item and expands it itself. A series it can't expand (EXDATE, an
 // all-day series, an unusual rule) takes Google's instances as rows (`expanded`). Rows a pending or
 // failed change holds are left alone.
 import {and, eq} from 'drizzle-orm';
@@ -21,7 +21,7 @@ import type {GoogleCalendarApi, GoogleCalendarEntry, GoogleEvent} from './api.ts
 import {cancelledOccurrence, eventColumns, originalStartOf, withOwnAfter} from './normalize.ts';
 
 const DAY = 86_400_000;
-// How far back a full read goes; series reach further on their own.
+// How far back a full read goes. Series reach further on their own.
 export const FULL_SYNC_BACK_MS = 400 * DAY;
 // The window Google's instances are read for, for series it expands.
 export const INSTANCES_BACK_MS = 120 * DAY;
@@ -144,7 +144,8 @@ export async function syncCalendar(store: Store, api: GoogleCalendarApi, source:
   }
   applyEvents(store, calendar, {
     full: fullRead, items: page.items, zone, defaults: page.defaultReminders, instances,
-    // Holiday calendars' tokens are refused at once: never kept, re-read daily.
+    // Holiday calendars' tokens are refused at once, so the tokens are never kept and the calendars
+    // are re-read daily.
     cursor: {token: holiday ? null : page.nextSyncToken, fullAt: fullRead ? now.toISOString() : cursor.fullAt},
   }, source);
 }
@@ -223,7 +224,7 @@ function applyEvents(store: Store, calendar: CalendarRow, fetched: Fetched, sour
       upsert(event.id, {...eventColumns(event, fetched.zone, fetched.defaults), recurringItemId: null, originalStart: null, cancelled: false});
     }
     for (const event of fetched.items.filter(event => !isMaster(event))) exception(event);
-    // Google's instances for the series it expands: each becomes (or stays) a row; ones it no
+    // Google's instances for the series it expands: each becomes (or stays) a row. Ones it no
     // longer has go.
     for (const [masterId, list] of fetched.instances) {
       const master = byProviderId.get(masterId);

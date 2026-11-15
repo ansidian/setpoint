@@ -3,7 +3,7 @@
 // or plain text in, markdown out, tested as a table (tests/markdown.test.ts).
 //
 // News's article extraction (src/domain/newsPages.ts) keeps paragraphs only, so a posting's headings
-// ("What you'll need") and its lists would be lost; this keeps them, in the one shape the detail
+// ("What you'll need") and its lists would be lost. This keeps them, in the one shape the detail
 // draws: `## ` headings, `- ` and `1. ` items (nested ones indented two spaces), paragraphs a blank
 // line apart. Inline emphasis and links are kept as their text, without markup.
 import type {ChildNode, Document} from 'domhandler';
@@ -190,7 +190,7 @@ const NUMBERED = /^(\d+)[.)]\s+(.*)$/;
 /**
  * Plain text (a platform's plain description, a page with no markup worth keeping) as markdown:
  * bullets as `- ` items, a short line standing alone before others as a heading, blank lines between
- * paragraphs. Cut at `limit`, as a page is; what the user pasted is refused rather than cut.
+ * paragraphs. Cut at `limit`, as a page is. What the user pasted is refused rather than cut.
  */
 export function plainToMarkdown(text: string, limit = MAX_POSTING_CHARS): string {
   const blocks: Block[] = [];

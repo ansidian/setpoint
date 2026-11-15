@@ -1,14 +1,15 @@
-// An HTML email made safe to show (a sandboxed frame, 600 px, radius 14 on white), served as its
-// own page by GET /api/mail/messages/:id/body with its own policy. The frame is sandboxed without
-// scripts or an origin of its own, and the page's policy allows no scripts; this also strips what an
-// email must never do there: scripts, frames, plugins, base and meta tags (a meta refresh would navigate the frame), stylesheets from elsewhere, forms' targets, event
-// handlers and javascript: links. Media rules that ask the window's height are answered as a tall
-// window would (the frame's height is the page's own). While remote content is hidden, images become
-// board 02's hatched placeholders with their alt text (or the hidden-image glyph), as tall as their
-// picture would be when they say so and holding the email's shape when they don't; tracking pixels
-// go, and remote backgrounds go. Links open in a new tab. The page ends with the reader's measuring
-// script, the one script its policy lets run; the iPhone app's frame (`app`) measures the page
-// itself, so its page has no script and its policy lets none run. Pure: a string in, a page out.
+// An HTML email made safe to show (a sandboxed frame, 600 px, radius 14 on white).
+// GET /api/mail/messages/:id/body serves it as its own page, with its own policy. The frame is
+// sandboxed without scripts or an origin of its own, and the page's policy allows no scripts. This
+// also strips what an email must never do there: scripts, frames, plugins, base and meta tags (a
+// meta refresh would navigate the frame), stylesheets from elsewhere, forms' targets, event handlers
+// and javascript: links. Media rules that ask the window's height get a tall window's answer (the
+// frame's height is the page's own). While remote content is hidden, images become board 02's
+// hatched placeholders with their alt text (or the hidden-image glyph). A placeholder is as tall as
+// its picture would be when the image says so, and holds the email's shape when it doesn't. Tracking
+// pixels go, and remote backgrounds go. Links open in a new tab. The page ends with the reader's
+// measuring script, the one script its policy lets run. The iPhone app's frame (`app`) measures the
+// page itself, so its page has no script and its policy lets none run. Pure: a string in, a page out.
 import {createHash} from 'node:crypto';
 import render from 'dom-serializer';
 import {Element, isDirective, Text} from 'domhandler';
@@ -20,7 +21,7 @@ import {parseDocument} from 'htmlparser2';
 export const FRAME_STYLE = 'html, body { margin: 0; padding: 0; background: #ffffff; } body { font: 13px/1.35 Helvetica, Arial, sans-serif; color: #1d1f22; -webkit-font-smoothing: antialiased; overflow-wrap: break-word; } img { max-width: 100%; }';
 
 /**
- * The page's own box, after the email's styles: the frame is as tall as its page, so a page
+ * The page's own box, after the email's styles. The frame is as tall as its page, so a page
  * sized to the window (`height: 100vh`, a flexed and centred body) would be sized to the frame and
  * never grow. `:root` outranks the `html` and `body` an email's styles name, and the body's own
  * attributes don't reach the page.
@@ -45,9 +46,9 @@ const HIDE_IMAGE = "M820 -747.69V-316.15Q820 -301.15 810.58 -293.65Q801.15 -286.
 const GLYPH_GREY = '#a3a6ab';
 
 /**
- * A placeholder's height when the image gives none: a quarter of its width,
- * 56 to 160, so a mailing service's 602-wide picture keeps 150 px of the newsletter's shape (a small one
- * stays square); with no size at all and no words, a 56 px band the width of its line.
+ * A placeholder's height when the image gives none: a quarter of its width, 56 to 160. A mailing
+ * service's 602-wide picture then keeps 150 px of the newsletter's shape (a small one stays square).
+ * With no size at all and no words, it is a 56 px band the width of its line.
  */
 function heldHeight(width: number | null, alt: string): number | null {
   if (width !== null) return Math.min(160, Math.max(Math.min(width, 56), Math.floor(width / 4)));
@@ -71,7 +72,8 @@ function placeholder(image: Element): Element | null {
   const style = image.attribs.style ?? '';
   const block = /display\s*:\s*(block|flex|grid|table)\b/i.test(style);
   const alt = image.attribs.alt ?? '';
-  // Its own style's height wins unless it's `auto`, which a placeholder can't take from a picture it hasn't loaded.
+  // Its own style's height wins unless it's `auto`. A placeholder can't take `auto` from a picture
+  // it hasn't loaded.
   const held = height === null && !/(^|;)\s*height\s*:(?!\s*auto\b)/i.test(style) ? heldHeight(width, alt) : null;
   const parts = [PLACEHOLDER, width !== null ? `width: ${width}px;` : held !== null ? 'width: 100%;' : '', height !== null ? `height: ${height}px;` : '',
     style.trim() ? `${style.trim().replace(/;?$/, ';')}` : '', held !== null ? `height: ${held}px;` : '', `display: ${block ? 'grid' : 'inline-grid'};`];
@@ -86,9 +88,9 @@ function placeholder(image: Element): Element | null {
 const DOCUMENT_TAGS = new Set(['html', 'head', 'body']);
 
 /**
- * All of the email, as a browser would show it: an email can be whole documents one after the other,
- * each with its own head and body (a bank's notice is three), and everything in them is the
- * email, as is anything around them.
+ * All of the email, as a browser would show it. An email can be whole documents one after the
+ * other, each with its own head and body (a bank's notice is three). Everything in them is the
+ * email, and so is anything around them.
  */
 const shown = (nodes: ChildNode[]): ChildNode[] => nodes.flatMap(node => {
   if (isDirective(node)) return [];
@@ -96,9 +98,9 @@ const shown = (nodes: ChildNode[]): ChildNode[] => nodes.flatMap(node => {
 });
 
 /**
- * A media rule's conditions on the window's height, read as a tall window would answer them:
- * the frame is as tall as its page, so asking the frame could flip the email's layout as the frame grows
- * and flip it back as it shrinks. Width and the device's own size are the frame's to answer.
+ * A media rule's conditions on the window's height, read as a tall window would answer them. The
+ * frame is as tall as its page, so asking the frame could flip the email's layout as the frame
+ * grows and flip it back as it shrinks. Width and the device's own size are the frame's to answer.
  */
 const ALWAYS = '(min-width: 0px)';
 const NEVER = '(max-width: 0px)';
@@ -117,7 +119,7 @@ export interface SafeEmail {
   body: string;
 }
 
-/** The email's styles and body, safe for the frame; `loadImages` keeps remote content. */
+/** The email's styles and body, safe for the frame. `loadImages` keeps remote content. */
 export function safeEmail(html: string, loadImages: boolean): SafeEmail {
   const doc = parseDocument(html, {decodeEntities: true});
   for (const element of elements(doc, item => REMOVE.has(item.name))) removeElement(element);
@@ -155,15 +157,15 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
 }
 
 /**
- * The reader's measuring script, at the end of the page: the frame has no origin the reader can
+ * The reader's measuring script, at the end of the page. The frame has no origin the reader can
  * reach into, so the page tells the reader how tall it is, as it lays out and as each image loads.
- * The page never scrolls itself (only the reading pane does), and an email wider than the frame is
+ * The page never scrolls itself (only the reading pane does). An email wider than the frame is
  * zoomed down to fit it. The height counts to a marker after the email, or to the lowest of the
- * body's own boxes when one sits out of the flow, in the frame's own pixels whichever way
+ * body's own boxes when one sits out of the flow. It is in the frame's own pixels, whichever way
  * the browser reports a zoomed box.
- * A key pressed with the email clicked into is passed on to the reader too, unless a field
- * of the email's own takes it. The page keeps its own defaults, so selecting and copying still work;
- * only ⌘F, ⌘K and ⌘, are kept from the browser, as Setpoint keeps them everywhere else.
+ * A key pressed with the email clicked into also goes on to the reader, unless a field of the
+ * email's own takes it. The page keeps its own defaults, so selecting and copying still work. Only
+ * ⌘F, ⌘K and ⌘, are kept from the browser, as Setpoint keeps them everywhere else.
  */
 export const MEASURE_SCRIPT = `(() => {
   const root = document.documentElement;
@@ -214,10 +216,10 @@ export function emailPage(email: SafeEmail, frame: EmailFrame = 'web'): string {
 }
 
 /**
- * The page's own policy: nothing runs but the measuring script (by its hash), and in the app's frame
- * nothing at all; nothing loads but inline styles and inline images, and remote images (https only)
- * when they may load. `sandbox` gives the page no origin of its own and holds even if the page is
- * opened alone.
+ * The page's own policy. Nothing runs but the measuring script (by its hash), and in the app's frame
+ * nothing at all. Nothing loads but inline styles and inline images, and remote images (https only)
+ * when they may load. `sandbox` gives the page no origin of its own, and it holds even if the page
+ * is opened alone.
  */
 export function emailPolicy(loadImages: boolean, frame: EmailFrame = 'web'): string {
   const web = frame === 'web';

@@ -1,9 +1,9 @@
-// Settings › AI (board 30b): the Anthropic key, write-only (set or replace, or remove); Mail's four models,
-// each changeable at will (triage's cheap and strong, the history pass, and Alfred; Default is the
-// built-in choice for the keys that are set); News's group: its two models, fixed, the
-// monthly cap, and this month's spend on its meter, saying so at the cap; Jobs's group (board 39b,
-// from jobs/, a wiring point), its models only; then this month's usage, Triage, Search terms, Search
-// reading, Alfred, News and Jobs in their parts, Jobs' line the one place its spend shows.
+// Settings › AI (board 30b): the Anthropic key, write-only (set or replace, or remove). Mail's four
+// models, each changeable at will (triage's cheap and strong, the history pass, and Alfred). Default
+// is the built-in choice for the keys that are set. News's group: its two models, fixed, the monthly
+// cap, and this month's spend on its meter, saying so at the cap. Jobs's group (board 39b, from
+// jobs/, a wiring point), its models only. Then this month's usage: Triage, Search terms, Search
+// reading, Alfred, News and Jobs in their parts. Jobs' line is the one place its spend shows.
 import type {AiModelChoiceOut, AiOut, SecretName, SecretOut, Settings} from '@setpoint/shared';
 import {useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -62,7 +62,7 @@ export function AiPage() {
           {MODELS.map(({setting, title, sub, current}) => {
             const chosen = settings?.ai[setting] ?? null;
             const inUse = ai ? current(ai) : null;
-            // Default names its model, chosen or not; a model whose key isn't set can't be picked.
+            // Default names its model, chosen or not. A model whose key isn't set can't be picked.
             const builtIn = ai?.defaults[setting] ?? null;
             const defaultLabel = builtIn ? `Default (${label(builtIn)})` : 'Default';
             const options = [

@@ -1,7 +1,7 @@
-// The typed live events: one stream of `mail`, `items`, `health`,
-// `news` and `jobs` events, each naming what changed. A write notes what it touched while its transaction runs,
-// and the event goes out only once the outermost transaction commits, so a refused write sends
-// nothing. Events in one transaction merge into one per type.
+// The typed live events: one stream of `mail`, `items`, `health`, `news` and `jobs` events, each
+// naming what changed. A write notes what it touched while its transaction runs. The event goes out
+// only once the outermost transaction commits, so a refused write sends nothing. Events in one
+// transaction merge into one per type.
 import {randomBytes} from 'node:crypto';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import type {LiveEvent} from '@setpoint/shared';
@@ -9,11 +9,11 @@ import type {LiveEvent} from '@setpoint/shared';
 export type FeedEvent =
   | {type: 'live'; id: string; event: LiveEvent}
   | {type: 'resync'; id: string}
-  // The server is stopping; streams end so it can.
+  // The server is stopping. Streams end so it can.
   | {type: 'closed'};
 type Kept = Exclude<FeedEvent, {type: 'closed'}>;
 
-// Enough for a reconnect after a sleep or a dropped connection; older ids get `resync`.
+// Enough for a reconnect after a sleep or a dropped connection. Older ids get `resync`.
 const KEEP = 1000;
 
 const union = (a: number[], b: number[]) => [...new Set([...a, ...b])].sort((x, y) => x - y);

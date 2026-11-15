@@ -1,7 +1,6 @@
-// The shared tooltip: resting the mouse on an element with
-// `data-tip` shows its words under it, describing it while it shows, and moving off or a press
-// puts it away. The reader's sender, "to you" and time are its first: the sender's address, the
-// account's, and the full timestamp.
+// The shared tooltip. Resting the mouse on an element with `data-tip` shows its words under it,
+// describing it while it shows. Moving off or a press puts it away. The reader's sender, "to you"
+// and time are its first: the sender's address, the account's, and the full timestamp.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut, AllOut} from '@setpoint/shared';

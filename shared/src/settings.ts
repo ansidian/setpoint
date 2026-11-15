@@ -1,6 +1,6 @@
 // Setpoint's settings, typed, each with its default.
-// API fields are snake_case, as everywhere in the API. The server keeps one row per section and fills anything missing from these defaults, so a new
-// setting needs no migration. Secrets (AI keys, the Places key, ntfy's token) aren't settings: they
+// API fields are snake_case, as everywhere in the API. The server keeps one row per section and
+// fills anything missing from these defaults, so a new setting needs no migration. Secrets (AI keys, the Places key, ntfy's token) aren't settings: they
 // are write-only (see SECRET_NAMES). Appearance is per browser, so it isn't here either.
 import {z} from 'zod';
 
@@ -23,7 +23,7 @@ export const settingsSchema = z.strictObject({
     code_expiry_minutes: z.number().int().refine(value => (CODE_EXPIRY_PRESETS as readonly number[]).includes(value), 'One of 5, 10, 15, 30 or 60 minutes'),
   }),
   reminders: z.strictObject({
-    // Events: minutes before the start; tasks: a time on the due day. Null is None.
+    // Events: minutes before the start. Tasks: a time on the due day. Null is None.
     event_minutes_before: z.number().int().min(0).max(7 * 24 * 60).nullable(),
     task_time: clock.nullable(),
   }),
@@ -32,7 +32,7 @@ export const settingsSchema = z.strictObject({
     buffer_minutes: z.number().int().min(0).max(120),
   }),
   notifications: z.strictObject({
-    // The user's self-hosted ntfy; null until it's set up. Its token, if any, is the `ntfy_token` secret.
+    // The user's self-hosted ntfy. Null until it's set up. Its token, if any, is the `ntfy_token` secret.
     ntfy_server: z.url({protocol: /^https?$/}).nullable(),
     topics: z.strictObject({
       reminders: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
@@ -52,11 +52,11 @@ export const settingsSchema = z.strictObject({
     home: homeSchema.nullable(),
   }),
   todoist: z.strictObject({
-    // A project's name, where a task with none goes; null is Todoist's Inbox.
+    // A project's name, where a task with none goes. Null is Todoist's Inbox.
     default_project: z.string().min(1).nullable(),
   }),
   ai: z.strictObject({
-    // Model ids, chosen in Settings › AI; null uses the built-in choice.
+    // Model ids, chosen in Settings › AI. Null uses the built-in choice.
     triage_model: z.string().min(1).nullable(),
     triage_strong_model: z.string().min(1).nullable(),
     alfred_model: z.string().min(1).nullable(),

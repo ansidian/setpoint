@@ -1,6 +1,6 @@
 // The "+N" popover (board 11b): the day's every item, hanging from its "+N" over the cells below so
 // the cell stays readable, inside the grid. Every item can be selected, and dragged out onto another
-// day (the popover closes as it lifts). It stays open while what's in it is used and
+// day (the popover closes as it lifts). It stays open while what's in it is used. It
 // closes on Esc, its close button, a click elsewhere, C, D, New or a change of view. It
 // grows from its "+N" over 180 ms and closes at once (DESIGN.md › Motion).
 import type {CalendarOut, ItemOut} from '@setpoint/shared';

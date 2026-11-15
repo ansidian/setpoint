@@ -1,7 +1,8 @@
-// Where an overlay anchored to a calendar item goes: 8 px off its item, beside it on the side away from the grid's nearer edge, an item in the
-// grid's left half (the first four columns in month) getting it on its right and one in the right half on its left,
-// level with it and slid inside the grid. The side never depends on what's around the item, so it can
-// be told before the click. The floating detail uses it, and so does every overlay anchored to an item.
+// Where an overlay anchored to a calendar item goes: 8 px off its item, beside it on the side away
+// from the grid's nearer edge, level with it and slid inside the grid. An item in the grid's left
+// half (the first four columns in month) gets it on its right, and one in the right half on its
+// left. The side never depends on what's around the item, so it can be told before the click. The
+// floating detail uses it, and so does every overlay anchored to an item.
 import {placement} from '../tokens.ts';
 import type {Rect} from './calendar.ts';
 
@@ -21,7 +22,7 @@ export interface Placement extends Point {
   side: Side;
   // How many other items the card would cover there.
   covers: number;
-  // Whether it fits inside the grid on that side; when no side does, the least-overflowing one is
+  // Whether it fits inside the grid on that side. When no side does, the least-overflowing one is
   // slid inside and `fits` is false.
   fits: boolean;
 }
@@ -45,7 +46,7 @@ export function clampInto(position: Point, size: Size, bounds: Rect, margin: num
   };
 }
 
-/** How far a box on a side reaches past the bounds (less `margin`), in px; 0 when it fits. */
+/** How far a box on a side reaches past the bounds (less `margin`), in px. 0 when it fits. */
 function overflow(box: Rect, bounds: Rect, margin: number): number {
   return Math.max(0, bounds.left + margin - box.left) + Math.max(0, box.left + box.width - (bounds.left + bounds.width - margin))
     + Math.max(0, bounds.top + margin - box.top) + Math.max(0, box.top + box.height - (bounds.top + bounds.height - margin));
@@ -65,7 +66,7 @@ export function onSide(side: Side, anchor: Rect, size: Size, bounds: Rect, gap: 
     below: {left: centreX, top: anchor.top + anchor.height + gap},
   }[side];
   const slid = clampInto(across, size, bounds, margin);
-  // Along the edge it slides; across it, it stays `gap` off the anchor (or it doesn't fit).
+  // Along the edge it slides. Across it, it stays `gap` off the anchor (or it doesn't fit).
   const point = side === 'right' || side === 'left' ? {left: across.left, top: slid.top} : {left: slid.left, top: across.top};
   const box = {left: Math.round(point.left), top: Math.round(point.top), width: size.width, height: size.height};
   return {box, overflow: overflow(box, bounds, margin)};
@@ -106,9 +107,9 @@ export function besideRow(anchor: Rect, size: Size, bounds: Rect, gap: number = 
  * Where an overlay anchored to `anchor` goes: right of an item whose centre is in the left
  * half of `bounds` (the middle column with them), left of one in the right half, the other of the
  * two when that side has no room. Short of room on both, the nearer of the two slides inside over
- * the item's edge, as long as it hides no more than half the item or a quarter of the card; past
- * that (a bar across the week, a very narrow grid) it goes below, then above, and failing all, the least-overflowing side
- * slides inside. `others` only counts what the card covers.
+ * the item's edge, as long as it hides no more than half the item or a quarter of the card. Past
+ * that (a bar across the week, a very narrow grid) it goes below, then above. Failing all, the
+ * least-overflowing side slides inside. `others` only counts what the card covers.
  */
 export function placeBeside(anchor: Rect, size: Size, bounds: Rect, others: Rect[], gap: number = placement.gapPx): Placement {
   const centre = anchor.left + anchor.width / 2;

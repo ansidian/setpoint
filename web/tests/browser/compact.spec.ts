@@ -1,11 +1,13 @@
-// The compact tier, 640 to 1099 px: an
-// iPad or a half-width window. At 640 and 1099: the sidebar a rail (icons named in their
-// tooltips, the red unread badge on Inbox), an email or a story covering the list with Back
-// (and Esc, J and K, at 640), the header whole, nothing scrolling sideways; Calendar's grid taking
-// the width with the editor and search over it and its sources' health atop it; ⌘K keeping the
-// rail's lost filters; the day's pane brought over the grid by its header button, and the
-// empty pane over Inbox, News and Jobs by theirs. At 1100 the panes beside return, the empty
-// one with nothing open, and the rail opens to the full sidebar by `` ` ``.
+// The compact tier, 640 to 1099 px: an iPad or a half-width window. At 640 and 1099:
+// - the sidebar is a rail (icons named in their tooltips, the red unread badge on Inbox)
+// - an email or a story covers the list with Back (and Esc, J and K, at 640)
+// - the header is whole, and nothing scrolls sideways
+// - Calendar's grid takes the width, with the editor and search over it and its sources' health atop it
+// - ⌘K keeps the rail's lost filters
+// - the day's pane comes over the grid by its header button, and the empty pane over Inbox, News
+//   and Jobs by theirs.
+// At 1100 the panes beside return, the empty one with nothing open, and the rail opens to the full
+// sidebar by `` ` ``.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
@@ -32,7 +34,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; at 11
       const page = await setpoint.page({width, height: HEIGHT});
       await page.goto(`${setpoint.base}/inbox`);
       await page.locator('.list .row').first().waitFor();
-      // The rail: Inbox, Calendar, News, Jobs and Settings, named in their tooltips; of Today, only the next-up slot.
+      // The rail: Inbox, Calendar, News, Jobs and Settings, named in their tooltips. Of Today, only the next-up slot.
       assert.deepEqual(await page.locator('.sb .nav').evaluateAll(links => links.map(link => link.getAttribute('data-tip'))), ['Inbox', 'Calendar', 'News', 'Jobs · 3 need you', 'Settings · ⌘,'], `${width}: the rail's items`);
       assert.equal(await page.locator('.sb .today-row:not(.next), .sb .sb-sec:not(.next-up), .sb .sb-name').count(), 0);
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: the Inbox's header`);
@@ -74,7 +76,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; at 11
       await page.close();
     }
 
-    // At 1100 the pane beside the list is back; the sidebar starts as the rail and `` ` `` opens it.
+    // At 1100 the pane beside the list is back. The sidebar starts as the rail and `` ` `` opens it.
     const wide = await setpoint.page({width: 1100, height: HEIGHT});
     await wide.goto(`${setpoint.base}/inbox`);
     await wide.locator('.list .row').first().waitFor();
@@ -141,13 +143,13 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       await page.goto(`${setpoint.base}/calendar`);
       await page.locator('.cal-month .cell').first().waitFor();
       const grid = async () => (await rested(() => page.locator('section.cal-month').boundingBox()))!;
-      // The grid takes the width; the day's pane isn't drawn, and its health line sits atop the grid.
+      // The grid takes the width. The day's pane isn't drawn, and its health line sits atop the grid.
       assert.equal((await grid()).width, width - layout.rail, `${width}: the grid`);
       assert.equal(await page.locator('.rpane').count(), 0);
       assert.match((await page.locator('.cal-health .rp-health').textContent())!, /^Todoist, as of /);
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: Calendar's header`);
-      // The editor lies over the grid, which keeps its width; where the pane lies and its shadow are by
-      // eye.
+      // The editor lies over the grid, which keeps its width. Where the pane lies and its shadow are
+      // by eye.
       await page.keyboard.press('c');
       const editor = page.locator('.rpane.editor');
       await editor.waitFor();

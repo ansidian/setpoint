@@ -3,12 +3,12 @@
 //
 // - An application with no title, or waiting for its company, that its confirmation's HTML can fill
 //   is filled first, so a rejection read next finds a role to match. A field the user set stays
-//   theirs (./stick.ts). One still open looks for its JD again, the title-less search's candidates
-//   going with it.
-// - Then the ignored emails that now read differently, and the ignored rejections, which the rules
-//   now take differently, are forgotten, and a history pass reads them through the usual
-//   rules. Only ignored ones: an email that made something may have been moved or assigned since,
-//   and those are never replayed (./stick.ts).
+//   theirs (./stick.ts). One still open looks for its JD again, and the title-less search's
+//   candidates go with it.
+// - Then Jobs forgets the ignored emails that now read differently, and the ignored rejections, which
+//   the rules now take differently. A history pass reads them through the usual rules. Only ignored
+//   ones: an email that made something may have been moved or assigned since, and those are never
+//   replayed (./stick.ts).
 import {OPEN_JOB_STATUSES} from '@setpoint/shared';
 import type {JobStatus} from '@setpoint/shared';
 import {and, eq, inArray, isNotNull, or} from 'drizzle-orm';

@@ -1,11 +1,11 @@
 // Alfred's Answer card (board 07): one or two lines with their bold
 // runs, the sources (rows that open in the reading pane), each follow-up turn below the last, and a
-// follow-up field. "Couldn't find that in your mail" says what it searched; a failure shows the
+// follow-up field. "Couldn't find that in your mail" says what it searched. A failure shows the
 // server's words and puts the question back in the field. With no key, the card says so as it opens,
 // and "Settings › AI" in any of its lines opens Settings there. Answers aren't streamed, so while a
-// question waits the card shows Alfred's trail: each step done (the search it ran, the email it
-// read) above what it's doing now, which shimmers, and the answer's place held by two bars, the
-// follow-up field dimmed until the answer is in, when the trail folds away and the answer fades up.
+// question waits the card shows Alfred's trail. Each step done (the search it ran, the email it
+// read) sits above what it's doing now, which shimmers. Two bars hold the answer's place, and the
+// follow-up field is dimmed until the answer is in. Then the trail folds away and the answer fades up.
 // A long list of sources shows its first five and Show all. Proposals in an answer show as the
 // proposal card.
 import type {AccountOut, AiOut} from '@setpoint/shared';
@@ -149,7 +149,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
   );
 }
 
-/** Alfred's trail: each step done, its tool's glyph and what it did, then what it's doing now; folding away once answered. */
+/** Alfred's trail: each step done, its tool's glyph and what it did, then what it's doing now. It folds away once answered. */
 function Trail({steps, folding = false, children}: {steps: AskStep[]; folding?: boolean; children?: ReactNode}) {
   if (!steps.length && !children) return null;
   return (

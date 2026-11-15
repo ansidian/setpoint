@@ -1,10 +1,10 @@
-// Settings › Calendar (not drawn): which
-// calendars show and each Google calendar's colour (written to Google), Home for Time to Leave and the forecast (a place, with its coordinates),
-// Time to Leave's switch and Buffer, under Home since it leaves from there,
-// Todoist's projects with their colours (written to Todoist) and the default project for a task
-// with none (Settings has no Todoist page; its connection is Accounts › Sources' row), weather
-// on or off, the forecast's Pirate Weather key (the weather source's credential) and the Google
-// Maps key that Places and Time to Leave's routes use, both write-only. The page scrolls.
+// Settings › Calendar (not drawn): which calendars show and each Google calendar's colour (written
+// to Google), and Home for Time to Leave and the forecast (a place, with its coordinates). Then Time
+// to Leave's switch and Buffer, under Home since it leaves from there. Then Todoist's projects with
+// their colours (written to Todoist) and the default project for a task with none. Settings has no
+// Todoist page: its connection is Accounts › Sources' row. Then weather on or off, the forecast's
+// Pirate Weather key (the weather source's credential) and the Google Maps key that Places and Time
+// to Leave's routes use, both write-only. The page scrolls.
 import type {CalendarOut, PlaceSuggestionOut, SecretOut, Settings, SourceOut, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
 import {SWATCH_COLOURS, TODOIST_COLOURS, TODOIST_COLOUR_NAMES} from '@setpoint/shared';
 import {useState} from 'react';
@@ -134,8 +134,8 @@ function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Pa
 
 /**
  * A calendar's row: its colour, picked from the swatches and written to Google, so
- * Google's own app matches; then its name and whether it shows. Todoist has its ring and no colour.
- * A colour waiting for Google shows at .5 with the spinner; one Google refused stays, with Google's
+ * Google's own app matches. Then its name and whether it shows. Todoist has its ring and no colour.
+ * A colour waiting for Google shows at .5 with the spinner. One Google refused stays, with Google's
  * words, Try again and Change back.
  */
 function CalendarRow({calendar, onShow}: {calendar: CalendarOut; onShow: (on: boolean) => void}) {
@@ -183,7 +183,7 @@ const swatch = (colour: TodoistColour | null) => ({'--c': colour ? TODOIST_COLOU
 /**
  * A project's row, as Settings › Calendar's calendar rows: its colour, picked from
  * Todoist's own 20 and written to Todoist, so its apps match and its tasks' rings take it. Waiting
- * for Todoist it shows at .5 with the spinner; one Todoist refused stays, with Todoist's words, Try
+ * for Todoist it shows at .5 with the spinner. One Todoist refused stays, with Todoist's words, Try
  * again and Change back.
  */
 function ProjectRow({project}: {project: TodoistProjectOut}) {
@@ -222,7 +222,7 @@ function ProjectRow({project}: {project: TodoistProjectOut}) {
   );
 }
 
-/** Home: type a place, pick a suggestion; its coordinates come with it. */
+/** Home: type a place, pick a suggestion. Its coordinates come with it. */
 function HomeSearch({onDone}: {onDone: () => void}) {
   const [session] = useState(() => crypto.randomUUID());
   const [found, setFound] = useState<PlaceSuggestionOut[]>([]);

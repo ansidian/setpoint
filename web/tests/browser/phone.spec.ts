@@ -1,6 +1,6 @@
-// The phone at 390 × 844 (board 21): board 21's three phones (the Inbox after
-// reading Northwind, the reader on it, the agenda), the Inbox, reader and agenda by taps, read
-// state, Done, Trash with Undo, Mark unread and read, Mark all as read, plain search, and every kind of deep link an ntfy
+// The phone at 390 × 844 (board 21): board 21's three phones (the Inbox after reading Northwind, the
+// reader on it, the agenda), the Inbox, reader and agenda by taps, read state, Done, Trash with
+// Undo, Mark unread and read, Mark all as read, plain search, and every kind of deep link an ntfy
 // notification carries (`deepLinkPath`): an email, an event, one occurrence of a recurring event, a
 // task's day, and a Settings page. Sign-in's fields are 16 px, so iOS doesn't zoom into them.
 import assert from 'node:assert/strict';
@@ -96,7 +96,7 @@ test('signing in on the phone: every field\'s text is 16 px, so iOS doesn\'t zoo
     await page.goto(`${setpoint.base}/inbox`);
     await page.getByLabel('Setup token').waitFor();
     assert.deepEqual(await rested(() => sizes()), [['Setup token', '16px'], ['New password', '16px']]);
-    // Claimed (elsewhere), the card asks for the password; then a recovery code and a new password.
+    // Claimed (elsewhere), the card asks for the password, then a recovery code and a new password.
     await setpoint.api('POST', '/auth/claim', {setup_token: setpoint.setupToken, password: 'a long enough password'});
     await page.reload();
     await page.getByLabel('Password').waitFor();
@@ -119,7 +119,7 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     // The list, as on the desktop: Attention, the Pinned shelf, then the days, Today first.
     const headers = (await page.locator('.gh').allTextContents()).map(text => text.trim().split(/\s/)[0]!.toLowerCase());
     assert.deepEqual(headers.slice(0, 3), ['attention', 'pinned', 'today']);
-    // Every row keeps its account; the Pinned row's "Sep 30" stays on one line.
+    // Every row keeps its account. The Pinned row's "Sep 30" stays on one line.
     for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
     const age = await box(page, '.row.shelf .age');
     assert.ok(age.height < 20, `the age is one line (${age.height}px)`);
@@ -197,7 +197,7 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
     await page.locator('.ph-acts button', {hasText: 'Mark read'}).tap();
     await until('read again', () => counts(setpoint), value => value.unread === 18);
 
-    // Done: out of Attention, with Undo in the toast; back to the list, with nothing else opened or
+    // Done: out of Attention, with Undo in the toast. Back to the list, with nothing else opened or
     // read.
     await page.locator('.ph-acts button', {hasText: 'Done'}).tap();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
@@ -276,7 +276,7 @@ test('no account filter, and plain search with no chips and no Alfred', async ()
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
     assert.equal(await page.locator('.hd .apill, .hd .ph-count').count(), 0);
     await page.keyboard.press('Enter');
-    // Nothing happens to wait for: Enter makes no chips on the phone, and no pause asks for a
+    // Nothing happens to wait for. Enter makes no chips on the phone, and no pause asks for a
     // suggestion, its 700 ms run out on the page's clock.
     await page.clock.runFor(701);
     await setpoint.idle();

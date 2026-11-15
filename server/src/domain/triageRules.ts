@@ -1,10 +1,10 @@
 // Matching triage rules against an email (rules come first). In a match, sender keys are
 // alternatives, every other key present must match too, text matches ignore case, and
 // `none_includes` vetoes a match. A field's `_excludes` (subject, sender name, body) vetoes it when
-// that field has one of its words. `organisation` and `type` match what the model
-// extracted, so a rule using them (every learned rule) applies only after the model has read the email.
+// that field has one of its words. `organisation` and `type` match what the model extracted, so a
+// rule using them (every learned rule) applies only after the model has read the email.
 //
-// Rules decide a lane; they never decide protection. src/domain/triagePolicy.ts applies the
+// Rules decide a lane. They never decide protection. src/domain/triagePolicy.ts applies the
 // protected class after every rule.
 import type {Kind, Lane, MessageType, RuleMatch, RuleTrash} from '@setpoint/shared';
 import {hasPositiveKey} from '@setpoint/shared';
@@ -25,7 +25,7 @@ export interface Extracted {
 
 /**
  * A rule as triage applies it: the user's written ones (by position), then learned ones, then the
- * shipped defaults (src/triage/defaultRules.json). A default with `lane: null` decides nothing; it
+ * shipped defaults (src/triage/defaultRules.json). A default with `lane: null` decides nothing. It
  * only routes the email to the model.
  */
 export interface Rule {
@@ -37,14 +37,15 @@ export interface Rule {
   kind: Kind | null;
   // A shipped default may also say the type ("shipping").
   type: MessageType | null;
-  // A written rule's actions; null for learned rules, the defaults and a written
+  // A written rule's actions. Null for learned rules, the defaults and a written
   // rule without any.
   actions?: RuleActions | null;
 }
 
 /**
- * What a written rule does besides sorting: mark the email read, trash it (now, or after a delay),
- * for mail that arrived at or after `since` (when the rule was saved, edited or turned on).
+ * What a written rule does besides sorting: mark the email read, trash it (now, or after a
+ * delay). It acts on mail that arrived at or after `since` (when the rule was saved, edited or
+ * turned on).
  */
 export interface RuleActions {
   markRead: boolean;
@@ -56,8 +57,8 @@ export interface RuleActions {
 const TRASH_DELAY_MS: Partial<Record<RuleTrash, number>> = {'15m': 15 * 60_000, '1h': 3_600_000, '1d': 86_400_000, '1w': 7 * 86_400_000};
 
 /**
- * When a rule's delayed trash is due: the email's arrival plus the delay. Null for Never and
- * Now, which aren't delayed.
+ * When a rule's delayed trash is due: the email's arrival plus the delay. Null for Never and Now,
+ * which aren't delayed.
  */
 export function trashDueAt(receivedAt: string, trash: RuleTrash): string | null {
   const delay = TRASH_DELAY_MS[trash];
@@ -116,7 +117,7 @@ export const organisationKey = (organisation: string) => organisation.trim().toL
 export function matchesRule(email: RuleEmail, match: RuleMatch, extracted: Extracted | null, parts = partsOf(email)): boolean {
   if (needsReading(match) && !extracted) return false;
   if (match.none_includes && includesAny(parts.all, match.none_includes)) return false;
-  // Sender keys are alternatives: an address, a domain (or its subdomain), or a name.
+  // Sender keys are alternatives. Each is an address, a domain (or its subdomain), or a name.
   const senders: boolean[] = [];
   if (match.from_addresses) senders.push(match.from_addresses.map(lower).includes(parts.fromAddress));
   if (match.from_domains) senders.push(match.from_domains.map(lower).some(domain => parts.fromDomain === domain || parts.fromDomain.endsWith(`.${domain}`)));
@@ -136,15 +137,15 @@ export function matchesRule(email: RuleEmail, match: RuleMatch, extracted: Extra
   return hasPositiveKey(match);
 }
 
-/** The first rule that fits, in the order given; rules needing a reading are skipped without one. */
+/** The first rule that fits, in the order given. Rules needing a reading are skipped without one. */
 export function firstMatch<T extends Rule>(rules: readonly T[], email: RuleEmail, extracted: Extracted | null): T | null {
   const parts = partsOf(email);
   return rules.find(rule => matchesRule(email, rule.match, extracted, parts)) ?? null;
 }
 
 /**
- * The hard-risk words: mail that may cost money, a deadline or an account. The
- * strong model reads such mail even when a rule matched (see ruleDecides).
+ * The hard-risk words: mail that may cost money, a deadline or an account. The strong model reads
+ * such mail even when a rule matched (see ruleDecides).
  */
 const HARD_RISK_PATTERNS = [
   /\bpast due\b/i, /\boverdue\b/i, /\blow balance\b/i, /\binsufficient funds\b/i,

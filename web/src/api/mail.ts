@@ -1,7 +1,7 @@
 // Mail's resources and changes (shared/src/api/mail.ts has the routes). Every change shows at once
-// on screen, counts included, then the server's answer takes over:
-// opening, Done, Pin, Mark read or unread and Mark all as read here; Trash in the Inbox page. Read
-// state, Trash and Mark all as read are commands the provider confirms, by the live stream.
+// on screen, counts included, then the server's answer takes over. The changes here are opening,
+// Done, Pin, Mark read or unread and Mark all as read. Trash is in the Inbox page. Read state, Trash
+// and Mark all as read are commands the provider confirms, by the live stream.
 import type {AllOut, CommandOut, InboxOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
 import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, markAllReads} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
@@ -29,8 +29,8 @@ export const PROMPTS_PATH = '/mail/prompts';
 export const TRIAGE_PATH = '/mail/triage';
 
 /**
- * The email's HTML body as its own page, for the reader's sandboxed frame (its own policy), with its
- * remote images or without, as the rule or Show has it: named either way, the browser keeps it.
+ * The email's HTML body as its own page, for the reader's sandboxed frame (its own policy). It has
+ * its remote images or not, as the rule or Show has it. Either way is named, so the browser keeps it.
  */
 export const emailBodyPath = (id: number, images: boolean) => `/api/mail/messages/${id}/body?images=${images ? 'show' : 'hide'}`;
 
@@ -71,12 +71,13 @@ function followInboxCounts() {
 }
 
 // The latest change made here to each email. A change's answer is the email as the server had it
-// then, so one that arrives after a later change's (P while the open is still on its way) would put
-// back what that change did: it's left out, and the later one's answer, or its at-once effect, stays.
+// then. An answer that arrives after a later change's (P while the open is still on its way) would
+// put back what that change did. So it's left out, and the later one's answer, or its at-once
+// effect, stays.
 const edits = new Map<number, number>();
 let edited = 0;
 
-/** Marks a change to the email; its answer shows only if it's still the latest (`answered`). */
+/** Marks a change to the email. Its answer shows only if it's still the latest (`answered`). */
 function edit(id: number): number {
   edited += 1;
   edits.set(id, edited);
@@ -100,8 +101,8 @@ function updateMessage(id: number, change: Partial<MessageOut>): number {
   return edit(id);
 }
 
-// What a change to an email shows at once in. A load asked while the change is on its way can be
-// answered from before the server has it, so these hold their answers until it's in.
+// Where a change to an email shows at once. A load asked while the change is on its way can be
+// answered from before the server has the change, so these hold their answers until it's in.
 const MAIL_LOADS = ['/mail/inbox', '/mail/all', COUNTS_PATH, DAY_PATH];
 
 /** Sends a change with the lists and counts held; the release loads them again. */
@@ -115,10 +116,10 @@ async function change<T>(send: () => Promise<T>): Promise<T> {
 }
 
 /**
- * One change to several emails (a selection's): each its own command, as for one email,
- * sent together, with the lists' and counts' answers held until the last is in, so one landing
- * between them doesn't bring back for a moment what the others did at once; one email's goes as it
- * always has. Each one's outcome.
+ * One change to several emails (a selection's). Each email gets its own command, as for one email,
+ * and all are sent together. The lists' and counts' answers are held until the last is in, so one
+ * landing between them doesn't bring back for a moment what the others did at once. A change to one
+ * email goes as it always has. Each one's outcome.
  */
 export async function changeEach<T>(ids: number[], change: (id: number) => Promise<T>): Promise<PromiseSettledResult<T>[]> {
   const release = ids.length > 1 ? holdLoads(MAIL_LOADS) : () => undefined;
@@ -129,7 +130,7 @@ export async function changeEach<T>(ids: number[], change: (id: number) => Promi
   }
 }
 
-/** Opens an email (a click or Enter): an unread one turns read, and the unread counts drop at once. */
+/** Opens an email (a click or Enter). An unread one turns read, and the unread counts drop at once. */
 export function openMessage(id: number): Promise<MessageOut> {
   const found = cachedRow(id);
   if (found?.row.unread) {
@@ -144,7 +145,7 @@ export function openMessage(id: number): Promise<MessageOut> {
   });
 }
 
-/** Done (`H`): out of Attention at once; the pill drops. */
+/** Done (`H`): out of Attention at once, and the pill drops. */
 export function setDone(id: number, done = true): Promise<MessageOut> {
   const found = cachedRow(id);
   if (done && found) {
@@ -161,17 +162,16 @@ export function setDone(id: number, done = true): Promise<MessageOut> {
   });
 }
 
-// Each email's pin changes go one at a time. Two sent together (P, then P again before the
-// first is answered) can reach the server in either order and leave it pinned while the screen
-// says unpinned, so a change made while one is on its way only updates what's wanted, and that is
-// sent once the one in flight is answered, if it differs. The last asked is what the server keeps,
-// and the lists and the email hold their answers meanwhile, so one landing between the two can't
-// show the pin back.
+// Each email's pin changes go one at a time. Two sent together (P, then P again before the first
+// is answered) can reach the server in either order and leave it pinned while the screen says
+// unpinned. So a change made while one is on its way only updates what's wanted. That is sent once
+// the one in flight is answered, if it differs. The server keeps the last asked. The lists and the
+// email hold their answers meanwhile, so one landing between the two can't show the pin back.
 const pinning = new Map<number, {wanted: boolean; mark: number; done: Promise<MessageOut>}>();
 
 /**
  * Pin (`P`) puts it on the Pinned shelf, or takes it off, at once on screen. Every way to pin
- * comes here (the reader's P, the Pinned toast's Undo, the shelf's Unpin); it resolves with the
+ * comes here (the reader's P, the Pinned toast's Undo, the shelf's Unpin). It resolves with the
  * email as the server has it once the last change asked is in.
  */
 export function setPinned(id: number, pinned: boolean): Promise<MessageOut> {
@@ -242,7 +242,7 @@ export async function trustDomain(domain: string, messageId: number): Promise<Tr
   }
 }
 
-/** A pattern prompt's Yes (a learned rule) or No; triage answers with the prompts that remain. */
+/** A pattern prompt's Yes (a learned rule) or No. Triage answers with the prompts that remain. */
 export async function answerPrompt(id: number, yes: boolean): Promise<void> {
   try {
     const remaining = await sendJson<PatternPrompt[] | undefined>('POST', `${PROMPTS_PATH}/${id}`, {answer: yes ? 'yes' : 'no'});
@@ -260,7 +260,7 @@ export const attachmentUrl = (messageId: number, attachmentId: number) => `/api/
 
 /**
  * An attachment's bytes, for its preview (GET /api/mail/messages/:id/attachments/:a, through the
- * account's adapter); a failure carries the server's words for the preview to show.
+ * account's adapter). A failure carries the server's words for the preview to show.
  */
 export async function attachmentBlob(messageId: number, attachmentId: number): Promise<Blob> {
   let response: Response;

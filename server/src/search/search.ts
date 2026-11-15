@@ -1,18 +1,18 @@
-// Search: the field's words are free text over the full-text
-// index, which holds an email's summary, its search terms (src/search/terms.ts) and its body without
-// links or footers (src/domain/searchBody.ts). They rank by how well they matched
-// (src/domain/searchMatch.ts › matchTier), newest first within each tier, with no importance boost:
-// what's about the search comes first, and `first` counts it, then what only mentions
-// it. Words never become chips by themselves: chips come from a suggestion the user accepted,
-// a model's reading of the whole search and the date grammar (src/search/reading.ts), and a client
-// sends them back. They narrow the list and keep its order. A "!word" alone still forms a chip here,
-// a Not chip, since it says exactly what it leaves out, or stays text and leaves out the mail with
+// Search: the field's words are free text over the full-text index. The index holds an email's
+// summary, its search terms (src/search/terms.ts) and its body without links or footers
+// (src/domain/searchBody.ts). Results rank by how well they matched
+// (src/domain/searchMatch.ts › matchTier), newest first within each tier, with no importance boost.
+// What's about the search comes first, and `first` counts it. Then comes what only mentions it.
+// Words never become chips by themselves. Chips come from a suggestion the user accepted, a model's
+// reading of the whole search and the date grammar (src/search/reading.ts), and a client sends them
+// back. They narrow the list and keep its order. A "!word" alone still forms a chip here, a Not
+// chip, because it says exactly what it leaves out. Or it stays text and leaves out the mail with
 // it.
 // Search covers All's mail: archived mail is in, trashed mail is out.
 //
 // Each search from the field is logged with its chips and the ids it returned, and opening a result
 // records its position (src/search/log.ts), so ranking can be measured against real searches.
-// Alfred runs the broad search through its tool, unlogged: its words each widen the search on their
+// Alfred runs the broad search through its tool, unlogged. Its words each widen the search on their
 // own, so its answers stay what they were (matching: 'broad').
 import type {MatchReasonOut, HighlightOut, MessageType, SearchChip, SearchOut, SearchReadingOut, SearchResultOut, searchInput} from '@setpoint/shared';
 import {asc} from 'drizzle-orm';
@@ -39,7 +39,7 @@ export function chipVocabulary(store: Store) {
   return {organisations, accounts};
 }
 
-/** Organisations an organisation chip covers: those whose name starts with its words. */
+/** Organisations an organisation chip covers: those whose names start with its words. */
 export function organisationsFor(value: string, organisations: string[]): string[] {
   const wanted = wordsOf(value);
   return organisations.filter(organisation => {
@@ -67,7 +67,7 @@ function chipFilter(store: Store, chips: SearchChip[], accountId: number | undef
     filter.sql.push(`${column} IN (${placeholders(values)})`);
     filter.args.push(...values);
   };
-  // A Not chip's values left out; an email without the column (no organisation, no type) stays.
+  // A Not chip's values are left out. An email without the column (no organisation, no type) stays.
   const none = (column: string, values: (string | number)[]) => {
     if (!values.length) return;
     filter.sql.push(`(${column} IS NULL OR ${column} NOT IN (${placeholders(values)}))`);
@@ -120,32 +120,31 @@ export interface SearchMatches {
   partial: boolean;
   // Every match, in order.
   ids: number[];
-  // How many of `ids`, from the top, are about the search; the rest only mention it.
+  // How many of `ids`, from the top, are about the search. The rest only mention it.
   first: number;
   // A type chip also takes the type's word in an email's own fields, and says which it found.
   readingTypes: boolean;
 }
 
 export interface MatchOptions {
-  // 'ranked' is the field's search. 'broad' is Alfred's: every word counts, filler too, any one word
-  // will do when no email has them all, the best field any word matched orders them, and its words
-  // form every chip the grammar knows.
+  // 'ranked' is the field's search. 'broad' is Alfred's. In it every word counts, filler too, and any
+  // one word will do when no email has them all. The best field any word matched orders them, and
+  // its words form every chip the grammar knows.
   matching?: 'ranked' | 'broad';
   // What the words of a ranked search form: nothing, as the field's typing and what's left of a
-  // reading, or dates for what a suggestion might offer. A word naming a type also finds that type
-  //.
+  // reading, or dates for what a suggestion might offer. A word naming a type also finds that type.
   chipsFromWords?: 'dates' | 'none';
   // Type chips are a reading's, rather than the grammar's exact ones.
   readingTypes?: boolean;
-  // The words as typed when a reading's chips stand for some of them. They rank as words do, none of
-  // them required, so a reading narrows the list and what stays keeps its order.
+  // The words as typed when a reading's chips stand for some of them. They rank as words do, with
+  // none of them required, so a reading narrows the list and what stays keeps its order.
   rankText?: string;
 }
 
 interface Parsed {
   store: Store;
   filter: Filter;
-  // Results with no ranking to do: the order of `none`.
+  // Results with no ranking to do, in the order of `none`.
   none: SearchMatches;
 }
 
@@ -176,10 +175,10 @@ function placeLinks(store: Store, emails: {row: Ranked; words: SearchWord[]; tie
 }
 
 /**
- * The words' matches in the field's order, by each one's tier, then a word the search names the type
+ * The words' matches in the field's order: by each one's tier, then a word the search names the type
  * of, then newest first. When no email has every word, the rarest words an email has rank it, and
- * only what has the rarest word found can be about the search. `ranking` is every word that ranks:
- * those beyond `words` no email has to have, since a reading's chip stands for them.
+ * only what has the rarest word found can be about the search. `ranking` is every word that ranks.
+ * No email has to have those beyond `words`, because a reading's chip stands for them.
  */
 function rankEmails({store, none}: Parsed, ranking: SearchWord[], words: SearchWord[], holders: Set<number>[], every: number[], partial: boolean): SearchMatches {
   const found = words.map((word, at) => ({word, emails: holders[at]!})).filter(({emails}) => emails.size);
@@ -203,7 +202,7 @@ function rankEmails({store, none}: Parsed, ranking: SearchWord[], words: SearchW
   return {...none, terms: ranking.map(word => word.term), partial, ids: emails.sort(order).map(email => email.row.id), first: emails.filter(isFirst).length};
 }
 
-/** The field's search: every word but filler, and failing that the rarest words any email has. */
+/** The field's search: every word but filler, or failing that, the rarest words any email has. */
 function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: string, {rankText}: MatchOptions): SearchMatches {
   const {store, filter, none} = parsed;
   const lastWord = (value: string) => fold(value).match(/[\p{L}\p{N}]+$/u)?.[0];
@@ -232,7 +231,7 @@ function broadSearch({store, filter, none}: Parsed, text: string): SearchMatches
     if (!rows.length) continue;
     const partial = step.step !== 'all';
     if (none.order === 'newest') return {...inOrder(none, rows.sort(newestFirst)), terms: step.terms, partial};
-    // Free text alone: the best field any word matched, then newest first.
+    // Free text alone orders by the best field any word matched, then newest first.
     const tierOf = new Map<number, number>();
     FIELD_TIERS.forEach(({columns}, tier) => {
       for (const row of textCandidates(store, filter, ftsExpression(step.terms, 'or', columns))) if (!tierOf.has(row.id)) tierOf.set(row.id, tier);
@@ -255,7 +254,7 @@ export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'c
   const filter = chipFilter(store, chips, input.account_id, vocabulary.organisations, excluded, readingTypes);
   const hasWords = textTerms(rankText ?? text).length > 0;
   // Chips leave the order to the words, a reading's as much as a date. Only Alfred's take it over,
-  // and leaving out alone doesn't: words with only Not chips still order by the best field.
+  // and leaving out alone doesn't. Words with only Not chips still order by the best field.
   const ordering = broad && chips.some(chip => !isNot(chip));
   const order = ordering || !hasWords ? 'newest' : 'match';
   const none: SearchMatches = {chips, text: parsed.text, terms: [], order, partial: false, ids: [], first: 0, readingTypes};
@@ -322,9 +321,9 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
   }
 
   const runsIn = (value: string | null) => mergeRuns([...termRuns(value, [...matches.terms, ...typeWords]), ...orgPhrases.flatMap(phrase => phraseRuns(value, phrase))]);
-  // The excerpt comes from what the index holds, so it never shows a word search no longer knows,
-  // and shows the words only the body has ("Body signed"), else any. A word only the summary has
-  // isn't in it: its reason stays, and the row has nothing to mark.
+  // The excerpt comes from what the index holds, so it never shows a word search no longer knows. It
+  // shows the words only the body has ("Body signed"), else any. A word only the summary has isn't
+  // in it. Its reason stays, and the row has nothing to mark.
   const excerpt = excerptOf(row.searchBody, text => {
     const own = termRuns(text, bodyTerms);
     return own.length ? own : runsIn(text);

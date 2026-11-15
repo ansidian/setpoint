@@ -1,6 +1,6 @@
-// Proposals (board 08): pre-filled from the email's
-// subject, key date and the body line naming that date, each field marked when the email says it,
-// with the conflict line against the day's items. Nothing is created until Create.
+// Proposals (board 08): pre-filled from the email's subject, key date and the body line naming that
+// date, each field marked when the email says it, with the conflict line against the day's items.
+// Nothing is created until Create.
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {proposeFromMessage} from '../src/alfred/proposals.ts';
@@ -38,7 +38,7 @@ describe('the pure rules', () => {
     expect(placeIn(line, organisation)).toBe(place);
   });
 
-  // Real mail spreads the date, the time and the address over lines; these bodies are in
+  // Real mail spreads the date, the time and the address over lines. These bodies are in
   // the shapes of an interview scheduler's, a maintenance notice's and a shop's emails.
   const LA = 'America/Los_Angeles';
   const read = (bodyText: string, keyDate: string) => {
@@ -156,7 +156,7 @@ describe('proposals over the seed', () => {
       conflict: {free: true, label: 'Free that evening'},
       source: {subject: 'Final exam schedule · CS 101', url: gmailOf(w, 'Final exam schedule · CS 101')},
     });
-    // Nothing was created; Create is POST /api/items with the item as it stands.
+    // Nothing was created. Create is POST /api/items with the item as it stands.
     expect(w.store.db.select().from(t.items).all().length).toBe(before);
     const {kind, ...item} = response.body.item;
     const created = await c.send('POST', '/api/items', {body: {kind, ...item}});
@@ -171,7 +171,7 @@ describe('proposals over the seed', () => {
     expect(proposeFromMessage(w.store, idOf(w, 'Dinner Friday?'), 'event', {title: 'Dinner with Sam', date: '2026-10-09', start: '19:00', end: '21:00'}).conflict)
       .toEqual({free: false, label: 'Overlaps Study group · 1h 30m'});
     expect(dinner.item.calendar_id).toBe(calendarId(w, 'Personal'));
-    // "Blue Door" and "Dinner" are in Sam's email; the date and time Alfred worked out aren't.
+    // "Blue Door" and "Dinner" are in Sam's email. The date and time Alfred worked out aren't.
     expect(dinner.from_email).toEqual(['place']);
   });
 
@@ -197,7 +197,7 @@ describe('proposals over the seed', () => {
     const invite = {title: 'CS 101 final', all_day: false, starts_at: '2026-12-10T02:00:00.000Z', ends_at: '2026-12-12T02:00:00.000Z', start_date: null, end_date: null, place: 'Hall B'};
     // The invite's instants as they are: an end two days later is kept.
     expect(proposeFromMessage(w.store, exam, 'event', {}, invite)).toMatchObject({item: {title: 'CS 101 final', starts_at: invite.starts_at, ends_at: invite.ends_at, place: 'Hall B'}, from_email: ['title', 'date', 'time', 'place']});
-    // Alfred's own day and time stand over the invite's; the place he didn't give is still the invite's.
+    // Alfred's own day and time stand over the invite's. The place he didn't give is still the invite's.
     expect(proposeFromMessage(w.store, exam, 'event', {date: '2026-12-20', start: '09:00', end: null}, invite))
       .toMatchObject({item: {starts_at: '2026-12-20T17:00:00.000Z', ends_at: '2026-12-20T18:00:00.000Z', place: 'Hall B'}, from_email: ['title', 'place']});
     expect(proposeFromMessage(w.store, exam, 'event', {place: 'Library', title: 'Study for the final'}, invite)).toMatchObject({item: {title: 'Study for the final', starts_at: invite.starts_at, place: 'Library'}, from_email: ['date', 'time']});
@@ -227,7 +227,7 @@ describe('proposals over the seed', () => {
     expect((await lookup(address.toUpperCase(), providerId)).body).toEqual({message_id: lease});
     expect((await lookup(address, 'FMfcgzQXJWvmnoLhBTsMlpwbz')).body).toEqual({message_id: null});
     expect((await lookup('someone@example.invalid', providerId)).body).toEqual({message_id: null});
-    // An iCloud email isn't Gmail's, whatever its id; a trashed one is gone from Setpoint's reader.
+    // An iCloud email isn't Gmail's, whatever its id. A trashed one is gone from Setpoint's reader.
     const bill = w.store.db.select().from(t.messages).where(eq(t.messages.subject, 'Bill is ready')).get()!;
     const icloud = w.store.db.select().from(t.accounts).where(eq(t.accounts.id, bill.accountId)).get()!;
     expect((await lookup(icloud.address, bill.providerId)).body).toEqual({message_id: null});
