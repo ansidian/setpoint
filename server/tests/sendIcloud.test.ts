@@ -6,7 +6,7 @@
 // without the user's say.
 import {SEED_NOW, SEND_HOLD_MS} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
-import {describe, expect, test, vi} from 'vitest';
+import {describe, expect, onTestFinished, test, vi} from 'vitest';
 import * as t from '../src/db/schema.ts';
 import {ICloudAdapter, icloudConnector} from '../src/providers/icloud/index.ts';
 import {parseEmail} from '../src/providers/mime.ts';
@@ -35,6 +35,8 @@ async function setup({appendSent = true}: {appendSent?: boolean} = {}) {
   imap.addUser(ADDRESS, PASSWORD);
   smtp.addUser(ADDRESS, PASSWORD);
   const adapter = new ICloudAdapter({endpoint: {host: imap.host, port: imap.port, secure: false}, smtp: {host: smtp.host, port: smtp.port, requireTLS: false}, appendSent, connectTimeoutMs: 2000});
+  // Its pooled connection and the pool's sweeper go with the test.
+  onTestFinished(() => adapter.close());
   const engine: SyncEngine = new SyncEngine({store: w.store, adapters: new Adapters({icloud: adapter}), timeoutMs: 5000, workers: [new SendWorker({
     store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
     attachment: (sourceId, message, id) => engine.attachment(sourceId, message, id),

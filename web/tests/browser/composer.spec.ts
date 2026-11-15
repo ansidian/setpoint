@@ -114,6 +114,8 @@ test('a draft outlives a reload: its row says "Draft", its composer opens again 
     await page.keyboard.press('Escape');
     await until('Esc closes the composer, not the email', () => composer(page).count(), count => count === 0);
     assert.equal(new URL(page.url()).pathname, `/inbox/${id}`);
+    // Read once the page has nothing left to ask, so a discard on its way would have landed.
+    await setpoint.idle();
     assert.equal((await drafts(setpoint)).length, 1);
 
     // R from the row under the cursor opens the email with the composer, its text in place.
@@ -135,8 +137,9 @@ test('C writes a new message by itself from the account last sent from; closed, 
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    // No draft, no Drafts row.
-    await until('the Drafts row goes with the last draft', () => page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), count => count === 0);
+    // No draft, no Drafts row, read once the page has nothing left to ask.
+    await setpoint.idle();
+    assert.equal(await page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), 0);
     await page.keyboard.press('c');
     await page.locator('.pane.writing .composer').waitFor();
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'To');
@@ -195,6 +198,8 @@ test('Drafts lists the newest first: a reply opens under its email, a refused on
     await body(page).filter({hasText: 'Blue Door works.'}).waitFor();
 
     // From: each account with its addresses, Business's alias under it.
+    // The menu lists what From's own load brought, so it's opened once that is in.
+    await setpoint.idle();
     await composer(page).locator('.cmp-from > button').click();
     assert.deepEqual(await composer(page).locator('.cmp-from-menu .menu-i').allTextContents(), [
       'Businessuser@studio.example.com', 'hello@studio.example.com', 'Personaluser@example.com', 'Workuser@work.example.org', 'Jobsuser.jobs@example.com', 'iClouduser@example.net',
@@ -222,14 +227,20 @@ test('a composer left with nothing written leaves nothing in Drafts: C, then an 
     await page.keyboard.press('c');
     await page.locator('.pane.writing .composer').waitFor();
     await until('the new message is a draft', () => drafts(setpoint), found => found.length === 1);
+    // The sidebar's Drafts row is seen each time before it's read as gone: the sidebar learns of a
+    // draft's end by its own refresh, after the server's answer.
+    const draftsRow = page.locator('.sb .nav.sub', {hasText: 'Drafts'});
+    await draftsRow.waitFor();
     await page.locator(`.list .row[data-id="${id}"]`).click();
     await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
     await until('the untouched message is gone', () => drafts(setpoint), found => found.length === 0);
+    await draftsRow.waitFor({state: 'detached'});
     await page.keyboard.press('r');
     await body(page).waitFor();
+    await draftsRow.waitFor();
     await page.keyboard.press('Escape');
     await until('the untouched reply is gone too', () => drafts(setpoint), found => found.length === 0);
-    await until('the Drafts row goes with the last draft', () => page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), count => count === 0);
+    await draftsRow.waitFor({state: 'detached'});
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

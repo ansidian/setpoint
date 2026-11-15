@@ -169,6 +169,9 @@ describe('Gmail: sent mail', () => {
     expect(w.store.db.select().from(t.jobs).where(and(eq(t.jobs.kind, 'triage'), eq(t.jobs.messageId, moved.id))).all()).toHaveLength(1);
 
     // Sweeps every 5 minutes: a sent-only row is never re-read for its labels.
+    send(google, 'Sent yesterday', ago(DAY));
+    await pushed();
+    expect(bySubject(w, 'Sent yesterday')).toMatchObject({sent: true, received: false});
     const labelReads = () => google.requests.filter(request => request.query.get('format') === 'minimal').length;
     const before = labelReads();
     w.advance(6 * MINUTE);

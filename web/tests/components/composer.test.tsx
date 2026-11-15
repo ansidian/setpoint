@@ -92,7 +92,15 @@ async function compose(draft: DraftOut, people: Recipient[] = [], message = MESS
 const chips = (field: string) => [...document.querySelectorAll(`.composer .cmp-row:has(input[aria-label="${field}"]) .cmp-chip`)].map(chip => chip.firstChild?.textContent);
 const field = (name: string) => page.getByRole('textbox', {name, exact: true});
 
+/**
+ * Holds the save's timer, so a check never waits out DRAFT_SAVE_MS on the real clock, nor saves
+ * half of what's typed when a letter comes late. `saveNow` is the moment after the last change.
+ */
+const holdSaves = () => vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+const saveNow = () => vi.advanceTimersByTime(DRAFT_SAVE_MS);
+
 afterEach(() => {
+  vi.useRealTimers();
   closeComposer();
   clearCache();
   vi.restoreAllMocks();
@@ -153,6 +161,7 @@ test('⌘⇧B shows Cc and Bcc on a reply without them; left empty, they fold aw
   await expect.poll(() => document.querySelector('.composer input[aria-label="Cc"]')).toBeNull();
   // The button does it too, and a Cc kept keeps them.
   await userEvent.click(page.getByRole('button', {name: 'Cc Bcc'}));
+  await expect.element(field('Cc')).toHaveFocus();
   await userEvent.keyboard('june.park@example.org,');
   await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
   expect(chips('Cc')).toEqual(['june.park@example.org']);
@@ -161,6 +170,7 @@ test('⌘⇧B shows Cc and Bcc on a reply without them; left empty, they fold aw
 
 test('the quote folds behind "…"; opened, it shows its line and the email, and a trim is saved as the quote', async () => {
   const {saves} = await compose(draftOf({}));
+  holdSaves();
   expect(document.querySelector('.cmp-quote-text')).toBeNull();
   await userEvent.click(page.getByRole('button', {name: 'Show the quoted email'}));
   await expect.element(page.getByText('On Oct 5, 2026, Sam Lee wrote:')).toBeVisible();
@@ -170,15 +180,21 @@ test('the quote folds behind "…"; opened, it shows its line and the email, and
   const element = document.querySelector<HTMLElement>('.cmp-quote-text')!;
   element.firstElementChild!.remove();
   element.dispatchEvent(new InputEvent('input', {bubbles: true}));
-  await expect.poll(() => saves.at(-1)?.quote, {timeout: DRAFT_SAVE_MS * 4}).toEqual([{type: 'paragraph', runs: [{text: 'Sam', marks: [], href: null}]}]);
+  saveNow();
+  await expect.poll(() => saves.at(-1)?.quote).toEqual([{type: 'paragraph', runs: [{text: 'Sam', marks: [], href: null}]}]);
   await userEvent.click(page.getByRole('button', {name: 'Hide the quoted email'}));
   expect(document.querySelector('.cmp-quote-text')).toBeNull();
 });
 
 test('the draft saves once a moment after the last letter, with the text as it then is; Esc closes it and saves at once', async () => {
   const {saves} = await compose(draftOf({}));
+  holdSaves();
   await userEvent.keyboard('Count me in');
-  await expect.poll(() => saves.length, {timeout: DRAFT_SAVE_MS * 4}).toBe(1);
+  // Not before the moment is up.
+  vi.advanceTimersByTime(DRAFT_SAVE_MS - 1);
+  expect(saves).toEqual([]);
+  vi.advanceTimersByTime(1);
+  await expect.poll(() => saves.length).toBe(1);
   expect(saves[0]).toEqual({body: [{type: 'paragraph', runs: [{text: 'Count me in', marks: [], href: null}]}]});
   await userEvent.keyboard('.');
   await userEvent.keyboard('{Escape}');
@@ -199,6 +215,7 @@ test('a forward shows its email in full: its header lines, its attachments as ch
     {id: 32, filename: 'Map.png', mime_type: 'image/png', size_bytes: 12 * 1024, previewable: true},
   ]} as MessageOut;
   const {saves} = await compose(draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?'}), [], message);
+  holdSaves();
   expect(document.activeElement?.getAttribute('aria-label')).toBe('To');
   await expect.element(page.getByText('---------- Forwarded message ---------')).toBeVisible();
   await expect.element(page.getByText('From: Sam Lee <sam.lee@example.com>')).toBeVisible();
@@ -208,19 +225,23 @@ test('a forward shows its email in full: its header lines, its attachments as ch
   expect(document.querySelector('.cmp-fold')).toBeNull();
   await userEvent.click(page.getByRole('button', {name: 'Remove Map.png'}));
   expect([...document.querySelectorAll('.cmp-file')].map(file => file.textContent)).toEqual(['Menu.pdf184 KB']);
-  await expect.poll(() => saves.at(-1)?.removed_attachments, {timeout: DRAFT_SAVE_MS * 4}).toEqual([32]);
+  saveNow();
+  await expect.poll(() => saves.at(-1)?.removed_attachments).toEqual([32]);
 });
 
 test('a change whose save failed stays owed: it goes out again with the next save, the failure said until it lands', async () => {
   const fake = await compose(draftOf({kind: 'reply_all', to: [SAM, JUNE]}));
   fake.failSaves = 1;
+  holdSaves();
   await userEvent.click(page.getByRole('button', {name: 'Remove June Park'}));
+  saveNow();
   await expect.element(page.getByText(/^Couldn't save the draft, Setpoint is restarting/)).toBeVisible();
   expect(fake.landed).toEqual([]);
   // The next save carries it, under what was typed since.
   await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
   await userEvent.keyboard('Hi');
-  await expect.poll(() => fake.landed.length, {timeout: DRAFT_SAVE_MS * 4}).toBe(1);
+  saveNow();
+  await expect.poll(() => fake.landed.length).toBe(1);
   expect(fake.landed[0]).toEqual({to: [SAM], body: [{type: 'paragraph', runs: [{text: 'Hi', marks: [], href: null}]}]});
   await expect.poll(() => document.querySelector('.composer .cmp-failed')).toBeNull();
 });
@@ -228,7 +249,9 @@ test('a change whose save failed stays owed: it goes out again with the next sav
 test('Send never sends while a change is owed and its save fails again: the composer stays with the failure', async () => {
   const fake = await compose(draftOf({kind: 'reply_all', to: [SAM, JUNE]}));
   fake.failSaves = 2;
+  holdSaves();
   await userEvent.click(page.getByRole('button', {name: 'Remove June Park'}));
+  saveNow();
   await expect.element(page.getByText(/^Couldn't save the draft/)).toBeVisible();
   await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
   await userEvent.keyboard('{Meta>}{Enter}{/Meta}');

@@ -243,8 +243,10 @@ export async function fakeImap() {
           if (!Buffer.isBuffer(raw)) return send(`${tag} BAD Missing message literal\r\n`);
           const flags = Array.isArray(args[1]) ? args[1].map(str) : [];
           const stamp = args.slice(1, -1).map(str).find(arg => /^\s?\d{1,2}-\w{3}-\d{4}/.test(arg));
-          const date = stamp ? new Date(stamp.trim().replace(/^(\d+)-(\w+)-(\d+)/, '$1 $2 $3')) : new Date();
-          const appended = {uid: folder.uidNext++, flags: new Set(flags), internalDate: Number.isFinite(date.getTime()) ? date : new Date(), raw};
+          // The date is the caller's (the held clock's): the fake never stamps one from the real clock.
+          const date = stamp ? new Date(stamp.trim().replace(/^(\d+)-(\w+)-(\d+)/, '$1 $2 $3')) : null;
+          if (!date || !Number.isFinite(date.getTime())) return send(`${tag} BAD APPEND needs a date\r\n`);
+          const appended = {uid: folder.uidNext++, flags: new Set(flags), internalDate: date, raw};
           folder.messages.push(appended);
           appends.push({folder: folder.name, uid: appended.uid, raw});
           return ok(`[APPENDUID ${folder.uidValidity} ${appended.uid}] APPEND completed`);

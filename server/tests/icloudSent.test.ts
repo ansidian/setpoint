@@ -5,7 +5,7 @@
 // whichever copy comes first.
 import {SEED_NOW} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
-import {describe, expect, test, vi} from 'vitest';
+import {describe, expect, onTestFinished, test, vi} from 'vitest';
 import * as t from '../src/db/schema.ts';
 import {ICloudAdapter, icloudConnector} from '../src/providers/icloud/index.ts';
 import {readBackfill, SENT_BACKFILL_SCOPE} from '../src/sync/cursors.ts';
@@ -44,6 +44,8 @@ async function setup() {
   // The same UIDVALIDITY as INBOX's, so the two mailboxes' UIDs would collide without the mailbox in the id.
   imap.folder(ADDRESS, SENT).uidValidity = imap.folder(ADDRESS).uidValidity;
   const adapter = new ICloudAdapter({endpoint: {host: imap.host, port: imap.port, secure: false}, backfillChunk: 3, connectTimeoutMs: 2000});
+  // Its pooled connection and the pool's sweeper go with the test.
+  onTestFinished(() => adapter.close());
   const engine = new SyncEngine({store: w.store, adapters: new Adapters({icloud: adapter}), timeoutMs: 3000});
   const api = await signedIn(w, {engine, connectors: {icloud: icloudConnector(w.store, adapter)}});
   const drain = async () => {
