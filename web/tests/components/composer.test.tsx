@@ -34,10 +34,16 @@ const draftOf = (fields: Partial<DraftOut>): DraftOut => ({
   subject: 'Re: Dinner Friday?', body: [], quote: null, removed_attachments: [], created_at: SEED_NOW, updated_at: SEED_NOW, send: null, ...fields,
 });
 
-/** The server, faked at fetch: the draft to start, From, people for any query, and the saves it got. */
+/**
+ * The server, faked at fetch: the draft to start, From, people for any query, and the saves it got.
+ * `failSaves` refuses that many saves next (they're still in `saves`, not in `landed`), and `sends`
+ * counts Send.
+ */
 function server(draft: DraftOut, people: Recipient[] = []) {
   const saves: Record<string, unknown>[] = [];
+  const landed: Record<string, unknown>[] = [];
   const asked: string[] = [];
+  const fake = {saves, landed, asked, failSaves: 0, sends: 0};
   const answer = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}}));
   vi.spyOn(window, 'fetch').mockImplementation((input, init) => {
     const url = new URL(String(input), location.href);
@@ -45,8 +51,18 @@ function server(draft: DraftOut, people: Recipient[] = []) {
     if (url.pathname === '/api/mail/drafts' && method === 'POST') return answer(draft, 201);
     if (url.pathname === `/api/mail/drafts/${draft.id}` && method === 'GET') return answer(draft);
     if (url.pathname === `/api/mail/drafts/${draft.id}` && method === 'PATCH') {
-      saves.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      const saved = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      saves.push(saved);
+      if (fake.failSaves > 0) {
+        fake.failSaves -= 1;
+        return answer({error: {code: 'unavailable', message: 'Setpoint is restarting.'}}, 503);
+      }
+      landed.push(saved);
       return answer({id: draft.id, updated_at: SEED_NOW});
+    }
+    if (url.pathname === `/api/mail/drafts/${draft.id}/send` && method === 'POST') {
+      fake.sends += 1;
+      return answer({...draft, send: {state: 'held', send_at: SEED_NOW, error: null}});
     }
     if (url.pathname === '/api/mail/from') return answer(FROM);
     if (url.pathname === '/api/mail/drafts') return answer({drafts: [], count: 0});
@@ -56,7 +72,7 @@ function server(draft: DraftOut, people: Recipient[] = []) {
     }
     return answer({error: {code: 'not_found', message: 'No such thing.'}}, 404);
   });
-  return {saves, asked};
+  return fake;
 }
 
 function Pane({message}: {message: MessageOut}) {
@@ -193,4 +209,33 @@ test('a forward shows its email in full: its header lines, its attachments as ch
   await userEvent.click(page.getByRole('button', {name: 'Remove Map.png'}));
   expect([...document.querySelectorAll('.cmp-file')].map(file => file.textContent)).toEqual(['Menu.pdf184 KB']);
   await expect.poll(() => saves.at(-1)?.removed_attachments, {timeout: DRAFT_SAVE_MS * 4}).toEqual([32]);
+});
+
+test('a change whose save failed stays owed: it goes out again with the next save, the failure said until it lands', async () => {
+  const fake = await compose(draftOf({kind: 'reply_all', to: [SAM, JUNE]}));
+  fake.failSaves = 1;
+  await userEvent.click(page.getByRole('button', {name: 'Remove June Park'}));
+  await expect.element(page.getByText(/^Couldn't save the draft, Setpoint is restarting/)).toBeVisible();
+  expect(fake.landed).toEqual([]);
+  // The next save carries it, under what was typed since.
+  await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
+  await userEvent.keyboard('Hi');
+  await expect.poll(() => fake.landed.length, {timeout: DRAFT_SAVE_MS * 4}).toBe(1);
+  expect(fake.landed[0]).toEqual({to: [SAM], body: [{type: 'paragraph', runs: [{text: 'Hi', marks: [], href: null}]}]});
+  await expect.poll(() => document.querySelector('.composer .cmp-failed')).toBeNull();
+});
+
+test('Send never sends while a change is owed and its save fails again: the composer stays with the failure', async () => {
+  const fake = await compose(draftOf({kind: 'reply_all', to: [SAM, JUNE]}));
+  fake.failSaves = 2;
+  await userEvent.click(page.getByRole('button', {name: 'Remove June Park'}));
+  await expect.element(page.getByText(/^Couldn't save the draft/)).toBeVisible();
+  await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
+  await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+  // Its second try was refused too: nothing was sent, and the composer is back with what the user had.
+  await expect.poll(() => fake.saves.length).toBe(2);
+  await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
+  expect(fake.sends).toBe(0);
+  expect(chips('To')).toEqual(['Sam Lee']);
+  expect(fake.saves[1]).toEqual({to: [SAM]});
 });

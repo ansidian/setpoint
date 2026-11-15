@@ -26,7 +26,7 @@ import {DescriptionField, mountBlocks} from '../calendar/DescriptionField.tsx';
 import {PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
-import {closeComposer, discard, queueSave, send, useSaveError, watchSends} from './composer.ts';
+import {closeComposer, discard, queueSave, send, unsaved, useSaveError, watchSends} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
 import './compose.css';
 
@@ -56,8 +56,12 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   accounts: Map<number, AccountOut>;
   timeZone: string;
 }) {
-  // What the user has, from the draft as it was when the composer opened. From then on it's theirs.
-  const [fields, setFields] = useState(() => ({from: draft.from, to: draft.to, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body}));
+  // What the user has, from the draft as it was when the composer opened, with any change the server
+  // is still owed. From then on it's theirs.
+  const [fields, setFields] = useState(() => {
+    const {from, to, cc, bcc, subject, body} = {...draft, ...unsaved(draft.id)} as DraftOut;
+    return {from, to, cc, bcc, subject, body};
+  });
   const [copies, setCopies] = useState(draft.cc.length + draft.bcc.length > 0);
   const saveError = useSaveError(draft.id);
   const body = useRef<HTMLDivElement>(null);
@@ -176,7 +180,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         </div>
       )}
       {saveError && <div className="cmp-failed" role="alert"><Icon name="error" size={16} /><span className="grow">{saveError}</span></div>}
-      <DescriptionField blocks={draft.body} kind="mail" note={null} label="Message" placeholder="" bar="always" fieldRef={body}
+      <DescriptionField blocks={fields.body} kind="mail" note={null} label="Message" placeholder="" bar="always" fieldRef={body}
         onChange={blocks => change('body', blocks)}
         after={draft.kind === 'reply' || draft.kind === 'reply_all' ? <Quote draft={draft} message={message} timeZone={timeZone} />
           : draft.kind === 'forward' ? <Forwarded draft={draft} message={message} timeZone={timeZone} /> : null}
@@ -201,7 +205,8 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
 function Quote({draft, message, timeZone}: {draft: DraftOut; message: MessageOut | undefined; timeZone: string}) {
   const [shown, setShown] = useState(false);
   const field = useRef<HTMLDivElement>(null);
-  const blocks = draft.quote ?? (message ? quoteOf(message) : null);
+  const owedQuote = unsaved(draft.id).quote;
+  const blocks = (owedQuote === undefined ? draft.quote : owedQuote) ?? (message ? quoteOf(message) : null);
   useLayoutEffect(() => {
     if (shown && field.current && blocks) mountBlocks(field.current, blocks);
     // Mounted as it opens: from then on the text is the user's.
@@ -231,7 +236,7 @@ function Quote({draft, message, timeZone}: {draft: DraftOut; message: MessageOut
  * attachments as chips that can be taken off (the recipient gets the rest), then the email itself.
  */
 function Forwarded({draft, message, timeZone}: {draft: DraftOut; message: MessageOut | undefined; timeZone: string}) {
-  const [removed, setRemoved] = useState(draft.removed_attachments);
+  const [removed, setRemoved] = useState(() => unsaved(draft.id).removed_attachments ?? draft.removed_attachments);
   if (!message) return null;
   const files = message.attachments.filter(file => !removed.includes(file.id));
   const remove = (id: number) => {

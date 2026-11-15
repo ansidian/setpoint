@@ -5,7 +5,9 @@
 //
 // Saving: each field's change is queued and sent DRAFT_SAVE_MS after the last one, one save after
 // another so the last write wins. Send, Esc, opening another draft and leaving the page save at once.
-// Nothing shows while it works. A save that fails says so in the composer until one lands.
+// Nothing shows while it works. A change whose save failed stays owed: it goes out again with the
+// next save, under whatever was changed since, and the composer says the save failed until every
+// owed change has landed. Send saves first and stops there while a change is owed and still fails.
 //
 // Send: the composer closes and the toast reads "Sending" with Undo. The toast shows at the press,
 // before the server's hold has begun, so its 6 seconds end before the server's: Undo is never
@@ -61,6 +63,8 @@ export const openComposer = () => open;
 // ---- Saving ----
 
 const queued = new Map<number, DraftUpdateInput>();
+// Changes whose save failed, owed to the server until a save carrying them lands.
+const owed = new Map<number, DraftUpdateInput>();
 const timers = new Map<number, number>();
 // Each draft's saves, one after another.
 const chains = new Map<number, Promise<void>>();
@@ -72,25 +76,42 @@ export function queueSave(draftId: number, changes: DraftUpdateInput) {
   timers.set(draftId, window.setTimeout(() => void flushSave(draftId), DRAFT_SAVE_MS));
 }
 
-/** Saves what's queued now, and answers once every save of the draft so far has landed. */
+/**
+ * Saves what's queued now, with any change still owed from a save that failed, and answers once
+ * every save of the draft so far has run. It fails when this save failed, so Send stops there.
+ */
 export function flushSave(draftId: number, {keepalive = false} = {}): Promise<void> {
   window.clearTimeout(timers.get(draftId));
   timers.delete(draftId);
-  const changes = queued.get(draftId);
+  const next = (chains.get(draftId) ?? Promise.resolve()).then(() => saveOwed(draftId, keepalive));
+  chains.set(draftId, next.catch(() => {}));
+  return next;
+}
+
+/** What the server is owed for a draft: changes whose save failed, under those queued since. */
+const owedOf = (draftId: number): DraftUpdateInput => ({...owed.get(draftId), ...queued.get(draftId)});
+
+/** The changes the server is still owed, for a composer drawing the draft again. */
+export const unsaved = (draftId: number): DraftUpdateInput => owedOf(draftId);
+
+async function saveOwed(draftId: number, keepalive: boolean) {
+  // Taken when its turn comes, so it carries everything changed until then.
+  const changes = owedOf(draftId);
+  owed.delete(draftId);
   queued.delete(draftId);
-  const before = chains.get(draftId) ?? Promise.resolve();
-  if (!changes) return before;
-  const next = before.then(() => saveDraft(draftId, changes, {keepalive})).then(() => {
-    if (saveErrors.delete(draftId)) notify();
-  }, (error: unknown) => {
-    // A save refused because the draft is sending or gone has nothing left to keep.
+  if (!Object.keys(changes).length) return;
+  try {
+    await saveDraft(draftId, changes, {keepalive});
+  } catch (error) {
+    // A draft that's sending or gone has nothing left to keep.
     if (error instanceof ApiFailure && (error.status === 404 || error.code === 'draft_held' || error.code === 'draft_sending')) return;
+    // Owed again, under anything queued meanwhile, which is newer.
+    owed.set(draftId, changes);
     saveErrors.set(draftId, failureLine('Couldn\'t save the draft', error));
     notify();
     throw error;
-  });
-  chains.set(draftId, next.catch(() => {}));
-  return next;
+  }
+  if (!owed.has(draftId) && saveErrors.delete(draftId)) notify();
 }
 
 /** Drops what's queued for a draft that's going away. */
@@ -98,12 +119,13 @@ function forgetSaves(draftId: number) {
   window.clearTimeout(timers.get(draftId));
   timers.delete(draftId);
   queued.delete(draftId);
+  owed.delete(draftId);
   saveErrors.delete(draftId);
 }
 
 if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', () => {
-    for (const draftId of [...queued.keys()]) void flushSave(draftId, {keepalive: true}).catch(() => {});
+    for (const draftId of new Set([...queued.keys(), ...owed.keys()])) void flushSave(draftId, {keepalive: true}).catch(() => {});
   });
 }
 
@@ -115,7 +137,7 @@ if (typeof window !== 'undefined') {
  */
 function letGo(draftId: number) {
   const draft = getCached<DraftOut>(draftPath(draftId));
-  const now = draft ? {...draft, ...queued.get(draftId)} as DraftOut : null;
+  const now = draft ? {...draft, ...owedOf(draftId)} as DraftOut : null;
   if (now && !now.send && unwritten(now)) {
     forgetSaves(draftId);
     discarded.add(draftId);
@@ -253,7 +275,8 @@ export function send(draft: DraftOut) {
   };
   toastId = showToast('Sending', {label: 'Undo', run: undo});
   held.catch((error: unknown) => {
-    // Refused before the hold began (no one to send to, offline): the composer comes back.
+    // Refused before the hold began (a save that failed, no one to send to, offline): the composer
+    // comes back with what the user had, the server still owed what didn't land.
     sending.delete(draft.id);
     dismissToast(toastId);
     toastFailure('Couldn\'t send it')(error);
