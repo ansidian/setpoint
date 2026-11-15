@@ -14,7 +14,7 @@ import type {Notifier} from '../notify/index.ts';
 import {readSourceCredentials} from '../secrets/store.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
-import type {AdapterContext, AdapterRegistry, AttachmentBytes, OutgoingMail, SentMail, SourceAdapter, SourceRow} from './adapter.ts';
+import type {AdapterContext, AdapterRegistry, AttachmentBytes, OutgoingMail, SentMail, SentQuery, SourceAdapter, SourceRow} from './adapter.ts';
 import {asProviderError, ProviderError} from './errors.ts';
 import {recordFailure, recordSuccess, sourceHealth} from './health.ts';
 import {claimDueJobs, enqueueJob, failJob, finishJob, hasActiveJob, pruneJobs, wakeSync} from './jobs.ts';
@@ -148,9 +148,9 @@ export class SyncEngine {
   }
 
   /** The provider's sent email with this Message-ID, if it holds one. */
-  async findSent(sourceId: number, rfc822Id: string): Promise<{sent: SentMail | null; certain: boolean}> {
+  async findSent(sourceId: number, query: SentQuery): Promise<{sent: SentMail | null; certain: boolean}> {
     const {source, adapter} = this.mailAdapter(sourceId, 'findSent');
-    return this.timed(adapter.findSent!(this.context(source), rfc822Id));
+    return this.timed(adapter.findSent!(this.context(source), query));
   }
 
   private mailAdapter(sourceId: number, needs: 'send' | 'findSent'): {source: SourceRow; adapter: SourceAdapter} {

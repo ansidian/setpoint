@@ -94,7 +94,7 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
   const pubsubQueue: {ackId: string; data: string}[] = [];
   const injected: {pattern: RegExp; response: Injected; times: number}[] = [];
   const requests: {method: string; path: string; query: URLSearchParams; body: unknown}[] = [];
-  // Every messages.send Gmail took, in order.
+  // Every messages.send Gmail took, in order, as Setpoint sent it.
   const sent: {address: string; id: string; raw: Buffer; threadId: string | null}[] = [];
   const hanging: http.ServerResponse[] = [];
   let nextId = 1;
@@ -170,7 +170,11 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
       if (!/@/.test(named)) return apiError(response, 400, 'Recipient address required', 'invalidArgument');
       const threadId = typeof body.threadId === 'string' && [...box.messages.values()].some(item => item.threadId === body.threadId) ? body.threadId : undefined;
       const toSelf = named.toLowerCase().includes(box.address.toLowerCase());
-      const id = fake.deliver(box.address, {raw, date: clock().toISOString(), labels: toSelf ? ['SENT', 'INBOX', 'UNREAD'] : ['SENT'], threadId});
+      // Gmail may set a Message-ID of its own on an API send, keeping the sender's in
+      // X-Google-Original-Message-ID (reported, not documented): the fake does, the worse case.
+      const own = headerValue(raw, 'Message-ID');
+      const filed = Buffer.from(raw.toString('utf8').replace(/^Message-ID:.*$/im, `Message-ID: <CAgmail${randomBytes(6).toString('hex')}@mail.gmail.com>${own ? `\r\nX-Google-Original-Message-ID: ${own}` : ''}`), 'utf8');
+      const id = fake.deliver(box.address, {raw: filed, date: clock().toISOString(), labels: toSelf ? ['SENT', 'INBOX', 'UNREAD'] : ['SENT'], threadId});
       sent.push({address: box.address, id, raw, threadId: threadId ?? null});
       return json(response, 200, {id, threadId: threadId ?? id, labelIds: toSelf ? ['SENT', 'INBOX', 'UNREAD'] : ['SENT']});
     }

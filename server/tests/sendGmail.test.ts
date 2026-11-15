@@ -30,7 +30,7 @@ const paragraph = (text: string) => [{type: 'paragraph', runs: [{text, marks: []
 function engineFor(w: World, google: FakeGoogle) {
   const adapter = new GmailAdapter({topic: null, client: google.client()});
   const engine: SyncEngine = new SyncEngine({store: w.store, adapters: new Adapters({gmail: adapter}), timeoutMs: 5000, workers: [new SendWorker({
-    store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, id) => engine.findSent(sourceId, id),
+    store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
     attachment: (sourceId, message, id) => engine.attachment(sourceId, message, id),
   })]});
   return engine;
@@ -113,7 +113,8 @@ describe('Gmail: sending', () => {
 
     // The draft is gone, and Sent and "You replied" show the reply before any sync.
     expect((await api.send('GET', `/api/mail/drafts/${draft.id}`)).status).toBe(404);
-    expect(sentRows(w)).toMatchObject([{providerId: sent!.id, threadId: 'thread-thursday', sent: true, received: false, subject: 'Re: Thursday', rfc822Id: parsed.rfc822Id,
+    // The Message-ID is the one Gmail filed, read back after the send.
+    expect(sentRows(w)).toMatchObject([{providerId: sent!.id, threadId: 'thread-thursday', sent: true, received: false, subject: 'Re: Thursday', rfc822Id: expect.stringMatching(/@mail\.gmail\.com>$/),
       toRecipients: [{name: 'Sam Ortiz', address: 'sam.ortiz@example.org'}, {name: 'June Park', address: 'june.park@example.org'}]}]);
     expect((await api.send('GET', '/api/mail/sent')).body.days[0].rows[0]).toMatchObject({subject: 'Re: Thursday', sent_only: true});
     expect((await api.send('GET', `/api/mail/messages/${sam.id}`)).body.replied_at).toBeDefined();
@@ -207,6 +208,28 @@ describe('Gmail: sending', () => {
     expect(parsed).toMatchObject({subject: 'Fwd: Thursday', inReplyTo: null, references: [], to: [{name: 'Mom', address: 'mom@example.net'}]});
     expect(parsed.text).toContain('---------- Forwarded message ---------\nFrom: Sam Ortiz <sam.ortiz@example.org>');
     expect(parsed.attachments.map(file => [file.filename, file.sizeBytes])).toEqual([['Itinerary.pdf', 18]]);
+  });
+
+  test('a reply or forward written from another account sends from it: no thread of the other account, the attachments fetched from the email\'s own', async () => {
+    const s = await setup();
+    const other = 'user.home@example.com';
+    s.google.addMailbox(other);
+    const started = await s.api.send('POST', '/api/accounts/gmail/authorize', {body: {}});
+    const state = new URL(started.body.url).searchParams.get('state')!;
+    await s.api.send('GET', `/api/ea/accounts/gmail/callback?code=${encodeURIComponent(s.google.issueCode(other))}&state=${encodeURIComponent(state)}`);
+    const home = s.w.store.db.select().from(t.accounts).where(eq(t.accounts.address, other)).get()!;
+    const {row: sam} = await samWrites(s.google, s.w, s.sync, {attachments: [{filename: 'Itinerary.pdf', contentType: 'application/pdf', content: '%PDF-1.4 itinerary'}]});
+    for (const kind of ['reply', 'forward']) {
+      const draft = (await s.api.send('POST', '/api/mail/drafts', {body: {kind, message_id: sam.id}})).body;
+      await s.api.send('PATCH', `/api/mail/drafts/${draft.id}`, {body: {from: {account_id: home.id, address: other}, to: [{name: null, address: 'sam.ortiz@example.org'}]}});
+      await s.api.send('POST', `/api/mail/drafts/${draft.id}/send`);
+      s.w.advance(SEND_HOLD_MS);
+      await s.drain();
+      expect((await s.api.send('GET', `/api/mail/drafts/${draft.id}`)).status).toBe(404);
+    }
+    expect(s.google.sent.map(sent => [sent.address, sent.threadId])).toEqual([[other, null], [other, null]]);
+    expect((await parseEmail(s.google.sent[0]!.raw)).inReplyTo).toBe('<thursday-1@example.org>');
+    expect((await parseEmail(s.google.sent[1]!.raw)).attachments.map(file => file.filename)).toEqual(['Itinerary.pdf']);
   });
 
   test('mail to yourself is one row, sent and received', async () => {

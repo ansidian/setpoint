@@ -18,7 +18,7 @@ import {inArray} from 'drizzle-orm';
 import * as t from '../../db/schema.ts';
 import type {Store} from '../../store.ts';
 import {aliasesDue, replaceAliases} from '../../sending/aliases.ts';
-import type {AdapterContext, AttachmentBytes, CommandRow, OutgoingMail, SentMail, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
+import type {AdapterContext, AttachmentBytes, CommandRow, OutgoingMail, SentMail, SentQuery, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
 import {BACKFILL_DAYS, BACKFILL_SCOPE, readBackfill, readCursor, SENT_BACKFILL_SCOPE, startBackfill, writeBackfill, writeCursor} from '../../sync/cursors.ts';
 import type {BackfillState} from '../../sync/cursors.ts';
 import {ProviderError} from '../../sync/errors.ts';
@@ -59,6 +59,9 @@ const MAX_SWEEP_REREADS = 500;
 // Gmail's batchModify takes up to 1,000 ids.
 const BATCH_MODIFY_MAX = 1000;
 const DAY_MS = 24 * 60 * 60_000;
+
+// The headers that name a sent email as Setpoint's.
+const FOUND_HEADERS = ['Message-ID', 'X-Google-Original-Message-ID'];
 
 // The headers the header pass asks Gmail for.
 const HEADER_NAMES = ['To', 'Cc', 'Reply-To', 'References', 'In-Reply-To'] as const;
@@ -181,17 +184,37 @@ export class GmailAdapter implements SourceAdapter {
       usable.map(entry => ({address: entry.sendAsEmail, name: entry.displayName ?? null, primary: entry.isPrimary === true})));
   }
 
-  /** messages.send in the answered email's thread. The id and thread are Gmail's, as its sync will see them. */
+  /**
+   * messages.send in the answered email's thread. The id and thread are Gmail's, as its sync will
+   * see them, and so is the Message-ID, read back: Gmail may file the email under one of its own.
+   */
   async send(context: AdapterContext, mail: OutgoingMail): Promise<SentMail> {
-    const sent = await this.api(context).send(mail.raw, mail.threadId);
-    return {providerId: sent.id, threadId: sent.threadId ?? null};
+    const api = this.api(context);
+    const sent = await api.send(mail.raw, mail.threadId);
+    let rfc822Id: string | null = null;
+    try {
+      const filed = await api.metadata(sent.id, ['Message-ID']);
+      rfc822Id = filed?.payload?.headers?.find(header => header.name.toLowerCase() === 'message-id')?.value.trim() || null;
+    } catch {
+      // Sent all the same: the sync reads the email's headers later.
+    }
+    return {providerId: sent.id, threadId: sent.threadId ?? null, rfc822Id};
   }
 
-  /** SENT's message with this Message-ID. Gmail files every send there, so its absence is certain. */
-  async findSent(context: AdapterContext, rfc822Id: string): Promise<{sent: SentMail | null; certain: boolean}> {
-    const {messages} = await this.api(context).list({q: `rfc822msgid:${rfc822Id.replace(/^<|>$/g, '')}`, labelIds: ['SENT'], maxResults: 1});
-    const found = messages[0];
-    return {sent: found ? {providerId: found.id, threadId: found.threadId ?? null} : null, certain: true};
+  /**
+   * SENT's message from this send: one sent since the attempt whose Message-ID, or the
+   * X-Google-Original-Message-ID Gmail keeps when it sets its own, is Setpoint's. Neither is
+   * documented, so not finding it is never taken as proof it wasn't sent.
+   */
+  async findSent(context: AdapterContext, {rfc822Id, since}: SentQuery): Promise<{sent: SentMail | null; certain: boolean}> {
+    const api = this.api(context);
+    const {messages} = await api.list({q: afterQuery(Date.parse(since) - 60_000), labelIds: ['SENT'], maxResults: 50});
+    for (const candidate of messages) {
+      const found = await api.metadata(candidate.id, FOUND_HEADERS);
+      const ids = (found?.payload?.headers ?? []).map(header => header.value.trim());
+      if (ids.includes(rfc822Id)) return {sent: {providerId: candidate.id, threadId: candidate.threadId ?? null}, certain: false};
+    }
+    return {sent: null, certain: false};
   }
 
   private async history(api: GmailApi, context: AdapterContext, cursor: string): Promise<string> {

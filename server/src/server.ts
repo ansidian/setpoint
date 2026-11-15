@@ -88,7 +88,7 @@ const newsSort = new NewsSortWorker({store, endpoints: aiEndpoints});
 const mailpiecesWorker = new MailpiecesWorker({store, fetchSource: (sourceId, message): Promise<Buffer | null> => engine.emailSource(sourceId, message)});
 // Each held send, once its Undo hold ends, through the account's adapter.
 const sender = new SendWorker({
-  store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, rfc822Id) => engine.findSent(sourceId, rfc822Id),
+  store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
   attachment: (sourceId, message, attachmentId) => engine.attachment(sourceId, message, attachmentId),
 });
 const engine: SyncEngine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader, mailpiecesWorker, sender]});

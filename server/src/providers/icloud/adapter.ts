@@ -31,7 +31,7 @@ import {ImapFlow} from 'imapflow';
 import {createTransport} from 'nodemailer';
 import type {FetchMessageObject} from 'imapflow';
 import * as t from '../../db/schema.ts';
-import type {AdapterContext, AttachmentBytes, CommandRow, OutgoingMail, SentMail, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
+import type {AdapterContext, AttachmentBytes, CommandRow, OutgoingMail, SentMail, SentQuery, SourceAdapter, SyncResult} from '../../sync/adapter.ts';
 import {BACKFILL_SCOPE, readBackfill, readCursor, SENT_BACKFILL_SCOPE, startBackfill, writeBackfill, writeCursor} from '../../sync/cursors.ts';
 import {ProviderError} from '../../sync/errors.ts';
 import {enqueueJob} from '../../sync/jobs.ts';
@@ -506,7 +506,7 @@ export class ICloudAdapter implements SourceAdapter {
   }
 
   /** The sent mailbox's copy with this Message-ID. iCloud's copy may come late, so "none" is never certain. */
-  async findSent(context: AdapterContext, rfc822Id: string): Promise<{sent: SentMail | null; certain: boolean}> {
+  async findSent(context: AdapterContext, {rfc822Id}: SentQuery): Promise<{sent: SentMail | null; certain: boolean}> {
     const path = await this.withMailbox(context, INBOX, client => sentMailbox(client));
     if (!path) return {sent: null, certain: false};
     return this.withMailbox(context, path, async client => {

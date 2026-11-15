@@ -36,7 +36,7 @@ async function setup({appendSent = true}: {appendSent?: boolean} = {}) {
   smtp.addUser(ADDRESS, PASSWORD);
   const adapter = new ICloudAdapter({endpoint: {host: imap.host, port: imap.port, secure: false}, smtp: {host: smtp.host, port: smtp.port, requireTLS: false}, appendSent, connectTimeoutMs: 2000});
   const engine: SyncEngine = new SyncEngine({store: w.store, adapters: new Adapters({icloud: adapter}), timeoutMs: 5000, workers: [new SendWorker({
-    store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, id) => engine.findSent(sourceId, id),
+    store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
     attachment: (sourceId, message, id) => engine.attachment(sourceId, message, id),
   })]});
   const api = await signedIn(w, {engine, connectors: {icloud: icloudConnector(w.store, adapter)}});
@@ -141,6 +141,18 @@ describe('iCloud: sending', () => {
     expect(smtp.accepted).toEqual([]);
     expect(imap.appends).toEqual([]);
     expect(sentRows(w)).toEqual([]);
+  });
+
+  test('after a clear refusal, Try again with the address put right sends at once', async () => {
+    const {smtp, api, w, drain, sendDraft} = await setup();
+    smtp.refuseRecipient('nobody@example.org', '550 5.1.1 <nobody@example.org>: Recipient address rejected: User unknown');
+    const draftId = await sendDraft({kind: 'new'}, {to: [{name: null, address: 'nobody@example.org'}], subject: 'Hello'});
+    await api.send('PATCH', `/api/mail/drafts/${draftId}`, {body: {to: [{name: null, address: 'sam.ortiz@example.org'}]}});
+    await api.send('POST', `/api/mail/drafts/${draftId}/send`);
+    w.advance(SEND_HOLD_MS);
+    await drain();
+    expect((await api.send('GET', `/api/mail/drafts/${draftId}`)).status).toBe(404);
+    expect(smtp.accepted.map(message => message.to)).toEqual([['sam.ortiz@example.org']]);
   });
 
   test('a refused app password fails the draft, not silently', async () => {

@@ -16,7 +16,7 @@ const paragraph = (text: string) => [{type: 'paragraph', runs: [{text, marks: []
 async function setup() {
   const w = world({seed: true});
   const engine: SyncEngine = new SyncEngine({store: w.store, adapters: new Adapters({}, devProvider()), workers: [new SendWorker({
-    store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, id) => engine.findSent(sourceId, id),
+    store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
     attachment: (sourceId, message, id) => engine.attachment(sourceId, message, id),
   })]});
   const api = await signedIn(w, {engine});

@@ -41,10 +41,20 @@ export interface OutgoingMail {
   threadId: string | null;
 }
 
-/** What the provider made of a sent email: its id in the record's form, and its thread where it says. */
+/**
+ * What the provider made of a sent email: its id in the record's form, its thread where it says,
+ * and the Message-ID it filed when that isn't the one Setpoint set (Gmail may set its own).
+ */
 export interface SentMail {
   providerId: string;
   threadId: string | null;
+  rfc822Id?: string | null;
+}
+
+/** A sent email to look for: the Message-ID Setpoint set, sent no earlier than `since`. */
+export interface SentQuery {
+  rfc822Id: string;
+  since: string;
 }
 
 export interface SyncResult {
@@ -98,10 +108,10 @@ export interface SourceAdapter {
   /**
    * The sent email with this Message-ID, when the provider's sent mail holds it: asked before a send
    * runs again after one that reached the provider (a restart mid-send), so it never goes twice.
-   * `certain` says whether "not there" means it was never accepted (Gmail files every send in SENT)
-   * or only that no copy is there yet.
+   * `certain` says whether "not there" means it was never accepted, or only that no copy was found
+   * (iCloud's may come late; Gmail may file it under a Message-ID of its own).
    */
-  findSent?(context: AdapterContext, rfc822Id: string): Promise<{sent: SentMail | null; certain: boolean}>;
+  findSent?(context: AdapterContext, query: SentQuery): Promise<{sent: SentMail | null; certain: boolean}>;
 }
 
 /** Which adapter serves a source: by provider for real ones, the dev provider for dev ones. */
