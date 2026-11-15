@@ -240,3 +240,21 @@ export function conversationLines(message: Pick<MessageOut, 'id' | 'received_at'
     folded: fold, earlier: earlier.slice(fold), marked: earlier.length > 0 && later.length > 0, later,
   };
 }
+
+/** How much of the reader's tools shows: every word, Reply, Reply all and Forward as glyphs, or every tool as a glyph. */
+export type ToolsSize = 'wide' | 'narrow' | 'tight';
+/** The width the tools were seen to need at each roomier size, 0 while not yet seen. */
+export type ToolsNeed = {wide: number; narrow: number};
+
+/**
+ * The tools' next size, from the bar's width and the width its tools take (more than the bar when
+ * they overflow). Overflowing, it steps down and remembers what the size it left needed. Fitting,
+ * it steps back up when the roomier size's need fits, or hasn't been seen.
+ */
+export function fitTools(size: ToolsSize, need: ToolsNeed, width: number, used: number): {size: ToolsSize; need: ToolsNeed} {
+  if (used > width + 1 && size !== 'tight') return {size: size === 'wide' ? 'narrow' : 'tight', need: {...need, [size]: used}};
+  if (size === 'wide') return {size, need};
+  const roomier = size === 'tight' ? 'narrow' : 'wide';
+  if (need[roomier] === 0 || need[roomier] <= width + 1) return {size: roomier, need};
+  return {size, need};
+}

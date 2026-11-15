@@ -3,7 +3,7 @@
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {chipLabel, hasOthers, quoteOf, readRecipient, readRecipients, replyLine, unwritten, withRecipients} from '../src/logic/composer.ts';
+import {chipLabel, forwardLines, hasOthers, quoteOf, readRecipient, readRecipients, replyLine, unwritten, withRecipients} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
   accounts: [
@@ -98,5 +98,20 @@ describe('a draft nothing was written in, which closing leaves out of Drafts', (
     ['a forward with someone to send to', {...blank, kind: 'forward', to: [JUNE], subject: 'Fwd: Dinner'}, false],
   ])('%s', (_name, draft, expected) => {
     expect(unwritten(draft)).toBe(expected);
+  });
+});
+
+describe('a forward\'s header lines, as the server writes them', () => {
+  const email = {from_name: 'Dana Whitfield', from_address: 'dana@example.org', subject: 'Lease renewal terms', received_at: '2026-09-30T21:15:00Z'};
+  test.each<[string, Parameters<typeof forwardLines>[0], string[]]>([
+    ['with To and Cc', {...email, to: [ME], cc: [JUNE, {name: null, address: 'office@example.org'}]}, [
+      '---------- Forwarded message ---------', 'From: Dana Whitfield <dana@example.org>', 'Date: Wed, Sep 30, 2026 at 2:15 PM', 'Subject: Lease renewal terms',
+      'To: User <user@example.com>', 'Cc: June Park <june@example.org>, office@example.org',
+    ]],
+    ['no name, recipients not known', {...email, from_name: ' '}, [
+      '---------- Forwarded message ---------', 'From: dana@example.org', 'Date: Wed, Sep 30, 2026 at 2:15 PM', 'Subject: Lease renewal terms',
+    ]],
+  ])('%s', (_name, message, expected) => {
+    expect(forwardLines(message, SEED_TIME_ZONE)).toEqual(expected);
   });
 });

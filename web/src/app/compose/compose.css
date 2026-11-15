@@ -56,3 +56,11 @@
 .composer .cmp-fold:hover, .composer .cmp-fold[aria-expanded="true"] { background: var(--sub3); color: var(--ink); }
 .composer .cmp-quote-line { margin-top: 10px; color: var(--ink3); }
 .composer .cmp-quote-text { margin-top: 6px; padding-left: 10px; box-shadow: inset 2px 0 0 var(--sub3); color: var(--ink2); outline: none; white-space: pre-wrap; }
+
+/* A forward's email, in full: its header lines, its attachments as chips to take off, the email. */
+.composer .cmp-forward { padding: 0 20px 16px; flex: none; }
+.composer .cmp-forward-head { color: var(--ink3); line-height: 20px; overflow-wrap: anywhere; }
+.composer .cmp-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.composer .cmp-file { height: 26px; max-width: 280px; display: inline-flex; align-items: center; gap: 6px; padding: 0 2px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; }
+.composer .cmp-file > .icon { color: var(--ink3); }
+.composer .cmp-forward-body { margin-top: 12px; }

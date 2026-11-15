@@ -227,7 +227,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   by copying its verification code. Moving the cursor, scrolling and opening a Noise line never mark
   anything read.
 - **Keyboard first:** every common action has a key; the keyboard cursor is a `sub2` fill, and
-  moving the pointer onto a row makes it the cursor. On an email, R replies and A replies to all;
+  moving the pointer onto a row makes it the cursor. On an email, R replies, A replies to all and F forwards;
   C writes a page's main thing (a new message on mail, a new event on Calendar); in the composer
   ⌘Enter sends and ⌘⇧B shows Cc and Bcc. Esc closes the topmost thing (the
   composer keeps its draft). Key hints read

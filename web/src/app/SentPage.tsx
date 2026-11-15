@@ -6,8 +6,8 @@
 // an account with none reads quieter, and a click on it still opens it, to an empty view. The Inbox
 // has no account filter: here the account is the address the user chose to write from.
 //
-// The reader opens a sent email as any other. Its tools are Trash, Open in Gmail, Reply R and Reply
-// all A, and C writes a new message from the selected account. A received email
+// The reader opens a sent email as any other. Its tools are Trash, Open in Gmail, Reply R, Reply
+// all A and Forward F, and C writes a new message from the selected account. A received email
 // of its conversation opens in the Inbox. J and K move the
 // cursor (with an email open, they open the next and previous one), Enter opens, E Trash (with Undo in
 // the toast, and ⌘Z), O Open in Gmail, Esc closes the reader, then the search.
@@ -278,10 +278,10 @@ export function SentPage({route}: {route: SentRoute}) {
       } else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
-      // R and A answer the open email, or the one under the cursor, which opens with its composer.
-      else if ((plainKey(event, 'r') || plainKey(event, 'a')) && target !== null) {
-        const kind = plainKey(event, 'r') ? 'reply' : 'reply_all';
-        run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : 'a');
+      // R, A and F answer the open email, or the one under the cursor, which opens with its composer.
+      else if ((plainKey(event, 'r') || plainKey(event, 'a') || plainKey(event, 'f')) && target !== null) {
+        const kind = plainKey(event, 'r') ? 'reply' : plainKey(event, 'a') ? 'reply_all' : 'forward';
+        run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : kind === 'reply_all' ? 'a' : 'f');
       } else if (plainKey(event, 'c')) run(() => newMessage(account ?? undefined));
       else if (plainKey(event, 'Escape')) {
         if (open !== null && openComposer()?.messageId === open) run(closeComposer);
@@ -295,8 +295,8 @@ export function SentPage({route}: {route: SentRoute}) {
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  /** Reply or Reply all on an email: it opens (if it isn't) with the composer under it. */
-  function answerOn(id: number, key: string | null | undefined, kind: 'reply' | 'reply_all') {
+  /** Reply, Reply all or Forward on an email: it opens (if it isn't) with the composer under it. */
+  function answerOn(id: number, key: string | null | undefined, kind: 'reply' | 'reply_all' | 'forward') {
     if (id !== open) openEmail(id, key ?? undefined);
     answerKey(id, kind);
   }
@@ -322,6 +322,7 @@ export function SentPage({route}: {route: SentRoute}) {
       propose: card => withCard(card),
       ask: () => withCard('ask'),
       reply: () => answerOn(id, key, 'reply'),
+      forward: () => answerOn(id, key, 'forward'),
     }, 'menu', undefined, true);
     if (!openContextMenu(event, element, offered)) return;
     if (key && stops.some(stop => stop.key === key)) setCursor(key);

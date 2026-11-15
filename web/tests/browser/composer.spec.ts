@@ -2,8 +2,8 @@
 // seed's moment so a held send stays held: Reply all from the keyboard, sent behind the "Sending"
 // toast and brought back by Undo as it was; a send the provider refused, back on its email with the
 // provider's words and Try again; a draft that outlives a reload, its row saying "Draft"; a new
-// message from C, kept in Drafts, its sidebar row and its page; From's alias and Sent's account; and
-// a composer left with nothing written, which leaves no draft. The
+// message from C, kept in Drafts, its sidebar row and its page; From's alias and Sent's account; a
+// composer left with nothing written, which leaves no draft; and a forward, its attachment taken off. The
 // fields, chips, the fold and the saving are components/composer.test.tsx's, a send that reaches the
 // dev provider the server's (sendDev.test.ts).
 import type {AllOut, DraftOut, DraftsOut} from '@setpoint/shared';
@@ -136,7 +136,7 @@ test('C writes a new message by itself from the account last sent from; closed, 
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     // No draft, no Drafts row.
-    assert.equal(await page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), 0);
+    await until('the Drafts row goes with the last draft', () => page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), count => count === 0);
     await page.keyboard.press('c');
     await page.locator('.pane.writing .composer').waitFor();
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'To');
@@ -229,7 +229,39 @@ test('a composer left with nothing written leaves nothing in Drafts: C, then an 
     await body(page).waitFor();
     await page.keyboard.press('Escape');
     await until('the untouched reply is gone too', () => drafts(setpoint), found => found.length === 0);
-    assert.equal(await page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), 0);
+    await until('the Drafts row goes with the last draft', () => page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), count => count === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('F forwards: the email in full under the body with its attachment as a chip; × takes it off, and Send holds the forward without it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const id = await idOf(setpoint, 'Lease renewal terms');
+    const page = await openEmail(setpoint, id);
+    await page.locator('.rd-tools .tool', {hasText: 'Forward'}).waitFor();
+    await page.keyboard.press('f');
+    await body(page).waitFor();
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'To');
+    assert.equal(await composer(page).getByRole('textbox', {name: 'Subject'}).inputValue(), 'Fwd: Lease renewal terms');
+    await composer(page).locator('.cmp-forward-head', {hasText: 'From: Dana Whitfield <dana.whitfield@parksideapts.example>'}).waitFor();
+    await composer(page).locator('.cmp-forward .mailtext', {hasText: 'Unit 4B'}).waitFor();
+    assert.deepEqual(await composer(page).locator('.cmp-file').allTextContents(), ['Renewal agreement.pdf184 KB']);
+
+    await page.keyboard.type('mom@example.net,');
+    await composer(page).getByRole('button', {name: 'Remove Renewal agreement.pdf'}).click();
+    assert.equal(await composer(page).locator('.cmp-file').count(), 0);
+    await body(page).click();
+    await page.keyboard.type('See below.');
+    await page.keyboard.press('Meta+Enter');
+    await holdToast(page);
+    const held = await until('held', () => drafts(setpoint), found => found[0]?.send_state === 'held');
+    const sent = await setpoint.api<DraftOut>('GET', `/mail/drafts/${held[0]!.id}`);
+    assert.equal(sent.kind, 'forward');
+    assert.deepEqual(sent.to, [{name: null, address: 'mom@example.net'}]);
+    assert.equal(sent.removed_attachments.length, 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

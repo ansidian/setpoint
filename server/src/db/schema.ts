@@ -236,6 +236,8 @@ export const drafts = sqliteTable('drafts', {
   // A reply's quote as the user trimmed it, as rich-text blocks. Null sends the original in full,
   // quoted from the email itself at send time.
   quote: text('quote', {mode: 'json'}).$type<Block[]>(),
+  // A forward's attachments the user took off it, by their ids: the rest go with it.
+  removedAttachments: text('removed_attachments', {mode: 'json'}).$type<number[]>().notNull().default(sql`'[]'`),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   sendState: text('send_state', {enum: SEND_STATES}),

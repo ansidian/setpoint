@@ -47,7 +47,7 @@ test('the sidebar\'s Sent: its list names who each went to, an email opens with 
     await rowOf(page, 'Lab notes for Friday').click();
     await page.locator('.rd-subj', {hasText: 'Lab notes for Friday'}).waitFor();
     assert.match(new URL(page.url()).pathname, /^\/sent\/\d+$/);
-    assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO', 'ReplyR']);
+    assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO', 'ReplyR', 'ForwardF']);
     await until('the head names its recipients', () => page.locator('.rd-head .to').textContent(), text => text === 'to Ravi Menon +1');
 
     // E: out of the list, the next one opens, and Undo puts it back in the reader.
@@ -86,7 +86,7 @@ test('search from Sent covers sent mail only, in its account; from the Inbox it 
     // A sent result opens with Sent's tools.
     await page.locator('.search-list .arow', {hasText: 'Order 4417 arrived damaged'}).click();
     await page.locator('.rd-subj', {hasText: 'Order 4417 arrived damaged'}).waitFor();
-    assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO', 'ReplyR']);
+    assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO', 'ReplyR', 'ForwardF']);
 
     // Sent: sent mail only.
     await page.goto(`${setpoint.base}/sent`);
@@ -133,19 +133,19 @@ test('a conversation from Sent: a sent reply lists its thread, Theo\'s email ope
     await page.locator('.mailtext', {hasText: '4 PM works.'}).waitFor();
     assert.equal(await page.locator('.rd-replied').count(), 0);
     await page.locator('.rd-conv-h', {hasText: 'Earlier in this conversation'}).waitFor();
-    assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO', 'ReplyR']);
+    assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO', 'ReplyR', 'ForwardF']);
 
     // Theo's email is received mail: it opens in the Inbox, with Pin, and says the user replied.
     await page.locator('.rd-conv-line', {hasText: 'Perfect, Ana and Kofi'}).click();
     await page.locator('.mailtext', {hasText: 'Perfect, Ana and Kofi'}).waitFor();
     assert.match(new URL(page.url()).pathname, /^\/inbox\/\d+$/);
     await page.locator('.rd-replied', {hasText: 'You replied Oct 4'}).waitFor();
-    assert.deepEqual(await tools(page), ['TrashE', 'PinP', 'Open in GmailO', 'ReplyR']);
+    assert.deepEqual(await tools(page), ['TrashE', 'PinP', 'Open in GmailO', 'ReplyR', 'ForwardF']);
 
     // A reply opened from the Inbox's reader has Sent's tools.
     await page.locator('.rd-conv-line.you', {hasText: 'Games and a cooler'}).click();
     await page.locator('.mailtext', {hasText: 'Games and a cooler'}).waitFor();
-    await until('Sent\'s tools', () => tools(page), shown => shown.join() === 'TrashE,Open in GmailO,ReplyR');
+    await until('Sent\'s tools', () => tools(page), shown => shown.join() === 'TrashE,Open in GmailO,ReplyR,ForwardF');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

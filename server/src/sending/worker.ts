@@ -144,7 +144,7 @@ export class SendWorker implements JobWorker {
     }, quote: draft.quote} : null;
     const body = composeBody(draft.body, original, store.timeZone);
     const reply = original?.kind === 'reply' ? replyHeaders(answered!) : {inReplyTo: null, references: []};
-    const attachments = original?.kind === 'forward' ? await this.forwarded(answered!) : [];
+    const attachments = original?.kind === 'forward' ? await this.forwarded(answered!, new Set(draft.removedAttachments)) : [];
     // A thread is the account's own: written from another account, the reply starts a new one there.
     const sameAccount = answered?.accountId === draft.accountId;
     const name = sendAddresses(store).get(draft.accountId)?.find(address => address.address === draft.fromAddress)?.name ?? null;
@@ -160,11 +160,14 @@ export class SendWorker implements JobWorker {
     };
   }
 
-  /** A forward's attachments, each fetched from the email's own provider. One that's gone fails the send. */
-  private async forwarded(email: MessageRow): Promise<OutgoingAttachment[]> {
+  /**
+   * A forward's attachments, less those the user removed, each fetched from the email's own provider.
+   * One that's gone fails the send.
+   */
+  private async forwarded(email: MessageRow, removed: Set<number>): Promise<OutgoingAttachment[]> {
     const sourceId = mailSourceId(this.options.store, email.accountId);
     if (sourceId === null) throw new ProviderError('permanent', 'The forwarded email\'s account is no longer connected.');
-    const files = this.options.store.db.select().from(t.attachments).where(eq(t.attachments.messageId, email.id)).all();
+    const files = this.options.store.db.select().from(t.attachments).where(eq(t.attachments.messageId, email.id)).all().filter(file => !removed.has(file.id));
     const out: OutgoingAttachment[] = [];
     for (const file of files) {
       const bytes = await this.options.attachment(sourceId, {providerId: email.providerId}, file.providerId);

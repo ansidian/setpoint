@@ -150,9 +150,9 @@ export function canReplyAll(id: number): boolean | null {
   return message && from ? hasOthers(message, from) : null;
 }
 
-/** R or A on an email (open, or under the cursor): Reply all only when it has others to reply to. */
-export function answerKey(id: number, kind: 'reply' | 'reply_all') {
-  if (kind === 'reply') return startComposer({kind, message_id: id});
+/** R, A or F on an email (open, or under the cursor): Reply all only when it has others to reply to. */
+export function answerKey(id: number, kind: 'reply' | 'reply_all' | 'forward') {
+  if (kind !== 'reply_all') return startComposer({kind, message_id: id});
   const known = canReplyAll(id);
   if (known !== null) {
     if (known) startComposer({kind, message_id: id});
@@ -300,9 +300,9 @@ export function discard(draft: DraftOut) {
   showToast('Draft discarded', {label: 'Undo', run: () => {
     void gone.then(async () => {
       const again = await startDraft(draft.message_id === null ? {kind: 'new', account_id: draft.from.account_id} : {kind: draft.kind as Exclude<DraftKind, 'new'>, message_id: draft.message_id});
-      const {from, to, cc, bcc, subject, body, quote} = draft;
-      await saveDraft(again.id, {from, to, cc, bcc, subject, body, quote});
-      reopen({...again, from, to, cc, bcc, subject, body, quote});
+      const {from, to, cc, bcc, subject, body, quote, removed_attachments} = draft;
+      await saveDraft(again.id, {from, to, cc, bcc, subject, body, quote, removed_attachments});
+      reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments});
     }).catch(toastFailure('Couldn\'t bring the draft back'));
   }}, 'gone');
 }

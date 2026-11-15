@@ -1,5 +1,5 @@
 // The reading pane: 680 px beside the list, there only while an email is open. It holds the tools
-// (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Reply R and Reply all A, previous, next,
+// (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Reply R, Reply all A and Forward F, previous, next,
 // More), the head (the protected line, subject, sender, organisation and platform, account, time),
 // security mail's facts card, the actions, then the body: plain text, or HTML in a sandboxed frame
 // with the images-hidden bar, and the attachments. Add to calendar and Add as task open the proposal
@@ -9,8 +9,8 @@
 // (InboxPage) does. Its head has mail's slot under the sender's line and above the actions
 // (slots.tsx), which another module may fill.
 //
-// On the desktop, Reply R and Reply all A (only when the email has others to reply to) sit after
-// Open in Gmail, and open the composer under the email (compose/Composer.tsx). An email with a draft
+// On the desktop, Reply R, Reply all A (only when the email has others to reply to) and Forward F sit
+// after Open in Gmail, and open the composer under the email (compose/Composer.tsx). An email with a draft
 // opens its composer again when it's shown.
 //
 // On the phone (board 21) it covers the page: Back and Pin at the top, the email
@@ -29,7 +29,8 @@ import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
 import {hasOthers} from '../logic/composer.ts';
 import {dayOf, fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
-import {factRows, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
+import {factRows, fitTools, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
+import type {ToolsNeed, ToolsSize} from '../logic/reader.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
 import {phraseRuns, segments} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
@@ -57,6 +58,35 @@ import type {Load} from './states/Loading.tsx';
 import {BodySkeleton, HeadSkeleton} from './states/Skeletons.tsx';
 import {useAlfred} from './search/state.ts';
 import {showToast, toastFailure} from './toast.ts';
+
+/**
+ * The tools give way to their glyphs when their words don't fit: Reply, Reply all and Forward first,
+ * then every tool, each named in its tip then (logic/reader.ts › fitTools). Measured before each
+ * paint, so no size shows that doesn't fit. A new set of tools (another email, Pin to Unpin) starts
+ * from the widest again.
+ */
+function useToolsFit(tools: string, paneWidth: number) {
+  const bar = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState<{tools: string; size: ToolsSize; need: ToolsNeed}>({tools, size: 'wide', need: {wide: 0, narrow: 0}});
+  const [width, setWidth] = useState(0);
+  const current = fit.tools === tools ? fit : {tools, size: 'wide' as const, need: {wide: 0, narrow: 0}};
+  // Each size drawn is measured once more: it steps until it fits, never back to a size that didn't.
+  useLayoutEffect(() => {
+    const element = bar.current;
+    if (!element) return;
+    const shown = fit.tools === tools ? fit : {tools, size: 'wide' as const, need: {wide: 0, narrow: 0}};
+    const next = fitTools(shown.size, shown.need, element.clientWidth, element.scrollWidth);
+    if (next.size !== shown.size || next.need !== shown.need || shown !== fit) setFit({tools, ...next});
+  }, [fit, tools, width, paneWidth]);
+  useLayoutEffect(() => {
+    const element = bar.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.round(entry?.contentRect.width ?? 0)));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return {bar, size: current.size};
+}
 
 /** The way the user stepped to the email shown: down the list (J, ↓, Done or Trash moving on) or up (K, ↑). */
 export type Travel = 'next' | 'prev';
@@ -125,6 +155,10 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
     if (!phone) showEmail(id, drafts?.drafts);
   }, [id, drafts, phone]);
   const replyAll = message ? hasOthers(message, from) : false;
+  // Whether the tools' words fit (useToolsFit), for this set of tools.
+  const {bar: toolsBar, size} = useToolsFit([doneable, isDone, sentMail, pinned, gmail, phone, replyAll].join(), width);
+  // A tool's tip, while its words are hidden.
+  const tip = (words: string, answer = false) => (size === 'tight' || (answer && size === 'narrow') ? words : undefined);
   // Mark unread on the phone keeps the email open and offers Mark read. The subject shows the unread
   // dot meanwhile. Each tap pops the swapped icon in (`toggles` keys it), but the first draw doesn't.
   const [unreadFor, setUnreadFor] = useState<number | null>(null);
@@ -144,6 +178,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const handlers = {...actions, propose: cards.propose, ask: cards.ask, ...(phone ? {} : {
     reply: () => startComposer({kind: 'reply', message_id: id}),
     ...(replyAll ? {replyAll: () => startComposer({kind: 'reply_all', message_id: id})} : {}),
+    forward: () => startComposer({kind: 'forward', message_id: id}),
   })};
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
   const offered = listed ? emailActions(listed, gmail, handlers, 'palette', rules, sentMail) : [];
@@ -163,26 +198,35 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
           </button>
         </div>
       )}
-      <div className="rd-tools">
+      <div ref={toolsBar} className="rd-tools" data-size={size}>
         {/* Only in the compact tier, where the reader covers the list. */}
         <button className="ibtn rd-back" type="button" aria-label="Back to the list" data-tip="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
-        {doneable && <button className="tool done" type="button" data-hint="h" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
+        {doneable && <button className="tool done" type="button" data-hint="h" aria-label="Done" data-tip={tip('Done · H')} onClick={actions.done}><Icon name="check" /><span className="lbl">Done</span><span className="kbd">H</span></button>}
         {isDone && <span className="rd-done"><Icon name="check" />Done</span>}
-        <button className="tool trash" type="button" data-hint="e" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
+        <button className="tool trash" type="button" data-hint="e" aria-label="Trash" data-tip={tip('Trash · E')} onClick={actions.trash}><Icon name="delete" /><span className="lbl">Trash</span><span className="kbd">E</span></button>
         {!sentMail && (
-          <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} onClick={actions.pin}>
-            <Icon name={pinned ? 'keep-fill' : 'keep'} />{pinned ? 'Unpin' : 'Pin'}<span className="kbd">P</span>
+          <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} aria-label={pinned ? 'Unpin' : 'Pin'} data-tip={tip(pinned ? 'Unpin · P' : 'Pin · P')} onClick={actions.pin}>
+            <Icon name={pinned ? 'keep-fill' : 'keep'} /><span className="lbl">{pinned ? 'Unpin' : 'Pin'}</span><span className="kbd">P</span>
           </button>
         )}
         {gmail !== false && (
-          <button className="tool" type="button" data-hint="o" onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}>
-            <Icon name="open_in_new" />Open in Gmail<span className="kbd">O</span>
+          <button className="tool" type="button" data-hint="o" aria-label="Open in Gmail" data-tip={tip('Open in Gmail · O')} onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}>
+            <Icon name="open_in_new" /><span className="lbl">Open in Gmail</span><span className="kbd">O</span>
           </button>
         )}
         {!phone && (
           <>
-            <button className="tool" type="button" data-hint="r" onClick={() => startComposer({kind: 'reply', message_id: id})}><Icon name="reply" />Reply<span className="kbd">R</span></button>
-            {replyAll && <button className="tool" type="button" data-hint="a" onClick={() => startComposer({kind: 'reply_all', message_id: id})}><Icon name="reply_all" />Reply all<span className="kbd">A</span></button>}
+            <button className="tool answering" type="button" data-hint="r" aria-label="Reply" data-tip={tip('Reply · R', true)} onClick={() => startComposer({kind: 'reply', message_id: id})}>
+              <Icon name="reply" /><span className="lbl">Reply</span><span className="kbd">R</span>
+            </button>
+            {replyAll && (
+              <button className="tool answering" type="button" data-hint="a" aria-label="Reply all" data-tip={tip('Reply all · A', true)} onClick={() => startComposer({kind: 'reply_all', message_id: id})}>
+                <Icon name="reply_all" /><span className="lbl">Reply all</span><span className="kbd">A</span>
+              </button>
+            )}
+            <button className="tool answering" type="button" data-hint="f" aria-label="Forward" data-tip={tip('Forward · F', true)} onClick={() => startComposer({kind: 'forward', message_id: id})}>
+              <Icon name="forward" /><span className="lbl">Forward</span><span className="kbd">F</span>
+            </button>
           </>
         )}
         <span className="grow" />

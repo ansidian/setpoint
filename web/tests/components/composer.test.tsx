@@ -1,6 +1,7 @@
 // The composer in the reading pane: its recipients as chips (a comma, Enter or leaving makes an
 // address one; Backspace takes the last back; a paste of several makes each one), suggestions while
-// typing, Cc and Bcc on ⌘⇧B, the reply's quote folded behind "…" and trimmed in place, a failed
+// typing, Cc and Bcc on ⌘⇧B, the reply's quote folded behind "…" and trimmed in place, a forward's
+// email in full with its attachments to take off, a failed
 // send's words with Try again, and the draft saved as it's typed, once after a pause or at once on
 // Esc. The server is faked at `fetch`: each test answers what the composer asks and reads what it
 // saved. Send's toast and Undo are the browser journey's (browser/composer.spec.ts).
@@ -24,12 +25,13 @@ const ACCOUNTS = new Map<number, AccountOut>([[2, {id: 2, label: 'Personal', col
 const MESSAGE = {
   id: EMAIL, account_id: 2, from_name: 'Sam Lee', from_address: SAM.address, subject: 'Dinner Friday?', received_at: '2026-10-05T19:40:00Z',
   body_text: 'Hey! Dinner Friday? Blue Door at 7?\n\nSam', body_html: null, to: [{name: 'User', address: 'user@example.com'}, JUNE], cc: [RAVI],
+  attachments: [], remote_content: {domain: 'example.com', trust_domain: 'example.com', sender_authenticated: true, trusted: false, load: false, reason: 'not_trusted'},
 } as unknown as MessageOut;
 
 let nextId = 1;
 const draftOf = (fields: Partial<DraftOut>): DraftOut => ({
   id: nextId++, kind: 'reply', message_id: EMAIL, from: {account_id: 2, address: 'user@example.com'}, to: [SAM], cc: [], bcc: [],
-  subject: 'Re: Dinner Friday?', body: [], quote: null, created_at: SEED_NOW, updated_at: SEED_NOW, send: null, ...fields,
+  subject: 'Re: Dinner Friday?', body: [], quote: null, removed_attachments: [], created_at: SEED_NOW, updated_at: SEED_NOW, send: null, ...fields,
 });
 
 /** The server, faked at fetch: the draft to start, From, people for any query, and the saves it got. */
@@ -57,15 +59,15 @@ function server(draft: DraftOut, people: Recipient[] = []) {
   return {saves, asked};
 }
 
-function Pane() {
+function Pane({message}: {message: MessageOut}) {
   const open = useOpenComposer();
-  return <div className="pane" style={{height: 700, width: 680}}><ComposerSlot open={open} messageId={EMAIL} message={MESSAGE} accounts={ACCOUNTS} timeZone={SEED_TIME_ZONE} /></div>;
+  return <div className="pane" style={{height: 700, width: 680}}><ComposerSlot open={open} messageId={EMAIL} message={message} accounts={ACCOUNTS} timeZone={SEED_TIME_ZONE} /></div>;
 }
 
-/** Starts the draft as R or A does, and waits for the composer. */
-async function compose(draft: DraftOut, people: Recipient[] = []) {
+/** Starts the draft as R, A or F does, and waits for the composer. */
+async function compose(draft: DraftOut, people: Recipient[] = [], message = MESSAGE) {
   const fake = server(draft, people);
-  await render(<Pane />);
+  await render(<Pane message={message} />);
   startComposer({kind: draft.kind as 'reply', message_id: EMAIL});
   await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
   return fake;
@@ -173,4 +175,22 @@ test('a send the provider refused shows its words with Try again', async () => {
   await compose(draftOf({to: [{name: null, address: 'nobody@refused.example'}], send: {state: 'failed', send_at: null, error: '550 5.1.1 Recipient address rejected'}}));
   await expect.element(page.getByText('550 5.1.1 Recipient address rejected')).toBeVisible();
   await expect.element(page.getByRole('button', {name: 'Try again'})).toBeVisible();
+});
+
+test('a forward shows its email in full: its header lines, its attachments as chips that × takes off, and its words', async () => {
+  const message = {...MESSAGE, attachments: [
+    {id: 31, filename: 'Menu.pdf', mime_type: 'application/pdf', size_bytes: 184 * 1024, previewable: true},
+    {id: 32, filename: 'Map.png', mime_type: 'image/png', size_bytes: 12 * 1024, previewable: true},
+  ]} as MessageOut;
+  const {saves} = await compose(draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?'}), [], message);
+  expect(document.activeElement?.getAttribute('aria-label')).toBe('To');
+  await expect.element(page.getByText('---------- Forwarded message ---------')).toBeVisible();
+  await expect.element(page.getByText('From: Sam Lee <sam.lee@example.com>')).toBeVisible();
+  expect(document.querySelector('.cmp-forward .mailtext')?.textContent).toBe('Hey! Dinner Friday? Blue Door at 7?Sam');
+  expect([...document.querySelectorAll('.cmp-file')].map(file => file.textContent)).toEqual(['Menu.pdf184 KB', 'Map.png12 KB']);
+  // Nothing folds it.
+  expect(document.querySelector('.cmp-fold')).toBeNull();
+  await userEvent.click(page.getByRole('button', {name: 'Remove Map.png'}));
+  expect([...document.querySelectorAll('.cmp-file')].map(file => file.textContent)).toEqual(['Menu.pdf184 KB']);
+  await expect.poll(() => saves.at(-1)?.removed_attachments, {timeout: DRAFT_SAVE_MS * 4}).toEqual([32]);
 });

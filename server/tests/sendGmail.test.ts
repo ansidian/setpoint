@@ -248,6 +248,25 @@ describe('Gmail: sending', () => {
     expect(parsed.attachments.map(file => [file.filename, file.sizeBytes])).toEqual([['Itinerary.pdf', 18]]);
   });
 
+  test('a forward sends without the attachments the user removed', async () => {
+    const {w, google, api, drain, sync} = await setup();
+    const {row: sam} = await samWrites(google, w, sync, {attachments: [
+      {filename: 'Itinerary.pdf', contentType: 'application/pdf', content: '%PDF-1.4 itinerary'},
+      {filename: 'Map.png', contentType: 'image/png', content: 'png bytes'},
+    ]});
+    const files = (await api.send('GET', `/api/mail/messages/${sam.id}`)).body.attachments as {id: number; filename: string}[];
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'forward', message_id: sam.id}})).body;
+    expect(draft.removed_attachments).toEqual([]);
+    const removed = files.find(file => file.filename === 'Map.png')!.id;
+    await api.send('PATCH', `/api/mail/drafts/${draft.id}`, {body: {to: [{name: 'Mom', address: 'mom@example.net'}], removed_attachments: [removed]}});
+    expect((await api.send('GET', `/api/mail/drafts/${draft.id}`)).body.removed_attachments).toEqual([removed]);
+    await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
+    w.advance(SEND_HOLD_MS);
+    await drain();
+    const parsed = await parseEmail(google.sent[0]!.raw);
+    expect(parsed.attachments.map(file => file.filename)).toEqual(['Itinerary.pdf']);
+  });
+
   test('a reply or forward written from another account sends from it: no thread of the other account, the attachments fetched from the email\'s own', async () => {
     const s = await setup();
     const other = 'user.home@example.com';

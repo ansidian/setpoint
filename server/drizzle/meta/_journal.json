@@ -337,6 +337,13 @@
       "when": 1794777343338,
       "tag": "0047_draft_quote",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1794780677157,
+      "tag": "0048_forward_attachments",
+      "breakpoints": true
     }
   ]
 }

@@ -14,7 +14,11 @@ import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {ClipboardEvent, CSSProperties, KeyboardEvent, ReactNode, RefObject} from 'react';
 import {ApiFailure, useResource} from '../../api/client.ts';
 import {draftPath, DRAFTS_PATH, FROM_PATH, suggestPeople} from '../../api/drafts.ts';
-import {chipLabel, quoteOf, readRecipient, readRecipients, replyLine, withRecipients} from '../../logic/composer.ts';
+import {paragraphs} from '../../logic/body.ts';
+import {chipLabel, forwardLines, quoteOf, readRecipient, readRecipients, replyLine, withRecipients} from '../../logic/composer.ts';
+import {attachmentLabel, attachmentType, hasRemoteContent, remoteImages} from '../../logic/reader.ts';
+import {TYPE_GLYPHS} from '../Attachments.tsx';
+import {MailFrame} from '../MailFrame.tsx';
 import type {Block} from '../../logic/description.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -174,7 +178,8 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
       {saveError && <div className="cmp-failed" role="alert"><Icon name="error" size={16} /><span className="grow">{saveError}</span></div>}
       <DescriptionField blocks={draft.body} kind="mail" note={null} label="Message" placeholder="" bar="always" fieldRef={body}
         onChange={blocks => change('body', blocks)}
-        after={draft.kind === 'reply' || draft.kind === 'reply_all' ? <Quote draft={draft} message={message} timeZone={timeZone} /> : null}
+        after={draft.kind === 'reply' || draft.kind === 'reply_all' ? <Quote draft={draft} message={message} timeZone={timeZone} />
+          : draft.kind === 'forward' ? <Forwarded draft={draft} message={message} timeZone={timeZone} /> : null}
         barEnd={(
           <>
             {/* Buttons of the composer's own come here. */}
@@ -217,6 +222,46 @@ function Quote({draft, message, timeZone}: {draft: DraftOut; message: MessageOut
             onPaste={event => event.preventDefault()} onDrop={event => event.preventDefault()} />
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * A forward's email, in full and not folded: its header lines as the recipient gets them, its
+ * attachments as chips that can be taken off (the recipient gets the rest), then the email itself.
+ */
+function Forwarded({draft, message, timeZone}: {draft: DraftOut; message: MessageOut | undefined; timeZone: string}) {
+  const [removed, setRemoved] = useState(draft.removed_attachments);
+  if (!message) return null;
+  const files = message.attachments.filter(file => !removed.includes(file.id));
+  const remove = (id: number) => {
+    const next = [...removed, id];
+    setRemoved(next);
+    queueSave(draft.id, {removed_attachments: next});
+  };
+  const images = remoteImages(message.remote_content, hasRemoteContent(message.body_html), false);
+  return (
+    <div className="cmp-forward">
+      <div className="cmp-forward-head">
+        {forwardLines(message, timeZone).map(line => <div key={line}>{line}</div>)}
+      </div>
+      {files.length > 0 && (
+        <div className="cmp-files">
+          {files.map(file => (
+            <span key={file.id} className="cmp-file" data-tip={file.filename} data-tip-quick>
+              <Icon name={TYPE_GLYPHS[attachmentType(file)]} size={14} /><span className="ell">{file.filename}</span><span className="ink3">{attachmentLabel(file).split(' · ')[1]}</span>
+              <button type="button" className="cmp-chip-x" aria-label={`Remove ${file.filename}`} onMouseDown={event => event.preventDefault()} onClick={() => remove(file.id)}>
+                <Icon name="close" size={14} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="cmp-forward-body">
+        {message.body_html ? <MailFrame messageId={message.id} show={images.load} title={message.subject} /> : (
+          <div className="mailtext">{paragraphs(message.body_text).map((lines, index) => <p key={index}>{lines.join('\n')}</p>)}</div>
+        )}
+      </div>
     </div>
   );
 }

@@ -23,7 +23,7 @@ import {failureLine} from './toast.ts';
 const CSV_ROWS = 500;
 
 /** Each type's glyph on its tile. The tile's colour is the stylesheet's, by `data-type`. */
-const TYPE_GLYPHS: Record<AttachmentType, IconName> = {
+export const TYPE_GLYPHS: Record<AttachmentType, IconName> = {
   pdf: 'picture_as_pdf', image: 'image', sheet: 'table_chart', doc: 'description', archive: 'folder_zip', calendar: 'calendar_month', other: 'draft',
 };
 

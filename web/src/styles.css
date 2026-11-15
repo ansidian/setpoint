@@ -397,6 +397,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .rd-tools .tool { padding: 0 9px; }
   .rd-tools .tool .kbd { display: none; }
 }
+/* When their words don't fit, the tools give way to their glyphs: Reply, Reply all and Forward first,
+   then every tool (Reader.tsx › useToolsFit), each named in its tip. */
+.rd-tools[data-size="narrow"] .tool.answering, .rd-tools[data-size="tight"] .tool { padding: 0 7px; }
+.rd-tools[data-size="narrow"] .tool.answering :is(.lbl, .kbd), .rd-tools[data-size="tight"] .tool :is(.lbl, .kbd) { display: none; }
 /* Done is Attention mail's verb: its check `good`, its label `ink`. Trash warns under the pointer
    in `alert` and presses in it. Every tool presses as pills do (below). */
 .rd-tools .tool.done { color: var(--ink); }

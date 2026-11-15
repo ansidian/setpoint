@@ -75,7 +75,7 @@ export function getDraftRow(store: Store, draftId: number): DraftRow {
 export function presentDraft(row: DraftRow): DraftOut {
   return {
     id: row.id, kind: row.kind, message_id: row.messageId, from: {account_id: row.accountId, address: row.fromAddress},
-    to: row.toRecipients, cc: row.ccRecipients, bcc: row.bccRecipients, subject: row.subject, body: row.body, quote: row.quote,
+    to: row.toRecipients, cc: row.ccRecipients, bcc: row.bccRecipients, subject: row.subject, body: row.body, quote: row.quote, removed_attachments: row.removedAttachments,
     created_at: row.createdAt, updated_at: row.updatedAt,
     send: row.sendState ? {state: row.sendState, send_at: row.sendState === 'held' ? row.sendAt : null, error: row.sendError} : null,
   };
@@ -141,6 +141,7 @@ export function updateDraft(store: Store, draftId: number, input: DraftUpdateInp
     if (input.subject !== undefined) changes.subject = input.subject;
     if (input.body) changes.body = input.body;
     if (input.quote !== undefined) changes.quote = input.quote;
+    if (input.removed_attachments) changes.removedAttachments = [...new Set(input.removed_attachments)];
     const updated = store.db.update(t.drafts).set(changes).where(eq(t.drafts.id, draftId)).returning().get()!;
     noteDraft(store, updated);
     return {id: updated.id, updated_at: updated.updatedAt};

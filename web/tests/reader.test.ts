@@ -1,9 +1,11 @@
 // The reader's rules as tables: the sender's
-// line, the actions offered, the facts card, which remote images load, attachments and CSV.
+// line, the actions offered, the facts card, which remote images load, attachments and CSV, and how
+// the tools give way when they don't fit.
 import type {MessageOut, RemoteContentOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attachmentLabel, attachmentType, factRows, fileSize, hasRemoteContent, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, whenLabel} from '../src/logic/reader.ts';
+import {attachmentLabel, attachmentType, factRows, fileSize, fitTools, hasRemoteContent, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, whenLabel} from '../src/logic/reader.ts';
+import type {ToolsNeed, ToolsSize} from '../src/logic/reader.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -188,5 +190,21 @@ describe('parseCsv', () => {
 
   test('stops at the limit', () => {
     expect(parseCsv('1\n2\n3\n4\n', 2)).toEqual([['1'], ['2']]);
+  });
+});
+
+describe('the reader\'s tools give way to their glyphs when their words don\'t fit', () => {
+  const none = {wide: 0, narrow: 0};
+  test.each<[string, ToolsSize, ToolsNeed, number, number, {size: ToolsSize; need: ToolsNeed}]>([
+    ['every word fits', 'wide', none, 700, 700, {size: 'wide', need: none}],
+    ['overflowing: Reply, Reply all and Forward drop theirs, and what every word needed is kept', 'wide', none, 600, 720, {size: 'narrow', need: {wide: 720, narrow: 0}}],
+    ['still overflowing: every tool drops its words', 'narrow', {wide: 720, narrow: 0}, 430, 520, {size: 'tight', need: {wide: 720, narrow: 520}}],
+    ['glyphs alone overflowing stay glyphs: there is nothing smaller', 'tight', {wide: 720, narrow: 520}, 300, 340, {size: 'tight', need: {wide: 720, narrow: 520}}],
+    ['narrow fitting, the wider pane not yet room for every word: it stays', 'narrow', {wide: 720, narrow: 0}, 650, 600, {size: 'narrow', need: {wide: 720, narrow: 0}}],
+    ['room again for every word: back to them', 'narrow', {wide: 720, narrow: 0}, 740, 600, {size: 'wide', need: {wide: 720, narrow: 0}}],
+    ['tight with a roomier size never seen: it tries it', 'tight', none, 500, 300, {size: 'narrow', need: none}],
+    ['a pixel of rounding is no overflow', 'wide', none, 600, 601, {size: 'wide', need: none}],
+  ])('%s', (_name, size, need, width, used, expected) => {
+    expect(fitTools(size, need, width, used)).toEqual(expected);
   });
 });

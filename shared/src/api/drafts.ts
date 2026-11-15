@@ -81,6 +81,8 @@ export const draftUpdateInput = z.strictObject({
   body: draftBodySchema.optional(),
   // A reply's quote, trimmed by the user. Null puts the original back in full.
   quote: draftBodySchema.nullable().optional(),
+  // A forward's attachments the user took off it, by id.
+  removed_attachments: z.array(z.number().int().positive()).max(500).optional(),
 });
 export type DraftUpdateInput = z.infer<typeof draftUpdateInput>;
 
@@ -112,6 +114,8 @@ export interface DraftOut {
   // A reply's quote as the user trimmed it, or null for the original in full (the server quotes it
   // at send time).
   quote: Block[] | null;
+  // A forward's attachments the user took off it, by id. The others go with it.
+  removed_attachments: number[];
   created_at: string;
   updated_at: string;
   send: DraftSendOut | null;

@@ -89,3 +89,23 @@ export function unwritten(draft: Pick<DraftOut, 'kind' | 'to' | 'cc' | 'bcc' | '
   if (draft.to.length + draft.cc.length + draft.bcc.length > 0) return false;
   return draft.kind === 'forward' || !draft.subject.trim();
 }
+
+const names = (recipients: Recipient[] | undefined) => (recipients ?? []).map(one => (one.name ? `${one.name} <${one.address}>` : one.address)).join(', ');
+
+/**
+ * A forward's header lines as the server writes them above the email: the dashes, From, Date,
+ * Subject, then To and Cc when it had them.
+ */
+export function forwardLines(message: Pick<MessageOut, 'from_name' | 'from_address' | 'subject' | 'received_at'> & Partial<Pick<MessageOut, 'to' | 'cc'>>, timeZone: string): string[] {
+  const date = new Date(message.received_at);
+  const day = new Intl.DateTimeFormat('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone}).format(date);
+  const time = new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone}).format(date);
+  return [
+    '---------- Forwarded message ---------',
+    `From: ${message.from_name.trim() ? `${message.from_name.trim()} <${message.from_address}>` : message.from_address}`,
+    `Date: ${day} at ${time}`,
+    `Subject: ${message.subject}`,
+    ...(message.to?.length ? [`To: ${names(message.to)}`] : []),
+    ...(message.cc?.length ? [`Cc: ${names(message.cc)}`] : []),
+  ];
+}
