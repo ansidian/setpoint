@@ -1,8 +1,8 @@
 // Sent in the browser, at the design target on a fresh seed each. The seed has sent mail from
 // Personal, Work and iCloud, and none from Business or Jobs. From the sidebar's Sent to its list,
 // each row naming who it went to, to an email with Sent's tools, Trash with Undo, and an empty
-// account's view. Then search from Sent (sent mail only, in its account) and from the Inbox (sent mail
-// with the rest). Tab and the quiet segments are components/sentAccounts.test.tsx's.
+// account's view. Then search from Sent (sent mail only, in its account, found by its recipients too)
+// and from the Inbox (sent mail with the rest). Tab and the quiet segments are components/sentAccounts.test.tsx's.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
@@ -93,6 +93,12 @@ test('search from Sent covers sent mail only, in its account; from the Inbox it 
     await rowOf(page, 'Re: Saturday hike').waitFor();
     await search(page, 'order');
     await until('only the sent one', () => results(page), found => JSON.stringify(found) === JSON.stringify([['To Contoso Coffee', 'Order 4417 arrived damaged']]));
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    // Who it went to finds it, in To or Cc, a name its words never say.
+    await search(page, 'ortiz');
+    await until('found by its recipients', () => results(page), found => JSON.stringify(found) === JSON.stringify([['To Sam Ortiz', 'Re: Saturday hike'], ['To Lena Fischer +1', 'Book club dates']]));
+    assert.deepEqual(await page.locator('.search-list .arow .why').allTextContents(), ['To ortiz', 'To ortiz']);
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await rowOf(page, 'Re: Saturday hike').waitFor();

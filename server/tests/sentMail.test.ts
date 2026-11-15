@@ -143,6 +143,24 @@ describe('mail the user sent to others', () => {
     expect(search({sent: 'only', account_id: account})).toEqual([sent]);
   });
 
+  test('is found by who it went to, To and Cc, as a received email is by its sender; mail that came in is not found by its recipients', async () => {
+    const {w, deliver} = await setup();
+    const sent = deliver(sentOnly(w, {recipients: {...RECIPIENTS, cc: [{name: null, address: 'june.park@fabrikam.example.org'}]}}));
+    const unknown = deliver(sentOnly(w, {subject: 'Headers not read yet', recipients: undefined}));
+    const received = deliver(w.fetched({subject: 'Team notes', bodyText: 'Notes.', receivedAt: w.store.now().toISOString(), recipients: RECIPIENTS}));
+    const search = (text: string, sentMail: 'include' | 'only' = 'include') => searchMail(w.store, searchInput.parse({text, sent: sentMail}), {log: false}).results
+      .filter(result => [sent, unknown, received].includes(result.id)).map(result => [result.id, result.reasons.map(reason => reason.label)]);
+    expect(search('ortiz')).toEqual([[sent, ['To ortiz']]]);
+    expect(search('sam ortiz', 'only')).toEqual([[sent, ['To sam ortiz']]]);
+    expect(search('fabrikam')).toEqual([[sent, ['To fabrikam']]]);
+    // Headers read later are indexed then.
+    w.store.db.update(t.messages).set({toRecipients: [{name: 'Lena Fischer', address: 'lena@example.org'}], ccRecipients: []}).where(eq(t.messages.id, unknown)).run();
+    expect(search('fischer')).toEqual([[unknown, ['To fischer']]]);
+    // Mail to yourself that arrives makes the row received: its recipients leave the index.
+    w.store.db.update(t.messages).set({received: true}).where(eq(t.messages.id, unknown)).run();
+    expect(search('fischer')).toEqual([]);
+  });
+
   test('marks itself sent-only, and its search result says who it went to; mail to yourself does only in Sent\'s search', async () => {
     const {w, deliver} = await setup();
     const sent = deliver(sentOnly(w));

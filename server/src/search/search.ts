@@ -165,7 +165,7 @@ type Ranked = Candidate & RankedRow;
 
 function rankedRows(store: Store, ids: number[]): Ranked[] {
   return store.sqlite.prepare(`
-    SELECT id, received_at, type, from_name AS fromName, from_address AS fromAddress, organisation, subject, summary, search_terms AS searchTerms, search_body AS searchBody
+    SELECT id, received_at, type, from_name AS fromName, from_address AS fromAddress, organisation, subject, summary, search_terms AS searchTerms, search_body AS searchBody, search_recipients AS searchRecipients
     FROM messages WHERE id IN (SELECT value FROM json_each(?))`).all(JSON.stringify(ids)) as Ranked[];
 }
 
@@ -302,12 +302,12 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
   const typed = typedWords(matches.text);
   const told = new Set<string>();
   const bodyTerms: string[] = [];
-  const byText = textMatches(row, matches.terms).flatMap(({field, terms}) => {
+  const byText = textMatches(row, matches.terms).flatMap(({field, terms, to}) => {
     const fresh = terms.filter(term => !told.has(term));
     terms.forEach(term => told.add(term));
     if (field === 'body') bodyTerms.push(...fresh);
     const words = fresh.map(term => typed.get(term) ?? term);
-    return words.length ? [{field, label: `${TEXT_LABELS[field]} ${words.join(' ')}`, matched: words}] : [];
+    return words.length ? [{field, label: `${to ? 'To' : TEXT_LABELS[field]} ${words.join(' ')}`, matched: words}] : [];
   });
   // A word found only because it names the email's type has no text to point at.
   const named = new Set<MessageType>(matches.terms.flatMap(term => {

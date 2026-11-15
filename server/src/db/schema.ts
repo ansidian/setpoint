@@ -42,8 +42,9 @@ export const accounts = sqliteTable('accounts', {
  * view is a query over this table, and nothing is copied per view.
  *
  * Search reads `messages_fts`, an FTS5 index over the sender, organisation, subject, summary, search
- * terms and search body, kept in step by triggers on this table. Drizzle has no virtual tables or
- * triggers, so migration 0022 creates them by hand (see the note there).
+ * terms, search body and a sent email's recipients, kept in step by triggers on this table. Drizzle
+ * has no virtual tables or triggers, so migrations 0022 and 0045 create them by hand (see the notes
+ * there).
  */
 export const messages = sqliteTable('messages', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -139,6 +140,10 @@ export const messages = sqliteTable('messages', {
   // Null for new mail, which is read on its own. 0 for mail from before terms. That mail, and mail
   // read by an older prompt, is read only once the user says so.
   searchTermsVersion: integer('search_terms_version'),
+  // Who mail the user sent to others went to, To then Cc, as names and addresses ("Sam Ortiz
+  // sam.ortiz@example.org"), so search finds it by them as it finds received mail by its sender.
+  // Empty for other mail. Triggers write it from the recipients (migration 0045), never the app.
+  searchRecipients: text('search_recipients').notNull().default(''),
 
   // ---- Triage: how the lane was decided, once per email ----
   // What decided it (a rule, a learned rule, a model, the unsure default, the history pass), the

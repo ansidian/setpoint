@@ -147,7 +147,7 @@ export function typeWordsIn(row: Pick<TextRow, 'subject' | 'summary' | 'searchTe
  * in a result.
  */
 export const FIELD_TIERS: {field: 'sender' | 'subject' | 'body'; columns: string[]}[] = [
-  {field: 'sender', columns: ['from_name', 'from_address', 'organisation']},
+  {field: 'sender', columns: ['from_name', 'from_address', 'organisation', 'search_recipients']},
   {field: 'subject', columns: ['subject']},
   {field: 'body', columns: ['search_body', 'summary', 'search_terms']},
 ];
@@ -197,6 +197,8 @@ export interface TextRow {
   summary: string | null;
   searchTerms: string | null;
   searchBody: string;
+  // Who mail the user sent to others went to: it stands where a received email's sender does.
+  searchRecipients?: string;
 }
 
 export type RankedRow = TextRow & {type: MessageType | null};
@@ -260,7 +262,7 @@ function isNear(tokens: string[], words: SearchWord[]): boolean {
  * word needs the subject or the sender for the top tiers, and is a mention in the body alone.
  */
 export function matchTier(row: RankedRow, words: SearchWord[]): number {
-  const sender = wordsOf(`${row.fromName} ${row.fromAddress} ${row.organisation ?? ''}`);
+  const sender = wordsOf(`${row.fromName} ${row.fromAddress} ${row.organisation ?? ''} ${row.searchRecipients ?? ''}`);
   if (words.every(word => hasStart(sender, word))) return TIER.sender;
   const subject = wordsOf(row.subject);
   const terms = (row.searchTerms ?? '').split('\n').map(wordsOf);
@@ -281,23 +283,24 @@ export const namesType = (word: SearchWord, row: Pick<RankedRow, 'type'>) => wor
 
 /** Whether some word is only in what a link left. `said` is the body without its links. */
 export function isLinkOnly(row: RankedRow, words: SearchWord[], said: string): boolean {
-  const text = fold([row.fromName, row.fromAddress, row.organisation, row.subject, row.summary, row.searchTerms, said].filter(Boolean).join(' '));
+  const text = fold([row.fromName, row.fromAddress, row.organisation, row.searchRecipients, row.subject, row.summary, row.searchTerms, said].filter(Boolean).join(' '));
   return words.some(word => !namesType(word, row) && !word.starts.test(text));
 }
 
 /**
- * Which fields each term matched, in order of preference: sender (and organisation), subject, body.
- * These are the index's words, so a link's path never reads as a match. Body takes the summary and
- * search terms as FIELD_TIERS does.
+ * Which fields each term matched, in order of preference: sender, a sent email's recipients (`to`,
+ * a sender field read "To"), organisation, subject, body. These are the index's words, so a link's
+ * path never reads as a match. Body takes the summary and search terms as FIELD_TIERS does.
  */
-export function textMatches(row: TextRow, terms: string[]): {field: Extract<MatchField, 'sender' | 'organisation' | 'subject' | 'body'>; terms: string[]}[] {
-  const fields = [
+export function textMatches(row: TextRow, terms: string[]): {field: Extract<MatchField, 'sender' | 'organisation' | 'subject' | 'body'>; terms: string[]; to?: true}[] {
+  const fields: {field: Extract<MatchField, 'sender' | 'organisation' | 'subject' | 'body'>; to?: true; matches: (term: string) => boolean}[] = [
     {field: 'sender' as const, matches: (term: string) => hasTerm(row.fromName, term) || hasTerm(row.fromAddress, term)},
+    {field: 'sender' as const, to: true, matches: (term: string) => hasTerm(row.searchRecipients ?? null, term)},
     {field: 'organisation' as const, matches: (term: string) => hasTerm(row.organisation, term)},
     {field: 'subject' as const, matches: (term: string) => hasTerm(row.subject, term)},
     {field: 'body' as const, matches: (term: string) => hasTerm(row.searchBody, term) || hasTerm(row.summary, term) || hasTerm(row.searchTerms, term)},
   ];
-  return fields.map(({field, matches}) => ({field, terms: terms.filter(matches)})).filter(entry => entry.terms.length);
+  return fields.map(({field, to, matches}) => ({field, ...(to ? {to} : {}), terms: terms.filter(matches)})).filter(entry => entry.terms.length);
 }
 
 const EXCERPT_LENGTH = 160;

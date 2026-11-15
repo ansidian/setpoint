@@ -157,6 +157,13 @@ describe('matching and highlighting', () => {
     ]);
   });
 
+  test('a sent email\'s recipients match after its sender, read "To", and rank as a sender does', () => {
+    const sent = {...row, fromName: 'User', fromAddress: 'user@example.com', organisation: null, searchRecipients: 'Sam Ortiz sam.ortiz@example.org june@fabrikam.example.org'};
+    expect(textMatches(sent, ['ortiz', 'fabrikam', 'lease'])).toEqual([{field: 'sender', to: true, terms: ['ortiz', 'fabrikam']}, {field: 'subject', terms: ['lease']}, {field: 'body', terms: ['lease']}]);
+    expect(matchTier({...sent, type: null}, searchWords('sam ortiz'))).toBe(TIER.sender);
+    expect(textMatches(row, ['ortiz'])).toEqual([]);
+  });
+
   test('the summary and search terms match as the body does, and a word the index no longer holds matches nothing', () => {
     expect(textMatches(row, ['flat', 'tenancy'])).toEqual([{field: 'body', terms: ['flat', 'tenancy']}]);
     expect(textMatches({...row, summary: null, searchTerms: null}, ['flat', 'tenancy'])).toEqual([]);
