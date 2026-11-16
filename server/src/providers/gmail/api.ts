@@ -1,4 +1,5 @@
 // The Gmail API calls Setpoint makes (users.me), each a plain HTTPS request through googleRequest.
+import {randomBytes} from 'node:crypto';
 import type {AdapterContext} from '../../sync/adapter.ts';
 import {googleRequest} from '../google/auth.ts';
 import type {GoogleClient, GoogleTokens} from '../google/auth.ts';
@@ -142,9 +143,21 @@ export class GmailApi {
     await this.request(`messages/${encodeURIComponent(id)}/untrash`, {what: 'Gmail messages.untrash', method: 'POST'});
   }
 
-  /** messages.send: the raw email, in the thread given. Gmail takes the recipients from its headers. */
+  /**
+   * messages.send: the raw email, in the thread given, through Gmail's upload form (multipart: the
+   * thread as JSON, then the email as message/rfc822), which takes messages up to 35 MB where the
+   * JSON form's base64 would not. Gmail takes the recipients from its headers.
+   */
   async send(raw: Buffer, threadId: string | null): Promise<GmailMessage> {
-    const response = await this.request('messages/send', {what: 'Gmail messages.send', method: 'POST', body: {raw: raw.toString('base64url'), ...(threadId ? {threadId} : {})}});
+    const boundary = `sp-upload-${randomBytes(12).toString('hex')}`;
+    const data = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(threadId ? {threadId} : {})}\r\n--${boundary}\r\nContent-Type: message/rfc822\r\n\r\n`),
+      raw, Buffer.from(`\r\n--${boundary}--`),
+    ]);
+    const url = `${this.client.endpoints.gmail}/upload/gmail/v1/users/me/messages/send`;
+    const response = await googleRequest(this.client, this.tokens, this.context, url, {
+      what: 'Gmail messages.send', method: 'POST', query: {uploadType: 'multipart'}, raw: {contentType: `multipart/related; boundary=${boundary}`, data},
+    });
     return await response.json() as GmailMessage;
   }
 

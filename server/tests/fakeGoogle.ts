@@ -75,6 +75,28 @@ function headerValue(raw: Buffer, name: string): string | null {
 
 // `clock` is the test's, for the times Google stamps (a watch's expiry, a push's publish time).
 /** format=metadata's headers: the asked-for lines of the source's header block, unfolded, in order. */
+/**
+ * An upload's two parts, as Gmail reads them: the JSON metadata, then the email, returned as the
+ * JSON form's body would have them ({...metadata, raw}).
+ */
+function uploadBody(bytes: Buffer, type: string): Record<string, unknown> {
+  const boundary = /boundary=([^;]+)/.exec(type)?.[1];
+  if (!boundary) throw new Error('No boundary');
+  const marker = Buffer.from(`--${boundary}`);
+  const parts: Buffer[] = [];
+  let at = bytes.indexOf(marker);
+  while (at !== -1) {
+    const next = bytes.indexOf(marker, at + marker.length);
+    if (next === -1) break;
+    parts.push(bytes.subarray(at + marker.length + 2, next - 2));
+    at = next;
+  }
+  const content = (part: Buffer) => part.subarray(part.indexOf('\r\n\r\n') + 4);
+  const [meta, message] = parts;
+  if (!meta || !message || !/message\/rfc822/i.test(message.subarray(0, message.indexOf('\r\n\r\n')).toString())) throw new Error('Not a messages.send upload');
+  return {...JSON.parse(content(meta).toString('utf8')) as Record<string, unknown>, raw: content(message).toString('base64url')};
+}
+
 function metadataHeaders(raw: Buffer, names: string[]): {name: string; value: string}[] {
   const wanted = new Set(names.map(name => name.toLowerCase()));
   const block = raw.toString('utf8').split(/\r?\n\r?\n/)[0]!.replace(/\r?\n[ \t]+/g, ' ');
@@ -243,13 +265,16 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
   }
 
   const server = http.createServer((request, response) => {
-    let text = '';
-    request.on('data', chunk => (text += chunk));
+    const chunks: Buffer[] = [];
+    request.on('data', (chunk: Buffer) => chunks.push(chunk));
     request.on('end', () => {
+      const bytes = Buffer.concat(chunks);
+      const text = bytes.toString('utf8');
       const url = new URL(request.url ?? '/', 'http://127.0.0.1');
       const method = request.method ?? 'GET';
-      const isForm = request.headers['content-type']?.includes('x-www-form-urlencoded');
-      const body = isForm ? Object.fromEntries(new URLSearchParams(text)) : text ? JSON.parse(text) as Record<string, unknown> : {};
+      const type = request.headers['content-type'] ?? '';
+      const isForm = type.includes('x-www-form-urlencoded');
+      const body = type.startsWith('multipart/related') ? uploadBody(bytes, type) : isForm ? Object.fromEntries(new URLSearchParams(text)) : text ? JSON.parse(text) as Record<string, unknown> : {};
       requests.push({method, path: url.pathname, query: url.searchParams, body});
       const rule = injected.find(candidate => candidate.times > 0 && candidate.pattern.test(`${method} ${url.pathname}`));
       if (rule) {
@@ -271,6 +296,11 @@ export async function fakeGoogle({publicKey, clock = () => new Date()}: {publicK
       const address = accessTokens.get(token);
       if (!address) return json(response, 401, {error: {code: 401, message: 'Request had invalid authentication credentials.', status: 'UNAUTHENTICATED'}});
       if (url.pathname.startsWith('/gmail/')) return handleGmail(address, method, url.pathname, url.searchParams, body as Record<string, unknown>, response);
+      // messages.send's upload form, as Gmail takes it: multipart only.
+      if (url.pathname.startsWith('/upload/gmail/')) {
+        if (url.searchParams.get('uploadType') !== 'multipart' || !type.startsWith('multipart/related')) return apiError(response, 400, 'Media type not supported', 'badRequest');
+        return handleGmail(address, method, url.pathname.replace('/upload', ''), url.searchParams, body as Record<string, unknown>, response);
+      }
       if (url.pathname.startsWith('/v1/projects/')) return handlePubSub(url.pathname, body as Record<string, unknown>, response);
       return json(response, 404, {error: {code: 404, message: 'Not found'}});
     });

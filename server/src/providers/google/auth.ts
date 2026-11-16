@@ -155,6 +155,8 @@ export interface RequestOptions {
   method?: string;
   query?: Record<string, string | string[] | number | undefined>;
   body?: unknown;
+  // A body that isn't JSON (an upload), sent as it is.
+  raw?: {contentType: string; data: Buffer};
   // What a refusal says it was ("Gmail history").
   what: string;
   // Statuses the caller handles itself (Gmail's 404 for a deleted message).
@@ -175,8 +177,8 @@ export async function googleRequest(client: GoogleClient, tokens: GoogleTokens, 
     const token = await tokens.accessToken(context, attempt > 0);
     const response = await fetch(target, {
       method: options.method ?? 'GET',
-      headers: {authorization: `Bearer ${token}`, ...(options.body === undefined ? {} : {'content-type': 'application/json'})},
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      headers: {authorization: `Bearer ${token}`, ...(options.raw ? {'content-type': options.raw.contentType} : options.body === undefined ? {} : {'content-type': 'application/json'})},
+      body: options.raw ? new Uint8Array(options.raw.data) : options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: AbortSignal.any([context.signal, AbortSignal.timeout(client.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS)]),
     });
     if (response.ok || options.accept?.includes(response.status)) return response;
