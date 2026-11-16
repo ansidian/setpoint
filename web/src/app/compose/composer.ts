@@ -154,6 +154,13 @@ async function saveOwed(draftId: number, keepalive: boolean) {
   if (!owed.has(draftId) && saveErrors.delete(draftId)) notify();
 }
 
+/** A draft's help-me-write line and versions as the composer last had them: owed to the server, else saved. */
+function writeNow(draft: DraftOut): DraftOut['write'] {
+  const owedWrite = owedOf(draft.id).write;
+  if (owedWrite !== undefined) return owedWrite;
+  return getCached<DraftOut>(draftPath(draft.id))?.write ?? draft.write ?? null;
+}
+
 /** Drops what's queued for a draft that's going away. */
 function forgetSaves(draftId: number) {
   window.clearTimeout(timers.get(draftId));
@@ -346,8 +353,10 @@ export function switchKind(current: DraftOut, kind: Exclude<DraftKind, 'new'>, {
   if (current.message_id === null || current.kind === kind) return;
   const messageId = current.message_id;
   const {body, from, to, cc, bcc} = current;
+  // Help me write's line and versions are the words' history, so they go with them.
+  const write = writeNow(current);
   void startDraft({kind, message_id: messageId}).then(async next => {
-    await saveDraft(next.id, editSubject ? {body, from, to, cc, bcc} : {body, from});
+    await saveDraft(next.id, editSubject ? {body, from, to, cc, bcc, write} : {body, from, write});
     const floating = byDraft(current.id)?.floating ?? false;
     forgetSaves(current.id);
     discarded.add(current.id);
@@ -448,6 +457,8 @@ export function discard(draft: DraftOut) {
   const target = byDraft(draft.id);
   const floating = target?.floating ?? false;
   if (target) closedOn = floating ? shownEmail() : target.messageId;
+  // Help me write's line and versions, as the composer last had them, come back with Undo too.
+  const write = writeNow(draft);
   forgetSaves(draft.id);
   discarded.add(draft.id);
   setComposers(without(draft.id));
@@ -457,8 +468,8 @@ export function discard(draft: DraftOut) {
     void gone.then(async () => {
       const again = await startDraft(draft.message_id === null ? {kind: 'new', account_id: draft.from.account_id} : {kind: draft.kind as Exclude<DraftKind, 'new'>, message_id: draft.message_id});
       const {from, to, cc, bcc, subject, body, quote, removed_attachments} = draft;
-      await saveDraft(again.id, {from, to, cc, bcc, subject, body, quote, removed_attachments});
-      reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments}, {floating});
+      await saveDraft(again.id, {from, to, cc, bcc, subject, body, quote, removed_attachments, write});
+      reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments, write}, {floating});
     }).catch(toastFailure('Couldn\'t bring the draft back'));
   }}, 'gone');
 }

@@ -13,6 +13,8 @@ import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {clearCache} from '../../src/api/client.ts';
 import {ComposerRoot, ComposerSlot} from '../../src/app/compose/Composer.tsx';
+import {ToastPill} from '../../src/app/ToastPill.tsx';
+import {dismissToast} from '../../src/app/toast.ts';
 import {closeComposer, DRAFT_SAVE_MS, flushSave, openComposers, startComposer, useOpenComposer, writingOf} from '../../src/app/compose/composer.ts';
 
 const EMAIL = 21;
@@ -35,10 +37,14 @@ const draftOf = (fields: Partial<DraftOut> = {}): DraftOut => ({
 });
 
 /**
- * The server, faked at fetch, keeping the draft's saves. Each ask (`asks`) waits until `answer` lets it go with the blocks
- * written, or `refuse` with the server's words. `saves` are the draft's saves. Send waits until `held`.
+ * The server, faked at fetch, keeping each draft's saves. Starting a draft answers the one of that
+ * kind there is, or a new empty one (after a discard, or of another kind). Each ask (`asks`) waits
+ * until `answer` lets it go with the blocks written, or `refuse` with the server's words. `saves` are
+ * every draft's saves, with its id. Send waits until `held`.
  */
-function server(draft: DraftOut) {
+function server(first: DraftOut) {
+  const drafts: DraftOut[] = [first];
+  const discarded: number[] = [];
   const saves: Record<string, unknown>[] = [];
   const asks: Record<string, unknown>[] = [];
   const waiting: ((response: Response) => void)[] = [];
@@ -47,21 +53,32 @@ function server(draft: DraftOut) {
   vi.spyOn(window, 'fetch').mockImplementation((input, init) => {
     const url = new URL(String(input), location.href);
     const method = init?.method ?? 'GET';
-    const path = `/api/mail/drafts/${draft.id}`;
-    if (url.pathname === '/api/mail/drafts' && method === 'POST') return Promise.resolve(json(draft, 201));
-    if (url.pathname === path && method === 'GET') return Promise.resolve(json(draft));
-    if (url.pathname === path && method === 'PATCH') {
+    if (url.pathname === '/api/mail/drafts' && method === 'POST') {
+      const kind = (JSON.parse(String(init?.body)) as {kind: DraftOut['kind']}).kind;
+      let draft = drafts.find(one => one.kind === kind && !discarded.includes(one.id));
+      if (!draft) drafts.push((draft = draftOf({kind})));
+      return Promise.resolve(json(draft, 201));
+    }
+    const found = /^\/api\/mail\/drafts\/(\d+)(\/\w+)?$/.exec(url.pathname);
+    const draft = found ? drafts.find(one => one.id === Number(found[1])) : undefined;
+    const action = found?.[2] ?? '';
+    if (draft && !action && method === 'GET') return Promise.resolve(json(draft));
+    if (draft && !action && method === 'PATCH') {
       const saved = JSON.parse(String(init?.body)) as Record<string, unknown>;
-      saves.push(saved);
+      saves.push({draft: draft.id, ...saved});
       // Kept, as the server keeps it: starting the draft again answers it as saved.
       Object.assign(draft, saved);
       return Promise.resolve(json({id: draft.id, updated_at: SEED_NOW}));
     }
-    if (url.pathname === `${path}/write` && method === 'POST') {
+    if (draft && !action && method === 'DELETE') {
+      discarded.push(draft.id);
+      return Promise.resolve(new Response(null, {status: 204}));
+    }
+    if (draft && action === '/write' && method === 'POST') {
       asks.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
       return new Promise(resolve => waiting.push(resolve));
     }
-    if (url.pathname === `${path}/send` && method === 'POST') return new Promise(resolve => sends.push(resolve));
+    if (draft && action === '/send' && method === 'POST') return new Promise(resolve => sends.push(resolve));
     if (url.pathname === '/api/mail/from') return Promise.resolve(json(FROM));
     if (url.pathname === '/api/accounts') return Promise.resolve(json(ACCOUNTS));
     if (url.pathname === `/api/mail/messages/${EMAIL}`) return Promise.resolve(json(MESSAGE));
@@ -69,9 +86,9 @@ function server(draft: DraftOut) {
     return Promise.resolve(json({error: {code: 'not_found', message: 'No such thing.'}}, 404));
   });
   return {
-    saves, asks, sends,
+    saves, asks, sends, discarded,
     // Send's hold answered, the draft now held.
-    held: () => sends.shift()!(json({...draft, send: {state: 'held', send_at: SEED_NOW, error: null}})),
+    held: () => sends.shift()!(json({...first, send: {state: 'held', send_at: SEED_NOW, error: null}})),
     answer: (written: ReturnType<typeof blocks>) => waiting.shift()!(json({blocks: written})),
     refuse: (message: string) => waiting.shift()!(json({error: {code: 'draft_write_failed', message}}, 502)),
   };
@@ -83,6 +100,7 @@ function Pane() {
     <div style={{position: 'relative', height: 760, width: 900}}>
       <div className="pane" style={{height: 700, width: 680}}><ComposerSlot open={open} messageId={EMAIL} /></div>
       <ComposerRoot />
+      <ToastPill />
     </div>
   );
 }
@@ -97,6 +115,8 @@ async function compose(draft: DraftOut) {
 
 const body = () => page.getByRole('textbox', {name: 'Message'});
 const line = () => page.getByRole('textbox', {name: 'Help me write'});
+/** The line's own undo and redo (the toast has an Undo too). */
+const step = (name: 'Undo' | 'Redo') => page.getByRole('group', {name: 'Help me write'}).getByRole('button', {name});
 const lines = () => [...document.querySelector('.composer .desc-edit')!.children].map(child => child.textContent);
 /** Holds the save's timer, so a save is read the moment after the last change (`saveNow`). */
 const holdSaves = () => vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
@@ -105,6 +125,7 @@ const saveNow = () => vi.advanceTimersByTime(DRAFT_SAVE_MS);
 afterEach(() => {
   vi.useRealTimers();
   for (const one of openComposers()) closeComposer(one.draftId);
+  dismissToast();
   clearCache();
   vi.restoreAllMocks();
   document.body.replaceChildren();
@@ -128,8 +149,8 @@ test('⌘J opens the line over an empty body; Enter asks with the body, the line
   // The line stays, to refine; it now asks what to change.
   await expect.element(line()).toHaveValue('say 7 works');
   await expect.element(line()).toHaveAttribute('placeholder', 'Describe your change');
-  await expect.element(page.getByRole('button', {name: 'Undo'})).toBeEnabled();
-  await expect.element(page.getByRole('button', {name: 'Redo'})).toBeDisabled();
+  await expect.element(step('Undo')).toBeEnabled();
+  await expect.element(step('Redo')).toBeDisabled();
   saveNow();
   await expect.poll(() => fake.saves.at(-1)).toMatchObject({
     body: blocks('Hi Sam,', '', '7 works.'),
@@ -209,7 +230,7 @@ test('a selection the body was replaced under is no selection: the next ask is a
   const fake = await compose(draftOf({body: blocks('Hi Sam,', 'See you at 7.'), write: {prompt: '', open: true, versions: [blocks('Draft me'), blocks('Hi Sam,', 'See you at 7.')], at: 1}}));
   selectLine(1);
   await expect.poll(() => document.getSelection()!.toString()).toBe('See you at 7.');
-  await userEvent.click(page.getByRole('button', {name: 'Undo'}));
+  await userEvent.click(step('Undo'));
   expect(lines()).toEqual(['Draft me']);
   await userEvent.fill(line(), 'warmer');
   await userEvent.keyboard('{Enter}');
@@ -245,14 +266,14 @@ test('undo and redo step between the body before the draft and after it', async 
   fake.answer(blocks('Short.'));
   await expect.poll(lines).toEqual(['Short.']);
   holdSaves();
-  await userEvent.click(page.getByRole('button', {name: 'Undo'}));
+  await userEvent.click(step('Undo'));
   expect(lines()).toEqual(['Draft me']);
-  await expect.element(page.getByRole('button', {name: 'Undo'})).toBeDisabled();
+  await expect.element(step('Undo')).toBeDisabled();
   saveNow();
   await expect.poll(() => fake.saves.at(-1)).toMatchObject({body: blocks('Draft me'), write: {at: 0}});
-  await userEvent.click(page.getByRole('button', {name: 'Redo'}));
+  await userEvent.click(step('Redo'));
   expect(lines()).toEqual(['Short.']);
-  await expect.element(page.getByRole('button', {name: 'Redo'})).toBeDisabled();
+  await expect.element(step('Redo')).toBeDisabled();
 });
 
 test('a failure says why under the line and leaves the body; typing a new ask clears it', async () => {
@@ -263,7 +284,7 @@ test('a failure says why under the line and leaves the body; typing a new ask cl
   fake.refuse('Anthropic: Overloaded (529)');
   await expect.element(page.getByRole('alert')).toHaveTextContent('Couldn\'t write it, Anthropic: Overloaded (529)');
   expect(lines()).toEqual(['Keep me']);
-  await expect.element(page.getByRole('button', {name: 'Undo'})).toBeDisabled();
+  await expect.element(step('Undo')).toBeDisabled();
   await userEvent.keyboard('!');
   await expect.element(page.getByRole('alert')).not.toBeInTheDocument();
 });
@@ -283,7 +304,7 @@ test('Esc closes the line first, the caret back in the body; Esc again closes th
 test('a draft saved with its line open opens with the line, its ask and its versions', async () => {
   await compose(draftOf({body: blocks('Short.'), write: {prompt: 'shorter', open: true, versions: [blocks('Draft me'), blocks('Short.')], at: 1}}));
   await expect.element(line()).toHaveValue('shorter');
-  await userEvent.click(page.getByRole('button', {name: 'Undo'}));
+  await userEvent.click(step('Undo'));
   expect(lines()).toEqual(['Draft me']);
 });
 
@@ -312,4 +333,41 @@ test('a composer opened again while the line works shows it working and takes th
   await expect.element(page.getByText('Writing…')).toBeVisible();
   fake.answer(blocks('Short.'));
   await expect.poll(lines).toEqual(['Short.']);
+});
+
+/** A draft help me write wrote into, its line open with what was asked. */
+async function written() {
+  const fake = await compose(draftOf({body: blocks('Draft me')}));
+  await userEvent.keyboard('{Meta>}j{/Meta}');
+  await userEvent.keyboard('shorter{Enter}');
+  await expect.poll(() => fake.asks.length).toBe(1);
+  fake.answer(blocks('Short.'));
+  await expect.poll(lines).toEqual(['Short.']);
+  return fake;
+}
+
+const WRITTEN = {prompt: 'shorter', open: true, versions: [blocks('Draft me'), blocks('Short.')], at: 1};
+
+test('Discard\'s Undo brings the line back with what was asked and its versions', async () => {
+  const fake = await written();
+  await userEvent.click(page.getByRole('button', {name: 'Discard'}));
+  expect(openComposers()).toEqual([]);
+  await userEvent.click(page.getByRole('status').getByRole('button', {name: 'Undo'}));
+  await expect.element(line()).toHaveValue('shorter');
+  expect(lines()).toEqual(['Short.']);
+  expect(fake.saves.at(-1)).toMatchObject({body: blocks('Short.'), write: WRITTEN});
+  await userEvent.click(step('Undo'));
+  expect(lines()).toEqual(['Draft me']);
+});
+
+test('the reply-type menu\'s kind carries the line and its versions with the words', async () => {
+  const fake = await written();
+  const reply = openComposers()[0]!.draftId;
+  await userEvent.click(page.getByRole('button', {name: 'Reply, change'}));
+  await userEvent.click(page.getByRole('menuitemradio', {name: 'Forward'}));
+  await expect.poll(() => openComposers()[0]?.draftId).not.toBe(reply);
+  await expect.element(line()).toHaveValue('shorter');
+  expect(fake.saves.find(save => save.draft !== reply)).toMatchObject({body: blocks('Short.'), write: WRITTEN});
+  await userEvent.click(step('Undo'));
+  expect(lines()).toEqual(['Draft me']);
 });

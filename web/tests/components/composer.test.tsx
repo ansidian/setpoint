@@ -394,7 +394,7 @@ test.each([
   await userEvent.click(page.getByRole('menuitemradio', {name: 'Forward'}));
   await expect.element(page.getByRole('button', {name: 'Forward, change'})).toBeVisible();
   expect(body()).toBe('Count me in');
-  expect(saves.find(one => one.draft === forward.id)).toEqual({draft: forward.id, body: paragraph('Count me in'), from: reply.from});
+  expect(saves.find(one => one.draft === forward.id)).toEqual({draft: forward.id, body: paragraph('Count me in'), from: reply.from, write: null});
   await expect.poll(() => discarded).toEqual([reply.id]);
   expect([inWindow() !== null, inPane() !== null]).toEqual([floating, !floating]);
   // A forward has no one to send to yet.
