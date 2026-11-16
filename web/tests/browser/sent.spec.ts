@@ -1,11 +1,13 @@
 // Sent in the browser, at the design target on a fresh seed each. The seed has sent mail from
 // Personal, Work and iCloud, and none from Business or Jobs. From the sidebar's Sent to its list,
 // each row naming who it went to, to an email with Sent's tools, Trash with Undo, and an empty
-// account's view. Then search from Sent (sent mail only, in its account, found by its recipients too)
-// and from the Inbox (sent mail with the rest). Tab and the quiet segments are components/sentAccounts.test.tsx's.
+// account's view. Several selected as in the Inbox, trashed together with one Undo. Then search
+// from Sent (sent mail only, in its account, found by its recipients too) and from the Inbox (sent
+// mail with the rest). Tab and the quiet segments are components/sentAccounts.test.tsx's.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {Page} from 'playwright-core';
+import type {SentOut} from '@setpoint/shared';
+import type {Locator, Page} from 'playwright-core';
 import {cleanUp, holdToast, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -16,6 +18,18 @@ const rowOf = (page: Page, subject: string) => rows(page).filter({hasText: subje
 const accountOf = (page: Page) => new URL(page.url()).searchParams.get('account');
 const tools = (page: Page) => page.locator('.rd-tools .tool').allTextContents();
 const results = (page: Page) => page.locator('.search-list .arow').evaluateAll(found => found.map(row => [row.querySelector('.from')?.getAttribute('aria-label') ?? row.querySelector('.from')?.textContent, row.querySelector('.l2')?.textContent]));
+
+const sentIds = async (setpoint: Setpoint) => (await setpoint.api<SentOut>('GET', '/mail/sent?limit=500')).days.flatMap(day => day.rows.map(row => row.id));
+const selection = (page: Page) => page.locator('section.pane.selection');
+const menu = (page: Page) => page.locator('.ctx-menu');
+
+/** Right-clicks `target`, and waits for the menu to open and take the keys. */
+async function rightClick(target: Locator) {
+  await target.click({button: 'right'});
+  const page = target.page();
+  await menu(page).waitFor();
+  await until('the menu has the keys', () => page.evaluate(() => document.activeElement?.classList.contains('ctx-menu') ?? false), has => has);
+}
 
 async function inbox(setpoint: Setpoint): Promise<Page> {
   const page = await setpoint.page('target');
@@ -70,6 +84,58 @@ test('the sidebar\'s Sent: its list names who each went to, an email opens with 
     await page.locator('.view-empty button', {hasText: 'Show All'}).click();
     await until('Show All', async () => accountOf(page), account => account === null);
     await rowOf(page, 'Re: Saturday hike').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('several selected in Sent: the first ⌘-click takes the open email, ⇧-click a range; the pane names who each went to; E trashes every one with one toast, and Undo brings them back', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/sent`);
+    await rows(page).nth(4).waitFor();
+    const ids = await rows(page).evaluateAll(found => found.map(row => Number((row as HTMLElement).dataset.id)));
+    const picked = ids.slice(1, 4);
+    const row = (id: number) => page.locator(`.list .row[data-id="${id}"]`);
+
+    // Open one, then ⌘-click the next: both selected, the reader giving way to the selection.
+    await row(picked[0]!).click();
+    await page.locator('.rd-subj').waitFor();
+    await row(picked[1]!).locator('.from').click({modifiers: ['ControlOrMeta']});
+    await selection(page).waitFor();
+    await page.locator('section.pane[aria-label="Reading pane"]').waitFor({state: 'detached'});
+    // ⇧-click: the range from the last one clicked.
+    await row(picked[2]!).locator('.from').click({modifiers: ['Shift']});
+    const listed = () => selection(page).locator('.sel-list > li[data-id]').evaluateAll(found => found.map(one => Number((one as HTMLElement).dataset.id)));
+    await until('three selected', listed, shown => shown.length === 3);
+    assert.deepEqual(await listed(), picked);
+    assert.equal(await selection(page).locator('.rd-subj').textContent(), '3 emails selected');
+    // Each line names who it went to, as its row does.
+    const who = (from: Locator) => from.evaluateAll(found => found.map(one => one.querySelector('.from')?.getAttribute('aria-label')));
+    assert.deepEqual(await who(selection(page).locator('.sel-list > li[data-id]')), await who(page.locator(picked.map(id => `.list .row[data-id="${id}"]`).join(', '))));
+    assert.deepEqual(await selection(page).locator('.rd-tools .tool').allTextContents(), ['TrashE', 'ClearEsc']);
+    assert.equal(await page.locator('.list .row.sel').count(), 3);
+
+    // A selected row's menu is the selection's.
+    await rightClick(row(picked[1]!));
+    assert.deepEqual(await menu(page).locator('.menu-i').allTextContents(), ['TrashE', 'Clear selectionEsc']);
+    await page.keyboard.press('Escape');
+    await menu(page).waitFor({state: 'detached'});
+
+    // E: every one leaves at once, one toast, the selection ended.
+    await page.keyboard.press('e');
+    const toast = await holdToast(page);
+    assert.equal(await toast.textContent(), 'Moved 3 to TrashUndo');
+    await selection(page).waitFor({state: 'detached'});
+    for (const id of picked) await until(`${id} trashed`, () => sentIds(setpoint), found => !found.includes(id));
+    for (const id of picked) await row(id).waitFor({state: 'detached'});
+
+    // Undo: every one back, on the server and in the list.
+    await toast.locator('button', {hasText: 'Undo'}).click();
+    for (const id of picked) await until(`${id} back`, () => sentIds(setpoint), found => found.includes(id));
+    for (const id of picked) await row(id).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

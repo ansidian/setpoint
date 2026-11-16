@@ -12,6 +12,11 @@
 // cursor (with an email open, they open the next and previous one), Enter opens, E Trash (with Undo in
 // the toast, and ⌘Z), O Open in Gmail, Esc closes the reader, then the search.
 //
+// ⌘ or Ctrl-click and ⇧-click select several emails, as on the Inbox. The pane shows the selection
+// (SelectionPane) with Trash E, and E, a selected row's right-click (Trash, Clear selection) and
+// Esc act on it. Trash takes every one with one toast and one Undo. A plain click or Enter ends the
+// selection and opens the email; another account ends it too.
+//
 // Search: the header's field searches sent mail only, in the selected account when one is. Its words
 // stay words, with no suggestions.
 import type {ItemKind, MessageRowOut, MessageOut, SentOut, SentRowOut} from '@setpoint/shared';
@@ -19,7 +24,7 @@ import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../api/auth.ts';
 import {getCached, getJson, prefetch, useResource, useResources} from '../api/client.ts';
-import {messagePath, openMessage, sentPath, trashMessage, untrashMessage} from '../api/mail.ts';
+import {changeEach, messagePath, openMessage, refusals, sentPath, trashMessage, untrashMessage} from '../api/mail.ts';
 import type {SearchScope} from '../api/search.ts';
 import {dayStops} from '../logic/all.ts';
 import type {DayView} from '../logic/all.ts';
@@ -27,16 +32,21 @@ import {keepCursor, moveCursor, neighbour, nextAfterLeaving, searchStops, stopOf
 import type {Stop} from '../logic/inbox.ts';
 import type {Route} from '../logic/route.ts';
 import {leftOutSection, resultSections} from '../logic/search.ts';
+import {counted, inListOrder, NO_SELECTION, ranged, toggled} from '../logic/selection.ts';
+import type {Selection} from '../logic/selection.ts';
 import {tabTitle} from '../logic/title.ts';
 import {skeleton} from '../tokens.ts';
+import {Icon} from '../ui/Icon.tsx';
 import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
 import {useNow} from './clock.ts';
 import {openContextMenu} from './ContextMenu.tsx';
+import type {MenuAction} from './ContextMenu.tsx';
 import {emailActions} from './emailActions.ts';
 import {SentEmptyView} from './EmptyView.tsx';
 import {beats} from './fold.ts';
+import {useCompact, usePhone} from './Phone.tsx';
 import {askCard, Reader} from './Reader.tsx';
 import {answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
@@ -44,6 +54,7 @@ import type {ReaderActions, Travel} from './Reader.tsx';
 import {navigate} from './router.ts';
 import {SearchField, SearchResults} from './search/Search.tsx';
 import {useSearch} from './search/mailSearch.ts';
+import {SelectionPane} from './SelectionPane.tsx';
 import {ALL_ACCOUNTS, SentAccounts} from './SentAccounts.tsx';
 import {SentFrom} from './SentFrom.tsx';
 import {LoadFailed, useAfter, useArrival, useLoadFailed} from './states/Loading.tsx';
@@ -82,6 +93,8 @@ function sentDays(pages: (SentOut | undefined)[], gone: ReadonlySet<number>): Da
 
 export function SentPage({route}: {route: SentRoute}) {
   const now = useNow();
+  const phone = usePhone();
+  const compact = useCompact();
   const zone = timeZone();
   const {list: accountList, byId: accounts} = useAccounts();
   const accountWidth = useAccountColumn(accountList);
@@ -115,7 +128,7 @@ export function SentPage({route}: {route: SentRoute}) {
 
   // Emails Trash took out here, hidden at once. Undo, or a refused Trash, lets one back.
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
-  const untrashing = (id: number) => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
+  const untrashing = (back: number[]) => setTrashing(ids => new Set([...ids].filter(one => !back.includes(one))));
   const days = useMemo(() => sentDays(pages, trashing), [pages, trashing]);
   const sentRows = useMemo(() => new Map(pages.flatMap(page => page?.days.flatMap(day => day.rows) ?? []).map(row => [row.id, row])), [pages]);
 
@@ -137,6 +150,11 @@ export function SentPage({route}: {route: SentRoute}) {
     setTrack({stops, cursor});
   }
   const setCursor = (key: string | null) => setTrack(current => ({...current, cursor: key}));
+  // The emails ⌘ or Ctrl-click and ⇧-click selected: those still in the list, in its order. None on the phone.
+  const [selection, setSelection] = useState<Selection>(NO_SELECTION);
+  const selected = useMemo(() => (phone ? [] : inListOrder(selection.ids, stops)), [phone, selection.ids, stops]);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const clearSelection = () => setSelection(NO_SELECTION);
 
   const open = route.open;
   const [travelled, setTravelled] = useState<{id: number; travel: Travel} | null>(null);
@@ -153,10 +171,12 @@ export function SentPage({route}: {route: SentRoute}) {
   function pick(next: number) {
     if (next === (account ?? ALL)) return;
     setCursor(null);
+    clearSelection();
     navigate({page: 'sent', open: null, ...(next === ALL ? {} : {account: next})});
   }
 
   function openEmail(id: number, key?: string, travel: Travel | null = null) {
+    if (selected.length) clearSelection();
     setTravelled(travel ? {id, travel} : null);
     const stop = (key ? stops.find(item => item.key === key) : null) ?? stopOf(stops, id);
     if (stop?.kind === 'row') setCursor(stop.key);
@@ -164,6 +184,24 @@ export function SentPage({route}: {route: SentRoute}) {
     if (searching) search.opened(id);
     go({open: id});
     void openMessage(id).catch(toastFailure('Couldn\'t mark it read'));
+  }
+
+  /**
+   * A click on a row. With ⌘ or Ctrl it joins the selection or leaves it (the first one taking the
+   * open email, whose reader gives way). With ⇧ every email from the last one clicked to it joins. A
+   * plain click ends the selection and opens it.
+   */
+  function clickRow(id: number, key: string, event?: ReactMouseEvent | MouseEvent) {
+    const adding = !phone && !!event && !event.altKey && (event.metaKey || event.ctrlKey);
+    const ranging = !phone && !!event && !event.altKey && !adding && event.shiftKey;
+    if (!adding && !ranging) {
+      openEmail(id, key);
+      return;
+    }
+    const current = {ids: selected, anchor: selection.anchor};
+    setSelection(adding ? toggled(current, id, open) : ranged(current, stops, id, open));
+    setCursor(key);
+    if (open !== null) go({open: null});
   }
 
   // From the reader: an email of its conversation the user didn't send is received mail, not
@@ -187,23 +225,27 @@ export function SentPage({route}: {route: SentRoute}) {
   }, [subject]);
 
   /**
-   * Trash: the email leaves the list at once. On the open email the next one opens, or the reader
-   * closes at the end. The toast's Undo, or ⌘Z later, puts it back, and an open email back in the reader.
+   * Trash: the emails leave the list at once. On the open email the next one opens, or the reader
+   * closes at the end. Each is its own command, sent together, with one toast. Its Undo, or ⌘Z
+   * later, puts them back, and an open email back in the reader.
    */
-  function trash(id: number) {
-    const wasOpen = open === id;
-    beats.set(id, 'trash');
-    setTrashing(ids => new Set([...ids, id]));
-    if (wasOpen) {
-      const next = nextAfterLeaving(stops, cursor, id);
+  function trash(ids: number[]) {
+    if (!ids.length) return;
+    const wasOpen = open !== null && ids.includes(open) ? open : null;
+    for (const id of ids) beats.set(id, 'trash');
+    setTrashing(trashed => new Set([...trashed, ...ids]));
+    if (wasOpen !== null) {
+      const next = nextAfterLeaving(stops, cursor, wasOpen);
       if (next !== null) openEmail(next, undefined, 'next');
       else close();
     }
-    const sent = trashMessage(id).then(() => true, (error: unknown) => {
-      beats.delete(id);
-      untrashing(id);
-      toastFailure('Couldn\'t move it to Trash')(error);
-      return false;
+    // The emails the server took. Undo waits for them, as an untrash sent before the trash is refused.
+    const sent = changeEach(ids, trashMessage).then(outcomes => {
+      const refused = refusals(ids, outcomes);
+      for (const {id} of refused) beats.delete(id);
+      untrashing(refused.map(one => one.id));
+      if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t move it to Trash', n => `Couldn't move ${n} to Trash`))(refused[0]!.error);
+      return ids.filter(id => !refused.some(one => one.id === id));
     });
     let toastId = 0;
     const back = () => {
@@ -211,16 +253,19 @@ export function SentPage({route}: {route: SentRoute}) {
       if (at < 0) return;
       undos.splice(at, 1);
       dismissToast(toastId);
-      beats.delete(id);
-      untrashing(id);
-      void sent.then(took => (took ? untrashMessage(id).then(() => undefined) : undefined)).catch(toastFailure('Couldn\'t bring it back from Trash'));
-      if (wasOpen) {
-        lastOpened = id;
-        navigate({...route, open: id});
+      for (const id of ids) beats.delete(id);
+      untrashing(ids);
+      void sent.then(took => changeEach(took, untrashMessage).then(outcomes => {
+        const refused = refusals(took, outcomes);
+        if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t bring it back from Trash', n => `Couldn't bring ${n} back from Trash`))(refused[0]!.error);
+      }));
+      if (wasOpen !== null) {
+        lastOpened = wasOpen;
+        navigate({...route, open: wasOpen});
       }
     };
     undos.push(back);
-    toastId = showToast('Moved to Trash', {label: 'Undo', run: back});
+    toastId = showToast(counted(ids.length, 'Moved to Trash', n => `Moved ${n} to Trash`), {label: 'Undo', run: back});
   }
 
   // The email's Gmail link. The open one's is in. A row's comes with the email, asked for as its menu opened.
@@ -238,12 +283,26 @@ export function SentPage({route}: {route: SentRoute}) {
   }
 
   const nothing = () => {};
+  // The selection's actions, for its pane, its right-click menu and its keys. Trash ends it.
+  const forSelection = {
+    trash: () => {
+      trash(selected);
+      clearSelection();
+    },
+    clear: clearSelection,
+  };
+  const selectionMenu: MenuAction[] = [
+    {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: true, run: forSelection.trash},
+    {id: 'clear', group: 'clear', label: 'Clear selection', icon: 'close', hint: 'Esc', run: forSelection.clear},
+  ];
+  // Whether the keys act on the selection: while nothing's open over it.
+  const onSelection = open === null && selected.length > 0;
   const actions: ReaderActions = {
     done: nothing,
     pin: nothing,
     markUnread: nothing,
     codeCopied: nothing,
-    trash: () => target !== null && trash(target),
+    trash: () => (onSelection ? forSelection.trash() : target !== null && trash([target])),
     openInGmail: () => open !== null && openInGmail(open),
     step: (delta: 1 | -1) => {
       const next = open ? neighbour(stops, open, delta) : null;
@@ -279,12 +338,13 @@ export function SentPage({route}: {route: SentRoute}) {
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
       // R, A and F answer the open email, or the one under the cursor, which opens with its composer.
-      else if ((plainKey(event, 'r') || plainKey(event, 'a') || plainKey(event, 'f')) && target !== null) {
+      else if ((plainKey(event, 'r') || plainKey(event, 'a') || plainKey(event, 'f')) && !onSelection && target !== null) {
         const kind = plainKey(event, 'r') ? 'reply' : plainKey(event, 'a') ? 'reply_all' : 'forward';
         run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : kind === 'reply_all' ? 'a' : 'f');
       } else if (plainKey(event, 'c')) run(() => newMessage(account ?? undefined));
       else if (plainKey(event, 'Escape')) {
-        if (open !== null && openComposer()?.messageId === open && !openComposer()?.floating) run(closeComposer);
+        if (selected.length) run(clearSelection, 'escape');
+        else if (open !== null && openComposer()?.messageId === open && !openComposer()?.floating) run(closeComposer);
         else if (writing) run(closeComposer);
         else if (open !== null) run(close);
         else if (searching) run(() => search.clear());
@@ -308,6 +368,11 @@ export function SentPage({route}: {route: SentRoute}) {
     const row = rowOf(id);
     if (!element || !row) return;
     const key = element.dataset.key ?? null;
+    // On a selected row, the selection's. On any other, its own, and the selection stays.
+    if (selected.includes(id)) {
+      if (openContextMenu(event, element, selectionMenu) && key && stops.some(stop => stop.key === key)) setCursor(key);
+      return;
+    }
     const gmail = accounts.get(row.account_id)?.provider;
     const withCard = (card: ItemKind | 'ask') => {
       askCard(id, card);
@@ -315,7 +380,7 @@ export function SentPage({route}: {route: SentRoute}) {
     };
     const offered = emailActions(row, gmail === undefined ? null : gmail === 'gmail', {
       open: () => openEmail(id, key ?? undefined),
-      trash: () => trash(id),
+      trash: () => trash([id]),
       openInGmail: () => openInGmail(id),
       done: nothing, pin: nothing, markUnread: nothing,
       // Add to calendar, Add as task and Ask open the email with their card.
@@ -340,6 +405,10 @@ export function SentPage({route}: {route: SentRoute}) {
     const sent = sentRows.get(row.id);
     return <SentFrom to={sent?.to} cc={sent?.cc} />;
   };
+  // The pane beside the list: the open email, else the selection. From 640 to 1099 px a pane
+  // covers the list, so the selection shows only on its rows there.
+  const showsSelection = onSelection && !compact && !writing;
+  const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
 
   return (
     <>
@@ -356,15 +425,21 @@ export function SentPage({route}: {route: SentRoute}) {
           <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
         ) : searching && !firstWait ? (
           <SearchResults search={search} sections={sections} cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone} card={null}
-            onPoint={key => key !== cursor && setCursor(key)} onOpen={(id, key) => openEmail(id, key)} />
+            selected={selectedSet} onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} />
         ) : (
           <AllList key={account ?? ALL} label="Sent" attention={[]} shelf={[]} days={days} lanes={false} from={from} slot={false}
             empty={empty ? <SentEmptyView account={shownAccount} style={dotStyle(shownAccount?.colour)} onAll={() => pick(ALL)} /> : null}
-            cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone} arrived={arrived} more={more} dimmed={firstWait}
+            cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={arrived} more={more} dimmed={firstWait}
             loading={!ready ? (failed ? <LoadFailed what="Sent" loads={[firstLoad]} /> : <AllSkeleton />) : null}
-            onPoint={key => key !== cursor && setCursor(key)} onOpen={(id, key) => openEmail(id, key)} onToggleNoise={nothing} onNearEnd={loadMore} onUnpin={nothing} />
+            onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={nothing} onNearEnd={loadMore} onUnpin={nothing} />
         )}
         {writing && <NewMessagePane open={writing} />}
+        {showsSelection && (
+          <SelectionPane label="Selected emails" heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)}
+            tools={<button className="tool trash" type="button" data-hint="e" onClick={forSelection.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>}
+            lines={selectedRows.map(row => ({id: row.id, from: from(row), subject: row.subject, name: row.subject}))}
+            onClear={clearSelection} onOpen={id => openEmail(id)} onDrop={id => setSelection({...selection, ids: selected.filter(one => one !== id)})} />
+        )}
         {open !== null && (
           <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={openFromReader}
             sent canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
