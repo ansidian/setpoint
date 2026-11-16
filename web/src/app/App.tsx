@@ -71,8 +71,9 @@ export function App({arrive = false}: {arrive?: boolean}) {
         openSettings('accounts');
         return;
       }
-      // ⌘J switches Light and Night, from a field too. On System it does nothing.
-      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'j') {
+      // ⌘J switches Light and Night, from a field too. On System it does nothing. In a composer it's
+      // help me write's, which takes it first.
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'j' && !event.defaultPrevented) {
         event.preventDefault();
         flipTheme();
         return;

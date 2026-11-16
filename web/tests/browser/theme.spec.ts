@@ -1,5 +1,5 @@
 // Light, System and Night: boards 22a and 22b (boards 01 and 11 in Light), then the switch itself.
-// System follows the browser, and a choice is kept per browser.
+// System follows the browser, and a choice is kept per browser. In a composer ⌘J is help me write's.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
@@ -80,6 +80,33 @@ test('⌘J switches Light and Night, from a field too, and leaves System alone',
     await page.keyboard.press('ControlOrMeta+j');
     await until('Light, from the search field', () => theme(page), value => value === 'light');
     assert.equal(await page.evaluate(() => localStorage.getItem('setpoint.theme')), 'light');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('with the caret in a composer, ⌘J opens help me write and the theme stays; out of it, ⌘J switches the theme again', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.addInitScript(() => localStorage.setItem('setpoint.theme', 'light'));
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    await page.locator('.list .row', {hasText: 'Blue Door at 7?'}).click();
+    await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
+    await page.keyboard.press('r');
+    const body = page.locator('.composer').getByRole('textbox', {name: 'Message'});
+    await until('the caret is in the body', () => body.evaluate(field => field === document.activeElement), focused => focused);
+    await page.keyboard.press('ControlOrMeta+j');
+    await page.locator('.composer').getByRole('textbox', {name: 'Help me write'}).waitFor();
+    assert.equal(await theme(page), 'light');
+    // Esc closes the line, then the composer: ⌘J is the theme's again.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await until('the composer closes', () => page.locator('.composer').count(), count => count === 0);
+    await page.keyboard.press('ControlOrMeta+j');
+    await until('Night', () => theme(page), value => value === 'night');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

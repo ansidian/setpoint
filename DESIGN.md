@@ -231,7 +231,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
 - **Keyboard first:** every common action has a key; the keyboard cursor is a `sub2` fill, and
   moving the pointer onto a row makes it the cursor. On an email, R replies, A replies to all and F forwards;
   C writes a page's main thing (a new message on mail, a new event on Calendar); in the composer
-  ⌘Enter sends, ⌘⇧B shows Cc and Bcc and ⌘J opens help me write's line. Esc closes the topmost thing (the
+  ⌘Enter sends, ⌘⇧B shows Cc and Bcc and ⌘J opens help me write's line (elsewhere ⌘J switches
+  Light and Night). Esc closes the topmost thing (the
   composer keeps its draft). Key hints read
   "Esc", "⌘K", "⇧I".
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed
