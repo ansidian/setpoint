@@ -52,6 +52,9 @@ Two ways to run it behind the host's reverse proxy:
   host.
 - **A published port:** set `SETPOINT_HOST=0.0.0.0` and publish `127.0.0.1:<port>:7430`.
 
+Either way, the proxy must let request bodies of about 26 MB through (`client_max_body_size 26m`
+in Nginx): a file attached to a draft is uploaded whole, up to 25 MB.
+
 ## The command line
 
 Run it in the container (`docker exec <container> npm run cli -- <command>`, or
