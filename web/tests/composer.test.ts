@@ -4,7 +4,7 @@
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {attachmentsTotal, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {arrangeWindows, canRedo, canUndo, chipLabel, forwardLines, hasOthers, megabytes, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, unwritten, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
+import {arrangeWindows, canRedo, canUndo, chipLabel, fillAround, forwardLines, hasOthers, megabytes, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, unwritten, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
 import type {Versions} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
@@ -204,5 +204,21 @@ describe('help me write\'s versions', () => {
     ['a body with text asks what to change', 'Hi Sam,', 'Describe your change'],
   ])('the line: %s', (_name, body, words) => {
     expect(writePlaceholder(b(body))).toBe(words);
+  });
+});
+
+describe('what was typed before the server answered, put into the draft it answered', () => {
+  const draft = {to: [SAM], cc: [], bcc: [], body: []};
+  const hello = [{type: 'paragraph' as const, runs: [{text: 'Hello', marks: [], href: null}]}];
+  const left = [{type: 'paragraph' as const, runs: [{text: 'Left earlier', marks: [], href: null}]}];
+  test.each<[string, Parameters<typeof fillAround>[0], Parameters<typeof fillAround>[1], ReturnType<typeof fillAround>]>([
+    ['nothing typed asks nothing', draft, {}, {}],
+    ['words in a new draft are its body', draft, {body: hello}, {body: hello}],
+    ['words typed on a draft left with words go after them', {...draft, body: left}, {body: hello}, {body: [...left, ...hello]}],
+    ['a recipient typed joins the server\'s', draft, {to: [JUNE]}, {to: [SAM, JUNE]}],
+    ['a recipient the server already has is there once', draft, {to: [SAM, JUNE]}, {to: [SAM, JUNE]}],
+    ['a subject typed is the subject', draft, {subject: 'Lunch'}, {subject: 'Lunch'}],
+  ])('%s', (_, answered, typed, saved) => {
+    expect(fillAround(answered, typed)).toEqual(saved);
   });
 });

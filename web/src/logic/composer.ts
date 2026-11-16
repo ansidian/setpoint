@@ -2,7 +2,7 @@
 // shared/src/draftFill.ts), what a typed recipient is, a chip's words, the reply's quote as the
 // composer shows it under its fold, and help me write's versions.
 import {DRAFT_VERSIONS_MAX} from '@setpoint/shared';
-import type {DraftOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
+import type {DraftOut, DraftUpdateInput, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {fillAnswer} from '@setpoint/shared/draftFill';
 import {isEmpty, readHtml, sameDescription} from '@setpoint/shared/richText';
 import type {Block} from '@setpoint/shared/richText';
@@ -15,18 +15,28 @@ type Answered = Pick<MessageOut, 'account_id' | 'from_name' | 'from_address' | '
  * the user's own addresses. Recipients not known yet (mail from before they were kept) count as none.
  */
 export function hasOthers(message: Answered, from: FromOut | undefined): boolean {
-  if (!from || message.to === undefined) return false;
+  const read = readAnswered(message, from);
+  if (!read) return false;
+  const count = (kind: 'reply' | 'reply_all') => {
+    const filled = fillAnswer(kind, read.email, read.account, read.own);
+    return filled.to.length + filled.cc.length;
+  };
+  return count('reply_all') > count('reply');
+}
+
+/**
+ * The email as the shared fill rule reads it, with its account's addresses and every one of the
+ * user's own; null while its recipients or the account's addresses aren't known.
+ */
+function readAnswered(message: Answered, from: FromOut | undefined) {
+  if (!from || message.to === undefined) return null;
   const account = from.accounts.find(one => one.account_id === message.account_id)?.addresses.map(address => address.address) ?? [];
-  if (!account.length) return false;
+  if (!account.length) return null;
   const own = from.accounts.flatMap(one => one.addresses.map(address => address.address));
   const email = {fromName: message.from_name, fromAddress: message.from_address, subject: message.subject, to: message.to ?? null, cc: message.cc ?? null, replyTo: message.reply_to ?? null,
     // Mail the user sent (Sent's, or mail to themselves) answers its own recipients.
     sent: own.includes(message.from_address.toLowerCase())};
-  const count = (kind: 'reply' | 'reply_all') => {
-    const filled = fillAnswer(kind, email, account, own);
-    return filled.to.length + filled.cc.length;
-  };
-  return count('reply_all') > count('reply');
+  return {email, account, own};
 }
 
 const ADDRESS = /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/;
@@ -89,6 +99,31 @@ export function unwritten(draft: Pick<DraftOut, 'kind' | 'to' | 'cc' | 'bcc' | '
   if (draft.kind === 'reply' || draft.kind === 'reply_all') return true;
   if (draft.to.length + draft.cc.length + draft.bcc.length > 0) return false;
   return draft.kind === 'forward' || !draft.subject.trim();
+}
+
+/**
+ * What was typed in a composer before the server answered with its draft, put into that draft: a
+ * recipient joins the server's, and words typed on a draft that was left with words go after them,
+ * so nothing either side wrote is lost. The answer is what to save.
+ */
+export function fillAround(draft: Pick<DraftOut, 'to' | 'cc' | 'bcc' | 'body'>, typed: DraftUpdateInput): DraftUpdateInput {
+  const saved: DraftUpdateInput = {...typed};
+  for (const field of ['to', 'cc', 'bcc'] as const) {
+    const added = typed[field];
+    if (added) saved[field] = withRecipients(draft[field], added);
+  }
+  if (typed.body && !isEmpty(draft.body)) saved.body = [...draft.body, ...typed.body];
+  return saved;
+}
+
+/**
+ * Whether a reply or forward of `message` starts with Cc (Reply all's other recipients), from the
+ * same rule the server fills it by, so its rows are there while the server answers. False when the
+ * email or From isn't in yet.
+ */
+export function startsWithCopies(kind: DraftOut['kind'], message: Answered | undefined, from: FromOut | undefined): boolean {
+  const read = kind === 'reply_all' && message ? readAnswered(message, from) : null;
+  return read !== null && fillAnswer('reply_all', read.email, read.account, read.own).cc.length > 0;
 }
 
 /** "12.4 MB": a total against the attachments' limit, to one decimal. */

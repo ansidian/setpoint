@@ -52,6 +52,13 @@
 .composer .cmp-from-menu { position: absolute; top: calc(100% + 4px); left: -10px; z-index: 6; min-width: 280px; transform-origin: top left; }
 .composer .cmp-from-menu .menu-i.alias { padding-left: 27px; }
 
+/* While the draft is on its way (loading.css): From's dot, label and address, a reply's chips and
+   the quote's fold, each where and as tall as what fills it. */
+.composer .cmp-from-sk { height: 26px; display: flex; align-items: center; gap: 6px; }
+.composer .cmp-from-sk > .sk-bar + .sk-bar { margin-left: 2px; }
+.composer .cmp-chips-sk { display: flex; align-items: center; gap: 4px; }
+.composer .cmp-fold-sk { display: flex; height: 18px; }
+
 /* Recipients: chips with a name or an address, then what's being typed. */
 .composer .cmp-recipients { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px 0; cursor: text; }
 .composer .cmp-chip { height: 24px; display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; max-width: 100%; }

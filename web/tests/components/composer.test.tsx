@@ -15,14 +15,16 @@
 // (browser/composer.spec.ts).
 import type {AccountOut, DraftFileOut, DraftOut, DraftRowOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {SEED_NOW} from '@setpoint/shared';
-import {afterEach, expect, test, vi} from 'vitest';
+import {afterEach, expect, onTestFinished, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
-import {clearCache} from '../../src/api/client.ts';
+import {clearCache, setCached} from '../../src/api/client.ts';
+import {FROM_PATH} from '../../src/api/drafts.ts';
+import {messagePath} from '../../src/api/mail.ts';
 import {ComposerRoot, ComposerSlot, ComposerWindows} from '../../src/app/compose/Composer.tsx';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
 import {dismissToast} from '../../src/app/toast.ts';
-import {closeComposer, dock, DRAFT_SAVE_MS, newMessage, openComposers, openDraft, showEmail, startComposer, useComposers, useOpenComposer} from '../../src/app/compose/composer.ts';
+import {closeComposerAt, dock, DRAFT_SAVE_MS, newMessage, openComposers, openDraft, showEmail, startComposer, useComposers, useOpenComposer} from '../../src/app/compose/composer.ts';
 
 const SAM: Recipient = {name: 'Sam Lee', address: 'sam.lee@example.com'};
 const JUNE: Recipient = {name: 'June Park', address: 'june.park@example.org'};
@@ -56,7 +58,20 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
   const asked: string[] = [];
   const discarded: number[] = [];
   const started = new Set<number>();
-  const fake = Object.assign(fileRoutes(id => [draft, ...others].find(one => one.id === id)), {saves, landed, asked, discarded, failSaves: 0, sends: 0});
+  // `holdStart` keeps the answers to starting a draft until `releaseStart`, as a slow server would;
+  // `refuseStart` refuses them.
+  let starting: {promise: Promise<void>; open: () => void} | null = null;
+  const fake = Object.assign(fileRoutes(id => [draft, ...others].find(one => one.id === id)), {
+    saves, landed, asked, discarded, failSaves: 0, sends: 0, refuseStart: false,
+    holdStart() {
+      let open = () => {};
+      starting = {promise: new Promise<void>(resolve => (open = resolve)), open};
+    },
+    releaseStart() {
+      starting?.open();
+      starting = null;
+    },
+  });
   const answer = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}}));
   vi.spyOn(window, 'fetch').mockImplementation((input, init) => {
     const url = new URL(String(input), location.href);
@@ -69,7 +84,8 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
       const kind = (JSON.parse(String(init?.body)) as {kind: string}).kind;
       const next = kind === draft.kind ? undefined : others.find(one => one.kind === kind && !started.has(one.id));
       if (next) started.add(next.id);
-      return answer(next ?? draft, 201);
+      const reply = () => (fake.refuseStart ? answer({error: {code: 'unavailable', message: 'Setpoint is restarting.'}}, 503) : answer(next ?? draft, 201));
+      return starting ? starting.promise.then(reply) : reply();
     }
     if (other && method === 'GET') return answer(other);
     if (other && method === 'DELETE') {
@@ -201,11 +217,12 @@ function Pane() {
   );
 }
 
-/** Starts the draft as R, A or F does, and waits for the composer. */
+/** Starts the draft as R, A or F does, and waits for the composer to have it. */
 async function compose(draft: DraftOut, people: Recipient[] = [], message = MESSAGE, others: DraftOut[] = []) {
   const fake = server(draft, people, message, others);
   await render(<Pane />);
   startComposer({kind: draft.kind as 'reply', message_id: EMAIL});
+  await expect.poll(() => openComposers().map(one => one.draftId)).toEqual([draft.id]);
   await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
   return fake;
 }
@@ -222,7 +239,7 @@ const saveNow = () => vi.advanceTimersByTime(DRAFT_SAVE_MS);
 
 afterEach(() => {
   vi.useRealTimers();
-  for (const one of openComposers()) closeComposer(one.draftId);
+  for (const one of openComposers()) closeComposerAt(one.key);
   dismissToast();
   clearCache();
   vi.restoreAllMocks();
@@ -642,6 +659,130 @@ test('a new message in the pane gives it to an email shown, kept in Drafts with 
   expect(openComposers()).toEqual([]);
   await expect.poll(() => saves.at(-1)).toEqual({draft: fresh.id, subject: 'Hike'});
   expect(discarded).toEqual([]);
+});
+
+// ---- Before the server answers ----
+
+/**
+ * Starts a draft as R (or `start`) does, with the server's answer held, as a slow one would be. The
+ * email and From are in, as they are when R, A or F is pressed on an email.
+ */
+async function composeHeld(draft: DraftOut, start = () => startComposer({kind: draft.kind as 'reply', message_id: EMAIL})) {
+  const fake = server(draft);
+  fake.holdStart();
+  setCached(messagePath(EMAIL), MESSAGE);
+  setCached(FROM_PATH, FROM);
+  await render(<Pane />);
+  start();
+  return fake;
+}
+/** The placeholders the composer draws for what the server has yet to fill. */
+const placeholders = () => [...document.querySelectorAll('.composer [data-skeleton]')].map(one => one.getAttribute('data-skeleton'));
+/** The keys that reach the page beyond the composer, where its shortcuts listen. */
+function pageKeys() {
+  const heard: string[] = [];
+  const listen = (event: KeyboardEvent) => heard.push(event.key);
+  document.addEventListener('keydown', listen);
+  onTestFinished(() => document.removeEventListener('keydown', listen));
+  return heard;
+}
+const COUNT_ME_IN = [{type: 'paragraph', runs: [{text: 'Count me in', marks: [], href: null}]}];
+
+test('R with the answer held: the composer is there at once, placeholders where the server fills it, and keys typed land in the body, running no shortcut', async () => {
+  const fake = await composeHeld(draftOf({}));
+  const heard = pageKeys();
+  await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
+  expect(placeholders()).toEqual(['composer-from', 'composer-to', 'composer-quote']);
+  await expect.poll(() => document.activeElement?.getAttribute('aria-label')).toBe('Message');
+  holdSaves();
+  await userEvent.keyboard('Count me in');
+  expect(heard).toEqual([]);
+  fake.releaseStart();
+  // The answer fills it around what was typed, the caret where it was.
+  await expect.poll(() => chips('To')).toEqual(['Sam Lee']);
+  expect(placeholders()).toEqual([]);
+  await expect.element(page.getByRole('button', {name: /Personal/})).toHaveTextContent('Personaluser@example.com');
+  await expect.element(page.getByRole('button', {name: 'Show the quoted email'})).toBeVisible();
+  await expect.element(page.getByRole('textbox', {name: 'Message'})).toHaveTextContent('Count me in');
+  expect(document.activeElement?.getAttribute('aria-label')).toBe('Message');
+  saveNow();
+  await expect.poll(() => fake.saves).toEqual([{body: COUNT_ME_IN}]);
+});
+
+test('C with the answer held: To has the caret, and an address and a subject typed stay as the answer fills From', async () => {
+  const fake = await composeHeld(draftOf({kind: 'new', message_id: null, to: [], subject: ''}), () => newMessage());
+  const heard = pageKeys();
+  await expect.poll(() => document.activeElement?.getAttribute('aria-label')).toBe('To');
+  expect(placeholders()).toEqual(['composer-from']);
+  // Tab makes the address a chip, and Tab again goes on to Subject.
+  await userEvent.keyboard('june.park@example.org{Tab}{Tab}Hike');
+  expect(heard).toEqual([]);
+  holdSaves();
+  fake.releaseStart();
+  await expect.element(page.getByRole('button', {name: /Personal/})).toBeVisible();
+  expect(placeholders()).toEqual([]);
+  expect(chips('To')).toEqual(['june.park@example.org']);
+  await expect.element(field('Subject')).toHaveValue('Hike');
+  saveNow();
+  await expect.poll(() => fake.saves).toEqual([{to: [{name: null, address: 'june.park@example.org'}], subject: 'Hike'}]);
+});
+
+test('Reply all with the answer held has its Cc and Bcc rows from the start, so nothing moves when they fill', async () => {
+  const fake = await composeHeld(draftOf({kind: 'reply_all', to: [SAM, JUNE], cc: [RAVI]}));
+  await expect.element(field('Bcc')).toBeVisible();
+  expect(placeholders()).toEqual(['composer-from', 'composer-to', 'composer-cc', 'composer-quote']);
+  fake.releaseStart();
+  await expect.poll(() => chips('Cc')).toEqual(['Ravi Menon']);
+  expect(chips('To')).toEqual(['Sam Lee', 'June Park']);
+});
+
+test('Esc before the answer with nothing typed: the draft that then arrives is discarded quietly', async () => {
+  const draft = draftOf({});
+  const fake = await composeHeld(draft);
+  await expect.poll(() => document.activeElement?.getAttribute('aria-label')).toBe('Message');
+  await userEvent.keyboard('{Escape}');
+  expect(document.querySelector('.composer')).toBeNull();
+  fake.releaseStart();
+  await expect.poll(() => fake.discarded).toEqual([draft.id]);
+  expect(fake.saves).toEqual([]);
+  // Quietly: no toast says it went, or that something failed.
+  expect(document.body.textContent).not.toMatch(/Discarded|Couldn't/);
+});
+
+test('Esc before the answer with words typed: they are saved into the draft that arrives', async () => {
+  const fake = await composeHeld(draftOf({}));
+  await expect.poll(() => document.activeElement?.getAttribute('aria-label')).toBe('Message');
+  await userEvent.keyboard('Count me in{Escape}');
+  expect(document.querySelector('.composer')).toBeNull();
+  fake.releaseStart();
+  await expect.poll(() => fake.saves).toEqual([{body: COUNT_ME_IN}]);
+  expect(fake.discarded).toEqual([]);
+});
+
+test('Esc and R again within one wait: the one still open takes the draft, which isn\'t discarded', async () => {
+  const draft = draftOf({});
+  const fake = await composeHeld(draft);
+  await expect.poll(() => document.activeElement?.getAttribute('aria-label')).toBe('Message');
+  await userEvent.keyboard('{Escape}');
+  startComposer({kind: 'reply', message_id: EMAIL});
+  await expect.poll(() => document.activeElement?.getAttribute('aria-label')).toBe('Message');
+  await userEvent.keyboard('Count me in');
+  fake.releaseStart();
+  await expect.poll(() => chips('To')).toEqual(['Sam Lee']);
+  expect(openComposers().map(one => one.draftId)).toEqual([draft.id]);
+  await userEvent.keyboard('{Escape}');
+  await expect.poll(() => fake.saves).toEqual([{body: COUNT_ME_IN}]);
+  expect(fake.discarded).toEqual([]);
+});
+
+test('a start the server refuses closes the waiting composer with its toast', async () => {
+  const fake = await composeHeld(draftOf({}));
+  fake.refuseStart = true;
+  await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
+  fake.releaseStart();
+  await expect.element(page.getByText(/Couldn't start the reply/)).toBeVisible();
+  expect(document.querySelector('.composer')).toBeNull();
+  expect(openComposers()).toEqual([]);
 });
 
 // ---- Attached files ----

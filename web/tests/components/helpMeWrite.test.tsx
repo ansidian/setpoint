@@ -15,7 +15,7 @@ import {clearCache} from '../../src/api/client.ts';
 import {ComposerRoot, ComposerSlot} from '../../src/app/compose/Composer.tsx';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
 import {dismissToast} from '../../src/app/toast.ts';
-import {closeComposer, DRAFT_SAVE_MS, flushSave, openComposers, startComposer, useOpenComposer, writingOf} from '../../src/app/compose/composer.ts';
+import {closeComposer, closeComposerAt, DRAFT_SAVE_MS, flushSave, openComposers, startComposer, useOpenComposer, writingOf} from '../../src/app/compose/composer.ts';
 
 const EMAIL = 21;
 const SAM: Recipient = {name: 'Sam Lee', address: 'sam.lee@example.com'};
@@ -109,6 +109,7 @@ async function compose(draft: DraftOut) {
   const fake = server(draft);
   await render(<Pane />);
   startComposer({kind: 'reply', message_id: EMAIL});
+  await expect.poll(() => openComposers().map(one => one.draftId)).toEqual([draft.id]);
   await expect.element(body()).toBeVisible();
   return fake;
 }
@@ -124,7 +125,7 @@ const saveNow = () => vi.advanceTimersByTime(DRAFT_SAVE_MS);
 
 afterEach(() => {
   vi.useRealTimers();
-  for (const one of openComposers()) closeComposer(one.draftId);
+  for (const one of openComposers()) closeComposerAt(one.key);
   dismissToast();
   clearCache();
   vi.restoreAllMocks();

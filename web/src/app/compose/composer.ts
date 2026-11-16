@@ -22,6 +22,14 @@
 // list, and opens again only those that were open, where they were. Drafts' Pop out and its
 // selection's Open put drafts straight into windows.
 //
+// Waiting: C, R, A and F open the composer at the key, before the server has started the draft.
+// It has no draft id until the answer comes (`draftId` null). The field with the caret is live from
+// the start (To for a new message and a forward, the body for a reply) and what's typed meanwhile is
+// kept here by the opening, then saved into the draft that arrives, around what the server filled
+// (logic/composer.ts › fillAround). What needs the draft (Send, Discard, files, help me write, the
+// menus, moving it) waits for it. Esc meanwhile is Esc: the draft that then arrives is let go of
+// as the composer would have let go of it. A start that fails closes the composer with its toast.
+//
 // A new message (C) has no email to stay with: it opens in a window of its own. Docked into the
 // pane, it has the pane by itself, and showing an email closes it into Drafts. On Drafts, the open
 // draft is the page's own (its address names it).
@@ -51,7 +59,7 @@ import {useSyncExternalStore} from 'react';
 import {ApiFailure, getCached, getJson, setCached} from '../../api/client.ts';
 import {discardDraft, draftPath, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
-import {hasOthers, megabytes, NO_VERSIONS, recordVersion, unwritten} from '../../logic/composer.ts';
+import {fillAround, hasOthers, megabytes, NO_VERSIONS, recordVersion, unwritten} from '../../logic/composer.ts';
 import {broughtBackLine, counted, discardedLine, discardFailedLine} from '../../logic/selection.ts';
 import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
@@ -62,7 +70,8 @@ import {composerHost, whenPlaced} from './place.ts';
 export const DRAFT_SAVE_MS = 600;
 
 export interface OpenComposer {
-  draftId: number;
+  // Null while the server is starting the draft.
+  draftId: number | null;
   messageId: number | null;
   kind: DraftKind;
   // Where the caret lands: the body when it already has someone to go to, else To. None when it
@@ -88,6 +97,7 @@ let touches = 0;
 /** The composer in the reading pane, if one is. */
 const docked = (): OpenComposer | null => composers.find(one => !one.floating) ?? null;
 const byDraft = (draftId: number): OpenComposer | null => composers.find(one => one.draftId === draftId) ?? null;
+const byKey = (key: number): OpenComposer | null => composers.find(one => one.key === key) ?? null;
 function setComposers(next: OpenComposer[]) {
   composers = next;
   notify();
@@ -108,7 +118,7 @@ const subscribe = (listener: () => void) => {
 export const useOpenComposer = () => useSyncExternalStore(subscribe, docked);
 /** Every open composer, the windows in the order they popped out. */
 export const useComposers = () => useSyncExternalStore(subscribe, () => composers);
-export const useSaveError = (draftId: number) => useSyncExternalStore(subscribe, () => saveErrors.get(draftId) ?? null);
+export const useSaveError = (draftId: number | null) => useSyncExternalStore(subscribe, () => (draftId === null ? null : saveErrors.get(draftId) ?? null));
 export const openComposer = docked;
 /** Every open composer, as useComposers has them. */
 export const openComposers = () => composers;
@@ -207,12 +217,17 @@ function letGo(draftId: number) {
   void flushSave(draftId).catch(() => {});
 }
 
+/** A composer gives way: its draft let go of, or, still waiting, the draft once it arrives (arrive). */
+function release(one: OpenComposer) {
+  if (one.draftId !== null) letGo(one.draftId);
+}
+
 /** Opens the draft in the pane (the one there gives way) or in a window of its own. */
 function show(draft: Pick<DraftOut, 'id' | 'message_id' | 'kind' | 'to' | 'cc' | 'bcc'>, {caret = true, floating = false, subject = false} = {}) {
   let rest = without(draft.id);
   const pane = rest.find(one => !one.floating);
   if (!floating && pane) {
-    letGo(pane.draftId);
+    release(pane);
     rest = rest.filter(one => one !== pane);
   }
   const someone = draft.to.length + draft.cc.length + draft.bcc.length > 0;
@@ -228,17 +243,71 @@ function change(draftId: number, changes: Partial<OpenComposer>) {
   setComposers(composers.map(one => (one.draftId === draftId ? {...one, ...changes} : one)));
 }
 
-/** Starts (or takes up again) a draft of `kind` on an email, or a new message, and opens it. */
+/**
+ * Starts (or takes up again) a draft of `kind` on an email, or a new message: its composer opens at
+ * once, waiting, and takes the draft when the server answers.
+ */
 export function startComposer(input: DraftCreateInput) {
   const already = input.kind === 'new' ? null : composers.find(one => one.messageId === input.message_id && one.kind === input.kind);
   if (already) {
     // Already open: R again brings its window back and puts the caret in it.
-    if (already.floating) change(already.draftId, {minimized: false, touched: ++touches});
+    if (already.floating) setComposers(composers.map(one => (one === already ? {...one, minimized: false, touched: ++touches} : one)));
     whenPlaced(already.key, () => composerHost(already.key).querySelector<HTMLElement>('.desc-edit')?.focus());
     return;
   }
   // A new message starts popped out, so the page stays as it is under it.
-  void startDraft(input).then(draft => show(draft, {floating: input.kind === 'new'}), toastFailure(input.kind === 'forward' ? 'Couldn\'t start the forward' : input.kind === 'new' ? 'Couldn\'t start a message' : 'Couldn\'t start the reply'));
+  const floating = input.kind === 'new';
+  let rest = composers;
+  const pane = floating ? null : docked();
+  if (pane) {
+    release(pane);
+    rest = rest.filter(one => one !== pane);
+  }
+  const key = ++opened;
+  closedOn = null;
+  setComposers([...rest, {
+    draftId: null, messageId: input.kind === 'new' ? null : input.message_id ?? null, kind: input.kind,
+    focus: input.kind === 'reply' || input.kind === 'reply_all' ? 'body' : 'to', subjectEdited: false, key, floating, minimized: false, touched: ++touches,
+  }]);
+  void startDraft(input).then(draft => arrive(key, draft), (error: unknown) => {
+    typedWhileWaiting.delete(key);
+    if (byKey(key)) setComposers(composers.filter(one => one.key !== key));
+    toastFailure(input.kind === 'forward' ? 'Couldn\'t start the forward' : input.kind === 'new' ? 'Couldn\'t start a message' : 'Couldn\'t start the reply')(error);
+  });
+}
+
+// What was typed in each waiting composer, by its opening, until its draft arrives.
+const typedWhileWaiting = new Map<number, DraftUpdateInput>();
+
+/** A change made in a composer still waiting for its draft: kept until the draft arrives. */
+export function queueTyped(key: number, changes: DraftUpdateInput) {
+  typedWhileWaiting.set(key, {...typedWhileWaiting.get(key), ...changes});
+}
+
+function takeTyped(key: number): DraftUpdateInput {
+  const typed = typedWhileWaiting.get(key) ?? {};
+  typedWhileWaiting.delete(key);
+  return typed;
+}
+
+/**
+ * The server answered composer `key` with its draft: what was typed meanwhile is saved into it, and
+ * the composer takes it where it is. One closed meanwhile hands it to a composer still waiting for
+ * the same email and kind (Esc, then R again), else lets it go as Esc would have: kept with words,
+ * discarded quietly without.
+ */
+function arrive(key: number, draft: DraftOut) {
+  const own = byKey(key);
+  const typed = takeTyped(key);
+  const taker = own ?? (draft.message_id === null ? null : composers.find(one => one.draftId === null && one.messageId === draft.message_id && one.kind === draft.kind) ?? null);
+  const changes = taker && taker !== own ? {...typed, ...takeTyped(taker.key)} : typed;
+  const fill = fillAround(draft, changes);
+  if (Object.keys(fill).length) queueSave(draft.id, fill);
+  if (taker && taker.draftId === null) {
+    setComposers(composers.map(one => (one === taker ? {...one, draftId: draft.id, messageId: draft.message_id} : one)));
+    return;
+  }
+  if (!taker && !byDraft(draft.id)) letGo(draft.id);
 }
 
 /** Whether email `id` has anyone for Reply all, from the email and From as they've loaded, else null. */
@@ -268,13 +337,22 @@ function shownEmail(): number | null {
 }
 
 /** Esc, or the page's Esc on the pane's composer: it closes, the draft kept. */
-export function closeComposer(draftId = docked()?.draftId) {
-  const target = draftId === undefined ? null : byDraft(draftId);
-  if (!target) return;
-  letGo(target.draftId);
+export function closeComposer(draftId?: number) {
+  const target = draftId === undefined ? docked() : byDraft(draftId);
+  if (target) closeOne(target);
+}
+
+function closeOne(target: OpenComposer) {
+  release(target);
   // A window closing leaves the pane as it is: the email shown there doesn't open its own draft now.
   closedOn = target.floating ? shownEmail() : target.messageId;
-  setComposers(without(target.draftId));
+  setComposers(composers.filter(one => one.key !== target.key));
+}
+
+/** Closes the composer opened as `key`, as Esc does. */
+export function closeComposerAt(key: number) {
+  const target = byKey(key);
+  if (target) closeOne(target);
 }
 
 /** The composer's pop-out: it leaves the pane for a window of its own, as it is. */
@@ -303,8 +381,8 @@ export function dock(draftId: number) {
   const target = byDraft(draftId);
   if (!target?.floating) return;
   const pane = docked();
-  if (pane) letGo(pane.draftId);
-  showPaneFor({id: target.draftId, message_id: target.messageId});
+  if (pane) release(pane);
+  showPaneFor({id: draftId, message_id: target.messageId});
   // The pane opens on that email now: its draft is this one.
   closedOn = null;
   setComposers(composers.filter(one => one !== pane).map(one => (one === target ? {...one, floating: false, minimized: false, touched: ++touches} : one)));
@@ -322,7 +400,7 @@ export function showEmail(messageId: number, drafts: DraftRowOut[] | undefined) 
   if (closedOn !== null && closedOn !== messageId) closedOn = null;
   // A new message in the pane gives it to the email, kept in Drafts.
   const pane = docked();
-  if (pane && pane.messageId === null) closeComposer(pane.draftId);
+  if (pane && pane.messageId === null) closeOne(pane);
   const taken = () => closedOn === messageId || composers.some(one => one.messageId === messageId);
   if (!drafts || taken()) return;
   const draft = drafts.filter(row => row.message_id === messageId && openable(row)).sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
@@ -348,7 +426,7 @@ export function openDraft(draftId: number) {
   if (target) {
     if (!target.floating) return;
     const pane = docked();
-    if (pane) letGo(pane.draftId);
+    if (pane) release(pane);
     setComposers(composers.filter(one => one !== pane).map(one => (one === target ? {...one, floating: false, minimized: false, touched: ++touches} : one)));
     return;
   }
@@ -609,7 +687,7 @@ const takers = new Map<number, (blocks: Block[], selection: boolean) => void>();
 
 /** Where a draft's ask stands: working, failed with its words, or neither. */
 export const writingOf = (draftId: number) => writes.get(draftId) ?? IDLE;
-export const useWriting = (draftId: number) => useSyncExternalStore(subscribe, () => writingOf(draftId));
+export const useWriting = (draftId: number | null) => useSyncExternalStore(subscribe, () => (draftId === null ? IDLE : writingOf(draftId)));
 
 /** The composer showing a draft takes what's written for it; the function it gets back lets go. */
 export function takeWritten(draftId: number, take: (blocks: Block[], selection: boolean) => void) {
@@ -674,8 +752,8 @@ const inFlight = new Map<number, Set<Promise<boolean>>>();
 const fileErrors = new Map<number, string>();
 
 const uploadsOf = (draftId: number) => uploads.get(draftId) ?? NO_UPLOADS;
-export const useUploads = (draftId: number) => useSyncExternalStore(subscribe, () => uploadsOf(draftId));
-export const useFileError = (draftId: number) => useSyncExternalStore(subscribe, () => fileErrors.get(draftId) ?? null);
+export const useUploads = (draftId: number | null) => useSyncExternalStore(subscribe, () => (draftId === null ? NO_UPLOADS : uploadsOf(draftId)));
+export const useFileError = (draftId: number | null) => useSyncExternalStore(subscribe, () => (draftId === null ? null : fileErrors.get(draftId) ?? null));
 
 /** A draft's files as the composer last had them: the cache's, else the draft's own. */
 function filesNow(draftId: number, draft: Pick<DraftOut, 'files'>): DraftOut['files'] {

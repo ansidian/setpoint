@@ -43,7 +43,8 @@ function highlight(range: Range | null) {
  * answer put into the body. `body` is the editable field; `current` reads its blocks as they are now.
  */
 export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
-  draftId: number;
+  // Null while the composer waits for its draft: the line doesn't open until it's there.
+  draftId: number | null;
   initial: DraftWriteState | null;
   body: RefObject<HTMLDivElement | null>;
   current: () => Block[];
@@ -98,7 +99,7 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
   };
 
   // What's written comes here, for as long as this composer shows the draft.
-  useEffect(() => takeWritten(draftId, (blocks, toSelection) => {
+  useEffect(() => (draftId === null ? undefined : takeWritten(draftId, (blocks, toSelection) => {
     const before = current();
     if (toSelection) {
       const kept = intact(asked.current);
@@ -121,9 +122,10 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
     }
     const versions = recordVersion(write.current, before, current());
     set(versions);
-  }), [draftId]); // eslint-disable-line react-hooks/exhaustive-deps
+  })), [draftId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = () => {
+    if (draftId === null) return;
     if (!write.current.open) set({open: true});
     setFocusAsks(asks => asks + 1);
   };
@@ -141,7 +143,7 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
   };
   const submit = () => {
     const prompt = write.current.prompt.trim();
-    if (!prompt || writing.working) return;
+    if (!prompt || writing.working || draftId === null) return;
     const kept = intact(selected.current);
     asked.current = kept ? {range: kept.range.cloneRange(), text: kept.text} : null;
     void helpMeWrite(draftId, {prompt, body: current(), selection: kept?.text ?? null});
@@ -154,9 +156,14 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
 
   return {
     write: shown, writing, focusAsks, open, close, submit,
+    // The draft arrived after the composer opened: its saved line and versions are the composer's.
+    adopt: (saved: DraftWriteState | null) => {
+      write.current = saved ?? NO_WRITE;
+      setShown(write.current);
+    },
     prompt: (prompt: string) => {
       set({prompt});
-      if (writing.error) writeError(draftId, null);
+      if (writing.error && draftId !== null) writeError(draftId, null);
     },
     undo: () => step(undoVersion(write.current, current())),
     redo: () => step(redoVersion(write.current, current())),

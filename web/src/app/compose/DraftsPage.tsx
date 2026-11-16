@@ -104,11 +104,11 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
     const before = was.current;
     was.current = composer;
     // Windows aren't the pane's: popping it out empties the pane, and its row docks it again.
-    if (composer && composer.draftId !== shown) navigate({page: 'drafts', open: composer.draftId}, {replace: true});
+    if (composer && composer.draftId !== null && composer.draftId !== shown) navigate({page: 'drafts', open: composer.draftId}, {replace: true});
     else if (!composer && before && before.draftId === shown) navigate({page: 'drafts', open: null});
   }, [composer, shown]);
 
-  const open = composer && composer.draftId === shown ? composer : null;
+  const open = composer && composer.draftId !== null && composer.draftId === shown ? composer : null;
   // The pane beside the list: the open draft, else the selection. From 640 to 1099 px a pane covers
   // the list, so the selection shows only on its rows there.
   const showsSelection = open === null && selected.length > 0 && !compact;

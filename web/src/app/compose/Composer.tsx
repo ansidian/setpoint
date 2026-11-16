@@ -15,9 +15,16 @@
 // originals among them, and the reason one was refused shows over them. The top right pops it out into a floating window (no
 // key), and the same button docks it again; the format row keeps a place for buttons of its own.
 //
+// Waiting for the server to start its draft (composer.ts), it shows its fields in their places at
+// once: To, the subject of a new message, the body and the format row are live, and what the server
+// has yet to fill (From, a reply's recipients, Reply all's Cc, the quote) draws its skeleton. The
+// answer fills those in around what was typed; the rows were there from the start, Reply all's Cc
+// and Bcc too when the shared fill rule says it has Cc, so nothing moves.
+//
 // It is mounted once, by ComposerRoot, into the host element its places take in turn (place.ts):
 // the reader under its email, a new message's pane, Drafts' pane and the floating window.
-import type {AccountOut, DraftOut, DraftsOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
+import type {AccountOut, DraftOut, DraftsOut, DraftUpdateInput, FromOut, MessageOut, Recipient} from '@setpoint/shared';
+import {isEmpty} from '@setpoint/shared/richText';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {ClipboardEvent, CSSProperties, DragEvent, KeyboardEvent, ReactNode, RefObject} from 'react';
@@ -26,7 +33,7 @@ import {timeZone as userTimeZone} from '../../api/auth.ts';
 import {draftPath, DRAFTS_PATH, FROM_PATH, suggestPeople} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
 import {paragraphs} from '../../logic/body.ts';
-import {chipLabel, forwardLines, quoteOf, readRecipient, readRecipients, replyLine, withRecipients} from '../../logic/composer.ts';
+import {chipLabel, forwardLines, quoteOf, readRecipient, readRecipients, replyLine, startsWithCopies, withRecipients} from '../../logic/composer.ts';
 import {attachmentType, fileSize, hasRemoteContent, remoteImages} from '../../logic/reader.ts';
 import {TYPE_GLYPHS} from '../Attachments.tsx';
 import {MailFrame} from '../MailFrame.tsx';
@@ -38,9 +45,10 @@ import {PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
 import {arrangeWindows, placeWindows} from '../../logic/composer.ts';
-import {attachFiles, canReplyAll, closeComposer, discard, dismissFileError, dock, foldWindows, popOut, queueSave, removeFile, switchKind, toggleMinimized, send, unsaved, useComposers, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
+import {attachFiles, canReplyAll, closeComposer, closeComposerAt, discard, dismissFileError, dock, foldWindows, popOut, queueSave, queueTyped, removeFile, switchKind, toggleMinimized, send, unsaved, useComposers, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
 import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
+import {Bar, Dot, Sk} from '../states/Loading.tsx';
 import {useHelpMeWrite, WriteButton, WriteLine} from './WriteLine.tsx';
 import './compose.css';
 
@@ -51,19 +59,24 @@ export function Composer({open, message, accounts, timeZone}: {
   accounts: Map<number, AccountOut>;
   timeZone: string;
 }) {
-  const {data: draft, error} = useResource<DraftOut>(draftPath(open.draftId));
+  const {data, error} = useResource<DraftOut>(open.draftId === null ? null : draftPath(open.draftId));
   const {data: from} = useResource<FromOut>(FROM_PATH);
   // Gone meanwhile (sent or discarded elsewhere): nothing left to write.
   const gone = error instanceof ApiFailure && error.status === 404;
   useEffect(() => {
-    if (gone) closeComposer(open.draftId);
+    if (gone && open.draftId !== null) closeComposer(open.draftId);
   }, [gone, open.draftId]);
-  if (!draft || draft.id !== open.draftId) return <section className="composer" aria-label="Composer" />;
+  // One Fields from the key to the draft's arrival, so what's typed and the caret stay.
+  const draft = data && data.id === open.draftId ? data : null;
   return <Fields draft={draft} open={open} from={from} message={message} accounts={accounts} timeZone={timeZone} />;
 }
 
+/** What a composer waiting for its draft has before the server fills it. */
+const WAITING = {from: {account_id: 0, address: ''}, to: [], cc: [], bcc: [], subject: '', body: []};
+
 function Fields({draft, open, from, message, accounts, timeZone}: {
-  draft: DraftOut;
+  // Null while the server starts it.
+  draft: DraftOut | null;
   open: OpenComposer;
   from: FromOut | undefined;
   message: MessageOut | undefined;
@@ -72,49 +85,80 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
 }) {
   // What the user has, from the draft as it was when the composer opened, with any change the server
   // is still owed. From then on it's theirs.
-  const [fields, setFields] = useState(() => {
+  const [fields, setFields] = useState<Pick<DraftOut, 'from' | 'to' | 'cc' | 'bcc' | 'subject' | 'body'>>(() => {
+    if (!draft) return WAITING;
     const {from, to, cc, bcc, subject, body} = {...draft, ...unsaved(draft.id)} as DraftOut;
     return {from, to, cc, bcc, subject, body};
   });
-  const [copies, setCopies] = useState(draft.cc.length + draft.bcc.length > 0);
+  const kind = open.kind;
+  const waiting = draft === null;
+  // Cc and Bcc show when the draft has them, and while it's on its way when it will (Reply all's
+  // other recipients), so their rows don't push in when it comes.
+  const [copies, setCopies] = useState(() => (draft ? draft.cc.length + draft.bcc.length > 0 : startsWithCopies(kind, message, from)));
   // A reply's or forward's subject shows as a field once the reply-type menu's Edit subject asks.
   // After it, the reply-type menu is gone.
-  const [subjectShown, setSubjectShown] = useState(draft.kind === 'new' || open.subjectEdited);
+  const [subjectShown, setSubjectShown] = useState(kind === 'new' || open.subjectEdited);
   const subjectField = useRef<HTMLInputElement>(null);
-  const saveError = useSaveError(draft.id);
+  const saveError = useSaveError(draft?.id ?? null);
   const body = useRef<HTMLDivElement>(null);
   const to = useRef<HTMLInputElement>(null);
   const cc = useRef<HTMLInputElement>(null);
   const bcc = useRef<HTMLInputElement>(null);
   // The fields as of the last change, for Send right after one (an address typed, then ⌘Enter).
   const latest = useRef(fields);
+  const waitedFor = useRef(draft === null);
+  // A change is saved into the draft, or, while it's on its way, kept for it.
+  const save = (changes: DraftUpdateInput) => (draft ? queueSave(draft.id, changes) : queueTyped(open.key, changes));
   const change = <K extends keyof typeof fields>(key: K, value: (typeof fields)[K]) => {
     latest.current = {...latest.current, [key]: value};
     setFields(latest.current);
-    queueSave(draft.id, {[key]: value});
+    save({[key]: value});
   };
   // Help me write's line and the body's versions, saved with the draft.
   const help = useHelpMeWrite({
-    draftId: draft.id, initial: ({...draft, ...unsaved(draft.id)} as DraftOut).write, body, current: () => latest.current.body,
-    onWrite: write => queueSave(draft.id, {write}),
+    draftId: draft?.id ?? null, initial: draft ? ({...draft, ...unsaved(draft.id)} as DraftOut).write : null, body, current: () => latest.current.body,
+    onWrite: write => save({write}),
   });
   // A forward's originals the user took off it: they leave the chips, and the rest go with it.
-  const [removed, setRemoved] = useState(() => unsaved(draft.id).removed_attachments ?? draft.removed_attachments);
-  const originals = draft.kind === 'forward' && message ? message.attachments : [];
+  const [removed, setRemoved] = useState(() => (draft ? unsaved(draft.id).removed_attachments ?? draft.removed_attachments : []));
+  const originals = kind === 'forward' && message ? message.attachments : [];
   const removeOriginal = (id: number) => {
     const next = [...removed, id];
     setRemoved(next);
-    queueSave(draft.id, {removed_attachments: next});
+    save({removed_attachments: next});
   };
-  const attach = (files: File[]) => attachFiles(draft.id, files, originals, removed);
+  // Files wait for the draft: there's nowhere to upload them before it.
+  const attach = (files: File[]) => draft && attachFiles(draft.id, files, originals, removed);
+
+  // The draft arrived: what the server filled comes in around what was typed (already saved into
+  // it), before the frame is drawn. A draft left with words before draws them, the typed after.
+  const [arrived, setArrived] = useState(false);
+  useLayoutEffect(() => {
+    if (!draft || !waitedFor.current) return;
+    waitedFor.current = false;
+    const now = {...draft, ...unsaved(draft.id)} as DraftOut;
+    latest.current = {from: now.from, to: now.to, cc: now.cc, bcc: now.bcc, subject: now.subject, body: now.body};
+    setFields(latest.current);
+    if (now.cc.length + now.bcc.length > 0) setCopies(true);
+    setRemoved(now.removed_attachments);
+    help.adopt(now.write);
+    if (!isEmpty(draft.body) && body.current) mountBlocks(body.current, now.body);
+    // No one to send to after all, and nothing written yet: the caret goes to To, as it would have.
+    const someone = now.to.length + now.cc.length + now.bcc.length > 0;
+    if (!someone && isEmpty(now.body) && document.activeElement === body.current) to.current?.focus();
+    setArrived(true);
+    // Once, as it arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft?.id]);
   const picker = useRef<HTMLInputElement>(null);
   // A drag with files over the composer: it says where they'll go.
   const [dropping, setDropping] = useState(false);
   const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files');
-  const failed = draft.send?.state === 'failed' ? draft.send.error : null;
+  const failed = draft?.send?.state === 'failed' ? draft.send.error : null;
   // Send: an address still being typed becomes a chip first (the field's leaving does it). With
   // no one to send to, the caret goes to To.
   const sendNow = () => {
+    if (!draft) return;
     const typing = document.activeElement;
     if (typing instanceof HTMLInputElement && typing.closest('.cmp-recipients')) typing.blur();
     const fresh = latest.current;
@@ -178,7 +222,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     }
     if (event.key === 'Escape' && !event.defaultPrevented) {
       event.preventDefault();
-      closeComposer(draft.id);
+      closeComposerAt(open.key);
       return;
     }
     // The page's own letters (J, K, E, R…) stay out of the composer.
@@ -215,22 +259,23 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
       {/* Popped out: the title folds the window to its bar and back, and the pop-out button docks
           it. The caret stays where it was as the composer moves. */}
       {open.floating && (
-        <div className="cmp-title" onMouseDown={event => event.preventDefault()} onClick={() => toggleMinimized(draft.id)}>
+        <div className="cmp-title" onMouseDown={event => event.preventDefault()} onClick={() => draft && toggleMinimized(draft.id)}>
           <button className="cmp-title-text ell" type="button" aria-expanded={!open.minimized} aria-label={open.minimized ? 'Open the window' : 'Minimize the window'}>
-            {draft.kind === 'new' ? 'New message' : fields.subject || 'No subject'}
+            {kind === 'new' ? 'New message' : fields.subject || (draft ? 'No subject' : '')}
           </button>
           <button className="ibtn sm" type="button" aria-label="Back in the reading pane" data-tip="Back in the reading pane"
             onClick={event => {
               event.stopPropagation();
-              dock(draft.id);
+              if (draft) dock(draft.id);
             }}><Icon name="pip" size={16} /></button>
         </div>
       )}
       <div className="cmp-row cmp-head">
-        {!subjectShown && draft.kind !== 'new' && (
-          <ReplyType kind={draft.kind} messageId={draft.message_id} floating={open.floating} onPopOut={() => popOut(draft.id)}
-            onKind={kind => switchKind({...draft, ...latest.current}, kind)}
+        {!subjectShown && kind !== 'new' && (
+          <ReplyType kind={kind} messageId={open.messageId} floating={open.floating} waiting={waiting} onPopOut={() => draft && popOut(draft.id)}
+            onKind={next => draft && switchKind({...draft, ...latest.current}, next)}
             onEditSubject={() => {
+              if (!draft) return;
               // Edit subject doubles as Forward: a reply becomes a forward that keeps its recipients.
               if (draft.kind !== 'forward') return switchKind({...draft, ...latest.current}, 'forward', {editSubject: true});
               setSubjectShown(true);
@@ -238,15 +283,18 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
             }} />
         )}
         <span className="cmp-label">From</span>
-        <FromPicker value={fields.from} from={from} accounts={accounts} onChange={value => change('from', value)} />
+        {draft ? <FromPicker value={fields.from} from={from} accounts={accounts} arrived={arrived} onChange={value => change('from', value)} /> : (
+          <Sk kind="composer-from" className="cmp-from-sk"><Dot size={7} /><Bar w={58} /><Bar w={128} /></Sk>
+        )}
         <span className="grow" />
         {!open.floating && (
-          <button className="ibtn sm" type="button" aria-label="Pop out" data-tip="Pop out" onMouseDown={event => event.preventDefault()} onClick={() => popOut(draft.id)}><Icon name="pip" size={16} /></button>
+          <button className="ibtn sm" type="button" aria-label="Pop out" data-tip="Pop out" onMouseDown={event => event.preventDefault()} onClick={() => draft && popOut(draft.id)}><Icon name="pip" size={16} /></button>
         )}
       </div>
       <div className="cmp-row">
         <span className="cmp-label">To</span>
-        <RecipientField label="To" recipients={fields.to} inputRef={to} onChange={value => change('to', value)} />
+        <RecipientField label="To" recipients={fields.to} inputRef={to} arrived={arrived} onChange={value => change('to', value)}
+          waiting={waiting && (kind === 'reply' || kind === 'reply_all') ? <Sk kind="composer-to" className="cmp-chips-sk">{kind === 'reply_all' ? <><Bar w={76} h={24} /><Bar w={92} h={24} /></> : <Bar w={76} h={24} />}</Sk> : null} />
         {/* Click-only (and ⌘⇧B): Tab from To goes on to Subject. */}
         {!copies && <button className="btn quiet sm cmp-copies" type="button" tabIndex={-1} data-tip="Cc and Bcc · ⌘⇧B" onClick={showCopies}>Cc Bcc</button>}
       </div>
@@ -254,7 +302,8 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         <div>
           <div className="cmp-row">
             <span className="cmp-label">Cc</span>
-            <RecipientField label="Cc" recipients={fields.cc} inputRef={cc} onChange={value => change('cc', value)} />
+            <RecipientField label="Cc" recipients={fields.cc} inputRef={cc} arrived={arrived} onChange={value => change('cc', value)}
+              waiting={waiting && kind === 'reply_all' ? <Sk kind="composer-cc" className="cmp-chips-sk"><Bar w={84} h={24} /></Sk> : null} />
           </div>
           <div className="cmp-row">
             <span className="cmp-label">Bcc</span>
@@ -279,8 +328,9 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         after={(
           <>
             <Files draft={draft} originals={originals.filter(file => !removed.includes(file.id))} onRemoveOriginal={removeOriginal} />
-            {draft.kind === 'reply' || draft.kind === 'reply_all' ? <Quote draft={draft} message={message} timeZone={timeZone} />
-              : draft.kind === 'forward' ? <Forwarded message={message} timeZone={timeZone} /> : null}
+            {kind === 'reply' || kind === 'reply_all' ? (draft ? <Quote draft={draft} message={message} timeZone={timeZone} arrived={arrived} /> : (
+              <div className="cmp-quote"><Sk kind="composer-quote" className="cmp-fold-sk"><Bar w={30} h={18} /></Sk></div>
+            )) : kind === 'forward' ? <Forwarded message={message} timeZone={timeZone} /> : null}
           </>
         )}
         beforeBar={<WriteLine help={help} body={fields.body} />}
@@ -300,7 +350,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
             }} />
             <span className="cmp-bar-slot"><WriteButton help={help} /></span>
             <span className="grow" />
-            <button className="ibtn sm danger" type="button" aria-label="Discard" data-tip="Discard" onMouseDown={event => event.preventDefault()} onClick={() => discard({...draft, ...latest.current})}>
+            <button className="ibtn sm danger" type="button" aria-label="Discard" data-tip="Discard" onMouseDown={event => event.preventDefault()} onClick={() => draft && discard({...draft, ...latest.current})}>
               <Icon name="delete" size={17} />
             </button>
           </>
@@ -310,7 +360,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
 }
 
 /** A reply's quote, folded behind "…". Opened, it can be trimmed: the recipient gets it as it's left. */
-function Quote({draft, message, timeZone}: {draft: DraftOut; message: MessageOut | undefined; timeZone: string}) {
+function Quote({draft, message, timeZone, arrived}: {draft: DraftOut; message: MessageOut | undefined; timeZone: string; arrived: boolean}) {
   const [shown, setShown] = useState(false);
   const field = useRef<HTMLDivElement>(null);
   const owedQuote = unsaved(draft.id).quote;
@@ -323,7 +373,7 @@ function Quote({draft, message, timeZone}: {draft: DraftOut; message: MessageOut
   if (!message) return null;
   return (
     <div className="cmp-quote">
-      <button className="cmp-fold" type="button" aria-expanded={shown} aria-label={shown ? 'Hide the quoted email' : 'Show the quoted email'}
+      <button className={arrived ? 'cmp-fold sk-arrive' : 'cmp-fold'} type="button" aria-expanded={shown} aria-label={shown ? 'Hide the quoted email' : 'Show the quoted email'}
         data-tip={shown ? 'Hide the quoted email' : 'Show the quoted email'} onMouseDown={event => event.preventDefault()} onClick={() => setShown(!shown)}>
         <Icon name="more_horiz" size={16} />
       </button>
@@ -344,10 +394,10 @@ function Quote({draft, message, timeZone}: {draft: DraftOut; message: MessageOut
  * in the order attached, then those still uploading. Each is a chip with its name and size, and its
  * x takes it off. The reason a file was refused shows over them until the next attach.
  */
-function Files({draft, originals, onRemoveOriginal}: {draft: DraftOut; originals: MessageOut['attachments']; onRemoveOriginal: (id: number) => void}) {
-  const uploads = useUploads(draft.id);
-  const error = useFileError(draft.id);
-  const own = draft.files ?? [];
+function Files({draft, originals, onRemoveOriginal}: {draft: DraftOut | null; originals: MessageOut['attachments']; onRemoveOriginal: (id: number) => void}) {
+  const uploads = useUploads(draft?.id ?? null);
+  const error = useFileError(draft?.id ?? null);
+  const own = draft?.files ?? [];
   if (!originals.length && !own.length && !uploads.length && !error) return null;
   const chip = (key: string, file: {filename: string; mime_type: string; size_bytes: number}, remove: (() => void) | null) => (
     <span key={key} className={`cmp-file${remove ? '' : ' uploading'}`} data-tip={file.filename} data-tip-quick>
@@ -365,13 +415,13 @@ function Files({draft, originals, onRemoveOriginal}: {draft: DraftOut; originals
       {error && (
         <div className="cmp-failed" role="alert">
           <Icon name="error" size={16} /><span className="grow">{error}</span>
-          <button type="button" className="cmp-chip-x" aria-label="Dismiss" onClick={() => dismissFileError(draft.id)}><Icon name="close" size={14} /></button>
+          <button type="button" className="cmp-chip-x" aria-label="Dismiss" onClick={() => draft && dismissFileError(draft.id)}><Icon name="close" size={14} /></button>
         </div>
       )}
       {(originals.length > 0 || own.length > 0 || uploads.length > 0) && (
         <div className="cmp-files" aria-label="Attachments">
           {originals.map(file => chip(`o${file.id}`, file, () => onRemoveOriginal(file.id)))}
-          {own.map(file => chip(`f${file.id}`, file, () => removeFile(draft.id, file.id)))}
+          {draft && own.map(file => chip(`f${file.id}`, file, () => removeFile(draft.id, file.id)))}
           {uploads.map(upload => chip(`u${upload.key}`, {filename: upload.name, mime_type: '', size_bytes: upload.size}, null))}
         </div>
       )}
@@ -409,10 +459,12 @@ const KIND_NAMES = {reply: 'Reply', reply_all: 'Reply all', forward: 'Forward'} 
  * subject doubles as Forward: a reply becomes a forward that keeps its recipients too, its subject
  * a field and this menu gone, the caret in the body. Pop out reply pops it out (in the pane only).
  */
-function ReplyType({kind, messageId, floating, onPopOut, onKind, onEditSubject}: {
+function ReplyType({kind, messageId, floating, waiting, onPopOut, onKind, onEditSubject}: {
   kind: 'reply' | 'reply_all' | 'forward';
   messageId: number | null;
   floating: boolean;
+  // The draft is on its way: the menu opens once it's there.
+  waiting: boolean;
   onPopOut: () => void;
   onKind: (kind: 'reply' | 'reply_all' | 'forward') => void;
   onEditSubject: () => void;
@@ -438,7 +490,7 @@ function ReplyType({kind, messageId, floating, onPopOut, onKind, onEditSubject}:
       }
     }}>
       <button className="btn quiet sm" type="button" aria-label={`${KIND_NAMES[kind]}, change`} aria-haspopup="menu" aria-expanded={menu}
-        onMouseDown={event => event.preventDefault()} onClick={() => setMenu(!menu)}>
+        onMouseDown={event => event.preventDefault()} onClick={() => !waiting && setMenu(!menu)}>
         <Icon name={KIND_GLYPHS[kind]} size={16} /><Icon name="expand_more" size={16} />
       </button>
       {menu && (
@@ -460,8 +512,10 @@ function ReplyType({kind, messageId, floating, onPopOut, onKind, onEditSubject}:
 }
 
 /** From: the account's colour and label, and the address it sends as. Each account lists its aliases under it. */
-function FromPicker({value, from, accounts, onChange}: {
+function FromPicker({value, from, accounts, arrived, onChange}: {
   value: {account_id: number; address: string};
+  // It replaced its skeleton: it fades in.
+  arrived: boolean;
   from: FromOut | undefined;
   accounts: Map<number, AccountOut>;
   onChange: (value: {account_id: number; address: string}) => void;
@@ -505,7 +559,7 @@ function FromPicker({value, from, accounts, onChange}: {
     }
   };
   return (
-    <span className="menu-anchor cmp-from" ref={anchor} onKeyDown={onKeyDown}>
+    <span className={arrived ? 'menu-anchor cmp-from sk-arrive' : 'menu-anchor cmp-from'} ref={anchor} onKeyDown={onKeyDown}>
       <button className="btn quiet sm" type="button" aria-haspopup="menu" aria-expanded={menu} onClick={() => {
         setCursor(Math.max(0, chosen));
         setMenu(!menu);
@@ -537,11 +591,15 @@ function FromPicker({value, from, accounts, onChange}: {
  * what's typed a chip when it's an address (Send leaves the field first, so it counts too). Backspace on an empty field takes the last chip back.
  * While something is typed, people from the user's mail are suggested under it (↑ ↓ and Enter).
  */
-export function RecipientField({label, recipients, onChange, inputRef}: {
+export function RecipientField({label, recipients, onChange, inputRef, waiting = null, arrived = false}: {
   label: string;
   recipients: Recipient[];
   onChange: (recipients: Recipient[]) => void;
   inputRef?: RefObject<HTMLInputElement | null>;
+  // The skeleton of the recipients the server has yet to fill, before what's typed.
+  waiting?: ReactNode;
+  // They replaced their skeleton: they fade in.
+  arrived?: boolean;
 }) {
   const [text, setText] = useState('');
   const [offered, setOffered] = useState<{for: string; people: Recipient[]}>({for: '', people: []});
@@ -604,8 +662,9 @@ export function RecipientField({label, recipients, onChange, inputRef}: {
   const invalid = !focused && query !== '' && !readRecipient(text);
   return (
     <div className="cmp-recipients grow" onClick={() => input.current?.focus()}>
+      {waiting}
       {recipients.map(recipient => (
-        <span key={recipient.address} className="cmp-chip" data-tip={recipient.name ? recipient.address : undefined} data-tip-quick>
+        <span key={recipient.address} className={arrived ? 'cmp-chip sk-arrive' : 'cmp-chip'} data-tip={recipient.name ? recipient.address : undefined} data-tip-quick>
           {chipLabel(recipient)}
           <button type="button" className="cmp-chip-x" aria-label={`Remove ${chipLabel(recipient)}`} tabIndex={-1}
             onClick={event => {
@@ -717,7 +776,7 @@ export function ComposerWindows() {
           <ComposerPlace composerKey={open.key} />
         </section>
       ))}
-      {hidden.length > 0 && <MoreWindows draftIds={windows.filter(one => hidden.includes(one.key)).map(one => one.draftId)} right={end} />}
+      {hidden.length > 0 && <MoreWindows draftIds={windows.flatMap(one => (hidden.includes(one.key) && one.draftId !== null ? [one.draftId] : []))} right={end} />}
     </div>
   );
 }
