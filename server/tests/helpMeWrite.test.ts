@@ -4,7 +4,7 @@
 // tests check what a draft reads, the tools it may use, the ledger, and what comes back.
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
-import {counterpartOf, DRAFT_HISTORY, draftEvidence, withoutQuote} from '../src/alfred/write.ts';
+import {counterpartOf, DRAFT_HISTORY, draftEvidence, EMAIL_LIMIT, HISTORY_LIMIT, withoutQuote} from '../src/alfred/write.ts';
 import * as t from '../src/db/schema.ts';
 import {getDraftRow} from '../src/sending/drafts.ts';
 import {setSecret} from '../src/secrets/store.ts';
@@ -69,6 +69,29 @@ describe('What a draft reads', () => {
     expect(evidence.history_ids).not.toContain(newest);
     expect(evidence.history[0]).toContain('Games and a cooler, done.');
     expect(evidence.history[0]).not.toContain('Could you bring the board games?');
+  });
+
+  test('the answered email is cut at its limit and each earlier one at its own, which the cost estimates rest on', async () => {
+    const {w, start} = await setup();
+    const draft = await start('reply', THEO);
+    const [newest] = draftEvidence(w.store, getDraftRow(w.store, draft.id)).history_ids;
+    setHeaders(w, THEO, {bodyText: '§'.repeat(EMAIL_LIMIT + 500)});
+    setHeaders(w, newest!, {bodyText: '¶'.repeat(HISTORY_LIMIT + 500)});
+    const evidence = draftEvidence(w.store, getDraftRow(w.store, draft.id));
+    expect(evidence.email!.match(/§+/)![0]).toHaveLength(EMAIL_LIMIT);
+    expect(evidence.email).toContain('[…the rest of this email was cut]');
+    expect(evidence.history[0]!.match(/¶+/)![0]).toHaveLength(HISTORY_LIMIT);
+    expect(evidence.history[0]).toContain('[…the rest of this email was cut]');
+  });
+
+  test('mail the user sent with the person in Cc counts; an answered email in the trash isn\'t shown', async () => {
+    const {w, start} = await setup();
+    const draft = await start('reply', THEO);
+    const [newest] = draftEvidence(w.store, getDraftRow(w.store, draft.id)).history_ids;
+    setHeaders(w, newest!, {toRecipients: [{name: 'Ana', address: 'ana@example.org'}], ccRecipients: [{name: 'Theo Walsh', address: 'theo.walsh@example.org'}]});
+    expect(draftEvidence(w.store, getDraftRow(w.store, draft.id)).history_ids[0]).toBe(newest);
+    w.store.db.update(t.messages).set({trashedAt: '2026-10-05T00:00:00.000Z'}).where(eq(t.messages.id, THEO)).run();
+    expect(draftEvidence(w.store, getDraftRow(w.store, draft.id)).email).toBeNull();
   });
 
   test.each([
@@ -188,6 +211,14 @@ describe('Writing through the model', () => {
     const {opening} = read(fake.requests[0]!);
     expect(opening).toContain('The body so far, in Markdown:\n<body>\nHi Theo,\n4 works.\nAlex\n</body>');
     expect(opening).toContain('The user selected this part of the body to change:\n<selection>\n4 works.\n</selection>');
+  });
+
+  test('a selection of only white space is no selection: the whole body is written', async () => {
+    const {api, fake, start} = await setup();
+    const draft = await start('reply', THEO);
+    fake.answer(() => ({calls: [{name: 'write_draft', input: {text: 'Yes.'}}]}));
+    await api.send('POST', `/api/mail/drafts/${draft.id}/write`, {body: {prompt: 'say yes', body: [paragraph('Hi')], selection: ' \n '}});
+    expect(read(fake.requests[0]!).opening).not.toContain('<selection>');
   });
 
   test('a turn that ends without write_draft is reminded once, then its text is taken', async () => {

@@ -173,6 +173,38 @@ test('the answer goes to the selection it was asked about, not one made while it
   await expect.poll(lines).toEqual(['Hi Sam,', 'Can\'t wait!', 'Alex']);
 });
 
+test('a selection whose words changed while it was written is left alone, and the line says to select it again', async () => {
+  const fake = await compose(draftOf({body: blocks('Hi Sam,', 'See you at 7.', 'Alex')}));
+  selectLine(1);
+  await userEvent.keyboard('{Meta>}j{/Meta}');
+  await expect.element(line()).toHaveFocus();
+  await userEvent.keyboard('warmer{Enter}');
+  await expect.poll(() => fake.asks.length).toBe(1);
+  // The user changes the selected words meanwhile.
+  (document.querySelector('.composer .desc-edit')!.children[1]!.firstChild as Text).data = 'See you at 8.';
+  fake.answer(blocks('Can\'t wait!'));
+  await expect.element(page.getByRole('alert')).toHaveTextContent('The selected text changed while it was written; select it again.');
+  expect(lines()).toEqual(['Hi Sam,', 'See you at 8.', 'Alex']);
+});
+
+test('a selection\'s answer for a composer closed meanwhile is dropped: the draft keeps its body', async () => {
+  const draft = draftOf({body: blocks('Hi Sam,', 'See you at 7.')});
+  const fake = await compose(draft);
+  selectLine(1);
+  await userEvent.keyboard('{Meta>}j{/Meta}');
+  await expect.element(line()).toHaveFocus();
+  await userEvent.keyboard('warmer{Enter}');
+  await expect.poll(() => fake.asks.length).toBe(1);
+  closeComposer();
+  holdSaves();
+  fake.answer(blocks('Can\'t wait!'));
+  await expect.poll(() => writingOf(draft.id).working).toBe(false);
+  saveNow();
+  // Every save the draft had queued has gone once its chain of saves is through.
+  await flushSave(draft.id);
+  expect(fake.saves.filter(save => 'body' in save).map(save => save.body)).toEqual([]);
+});
+
 test('a selection the body was replaced under is no selection: the next ask is about the whole body', async () => {
   const fake = await compose(draftOf({body: blocks('Hi Sam,', 'See you at 7.'), write: {prompt: '', open: true, versions: [blocks('Draft me'), blocks('Hi Sam,', 'See you at 7.')], at: 1}}));
   selectLine(1);
