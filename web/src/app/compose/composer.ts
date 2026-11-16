@@ -17,7 +17,10 @@
 // its words and Try again: on its email, in the toast (Open), and in Drafts.
 //
 // Discard has no key: the draft goes at once, and the toast's Undo starts it again as it was. A
-// draft nothing was written in goes quietly when its composer closes.
+// draft nothing was written in goes quietly when its composer closes. Drafts discards rows too, one
+// or several under one toast ("Discarded 3 drafts"): Undo starts each again in its place in the
+// list, and opens again only those that were open, where they were. Drafts' Pop out and its
+// selection's Open put drafts straight into windows.
 //
 // A new message (C) has no email to stay with: it opens in a window of its own. Docked into the
 // pane, it has the pane by itself, and showing an email closes it into Drafts. On Drafts, the open
@@ -49,6 +52,7 @@ import {ApiFailure, getCached, getJson, setCached} from '../../api/client.ts';
 import {discardDraft, draftPath, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
 import {hasOthers, megabytes, NO_VERSIONS, recordVersion, unwritten} from '../../logic/composer.ts';
+import {broughtBackLine, counted, discardedLine, discardFailedLine} from '../../logic/selection.ts';
 import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
@@ -472,8 +476,19 @@ export function watchSends(drafts: DraftRowOut[] | undefined) {
   }
 }
 
-/** Discard: the draft goes at once, and Undo starts it again with everything it had. */
-export function discard(draft: DraftOut) {
+/** A draft on its way out: where its composer was, the server's answer, and how to start it again. */
+interface TakenAway {
+  id: number;
+  // Open in a composer when it went: in a window, else in the pane.
+  open: boolean;
+  floating: boolean;
+  gone: Promise<void>;
+  // Starts it again with its recipients, subject, body, quote, help me write's versions and files.
+  again: () => Promise<DraftOut>;
+}
+
+/** The draft goes at once: its composer closes, what's queued for it is dropped, and the server is asked. */
+function takeAway(draft: DraftOut): TakenAway {
   const target = byDraft(draft.id);
   const floating = target?.floating ?? false;
   if (target) closedOn = floating ? shownEmail() : target.messageId;
@@ -486,16 +501,92 @@ export function discard(draft: DraftOut) {
   discarded.add(draft.id);
   setComposers(without(draft.id));
   const gone = discardDraft(draft.id, draft.message_id);
-  gone.catch(toastFailure('Couldn\'t discard the draft')).finally(() => discarded.delete(draft.id));
-  showToast('Draft discarded', {label: 'Undo', run: () => {
-    void gone.then(async () => {
-      const again = await startDraft(draft.message_id === null ? {kind: 'new', account_id: draft.from.account_id} : {kind: draft.kind as Exclude<DraftKind, 'new'>, message_id: draft.message_id});
-      const {from, to, cc, bcc, subject, body, quote, removed_attachments} = draft;
-      await saveDraft(again.id, {from, to, cc, bcc, subject, body, quote, removed_attachments, write});
-      const taken = await takeDraftFiles(again.id, files.map(file => file.id));
-      reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments, write, files: taken}, {floating});
-    }).catch(toastFailure('Couldn\'t bring the draft back'));
+  void gone.catch(() => {}).finally(() => discarded.delete(draft.id));
+  const again = async (): Promise<DraftOut> => {
+    const restarted = await startDraft(draft.message_id === null ? {kind: 'new', account_id: draft.from.account_id} : {kind: draft.kind as Exclude<DraftKind, 'new'>, message_id: draft.message_id});
+    const {from, to, cc, bcc, subject, body, quote, removed_attachments} = draft;
+    await saveDraft(restarted.id, {from, to, cc, bcc, subject, body, quote, removed_attachments, write});
+    const taken = await takeDraftFiles(restarted.id, files.map(file => file.id));
+    return {...restarted, from, to, cc, bcc, subject, body, quote, removed_attachments, write, files: taken};
+  };
+  return {id: draft.id, open: target !== null, floating, gone, again};
+}
+
+/** The composer's Discard: the draft goes at once, and Undo starts it again with everything it had. */
+export function discard(draft: DraftOut) {
+  const taken = takeAway(draft);
+  taken.gone.catch(toastFailure(discardFailedLine(1)));
+  showToast(discardedLine(1), {label: 'Undo', run: () => {
+    void taken.gone.then(taken.again).then(back => reopen(back, {floating: taken.floating})).catch(toastFailure(broughtBackLine(0, 1)));
   }}, 'gone');
+}
+
+/** A draft as it is now: the composer's, with what it still owes the server, else the server's. */
+function draftNow(draftId: number): Promise<DraftOut> {
+  const cached = getCached<DraftOut>(draftPath(draftId));
+  return cached ? Promise.resolve({...cached, ...owedOf(draftId)} as DraftOut) : loadDraft(draftId);
+}
+
+/**
+ * Drafts' Discard on rows (`ids` in the list's order): every one goes, under one toast. Its Undo
+ * starts each again, oldest first so they come back in their places in the list, and opens again
+ * those that were open, where they were. When not all come back, a toast says how many did.
+ * Answers the drafts that didn't go.
+ */
+export function discardDrafts(ids: number[]): Promise<number[]> {
+  const taking = Promise.allSettled(ids.map(draftNow)).then(async loads => {
+    const away = loads.flatMap(load => (load.status === 'fulfilled' ? [takeAway(load.value)] : []));
+    const answers = await Promise.allSettled(away.map(one => one.gone));
+    const refused = [
+      ...loads.flatMap((load, at) => (load.status === 'rejected' ? [{id: ids[at]!, error: load.reason as unknown}] : [])),
+      ...answers.flatMap((answer, at) => (answer.status === 'rejected' ? [{id: away[at]!.id, error: answer.reason as unknown}] : [])),
+    ];
+    return {went: away.filter((_, at) => answers[at]!.status === 'fulfilled'), refused};
+  });
+  const undo = () => void taking.then(async ({went}) => {
+    let back = 0;
+    let failure: {error: unknown} | null = null;
+    for (const one of [...went].reverse()) {
+      try {
+        const again = await one.again();
+        back += 1;
+        if (one.open) reopen(again, {floating: one.floating});
+      } catch (error) {
+        failure ??= {error};
+      }
+    }
+    if (failure) toastFailure(broughtBackLine(back, went.length))(failure.error);
+  });
+  showToast(discardedLine(ids.length), {label: 'Undo', run: undo}, 'gone');
+  return taking.then(({refused}) => {
+    if (refused.length) toastFailure(discardFailedLine(refused.length))(refused[0]!.error);
+    return refused.map(one => one.id);
+  });
+}
+
+/**
+ * Drafts' Pop out, and its selection's Open: each draft in a window of its own, in the order given.
+ * One up in a window comes back, the pane's pops out, the rest load and open, the caret in the last.
+ * The windows fold as they do when they don't all fit.
+ */
+export function popOutDrafts(ids: number[]) {
+  void Promise.allSettled(ids.map(id => (byDraft(id) ? Promise.resolve(null) : loadDraft(id)))).then(loads => {
+    let failed = 0;
+    let failure: unknown = null;
+    loads.forEach((load, at) => {
+      const id = ids[at]!;
+      if (load.status === 'rejected') {
+        failed += 1;
+        failure ??= load.reason;
+        return;
+      }
+      const up = byDraft(id);
+      if (up?.floating) change(id, {minimized: false, touched: ++touches});
+      else if (up) popOut(id);
+      else if (load.value && !discarded.has(id)) show(load.value, {floating: true, caret: at === ids.length - 1});
+    });
+    if (failed) toastFailure(counted(failed, 'Couldn\'t open the draft', n => `Couldn't open ${n} drafts`))(failure);
+  });
 }
 
 // ---- Help me write ----

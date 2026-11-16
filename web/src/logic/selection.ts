@@ -1,7 +1,8 @@
-// Selecting several emails. ⌘ or Ctrl-click adds a row or takes it out, and the first one takes the
-// open email too. ⇧-click adds every email from the last one clicked (or the open one) to this one.
-// This file also has what the selection's tools and menu offer, from its rows.
-import type {MessageRowOut} from '@setpoint/shared';
+// Selecting several emails or drafts. ⌘ or Ctrl-click adds a row or takes it out, and the first one
+// takes the open one too. ⇧-click adds every row from the last one clicked (or the open one) to this
+// one. This file also has what the selection's tools and menu offer, from its rows, and how Drafts'
+// Discard counts in its toasts.
+import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import type {Stop} from './inbox.ts';
 import {readerActions} from './reader.ts';
 
@@ -58,3 +59,19 @@ export function selectionOffers(rows: MessageRowOut[]): {done: number; pin: bool
 
 /** "Moved 3 to Trash", or the one email's own words for one. */
 export const counted = (n: number, one: string, many: (n: number) => string) => (n === 1 ? one : many(n));
+
+/** Whether a draft can be discarded: not while its send is held or under way. One that failed can. */
+export const discardable = (row: Pick<DraftRowOut, 'send_state'>) => row.send_state !== 'held' && row.send_state !== 'sending';
+
+/** What a selection of drafts offers: Discard for those that can go, and how many ("Discard 2"). */
+export const draftOffers = (rows: Pick<DraftRowOut, 'send_state'>[]): {discard: number} => ({discard: rows.filter(discardable).length});
+
+/** Discard's toast: "Draft discarded", or "Discarded 3 drafts". */
+export const discardedLine = (n: number) => counted(n, 'Draft discarded', m => `Discarded ${m} drafts`);
+
+/** What the server refused to discard, before the reason. */
+export const discardFailedLine = (n: number) => counted(n, 'Couldn\'t discard the draft', m => `Couldn't discard ${m} drafts`);
+
+/** Undo, when not every draft came back: how many did, of how many it was starting again. */
+export const broughtBackLine = (back: number, of: number) => (back > 0 ? `Brought back ${back} of ${of} drafts`
+  : counted(of, 'Couldn\'t bring the draft back', () => 'Couldn\'t bring the drafts back'));

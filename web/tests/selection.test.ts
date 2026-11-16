@@ -1,9 +1,10 @@
 // Selecting several emails as tables: ⌘-click in and out, the first taking the open email,
-// ⇧-click's range from the anchor, the selection in list order, and what its tools offer.
-import type {MessageRowOut} from '@setpoint/shared';
+// ⇧-click's range from the anchor, the selection in list order, and what its tools offer. Then
+// drafts: which can be discarded, and how Discard's toasts count them.
+import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Stop} from '../src/logic/inbox.ts';
-import {inListOrder, NO_SELECTION, ranged, selectionOffers, toggled} from '../src/logic/selection.ts';
+import {broughtBackLine, discardable, discardedLine, discardFailedLine, draftOffers, inListOrder, NO_SELECTION, ranged, selectionOffers, toggled} from '../src/logic/selection.ts';
 import type {Selection} from '../src/logic/selection.ts';
 
 // New's 1 and 2, the shelf's 3, then a day's 4, 3 again (pinned, in its day too), 5, and a Noise fold.
@@ -70,5 +71,37 @@ describe('selectionOffers', () => {
       [row({pinned: true}), row({pinned: true, lane: 'noise'})], {done: 0, pin: false, read: false}],
   ])('%s', (_, rows, offers) => {
     expect(selectionOffers(rows)).toEqual(offers);
+  });
+});
+
+describe('drafts: Discard', () => {
+  const state = (send_state: DraftRowOut['send_state']) => ({send_state});
+  test.each<[string, DraftRowOut['send_state'], boolean]>([
+    ['an ordinary draft', null, true],
+    ['one whose send failed', 'failed', true],
+    ['one held after Send', 'held', false],
+    ['one being sent', 'sending', false],
+  ])('%s: %s', (_, sendState, can) => {
+    expect(discardable(state(sendState))).toBe(can);
+  });
+
+  test.each<[string, DraftRowOut['send_state'][], number]>([
+    ['every one can go', [null, 'failed', null], 3],
+    ['2 of 3, one sending', [null, 'sending', null], 2],
+    ['none, all held or sending', ['held', 'sending'], 0],
+  ])('a selection offers Discard for those that can go: %s', (_, states, discard) => {
+    expect(draftOffers(states.map(state))).toEqual({discard});
+  });
+
+  test.each<[string, string, string]>([
+    ['one', discardedLine(1), 'Draft discarded'],
+    ['several', discardedLine(3), 'Discarded 3 drafts'],
+    ['one refused', discardFailedLine(1), 'Couldn\'t discard the draft'],
+    ['several refused', discardFailedLine(2), 'Couldn\'t discard 2 drafts'],
+    ['Undo, the one not back', broughtBackLine(0, 1), 'Couldn\'t bring the draft back'],
+    ['Undo, none of several back', broughtBackLine(0, 3), 'Couldn\'t bring the drafts back'],
+    ['Undo, some back', broughtBackLine(2, 3), 'Brought back 2 of 3 drafts'],
+  ])('the toast: %s', (_, line, reads) => {
+    expect(line).toBe(reads);
   });
 });
