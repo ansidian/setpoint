@@ -30,8 +30,8 @@ const ago = (ms: number) => new Date(Date.parse(SEED_NOW) - ms).toISOString();
 const paragraph = (text: string) => [{type: 'paragraph', runs: [{text, marks: [], href: null}]}];
 
 /** An engine with the send worker on the adapters, as server.ts wires it. */
-function engineFor(w: World, google: FakeGoogle, filesDir: string) {
-  const adapter = new GmailAdapter({topic: null, client: google.client()});
+function engineFor(w: World, google: FakeGoogle, filesDir: string, client = google.client()) {
+  const adapter = new GmailAdapter({topic: null, client});
   const engine: SyncEngine = new SyncEngine({store: w.store, adapters: new Adapters({gmail: adapter}), timeoutMs: 5000, workers: [new SendWorker({
     store: w.store, filesDir, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
     attachment: (sourceId, message, id) => engine.attachment(sourceId, message, id),
@@ -64,10 +64,10 @@ async function setup() {
     engine.pushed(source.id);
     await drain();
   };
-  /** The server stopped and started again: a new engine on the same database. */
-  const restart = () => {
+  /** The server stopped and started again: a new engine on the same database (with `client`, Google's settings changed). */
+  const restart = (client = google.client()) => {
     engine.stop();
-    engine = engineFor(w, google, filesDir);
+    engine = engineFor(w, google, filesDir, client);
   };
   /** Attaches a file to the draft, as the composer uploads it. */
   const attach = async (draftId: number, name: string, content: Buffer) => {
@@ -284,6 +284,19 @@ describe('Gmail: sending', () => {
     await drain();
     const parsed = await parseEmail(google.sent[0]!.raw);
     expect(parsed.attachments.map(file => file.filename)).toEqual(['Itinerary.pdf']);
+  });
+
+  test('messages.send has a limit of its own, longer than other requests\': a send they would give up on still goes', async () => {
+    const {w, google, api, drain, sync, restart} = await setup();
+    const {row: sam} = await samWrites(google, w, sync);
+    // Every other request now gives up at once.
+    restart({...google.client(), requestTimeoutMs: 0});
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: sam.id}})).body;
+    await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
+    w.advance(SEND_HOLD_MS);
+    await drain();
+    expect(google.sent).toHaveLength(1);
+    expect((await api.send('GET', `/api/mail/drafts/${draft.id}`)).status).toBe(404);
   });
 
   test('the user\'s own files go in the reply, through messages.send\'s upload form, in its thread', async () => {

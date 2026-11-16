@@ -40,7 +40,7 @@ export interface GoogleClient {
   clientId: string;
   clientSecret: string;
   endpoints: GoogleEndpoints;
-  // Each request gives up after this long (a transient failure).
+  // Each request gives up after this long (a transient failure), unless it has a limit of its own.
   requestTimeoutMs?: number;
 }
 
@@ -161,6 +161,8 @@ export interface RequestOptions {
   what: string;
   // Statuses the caller handles itself (Gmail's 404 for a deleted message).
   accept?: number[];
+  // This request's own limit, instead of the client's (an upload of up to 25 MB of attachments).
+  timeoutMs?: number;
 }
 
 /**
@@ -179,7 +181,7 @@ export async function googleRequest(client: GoogleClient, tokens: GoogleTokens, 
       method: options.method ?? 'GET',
       headers: {authorization: `Bearer ${token}`, ...(options.raw ? {'content-type': options.raw.contentType} : options.body === undefined ? {} : {'content-type': 'application/json'})},
       body: options.raw ? new Uint8Array(options.raw.data) : options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: AbortSignal.any([context.signal, AbortSignal.timeout(client.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS)]),
+      signal: AbortSignal.any([context.signal, AbortSignal.timeout(options.timeoutMs ?? client.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS)]),
     });
     if (response.ok || options.accept?.includes(response.status)) return response;
     if (response.status === 401 && attempt === 0) continue;

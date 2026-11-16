@@ -4,6 +4,9 @@ import type {AdapterContext} from '../../sync/adapter.ts';
 import {googleRequest} from '../google/auth.ts';
 import type {GoogleClient, GoogleTokens} from '../google/auth.ts';
 
+/** How long messages.send may take, its upload with it. */
+const SEND_TIMEOUT_MS = 5 * 60_000;
+
 export interface GmailMessageRef {
   id: string;
   threadId?: string;
@@ -149,6 +152,8 @@ export class GmailApi {
    * JSON form's base64 would not. Gmail takes the recipients from its headers.
    */
   async send(raw: Buffer, threadId: string | null): Promise<GmailMessage> {
+    // Up to 25 MB of attachments is about 34 MB on the wire: a slow uplink needs longer than an
+    // ordinary request's limit. The engine gives a job the same 5 minutes.
     const boundary = `sp-upload-${randomBytes(12).toString('hex')}`;
     const data = Buffer.concat([
       Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(threadId ? {threadId} : {})}\r\n--${boundary}\r\nContent-Type: message/rfc822\r\n\r\n`),
@@ -156,7 +161,7 @@ export class GmailApi {
     ]);
     const url = `${this.client.endpoints.gmail}/upload/gmail/v1/users/me/messages/send`;
     const response = await googleRequest(this.client, this.tokens, this.context, url, {
-      what: 'Gmail messages.send', method: 'POST', query: {uploadType: 'multipart'}, raw: {contentType: `multipart/related; boundary=${boundary}`, data},
+      what: 'Gmail messages.send', method: 'POST', query: {uploadType: 'multipart'}, timeoutMs: SEND_TIMEOUT_MS, raw: {contentType: `multipart/related; boundary=${boundary}`, data},
     });
     return await response.json() as GmailMessage;
   }
