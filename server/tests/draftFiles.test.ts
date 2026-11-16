@@ -97,6 +97,16 @@ describe('Attaching', () => {
     expect(onDisk(dir)).toEqual([String(again.id)]);
   });
 
+  test('Remove takes only the draft\'s own file: another draft\'s id is not found, and that file stays', async () => {
+    const {dir, start, upload, draft, api} = await setup();
+    const reply = await start({kind: 'reply', message_id: THEO});
+    const other = await start({kind: 'new'});
+    const theirs = (await upload(other.id, 'Theirs.txt', 'theirs')).body;
+    expect((await api.send('DELETE', `/api/mail/drafts/${reply.id}/files/${theirs.id}`)).status).toBe(404);
+    expect((await draft(other.id)).files).toEqual([theirs]);
+    expect(onDisk(dir)).toEqual([String(theirs.id)]);
+  });
+
   test('an empty file is refused, and so is one over 25 MB on its own, before anything is kept', async () => {
     const {w, dir, start, upload} = await setup();
     const reply = await start({kind: 'reply', message_id: THEO});
@@ -172,6 +182,18 @@ describe('Discard, Undo and the reply-type menu', () => {
     await api.send('DELETE', `/api/mail/drafts/${(await start({kind: 'new'})).id}`);
     expect(fileRows(w).map(row => row.id)).toEqual([kept.id]);
     expect(onDisk(dir)).toEqual([String(kept.id)]);
+  });
+
+  test('a draft that goes without releasing its files (its account removed) leaves them to the next sweep at once', async () => {
+    const {w, dir, start, upload, api} = await setup();
+    const reply = await start({kind: 'reply', message_id: THEO});
+    await upload(reply.id, 'Notes.txt', 'Bring boots.');
+    // As an account's removal deletes its drafts: the files' draft goes, nothing released.
+    w.store.db.delete(t.drafts).where(eq(t.drafts.id, reply.id)).run();
+    expect(fileRows(w)).toMatchObject([{draftId: null, releasedAt: null}]);
+    await api.send('DELETE', `/api/mail/drafts/${(await start({kind: 'new'})).id}`);
+    expect(fileRows(w)).toEqual([]);
+    expect(onDisk(dir)).toEqual([]);
   });
 
   test('a reply switched to a forward takes its files onto the new draft', async () => {
