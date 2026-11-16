@@ -37,9 +37,10 @@
 import type {DraftCreateInput, DraftKind, DraftOut, DraftRowOut, DraftUpdateInput, FromOut, MessageOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {ApiFailure, getCached, getJson} from '../../api/client.ts';
-import {discardDraft, draftPath, FROM_PATH, loadDraft, saveDraft, sendDraft, startDraft, undoSend} from '../../api/drafts.ts';
+import {discardDraft, draftPath, FROM_PATH, loadDraft, saveDraft, sendDraft, startDraft, undoSend, writeDraft} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
-import {hasOthers, unwritten} from '../../logic/composer.ts';
+import {hasOthers, NO_VERSIONS, recordVersion, unwritten} from '../../logic/composer.ts';
+import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
 import {composerHost, whenPlaced} from './place.ts';
@@ -460,4 +461,69 @@ export function discard(draft: DraftOut) {
       reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments}, {floating});
     }).catch(toastFailure('Couldn\'t bring the draft back'));
   }}, 'gone');
+}
+
+// ---- Help me write ----
+//
+// The line's ask goes to the server with the body as the composer has it, and the answer goes to the
+// composer showing that draft, which puts it in as the user's own change and keeps a version for undo.
+// The ask's state is kept here by draft, so a composer closed and opened again while it works shows
+// it working and still takes the answer. With no composer on the draft when the answer comes, a whole
+// body is saved straight into the draft, its versions with it; a selection's answer has no selection
+// left to go into, so it's dropped. A failure leaves the body as it was and says why on the line.
+
+export interface Writing {
+  working: boolean;
+  error: string | null;
+}
+
+const IDLE: Writing = {working: false, error: null};
+const writes = new Map<number, Writing>();
+const takers = new Map<number, (blocks: Block[], selection: boolean) => void>();
+
+export const useWriting = (draftId: number) => useSyncExternalStore(subscribe, () => writes.get(draftId) ?? IDLE);
+
+/** The composer showing a draft takes what's written for it; the function it gets back lets go. */
+export function takeWritten(draftId: number, take: (blocks: Block[], selection: boolean) => void) {
+  takers.set(draftId, take);
+  return () => {
+    if (takers.get(draftId) === take) takers.delete(draftId);
+  };
+}
+
+/** Says why on the line (null clears it). */
+export function writeError(draftId: number, error: string | null) {
+  if (error === null && !writes.get(draftId)?.error) return;
+  if (error === null) writes.delete(draftId);
+  else writes.set(draftId, {working: false, error});
+  notify();
+}
+
+/** Asks for a draft: the whole body, or with `selection` only that part. One ask at a time per draft. */
+export async function helpMeWrite(draftId: number, input: {prompt: string; body: Block[]; selection: string | null}) {
+  if (writes.get(draftId)?.working) return;
+  writes.set(draftId, {working: true, error: null});
+  notify();
+  let blocks: Block[];
+  try {
+    blocks = (await writeDraft(draftId, input)).blocks;
+  } catch (error) {
+    writes.set(draftId, {working: false, error: failureLine('Couldn\'t write it', error)});
+    notify();
+    return;
+  }
+  writes.delete(draftId);
+  notify();
+  const take = takers.get(draftId);
+  if (take) take(blocks, input.selection !== null);
+  else if (input.selection === null) saveWritten(draftId, blocks);
+}
+
+/** A whole body written for a draft no composer shows: saved into it, with a version to undo to. */
+function saveWritten(draftId: number, blocks: Block[]) {
+  const draft = getCached<DraftOut>(draftPath(draftId));
+  if (!draft || draft.send || discarded.has(draftId)) return;
+  const now = {...draft, ...owedOf(draftId)} as DraftOut;
+  const write = now.write ?? {prompt: '', open: false, ...NO_VERSIONS};
+  queueSave(draftId, {body: blocks, write: {...write, ...recordVersion(write, now.body, blocks)}});
 }

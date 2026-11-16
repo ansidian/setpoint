@@ -1,6 +1,6 @@
 // A fake Anthropic on 127.0.0.1 for the browser checks (server/tests/fakeModels.ts is the full one).
 // It is Anthropic's Messages API, answering Alfred's turns with the tool calls a test scripts, so
-// board 07 can show Alfred answering. It also answers a suggestion's reading of a search with
+// board 07 can show Alfred answering, and help me write's turns with the calls a `writer` scripts. It also answers a suggestion's reading of a search with
 // invented readings of the seed's mail (`SEED_READINGS`). Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a
 // dev run accepts. With the key set, triage and the history pass ask it too. The fake tells them
 // it's overloaded, so they change nothing. No check reaches a real model provider.
@@ -50,10 +50,12 @@ export const SEED_READINGS: Record<string, FakeReading> = {
  * works, or the field while a reading comes, for as long as it needs rather than inside a window of
  * time. `release()` lets one go: the one held longest, or, with none held yet, the next to come.
  */
-export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = false, readings = SEED_READINGS}: {held?: boolean; readings?: Record<string, FakeReading>} = {}) {
+export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = false, readings = SEED_READINGS, writer}: {held?: boolean; readings?: Record<string, FakeReading>; writer?: (turn: AlfredTurn) => Call} = {}) {
   let ids = 0;
   // Every search the model was asked to read, in turn.
   const read: string[] = [];
+  // Every help-me-write request's opening turn (what the draft reads), in turn.
+  const drafts: string[] = [];
   // The answers held, each going when it's let go, and how many were let go before they came.
   const holding: (() => void)[] = [];
   let letGo = 0;
@@ -94,6 +96,13 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = fal
         if (fails) return overloaded();
         return called({name: 'submit_reading', input: {organisations: [], types: [], is_date: true, keywords: search, ...reading}}, hold);
       }
+      if (writer && body.tools?.some(tool => tool.name === 'write_draft')) {
+        // Help me write: the question is the opening turn, which carries the email, its history and the ask.
+        const opening = blocks(body.messages[0]!.content).map(block => block.text ?? '').join('');
+        if (body.messages.length === 1) drafts.push(opening);
+        const results = body.messages.flatMap(message => blocks(message.content).filter(block => block.type === 'tool_result').map(block => JSON.parse(String(block.content)) as Record<string, unknown>));
+        return called(writer({question: opening, results}), held);
+      }
       if (!body.tools?.some(tool => tool.name === 'answer')) return overloaded();
       const users = body.messages.filter(message => message.role === 'user');
       const question = blocks(users.at(-1)!.content).filter(block => block.type === 'text').map(block => block.text).join('')
@@ -107,7 +116,7 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = fal
   // running. The socket alone doesn't hold the process open.
   server.unref();
   const {port} = server.address() as AddressInfo;
-  return {url: `http://127.0.0.1:${port}`, read, release, close: () => new Promise<void>(resolve => {
+  return {url: `http://127.0.0.1:${port}`, read, drafts, release, close: () => new Promise<void>(resolve => {
     server.close(() => resolve());
     server.closeAllConnections();
   })};

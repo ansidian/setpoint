@@ -5,15 +5,16 @@
 // message from C in a window, kept in Drafts, its sidebar row and its page; From's alias and Sent's
 // account; a composer left with nothing written, which leaves no draft; a forward, its attachment
 // taken off; and a reply popped out, kept up while other mail and Calendar show, and docked back on
-// its email. The fields, chips, the fold, the saving and what carries across a pop-out are
+// its email; and help me write, from ⌘J through a lookup to the draft sent as written. The fields, chips, the fold, the saving and what carries across a pop-out are
 // components/composer.test.tsx's, how windows fold when they don't fit composer.test.ts's, a send
 // that reaches the dev provider the server's (sendDev.test.ts).
-import type {AllOut, DraftOut, DraftsOut} from '@setpoint/shared';
+import type {AiOut, AllOut, DraftOut, DraftsOut} from '@setpoint/shared';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
+import {FAKE_ANTHROPIC_KEY, fakeAlfred} from './fakeAlfred.ts';
 import {cleanUp, holdToast, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -325,5 +326,56 @@ test('a reply popped out stays up while other mail and Calendar show, clear of t
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
+  }
+});
+
+test('help me write: ⌘J opens the line, the draft reads the email and Sam\'s mail, looks up the calendar the ask needs, fills the body, and Send holds it as written', async () => {
+  // The model: the calendar first, then the draft, saying how many things are on Friday.
+  const fake = await fakeAlfred(() => ({name: 'answer', input: {found: false, text: '', source_ids: []}}), {
+    held: true,
+    writer: ({results}) => (results.length
+      ? {name: 'write_draft', input: {text: `Hi Sam,\n\nFriday at 7 works, I have ${results[0]!.total} other things that day.\n\nAlex`}}
+      : {name: 'list_items', input: {from: '2026-10-09', to: '2026-10-09'}}),
+  });
+  const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
+    await fake.close();
+    throw error;
+  });
+  try {
+    await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
+    const page = await openEmail(setpoint, await idOf(setpoint, 'Dinner Friday?'));
+    await page.keyboard.press('r');
+    await body(page).waitFor();
+    await until('the caret is in the body', () => body(page).evaluate(field => field === document.activeElement), focused => focused);
+    await page.keyboard.press('Meta+j');
+    const line = composer(page).getByRole('textbox', {name: 'Help me write'});
+    await line.waitFor();
+    assert.equal(await line.getAttribute('placeholder'), 'Describe your message');
+    await line.fill('say Friday at 7 works');
+    await line.press('Enter');
+
+    // The lookup and the draft are held: the line says it's working until the model answers.
+    await composer(page).getByText('Writing…').waitFor();
+    fake.release();
+    fake.release();
+    await body(page).filter({hasText: 'Friday at 7 works, I have'}).waitFor();
+    assert.equal(fake.drafts.length, 1);
+    assert.match(fake.drafts[0]!, /<email_content message_id="\d+">[^]*Blue Door at 7\?/);
+    assert.match(fake.drafts[0]!, /The user asks: say Friday at 7 works$/);
+    assert.equal(await line.inputValue(), 'say Friday at 7 works');
+
+    await page.keyboard.press('Meta+Enter');
+    await holdToast(page);
+    const held = await until('the server holds it', () => drafts(setpoint), found => found.length === 1 && found[0]!.send_state === 'held');
+    const sent = await setpoint.api<DraftOut>('GET', `/mail/drafts/${held[0]!.id}`);
+    assert.deepEqual(sent.to.map(one => one.address), ['sam.lee@example.com']);
+    assert.equal(sent.subject, 'Re: Dinner Friday?');
+    assert.match(sent.body.map(block => ('runs' in block ? block.runs.map(run => run.text).join('') : '')).join('\n'), /^Hi Sam,\n\nFriday at 7 works, I have \d+ other things that day\.\n\nAlex$/);
+    const ai = await setpoint.api<AiOut>('GET', '/ai');
+    assert.equal(ai.usage_this_month.mail_drafts.calls, 2);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+    await fake.close();
   }
 });

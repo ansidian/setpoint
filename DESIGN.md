@@ -22,7 +22,8 @@ copy. They are small and global on purpose. How a page behaves lives in its test
 - **Providers are the truth.** Read state, events and tasks are Gmail's, iCloud's, Google
   Calendar's and Todoist's; Setpoint mirrors them and sends commands. A draft is the one exception:
   it lives in Setpoint until it is sent, and the provider only ever gets the sent email.
-- **The AI sorts and pre-fills; it never adds to a list the user trusts.**
+- **The AI sorts and pre-fills; it never adds to a list the user trusts.** It writes a mail draft
+  only when asked, fills the body alone, and never sends.
 - **Fail visibly.** Unsorted mail stays in view; a failed change stays in place with the provider's
   words; a stale source says "as of".
 - **Desktop first, Linear-fast.** Design target **1677 × 1050** (the MacBook in Arc with its sidebar
@@ -190,7 +191,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   header button (Settings', the editor's) and a Settings row's "…". One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, Reply and an email the user answered (its row's mark, "You replied") `reply`,
-  Reply all `reply_all`, Forward `forward`, popping the composer out `pip` (its window's × is `close`), Drafts `draft` (an email's row says "Draft" in `alert`
+  Reply all `reply_all`, Forward `forward`, popping the composer out `pip` (its window's × is `close`), help me write's undo and redo `undo` and `redo`, Drafts `draft` (an email's row says "Draft" in `alert`
   instead), an attachment of an unknown type `unknown_document`,
   a Settings page its nav's glyph wherever it's named.
 - **Tones**: `caution` and `alert` are close in hue, so a state's shape says how serious it is
@@ -216,7 +217,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   calendar is recoloured. Never show it beside the pending spinner.
 - **Alfred's mark** is `auto_awesome` filled with a gradient from `cool` to `violet` (bottom left to
   top right), two of Day stack's colours, wherever Alfred shows: Ask Alfred, the Answer card's header,
-  and Ask about this email in the reader and ⌘K. Nothing else about the AI takes a hue.
+  Ask about this email in the reader and ⌘K, and help me write in the composer. Nothing else about the AI takes a hue.
 - **Favicon:** `favicon.svg` (the mark on a 32 px `card` tile, radius 7, with an `edgeOn`
   border, in Night's colours), 16 and 32 px PNGs (the 16 px one redrawn on its pixel grid: the middle
   chip level, set apart by the wider gap above it) and a 180 px square `apple-touch-icon`; no web
@@ -230,7 +231,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
 - **Keyboard first:** every common action has a key; the keyboard cursor is a `sub2` fill, and
   moving the pointer onto a row makes it the cursor. On an email, R replies, A replies to all and F forwards;
   C writes a page's main thing (a new message on mail, a new event on Calendar); in the composer
-  ⌘Enter sends and ⌘⇧B shows Cc and Bcc. Esc closes the topmost thing (the
+  ⌘Enter sends, ⌘⇧B shows Cc and Bcc and ⌘J opens help me write's line. Esc closes the topmost thing (the
   composer keeps its draft). Key hints read
   "Esc", "⌘K", "⇧I".
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed

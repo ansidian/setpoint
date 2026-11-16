@@ -2,7 +2,7 @@
 // started filled on the server, and saved as the user types. Send holds it on the server for
 // SEND_HOLD_MS with Undo. The Drafts list, the draft itself and its email's row refresh by the live
 // stream's `drafts` key (logic/live.ts).
-import type {DraftCreateInput, DraftOut, DraftSavedOut, DraftUpdateInput, PeopleOut, Recipient} from '@setpoint/shared';
+import type {DraftCreateInput, DraftOut, DraftSavedOut, DraftUpdateInput, DraftWriteInput, DraftWrittenOut, PeopleOut, Recipient} from '@setpoint/shared';
 import {getJson, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
 import {messagePath} from './mail.ts';
 
@@ -47,6 +47,9 @@ export async function undoSend(id: number): Promise<DraftOut> {
   refreshIfShown(DRAFTS_PATH);
   return draft;
 }
+
+/** Help me write: the new body, or the selection's new text, as blocks. Nothing is saved by it. */
+export const writeDraft = (id: number, input: DraftWriteInput) => sendJson<DraftWrittenOut>('POST', `${draftPath(id)}/write`, input);
 
 /** The draft as the server has it now. */
 export const loadDraft = (id: number) => getJson<DraftOut>(draftPath(id));

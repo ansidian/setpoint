@@ -111,3 +111,23 @@
 .composer .cmp-file { height: 26px; max-width: 280px; display: inline-flex; align-items: center; gap: 6px; padding: 0 2px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; }
 .composer .cmp-file > .icon { color: var(--ink3); }
 .composer .cmp-forward-body { margin-top: 12px; }
+
+/* Help me write's line, right above the format row and held with it at the composer's foot: a
+   field with Alfred's mark, then undo and redo. While it writes, the mark turns into the spinner and
+   the line says so. A failure shows under it. The body's selection the line will change stays
+   drawn while the line has the caret. */
+.composer .cmp-write-wrap { position: sticky; bottom: 48px; z-index: 2; margin-top: auto; padding: 8px 12px 6px; background: var(--page); flex: none; }
+.cmp-window .composer .cmp-write-wrap { background: var(--card); }
+.composer .cmp-write-wrap + .desc-bar { margin-top: 0; }
+.composer .cmp-write { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 4px 0 12px; border-radius: 10px; background: var(--chip);
+  box-shadow: inset 0 0 0 1px var(--edge); transition: box-shadow var(--dur-fast) var(--ease); }
+.composer .cmp-write:focus-within { box-shadow: inset 0 0 0 1px var(--edgeFocus); }
+.composer .cmp-write > input { min-width: 0; height: 30px; outline: none; color: var(--ink); }
+.composer .cmp-write > input::placeholder { color: var(--ink3); opacity: 1; }
+.composer .cmp-write.working > input { color: var(--ink2); }
+.composer .cmp-write > .spin { margin-left: 0; color: var(--ink3); }
+.composer .cmp-write-state { flex: none; font-size: 12.5px; }
+.composer .cmp-write .ibtn:disabled { color: var(--ink3); opacity: .5; }
+.composer .cmp-write-error { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0 12px; color: var(--alert); }
+.composer .cmp-write-error > span { color: var(--ink); }
+::highlight(cmp-write) { background: var(--sub3); }

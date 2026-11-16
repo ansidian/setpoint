@@ -1,9 +1,10 @@
 // The composer's pure rules: whether an email has anyone for Reply all (the server's own fill rule,
-// shared/src/draftFill.ts), what a typed recipient is, a chip's words, and the reply's quote as the
-// composer shows it under its fold.
+// shared/src/draftFill.ts), what a typed recipient is, a chip's words, the reply's quote as the
+// composer shows it under its fold, and help me write's versions.
+import {DRAFT_VERSIONS_MAX} from '@setpoint/shared';
 import type {DraftOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {fillAnswer} from '@setpoint/shared/draftFill';
-import {isEmpty, readHtml} from '@setpoint/shared/richText';
+import {isEmpty, readHtml, sameDescription} from '@setpoint/shared/richText';
 import type {Block} from '@setpoint/shared/richText';
 import {paragraphs} from './body.ts';
 
@@ -165,3 +166,57 @@ export function placeWindows(windows: Omit<WindowSlot, 'touched'>[], hidden: num
   }, 0);
   return {at, end};
 }
+
+// ---- Help me write's versions ----
+//
+// Each draft help me write puts in keeps the body as it was before and as it was written, so undo and
+// redo beside the line step between them. Typing after a step makes a version of its own on the next
+// undo (so redo brings the typing back) and drops what redo had. The oldest go past DRAFT_VERSIONS_MAX.
+
+export interface Versions {
+  versions: Block[][];
+  // The version the body shows, unless it was typed in since.
+  at: number;
+}
+
+export const NO_VERSIONS: Versions = {versions: [], at: 0};
+
+const sameBody = (a: Block[], b: Block[]) => sameDescription(a, b);
+
+const kept = (versions: Block[][], max: number): Versions => {
+  const trimmed = versions.slice(-max);
+  return {versions: trimmed, at: trimmed.length - 1};
+};
+
+/** A draft written: the body before it (unless that's already the version shown) and after it. */
+export function recordVersion(state: Versions, before: Block[], after: Block[], max = DRAFT_VERSIONS_MAX): Versions {
+  const base = state.versions.slice(0, state.at + 1);
+  if (!base.length || !sameBody(base.at(-1)!, before)) base.push(before);
+  base.push(after);
+  return kept(base, max);
+}
+
+/** Whether undo has a version to go back to from the body as it is now. */
+export const canUndo = (state: Versions, current: Block[]) => state.versions.length > 0 && (state.at > 0 || !sameBody(current, state.versions[0]!));
+
+/** Whether redo has a version: only while the body is still the version shown. */
+export const canRedo = (state: Versions, current: Block[]) => state.at < state.versions.length - 1 && sameBody(current, state.versions[state.at]!);
+
+/** Undo from the body as it is now: the version to show, or null. Typing since is kept as a version first. */
+export function undoVersion(state: Versions, current: Block[], max = DRAFT_VERSIONS_MAX): {state: Versions; body: Block[]} | null {
+  if (!canUndo(state, current)) return null;
+  let next = state;
+  if (!sameBody(current, state.versions[state.at]!)) next = kept([...state.versions.slice(0, state.at + 1), current], max);
+  const at = next.at - 1;
+  return {state: {versions: next.versions, at}, body: next.versions[at]!};
+}
+
+/** Redo: the next version to show, or null. */
+export function redoVersion(state: Versions, current: Block[]): {state: Versions; body: Block[]} | null {
+  if (!canRedo(state, current)) return null;
+  const at = state.at + 1;
+  return {state: {versions: state.versions, at}, body: state.versions[at]!};
+}
+
+/** The line's words: over an empty body, what to write; over text, what to change. */
+export const writePlaceholder = (body: Block[]) => (isEmpty(body) ? 'Describe your message' : 'Describe your change');

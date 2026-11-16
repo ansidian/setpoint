@@ -4,7 +4,8 @@
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {arrangeWindows, chipLabel, forwardLines, hasOthers, placeWindows, quoteOf, readRecipient, readRecipients, replyLine, unwritten, withRecipients} from '../src/logic/composer.ts';
+import {arrangeWindows, canRedo, canUndo, chipLabel, forwardLines, hasOthers, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, unwritten, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
+import type {Versions} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
   accounts: [
@@ -138,5 +139,51 @@ describe('the composer\'s windows, when they don\'t all fit', () => {
     const {at, end} = placeWindows([{key: 1, minimized: true}, {key: 2, minimized: true}, {key: 3, minimized: false}], [1], 1300);
     expect([...at]).toEqual([[1, {right: 0, width: 320}], [2, {right: 0, width: 320}], [3, {right: 332, width: 560}]]);
     expect(end).toBe(904);
+  });
+});
+
+describe('help me write\'s versions', () => {
+  // A body of one line, by its words ('' is the empty body).
+  const b = (text: string) => (text ? [{type: 'paragraph' as const, runs: [{text, marks: [], href: null}]}] : []);
+  const v = (texts: string[], at: number): Versions => ({versions: texts.map(b), at});
+
+  test.each([
+    ['the first draft keeps the empty body before it', NO_VERSIONS, '', 'A', v(['', 'A'], 1)],
+    ['a second draft over the shown version adds only the new one', v(['', 'A'], 1), 'A', 'B', v(['', 'A', 'B'], 2)],
+    ['typing before a draft keeps the typed body as a version', v(['', 'A'], 1), 'A typed', 'B', v(['', 'A', 'A typed', 'B'], 3)],
+    ['a draft after an undo drops what redo had', v(['', 'A', 'B'], 1), 'A', 'C', v(['', 'A', 'C'], 2)],
+  ])('recording: %s', (_name, state, before, after, expected) => {
+    expect(recordVersion(state, b(before), b(after))).toEqual(expected);
+  });
+
+  test('the oldest versions go past the limit', () => {
+    expect(recordVersion(v(['1', '2', '3'], 2), b('3'), b('4'), 3)).toEqual(v(['2', '3', '4'], 2));
+  });
+
+  test.each([
+    ['nothing to undo before any draft', NO_VERSIONS, '', null],
+    ['undo goes back a version', v(['', 'A', 'B'], 2), 'B', {state: v(['', 'A', 'B'], 1), body: b('A')}],
+    ['at the first version, nothing more', v(['', 'A'], 0), '', null],
+    ['typing since is kept, so undo shows the version it was typed over', v(['', 'A'], 1), 'A typed', {state: v(['', 'A', 'A typed'], 1), body: b('A')}],
+    ['typing over the first version can still be undone back to it', v(['', 'A'], 0), 'typed', {state: v(['', 'typed'], 0), body: b('')}],
+  ])('undo: %s', (_name, state, current, expected) => {
+    expect(undoVersion(state, b(current))).toEqual(expected);
+    expect(canUndo(state, b(current))).toBe(expected !== null);
+  });
+
+  test.each([
+    ['redo after an undo', v(['', 'A', 'B'], 1), 'A', {state: v(['', 'A', 'B'], 2), body: b('B')}],
+    ['nothing past the newest', v(['', 'A'], 1), 'A', null],
+    ['typing since drops redo', v(['', 'A', 'B'], 1), 'A typed', null],
+  ])('redo: %s', (_name, state, current, expected) => {
+    expect(redoVersion(state, b(current))).toEqual(expected);
+    expect(canRedo(state, b(current))).toBe(expected !== null);
+  });
+
+  test.each([
+    ['an empty body asks what to write', '', 'Describe your message'],
+    ['a body with text asks what to change', 'Hi Sam,', 'Describe your change'],
+  ])('the line: %s', (_name, body, words) => {
+    expect(writePlaceholder(b(body))).toBe(words);
   });
 });

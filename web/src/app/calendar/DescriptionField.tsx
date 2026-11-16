@@ -134,11 +134,13 @@ export interface DescriptionFieldProps {
   barEnd?: ReactNode;
   // Under the field, above the format row (the composer's folded quote).
   after?: ReactNode;
+  // Right above the format row, after `after` (the composer's help-me-write line).
+  beforeBar?: ReactNode;
   // The editable element, for a caller that focuses it.
   fieldRef?: RefObject<HTMLDivElement | null>;
 }
 
-export function DescriptionField({blocks, kind, note, mark: source = null, onChange, label = 'Description', placeholder = 'Add description', bar = 'focus', barStart = null, barEnd = null, after = null, fieldRef}: DescriptionFieldProps) {
+export function DescriptionField({blocks, kind, note, mark: source = null, onChange, label = 'Description', placeholder = 'Add description', bar = 'focus', barStart = null, barEnd = null, after = null, beforeBar = null, fieldRef}: DescriptionFieldProps) {
   const own = useRef<HTMLDivElement>(null);
   const field = fieldRef ?? own;
   const address = useRef<HTMLInputElement>(null);
@@ -322,6 +324,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
         onMouseOver={hoverLink} onClick={openLink} />
       {source}
       {after}
+      {beforeBar}
       {(focused || linking || bar === 'always') && (linking ? (
         <div className="desc-bar linking">
           {barStart}

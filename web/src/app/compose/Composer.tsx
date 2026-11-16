@@ -8,8 +8,9 @@
 // The body is the description field's rich text, with its format row always there; a reply's quote
 // is folded behind "…" and opens to be trimmed (the recipient gets the quote as it is left).
 //
-// Keys: ⌘Enter sends, ⌘⇧B shows Cc and Bcc, Esc closes it (the draft kept). The format row leads
-// with Send and ends with Discard (no key). The top right pops it out into a floating window (no
+// Keys: ⌘Enter sends, ⌘⇧B shows Cc and Bcc, ⌘J opens help me write's line (WriteLine.tsx), Esc
+// closes it (the draft kept). The format row leads with Send, has help me write after the formats,
+// and ends with Discard (no key). The top right pops it out into a floating window (no
 // key), and the same button docks it again; the format row keeps a place for buttons of its own.
 //
 // It is mounted once, by ComposerRoot, into the host element its places take in turn (place.ts):
@@ -38,6 +39,7 @@ import {arrangeWindows, placeWindows} from '../../logic/composer.ts';
 import {canReplyAll, closeComposer, discard, dock, foldWindows, popOut, queueSave, switchKind, toggleMinimized, send, unsaved, useComposers, useSaveError, watchSends} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
 import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
+import {useHelpMeWrite, WriteButton, WriteLine} from './WriteLine.tsx';
 import './compose.css';
 
 export function Composer({open, message, accounts, timeZone}: {
@@ -89,6 +91,11 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     setFields(latest.current);
     queueSave(draft.id, {[key]: value});
   };
+  // Help me write's line and the body's versions, saved with the draft.
+  const help = useHelpMeWrite({
+    draftId: draft.id, initial: ({...draft, ...unsaved(draft.id)} as DraftOut).write, body, current: () => latest.current.body,
+    onWrite: write => queueSave(draft.id, {write}),
+  });
   const failed = draft.send?.state === 'failed' ? draft.send.error : null;
   // Send: an address still being typed becomes a chip first (the field's leaving does it). With
   // no one to send to, the caret goes to To.
@@ -137,6 +144,11 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     if (command && !event.shiftKey && !event.altKey && event.key === 'Enter') {
       event.preventDefault();
       sendNow();
+      return;
+    }
+    if (command && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'j') {
+      event.preventDefault();
+      help.open();
       return;
     }
     if (command && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'b') {
@@ -227,6 +239,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         onChange={blocks => change('body', blocks)}
         after={draft.kind === 'reply' || draft.kind === 'reply_all' ? <Quote draft={draft} message={message} timeZone={timeZone} />
           : draft.kind === 'forward' ? <Forwarded draft={draft} message={message} timeZone={timeZone} /> : null}
+        beforeBar={<WriteLine help={help} body={fields.body} />}
         barStart={(
           <button className="btn cmp-send" type="button" onMouseDown={event => event.preventDefault()} onClick={sendNow}>
             Send<span className="kbd">⌘↵</span>
@@ -234,8 +247,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         )}
         barEnd={(
           <>
-            {/* Buttons of the composer's own come here. */}
-            <span className="cmp-bar-slot" />
+            <span className="cmp-bar-slot"><WriteButton help={help} /></span>
             <span className="grow" />
             <button className="ibtn sm danger" type="button" aria-label="Discard" data-tip="Discard" onMouseDown={event => event.preventDefault()} onClick={() => discard({...draft, ...latest.current})}>
               <Icon name="delete" size={17} />
