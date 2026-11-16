@@ -5,6 +5,9 @@
 // A row opens its draft in the pane (/drafts/4): a reply's or a forward's under its email, which
 // stays readable above it, a new message's by itself. J and K move the cursor, Enter opens, C writes a
 // new message, Esc closes the composer (the draft kept), then the pane.
+//
+// In a narrow window an open draft covers the list, and the empty pane comes over it only from the
+// header's button, as on the Inbox (EmptyPane.tsx).
 import type {DraftRowOut, DraftsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties} from 'react';
@@ -18,7 +21,7 @@ import {tabTitle} from '../../logic/title.ts';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
-import {EmptyPane} from '../EmptyPane.tsx';
+import {EmptyPane, EmptyPaneButton, useEmptyPane} from '../EmptyPane.tsx';
 import {DraftsEmptyView} from '../EmptyView.tsx';
 import {EmailOnly, PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
@@ -71,6 +74,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
   }, [composer, shown]);
 
   const open = composer && composer.draftId === shown ? composer : null;
+  const pane = useEmptyPane(open !== null, []);
   const subject = open ? rows.find(row => row.id === open.draftId)?.subject ?? null : null;
   useEffect(() => {
     document.title = tabTitle({page: 'drafts', subject});
@@ -100,6 +104,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
       else if (plainKey(event, 'Escape')) {
         if (open) run(closeComposer);
         else if (shown !== null) run(() => navigate({page: 'drafts', open: null}));
+        else if (pane.shown) run(pane.close);
         else if (at !== null) run(() => setCursor(null));
       }
     };
@@ -112,6 +117,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
       <header className="hd">
         <h1 className="hd-title">Drafts</h1>
         <span className="grow" />
+        <EmptyPaneButton pane={pane} />
       </header>
       <div className="content" style={accountWidth}>
         <section className="list drafts-list" aria-label="Drafts">
@@ -136,7 +142,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
             );
           })}
         </section>
-        {open ? <DraftPane open={open} accounts={accounts} timeZone={zone} /> : <EmptyPane label="Draft" keys={KEYS}>{null}</EmptyPane>}
+        {open ? <DraftPane open={open} accounts={accounts} timeZone={zone} /> : pane.drawn && <EmptyPane label="Draft" keys={KEYS}>{null}</EmptyPane>}
       </div>
     </>
   );

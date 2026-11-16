@@ -4,8 +4,8 @@
 // - the header is whole, and nothing scrolls sideways
 // - Calendar's grid takes the width, with the editor and search over it and its sources' health atop it
 // - ⌘K keeps the rail's lost filters
-// - the day's pane comes over the grid by its header button, and the empty pane over Inbox, News
-//   and Jobs by theirs.
+// - the day's pane comes over the grid by its header button, and the empty pane over Inbox, News,
+//   Jobs and Drafts by theirs.
 // At 1100 the panes beside return, the empty one with nothing open, and the rail opens to the full
 // sidebar by `` ` ``.
 import assert from 'node:assert/strict';
@@ -97,12 +97,12 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; at 11
   }
 });
 
-test('in the compact tier the empty pane comes over the list only from the header\'s button, on Inbox, News and Jobs; it again, Esc or an item opening puts it away', async () => {
+test('in the compact tier the empty pane comes over the list only from the header\'s button, on Inbox, News, Jobs and Drafts; it again, Esc or an item opening puts it away', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const width = 1099;
     const page = await setpoint.page({width, height: HEIGHT});
-    for (const [path, ready, label] of [['inbox', '.list .row', 'Inbox pane'], ['news', '.nw-list [data-story]', 'News pane'], ['jobs', '.jb-tr[data-application]', 'Jobs pane']] as const) {
+    for (const [path, ready, label] of [['inbox', '.list .row', 'Inbox pane'], ['news', '.nw-list [data-story]', 'News pane'], ['jobs', '.jb-tr[data-application]', 'Jobs pane'], ['drafts', '.drafts-list .view-empty', 'Draft']] as const) {
       await page.goto(`${setpoint.base}/${path}`);
       await page.locator(ready).first().waitFor();
       const button = page.locator('.hd .pane-open');
