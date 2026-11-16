@@ -481,6 +481,7 @@ export function discard(draft: DraftOut) {
   const write = writeNow(draft);
   const files = filesNow(draft.id, draft);
   forgetSaves(draft.id);
+  // Only this tab's memory: a discarded draft's id never opens again (Undo starts a new one).
   forgetFiles(draft.id);
   discarded.add(draft.id);
   setComposers(without(draft.id));
@@ -635,7 +636,7 @@ export function attachFiles(draftId: number, files: File[], originals: {id: numb
     uploads.set(draftId, [...uploadsOf(draftId), upload]);
     notify();
     const done = uploadDraftFile(draftId, file).then(() => true, (error: unknown) => {
-      if (!discarded.has(draftId)) setFileError(draftId, failureLine(`Couldn't attach ${file.name}`, error));
+      setFileError(draftId, failureLine(`Couldn't attach ${file.name}`, error));
       return false;
     }).finally(() => {
       uploads.set(draftId, uploadsOf(draftId).filter(one => one !== upload));

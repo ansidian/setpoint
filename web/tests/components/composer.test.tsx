@@ -118,7 +118,8 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
 
 /**
  * The draft files' routes, faked: an upload is answered as the server would (`hold` keeps the
- * answers until `release`, `failUploads` refuses that many), a removal and a take are recorded, and
+ * answers until `release`, `failUploads` refuses that many), a removal (`failRemoves` refuses that
+ * many) and a take are recorded, and
  * `refuseTakes` answers a take as over the limit. Any file uploaded, or on a draft, can be taken. The
  * drafts' own files change with each, as the server's do.
  */
@@ -131,6 +132,7 @@ function fileRoutes(draftOf: (id: number) => DraftOut | undefined) {
     removed: [] as {draft: number; id: number}[],
     takes: [] as {draft: number; ids: number[]}[],
     failUploads: 0,
+    failRemoves: 0,
     refuseTakes: false,
     known,
     hold() {
@@ -172,6 +174,10 @@ function fileRoutes(draftOf: (id: number) => DraftOut | undefined) {
       }
       if (match[2] && method === 'DELETE') {
         routes.removed.push({draft, id: Number(match[2])});
+        if (routes.failRemoves > 0) {
+          routes.failRemoves -= 1;
+          return answer({error: {code: 'unavailable', message: 'Setpoint is restarting.'}}, 503);
+        }
         if (row) row.files = row.files.filter(file => file.id !== Number(match[2]));
         return Promise.resolve(new Response(null, {status: 204}));
       }
@@ -650,6 +656,24 @@ test('files come by the attach button, a drop on the composer or a pasted image:
   await expect.poll(() => fake.removed).toEqual([{draft: fake.uploads[0]!.draft, id: notes.id}]);
 });
 
+test('words pasted or dropped on the composer are left to the field they land in: only files are attached', async () => {
+  const fake = await compose(draftOf({kind: 'new', message_id: null, to: [], subject: ''}));
+  const subject = field('Subject');
+  await userEvent.click(subject);
+  await userEvent.keyboard('Lunch');
+  await userEvent.keyboard('{ControlOrMeta>}a{/ControlOrMeta}');
+  await userEvent.copy();
+  await userEvent.keyboard('{ArrowRight} on Friday, ');
+  await userEvent.paste();
+  await expect.element(subject).toHaveValue('Lunch on Friday, Lunch');
+  // A drop of words isn't taken from the field: the browser puts them in.
+  const words = new DataTransfer();
+  words.setData('text/plain', 'Noon');
+  expect(drop(subject.element(), words)).toBe(true);
+  expect(fake.uploads).toEqual([]);
+  expect(fileChips()).toEqual([]);
+});
+
 test('a file removed and attached again is one chip', async () => {
   const fake = await compose(draftOf({files: [NOTES]}));
   await userEvent.click(page.getByRole('button', {name: 'Remove Notes.txt'}));
@@ -691,6 +715,28 @@ test('a forward\'s originals come first in the row; a file that would cross 25 M
   pick(fileOf('Photos.zip', MB));
   await expect.poll(fileChips).toEqual(['Notes.txt512 KB', 'Photos.zip1 MB']);
   expect(fileError()).toBeNull();
+});
+
+test('files still uploading count toward 25 MB; the reason goes once the next file attaches', async () => {
+  const fake = await compose(draftOf({}));
+  fake.hold();
+  pick(fileOf('Photos.zip', 20 * MB));
+  await expect.poll(fileChips).toEqual(['Photos.zip20 MB (uploading)']);
+  pick(fileOf('Video.mov', 6 * MB));
+  await expect.poll(fileError).toBe('Couldn\'t attach Video.mov, attachments can total 25 MB, and these would be 26 MB.');
+  expect(fake.uploads.map(one => one.name)).toEqual(['Photos.zip']);
+  fake.release();
+  pick(fileOf('Notes.txt', 12, 'text/plain'));
+  await expect.poll(fileChips).toEqual(['Photos.zip20 MB', 'Notes.txt12 bytes']);
+  expect(fileError()).toBeNull();
+});
+
+test('a Remove the server refuses says so, and the chip comes back: the file is still attached', async () => {
+  const fake = await compose(draftOf({files: [NOTES]}));
+  fake.failRemoves = 1;
+  await userEvent.click(page.getByRole('button', {name: 'Remove Notes.txt'}));
+  await expect.poll(fileError).toMatch(/^Couldn't remove the file/);
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes']);
 });
 
 test('Send waits for an upload under way; one that fails stops it with its words, the composer kept', async () => {
