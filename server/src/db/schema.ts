@@ -255,6 +255,22 @@ export const drafts = sqliteTable('drafts', {
   check('drafts_send_state', sql`${table.sendState} is null or ${table.sendState} in (${quoted(SEND_STATES)})`),
 ]);
 
+/**
+ * The user's own files attached to a draft, each kept in the data directory's draft-files/ under its
+ * id (src/sending/files.ts). A file outlives its draft for a short while (`released_at`), so
+ * Discard's Undo and the reply-type menu's new draft can take it; then it's deleted with its bytes.
+ */
+export const draftFiles = sqliteTable('draft_files', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  draftId: integer('draft_id').references(() => drafts.id, {onDelete: 'set null'}),
+  filename: text('filename').notNull(),
+  mimeType: text('mime_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  createdAt: text('created_at').notNull(),
+  // When its draft went (discarded, or sent): null while it has one.
+  releasedAt: text('released_at'),
+}, table => [index('draft_files_draft').on(table.draftId)]);
+
 /** Where items come from: each Google calendar, and Todoist as one more toggle. */
 export const calendars = sqliteTable('calendars', {
   id: integer('id').primaryKey({autoIncrement: true}),

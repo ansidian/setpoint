@@ -72,10 +72,12 @@ export function getDraftRow(store: Store, draftId: number): DraftRow {
   return row;
 }
 
-export function presentDraft(row: DraftRow): DraftOut {
+export function presentDraft(store: Store, row: DraftRow): DraftOut {
+  const files = store.db.select().from(t.draftFiles).where(eq(t.draftFiles.draftId, row.id)).orderBy(asc(t.draftFiles.id)).all();
   return {
     id: row.id, kind: row.kind, message_id: row.messageId, from: {account_id: row.accountId, address: row.fromAddress},
-    to: row.toRecipients, cc: row.ccRecipients, bcc: row.bccRecipients, subject: row.subject, body: row.body, quote: row.quote, removed_attachments: row.removedAttachments, write: row.write,
+    to: row.toRecipients, cc: row.ccRecipients, bcc: row.bccRecipients, subject: row.subject, body: row.body, quote: row.quote, removed_attachments: row.removedAttachments,
+    files: files.map(file => ({id: file.id, filename: file.filename, mime_type: file.mimeType, size_bytes: file.sizeBytes})), write: row.write,
     created_at: row.createdAt, updated_at: row.updatedAt,
     send: row.sendState ? {state: row.sendState, send_at: row.sendState === 'held' ? row.sendAt : null, error: row.sendError} : null,
   };
@@ -102,7 +104,7 @@ export function createDraft(store: Store, input: DraftCreateInput): DraftOut {
     } else {
       const messageId = input.message_id!;
       const existing = store.db.select().from(t.drafts).where(and(eq(t.drafts.messageId, messageId), eq(t.drafts.kind, input.kind))).get();
-      if (existing) return presentDraft(existing);
+      if (existing) return presentDraft(store, existing);
       const email = store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
       if (!email || email.trashedAt) throw notFound('That email is no longer in Setpoint.');
       const own = [...addresses.values()].flat().map(address => address.address);
@@ -113,7 +115,7 @@ export function createDraft(store: Store, input: DraftCreateInput): DraftOut {
     }
     const row = store.db.insert(t.drafts).values({...values, kind: input.kind, createdAt: now, updatedAt: now}).returning().get();
     noteDraft(store, row);
-    return presentDraft(row);
+    return presentDraft(store, row);
   });
 }
 
@@ -149,11 +151,15 @@ export function updateDraft(store: Store, draftId: number, input: DraftUpdateInp
   });
 }
 
-/** Discards a draft. A held send goes with it; one already sending can't be discarded. */
+/**
+ * Discards a draft. A held send goes with it; one already sending can't be discarded. Its files
+ * are released, kept a while for Discard's Undo to take back (src/sending/files.ts), then swept.
+ */
 export function discardDraft(store: Store, draftId: number) {
   transaction(store, () => {
     const row = getDraftRow(store, draftId);
     if (row.sendState === 'sending') throw conflict('draft_sending', 'This message is sending.');
+    store.db.update(t.draftFiles).set({draftId: null, releasedAt: isoNow(store)}).where(eq(t.draftFiles.draftId, draftId)).run();
     // Its held send job goes with it (the job's draft_id cascades).
     store.db.delete(t.drafts).where(eq(t.drafts.id, draftId)).run();
     noteDraft(store, row);

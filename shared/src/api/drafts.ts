@@ -141,6 +141,8 @@ export interface DraftOut {
   quote: Block[] | null;
   // A forward's attachments the user took off it, by id. The others go with it.
   removed_attachments: number[];
+  // The user's own files, in the order they were attached.
+  files: DraftFileOut[];
   // Help me write's line and the body's versions, or null when it was never used.
   write: DraftWriteState | null;
   created_at: string;
@@ -164,6 +166,37 @@ export type DraftWriteInput = z.input<typeof draftWriteInput>;
 export interface DraftWrittenOut {
   blocks: Block[];
 }
+
+/**
+ * The most a message's attachments may weigh together, its own files and a forward's kept originals
+ * alike: Gmail's limit, by the files' own sizes.
+ */
+export const ATTACHMENTS_MAX_BYTES = 25 * 1024 * 1024;
+
+/** A file the user attached to a draft, kept on the server until it's sent or discarded. */
+export interface DraftFileOut {
+  id: number;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+}
+
+/**
+ * The bytes a message would carry: its own files and a forward's originals less those taken off.
+ * Over ATTACHMENTS_MAX_BYTES, the server refuses the file that would cross it, and Send.
+ */
+export function attachmentsTotal(files: {size_bytes: number}[], originals: {id: number; size_bytes: number}[], removed: number[]): number {
+  const off = new Set(removed);
+  return files.reduce((sum, file) => sum + file.size_bytes, 0) + originals.reduce((sum, file) => sum + (off.has(file.id) ? 0 : file.size_bytes), 0);
+}
+
+/**
+ * Takes files onto a draft by id: those of a draft that went a moment ago (Discard's Undo), or of
+ * the draft the reply-type menu replaces. Upload and removal have routes of their own, never the
+ * typing's saves, so a save can't drop a file attached meanwhile.
+ */
+export const draftFilesTakeInput = z.strictObject({ids: z.array(z.number().int().positive()).max(100)});
+export type DraftFilesTakeInput = z.infer<typeof draftFilesTakeInput>;
 
 /** What a save answers: enough to know it landed, and cheap. */
 export interface DraftSavedOut {

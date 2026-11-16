@@ -15,6 +15,7 @@ import {enqueueJob} from '../sync/jobs.ts';
 import {transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {assertEditable, getDraftRow, noteDraft, presentDraft} from './drafts.ts';
+import {assertWithinLimit} from './files.ts';
 
 export const sendKey = (draftId: number) => `send:${draftId}`;
 
@@ -33,6 +34,7 @@ export function holdSend(store: Store, draftId: number): DraftOut {
     const row = getDraftRow(store, draftId);
     assertEditable(row);
     if (!row.toRecipients.length && !row.ccRecipients.length && !row.bccRecipients.length) throw invalid('Add someone to send it to.');
+    assertWithinLimit(store, row);
     const now = store.now();
     const sendAt = new Date(now.getTime() + SEND_HOLD_MS).toISOString();
     const updated = store.db.update(t.drafts).set({
@@ -40,7 +42,7 @@ export function holdSend(store: Store, draftId: number): DraftOut {
     }).where(eq(t.drafts.id, draftId)).returning().get()!;
     if (!enqueueJob(store, {kind: 'send', key: sendKey(draftId), draftId, runAt: sendAt})) throw conflict('draft_sending', 'This message is sending.');
     noteDraft(store, updated);
-    return presentDraft(updated);
+    return presentDraft(store, updated);
   });
 }
 
@@ -53,6 +55,6 @@ export function undoSend(store: Store, draftId: number): DraftOut {
     if (!taken) throw conflict('draft_not_held', 'It has already gone to the provider.');
     const updated = store.db.update(t.drafts).set({sendState: null, sendAt: null}).where(eq(t.drafts.id, draftId)).returning().get()!;
     noteDraft(store, updated);
-    return presentDraft(updated);
+    return presentDraft(store, updated);
   });
 }

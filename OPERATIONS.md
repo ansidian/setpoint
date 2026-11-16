@@ -21,6 +21,9 @@ healthcheck.
 `SETPOINT_DATA_DIR` (`/data` in the image) holds `setpoint.sqlite` and its WAL files. Mount it as a
 volume writable by uid 1000. Migrations run at every start, inside a transaction, with SQLite's temporary files in this directory (`SQLITE_TMPDIR` moves them), so a large one needs about the database's size free here. Back up the whole
 directory. The encryption key must not live in it, so a backup alone can't open the credentials.
+Beside the database, `news-images/` keeps News's image copies and `draft-files/` the files attached
+to unsent drafts (up to 25 MB a draft; each goes when its draft is sent, or 10 minutes after it's
+discarded, and a start sweeps any left over).
 
 ## Settings
 

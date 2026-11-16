@@ -30,6 +30,7 @@ import {RuleTrashScheduler} from './triage/ruleTrash.ts';
 import {loadKeyring} from './secrets/crypto.ts';
 import {storeClock} from './store.ts';
 import type {Store} from './store.ts';
+import {draftFilesDir, sweepDraftFiles} from './sending/files.ts';
 import {SendWorker} from './sending/worker.ts';
 import {SyncEngine} from './sync/engine.ts';
 import {Adapters} from './sync/registry.ts';
@@ -87,9 +88,12 @@ const news = new NewsWorker({store, imagesDir: newsImages, ...(config.production
 const newsSort = new NewsSortWorker({store, endpoints: aiEndpoints});
 // Each USPS digest's scans, read from its source through the engine's adapters.
 const mailpiecesWorker = new MailpiecesWorker({store, fetchSource: (sourceId, message): Promise<Buffer | null> => engine.emailSource(sourceId, message)});
-// Each held send, once its Undo hold ends, through the account's adapter.
+// Each held send, once its Undo hold ends, through the account's adapter, with the drafts' own
+// files from the data directory's draft-files/ (what no draft will take is swept at start).
+const draftFiles = draftFilesDir(config.dataDir);
+sweepDraftFiles(store, draftFiles, {disk: true});
 const sender = new SendWorker({
-  store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
+  store, filesDir: draftFiles, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
   attachment: (sourceId, message, attachmentId) => engine.attachment(sourceId, message, attachmentId),
 });
 const engine: SyncEngine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader, mailpiecesWorker, sender]});
@@ -101,7 +105,7 @@ const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
   providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints},
   // A dev run with no key and no fake model drafts with the dev provider's canned answer.
-  drafting: {endpoints: aiEndpoints, canned: config.production || config.devAiUrl ? null : devDraftWriter()}, reading: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, newsSort,
+  drafting: {endpoints: aiEndpoints, canned: config.production || config.devAiUrl ? null : devDraftWriter()}, reading: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, draftFiles, newsSort,
   routes: [jobsApi(store)],
   tokenRoutes: [jobsTokenApi(store)],
 });

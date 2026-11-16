@@ -107,7 +107,14 @@
 /* A forward's email, in full: its header lines, its attachments as chips to take off, the email. */
 .composer .cmp-forward { padding: 0 20px 16px; flex: none; }
 .composer .cmp-forward-head { color: var(--ink3); line-height: 20px; overflow-wrap: anywhere; }
-.composer .cmp-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.composer .cmp-files { display: flex; flex-wrap: wrap; gap: 6px; }
+/* The message's files, under the user's text, above a quote or a forward. */
+.composer .cmp-attached { display: flex; flex-direction: column; gap: 6px; padding: 4px 20px 8px; }
+.composer .cmp-attached .cmp-failed { min-height: 28px; padding: 0; border-bottom: none; }
+.composer .cmp-attached { flex: none; }
+.composer .cmp-file.uploading { color: var(--ink2); }
+/* Files dragged over the composer: it outlines itself as where they'll land. */
+.composer.dropping { outline: 2px dashed var(--accent); outline-offset: -4px; }
 .composer .cmp-file { height: 26px; max-width: 280px; display: inline-flex; align-items: center; gap: 6px; padding: 0 2px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; }
 .composer .cmp-file > .icon { color: var(--ink3); }
 .composer .cmp-forward-body { margin-top: 12px; }

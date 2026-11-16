@@ -2,8 +2,8 @@
 // started filled on the server, and saved as the user types. Send holds it on the server for
 // SEND_HOLD_MS with Undo. The Drafts list, the draft itself and its email's row refresh by the live
 // stream's `drafts` key (logic/live.ts).
-import type {DraftCreateInput, DraftOut, DraftSavedOut, DraftUpdateInput, DraftWriteInput, DraftWrittenOut, PeopleOut, Recipient} from '@setpoint/shared';
-import {getJson, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
+import type {DraftCreateInput, DraftFileOut, DraftFilesTakeInput, DraftOut, DraftSavedOut, DraftUpdateInput, DraftWriteInput, DraftWrittenOut, PeopleOut, Recipient} from '@setpoint/shared';
+import {getCached, getJson, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
 import {messagePath} from './mail.ts';
 
 export const DRAFTS_PATH = '/mail/drafts';
@@ -57,4 +57,28 @@ export const loadDraft = (id: number) => getJson<DraftOut>(draftPath(id));
 /** People to suggest for what's typed in a recipient field. */
 export async function suggestPeople(query: string): Promise<Recipient[]> {
   return (await getJson<PeopleOut>(`/mail/people?q=${encodeURIComponent(query)}&limit=6`)).people;
+}
+
+/**
+ * Attaches a file to a draft: its bytes in their own type, its name in the address. Refused 413
+ * `too_large` with the reason when the attachments would cross 25 MB.
+ */
+export async function uploadDraftFile(id: number, file: File): Promise<DraftFileOut> {
+  const added = await sendJson<DraftFileOut>('POST', `${draftPath(id)}/files?name=${encodeURIComponent(file.name)}`, new Blob([file], {type: file.type || 'application/octet-stream'}));
+  updateCached<DraftOut>(draftPath(id), draft => ({...draft, files: [...draft.files.filter(one => one.id !== added.id), added]}));
+  return added;
+}
+
+/** Takes a file off a draft. Its bytes go from the server at once. */
+export async function removeDraftFile(id: number, fileId: number): Promise<void> {
+  updateCached<DraftOut>(draftPath(id), draft => ({...draft, files: draft.files.filter(one => one.id !== fileId)}));
+  await sendJson<void>('DELETE', `${draftPath(id)}/files/${fileId}`);
+}
+
+/** Takes files onto a draft by id: a discarded draft's (Undo), or the draft a kind switch replaces. */
+export async function takeDraftFiles(id: number, ids: number[]): Promise<DraftFileOut[]> {
+  if (!ids.length) return getCached<DraftOut>(draftPath(id))?.files ?? [];
+  const {files} = await sendJson<{files: DraftFileOut[]}>('POST', `${draftPath(id)}/files/take`, {ids} satisfies DraftFilesTakeInput);
+  updateCached<DraftOut>(draftPath(id), draft => ({...draft, files}));
+  return files;
 }

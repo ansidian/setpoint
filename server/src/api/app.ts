@@ -8,7 +8,7 @@ import {
   accountOrderInput, accountUpdateInput, allInput, sentInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, mailpiecesInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
-  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftUpdateInput, draftWriteInput, peopleInput,
+  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput, ATTACHMENTS_MAX_BYTES,
 } from '@setpoint/shared';
 import type {
   ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
@@ -51,6 +51,7 @@ import * as t from '../db/schema.ts';
 import {conflict, forbidden, invalid, parse, SetpointError, unauthorized} from '../errors.ts';
 import {suggestPeople} from '../sending/people.ts';
 import {createDraft, discardDraft, fromOptions, getDraftRow, listDrafts, presentDraft, updateDraft} from '../sending/drafts.ts';
+import {addDraftFile, removeDraftFile, sweepDraftFiles, takeDraftFiles} from '../sending/files.ts';
 import {holdSend, undoSend} from '../sending/send.ts';
 import type {FeedEvent} from '../live/feed.ts';
 import type {Notifier} from '../notify/index.ts';
@@ -140,6 +141,8 @@ export interface AppOptions {
   reading?: Omit<SearchReaderOptions, 'store'>;
   // Where News's image copies are (the data directory's news-images/).
   news?: NewsApiOptions;
+  // Where drafts' attached files are kept (the data directory's draft-files/). Null refuses uploads.
+  draftFiles?: string | null;
   // News sorting, told when the AI keys or settings change, so articles waiting Unsorted are sorted at once.
   newsSort?: Pick<NewsSortWorker, 'configurationChanged'> | null;
   // A removable module's routes (Jobs, from server.ts), mounted under /api behind the session after
@@ -154,6 +157,7 @@ const MAX_STREAMS = 20;
 // How long the browser keeps an email's body page: a sitting's worth, so a release's changes to it reach the reader soon.
 const BODY_KEPT_S = 3600;
 const ICS_READ_PATH = '/api/calendar/import/read';
+const DRAFT_FILE_PATH = /^\/api\/mail\/drafts\/\d+\/files$/;
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
 
 async function body(c: Context): Promise<unknown> {
@@ -172,7 +176,7 @@ const WEB_POLICY = [
   "frame-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
 ].join('; ');
 
-export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, drafting = {}, reading = {}, news = {}, newsSort = null, routes = [], tokenRoutes = []}: AppOptions) {
+export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, drafting = {}, reading = {}, news = {}, draftFiles = null, newsSort = null, routes = [], tokenRoutes = []}: AppOptions) {
   const app = new Hono<Env>();
   const searchReader = new SearchReader({store, ...reading});
   const cookies = cookieNames(publicUrl?.startsWith('https:') ?? false);
@@ -212,7 +216,11 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   // readIcs's words ("over 2 MB") rather than by the body limit.
   const normalLimit = bodyLimit({maxSize: 1024 * 1024});
   const fileLimit = bodyLimit({maxSize: 2 * ICS_MAX_BYTES});
-  app.use('/api/*', (c, next) => (c.req.path === ICS_READ_PATH ? fileLimit(c, next) : normalLimit(c, next)), async (c, next) => {
+  // A draft's file is read up to the most a message carries, and a little over, so one past it is
+  // refused in the limit's words rather than the body limit's.
+  const draftFileLimit = bodyLimit({maxSize: ATTACHMENTS_MAX_BYTES + 1024 * 1024, onError: c => c.json(errorBody('too_large', 'Attachments can total 25 MB, and this file alone is over it.'), 413)});
+  const limitFor = (c: Context) => (c.req.path === ICS_READ_PATH ? fileLimit : c.req.method === 'POST' && DRAFT_FILE_PATH.test(c.req.path) ? draftFileLimit : normalLimit);
+  app.use('/api/*', (c, next) => limitFor(c)(c, next), async (c, next) => {
     c.header('Cache-Control', 'no-store');
     await next();
   });
@@ -632,12 +640,31 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json(suggestPeople(store, q, limit));
   });
   app.post('/api/mail/drafts', async c => c.json(createDraft(store, parse(draftCreateInput, await body(c))), 201));
-  app.get('/api/mail/drafts/:id', c => c.json(presentDraft(getDraftRow(store, id(c.req.param('id'))))));
+  app.get('/api/mail/drafts/:id', c => c.json(presentDraft(store, getDraftRow(store, id(c.req.param('id'))))));
   app.patch('/api/mail/drafts/:id', async c => c.json(updateDraft(store, id(c.req.param('id')), parse(draftUpdateInput, await body(c)))));
   app.delete('/api/mail/drafts/:id', c => {
     discardDraft(store, id(c.req.param('id')));
+    if (draftFiles) sweepDraftFiles(store, draftFiles);
     return c.body(null, 204);
   });
+  // A draft's own files (src/sending/files.ts): the bytes are the body, the name in `name`.
+  const filesDir = () => {
+    if (!draftFiles) throw conflict('no_files_dir', 'This Setpoint keeps no attached files.');
+    return draftFiles;
+  };
+  app.post('/api/mail/drafts/:id/files', async c => {
+    const dir = filesDir();
+    sweepDraftFiles(store, dir);
+    const content = Buffer.from(await c.req.arrayBuffer());
+    if (!content.length) throw invalid('That file is empty.');
+    const filename = parse(z.string().max(1000), c.req.query('name') ?? '');
+    return c.json(addDraftFile(store, dir, id(c.req.param('id')), {filename, mimeType: c.req.header('content-type') ?? '', content}), 201);
+  });
+  app.delete('/api/mail/drafts/:id/files/:file', c => {
+    removeDraftFile(store, filesDir(), id(c.req.param('id')), id(c.req.param('file')));
+    return c.body(null, 204);
+  });
+  app.post('/api/mail/drafts/:id/files/take', async c => c.json({files: takeDraftFiles(store, id(c.req.param('id')), parse(draftFilesTakeInput, await body(c)).ids)}));
   app.post('/api/mail/drafts/:id/send', c => c.json(holdSend(store, id(c.req.param('id')))));
   app.post('/api/mail/drafts/:id/undo', c => c.json(undoSend(store, id(c.req.param('id')))));
   app.post('/api/mail/drafts/:id/write', async c => c.json(await writeDraft(store, id(c.req.param('id')), parse(draftWriteInput, await body(c)), drafting)));

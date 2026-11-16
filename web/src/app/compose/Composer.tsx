@@ -9,8 +9,10 @@
 // is folded behind "…" and opens to be trimmed (the recipient gets the quote as it is left).
 //
 // Keys: ⌘Enter sends, ⌘⇧B shows Cc and Bcc, ⌘J opens help me write's line (WriteLine.tsx), Esc
-// closes it (the draft kept). The format row leads with Send, has help me write after the formats,
-// and ends with Discard (no key). The top right pops it out into a floating window (no
+// closes it (the draft kept). The format row leads with Send, has Attach and help me write after the
+// formats, and ends with Discard (no key). Files come by Attach, a drop anywhere on the composer or
+// a pasted image; each is a chip under the user's text with its name and size, a forward's kept
+// originals among them, and the reason one was refused shows over them. The top right pops it out into a floating window (no
 // key), and the same button docks it again; the format row keeps a place for buttons of its own.
 //
 // It is mounted once, by ComposerRoot, into the host element its places take in turn (place.ts):
@@ -18,14 +20,14 @@
 import type {AccountOut, DraftOut, DraftsOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
-import type {ClipboardEvent, CSSProperties, KeyboardEvent, ReactNode, RefObject} from 'react';
+import type {ClipboardEvent, CSSProperties, DragEvent, KeyboardEvent, ReactNode, RefObject} from 'react';
 import {ApiFailure, useResource} from '../../api/client.ts';
 import {timeZone as userTimeZone} from '../../api/auth.ts';
 import {draftPath, DRAFTS_PATH, FROM_PATH, suggestPeople} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
 import {paragraphs} from '../../logic/body.ts';
 import {chipLabel, forwardLines, quoteOf, readRecipient, readRecipients, replyLine, withRecipients} from '../../logic/composer.ts';
-import {attachmentLabel, attachmentType, hasRemoteContent, remoteImages} from '../../logic/reader.ts';
+import {attachmentType, fileSize, hasRemoteContent, remoteImages} from '../../logic/reader.ts';
 import {TYPE_GLYPHS} from '../Attachments.tsx';
 import {MailFrame} from '../MailFrame.tsx';
 import type {Block} from '../../logic/description.ts';
@@ -36,7 +38,7 @@ import {PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
 import {arrangeWindows, placeWindows} from '../../logic/composer.ts';
-import {canReplyAll, closeComposer, discard, dock, foldWindows, popOut, queueSave, switchKind, toggleMinimized, send, unsaved, useComposers, useSaveError, watchSends} from './composer.ts';
+import {attachFiles, canReplyAll, closeComposer, discard, dismissFileError, dock, foldWindows, popOut, queueSave, removeFile, switchKind, toggleMinimized, send, unsaved, useComposers, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
 import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
 import {useHelpMeWrite, WriteButton, WriteLine} from './WriteLine.tsx';
@@ -96,6 +98,19 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     draftId: draft.id, initial: ({...draft, ...unsaved(draft.id)} as DraftOut).write, body, current: () => latest.current.body,
     onWrite: write => queueSave(draft.id, {write}),
   });
+  // A forward's originals the user took off it: they leave the chips, and the rest go with it.
+  const [removed, setRemoved] = useState(() => unsaved(draft.id).removed_attachments ?? draft.removed_attachments);
+  const originals = draft.kind === 'forward' && message ? message.attachments : [];
+  const removeOriginal = (id: number) => {
+    const next = [...removed, id];
+    setRemoved(next);
+    queueSave(draft.id, {removed_attachments: next});
+  };
+  const attach = (files: File[]) => attachFiles(draft.id, files, originals, removed);
+  const picker = useRef<HTMLInputElement>(null);
+  // A drag with files over the composer: it says where they'll go.
+  const [dropping, setDropping] = useState(false);
+  const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files');
   const failed = draft.send?.state === 'failed' ? draft.send.error : null;
   // Send: an address still being typed becomes a chip first (the field's leaving does it). With
   // no one to send to, the caret goes to To.
@@ -166,7 +181,32 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   };
 
   return (
-    <section className="composer" aria-label="Composer" onKeyDown={onKeyDown}
+    <section className={`composer${dropping ? ' dropping' : ''}`} aria-label="Composer" onKeyDown={onKeyDown}
+      onDragOver={event => {
+        if (!carriesFiles(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        setDropping(true);
+      }}
+      onDragLeave={event => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropping(false);
+      }}
+      onDropCapture={event => {
+        if (!carriesFiles(event)) return;
+        // Before the fields' own drop, which keeps anything else out.
+        event.preventDefault();
+        event.stopPropagation();
+        setDropping(false);
+        attach([...event.dataTransfer.files]);
+      }}
+      // A pasted image (or any file) is attached, not put in the text.
+      onPasteCapture={event => {
+        const files = [...event.clipboardData.files];
+        if (!files.length) return;
+        event.preventDefault();
+        event.stopPropagation();
+        attach(files);
+      }}
       onBlur={event => {
         // Cc and Bcc fold away again when both are empty and the caret has left them.
         if (copies && !fields.cc.length && !fields.bcc.length && !copiesRow.current?.contains(event.relatedTarget as Node | null)) {
@@ -237,8 +277,13 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
       {saveError && <div className="cmp-failed" role="alert"><Icon name="error" size={16} /><span className="grow">{saveError}</span></div>}
       <DescriptionField blocks={fields.body} kind="mail" note={null} label="Message" placeholder="" bar="always" fieldRef={body}
         onChange={blocks => change('body', blocks)}
-        after={draft.kind === 'reply' || draft.kind === 'reply_all' ? <Quote draft={draft} message={message} timeZone={timeZone} />
-          : draft.kind === 'forward' ? <Forwarded draft={draft} message={message} timeZone={timeZone} /> : null}
+        after={(
+          <>
+            <Files draft={draft} originals={originals.filter(file => !removed.includes(file.id))} onRemoveOriginal={removeOriginal} />
+            {draft.kind === 'reply' || draft.kind === 'reply_all' ? <Quote draft={draft} message={message} timeZone={timeZone} />
+              : draft.kind === 'forward' ? <Forwarded message={message} timeZone={timeZone} /> : null}
+          </>
+        )}
         beforeBar={<WriteLine help={help} body={fields.body} />}
         barStart={(
           <button className="btn cmp-send" type="button" onMouseDown={event => event.preventDefault()} onClick={sendNow}>
@@ -247,6 +292,13 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         )}
         barEnd={(
           <>
+            <button className="ibtn sm" type="button" aria-label="Attach files" data-tip="Attach files" onMouseDown={event => event.preventDefault()} onClick={() => picker.current?.click()}>
+              <Icon name="attach_file" size={17} />
+            </button>
+            <input ref={picker} type="file" multiple hidden aria-hidden="true" tabIndex={-1} onChange={event => {
+              attach([...event.currentTarget.files ?? []]);
+              event.currentTarget.value = '';
+            }} />
             <span className="cmp-bar-slot"><WriteButton help={help} /></span>
             <span className="grow" />
             <button className="ibtn sm danger" type="button" aria-label="Discard" data-tip="Discard" onMouseDown={event => event.preventDefault()} onClick={() => discard({...draft, ...latest.current})}>
@@ -289,36 +341,57 @@ function Quote({draft, message, timeZone}: {draft: DraftOut; message: MessageOut
 }
 
 /**
- * A forward's email, in full and not folded: its header lines as the recipient gets them, its
- * attachments as chips that can be taken off (the recipient gets the rest), then the email itself.
+ * The message's files, right under the user's text (above a quote or a forward): a forward's kept originals, then the user's own
+ * in the order attached, then those still uploading. Each is a chip with its name and size, and its
+ * x takes it off. The reason a file was refused shows over them until the next attach.
  */
-function Forwarded({draft, message, timeZone}: {draft: DraftOut; message: MessageOut | undefined; timeZone: string}) {
-  const [removed, setRemoved] = useState(() => unsaved(draft.id).removed_attachments ?? draft.removed_attachments);
+function Files({draft, originals, onRemoveOriginal}: {draft: DraftOut; originals: MessageOut['attachments']; onRemoveOriginal: (id: number) => void}) {
+  const uploads = useUploads(draft.id);
+  const error = useFileError(draft.id);
+  const own = draft.files ?? [];
+  if (!originals.length && !own.length && !uploads.length && !error) return null;
+  const chip = (key: string, file: {filename: string; mime_type: string; size_bytes: number}, remove: (() => void) | null) => (
+    <span key={key} className={`cmp-file${remove ? '' : ' uploading'}`} data-tip={file.filename} data-tip-quick>
+      {remove ? <Icon name={TYPE_GLYPHS[attachmentType(file)]} size={14} /> : <span className="spin" aria-label="Uploading"><Icon name="progress_activity" size={14} /></span>}
+      <span className="ell">{file.filename}</span><span className="ink3 num">{fileSize(file.size_bytes)}</span>
+      {remove && (
+        <button type="button" className="cmp-chip-x" aria-label={`Remove ${file.filename}`} onMouseDown={event => event.preventDefault()} onClick={remove}>
+          <Icon name="close" size={14} />
+        </button>
+      )}
+    </span>
+  );
+  return (
+    <div className="cmp-attached">
+      {error && (
+        <div className="cmp-failed" role="alert">
+          <Icon name="error" size={16} /><span className="grow">{error}</span>
+          <button type="button" className="cmp-chip-x" aria-label="Dismiss" onClick={() => dismissFileError(draft.id)}><Icon name="close" size={14} /></button>
+        </div>
+      )}
+      {(originals.length > 0 || own.length > 0 || uploads.length > 0) && (
+        <div className="cmp-files" aria-label="Attachments">
+          {originals.map(file => chip(`o${file.id}`, file, () => onRemoveOriginal(file.id)))}
+          {own.map(file => chip(`f${file.id}`, file, () => removeFile(draft.id, file.id)))}
+          {uploads.map(upload => chip(`u${upload.key}`, {filename: upload.name, mime_type: '', size_bytes: upload.size}, null))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A forward's email, in full and not folded: its header lines as the recipient gets them, then the
+ * email itself. Its attachments are chips with the user's own files (Files).
+ */
+function Forwarded({message, timeZone}: {message: MessageOut | undefined; timeZone: string}) {
   if (!message) return null;
-  const files = message.attachments.filter(file => !removed.includes(file.id));
-  const remove = (id: number) => {
-    const next = [...removed, id];
-    setRemoved(next);
-    queueSave(draft.id, {removed_attachments: next});
-  };
   const images = remoteImages(message.remote_content, hasRemoteContent(message.body_html), false);
   return (
     <div className="cmp-forward">
       <div className="cmp-forward-head">
         {forwardLines(message, timeZone).map(line => <div key={line}>{line}</div>)}
       </div>
-      {files.length > 0 && (
-        <div className="cmp-files">
-          {files.map(file => (
-            <span key={file.id} className="cmp-file" data-tip={file.filename} data-tip-quick>
-              <Icon name={TYPE_GLYPHS[attachmentType(file)]} size={14} /><span className="ell">{file.filename}</span><span className="ink3">{attachmentLabel(file).split(' · ')[1]}</span>
-              <button type="button" className="cmp-chip-x" aria-label={`Remove ${file.filename}`} onMouseDown={event => event.preventDefault()} onClick={() => remove(file.id)}>
-                <Icon name="close" size={14} />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
       <div className="cmp-forward-body">
         {message.body_html ? <MailFrame messageId={message.id} show={images.load} title={message.subject} /> : (
           <div className="mailtext">{paragraphs(message.body_text).map((lines, index) => <p key={index}>{lines.join('\n')}</p>)}</div>

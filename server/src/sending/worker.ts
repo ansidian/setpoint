@@ -13,7 +13,8 @@
 //   so the later sync finds and keeps the same row: Gmail by its id, iCloud by Message-ID), with the
 //   Message-ID the provider filed, and the draft is deleted. A reply written from another account
 //   than the email's starts a thread of its own there; a forward's attachments come from the
-//   email's own account.
+//   email's own account. The user's own files go after a forward's, and their rows and bytes go
+//   with the draft; a refused send keeps them for Try again.
 // - The provider refused: the draft stays, failed with the provider's words, for Try again. A send
 //   is never retried by itself: a timeout may hide an accepted email.
 import type {Recipient} from '@setpoint/shared';
@@ -34,6 +35,7 @@ import {isoNow, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import type {DraftRow} from './drafts.ts';
 import {noteDraft, sendAddresses} from './drafts.ts';
+import {draftFileRows, dropDraftFiles, readDraftFile, unlinkFiles} from './files.ts';
 
 type MessageRow = typeof t.messages.$inferSelect;
 
@@ -43,6 +45,8 @@ export interface SendWorkerOptions {
   send: (sourceId: number, mail: OutgoingMail) => Promise<SentMail>;
   findSent: (sourceId: number, query: SentQuery) => Promise<{sent: SentMail | null; certain: boolean}>;
   attachment: (sourceId: number, message: {providerId: string}, attachmentId: string) => Promise<AttachmentBytes | null>;
+  // Where the drafts' own files are (src/sending/files.ts). Null: a draft carries none.
+  filesDir?: string | null;
 }
 
 const UNSURE = 'Setpoint lost touch with the provider while sending, and can\'t tell whether it went. Check Sent before you try again.';
@@ -92,13 +96,21 @@ export class SendWorker implements JobWorker {
       if (!accepted.mail) wakeSync(store, sourceId!);
     } catch (error) {
       console.error(`Send ${sending.id}: sent, but not recorded`, error);
-      transaction(store, () => {
+      const files = transaction(store, () => {
+        const ids = dropDraftFiles(store, sending.id);
         store.db.delete(t.drafts).where(eq(t.drafts.id, sending.id)).run();
         noteDraft(store, sending);
         finishJob(store, job.id);
         wakeSync(store, sourceId!);
+        return ids;
       });
+      this.unlink(files);
     }
+  }
+
+  /** A sent draft's files, their rows gone: their bytes go too. */
+  private unlink(ids: number[]) {
+    if (this.options.filesDir) unlinkFiles(this.options.filesDir, ids);
   }
 
   /** The provider's answer: the email it took (sent now, or found from an earlier attempt), or a throw. */
@@ -123,15 +135,18 @@ export class SendWorker implements JobWorker {
       providerId: result.providerId, threadId: result.threadId, receivedAt: isoNow(store), unread: false, trashed: false, archived: false, sent: true, received: false,
     }, store.now()) : null;
     if (fetched && result.rfc822Id) fetched.rfc822Id = result.rfc822Id;
-    transaction(store, () => {
+    const files = transaction(store, () => {
       if (fetched && account) {
         const icloud = account.provider === 'icloud';
         upsertMessages(store, account.id, [fetched], icloud ? {matchByRfc822Id: true, sentCopy: true, threadsByHeaders: true} : {});
       }
+      const ids = dropDraftFiles(store, draft.id);
       store.db.delete(t.drafts).where(eq(t.drafts.id, draft.id)).run();
       noteDraft(store, draft);
       finishJob(store, job.id);
+      return ids;
     });
+    this.unlink(files);
   }
 
   /** The email, built once for the provider: the copy it sends and the one SMTP delivers. */
@@ -144,7 +159,7 @@ export class SendWorker implements JobWorker {
     }, quote: draft.quote} : null;
     const body = composeBody(draft.body, original, store.timeZone);
     const reply = original?.kind === 'reply' ? replyHeaders(answered!) : {inReplyTo: null, references: []};
-    const attachments = original?.kind === 'forward' ? await this.forwarded(answered!, new Set(draft.removedAttachments)) : [];
+    const attachments = [...original?.kind === 'forward' ? await this.forwarded(answered!, new Set(draft.removedAttachments)) : [], ...this.ownFiles(draft)];
     // A thread is the account's own: written from another account, the reply starts a new one there.
     const sameAccount = answered?.accountId === draft.accountId;
     const name = sendAddresses(store).get(draft.accountId)?.find(address => address.address === draft.fromAddress)?.name ?? null;
@@ -175,6 +190,18 @@ export class SendWorker implements JobWorker {
       out.push({filename: file.filename, mimeType: file.mimeType, content: bytes.content});
     }
     return out;
+  }
+
+  /** The user's own files, in the order attached. One gone from the disk fails the send. */
+  private ownFiles(draft: DraftRow): OutgoingAttachment[] {
+    const rows = draftFileRows(this.options.store, draft.id);
+    if (!rows.length) return [];
+    const dir = this.options.filesDir;
+    return rows.map(row => {
+      const content = dir ? readDraftFile(dir, row) : null;
+      if (!content) throw new ProviderError('permanent', `The attached file ${row.filename} is missing from Setpoint; take it off and attach it again.`);
+      return {filename: row.filename, mimeType: row.mimeType, content};
+    });
   }
 }
 

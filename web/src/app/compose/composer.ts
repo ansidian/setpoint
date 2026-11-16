@@ -34,12 +34,21 @@
 // it, or the new message by itself (Drafts' pane off the mail pages), and the pane's composer, if
 // another, gives way. Esc in a window closes it, the draft kept, as in the pane; Esc outside the
 // windows leaves them alone. R, A and F open in the pane, beside any windows.
+//
+// Files: the attach button, a drop on the composer or a pasted image uploads each file to the draft
+// at once, a chip showing it while it goes; one that would take the attachments over 25 MB (with a
+// forward's kept originals) is refused before it leaves, and the server refuses it again, the
+// reason on the composer either way. Send waits for the uploads under way, and stops, the composer
+// back, if one failed. A draft with a file or an upload is never "unwritten". Discard's Undo and the
+// reply-type menu take the files onto the new draft by id (the server keeps a gone draft's files a
+// few minutes for that).
+import {ATTACHMENTS_MAX_BYTES, attachmentsTotal} from '@setpoint/shared';
 import type {DraftCreateInput, DraftKind, DraftOut, DraftRowOut, DraftUpdateInput, FromOut, MessageOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
-import {ApiFailure, getCached, getJson} from '../../api/client.ts';
-import {discardDraft, draftPath, FROM_PATH, loadDraft, saveDraft, sendDraft, startDraft, undoSend, writeDraft} from '../../api/drafts.ts';
+import {ApiFailure, getCached, getJson, setCached} from '../../api/client.ts';
+import {discardDraft, draftPath, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
-import {hasOthers, NO_VERSIONS, recordVersion, unwritten} from '../../logic/composer.ts';
+import {hasOthers, megabytes, NO_VERSIONS, recordVersion, unwritten} from '../../logic/composer.ts';
 import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
@@ -185,7 +194,7 @@ if (typeof window !== 'undefined') {
 function letGo(draftId: number) {
   const draft = getCached<DraftOut>(draftPath(draftId));
   const now = draft ? {...draft, ...owedOf(draftId)} as DraftOut : null;
-  if (now && !now.send && unwritten(now)) {
+  if (now && !now.send && unwritten(now) && !uploadsOf(draftId).length) {
     forgetSaves(draftId);
     discarded.add(draftId);
     void discardDraft(draftId, now.message_id).catch(() => {}).finally(() => discarded.delete(draftId));
@@ -355,8 +364,19 @@ export function switchKind(current: DraftOut, kind: Exclude<DraftKind, 'new'>, {
   const {body, from, to, cc, bcc} = current;
   // Help me write's line and versions are the words' history, so they go with them.
   const write = writeNow(current);
+  // The user's files go with the words, once any upload under way has landed.
+  const settled = settledUploads(current.id);
   void startDraft({kind, message_id: messageId}).then(async next => {
     await saveDraft(next.id, editSubject ? {body, from, to, cc, bcc, write} : {body, from, write});
+    await settled;
+    const files = filesNow(current.id, current);
+    try {
+      await takeDraftFiles(next.id, files.map(file => file.id));
+    } catch (error) {
+      // Refused (over the limit as a forward, with the originals): the draft stays as it was.
+      void discardDraft(next.id, messageId).catch(() => {});
+      throw error;
+    }
     const floating = byDraft(current.id)?.floating ?? false;
     forgetSaves(current.id);
     discarded.add(current.id);
@@ -404,7 +424,7 @@ export function send(draft: DraftOut) {
   const floating = byDraft(draft.id)?.floating ?? false;
   if (byDraft(draft.id)) setComposers(without(draft.id));
   sending.set(draft.id, {subject: draft.subject});
-  const held = flushSave(draft.id).then(() => sendDraft(draft.id));
+  const held = settledUploads(draft.id, {strict: true}).then(() => flushSave(draft.id)).then(() => sendDraft(draft.id));
   let toastId = 0;
   const undo = () => {
     dismissToast(toastId);
@@ -459,7 +479,9 @@ export function discard(draft: DraftOut) {
   if (target) closedOn = floating ? shownEmail() : target.messageId;
   // Help me write's line and versions, as the composer last had them, come back with Undo too.
   const write = writeNow(draft);
+  const files = filesNow(draft.id, draft);
   forgetSaves(draft.id);
+  forgetFiles(draft.id);
   discarded.add(draft.id);
   setComposers(without(draft.id));
   const gone = discardDraft(draft.id, draft.message_id);
@@ -469,7 +491,8 @@ export function discard(draft: DraftOut) {
       const again = await startDraft(draft.message_id === null ? {kind: 'new', account_id: draft.from.account_id} : {kind: draft.kind as Exclude<DraftKind, 'new'>, message_id: draft.message_id});
       const {from, to, cc, bcc, subject, body, quote, removed_attachments} = draft;
       await saveDraft(again.id, {from, to, cc, bcc, subject, body, quote, removed_attachments, write});
-      reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments, write}, {floating});
+      const taken = await takeDraftFiles(again.id, files.map(file => file.id));
+      reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments, write, files: taken}, {floating});
     }).catch(toastFailure('Couldn\'t bring the draft back'));
   }}, 'gone');
 }
@@ -540,4 +563,94 @@ function saveWritten(draftId: number, blocks: Block[]) {
   const now = {...draft, ...owedOf(draftId)} as DraftOut;
   const write = now.write ?? {prompt: '', open: false, ...NO_VERSIONS};
   queueSave(draftId, {body: blocks, write: {...write, ...recordVersion(write, now.body, blocks)}});
+}
+
+// ---- Files ----
+
+/** A file on its way to a draft: its chip shows while it uploads. */
+export interface Upload {
+  key: number;
+  name: string;
+  size: number;
+}
+
+let uploadKeys = 0;
+const NO_UPLOADS: Upload[] = [];
+const uploads = new Map<number, Upload[]>();
+// Each draft's uploads under way, and whether each landed.
+const inFlight = new Map<number, Set<Promise<boolean>>>();
+const fileErrors = new Map<number, string>();
+
+const uploadsOf = (draftId: number) => uploads.get(draftId) ?? NO_UPLOADS;
+export const useUploads = (draftId: number) => useSyncExternalStore(subscribe, () => uploadsOf(draftId));
+export const useFileError = (draftId: number) => useSyncExternalStore(subscribe, () => fileErrors.get(draftId) ?? null);
+
+/** A draft's files as the composer last had them: the cache's, else the draft's own. */
+function filesNow(draftId: number, draft: Pick<DraftOut, 'files'>): DraftOut['files'] {
+  return getCached<DraftOut>(draftPath(draftId))?.files ?? draft.files;
+}
+
+/**
+ * Answers once the draft's uploads under way have settled. `strict` (Send) fails when one of them
+ * failed, so a message never goes without a file the user attached.
+ */
+function settledUploads(draftId: number, {strict = false} = {}): Promise<void> {
+  const pending = [...inFlight.get(draftId) ?? []];
+  return Promise.all(pending).then(results => {
+    if (strict && results.includes(false)) throw new ApiFailure(0, 'file_failed', 'a file didn\'t attach');
+  });
+}
+
+function forgetFiles(draftId: number) {
+  uploads.delete(draftId);
+  inFlight.delete(draftId);
+  fileErrors.delete(draftId);
+}
+
+function setFileError(draftId: number, error: string | null) {
+  if (error === null ? !fileErrors.delete(draftId) : fileErrors.get(draftId) === error) return;
+  if (error !== null) fileErrors.set(draftId, error);
+  notify();
+}
+
+/** Clears the line saying why a file didn't attach. */
+export const dismissFileError = (draftId: number) => setFileError(draftId, null);
+
+/**
+ * Attaches files to a draft (the attach button, a drop, a paste), each uploaded at once. One that
+ * would take the attachments over 25 MB, counting `originals` less those `removed` (a forward's),
+ * is refused here with the reason; the server checks again.
+ */
+export function attachFiles(draftId: number, files: File[], originals: {id: number; size_bytes: number}[] = [], removed: number[] = []) {
+  if (!files.length) return;
+  setFileError(draftId, null);
+  for (const file of files) {
+    const held = filesNow(draftId, {files: []});
+    const total = attachmentsTotal([...held, ...uploadsOf(draftId).map(one => ({size_bytes: one.size}))], originals, removed) + file.size;
+    if (total > ATTACHMENTS_MAX_BYTES) {
+      setFileError(draftId, `Couldn't attach ${file.name}, attachments can total 25 MB, and these would be ${megabytes(total)}.`);
+      continue;
+    }
+    const upload: Upload = {key: ++uploadKeys, name: file.name, size: file.size};
+    uploads.set(draftId, [...uploadsOf(draftId), upload]);
+    notify();
+    const done = uploadDraftFile(draftId, file).then(() => true, (error: unknown) => {
+      if (!discarded.has(draftId)) setFileError(draftId, failureLine(`Couldn't attach ${file.name}`, error));
+      return false;
+    }).finally(() => {
+      uploads.set(draftId, uploadsOf(draftId).filter(one => one !== upload));
+      inFlight.get(draftId)?.delete(done);
+      notify();
+    });
+    inFlight.set(draftId, new Set([...inFlight.get(draftId) ?? [], done]));
+  }
+}
+
+/** A chip's x: the file comes off the draft, and off the server. */
+export function removeFile(draftId: number, fileId: number) {
+  setFileError(draftId, null);
+  void removeDraftFile(draftId, fileId).catch((error: unknown) => {
+    setFileError(draftId, failureLine('Couldn\'t remove the file', error));
+    void loadDraft(draftId).then(draft => setCached(draftPath(draftId), draft), () => {});
+  });
 }

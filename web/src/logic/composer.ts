@@ -80,16 +80,19 @@ export function quoteOf(message: Pick<MessageOut, 'body_html' | 'body_text'>): B
 }
 
 /**
- * Whether nothing was written in a draft, so closing it leaves nothing behind: no words in the body
- * and the quote untouched; for a forward no one to send to either, and for a new message no subject
+ * Whether nothing was written in a draft, so closing it leaves nothing behind: no words in the body,
+ * no file attached and the quote untouched; for a forward no one to send to either, and for a new message no subject
  * too. A reply's recipients and subject are the server's, so its body decides.
  */
-export function unwritten(draft: Pick<DraftOut, 'kind' | 'to' | 'cc' | 'bcc' | 'subject' | 'body' | 'quote'>): boolean {
-  if (!isEmpty(draft.body) || draft.quote !== null) return false;
+export function unwritten(draft: Pick<DraftOut, 'kind' | 'to' | 'cc' | 'bcc' | 'subject' | 'body' | 'quote'> & Partial<Pick<DraftOut, 'files'>>): boolean {
+  if (!isEmpty(draft.body) || draft.quote !== null || (draft.files?.length ?? 0) > 0) return false;
   if (draft.kind === 'reply' || draft.kind === 'reply_all') return true;
   if (draft.to.length + draft.cc.length + draft.bcc.length > 0) return false;
   return draft.kind === 'forward' || !draft.subject.trim();
 }
+
+/** "12.4 MB": a total against the attachments' limit, to one decimal. */
+export const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')} MB`;
 
 const names = (recipients: Recipient[] | undefined) => (recipients ?? []).map(one => (one.name ? `${one.name} <${one.address}>` : one.address)).join(', ');
 

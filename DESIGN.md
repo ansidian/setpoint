@@ -191,7 +191,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   header button (Settings', the editor's) and a Settings row's "…". One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, Reply and an email the user answered (its row's mark, "You replied") `reply`,
-  Reply all `reply_all`, Forward `forward`, popping the composer out `pip` (its window's × is `close`), help me write's undo and redo `undo` and `redo`, Drafts `draft` (an email's row says "Draft" in `alert`
+  Reply all `reply_all`, Forward `forward`, popping the composer out `pip` (its window's × is `close`), help me write's undo and redo `undo` and `redo`, attaching a file `attach_file`, Drafts `draft` (an email's row says "Draft" in `alert`
   instead), an attachment of an unknown type `unknown_document`,
   a Settings page its nav's glyph wherever it's named.
 - **Tones**: `caution` and `alert` are close in hue, so a state's shape says how serious it is
