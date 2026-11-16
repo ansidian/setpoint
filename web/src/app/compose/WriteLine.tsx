@@ -54,6 +54,8 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
   const [shown, setShown] = useState<DraftWriteState>(initial ?? NO_WRITE);
   const write = useRef<DraftWriteState>(shown);
   const selected = useRef<Selected | null>(null);
+  // The selection an ask in flight was about: its answer goes there, wherever the user selects meanwhile.
+  const asked = useRef<Selected | null>(null);
   // Each opening asks the line for the caret.
   const [focusAsks, setFocusAsks] = useState(0);
   const writing = useWriting(draftId);
@@ -79,10 +81,18 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
     };
   }, [body]);
 
+  /**
+   * A kept selection still in the body as it was: not collapsed by a change around it, its words the
+   * same. A body replaced (undo, redo, a whole draft) or typed over leaves none.
+   */
+  const intact = (kept: Selected | null) => (kept && !kept.range.collapsed && body.current?.contains(kept.range.commonAncestorContainer) && kept.range.toString() === kept.text ? kept : null);
+
   /** The body's blocks replaced from outside, through the field's own input so it reads them as typed. */
   const replaceBody = (blocks: Block[]) => {
     const field = body.current;
     if (!field) return;
+    selected.current = null;
+    highlight(null);
     mountBlocks(field, blocks);
     field.dispatchEvent(new Event('input', {bubbles: true}));
   };
@@ -91,10 +101,11 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
   useEffect(() => takeWritten(draftId, (blocks, toSelection) => {
     const before = current();
     if (toSelection) {
-      const kept = selected.current;
+      const kept = intact(asked.current);
+      asked.current = null;
       const field = body.current;
-      if (!kept || !field || !field.contains(kept.range.commonAncestorContainer)) {
-        writeError(draftId, 'The selection changed while it was written; select the text again.');
+      if (!kept || !field) {
+        writeError(draftId, 'The selected text changed while it was written; select it again.');
         return;
       }
       field.focus();
@@ -122,8 +133,8 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
     const field = body.current;
     if (!field) return;
     field.focus();
-    const kept = selected.current;
-    if (kept && field.contains(kept.range.commonAncestorContainer)) {
+    const kept = intact(selected.current);
+    if (kept) {
       document.getSelection()?.removeAllRanges();
       document.getSelection()?.addRange(kept.range);
     }
@@ -131,7 +142,8 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
   const submit = () => {
     const prompt = write.current.prompt.trim();
     if (!prompt || writing.working) return;
-    const kept = selected.current && body.current?.contains(selected.current.range.commonAncestorContainer) ? selected.current : null;
+    const kept = intact(selected.current);
+    asked.current = kept ? {range: kept.range.cloneRange(), text: kept.text} : null;
     void helpMeWrite(draftId, {prompt, body: current(), selection: kept?.text ?? null});
   };
   const step = (stepped: {state: Versions; body: Block[]} | null) => {
@@ -151,7 +163,7 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
     canUndo: (body: Block[]) => canUndo(shown, body),
     canRedo: (body: Block[]) => canRedo(shown, body),
     // The body's selection drawn while the line has the caret.
-    showSelection: () => highlight(selected.current && body.current?.contains(selected.current.range.commonAncestorContainer) ? selected.current.range : null),
+    showSelection: () => highlight(intact(selected.current)?.range ?? null),
   };
 }
 

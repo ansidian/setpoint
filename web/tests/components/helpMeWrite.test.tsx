@@ -13,7 +13,7 @@ import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {clearCache} from '../../src/api/client.ts';
 import {ComposerRoot, ComposerSlot} from '../../src/app/compose/Composer.tsx';
-import {closeComposer, DRAFT_SAVE_MS, openComposers, startComposer, useOpenComposer} from '../../src/app/compose/composer.ts';
+import {closeComposer, DRAFT_SAVE_MS, flushSave, openComposers, startComposer, useOpenComposer, writingOf} from '../../src/app/compose/composer.ts';
 
 const EMAIL = 21;
 const SAM: Recipient = {name: 'Sam Lee', address: 'sam.lee@example.com'};
@@ -36,12 +36,13 @@ const draftOf = (fields: Partial<DraftOut> = {}): DraftOut => ({
 
 /**
  * The server, faked at fetch, keeping the draft's saves. Each ask (`asks`) waits until `answer` lets it go with the blocks
- * written, or `refuse` with the server's words. `saves` are the draft's saves.
+ * written, or `refuse` with the server's words. `saves` are the draft's saves. Send waits until `held`.
  */
 function server(draft: DraftOut) {
   const saves: Record<string, unknown>[] = [];
   const asks: Record<string, unknown>[] = [];
   const waiting: ((response: Response) => void)[] = [];
+  const sends: ((response: Response) => void)[] = [];
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}});
   vi.spyOn(window, 'fetch').mockImplementation((input, init) => {
     const url = new URL(String(input), location.href);
@@ -60,6 +61,7 @@ function server(draft: DraftOut) {
       asks.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
       return new Promise(resolve => waiting.push(resolve));
     }
+    if (url.pathname === `${path}/send` && method === 'POST') return new Promise(resolve => sends.push(resolve));
     if (url.pathname === '/api/mail/from') return Promise.resolve(json(FROM));
     if (url.pathname === '/api/accounts') return Promise.resolve(json(ACCOUNTS));
     if (url.pathname === `/api/mail/messages/${EMAIL}`) return Promise.resolve(json(MESSAGE));
@@ -67,7 +69,9 @@ function server(draft: DraftOut) {
     return Promise.resolve(json({error: {code: 'not_found', message: 'No such thing.'}}, 404));
   });
   return {
-    saves, asks,
+    saves, asks, sends,
+    // Send's hold answered, the draft now held.
+    held: () => sends.shift()!(json({...draft, send: {state: 'held', send_at: SEED_NOW, error: null}})),
     answer: (written: ReturnType<typeof blocks>) => waiting.shift()!(json({blocks: written})),
     refuse: (message: string) => waiting.shift()!(json({error: {code: 'draft_write_failed', message}}, 502)),
   };
@@ -146,6 +150,58 @@ test('with text selected, only the selection is asked about and changed', async 
   await expect.poll(() => fake.asks).toEqual([{prompt: 'warmer', body: blocks('Hi Sam,', 'See you at 7.', 'Alex'), selection: 'See you at 7.'}]);
   fake.answer(blocks('Can\'t wait, see you at 7!'));
   await expect.poll(lines).toEqual(['Hi Sam,', 'Can\'t wait, see you at 7!', 'Alex']);
+});
+
+/** Selects the body's line `index` (from 0), as the user would by dragging over it. */
+function selectLine(index: number) {
+  const range = document.createRange();
+  range.selectNodeContents(document.querySelector('.composer .desc-edit')!.children[index]!);
+  document.getSelection()!.removeAllRanges();
+  document.getSelection()!.addRange(range);
+}
+
+test('the answer goes to the selection it was asked about, not one made while it works', async () => {
+  const fake = await compose(draftOf({body: blocks('Hi Sam,', 'See you at 7.', 'Alex')}));
+  selectLine(1);
+  await userEvent.keyboard('{Meta>}j{/Meta}');
+  await expect.element(line()).toHaveFocus();
+  await userEvent.keyboard('warmer{Enter}');
+  await expect.poll(() => fake.asks.length).toBe(1);
+  selectLine(2);
+  await expect.poll(() => document.getSelection()!.toString()).toBe('Alex');
+  fake.answer(blocks('Can\'t wait!'));
+  await expect.poll(lines).toEqual(['Hi Sam,', 'Can\'t wait!', 'Alex']);
+});
+
+test('a selection the body was replaced under is no selection: the next ask is about the whole body', async () => {
+  const fake = await compose(draftOf({body: blocks('Hi Sam,', 'See you at 7.'), write: {prompt: '', open: true, versions: [blocks('Draft me'), blocks('Hi Sam,', 'See you at 7.')], at: 1}}));
+  selectLine(1);
+  await expect.poll(() => document.getSelection()!.toString()).toBe('See you at 7.');
+  await userEvent.click(page.getByRole('button', {name: 'Undo'}));
+  expect(lines()).toEqual(['Draft me']);
+  await userEvent.fill(line(), 'warmer');
+  await userEvent.keyboard('{Enter}');
+  await expect.poll(() => fake.asks).toEqual([{prompt: 'warmer', body: blocks('Draft me'), selection: null}]);
+});
+
+test('a whole draft answered after Send is pressed is not saved into the draft going out', async () => {
+  const draft = draftOf({body: blocks('Draft me')});
+  const fake = await compose(draft);
+  await userEvent.keyboard('{Meta>}j{/Meta}');
+  await userEvent.keyboard('shorter{Enter}');
+  await expect.poll(() => fake.asks.length).toBe(1);
+  await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+  await expect.poll(() => fake.sends.length).toBe(1);
+  expect(openComposers()).toEqual([]);
+  holdSaves();
+  fake.answer(blocks('Short.'));
+  // The answer is in once the ask stops working.
+  await expect.poll(() => writingOf(draft.id).working).toBe(false);
+  saveNow();
+  // Every save the draft had queued has gone once its chain of saves is through.
+  await flushSave(draft.id);
+  expect(fake.saves.filter(save => 'body' in save)).toEqual([]);
+  fake.held();
 });
 
 test('undo and redo step between the body before the draft and after it', async () => {

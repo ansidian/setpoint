@@ -481,7 +481,9 @@ const IDLE: Writing = {working: false, error: null};
 const writes = new Map<number, Writing>();
 const takers = new Map<number, (blocks: Block[], selection: boolean) => void>();
 
-export const useWriting = (draftId: number) => useSyncExternalStore(subscribe, () => writes.get(draftId) ?? IDLE);
+/** Where a draft's ask stands: working, failed with its words, or neither. */
+export const writingOf = (draftId: number) => writes.get(draftId) ?? IDLE;
+export const useWriting = (draftId: number) => useSyncExternalStore(subscribe, () => writingOf(draftId));
 
 /** The composer showing a draft takes what's written for it; the function it gets back lets go. */
 export function takeWritten(draftId: number, take: (blocks: Block[], selection: boolean) => void) {
@@ -522,7 +524,8 @@ export async function helpMeWrite(draftId: number, input: {prompt: string; body:
 /** A whole body written for a draft no composer shows: saved into it, with a version to undo to. */
 function saveWritten(draftId: number, blocks: Block[]) {
   const draft = getCached<DraftOut>(draftPath(draftId));
-  if (!draft || draft.send || discarded.has(draftId)) return;
+  // A draft sent or sending meanwhile goes as the user left it.
+  if (!draft || draft.send || sending.has(draftId) || discarded.has(draftId)) return;
   const now = {...draft, ...owedOf(draftId)} as DraftOut;
   const write = now.write ?? {prompt: '', open: false, ...NO_VERSIONS};
   queueSave(draftId, {body: blocks, write: {...write, ...recordVersion(write, now.body, blocks)}});
