@@ -1,16 +1,49 @@
 /* The composer, in the reading pane under its email: the email keeps the pane's top and scrolls,
    the composer takes up to 70% of the height under it and scrolls as one past that (fields, body
    and quote), its format row held at its foot. It slides up 12 px over a pane's 180 ms as it opens (DESIGN.md › Motion). */
+/* The composer is mounted once, in a host its places take in turn (place.ts). The place and the host
+   draw no box of their own, so the composer lays out as the pane's or the window's own child. */
+.cmp-place, .cmp-host { display: contents; }
 @keyframes cmp-in { from { opacity: 0; transform: translateY(12px); } }
-.pane > .composer { flex: 0 1 auto; max-height: 70%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; border-top: 1px solid var(--hair); background: var(--page); animation: cmp-in var(--dur-medium) var(--ease); }
-.pane > .rd-scroll:has(+ .composer) { flex-basis: 30%; }
+.composer { overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; background: var(--page); }
+.pane > .cmp-place .composer { flex: 0 1 auto; max-height: 70%; min-height: 0; border-top: 1px solid var(--hair); animation: cmp-in var(--dur-medium) var(--ease); }
+.pane > .rd-scroll:has(+ .cmp-place) { flex-basis: 30%; }
 /* A new message, or a new message's draft, has the pane to itself. */
-.pane.writing > .composer { flex: 1 1 auto; max-height: none; border-top: none; }
+.pane.writing > .cmp-place .composer { flex: 1 1 auto; max-height: none; border-top: none; }
+
+/* Popped out: windows along the main area's foot, 16 px in from its bottom right corner, lined up
+   leftward (placed by ComposerWindows). The row's top stays under the reading pane's tools, and
+   the toast (z-index 35) shows over the windows, so they cover neither. A window grows from its
+   corner as a popover does (DESIGN.md › Motion). Its title folds it to the title bar. */
+@keyframes cmp-pop { from { opacity: 0; transform: translate(4px, 4px) scale(.97); } }
+.cmp-windows { position: absolute; left: 16px; right: 16px; bottom: 16px; top: calc(var(--header) + 48px + 12px); z-index: 30; pointer-events: none; }
+.cmp-window { position: absolute; bottom: 0; height: min(640px, 100%); pointer-events: auto;
+  display: flex; flex-direction: column; border-radius: var(--r-popover); overflow: hidden; background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); transform-origin: bottom right; animation: cmp-pop var(--dur-medium) var(--ease); }
+.cmp-window.shut { display: none; }
+.cmp-window .composer { flex: 1 1 auto; min-height: 0; background: var(--card); }
+.cmp-window .composer .desc-bar { background: var(--card); }
+.cmp-window.min { height: auto; }
+.cmp-window.min .composer > :not(.cmp-title) { display: none; }
+.cmp-window.min .composer .cmp-title { border-bottom: none; }
+
+/* The "+N" chip for windows that don't fit even as title bars, its menu above it. */
+.cmp-more { position: absolute; bottom: 0; pointer-events: auto; }
+.cmp-more-btn { height: 40px; min-width: 64px; display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; border-radius: 999px; font-weight: 500; font-variant-numeric: tabular-nums;
+  background: var(--cardOn); color: var(--ink); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); transition: background var(--dur-fast) var(--ease); }
+@media (hover: hover) { .cmp-more-btn:hover { background: color-mix(in srgb, var(--ink) 6%, var(--cardOn)); } }
+.cmp-more-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 260px; max-width: 380px; transform-origin: bottom left; }
+.cmp-more-menu .menu-i { gap: 8px; }
+
+/* The window's title bar: the subject, or "New message", then the button that docks it. */
+.composer .cmp-title { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 8px 0 20px; flex: none; position: sticky; top: 0; z-index: 3; border-bottom: 1px solid var(--hair); cursor: pointer;
+  background: color-mix(in srgb, var(--ink) 4%, var(--card)); transition: background var(--dur-fast) var(--ease); }
+@media (hover: hover) { .composer .cmp-title:hover { background: color-mix(in srgb, var(--ink) 8%, var(--card)); } }
+.composer .cmp-title-text { flex: 1 1 auto; min-width: 0; text-align: left; font-weight: 500; color: var(--ink); height: 40px; cursor: pointer; }
 
 .composer .cmp-row { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--hair); flex: none; }
 .composer .cmp-head { min-height: 44px; padding-right: 12px; }
 .composer .cmp-label { width: 34px; flex: none; color: var(--ink3); }
-.composer .cmp-popout-slot:empty { display: none; }
 .composer .cmp-copies { color: var(--ink3); }
 
 /* From: the account's dot and label, then the address it sends as. */
@@ -41,13 +74,27 @@
 .composer .desc-field { display: flex; flex-direction: column; flex: 1 0 auto; }
 .composer .desc-edit { flex: 1 0 auto; min-height: 120px; padding: 12px 20px; outline: none; white-space: pre-wrap; cursor: text; line-height: 20px; }
 .composer .desc-edit[data-empty]::before { content: attr(data-placeholder); color: var(--ink3); position: absolute; pointer-events: none; }
-.composer .desc-bar { display: flex; align-items: center; gap: 2px; min-height: 48px; padding: 0 12px 0 14px; border-top: 1px solid var(--hair); flex: none; position: sticky; bottom: 0; z-index: 2; background: var(--page); margin-top: auto; }
+.composer .desc-bar { display: flex; align-items: center; gap: 2px; min-height: 48px; padding: 0 12px 0 12px; border-top: 1px solid var(--hair); flex: none; position: sticky; bottom: 0; z-index: 2; background: var(--page); margin-top: auto; }
 .composer .desc-bar .ibtn[aria-pressed="true"] { background: var(--sub3); color: var(--ink); }
 .composer .desc-bar.linking { gap: 8px; padding-left: 20px; color: var(--ink3); }
 .composer .desc-bar.linking input { min-width: 0; height: 26px; outline: none; color: var(--ink); }
 .composer .desc-bar.linking input::placeholder { color: var(--ink3); opacity: 1; }
 .composer .cmp-bar-slot:empty { display: none; }
-.composer .cmp-send { margin-left: 6px; }
+/* Send leads the format row, the one accent fill in the app: the blue of the pane's resize edge. */
+.composer .cmp-send { margin-right: 8px; background: var(--accent); color: var(--onInk); }
+/* Under the pointer it turns a clearly different blue (brighter, much more chroma, the hue turned
+   25° toward indigo, in both themes) and grows a little; pressed, a step darker and smaller. */
+.composer .cmp-send { transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+@media (hover: hover) { .composer .btn.cmp-send:enabled:hover { transform: scale(1.05); } }
+.composer .btn.cmp-send:enabled:is(:active, [data-echo]) { transform: scale(.97); transition-duration: 80ms; }
+@media (hover: hover) { .composer .btn.cmp-send:enabled:hover { background: oklch(from var(--accent) calc(l + .05) calc(c + .1) calc(h + 25)); } }
+.composer .btn.cmp-send:enabled:is(:active, [data-echo]) { background: oklch(from var(--accent) calc(l - .04) calc(c + .1) calc(h + 25)); }
+
+/* The reply-type menu, before From: the kind's glyph and a caret. */
+.composer .cmp-type { margin-left: -10px; margin-right: 2px; }
+.composer .cmp-type > .btn { gap: 0; padding: 0 4px 0 8px; color: var(--ink2); }
+.composer .cmp-type-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 6; min-width: 200px; transform-origin: top left; }
+.composer .cmp-type-menu .menu-i.plain { padding-left: 36px; }
 .composer .cmp-send .kbd { margin-left: 2px; background: color-mix(in srgb, var(--onInk) 16%, transparent); color: color-mix(in srgb, var(--onInk) 70%, transparent); }
 
 /* The reply's quote, folded behind "…"; opened, it can be trimmed. */

@@ -1,9 +1,10 @@
 // The composer's pure rules as tables: when an email has anyone for Reply all (the server's own fill
-// rule), what a typed or pasted recipient is, a chip's words, and the reply's quote and its line.
+// rule), what a typed or pasted recipient is, a chip's words, the reply's quote and its line, and
+// how the composer's windows fold and hide when they don't all fit.
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {chipLabel, forwardLines, hasOthers, quoteOf, readRecipient, readRecipients, replyLine, unwritten, withRecipients} from '../src/logic/composer.ts';
+import {arrangeWindows, chipLabel, forwardLines, hasOthers, placeWindows, quoteOf, readRecipient, readRecipients, replyLine, unwritten, withRecipients} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
   accounts: [
@@ -113,5 +114,29 @@ describe('a forward\'s header lines, as the server writes them', () => {
     ]],
   ])('%s', (_name, message, expected) => {
     expect(forwardLines(message, SEED_TIME_ZONE)).toEqual(expected);
+  });
+});
+
+describe('the composer\'s windows, when they don\'t all fit', () => {
+  // Keys 1, 2, 3… popped out in that order; `touched` says which was touched longest ago.
+  const windows = (touched: number[], minimized: number[] = []) => touched.map((at, index) => ({key: index + 1, touched: at, minimized: minimized.includes(index + 1)}));
+  test.each<[string, ReturnType<typeof windows>, number, {fold: number[]; hidden: number[]}]>([
+    ['two fit side by side', windows([1, 2]), 1200, {fold: [], hidden: []}],
+    // 560 × 3 + 2 gaps is 1704; folding the oldest makes 1464, the next 1224.
+    ['the one touched longest ago folds first, then the next', windows([1, 2, 3]), 1300, {fold: [1, 2], hidden: []}],
+    ['the oldest touched is the one to fold, whatever its place', windows([3, 1, 2]), 1500, {fold: [2], hidden: []}],
+    ['one already folded stays, and counts as a bar', windows([1, 2, 3], [1]), 1500, {fold: [], hidden: []}],
+    // Three bars and a window are 1556; hiding the oldest makes 1224 plus the chip's 76.
+    ['once even the bars don\'t fit, the oldest go into the chip', windows([1, 2, 3, 4]), 1300, {fold: [1, 2, 3], hidden: [1]}],
+    ['the window touched last always stays as it is', windows([1, 2]), 400, {fold: [1], hidden: [1]}],
+    ['one window wider than the room only narrows', windows([1]), 400, {fold: [], hidden: []}],
+  ])('%s', (_, slots, room, expected) => {
+    expect(arrangeWindows(slots, room)).toEqual(expected);
+  });
+
+  test('they line up leftward in the order they popped out, a hidden one taking no room, the chip after the last shown', () => {
+    const {at, end} = placeWindows([{key: 1, minimized: true}, {key: 2, minimized: true}, {key: 3, minimized: false}], [1], 1300);
+    expect([...at]).toEqual([[1, {right: 0, width: 320}], [2, {right: 0, width: 320}], [3, {right: 332, width: 560}]]);
+    expect(end).toBe(904);
   });
 });

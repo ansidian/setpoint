@@ -589,7 +589,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // The pane beside the list: the open email, else the selection, else empty.
   // A new message has the pane to itself while no email is open.
   const composer = useOpenComposer();
-  const writing = !phone && open === null && composer?.messageId === null ? composer : null;
+  const writing = !phone && open === null && composer?.messageId === null && !composer.floating ? composer : null;
   const showsSelection = open === null && selected.length > 0 && !compact && !writing;
   const pane = useEmptyPane(open !== null || showsSelection || writing !== null, PANE_PATHS);
 
@@ -644,7 +644,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, '1') && (searching || phone || view !== 'all')) run(() => navigate(toInbox()));
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
-        else if (open !== null && openComposer()?.messageId === open) run(closeComposer);
+        else if (open !== null && openComposer()?.messageId === open && !openComposer()?.floating) run(closeComposer);
         else if (writing) run(closeComposer);
         else if (open !== null) run(close);
         else if (pane.shown) run(pane.close);
@@ -779,7 +779,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}
         {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}
-        {writing && <NewMessagePane open={writing} accounts={accounts} timeZone={zone} />}
+        {writing && <NewMessagePane open={writing} />}
         {showsSelection && (
           <SelectionPane rows={selectedRows} on={forSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
         )}

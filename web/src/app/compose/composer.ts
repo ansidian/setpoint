@@ -1,5 +1,5 @@
-// The composer's state, one for the whole app: one composer is open at a time, in the reading pane
-// under its email. Opening another email leaves the draft where it is (its row carries the draft
+// The composers' state, one for the whole app: at most one composer is in the reading pane, under
+// its email, and any number more in windows. Opening another email leaves the draft where it is (its row carries the draft
 // mark), and its composer opens again when the email is shown again. Esc closes it, keeping the
 // draft, and it stays closed while that email stays shown.
 //
@@ -19,8 +19,21 @@
 // Discard has no key: the draft goes at once, and the toast's Undo starts it again as it was. A
 // draft nothing was written in goes quietly when its composer closes.
 //
-// A new message (C) has no email to stay with: it opens in the pane by itself, and showing an email
-// closes it into Drafts. On Drafts, the open draft is the page's own (its address names it).
+// A new message (C) has no email to stay with: it opens in a window of its own. Docked into the
+// pane, it has the pane by itself, and showing an email closes it into Drafts. On Drafts, the open
+// draft is the page's own (its address names it).
+//
+// Popping out: the composer leaves the pane for a window in the main area's bottom right corner,
+// which stays up over other mail and every other page. Windows line up leftward in the order they
+// popped out. It is one composer in two places: each stays mounted in a host element of its own
+// (place.ts) that the pane and its window take in turn, so what's typed, the fold, Cc and Bcc and
+// the caret carry across. A window's title (the subject, or "New message") folds it to its title
+// bar and back; when the windows don't all fit, the one touched longest ago folds first, and once
+// even the bars don't fit the oldest go into a "+N" chip (logic/composer.ts › arrangeWindows). A
+// window's pop-out button docks it: the pane shows the draft's own email with the composer under
+// it, or the new message by itself (Drafts' pane off the mail pages), and the pane's composer, if
+// another, gives way. Esc in a window closes it, the draft kept, as in the pane; Esc outside the
+// windows leaves them alone. R, A and F open in the pane, beside any windows.
 import type {DraftCreateInput, DraftKind, DraftOut, DraftRowOut, DraftUpdateInput, FromOut, MessageOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {ApiFailure, getCached, getJson} from '../../api/client.ts';
@@ -29,6 +42,7 @@ import {messagePath} from '../../api/mail.ts';
 import {hasOthers, unwritten} from '../../logic/composer.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
+import {composerHost, whenPlaced} from './place.ts';
 
 /** How long after the last change a draft is saved. */
 export const DRAFT_SAVE_MS = 600;
@@ -40,11 +54,31 @@ export interface OpenComposer {
   // Where the caret lands: the body when it already has someone to go to, else To. None when it
   // opened again by itself on its email, so J and K go on stepping through the list.
   focus: 'body' | 'to' | null;
+  // Opened by Edit subject: its subject is a field, and the reply-type menu is gone.
+  subjectEdited: boolean;
   // A new one for each opening, so a composer opened again draws the draft afresh.
   key: number;
+  // Popped out into the floating window, else in the reading pane.
+  floating: boolean;
+  // The window folded to its title bar (a click on the title, or to make room for another).
+  minimized: boolean;
+  // When it was last opened, popped out or brought back, so the window touched longest ago is the
+  // first to fold when they don't all fit.
+  touched: number;
 }
 
-let open: OpenComposer | null = null;
+// Every open composer: at most one in the reading pane, the rest in windows, in the order they
+// popped out (the first at the right).
+let composers: OpenComposer[] = [];
+let touches = 0;
+/** The composer in the reading pane, if one is. */
+const docked = (): OpenComposer | null => composers.find(one => !one.floating) ?? null;
+const byDraft = (draftId: number): OpenComposer | null => composers.find(one => one.draftId === draftId) ?? null;
+function setComposers(next: OpenComposer[]) {
+  composers = next;
+  notify();
+}
+const without = (draftId: number) => composers.filter(one => one.draftId !== draftId);
 // The email whose composer the user closed, so it doesn't open again by itself while it's shown.
 let closedOn: number | null = null;
 let opened = 0;
@@ -56,9 +90,14 @@ const subscribe = (listener: () => void) => {
   return () => listeners.delete(listener);
 };
 
-export const useOpenComposer = () => useSyncExternalStore(subscribe, () => open);
+/** The composer in the reading pane. */
+export const useOpenComposer = () => useSyncExternalStore(subscribe, docked);
+/** Every open composer, the windows in the order they popped out. */
+export const useComposers = () => useSyncExternalStore(subscribe, () => composers);
 export const useSaveError = (draftId: number) => useSyncExternalStore(subscribe, () => saveErrors.get(draftId) ?? null);
-export const openComposer = () => open;
+export const openComposer = docked;
+/** Every open composer, as useComposers has them. */
+export const openComposers = () => composers;
 
 // ---- Saving ----
 
@@ -147,22 +186,38 @@ function letGo(draftId: number) {
   void flushSave(draftId).catch(() => {});
 }
 
-function show(draft: Pick<DraftOut, 'id' | 'message_id' | 'kind' | 'to' | 'cc' | 'bcc'>, {caret = true} = {}) {
-  if (open && open.draftId !== draft.id) letGo(open.draftId);
+/** Opens the draft in the pane (the one there gives way) or in a window of its own. */
+function show(draft: Pick<DraftOut, 'id' | 'message_id' | 'kind' | 'to' | 'cc' | 'bcc'>, {caret = true, floating = false, subject = false} = {}) {
+  let rest = without(draft.id);
+  const pane = rest.find(one => !one.floating);
+  if (!floating && pane) {
+    letGo(pane.draftId);
+    rest = rest.filter(one => one !== pane);
+  }
   const someone = draft.to.length + draft.cc.length + draft.bcc.length > 0;
-  open = {draftId: draft.id, messageId: draft.message_id, kind: draft.kind, focus: caret ? (someone ? 'body' : 'to') : null, key: ++opened};
   closedOn = null;
-  notify();
+  setComposers([...rest, {
+    draftId: draft.id, messageId: draft.message_id, kind: draft.kind, focus: caret ? (subject || someone ? 'body' : 'to') : null, subjectEdited: subject,
+    key: ++opened, floating, minimized: false, touched: ++touches,
+  }]);
+}
+
+/** Changes one open composer. */
+function change(draftId: number, changes: Partial<OpenComposer>) {
+  setComposers(composers.map(one => (one.draftId === draftId ? {...one, ...changes} : one)));
 }
 
 /** Starts (or takes up again) a draft of `kind` on an email, or a new message, and opens it. */
 export function startComposer(input: DraftCreateInput) {
-  if (open && input.kind !== 'new' && open.messageId === input.message_id && open.kind === input.kind) {
-    // Already open: R again puts the caret back in it.
-    document.querySelector<HTMLElement>('.composer .desc-edit')?.focus();
+  const already = input.kind === 'new' ? null : composers.find(one => one.messageId === input.message_id && one.kind === input.kind);
+  if (already) {
+    // Already open: R again brings its window back and puts the caret in it.
+    if (already.floating) change(already.draftId, {minimized: false, touched: ++touches});
+    whenPlaced(already.key, () => composerHost(already.key).querySelector<HTMLElement>('.desc-edit')?.focus());
     return;
   }
-  void startDraft(input).then(show, toastFailure(input.kind === 'forward' ? 'Couldn\'t start the forward' : input.kind === 'new' ? 'Couldn\'t start a message' : 'Couldn\'t start the reply'));
+  // A new message starts popped out, so the page stays as it is under it.
+  void startDraft(input).then(draft => show(draft, {floating: input.kind === 'new'}), toastFailure(input.kind === 'forward' ? 'Couldn\'t start the forward' : input.kind === 'new' ? 'Couldn\'t start a message' : 'Couldn\'t start the reply'));
 }
 
 /** Whether email `id` has anyone for Reply all, from the email and From as they've loaded, else null. */
@@ -185,53 +240,133 @@ export function answerKey(id: number, kind: 'reply' | 'reply_all' | 'forward') {
   }, () => {});
 }
 
-/** Esc, or the composer's close: it closes, the draft kept. */
-export function closeComposer() {
-  if (!open) return;
-  letGo(open.draftId);
-  closedOn = open.messageId;
-  open = null;
-  notify();
+/** The email the reading pane shows, on the Inbox or Sent. */
+function shownEmail(): number | null {
+  const route = currentRoute();
+  return route.page === 'inbox' || route.page === 'sent' ? route.open : null;
+}
+
+/** Esc, or the page's Esc on the pane's composer: it closes, the draft kept. */
+export function closeComposer(draftId = docked()?.draftId) {
+  const target = draftId === undefined ? null : byDraft(draftId);
+  if (!target) return;
+  letGo(target.draftId);
+  // A window closing leaves the pane as it is: the email shown there doesn't open its own draft now.
+  closedOn = target.floating ? shownEmail() : target.messageId;
+  setComposers(without(target.draftId));
+}
+
+/** The composer's pop-out: it leaves the pane for a window of its own, as it is. */
+export function popOut(draftId: number) {
+  const target = byDraft(draftId);
+  if (!target || target.floating) return;
+  // Taken out and put last, so it lines up after the windows already up.
+  setComposers([...without(draftId), {...target, floating: true, minimized: false, touched: ++touches}]);
+}
+
+/** A click on a window's title folds it to the title bar, or brings it back. */
+export function toggleMinimized(draftId: number) {
+  const target = byDraft(draftId);
+  if (!target?.floating) return;
+  change(draftId, target.minimized ? {minimized: false, touched: ++touches} : {minimized: true});
+}
+
+/** The windows don't all fit: these fold to their title bars, the oldest touched first. */
+export function foldWindows(keys: number[]) {
+  if (!keys.length) return;
+  setComposers(composers.map(one => (keys.includes(one.key) ? {...one, minimized: true} : one)));
+}
+
+/** A window's pop-out button: the composer goes back into the reading pane, under its email or by itself. */
+export function dock(draftId: number) {
+  const target = byDraft(draftId);
+  if (!target?.floating) return;
+  const pane = docked();
+  if (pane) letGo(pane.draftId);
+  showPaneFor({id: target.draftId, message_id: target.messageId});
+  // The pane opens on that email now: its draft is this one.
+  closedOn = null;
+  setComposers(composers.filter(one => one !== pane).map(one => (one === target ? {...one, floating: false, minimized: false, touched: ++touches} : one)));
 }
 
 /** Whether a draft can open by itself: not while its send is held or under way, or it's going. */
 const openable = (row: DraftRowOut) => row.send_state !== 'held' && row.send_state !== 'sending' && !sending.has(row.id) && !discarded.has(row.id);
 
 /**
- * The reader shows `messageId`: its draft's composer opens again, the latest one when it has more
- * than one, unless the user closed it here. Showing another email lets the closed one open again.
+ * The reader shows `messageId`: its draft's composer opens again in the pane, the latest one when
+ * it has more than one, unless the user closed it here or it's up in a window. Showing another
+ * email lets the closed one open again.
  */
 export function showEmail(messageId: number, drafts: DraftRowOut[] | undefined) {
   if (closedOn !== null && closedOn !== messageId) closedOn = null;
-  // A new message gives the pane to the email, kept in Drafts.
-  if (open && open.messageId === null) closeComposer();
-  if (!drafts || closedOn === messageId || open?.messageId === messageId) return;
+  // A new message in the pane gives it to the email, kept in Drafts.
+  const pane = docked();
+  if (pane && pane.messageId === null) closeComposer(pane.draftId);
+  const taken = () => closedOn === messageId || composers.some(one => one.messageId === messageId);
+  if (!drafts || taken()) return;
   const draft = drafts.filter(row => row.message_id === messageId && openable(row)).sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
   if (!draft) return;
   void loadDraft(draft.id).then(full => {
     // Something else opened meanwhile, or it was sent or discarded.
-    if (closedOn === messageId || open?.messageId === messageId || sending.has(full.id) || discarded.has(full.id)) return;
+    if (taken() || sending.has(full.id) || discarded.has(full.id)) return;
     show(full, {caret: false});
   }, () => {});
 }
 
-/** C: a new message, from the account asked for (Sent's selected one), else the one last sent from. */
+/**
+ * C: a new message, from the account asked for (Sent's selected one), else the one last sent from.
+ * It opens popped out, over whatever the page shows.
+ */
 export function newMessage(accountId?: number) {
-  const route = currentRoute();
-  // The pane is the message's: an email open there gives way.
-  if ((route.page === 'inbox' || route.page === 'sent') && route.open !== null) navigate({...route, open: null});
-  if (route.page === 'drafts' && route.open !== null) navigate({page: 'drafts', open: null});
   startComposer({kind: 'new', ...(accountId ? {account_id: accountId} : {})});
 }
 
-/** Drafts' row: its draft opens in Drafts' pane, the caret in it. */
+/** Drafts' row: its draft opens in Drafts' pane, the caret in it. One up in a window docks there. */
 export function openDraft(draftId: number) {
-  if (open?.draftId === draftId) return;
+  const target = byDraft(draftId);
+  if (target) {
+    if (!target.floating) return;
+    const pane = docked();
+    if (pane) letGo(pane.draftId);
+    setComposers(composers.filter(one => one !== pane).map(one => (one === target ? {...one, floating: false, minimized: false, touched: ++touches} : one)));
+    return;
+  }
   void loadDraft(draftId).then(draft => show(draft), toastFailure('Couldn\'t open the draft'));
 }
 
-/** Opens the draft, showing its email first when the page shows another (Undo, a failure's Open). */
-function reopen(draft: DraftOut) {
+/**
+ * The reply-type menu: the draft becomes a reply, a reply to all or a forward of the same email,
+ * keeping what was written and From, in the same place. The draft it was goes, and a draft of the
+ * new kind the email already had takes the text. Edit subject is a forward that keeps the
+ * recipients too, its subject shown as a field and the menu gone, the caret in the body.
+ */
+export function switchKind(current: DraftOut, kind: Exclude<DraftKind, 'new'>, {editSubject = false} = {}) {
+  // A forward's own Edit subject only shows the field (the composer does that).
+  if (current.message_id === null || current.kind === kind) return;
+  const messageId = current.message_id;
+  const {body, from, to, cc, bcc} = current;
+  void startDraft({kind, message_id: messageId}).then(async next => {
+    await saveDraft(next.id, editSubject ? {body, from, to, cc, bcc} : {body, from});
+    const floating = byDraft(current.id)?.floating ?? false;
+    forgetSaves(current.id);
+    discarded.add(current.id);
+    composers = without(current.id);
+    void discardDraft(current.id, messageId).catch(() => {}).finally(() => discarded.delete(current.id));
+    show(editSubject ? {...next, to, cc, bcc} : next, {floating, subject: editSubject});
+  }).catch(toastFailure(kind === 'forward' ? 'Couldn\'t start the forward' : 'Couldn\'t start the reply'));
+}
+
+/**
+ * Opens the draft, showing its email first when the page shows another (Undo, a failure's Open).
+ * One that was in a window opens in a window again, wherever the user is.
+ */
+function reopen(draft: DraftOut, {floating = false} = {}) {
+  if (!floating) showPaneFor(draft);
+  show(draft, {floating});
+}
+
+/** The page whose pane a draft opens in: its own email's, the new message's own, or Drafts'. */
+function showPaneFor(draft: Pick<DraftOut, 'id' | 'message_id'>) {
   const route = currentRoute();
   if (route.page === 'drafts') {
     if (route.open !== draft.id) navigate({page: 'drafts', open: draft.id});
@@ -244,7 +379,6 @@ function reopen(draft: DraftOut) {
     const shown = (route.page === 'inbox' || route.page === 'sent') && route.open === draft.message_id;
     if (!shown) navigate(route.page === 'sent' ? {...route, open: draft.message_id} : route.page === 'inbox' ? {...route, open: draft.message_id} : {page: 'inbox', open: draft.message_id});
   }
-  show(draft);
 }
 
 // ---- Send, Undo, failures ----
@@ -256,10 +390,9 @@ const discarded = new Set<number>();
 
 /** ⌘Enter or Send (and Try again): the composer closes and the toast offers Undo while the server holds it. */
 export function send(draft: DraftOut) {
-  if (open?.draftId === draft.id) {
-    open = null;
-    notify();
-  }
+  // Undo, or a refusal, brings it back where it was sent from.
+  const floating = byDraft(draft.id)?.floating ?? false;
+  if (byDraft(draft.id)) setComposers(without(draft.id));
   sending.set(draft.id, {subject: draft.subject});
   const held = flushSave(draft.id).then(() => sendDraft(draft.id));
   let toastId = 0;
@@ -267,7 +400,7 @@ export function send(draft: DraftOut) {
     dismissToast(toastId);
     void held.then(() => undoSend(draft.id)).then(back => {
       sending.delete(draft.id);
-      reopen(back);
+      reopen(back, {floating});
     }, (error: unknown) => {
       if (error instanceof ApiFailure && error.code === 'draft_not_held') showToast('Too late to undo, it\'s already sending', null, 'failed');
       else if (!(error instanceof ApiFailure && error.code === 'draft_sending')) toastFailure('Couldn\'t undo it')(error);
@@ -280,7 +413,7 @@ export function send(draft: DraftOut) {
     sending.delete(draft.id);
     dismissToast(toastId);
     toastFailure('Couldn\'t send it')(error);
-    void loadDraft(draft.id).then(reopen, () => {});
+    void loadDraft(draft.id).then(back => reopen(back, {floating}), () => {});
   });
 }
 
@@ -301,7 +434,7 @@ export function watchSends(drafts: DraftRowOut[] | undefined) {
     void loadDraft(id).then(draft => {
       const words = draft.send?.error ?? 'the provider refused it';
       showToast(`Couldn't send ${subject ? `"${subject}"` : 'it'}, ${words}`, {label: 'Open', run: () => reopen(draft)}, 'failed');
-      if (draft.message_id !== null && open === null) {
+      if (draft.message_id !== null && docked() === null && !byDraft(draft.id)) {
         const route = currentRoute();
         if ((route.page === 'inbox' || route.page === 'sent') && route.open === draft.message_id) show(draft, {caret: false});
       }
@@ -311,13 +444,12 @@ export function watchSends(drafts: DraftRowOut[] | undefined) {
 
 /** Discard: the draft goes at once, and Undo starts it again with everything it had. */
 export function discard(draft: DraftOut) {
-  if (open?.draftId === draft.id) {
-    closedOn = open.messageId;
-    open = null;
-  }
+  const target = byDraft(draft.id);
+  const floating = target?.floating ?? false;
+  if (target) closedOn = floating ? shownEmail() : target.messageId;
   forgetSaves(draft.id);
   discarded.add(draft.id);
-  notify();
+  setComposers(without(draft.id));
   const gone = discardDraft(draft.id, draft.message_id);
   gone.catch(toastFailure('Couldn\'t discard the draft')).finally(() => discarded.delete(draft.id));
   showToast('Draft discarded', {label: 'Undo', run: () => {
@@ -325,7 +457,7 @@ export function discard(draft: DraftOut) {
       const again = await startDraft(draft.message_id === null ? {kind: 'new', account_id: draft.from.account_id} : {kind: draft.kind as Exclude<DraftKind, 'new'>, message_id: draft.message_id});
       const {from, to, cc, bcc, subject, body, quote, removed_attachments} = draft;
       await saveDraft(again.id, {from, to, cc, bcc, subject, body, quote, removed_attachments});
-      reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments});
+      reopen({...again, from, to, cc, bcc, subject, body, quote, removed_attachments}, {floating});
     }).catch(toastFailure('Couldn\'t bring the draft back'));
   }}, 'gone');
 }

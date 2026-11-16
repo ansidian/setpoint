@@ -2,17 +2,19 @@
 // seed's moment so a held send stays held: Reply all from the keyboard, sent behind the "Sending"
 // toast and brought back by Undo as it was; a send the provider refused, back on its email with the
 // provider's words and Try again; a draft that outlives a reload, its row saying "Draft"; a new
-// message from C, kept in Drafts, its sidebar row and its page; From's alias and Sent's account; a
-// composer left with nothing written, which leaves no draft; and a forward, its attachment taken off. The
-// fields, chips, the fold and the saving are components/composer.test.tsx's, a send that reaches the
-// dev provider the server's (sendDev.test.ts).
+// message from C in a window, kept in Drafts, its sidebar row and its page; From's alias and Sent's
+// account; a composer left with nothing written, which leaves no draft; a forward, its attachment
+// taken off; and a reply popped out, kept up while other mail and Calendar show, and docked back on
+// its email. The fields, chips, the fold, the saving and what carries across a pop-out are
+// components/composer.test.tsx's, how windows fold when they don't fit composer.test.ts's, a send
+// that reaches the dev provider the server's (sendDev.test.ts).
 import type {AllOut, DraftOut, DraftsOut} from '@setpoint/shared';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, holdToast, point, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -23,7 +25,8 @@ async function idOf(setpoint: Setpoint, subject: string): Promise<number> {
 }
 
 const drafts = async (setpoint: Setpoint) => (await setpoint.api<DraftsOut>('GET', '/mail/drafts')).drafts;
-const composer = (page: Page) => page.locator('.pane .composer');
+// The one composer each journey has open, in the pane or in a window.
+const composer = (page: Page) => page.locator('.composer');
 const chips = (page: Page, field: string) => composer(page).locator(`.cmp-row:has(input[aria-label="${field}"]) .cmp-chip`).evaluateAll(found => found.map(chip => chip.firstChild?.textContent));
 const body = (page: Page) => composer(page).getByRole('textbox', {name: 'Message'});
 
@@ -131,7 +134,7 @@ test('a draft outlives a reload: its row says "Draft", its composer opens again 
   }
 });
 
-test('C writes a new message by itself from the account last sent from; closed, it waits in Drafts, whose row and count show, and opens alone there', async () => {
+test('C writes a new message in a window from the account last sent from; closed, it waits in Drafts, whose row and count show, and opens alone there', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -141,7 +144,8 @@ test('C writes a new message by itself from the account last sent from; closed, 
     await setpoint.idle();
     assert.equal(await page.locator('.sb .nav.sub', {hasText: 'Drafts'}).count(), 0);
     await page.keyboard.press('c');
-    await page.locator('.pane.writing .composer').waitFor();
+    await page.locator('.cmp-window .composer').waitFor();
+    assert.equal(await page.locator('.cmp-window .cmp-title-text').textContent(), 'New message');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'To');
     // The seed's last sent mail went from Work.
     assert.equal(await composer(page).locator('.cmp-from > button').textContent(), 'Workuser@work.example.org');
@@ -211,7 +215,7 @@ test('Drafts lists the newest first: a reply opens under its email, a refused on
     await page.goto(`${setpoint.base}/sent?account=5`);
     await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('c');
-    await page.locator('.pane.writing .composer').waitFor();
+    await page.locator('.cmp-window .composer').waitFor();
     assert.equal(await composer(page).locator('.cmp-from > button').textContent(), 'iClouduser@example.net');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -219,19 +223,21 @@ test('Drafts lists the newest first: a reply opens under its email, a refused on
   }
 });
 
-test('a composer left with nothing written leaves nothing in Drafts: C, then an email opened; R, then Esc', async () => {
+test('a composer left with nothing written leaves nothing in Drafts: C, then Esc in its window; R, then Esc', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const id = await idOf(setpoint, 'Dinner Friday?');
     const page = await openEmail(setpoint, id);
     await page.keyboard.press('c');
-    await page.locator('.pane.writing .composer').waitFor();
+    await page.locator('.cmp-window .composer').waitFor();
     await until('the new message is a draft', () => drafts(setpoint), found => found.length === 1);
     // The sidebar's Drafts row is seen each time before it's read as gone: the sidebar learns of a
     // draft's end by its own refresh, after the server's answer.
     const draftsRow = page.locator('.sb .nav.sub', {hasText: 'Drafts'});
     await draftsRow.waitFor();
-    await page.locator(`.list .row[data-id="${id}"]`).click();
+    await page.keyboard.press('Escape');
+    await until('the window closes', () => page.locator('.cmp-window').count(), count => count === 0);
+    // The email the pane shows stays.
     await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
     await until('the untouched message is gone', () => drafts(setpoint), found => found.length === 0);
     await draftsRow.waitFor({state: 'detached'});
@@ -256,7 +262,8 @@ test('F forwards: the email in full under the body with its attachment as a chip
     await page.keyboard.press('f');
     await body(page).waitFor();
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'To');
-    assert.equal(await composer(page).getByRole('textbox', {name: 'Subject'}).inputValue(), 'Fwd: Lease renewal terms');
+    // Its subject is the server's, with no field for it until Edit subject asks.
+    assert.equal(await composer(page).getByRole('textbox', {name: 'Subject'}).count(), 0);
     await composer(page).locator('.cmp-forward-head', {hasText: 'From: Dana Whitfield <dana.whitfield@parksideapts.example>'}).waitFor();
     await composer(page).locator('.cmp-forward .mailtext', {hasText: 'Unit 4B'}).waitFor();
     assert.deepEqual(await composer(page).locator('.cmp-file').allTextContents(), ['Renewal agreement.pdf184 KB']);
@@ -273,6 +280,48 @@ test('F forwards: the email in full under the body with its attachment as a chip
     assert.equal(sent.kind, 'forward');
     assert.deepEqual(sent.to, [{name: null, address: 'mom@example.net'}]);
     assert.equal(sent.removed_attachments.length, 1);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a reply popped out stays up while other mail and Calendar show, clear of the reader\'s tools, and its window\'s pop-out button docks it back on its email as it was', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const dinner = await idOf(setpoint, 'Dinner Friday?');
+    const lease = await idOf(setpoint, 'Lease renewal terms');
+    const page = await openEmail(setpoint, dinner);
+    await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().click();
+    await body(page).waitFor();
+    await page.keyboard.type('Count me in.');
+    await composer(page).getByRole('button', {name: 'Pop out'}).click();
+    const window = page.locator('.cmp-window');
+    await window.locator('.cmp-title-text', {hasText: 'Re: Dinner Friday?'}).waitFor();
+    assert.equal(await page.locator('.pane .composer').count(), 0);
+    // The caret came along.
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Message');
+
+    // Another email: the window stays, within the page and below the reader's tools.
+    await page.locator(`.list .row[data-id="${lease}"]`).click();
+    await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    await window.locator('.cmp-title-text', {hasText: 'Re: Dinner Friday?'}).waitFor();
+    const [box, tools] = await rested(() => Promise.all([window.boundingBox(), page.locator('.rd-tools').boundingBox()]));
+    const viewport = page.viewportSize()!;
+    assert.ok(box!.x >= 0 && box!.x + box!.width <= viewport.width && box!.y + box!.height <= viewport.height, 'the window fits the page');
+    assert.ok(box!.y >= tools!.y + tools!.height, 'the window is below the reader\'s tools');
+
+    // Calendar: still up, its text in place.
+    await page.keyboard.press('2');
+    await until('Calendar opens', async () => new URL(page.url()).pathname, path => path.startsWith('/calendar'));
+    await window.getByRole('textbox', {name: 'Message'}).filter({hasText: 'Count me in.'}).waitFor();
+
+    await window.getByRole('button', {name: 'Back in the reading pane'}).click();
+    await until('its email opens', async () => new URL(page.url()).pathname, path => path === `/inbox/${dinner}`);
+    await page.locator('.pane .composer').getByRole('textbox', {name: 'Message'}).filter({hasText: 'Count me in.'}).waitFor();
+    assert.equal(await page.locator('.cmp-window').count(), 0);
+    await setpoint.idle();
+    assert.equal((await drafts(setpoint)).length, 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

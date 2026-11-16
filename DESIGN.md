@@ -95,7 +95,8 @@ account names). The UI says "Done", never "handled".
   it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count,
   Attention's band and dots, and health warnings, nothing else. **`alert`** says danger and now: protected
   mail, failed changes, destructive actions, offline, the now-line, today's disc and a row's "Draft".
-  **`ink`** is the primary action (New, sign-in, OK: solid ink pills). The identity swatches show only as dots, chip
+  **`ink`** is the primary action (New, sign-in, OK: solid ink pills), except the composer's Send,
+  a solid `accent` pill at the start of its format row. The identity swatches show only as dots, chip
   tints and bars, never as control fills, and the AI has no hue of its own.
 - **Accounts** (`--a-*`): Business `warm`, Personal `cool`, Work `comf`, Jobs `violet`, iCloud `ink2`.
   **Calendars** (`--c-*`): Personal `cool`, Classes `cyan`, Jobs `violet`. Both pick from nine of
@@ -189,7 +190,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   header button (Settings', the editor's) and a Settings row's "…". One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, Reply and an email the user answered (its row's mark, "You replied") `reply`,
-  Reply all `reply_all`, Forward `forward`, Drafts `draft` (an email's row says "Draft" in `alert`
+  Reply all `reply_all`, Forward `forward`, popping the composer out `pip` (its window's × is `close`), Drafts `draft` (an email's row says "Draft" in `alert`
   instead), an attachment of an unknown type `unknown_document`,
   a Settings page its nav's glyph wherever it's named.
 - **Tones**: `caution` and `alert` are close in hue, so a state's shape says how serious it is

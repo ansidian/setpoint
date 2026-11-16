@@ -127,9 +127,10 @@ export interface DescriptionFieldProps {
   // The field's name and its empty line. An item's are Description and "Add description".
   label?: string;
   placeholder?: string;
-  // The format row: under the field while it's focused (an item's), or always there, with `barEnd`
-  // after the formats (the composer's).
+  // The format row: under the field while it's focused (an item's), or always there, with `barStart`
+  // before the formats and `barEnd` after them (the composer's).
   bar?: 'focus' | 'always';
+  barStart?: ReactNode;
   barEnd?: ReactNode;
   // Under the field, above the format row (the composer's folded quote).
   after?: ReactNode;
@@ -137,7 +138,7 @@ export interface DescriptionFieldProps {
   fieldRef?: RefObject<HTMLDivElement | null>;
 }
 
-export function DescriptionField({blocks, kind, note, mark: source = null, onChange, label = 'Description', placeholder = 'Add description', bar = 'focus', barEnd = null, after = null, fieldRef}: DescriptionFieldProps) {
+export function DescriptionField({blocks, kind, note, mark: source = null, onChange, label = 'Description', placeholder = 'Add description', bar = 'focus', barStart = null, barEnd = null, after = null, fieldRef}: DescriptionFieldProps) {
   const own = useRef<HTMLDivElement>(null);
   const field = fieldRef ?? own;
   const address = useRef<HTMLInputElement>(null);
@@ -323,6 +324,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
       {after}
       {(focused || linking || bar === 'always') && (linking ? (
         <div className="desc-bar linking">
+          {barStart}
           <Icon name="link" size={16} />
           <input ref={address} className="grow" aria-label="Link address" placeholder="Paste or type a link" value={linking.url} onChange={event => setLinking({...linking, url: event.target.value})}
             onKeyDown={event => {
@@ -337,6 +339,7 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
         </div>
       ) : (
         <div className="desc-bar" role="toolbar" aria-label="Formatting">
+          {barStart}
           {formats.map(format => (
             <button key={format.command} type="button" className="ibtn sm" aria-label={format.label} aria-pressed={on.includes(format.command)} data-tip={format.keys ? `${format.label} · ${format.keys}` : format.label}
               onMouseDown={event => event.preventDefault()} onClick={() => run(format.command)}><Icon name={format.icon} size={17} /></button>

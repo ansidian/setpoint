@@ -1,19 +1,27 @@
 // The composer, in the reading pane under the email it answers (the email scrolls above it). From
-// is the account's colour and label, its Gmail aliases under each account. To is always there; Cc
+// is the account's colour and label, its Gmail aliases under each account. Popped out, a title bar
+// leads it: the subject, or "New message". To is always there; Cc
 // and Bcc show together with ⌘⇧B (and by themselves when the draft has them), and hide again when
 // both are empty and the caret leaves them. A recipient is a chip with a name or an address; typing
-// suggests people from the user's mail. The subject is the server's ("Re: …") and can be changed.
+// suggests people from the user's mail. A new message has a subject field; a reply's or a
+// forward's subject is the server's ("Re: …", "Fwd: …"), shown as the window's title.
 // The body is the description field's rich text, with its format row always there; a reply's quote
 // is folded behind "…" and opens to be trimmed (the recipient gets the quote as it is left).
 //
-// Keys: ⌘Enter sends, ⌘⇧B shows Cc and Bcc, Esc closes it (the draft kept). Discard is a button with
-// no key. The top right keeps a place for popping the composer out, and the format row's end a
-// place for buttons of its own.
+// Keys: ⌘Enter sends, ⌘⇧B shows Cc and Bcc, Esc closes it (the draft kept). The format row leads
+// with Send and ends with Discard (no key). The top right pops it out into a floating window (no
+// key), and the same button docks it again; the format row keeps a place for buttons of its own.
+//
+// It is mounted once, by ComposerRoot, into the host element its places take in turn (place.ts):
+// the reader under its email, a new message's pane, Drafts' pane and the floating window.
 import type {AccountOut, DraftOut, DraftsOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {createPortal} from 'react-dom';
 import type {ClipboardEvent, CSSProperties, KeyboardEvent, ReactNode, RefObject} from 'react';
 import {ApiFailure, useResource} from '../../api/client.ts';
+import {timeZone as userTimeZone} from '../../api/auth.ts';
 import {draftPath, DRAFTS_PATH, FROM_PATH, suggestPeople} from '../../api/drafts.ts';
+import {messagePath} from '../../api/mail.ts';
 import {paragraphs} from '../../logic/body.ts';
 import {chipLabel, forwardLines, quoteOf, readRecipient, readRecipients, replyLine, withRecipients} from '../../logic/composer.ts';
 import {attachmentLabel, attachmentType, hasRemoteContent, remoteImages} from '../../logic/reader.ts';
@@ -21,13 +29,15 @@ import {TYPE_GLYPHS} from '../Attachments.tsx';
 import {MailFrame} from '../MailFrame.tsx';
 import type {Block} from '../../logic/description.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {dotStyle} from '../accounts.ts';
+import {dotStyle, useAccounts} from '../accounts.ts';
 import {DescriptionField, mountBlocks} from '../calendar/DescriptionField.tsx';
 import {PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
-import {closeComposer, discard, queueSave, send, unsaved, useSaveError, watchSends} from './composer.ts';
+import {arrangeWindows, placeWindows} from '../../logic/composer.ts';
+import {canReplyAll, closeComposer, discard, dock, foldWindows, popOut, queueSave, switchKind, toggleMinimized, send, unsaved, useComposers, useSaveError, watchSends} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
+import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
 import './compose.css';
 
 export function Composer({open, message, accounts, timeZone}: {
@@ -42,8 +52,8 @@ export function Composer({open, message, accounts, timeZone}: {
   // Gone meanwhile (sent or discarded elsewhere): nothing left to write.
   const gone = error instanceof ApiFailure && error.status === 404;
   useEffect(() => {
-    if (gone) closeComposer();
-  }, [gone]);
+    if (gone) closeComposer(open.draftId);
+  }, [gone, open.draftId]);
   if (!draft || draft.id !== open.draftId) return <section className="composer" aria-label="Composer" />;
   return <Fields draft={draft} open={open} from={from} message={message} accounts={accounts} timeZone={timeZone} />;
 }
@@ -63,6 +73,10 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     return {from, to, cc, bcc, subject, body};
   });
   const [copies, setCopies] = useState(draft.cc.length + draft.bcc.length > 0);
+  // A reply's or forward's subject shows as a field once the reply-type menu's Edit subject asks.
+  // After it, the reply-type menu is gone.
+  const [subjectShown, setSubjectShown] = useState(draft.kind === 'new' || open.subjectEdited);
+  const subjectField = useRef<HTMLInputElement>(null);
   const saveError = useSaveError(draft.id);
   const body = useRef<HTMLDivElement>(null);
   const to = useRef<HTMLInputElement>(null);
@@ -90,17 +104,20 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   };
 
   // The caret: in the body, at its start, when there's someone to send to already; else in To.
+  // Once it's in its place, which may come after it's drawn.
   useLayoutEffect(() => {
     if (!open.focus) return;
-    if (open.focus === 'to') return to.current?.focus();
-    const field = body.current;
-    if (!field) return;
-    field.focus();
-    const range = document.createRange();
-    range.setStart(field, 0);
-    range.collapse(true);
-    document.getSelection()?.removeAllRanges();
-    document.getSelection()?.addRange(range);
+    whenPlaced(open.key, () => {
+      if (open.focus === 'to') return to.current?.focus();
+      const field = body.current;
+      if (!field) return;
+      field.focus();
+      const range = document.createRange();
+      range.setStart(field, 0);
+      range.collapse(true);
+      document.getSelection()?.removeAllRanges();
+      document.getSelection()?.addRange(range);
+    });
     // Once per opening.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open.key]);
@@ -129,7 +146,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     }
     if (event.key === 'Escape' && !event.defaultPrevented) {
       event.preventDefault();
-      closeComposer();
+      closeComposer(draft.id);
       return;
     }
     // The page's own letters (J, K, E, R…) stay out of the composer.
@@ -145,13 +162,37 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
           if (!typed && copiesRow.current?.contains(event.target as Node)) setCopies(false);
         }
       }}>
+      {/* Popped out: the title folds the window to its bar and back, and the pop-out button docks
+          it. The caret stays where it was as the composer moves. */}
+      {open.floating && (
+        <div className="cmp-title" onMouseDown={event => event.preventDefault()} onClick={() => toggleMinimized(draft.id)}>
+          <button className="cmp-title-text ell" type="button" aria-expanded={!open.minimized} aria-label={open.minimized ? 'Open the window' : 'Minimize the window'}>
+            {draft.kind === 'new' ? 'New message' : fields.subject || 'No subject'}
+          </button>
+          <button className="ibtn sm" type="button" aria-label="Back in the reading pane" data-tip="Back in the reading pane"
+            onClick={event => {
+              event.stopPropagation();
+              dock(draft.id);
+            }}><Icon name="pip" size={16} /></button>
+        </div>
+      )}
       <div className="cmp-row cmp-head">
+        {!subjectShown && draft.kind !== 'new' && (
+          <ReplyType kind={draft.kind} messageId={draft.message_id} floating={open.floating} onPopOut={() => popOut(draft.id)}
+            onKind={kind => switchKind({...draft, ...latest.current}, kind)}
+            onEditSubject={() => {
+              // Edit subject doubles as Forward: a reply becomes a forward that keeps its recipients.
+              if (draft.kind !== 'forward') return switchKind({...draft, ...latest.current}, 'forward', {editSubject: true});
+              setSubjectShown(true);
+              requestAnimationFrame(() => body.current?.focus());
+            }} />
+        )}
         <span className="cmp-label">From</span>
         <FromPicker value={fields.from} from={from} accounts={accounts} onChange={value => change('from', value)} />
         <span className="grow" />
-        {/* The pop-out's place. */}
-        <span className="cmp-popout-slot" />
-        <button className="ibtn sm" type="button" aria-label="Close" data-tip="Close · Esc" onClick={closeComposer}><Icon name="close" size={16} /></button>
+        {!open.floating && (
+          <button className="ibtn sm" type="button" aria-label="Pop out" data-tip="Pop out" onMouseDown={event => event.preventDefault()} onClick={() => popOut(draft.id)}><Icon name="pip" size={16} /></button>
+        )}
       </div>
       <div className="cmp-row">
         <span className="cmp-label">To</span>
@@ -170,9 +211,11 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
           </div>
         </div>
       )}
-      <div className="cmp-row">
-        <input className="cmp-subject grow" aria-label="Subject" placeholder="Subject" value={fields.subject} onChange={event => change('subject', event.target.value)} />
-      </div>
+      {subjectShown && (
+        <div className="cmp-row">
+          <input ref={subjectField} className="cmp-subject grow" aria-label="Subject" placeholder="Subject" value={fields.subject} onChange={event => change('subject', event.target.value)} />
+        </div>
+      )}
       {failed && (
         <div className="cmp-failed" role="alert">
           <Icon name="error" size={16} /><span className="grow">{failed}</span>
@@ -184,6 +227,11 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         onChange={blocks => change('body', blocks)}
         after={draft.kind === 'reply' || draft.kind === 'reply_all' ? <Quote draft={draft} message={message} timeZone={timeZone} />
           : draft.kind === 'forward' ? <Forwarded draft={draft} message={message} timeZone={timeZone} /> : null}
+        barStart={(
+          <button className="btn cmp-send" type="button" onMouseDown={event => event.preventDefault()} onClick={sendNow}>
+            Send<span className="kbd">⌘↵</span>
+          </button>
+        )}
         barEnd={(
           <>
             {/* Buttons of the composer's own come here. */}
@@ -191,9 +239,6 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
             <span className="grow" />
             <button className="ibtn sm danger" type="button" aria-label="Discard" data-tip="Discard" onMouseDown={event => event.preventDefault()} onClick={() => discard({...draft, ...latest.current})}>
               <Icon name="delete" size={17} />
-            </button>
-            <button className="btn cmp-send" type="button" onMouseDown={event => event.preventDefault()} onClick={sendNow}>
-              Send<span className="kbd">⌘↵</span>
             </button>
           </>
         )} />
@@ -268,6 +313,65 @@ function Forwarded({draft, message, timeZone}: {draft: DraftOut; message: Messag
         )}
       </div>
     </div>
+  );
+}
+
+const KIND_GLYPHS = {reply: 'reply', reply_all: 'reply_all', forward: 'forward'} as const;
+const KIND_NAMES = {reply: 'Reply', reply_all: 'Reply all', forward: 'Forward'} as const;
+
+/**
+ * The reply-type menu, before From on a reply or a forward: Reply, Reply all (when the email has
+ * others to reply to) and Forward turn the draft into that kind, keeping what was written. Edit
+ * subject doubles as Forward: a reply becomes a forward that keeps its recipients too, its subject
+ * a field and this menu gone, the caret in the body. Pop out reply pops it out (in the pane only).
+ */
+function ReplyType({kind, messageId, floating, onPopOut, onKind, onEditSubject}: {
+  kind: 'reply' | 'reply_all' | 'forward';
+  messageId: number | null;
+  floating: boolean;
+  onPopOut: () => void;
+  onKind: (kind: 'reply' | 'reply_all' | 'forward') => void;
+  onEditSubject: () => void;
+}) {
+  const [menu, setMenu] = useState(false);
+  const anchor = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const away = (event: PointerEvent) => !anchor.current?.contains(event.target as Node) && setMenu(false);
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [menu]);
+  const kinds = (['reply', 'reply_all', 'forward'] as const).filter(one => one !== 'reply_all' || kind === 'reply_all' || (messageId !== null && canReplyAll(messageId)));
+  const choose = (run: () => void) => {
+    setMenu(false);
+    run();
+  };
+  return (
+    <span className="menu-anchor cmp-type" ref={anchor} onKeyDown={event => {
+      if (menu && event.key === 'Escape') {
+        event.preventDefault();
+        setMenu(false);
+      }
+    }}>
+      <button className="btn quiet sm" type="button" aria-label={`${KIND_NAMES[kind]}, change`} aria-haspopup="menu" aria-expanded={menu}
+        onMouseDown={event => event.preventDefault()} onClick={() => setMenu(!menu)}>
+        <Icon name={KIND_GLYPHS[kind]} size={16} /><Icon name="expand_more" size={16} />
+      </button>
+      {menu && (
+        <div className="pop menu cmp-type-menu" role="menu">
+          {kinds.map(one => (
+            <button key={one} type="button" role="menuitemradio" aria-checked={one === kind} className="menu-i" onMouseDown={event => event.preventDefault()} onClick={() => choose(() => onKind(one))}>
+              <Icon name={KIND_GLYPHS[one]} size={16} /><span className="grow">{KIND_NAMES[one]}</span>{one === kind && <Icon name="check" size={16} />}
+            </button>
+          ))}
+          <div className="menu-sep" />
+          <button type="button" role="menuitem" className="menu-i" onMouseDown={event => event.preventDefault()} onClick={() => choose(onEditSubject)}>
+            <Icon name="forward" size={16} /><span className="grow">Edit subject</span>
+          </button>
+          {!floating && <button type="button" role="menuitem" className="menu-i plain" onMouseDown={event => event.preventDefault()} onClick={() => choose(onPopOut)}>Pop out {kind === 'forward' ? 'forward' : 'reply'}</button>}
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -464,16 +568,109 @@ export function RecipientField({label, recipients, onChange, inputRef}: {
   );
 }
 
-/** The reader's place for the composer, under the email: the open one, when it's this email's. */
-export function ComposerSlot({open, messageId, message, accounts, timeZone}: {
-  open: OpenComposer | null;
-  messageId: number;
-  message: MessageOut | undefined;
-  accounts: Map<number, AccountOut>;
-  timeZone: string;
-}): ReactNode {
-  if (!open || open.messageId !== messageId) return null;
-  return <Composer key={open.key} open={open} message={message?.id === messageId ? message : undefined} accounts={accounts} timeZone={timeZone} />;
+/** Every open composer, each mounted once on the desktop, into the host its places take in turn. */
+export function ComposerRoot() {
+  const composers = useComposers();
+  // A closed composer's host goes once it has unmounted.
+  useEffect(() => pruneHosts(composers.map(one => one.key)), [composers]);
+  return <>{composers.map(open => <Mounted key={open.key} open={open} />)}</>;
+}
+
+function Mounted({open}: {open: OpenComposer}) {
+  const {byId: accounts} = useAccounts();
+  const {data} = useResource<MessageOut>(open.messageId === null ? null : messagePath(open.messageId));
+  const message = data?.id === open.messageId ? data : undefined;
+  return createPortal(<Composer open={open} message={message} accounts={accounts} timeZone={userTimeZone()} />, composerHost(open.key));
+}
+
+/** A place composer `composerKey` shows in. */
+export function ComposerPlace({composerKey}: {composerKey: number}) {
+  const place = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = place.current!;
+    attach(composerKey, element);
+    return () => detach(composerKey, element);
+  }, [composerKey]);
+  return <div ref={place} className="cmp-place" />;
+}
+
+/** The reader's place for the composer, under the email: the pane's one, when it's this email's. */
+export function ComposerSlot({open, messageId}: {open: OpenComposer | null; messageId: number}): ReactNode {
+  if (!open || open.floating || open.messageId !== messageId) return null;
+  return <ComposerPlace composerKey={open.key} />;
+}
+
+/**
+ * The windows, in the main area's bottom right corner over any page, lined up leftward in the
+ * order they popped out. Their tops stay under the reading pane's tools, and the toast shows over
+ * them. When they don't all fit, the one touched longest ago folds to its title bar first, and
+ * once even the bars don't fit, the oldest go into a "+N" chip at the row's left end.
+ */
+export function ComposerWindows() {
+  const windows = useComposers().filter(one => one.floating);
+  const row = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(0);
+  const any = windows.length > 0;
+  useLayoutEffect(() => {
+    const element = row.current;
+    if (!element) return;
+    const measure = () => setRoom(element.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [any]);
+  const {fold, hidden} = room ? arrangeWindows(windows, room) : {fold: [], hidden: []};
+  // Folded in the store, so a window stays folded until the user brings it back.
+  useLayoutEffect(() => foldWindows(fold));
+  if (!any) return null;
+  const {at, end} = placeWindows(windows, hidden, room);
+  return (
+    <div ref={row} className="cmp-windows">
+      {windows.map(open => (
+        <section key={open.key} className={['cmp-window', open.minimized && 'min', hidden.includes(open.key) && 'shut'].filter(Boolean).join(' ')} aria-label="Composer window"
+          style={{right: at.get(open.key)?.right, width: at.get(open.key)?.width}}>
+          <ComposerPlace composerKey={open.key} />
+        </section>
+      ))}
+      {hidden.length > 0 && <MoreWindows draftIds={windows.filter(one => hidden.includes(one.key)).map(one => one.draftId)} right={end} />}
+    </div>
+  );
+}
+
+/** The "+N" chip for windows that don't fit even as bars: its menu brings one back. */
+function MoreWindows({draftIds, right}: {draftIds: number[]; right: number}) {
+  const [menu, setMenu] = useState(false);
+  const anchor = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const away = (event: PointerEvent) => !anchor.current?.contains(event.target as Node) && setMenu(false);
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [menu]);
+  return (
+    <div ref={anchor} className="menu-anchor cmp-more" style={{right}}>
+      <button className="cmp-more-btn" type="button" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>+{draftIds.length}</button>
+      {menu && (
+        <div className="pop menu cmp-more-menu" role="menu">
+          {draftIds.map(id => <MoreItem key={id} draftId={id} onPick={() => setMenu(false)} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MoreItem({draftId, onPick}: {draftId: number; onPick: () => void}) {
+  const {data: draft} = useResource<DraftOut>(draftPath(draftId));
+  return (
+    <button type="button" role="menuitem" className="menu-i" onClick={() => {
+      onPick();
+      toggleMinimized(draftId);
+    }}>
+      <span className="ell">{draft ? draft.subject.trim() || (draft.kind === 'new' ? 'New message' : 'No subject') : ''}</span>
+      {draft?.to[0] && <span className="ink3 ell">{chipLabel(draft.to[0])}{draft.to.length > 1 ? ` +${draft.to.length - 1}` : ''}</span>}
+    </button>
+  );
 }
 
 /** Drafts, watched on every desktop page, so a send the provider refused comes back wherever the user is. */
@@ -484,12 +681,12 @@ export function SendWatch() {
 }
 
 /** A new message's pane on a mail page: the composer by itself, at the reading pane's width. */
-export function NewMessagePane({open, accounts, timeZone}: {open: OpenComposer; accounts: Map<number, AccountOut>; timeZone: string}) {
+export function NewMessagePane({open}: {open: OpenComposer}) {
   const width = useReadingPaneWidth();
   return (
     <section className="pane writing" aria-label="New message" style={{'--readingPane': `${width}px`} as CSSProperties}>
       <PaneEdge width={width} />
-      <Composer key={open.key} open={open} message={undefined} accounts={accounts} timeZone={timeZone} />
+      <ComposerPlace composerKey={open.key} />
     </section>
   );
 }

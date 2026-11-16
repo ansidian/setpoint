@@ -5,13 +5,12 @@
 // A row opens its draft in the pane (/drafts/4): a reply's or a forward's under its email, which
 // stays readable above it, a new message's by itself. J and K move the cursor, Enter opens, C writes a
 // new message, Esc closes the composer (the draft kept), then the pane.
-import type {DraftRowOut, DraftsOut, MessageOut} from '@setpoint/shared';
+import type {DraftRowOut, DraftsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {DRAFTS_PATH} from '../../api/drafts.ts';
-import {messagePath} from '../../api/mail.ts';
 import {chipLabel} from '../../logic/composer.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
@@ -26,7 +25,7 @@ import {useReadingPaneWidth} from '../readingPane.ts';
 import {navigate} from '../router.ts';
 import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
 import {AllSkeleton} from '../states/Skeletons.tsx';
-import {Composer} from './Composer.tsx';
+import {ComposerPlace} from './Composer.tsx';
 import {closeComposer, newMessage, openDraft, useOpenComposer} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
 
@@ -66,6 +65,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
   useEffect(() => {
     const before = was.current;
     was.current = composer;
+    // Windows aren't the pane's: popping it out empties the pane, and its row docks it again.
     if (composer && composer.draftId !== shown) navigate({page: 'drafts', open: composer.draftId}, {replace: true});
     else if (!composer && before && before.draftId === shown) navigate({page: 'drafts', open: null});
   }, [composer, shown]);
@@ -145,14 +145,12 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
 /** The open draft: under its email for a reply or a forward, by itself for a new message. */
 function DraftPane({open, accounts, timeZone}: {open: OpenComposer; accounts: ReturnType<typeof useAccounts>['byId']; timeZone: string}) {
   const width = useReadingPaneWidth();
-  const {data} = useResource<MessageOut>(open.messageId === null ? null : messagePath(open.messageId));
-  const message = data?.id === open.messageId ? data : undefined;
   const now = useNow();
   return (
     <section className={open.messageId === null ? 'pane writing' : 'pane'} aria-label="Draft" style={{'--readingPane': `${width}px`} as CSSProperties}>
       <PaneEdge width={width} />
       {open.messageId !== null && <EmailOnly id={open.messageId} accounts={accounts} now={now} timeZone={timeZone} />}
-      <Composer key={open.key} open={open} message={message} accounts={accounts} timeZone={timeZone} />
+      <ComposerPlace composerKey={open.key} />
     </section>
   );
 }

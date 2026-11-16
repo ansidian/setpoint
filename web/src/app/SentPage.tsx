@@ -176,7 +176,7 @@ export function SentPage({route}: {route: SentRoute}) {
   const target = open ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
   // A new message has the pane to itself while no email is open.
   const composer = useOpenComposer();
-  const writing = open === null && composer?.messageId === null ? composer : null;
+  const writing = open === null && composer?.messageId === null && !composer.floating ? composer : null;
   const rowOf = (id: number): MessageRowOut | undefined => {
     const row = sentRows.get(id);
     return row ? asSent(row) : search.listed.find(result => result.id === id);
@@ -284,7 +284,7 @@ export function SentPage({route}: {route: SentRoute}) {
         run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : kind === 'reply_all' ? 'a' : 'f');
       } else if (plainKey(event, 'c')) run(() => newMessage(account ?? undefined));
       else if (plainKey(event, 'Escape')) {
-        if (open !== null && openComposer()?.messageId === open) run(closeComposer);
+        if (open !== null && openComposer()?.messageId === open && !openComposer()?.floating) run(closeComposer);
         else if (writing) run(closeComposer);
         else if (open !== null) run(close);
         else if (searching) run(() => search.clear());
@@ -364,7 +364,7 @@ export function SentPage({route}: {route: SentRoute}) {
             loading={!ready ? (failed ? <LoadFailed what="Sent" loads={[firstLoad]} /> : <AllSkeleton />) : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={(id, key) => openEmail(id, key)} onToggleNoise={nothing} onNearEnd={loadMore} onUnpin={nothing} />
         )}
-        {writing && <NewMessagePane open={writing} accounts={accounts} timeZone={zone} />}
+        {writing && <NewMessagePane open={writing} />}
         {open !== null && (
           <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={openFromReader}
             sent canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />

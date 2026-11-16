@@ -32,7 +32,7 @@ import {toInbox} from './toInbox.ts';
 import {fillMailSlots} from './slots.tsx';
 import {showToast} from './toast.ts';
 import {ToastPill} from './ToastPill.tsx';
-import {SendWatch} from './compose/Composer.tsx';
+import {ComposerRoot, ComposerWindows, SendWatch} from './compose/Composer.tsx';
 import {DraftsPage} from './compose/DraftsPage.tsx';
 
 // Jobs fills mail's slots: the reader's JD chip and Applied before, before Setpoint first draws.
@@ -117,6 +117,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
             : route.page === 'news' ? (phone ? null : <NewsPage route={route} />)
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)
               : phone ? <PhoneSettings /> : null}
+        {!phone && <ComposerWindows />}
         <OfflinePill />
         <ToastPill />
       </main>
@@ -127,6 +128,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
           <ContextMenu />
           <Tip />
           <SendWatch />
+          <ComposerRoot />
         </>
       )}
     </div>

@@ -109,3 +109,59 @@ export function forwardLines(message: Pick<MessageOut, 'from_name' | 'from_addre
     ...(message.cc?.length ? [`Cc: ${names(message.cc)}`] : []),
   ];
 }
+
+/** The composer's windows: a window, a window folded to its title bar, the gap between, the "+N" chip. */
+export const WINDOW_WIDTH = 560;
+export const WINDOW_BAR_WIDTH = 320;
+export const WINDOW_GAP = 12;
+export const WINDOW_MORE_WIDTH = 64;
+
+export interface WindowSlot {
+  key: number;
+  minimized: boolean;
+  // When it was last opened or brought back: the lowest was touched longest ago.
+  touched: number;
+}
+
+/**
+ * Fits the windows into `room` px: the ones touched longest ago fold to their title bars first,
+ * and once even the bars don't fit the oldest go into the "+N" chip. The window touched last
+ * always stays as it is. Answers which to fold and which to hide, oldest first.
+ */
+export function arrangeWindows(windows: WindowSlot[], room: number): {fold: number[]; hidden: number[]} {
+  const byAge = [...windows].sort((a, b) => a.touched - b.touched);
+  const newest = byAge.at(-1)?.key;
+  const folded = new Set(windows.filter(one => one.minimized).map(one => one.key));
+  const hidden = new Set<number>();
+  const width = () => {
+    const shown = windows.filter(one => !hidden.has(one.key));
+    const windowsWidth = shown.reduce((sum, one) => sum + (folded.has(one.key) ? WINDOW_BAR_WIDTH : Math.min(WINDOW_WIDTH, room)), 0);
+    return windowsWidth + Math.max(0, shown.length - 1) * WINDOW_GAP + (hidden.size ? WINDOW_GAP + WINDOW_MORE_WIDTH : 0);
+  };
+  const fold: number[] = [];
+  for (const one of byAge) {
+    if (width() <= room) break;
+    if (one.key === newest || folded.has(one.key)) continue;
+    folded.add(one.key);
+    fold.push(one.key);
+  }
+  for (const one of byAge) {
+    if (width() <= room) break;
+    if (one.key !== newest) hidden.add(one.key);
+  }
+  return {fold, hidden: [...hidden]};
+}
+
+/**
+ * Where each window sits, right to left in the order they popped out: its distance from the row's
+ * right end and its width. Hidden ones take no room. `end` is where the "+N" chip goes.
+ */
+export function placeWindows(windows: Omit<WindowSlot, 'touched'>[], hidden: number[], room: number): {at: Map<number, {right: number; width: number}>; end: number} {
+  const at = new Map<number, {right: number; width: number}>();
+  const end = windows.reduce((right, one) => {
+    const width = one.minimized ? WINDOW_BAR_WIDTH : Math.min(WINDOW_WIDTH, room || WINDOW_WIDTH);
+    at.set(one.key, {right, width});
+    return hidden.includes(one.key) ? right : right + width + WINDOW_GAP;
+  }, 0);
+  return {at, end};
+}

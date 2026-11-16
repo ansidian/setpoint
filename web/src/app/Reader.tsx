@@ -243,7 +243,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         {/* The head from the email's row at once. Only the body waits for the email. */}
         <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} />
       </Swap>
-      {!phone && <ComposerSlot open={composer} messageId={id} message={message} accounts={accounts} timeZone={timeZone} />}
+      {!phone && <ComposerSlot open={composer} messageId={id} />}
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
           email and its account are known, so none moves in or along when the email arrives. Until
           then the bar stays empty. Done leads, the phone's main job on Attention mail. */}
