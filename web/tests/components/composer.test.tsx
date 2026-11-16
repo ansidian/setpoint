@@ -3,19 +3,25 @@
 // typing, Cc and Bcc on ⌘⇧B, the reply's quote folded behind "…" and trimmed in place, a forward's
 // email in full with its attachments to take off, a failed
 // send's words with Try again, the draft saved as it's typed, once after a pause or at once on
-// Esc, and the reply-type menu. Popped out into a window and docked back, it is one composer: what's
-// typed, a recipient, the open fold and the caret carry across, and the window's title folds it.
+// Esc, and the reply-type menu, its kinds and Edit subject. Popped out into a window and docked
+// back, it is one composer: what's typed, a recipient, the open fold and the caret carry across, and
+// the window's title folds it. The store's rules around windows: Undo brings a send back where it
+// was, an email shown opens no second composer for a draft in a window, docking saves the pane's
+// one as it gives way, a draft's row docks its window, a docked new message gives the pane to an
+// email shown, and windows that don't fit fold and hide by when each was touched.
 // The server is faked at `fetch`: each test answers what the composer asks and reads what it
 // saved. Send's toast and Undo, and a window over other pages, are the browser journeys'
 // (browser/composer.spec.ts).
-import type {AccountOut, DraftOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
+import type {AccountOut, DraftOut, DraftRowOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {SEED_NOW} from '@setpoint/shared';
 import {afterEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {clearCache} from '../../src/api/client.ts';
 import {ComposerRoot, ComposerSlot, ComposerWindows} from '../../src/app/compose/Composer.tsx';
-import {closeComposer, DRAFT_SAVE_MS, openComposers, startComposer, useComposers, useOpenComposer} from '../../src/app/compose/composer.ts';
+import {ToastPill} from '../../src/app/ToastPill.tsx';
+import {dismissToast} from '../../src/app/toast.ts';
+import {closeComposer, dock, DRAFT_SAVE_MS, newMessage, openComposers, openDraft, showEmail, startComposer, useComposers, useOpenComposer} from '../../src/app/compose/composer.ts';
 
 const SAM: Recipient = {name: 'Sam Lee', address: 'sam.lee@example.com'};
 const JUNE: Recipient = {name: 'June Park', address: 'june.park@example.org'};
@@ -48,6 +54,7 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
   const landed: Record<string, unknown>[] = [];
   const asked: string[] = [];
   const discarded: number[] = [];
+  const started = new Set<number>();
   const fake = {saves, landed, asked, discarded, failSaves: 0, sends: 0};
   const answer = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}}));
   vi.spyOn(window, 'fetch').mockImplementation((input, init) => {
@@ -55,10 +62,17 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
     const method = init?.method ?? 'GET';
     const other = others.find(one => url.pathname === `/api/mail/drafts/${one.id}`);
     if (url.pathname === '/api/mail/drafts' && method === 'POST') {
+      // The draft, or the next of `others` of the kind asked for, each started once.
       const kind = (JSON.parse(String(init?.body)) as {kind: string}).kind;
-      return answer(others.find(one => one.kind === kind && kind !== draft.kind) ?? draft, 201);
+      const next = kind === draft.kind ? undefined : others.find(one => one.kind === kind && !started.has(one.id));
+      if (next) started.add(next.id);
+      return answer(next ?? draft, 201);
     }
     if (other && method === 'GET') return answer(other);
+    if (other && method === 'DELETE') {
+      discarded.push(other.id);
+      return Promise.resolve(new Response(null, {status: 204}));
+    }
     if (other && method === 'PATCH') {
       saves.push({draft: other.id, ...JSON.parse(String(init?.body)) as Record<string, unknown>});
       return answer({id: other.id, updated_at: SEED_NOW});
@@ -82,6 +96,7 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
       fake.sends += 1;
       return answer({...draft, send: {state: 'held', send_at: SEED_NOW, error: null}});
     }
+    if (url.pathname === `/api/mail/drafts/${draft.id}/undo` && method === 'POST') return answer({...draft, send: null});
     if (url.pathname === '/api/mail/from') return answer(FROM);
     if (url.pathname === '/api/accounts') return answer(ACCOUNTS);
     if (url.pathname === `/api/mail/messages/${EMAIL}`) return answer(message);
@@ -104,6 +119,7 @@ function Pane() {
       <div className="pane" style={{height: 700, width: 680}}><ComposerSlot open={open} messageId={EMAIL} /></div>
       <ComposerWindows />
       <ComposerRoot />
+      <ToastPill />
     </div>
   );
 }
@@ -130,6 +146,7 @@ const saveNow = () => vi.advanceTimersByTime(DRAFT_SAVE_MS);
 afterEach(() => {
   vi.useRealTimers();
   for (const one of openComposers()) closeComposer(one.draftId);
+  dismissToast();
   clearCache();
   vi.restoreAllMocks();
   document.body.replaceChildren();
@@ -355,4 +372,160 @@ test('the reply-type menu\'s Edit subject turns a reply into a forward that keep
   expect(document.querySelector('.composer .desc-edit')?.textContent).toBe('Count me in');
   expect(saves.find(one => one.draft === forward.id)).toMatchObject({to: [SAM], body: [{type: 'paragraph', runs: [{text: 'Count me in', marks: [], href: null}]}]});
   await expect.poll(() => discarded).toEqual([reply.id]);
+});
+
+const paragraph = (text: string): DraftOut['body'] => [{type: 'paragraph', runs: [{text, marks: [], href: null}]}];
+const body = () => document.querySelector('.composer .desc-edit')?.textContent;
+
+test.each([
+  ['in the pane', false],
+  ['in a window', true],
+])('the reply-type menu turns a reply %s into a forward, carrying its words and From over the forward\'s own, the reply discarded, in the same place', async (_, floating) => {
+  const reply = draftOf({});
+  // The email already had a forward: it takes the reply's words.
+  const forward = draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?', body: paragraph('Older words')});
+  const {saves, discarded} = await compose(reply, [], MESSAGE, [forward]);
+  await userEvent.keyboard('Count me in');
+  if (floating) {
+    await userEvent.click(page.getByRole('button', {name: 'Pop out'}));
+    await expect.poll(inWindow).not.toBeNull();
+  }
+  await userEvent.click(page.getByRole('button', {name: 'Reply, change'}));
+  await userEvent.click(page.getByRole('menuitemradio', {name: 'Forward'}));
+  await expect.element(page.getByRole('button', {name: 'Forward, change'})).toBeVisible();
+  expect(body()).toBe('Count me in');
+  expect(saves.find(one => one.draft === forward.id)).toEqual({draft: forward.id, body: paragraph('Count me in'), from: reply.from});
+  await expect.poll(() => discarded).toEqual([reply.id]);
+  expect([inWindow() !== null, inPane() !== null]).toEqual([floating, !floating]);
+  // A forward has no one to send to yet.
+  expect(chips('To')).toEqual([]);
+});
+
+test('Undo of a send made from a window brings the composer back in a window', async () => {
+  const fake = await compose(draftOf({}));
+  await userEvent.keyboard('Count me in');
+  await userEvent.click(page.getByRole('button', {name: 'Pop out'}));
+  await expect.poll(inWindow).not.toBeNull();
+  // The toast's time held, so Undo stays offered.
+  holdSaves();
+  await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+  await expect.poll(() => document.querySelector('.composer')).toBeNull();
+  await expect.poll(() => fake.sends).toBe(1);
+  await userEvent.click(page.getByRole('button', {name: 'Undo'}));
+  await expect.poll(inWindow).not.toBeNull();
+  expect(inPane()).toBeNull();
+});
+
+test('showing an email whose draft is up in a window opens no second composer in the pane', async () => {
+  const draft = draftOf({});
+  await compose(draft);
+  await userEvent.click(page.getByRole('button', {name: 'Pop out'}));
+  await expect.poll(inWindow).not.toBeNull();
+  const fetched = vi.mocked(window.fetch).mock.calls.length;
+  showEmail(EMAIL, [{id: draft.id, message_id: EMAIL, updated_at: SEED_NOW, send_state: null} as DraftRowOut]);
+  // It asks for nothing: the draft is taken already.
+  expect(vi.mocked(window.fetch).mock.calls.length).toBe(fetched);
+  expect(openComposers().map(one => one.floating)).toEqual([true]);
+  expect(inPane()).toBeNull();
+});
+
+test('docking a window while the pane holds another composer: the pane\'s gives way, its words saved', async () => {
+  const fresh = draftOf({kind: 'new', message_id: null, to: [], subject: ''});
+  const {saves} = await compose(draftOf({}), [], MESSAGE, [fresh]);
+  newMessage();
+  await expect.poll(inWindow).not.toBeNull();
+  // Typed in the pane's reply once the window is up, its save held, and no poll after.
+  holdSaves();
+  await userEvent.click(page.getByRole('textbox', {name: 'Message'}).first());
+  await userEvent.keyboard('Count me in');
+  expect(saves).toEqual([]);
+  dock(fresh.id);
+  // The reply left the pane (the new message has it now), and what was typed went out at once: read
+  // a frame on, past the save's promises, without a poll, which would run the held timer.
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  expect(saves).toEqual([{body: paragraph('Count me in')}]);
+  expect(inWindow()).toBeNull();
+  expect(inPane()).toBeNull();
+  expect(openComposers().map(one => [one.draftId, one.floating])).toEqual([[fresh.id, false]]);
+});
+
+/** Several windows in a row of `room` px, as the main area's foot has them, with the composers mounted. */
+function Windows({room}: {room: number}) {
+  useComposers();
+  return (
+    <div style={{position: 'relative', width: room, height: 760}}>
+      <ComposerWindows />
+      <ComposerRoot />
+    </div>
+  );
+}
+
+const windowStates = () => [...document.querySelectorAll('.cmp-window')].map(one => (one.classList.contains('shut') ? 'hidden' : one.classList.contains('min') ? 'bar' : 'open'));
+
+test('windows that don\'t fit: the one touched longest ago folds, one brought back is touched so another folds, and past the bars the oldest go into "+N", whose menu brings one back', async () => {
+  // A 1350 px row less its 16 px sides, 1318: two open windows and a bar don't fit (1464), one open
+  // and two bars do (1224).
+  const fresh = [1, 2, 3, 4].map(n => draftOf({kind: 'new', message_id: null, to: [], subject: `Message ${n}`}));
+  server(draftOf({}), [], MESSAGE, fresh);
+  await render(<Windows room={1350} />);
+  for (const n of [1, 2, 3]) {
+    newMessage();
+    await expect.poll(() => document.querySelectorAll('.cmp-window').length).toBe(n);
+  }
+  await expect.poll(windowStates).toEqual(['bar', 'bar', 'open']);
+
+  // The first brought back is the one touched last now: the third folds instead.
+  await userEvent.click(page.getByRole('button', {name: 'Open the window'}).first());
+  await expect.poll(windowStates).toEqual(['open', 'bar', 'bar']);
+
+  // A fourth: three bars and a window are 1556, so the oldest touched (the second) goes into "+1"
+  // (two bars, a window and the chip are 1300).
+  newMessage();
+  await expect.poll(() => document.querySelectorAll('.cmp-window').length).toBe(4);
+  await expect.poll(windowStates).toEqual(['bar', 'hidden', 'bar', 'open']);
+  await userEvent.click(page.getByRole('button', {name: '+1'}));
+  await expect.element(page.getByRole('menuitem', {name: 'Message 2'})).toBeVisible();
+  // Brought back, it's the one touched last: the fourth folds, and the third, touched before the
+  // first was brought back, takes its place in "+1".
+  await userEvent.click(page.getByRole('menuitem', {name: 'Message 2'}));
+  await expect.poll(windowStates).toEqual(['bar', 'open', 'hidden', 'bar']);
+});
+
+test('a draft up in a window, opened from its row in Drafts, docks there', async () => {
+  const draft = draftOf({});
+  await compose(draft);
+  await userEvent.click(page.getByRole('button', {name: 'Pop out'}));
+  await expect.poll(inWindow).not.toBeNull();
+  openDraft(draft.id);
+  await expect.poll(inPane).not.toBeNull();
+  expect(inWindow()).toBeNull();
+});
+
+test('Edit subject on a forward only shows its subject as a field: it stays a forward, nothing started', async () => {
+  const fake = await compose(draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?'}));
+  const posted = () => vi.mocked(window.fetch).mock.calls.filter(([, init]) => init?.method === 'POST').length;
+  const before = posted();
+  await userEvent.click(page.getByRole('button', {name: 'Forward, change'}));
+  await userEvent.click(page.getByRole('menuitem', {name: 'Edit subject'}));
+  await expect.element(page.getByRole('textbox', {name: 'Subject'})).toHaveValue('Fwd: Dinner Friday?');
+  await expect.element(page.getByRole('textbox', {name: 'Message'})).toHaveFocus();
+  expect(document.querySelector('.cmp-type')).toBeNull();
+  expect(posted()).toBe(before);
+  expect(fake.discarded).toEqual([]);
+});
+
+test('a new message in the pane gives it to an email shown, kept in Drafts with what was written', async () => {
+  const fresh = draftOf({kind: 'new', message_id: null, to: [], subject: ''});
+  const {saves, discarded} = server(draftOf({}), [], MESSAGE, [fresh]);
+  await render(<Pane />);
+  newMessage();
+  await expect.poll(inWindow).not.toBeNull();
+  await userEvent.fill(page.getByRole('textbox', {name: 'Subject'}), 'Hike');
+  // Docked, it has the pane by itself (a page's own place for it, not drawn here).
+  dock(fresh.id);
+  expect(openComposers().map(one => [one.draftId, one.floating])).toEqual([[fresh.id, false]]);
+  showEmail(EMAIL, []);
+  expect(openComposers()).toEqual([]);
+  await expect.poll(() => saves.at(-1)).toEqual({draft: fresh.id, subject: 'Hike'});
+  expect(discarded).toEqual([]);
 });
