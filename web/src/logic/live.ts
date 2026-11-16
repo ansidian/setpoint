@@ -1,5 +1,5 @@
 // What a live event refreshes (only what an event names), as paths of the API resources on screen.
-// A `mail` event names emails and accounts (one naming only a draft refreshes Drafts and that draft). The Inbox and All lists, the counts and triage's health
+// A `mail` event names emails and accounts (one naming only a draft, a save, refreshes Drafts and that draft). The Inbox and All lists, the counts and triage's health
 // (its Unsorted count) show them, and an open email refreshes only when it's named. An `items` event
 // refreshes the item ranges. When it names a calendar, it also refreshes the calendars and Todoist's
 // projects (their colours). A `health` event refreshes the accounts and sources. A `news` event
@@ -32,9 +32,10 @@ export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): str
   const under = (prefix: string) => (path: string) => path === prefix || path.startsWith(`${prefix}?`) || path.startsWith(`${prefix}/`);
   switch (event.type) {
     case 'mail': {
-      // A draft's change (started, saved, sent, failed, discarded) names it and its email: Drafts and
-      // the draft refresh with the lists, whose rows carry the draft mark. A new message's draft has
-      // no email, so no list row shows it: the lists stay, and the next C isn't kept waiting behind them.
+      // A draft's start, send, failure or discard names it and its email: Drafts and the draft refresh
+      // with the lists, whose rows carry the draft mark. A save names the draft only, as does any change
+      // to a new message's draft, which no row shows: the lists stay, so typing and the next C aren't
+      // kept waiting behind them.
       const named = new Set([...event.messages.map(id => `/mail/messages/${id}`), ...(event.drafts ?? []).map(id => `/mail/drafts/${id}`)]);
       const draftOnly = !!event.drafts?.length && !event.messages.length && !event.commands.length;
       return mounted.filter(path => (!draftOnly && MAIL_LISTS.some(prefix => under(prefix)(path))) || named.has(path) || (path === '/mail/drafts' && !!event.drafts?.length));

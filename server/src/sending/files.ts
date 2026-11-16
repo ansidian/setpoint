@@ -180,8 +180,8 @@ export function sweepDraftFiles(store: Store, dir: string, {disk = false} = {}):
   return gone.length;
 }
 
-/** A draft's files changed: its updated time moves and its composer hears of it. */
+/** A draft's files changed: its updated time moves and its composer hears of it, as of a save. */
 function touch(store: Store, draft: DraftRow) {
   store.db.update(t.drafts).set({updatedAt: isoNow(store)}).where(eq(t.drafts.id, draft.id)).run();
-  noteDraft(store, draft);
+  noteDraft(store, draft, {saved: true});
 }

@@ -14,7 +14,7 @@ import {FILES_KEPT_MS, sweepDraftFiles} from '../src/sending/files.ts';
 import {SendWorker} from '../src/sending/worker.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
 import {Adapters} from '../src/sync/registry.ts';
-import {ORIGIN, signedIn, world} from './helpers.ts';
+import {liveEvents, ORIGIN, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
 
 const THEO = 55;
@@ -95,6 +95,16 @@ describe('Attaching', () => {
     expect(again.id).not.toBe(first.id);
     expect((await draft(reply.id)).files).toEqual([again]);
     expect(onDisk(dir)).toEqual([String(again.id)]);
+  });
+
+  test('a reply\'s file attached or removed is a save: the live stream names the draft only, not its email', async () => {
+    const {w, start, upload, api} = await setup();
+    const reply = await start({kind: 'reply', message_id: THEO});
+    const mailEvents = () => liveEvents(w).flatMap(event => (event.type === 'mail' ? [event] : []));
+    const file = (await upload(reply.id, 'Notes.txt', 'Bring boots.')).body;
+    expect(mailEvents().at(-1)).toMatchObject({messages: [], drafts: [reply.id]});
+    await api.send('DELETE', `/api/mail/drafts/${reply.id}/files/${file.id}`);
+    expect(mailEvents().at(-1)).toMatchObject({messages: [], drafts: [reply.id]});
   });
 
   test('Remove takes only the draft\'s own file: another draft\'s id is not found, and that file stays', async () => {

@@ -83,9 +83,13 @@ export function presentDraft(store: Store, row: DraftRow): DraftOut {
   };
 }
 
-/** A draft's change on the live stream: the Drafts row and count, and its email's row (its draft mark). */
-export function noteDraft(store: Store, row: Pick<DraftRow, 'id' | 'messageId' | 'accountId'>) {
-  noteLive(store, {type: 'mail', messages: row.messageId === null ? [] : [row.messageId], accounts: [row.accountId], commands: [], drafts: [row.id]});
+/**
+ * A draft's change on the live stream: the Drafts row and count, and its email's row (its draft
+ * mark). A save names the draft only, since the mark changes only when the draft starts or goes:
+ * typing a reply then reloads Drafts and the draft, not every mail list.
+ */
+export function noteDraft(store: Store, row: Pick<DraftRow, 'id' | 'messageId' | 'accountId'>, {saved = false} = {}) {
+  noteLive(store, {type: 'mail', messages: saved || row.messageId === null ? [] : [row.messageId], accounts: [row.accountId], commands: [], drafts: [row.id]});
 }
 
 /**
@@ -146,7 +150,7 @@ export function updateDraft(store: Store, draftId: number, input: DraftUpdateInp
     if (input.removed_attachments) changes.removedAttachments = [...new Set(input.removed_attachments)];
     if (input.write !== undefined) changes.write = input.write;
     const updated = store.db.update(t.drafts).set(changes).where(eq(t.drafts.id, draftId)).returning().get()!;
-    noteDraft(store, updated);
+    noteDraft(store, updated, {saved: true});
     return {id: updated.id, updated_at: updated.updatedAt};
   });
 }

@@ -159,6 +159,17 @@ describe('Listing and discarding', () => {
     expect((await api.send('GET', `/api/mail/messages/${THEO}`)).body.draft).toBeUndefined();
   });
 
+  test('a reply\'s start and discard name its email on the live stream, a save the draft only', async () => {
+    const {w, api} = await setup();
+    const mailEvents = () => liveEvents(w).flatMap(event => (event.type === 'mail' ? [event] : []));
+    const reply = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: THEO}})).body;
+    expect(mailEvents().at(-1)).toMatchObject({messages: [THEO], drafts: [reply.id]});
+    await api.send('PATCH', `/api/mail/drafts/${reply.id}`, {body: {body: body('Count me in.')}});
+    expect(mailEvents().at(-1)).toMatchObject({messages: [], drafts: [reply.id]});
+    await api.send('DELETE', `/api/mail/drafts/${reply.id}`);
+    expect(mailEvents().at(-1)).toMatchObject({messages: [THEO], drafts: [reply.id]});
+  });
+
   test('a draft outlives its email: the user\'s text stays, answering nothing', async () => {
     const {w, api} = await setup();
     const reply = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: THEO}})).body;
