@@ -560,6 +560,21 @@ test('showing an email whose draft is up in a window opens no second composer in
   expect(inPane()).toBeNull();
 });
 
+test('a reply closed with Esc stays closed when C opens a new message in a window over its email', async () => {
+  const draft = draftOf({});
+  const fresh = draftOf({kind: 'new', message_id: null, to: [], subject: ''});
+  await compose(draft, [], MESSAGE, [fresh]);
+  await userEvent.keyboard('Count me in{Escape}');
+  expect(openComposers()).toEqual([]);
+  newMessage();
+  await expect.poll(() => openComposers().map(one => one.draftId)).toEqual([fresh.id]);
+  const fetched = vi.mocked(window.fetch).mock.calls.length;
+  // The Drafts list comes back with the reply: it asks for nothing, so it opens nothing.
+  showEmail(EMAIL, [{id: draft.id, message_id: EMAIL, updated_at: SEED_NOW, send_state: null} as DraftRowOut]);
+  expect(vi.mocked(window.fetch).mock.calls.length).toBe(fetched);
+  expect(openComposers().map(one => one.floating)).toEqual([true]);
+});
+
 test('docking a window while the pane holds another composer: the pane\'s gives way, its words saved', async () => {
   const fresh = draftOf({kind: 'new', message_id: null, to: [], subject: ''});
   const {saves} = await compose(draftOf({}), [], MESSAGE, [fresh]);

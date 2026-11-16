@@ -231,7 +231,8 @@ function show(draft: Pick<DraftOut, 'id' | 'message_id' | 'kind' | 'to' | 'cc' |
     rest = rest.filter(one => one !== pane);
   }
   const someone = draft.to.length + draft.cc.length + draft.bcc.length > 0;
-  closedOn = null;
+  // A window leaves the pane as it is: an email's draft closed there stays closed.
+  if (!floating) closedOn = null;
   setComposers([...rest, {
     draftId: draft.id, messageId: draft.message_id, kind: draft.kind, focus: caret ? (subject || someone ? 'body' : 'to') : null, subjectEdited: subject,
     key: ++opened, floating, minimized: false, touched: ++touches,
@@ -264,7 +265,7 @@ export function startComposer(input: DraftCreateInput) {
     rest = rest.filter(one => one !== pane);
   }
   const key = ++opened;
-  closedOn = null;
+  if (!floating) closedOn = null;
   setComposers([...rest, {
     draftId: null, messageId: input.kind === 'new' ? null : input.message_id ?? null, kind: input.kind,
     focus: input.kind === 'reply' || input.kind === 'reply_all' ? 'body' : 'to', subjectEdited: false, key, floating, minimized: false, touched: ++touches,
