@@ -20,3 +20,9 @@ export function chooseAlfredModel(ai: Settings['ai'], keys: Record<AiProvider, b
   if (!keys.anthropic) return {choice: null, missing: 'Alfred needs an Anthropic key in Settings › AI.'};
   return {choice: {provider: 'anthropic', model: DEFAULT_ALFRED_MODEL}, missing: null};
 }
+
+/**
+ * Help me write's model: Alfred's, as Settings › AI chooses it. It writes in the user's name, so it
+ * gets the same most capable default.
+ */
+export const chooseDraftModel = chooseAlfredModel;

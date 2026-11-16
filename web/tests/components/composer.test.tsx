@@ -40,7 +40,7 @@ const MESSAGE = {
 let nextId = 1;
 const draftOf = (fields: Partial<DraftOut>): DraftOut => ({
   id: nextId++, kind: 'reply', message_id: EMAIL, from: {account_id: 2, address: 'user@example.com'}, to: [SAM], cc: [], bcc: [],
-  subject: 'Re: Dinner Friday?', body: [], quote: null, removed_attachments: [], created_at: SEED_NOW, updated_at: SEED_NOW, send: null, ...fields,
+  subject: 'Re: Dinner Friday?', body: [], quote: null, removed_attachments: [], write: null, created_at: SEED_NOW, updated_at: SEED_NOW, send: null, ...fields,
 });
 
 /**

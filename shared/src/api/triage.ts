@@ -228,13 +228,15 @@ export interface AiOut {
   // Settings › AI's News group (board 30b).
   news: NewsAiOut;
   // "Usage this month" (since local midnight on the 1st): Triage, search terms, reading
-  // searches, Alfred and News, News in its parts.
+  // searches, Alfred, help me write and News, News in its parts.
   usage_this_month: {
     since: string;
     triage: AiUsageOut;
     search_terms: AiUsageOut;
     search_reading: AiUsageOut;
     alfred: AiUsageOut;
+    // Help me write's drafts in the composer.
+    mail_drafts: AiUsageOut;
     news: AiUsageOut & {articles: AiUsageOut; grouping: AiUsageOut; stories: AiUsageOut; ranking: AiUsageOut};
   };
 }

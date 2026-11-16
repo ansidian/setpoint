@@ -14,7 +14,7 @@ import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
   NEWS_ADAPTERS, NEWS_SECTIONS, RULE_TRASH, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
-  DRAFT_KINDS, SEND_STATES, type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
+  DRAFT_KINDS, SEND_STATES, type DraftWriteState, type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
 import type {Block} from '@setpoint/shared/richText';
 import type {ArticleNotes, NoiseReason} from '../domain/newsSorting.ts';
@@ -238,6 +238,8 @@ export const drafts = sqliteTable('drafts', {
   quote: text('quote', {mode: 'json'}).$type<Block[]>(),
   // A forward's attachments the user took off it, by their ids: the rest go with it.
   removedAttachments: text('removed_attachments', {mode: 'json'}).$type<number[]>().notNull().default(sql`'[]'`),
+  // Help me write's line and the body's versions for its undo and redo. Null until it's used.
+  write: text('write', {mode: 'json'}).$type<DraftWriteState>(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   sendState: text('send_state', {enum: SEND_STATES}),

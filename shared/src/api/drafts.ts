@@ -54,6 +54,29 @@ export const draftBodySchema = z.array(blockSchema).max(5000);
 
 const recipients = z.array(recipientInput).max(100);
 
+/** How many of the body's versions help me write keeps for its undo and redo. */
+export const DRAFT_VERSIONS_MAX = 20;
+
+/** The help-me-write line's own text: what the user asks for. */
+export const draftPromptSchema = z.string().max(2000);
+
+/**
+ * Help me write's line, saved with the draft: what was asked last, whether the line was open, and
+ * the body's versions its undo and redo step between (`at` is the one the body shows).
+ */
+export const draftWriteState = z.strictObject({
+  prompt: draftPromptSchema,
+  open: z.boolean(),
+  versions: z.array(draftBodySchema).max(DRAFT_VERSIONS_MAX),
+  at: z.number().int().min(0),
+}).refine(state => state.at < Math.max(1, state.versions.length), {message: 'at names one of the versions.'});
+export interface DraftWriteState {
+  prompt: string;
+  open: boolean;
+  versions: Block[][];
+  at: number;
+}
+
 /**
  * Starts a draft. A reply, reply all or forward names the email it answers, and there is one such
  * draft per email and kind: starting it again returns the one there is. A new message may name the
@@ -83,6 +106,8 @@ export const draftUpdateInput = z.strictObject({
   quote: draftBodySchema.nullable().optional(),
   // A forward's attachments the user took off it, by id.
   removed_attachments: z.array(z.number().int().positive()).max(500).optional(),
+  // Help me write's line and the body's versions. Null forgets them.
+  write: draftWriteState.nullable().optional(),
 });
 export type DraftUpdateInput = z.infer<typeof draftUpdateInput>;
 
@@ -116,9 +141,28 @@ export interface DraftOut {
   quote: Block[] | null;
   // A forward's attachments the user took off it, by id. The others go with it.
   removed_attachments: number[];
+  // Help me write's line and the body's versions, or null when it was never used.
+  write: DraftWriteState | null;
   created_at: string;
   updated_at: string;
   send: DraftSendOut | null;
+}
+
+/**
+ * Help me write: the user's words for what to write, and the body as the composer has it now. With
+ * `selection` (the selected text), only that is rewritten. The answer is the new body, or the
+ * selection's new text, as blocks; the composer puts it in and saves it as the user's own typing.
+ * Nothing else of the draft is read from the request or changed.
+ */
+export const draftWriteInput = z.strictObject({
+  prompt: draftPromptSchema.trim().min(1, 'Say what to write.'),
+  body: draftBodySchema,
+  selection: z.string().max(20_000).nullable().optional().default(null),
+});
+export type DraftWriteInput = z.input<typeof draftWriteInput>;
+
+export interface DraftWrittenOut {
+  blocks: Block[];
 }
 
 /** What a save answers: enough to know it landed, and cheap. */

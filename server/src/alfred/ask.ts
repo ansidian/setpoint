@@ -38,8 +38,8 @@ export interface AlfredOptions {
   engine?: SyncEngine | null;
 }
 
-/** Model turns per question before Alfred gives up */
-const MAX_STEPS = 10;
+/** Model turns per question before Alfred gives up (help me write's draft too) */
+export const MAX_STEPS = 10;
 /** A thread ends after this long idle (four hours). A follow-up then starts over. */
 const THREAD_IDLE_MS = 4 * 60 * 60_000;
 /** Threads are kept a week, then deleted. */

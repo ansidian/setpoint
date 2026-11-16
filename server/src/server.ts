@@ -17,6 +17,7 @@ import {NewsWorker} from './news/worker.ts';
 import {Notifier} from './notify/index.ts';
 import {AI_ENDPOINTS} from './providers/ai/index.ts';
 import {boardRefusals, devProvider} from './providers/dev/index.ts';
+import {devDraftWriter} from './providers/dev/draft.ts';
 import {googleCalendarAdapter} from './providers/gcal/index.ts';
 import {GmailAdapter, gmailConnector, GmailPushPuller, readServiceAccount} from './providers/gmail/index.ts';
 import {GOOGLE_ENDPOINTS} from './providers/google/auth.ts';
@@ -98,7 +99,9 @@ const reminders = new ReminderScheduler({store, notifier});
 const ruleTrash = new RuleTrashScheduler({store});
 const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
-  providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints}, reading: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, newsSort,
+  providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints},
+  // A dev run with no key and no fake model drafts with the dev provider's canned answer.
+  drafting: {endpoints: aiEndpoints, canned: config.production || config.devAiUrl ? null : devDraftWriter()}, reading: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, newsSort,
   routes: [jobsApi(store)],
   tokenRoutes: [jobsTokenApi(store)],
 });

@@ -110,6 +110,7 @@ export function AiPage() {
           <Row title="Search terms" sub={usage ? usageLine(usage.search_terms) : ''}>{usage && <span className="cost num">{dollars(usage.search_terms.cost_usd, true)}</span>}</Row>
           <Row title="Search reading" sub={usage ? usageLine(usage.search_reading) : ''}>{usage && <span className="cost num">{dollars(usage.search_reading.cost_usd, true)}</span>}</Row>
           <Row title="Alfred" sub={usage ? usageLine(usage.alfred) : ''}>{usage && <span className="cost num">{dollars(usage.alfred.cost_usd, true)}</span>}</Row>
+          <Row title="Help me write" sub={usage ? usageLine(usage.mail_drafts) : ''}>{usage && <span className="cost num">{dollars(usage.mail_drafts.cost_usd, true)}</span>}</Row>
           <Row title="News" sub={usage ? newsUsageParts(usage.news) : ''}>{usage && <span className="cost num">{dollars(usage.news.cost_usd, true)}</span>}</Row>
           <JobsUsageRow />
         </div>}

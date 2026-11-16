@@ -108,8 +108,8 @@ describe('Settings', () => {
   ] as const)('an email in %s %s starts a rule sending to %s', (lane, kind, destination) => expect(ruleDestination(lane, kind)).toBe(destination));
 
   test('the month\'s AI spend, for Usage this month\'s label: Triage, Search terms, Search reading, Alfred and News together', () => {
-    expect(monthTotal({triage: {cost_usd: 2.1}, search_terms: {cost_usd: 0.04}, search_reading: {cost_usd: 0.01}, alfred: {cost_usd: 0.85}, news: {cost_usd: 18.4}})).toBeCloseTo(21.4);
-    expect(monthTotal({triage: {cost_usd: 0}, search_terms: {cost_usd: 0}, search_reading: {cost_usd: 0}, alfred: {cost_usd: 0}, news: {cost_usd: 0}})).toBe(0);
+    expect(monthTotal({triage: {cost_usd: 2.1}, search_terms: {cost_usd: 0.04}, search_reading: {cost_usd: 0.01}, alfred: {cost_usd: 0.85}, mail_drafts: {cost_usd: 0.05}, news: {cost_usd: 18.4}})).toBeCloseTo(21.45);
+    expect(monthTotal({triage: {cost_usd: 0}, search_terms: {cost_usd: 0}, search_reading: {cost_usd: 0}, alfred: {cost_usd: 0}, mail_drafts: {cost_usd: 0}, news: {cost_usd: 0}})).toBe(0);
   });
 
   test.each([

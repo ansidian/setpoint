@@ -8,7 +8,7 @@ import {
   accountOrderInput, accountUpdateInput, allInput, sentInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, mailpiecesInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
-  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftUpdateInput, peopleInput,
+  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftUpdateInput, draftWriteInput, peopleInput,
 } from '@setpoint/shared';
 import type {
   ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
@@ -33,6 +33,8 @@ import {
 } from '../auth/passkeys.ts';
 import {alfredStep, askAlfred, conversation} from '../alfred/ask.ts';
 import type {AlfredOptions} from '../alfred/ask.ts';
+import {writeDraft} from '../alfred/write.ts';
+import type {WriteOptions} from '../alfred/write.ts';
 import {inviteOf, proposeFromMessage} from '../alfred/proposals.ts';
 import {haTokenMatches} from '../auth/haToken.ts';
 import {bearerToken, findDevice, issuePairingCode, listDevices, pairDevice, revokeDevice, withdrawPairingCode} from '../auth/devices.ts';
@@ -132,6 +134,8 @@ export interface AppOptions {
   triage?: Pick<TriageWorker, 'configurationChanged'> | null;
   // Alfred's model endpoints (tests: a fake on 127.0.0.1).
   alfred?: AlfredOptions;
+  // Help me write's, likewise, and the dev provider's canned draft for a dev run with no key.
+  drafting?: WriteOptions;
   // The search reading's, likewise.
   reading?: Omit<SearchReaderOptions, 'store'>;
   // Where News's image copies are (the data directory's news-images/).
@@ -168,7 +172,7 @@ const WEB_POLICY = [
   "frame-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
 ].join('; ');
 
-export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, reading = {}, news = {}, newsSort = null, routes = [], tokenRoutes = []}: AppOptions) {
+export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, drafting = {}, reading = {}, news = {}, newsSort = null, routes = [], tokenRoutes = []}: AppOptions) {
   const app = new Hono<Env>();
   const searchReader = new SearchReader({store, ...reading});
   const cookies = cookieNames(publicUrl?.startsWith('https:') ?? false);
@@ -636,6 +640,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   });
   app.post('/api/mail/drafts/:id/send', c => c.json(holdSend(store, id(c.req.param('id')))));
   app.post('/api/mail/drafts/:id/undo', c => c.json(undoSend(store, id(c.req.param('id')))));
+  app.post('/api/mail/drafts/:id/write', async c => c.json(await writeDraft(store, id(c.req.param('id')), parse(draftWriteInput, await body(c)), drafting)));
   // Triage's health, pattern prompts, rules and Settings › AI (src/api/triage.ts).
   app.route('/api', triageApi(store));
   app.get('/api/mail/trusted-domains', c => c.json(trustedDomains(store)));
