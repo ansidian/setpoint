@@ -34,7 +34,7 @@ import {flushSync} from 'react-dom';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
 import {
-  allPath, answerPrompt, changeEach, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
+  allPath, answerPrompt, changeEach, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, refusals, setDone, setPinned, trashMessage, untrashMessage,
 } from '../api/mail.ts';
 import type {SearchScope} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
@@ -68,7 +68,7 @@ import {NewMessagePane} from './compose/Composer.tsx';
 import {openContextMenu} from './ContextMenu.tsx';
 import {emailActions, selectionActions} from './emailActions.ts';
 import type {SelectionHandlers} from './emailActions.ts';
-import {SelectionPane} from './SelectionPane.tsx';
+import {EmailTools, emailLines, SelectionPane} from './SelectionPane.tsx';
 import {EmptyPaneButton, useEmptyPane} from './EmptyPane.tsx';
 import {InboxDay, PANE_PATHS} from './InboxDay.tsx';
 import type {Travel} from './Reader.tsx';
@@ -112,11 +112,6 @@ let lastOpened: number | null = null;
 
 // ⌘Z: what undoes each Done and Trash made here, newest last. The toast's Undo runs the same one.
 const undos: (() => void)[] = [];
-
-/** The emails whose change the server refused, with why, from `changeEach`'s outcomes. */
-function refusals(ids: number[], outcomes: PromiseSettledResult<unknown>[]): {id: number; error: unknown}[] {
-  return outcomes.flatMap((outcome, at) => (outcome.status === 'rejected' ? [{id: ids[at]!, error: outcome.reason as unknown}] : []));
-}
 
 // The slide under way, so one that a newer one cut short doesn't take the newer one's direction away.
 let slides = 0;
@@ -781,7 +776,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}
         {writing && <NewMessagePane open={writing} />}
         {showsSelection && (
-          <SelectionPane rows={selectedRows} on={forSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
+          <SelectionPane label="Selected emails" heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)} tools={<EmailTools rows={selectedRows} on={forSelection} />}
+            lines={emailLines(selectedRows)} onClear={clearSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
         )}
         {pane.drawn && <InboxDay settle={pane.settle} />}
       </div>

@@ -134,6 +134,11 @@ export async function changeEach<T>(ids: number[], change: (id: number) => Promi
   }
 }
 
+/** The emails whose change the server refused, with why, from `changeEach`'s outcomes. */
+export function refusals(ids: number[], outcomes: PromiseSettledResult<unknown>[]): {id: number; error: unknown}[] {
+  return outcomes.flatMap((outcome, at) => (outcome.status === 'rejected' ? [{id: ids[at]!, error: outcome.reason as unknown}] : []));
+}
+
 /** Opens an email (a click or Enter). An unread one turns read, and the unread counts drop at once. */
 export function openMessage(id: number): Promise<MessageOut> {
   const found = cachedRow(id);
