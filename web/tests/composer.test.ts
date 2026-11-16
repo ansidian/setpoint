@@ -1,10 +1,10 @@
 // The composer's pure rules as tables: when an email has anyone for Reply all (the server's own fill
 // rule), what a typed or pasted recipient is, a chip's words, the reply's quote and its line, and
-// how the composer's windows fold and hide when they don't all fit.
+// how the composer's windows fold and hide when they don't all fit, and what attachments weigh.
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
-import {SEED_TIME_ZONE} from '@setpoint/shared';
+import {attachmentsTotal, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {arrangeWindows, canRedo, canUndo, chipLabel, forwardLines, hasOthers, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, unwritten, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
+import {arrangeWindows, canRedo, canUndo, chipLabel, forwardLines, hasOthers, megabytes, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, unwritten, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
 import type {Versions} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
@@ -98,8 +98,27 @@ describe('a draft nothing was written in, which closing leaves out of Drafts', (
     ['a reply whose quote was trimmed', {...blank, kind: 'reply', to: [SAM], quote: []}, false],
     ['a forward with no one yet', {...blank, kind: 'forward', subject: 'Fwd: Dinner'}, true],
     ['a forward with someone to send to', {...blank, kind: 'forward', to: [JUNE], subject: 'Fwd: Dinner'}, false],
+    ['a reply with only a file attached', {...blank, kind: 'reply', to: [SAM], files: [{id: 1, filename: 'Notes.txt', mime_type: 'text/plain', size_bytes: 12}]}, false],
+    ['a new message with only a file attached', {...blank, files: [{id: 1, filename: 'Notes.txt', mime_type: 'text/plain', size_bytes: 12}]}, false],
   ])('%s', (_name, draft, expected) => {
     expect(unwritten(draft)).toBe(expected);
+  });
+});
+
+describe('Attachments\' weight', () => {
+  const MB = 1024 * 1024;
+  test.each<[string, Parameters<typeof attachmentsTotal>, number]>([
+    ['nothing', [[], [], []], 0],
+    ['the user\'s own files', [[{size_bytes: 2 * MB}, {size_bytes: 3 * MB}], [], []], 5 * MB],
+    ['a forward\'s originals with the user\'s files', [[{size_bytes: 2 * MB}], [{id: 7, size_bytes: 20 * MB}, {id: 8, size_bytes: MB}], []], 23 * MB],
+    ['an original taken off doesn\'t count', [[{size_bytes: 2 * MB}], [{id: 7, size_bytes: 20 * MB}, {id: 8, size_bytes: MB}], [7]], 3 * MB],
+    ['a removed id that isn\'t an original changes nothing', [[], [{id: 7, size_bytes: MB}], [99]], MB],
+  ])('%s', (_name, args, expected) => {
+    expect(attachmentsTotal(...args)).toBe(expected);
+  });
+
+  test.each([[0, '0 MB'], [MB, '1 MB'], [25.5 * MB, '25.5 MB'], [12.44 * MB, '12.4 MB'], [26 * MB + 1, '26 MB']])('%d bytes read %s', (bytes, words) => {
+    expect(megabytes(bytes)).toBe(words);
   });
 });
 

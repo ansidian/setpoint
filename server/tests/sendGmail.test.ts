@@ -5,7 +5,10 @@
 // at once, the later sync keeping that one row. Aliases come from Gmail's "Send mail as" list.
 import {SEED_NOW, SEND_HOLD_MS} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
-import {describe, expect, test, vi} from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {describe, expect, onTestFinished, test, vi} from 'vitest';
 import * as t from '../src/db/schema.ts';
 import {GmailAdapter} from '../src/providers/gmail/adapter.ts';
 import {gmailConnector} from '../src/providers/gmail/connect.ts';
@@ -27,10 +30,10 @@ const ago = (ms: number) => new Date(Date.parse(SEED_NOW) - ms).toISOString();
 const paragraph = (text: string) => [{type: 'paragraph', runs: [{text, marks: [], href: null}]}];
 
 /** An engine with the send worker on the adapters, as server.ts wires it. */
-function engineFor(w: World, google: FakeGoogle) {
+function engineFor(w: World, google: FakeGoogle, filesDir: string) {
   const adapter = new GmailAdapter({topic: null, client: google.client()});
   const engine: SyncEngine = new SyncEngine({store: w.store, adapters: new Adapters({gmail: adapter}), timeoutMs: 5000, workers: [new SendWorker({
-    store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
+    store: w.store, filesDir, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
     attachment: (sourceId, message, id) => engine.attachment(sourceId, message, id),
   })]});
   return engine;
@@ -40,9 +43,11 @@ async function setup() {
   const w = world();
   const google = await fakeGoogle({clock: () => w.store.now()});
   google.addMailbox(ADDRESS);
-  let engine = engineFor(w, google);
+  const filesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-gmail-files-'));
+  onTestFinished(() => fs.rmSync(filesDir, {recursive: true, force: true}));
+  let engine = engineFor(w, google, filesDir);
   const connectors = {gmail: gmailConnector(w.store, google.client(), false)};
-  const api = await signedIn(w, {engine, connectors});
+  const api = await signedIn(w, {engine, connectors, draftFiles: filesDir});
   const drain = async () => {
     for (let round = 0; round < 40; round += 1) {
       await engine.tick();
@@ -62,9 +67,19 @@ async function setup() {
   /** The server stopped and started again: a new engine on the same database. */
   const restart = () => {
     engine.stop();
-    engine = engineFor(w, google);
+    engine = engineFor(w, google, filesDir);
   };
-  return {w, google, api, drain, sync, source, restart, get engine() {
+  /** Attaches a file to the draft, as the composer uploads it. */
+  const attach = async (draftId: number, name: string, content: Buffer) => {
+    const uploaded = await api.app.request(`/api/mail/drafts/${draftId}/files?name=${encodeURIComponent(name)}`, {method: 'POST', headers: {origin: 'http://localhost', cookie: api.cookie!, 'content-type': 'application/octet-stream'}, body: content});
+    expect(uploaded.status).toBe(201);
+  };
+  /** No file kept for any draft: rows and bytes. */
+  const noFilesKept = () => {
+    expect(w.store.db.select().from(t.draftFiles).all()).toEqual([]);
+    expect(fs.readdirSync(filesDir)).toEqual([]);
+  };
+  return {w, google, api, drain, sync, source, restart, attach, noFilesKept, get engine() {
     return engine;
   }};
 }
@@ -173,10 +188,11 @@ describe('Gmail: sending', () => {
     expect((await api.send('GET', `/api/mail/drafts/${draft.id}`)).status).toBe(404);
   });
 
-  test('Gmail took it but the answer was lost: Try again finds it by its Message-ID and never sends it twice', async () => {
-    const {w, google, api, drain, sync} = await setup();
+  test('Gmail took it but the answer was lost: Try again finds it by its Message-ID and never sends it twice, and its files go', async () => {
+    const {w, google, api, drain, sync, attach, noFilesKept} = await setup();
     const {row: sam} = await samWrites(google, w, sync);
     const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: sam.id}})).body;
+    await attach(draft.id, 'Notes.txt', Buffer.from('Bring boots.'));
     google.inject(/messages\/send/, 'lost');
     await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
     w.advance(SEND_HOLD_MS);
@@ -190,14 +206,16 @@ describe('Gmail: sending', () => {
     expect(google.sent).toHaveLength(1);
     expect(google.count(/messages\/send/)).toBe(1);
     expect((await api.send('GET', `/api/mail/drafts/${draft.id}`)).status).toBe(404);
+    noFilesKept();
     await sync();
     expect(sentRows(w)).toMatchObject([{providerId: google.sent[0]!.id, received: false}]);
   });
 
-  test('Setpoint failing to record a send Gmail accepted still settles it: the draft goes, nothing can send it again, and the sync brings the row', async () => {
-    const {w, google, api, drain, sync} = await setup();
+  test('Setpoint failing to record a send Gmail accepted still settles it: the draft and its files go, nothing can send it again, and the sync brings the row', async () => {
+    const {w, google, api, drain, sync, attach, noFilesKept} = await setup();
     const {row: sam} = await samWrites(google, w, sync);
     const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: sam.id}})).body;
+    await attach(draft.id, 'Notes.txt', Buffer.from('Bring boots.'));
     await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
     // The database refuses the Sent row.
     w.store.sqlite.exec('CREATE TRIGGER refuse_sent BEFORE INSERT ON messages WHEN NEW.sent = 1 BEGIN SELECT RAISE(ABORT, \'disk I/O error\'); END');
@@ -206,6 +224,7 @@ describe('Gmail: sending', () => {
     expect(google.sent).toHaveLength(1);
     expect((await api.send('GET', `/api/mail/drafts/${draft.id}`)).status).toBe(404);
     expect((await api.send('POST', `/api/mail/drafts/${draft.id}/send`)).status).toBe(404);
+    noFilesKept();
     // The sync woken then met the same fault, and comes back after its retry's wait.
     w.store.sqlite.exec('DROP TRIGGER refuse_sent');
     w.advance(MINUTE);
@@ -265,6 +284,24 @@ describe('Gmail: sending', () => {
     await drain();
     const parsed = await parseEmail(google.sent[0]!.raw);
     expect(parsed.attachments.map(file => file.filename)).toEqual(['Itinerary.pdf']);
+  });
+
+  test('the user\'s own files go in the reply, through messages.send\'s upload form, in its thread', async () => {
+    const {w, google, api, drain, sync} = await setup();
+    const {row: sam} = await samWrites(google, w, sync);
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: sam.id}})).body;
+    // Over the 5 MB Gmail takes as JSON.
+    const photos = Buffer.alloc(6 * 1024 * 1024, 7);
+    const uploaded = await api.app.request(`/api/mail/drafts/${draft.id}/files?name=Photos.zip`, {method: 'POST', headers: {origin: 'http://localhost', cookie: api.cookie!, 'content-type': 'application/zip'}, body: photos});
+    expect(uploaded.status).toBe(201);
+    await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
+    w.advance(SEND_HOLD_MS);
+    await drain();
+    expect(google.count(/^POST \/upload\/gmail\/v1\/users\/me\/messages\/send$/)).toBe(1);
+    const [sent] = google.sent;
+    expect(sent!.threadId).toBe('thread-thursday');
+    const parsed = await parseEmail(sent!.raw);
+    expect(parsed.attachments.map(file => [file.filename, file.mimeType, file.sizeBytes])).toEqual([['Photos.zip', 'application/zip', photos.length]]);
   });
 
   test('a reply or forward written from another account sends from it: no thread of the other account, the attachments fetched from the email\'s own', async () => {

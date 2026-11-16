@@ -4,12 +4,14 @@
 // provider's words and Try again; a draft that outlives a reload, its row saying "Draft"; a new
 // message from C in a window, kept in Drafts, its sidebar row and its page; From's alias and Sent's
 // account; a composer left with nothing written, which leaves no draft; a forward, its attachment
-// taken off; and a reply popped out, kept up while other mail and Calendar show, and docked back on
+// taken off; a file attached by the attach button, kept on the server through a pop-out and
+// Discard's Undo and held with the reply; and a reply popped out, kept up while other mail and Calendar show, and docked back on
 // its email; and help me write, from ⌘J through a lookup to the draft sent as written. The fields, chips, the fold, the saving and what carries across a pop-out are
 // components/composer.test.tsx's, how windows fold when they don't fit composer.test.ts's, a send
 // that reaches the dev provider the server's (sendDev.test.ts).
 import type {AiOut, AllOut, DraftOut, DraftsOut} from '@setpoint/shared';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
@@ -281,6 +283,49 @@ test('F forwards: the email in full under the body with its attachment as a chip
     assert.equal(sent.kind, 'forward');
     assert.deepEqual(sent.to, [{name: null, address: 'mom@example.net'}]);
     assert.equal(sent.removed_attachments.length, 1);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a file attached by the attach button is a chip and kept on the server; popped out, discarded and brought back by Undo it\'s still there, and Send holds the reply with it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const id = await idOf(setpoint, 'Dinner Friday?');
+    const page = await openEmail(setpoint, id);
+    await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().waitFor();
+    await page.keyboard.press('r');
+    await body(page).waitFor();
+    await page.keyboard.type('The menu is attached.');
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), composer(page).getByRole('button', {name: 'Attach files'}).click()]);
+    await chooser.setFiles({name: 'Menu.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 menu')});
+    await composer(page).locator('.cmp-file:not(.uploading)', {hasText: 'Menu.pdf'}).waitFor();
+    assert.deepEqual(await composer(page).locator('.cmp-file').allTextContents(), ['Menu.pdf13 bytes']);
+    const [draft] = await drafts(setpoint);
+    const {files} = await setpoint.api<DraftOut>('GET', `/mail/drafts/${draft!.id}`);
+    assert.deepEqual(files.map(file => [file.filename, file.mime_type, file.size_bytes]), [['Menu.pdf', 'application/pdf', 13]]);
+    const kept = path.join(setpoint.dataDir, 'draft-files', String(files[0]!.id));
+    assert.equal(fs.readFileSync(kept, 'utf8'), '%PDF-1.4 menu');
+
+    await composer(page).getByRole('button', {name: 'Pop out'}).click();
+    const window = page.locator('.cmp-window');
+    await window.locator('.cmp-file', {hasText: 'Menu.pdf'}).waitFor();
+    await window.getByRole('button', {name: 'Discard'}).click();
+    const discarded = await holdToast(page);
+    await until('the draft is discarded', () => drafts(setpoint), found => found.length === 0);
+    await discarded.locator('button', {hasText: 'Undo'}).click();
+    await window.locator('.cmp-file', {hasText: 'Menu.pdf'}).waitFor();
+    await window.getByRole('textbox', {name: 'Message'}).filter({hasText: 'The menu is attached.'}).waitFor();
+    const [back] = await until('it\'s back with its file', () => drafts(setpoint), found => found.length === 1);
+    assert.deepEqual((await setpoint.api<DraftOut>('GET', `/mail/drafts/${back!.id}`)).files, files);
+    assert.ok(fs.existsSync(kept));
+
+    await window.getByRole('textbox', {name: 'Message'}).click();
+    await page.keyboard.press('Meta+Enter');
+    await holdToast(page);
+    await until('held', () => drafts(setpoint), found => found[0]?.send_state === 'held');
+    assert.deepEqual((await setpoint.api<DraftOut>('GET', `/mail/drafts/${back!.id}`)).files, files);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

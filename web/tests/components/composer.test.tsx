@@ -1,8 +1,9 @@
 // The composer in the reading pane: its recipients as chips (a comma, Enter or leaving makes an
 // address one; Backspace takes the last back; a paste of several makes each one), suggestions while
 // typing, Cc and Bcc on ⌘⇧B, the reply's quote folded behind "…" and trimmed in place, a forward's
-// email in full with its attachments to take off, a failed
-// send's words with Try again, the draft saved as it's typed, once after a pause or at once on
+// email in full with its attachments to take off, the user's own files (attached by the button, a
+// drop or a paste, chips after a forward's originals, refused past 25 MB, waited for by Send, taken
+// back by Discard's Undo and carried by the reply-type menu), a failed send's words with Try again, the draft saved as it's typed, once after a pause or at once on
 // Esc, and the reply-type menu, its kinds and Edit subject. Popped out into a window and docked
 // back, it is one composer: what's typed, a recipient, the open fold and the caret carry across, and
 // the window's title folds it. The store's rules around windows: Undo brings a send back where it
@@ -12,7 +13,7 @@
 // The server is faked at `fetch`: each test answers what the composer asks and reads what it
 // saved. Send's toast and Undo, and a window over other pages, are the browser journeys'
 // (browser/composer.spec.ts).
-import type {AccountOut, DraftOut, DraftRowOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
+import type {AccountOut, DraftFileOut, DraftOut, DraftRowOut, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {SEED_NOW} from '@setpoint/shared';
 import {afterEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -55,11 +56,13 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
   const asked: string[] = [];
   const discarded: number[] = [];
   const started = new Set<number>();
-  const fake = {saves, landed, asked, discarded, failSaves: 0, sends: 0};
+  const fake = Object.assign(fileRoutes(id => [draft, ...others].find(one => one.id === id)), {saves, landed, asked, discarded, failSaves: 0, sends: 0});
   const answer = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}}));
   vi.spyOn(window, 'fetch').mockImplementation((input, init) => {
     const url = new URL(String(input), location.href);
     const method = init?.method ?? 'GET';
+    const files = fake.answerFiles(url, method, init, answer);
+    if (files) return files;
     const other = others.find(one => url.pathname === `/api/mail/drafts/${one.id}`);
     if (url.pathname === '/api/mail/drafts' && method === 'POST') {
       // The draft, or the next of `others` of the kind asked for, each started once.
@@ -71,6 +74,7 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
     if (other && method === 'GET') return answer(other);
     if (other && method === 'DELETE') {
       discarded.push(other.id);
+      other.files = [];
       return Promise.resolve(new Response(null, {status: 204}));
     }
     if (other && method === 'PATCH') {
@@ -79,6 +83,8 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
     }
     if (url.pathname === `/api/mail/drafts/${draft.id}` && method === 'DELETE') {
       discarded.push(draft.id);
+      // Its files are released, for Undo to take.
+      draft.files = [];
       return Promise.resolve(new Response(null, {status: 204}));
     }
     if (url.pathname === `/api/mail/drafts/${draft.id}` && method === 'GET') return answer(draft);
@@ -108,6 +114,71 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
     return answer({error: {code: 'not_found', message: 'No such thing.'}}, 404);
   });
   return fake;
+}
+
+/**
+ * The draft files' routes, faked: an upload is answered as the server would (`hold` keeps the
+ * answers until `release`, `failUploads` refuses that many), a removal and a take are recorded, and
+ * `refuseTakes` answers a take as over the limit. Any file uploaded, or on a draft, can be taken. The
+ * drafts' own files change with each, as the server's do.
+ */
+function fileRoutes(draftOf: (id: number) => DraftOut | undefined) {
+  let nextFile = 100;
+  let gate: {promise: Promise<void>; open: () => void} | null = null;
+  const known = new Map<number, DraftFileOut>();
+  const routes = {
+    uploads: [] as {draft: number; name: string; type: string; size: number}[],
+    removed: [] as {draft: number; id: number}[],
+    takes: [] as {draft: number; ids: number[]}[],
+    failUploads: 0,
+    refuseTakes: false,
+    known,
+    hold() {
+      let open = () => {};
+      gate = {promise: new Promise<void>(resolve => (open = resolve)), open};
+    },
+    release() {
+      gate?.open();
+      gate = null;
+    },
+    answerFiles(url: URL, method: string, init: RequestInit | undefined, answer: (body: unknown, status?: number) => Promise<Response>): Promise<Response> | null {
+      const match = /^\/api\/mail\/drafts\/(\d+)\/files(?:\/(\d+|take))?$/.exec(url.pathname);
+      if (!match) return null;
+      const draft = Number(match[1]);
+      const row = draftOf(draft);
+      if (!match[2] && method === 'POST') {
+        const body = init?.body as Blob;
+        routes.uploads.push({draft, name: url.searchParams.get('name') ?? '', type: body.type, size: body.size});
+        const waiting = gate?.promise ?? Promise.resolve();
+        return waiting.then(() => {
+          if (routes.failUploads > 0) {
+            routes.failUploads -= 1;
+            return answer({error: {code: 'unavailable', message: 'Setpoint is restarting.'}}, 503);
+          }
+          const file: DraftFileOut = {id: nextFile++, filename: url.searchParams.get('name') ?? '', mime_type: body.type, size_bytes: body.size};
+          known.set(file.id, file);
+          if (row) row.files = [...row.files, file];
+          return answer(file, 201);
+        });
+      }
+      if (match[2] === 'take' && method === 'POST') {
+        const {ids} = JSON.parse(String(init?.body)) as {ids: number[]};
+        routes.takes.push({draft, ids});
+        if (routes.refuseTakes) return answer({error: {code: 'too_large', message: 'Attachments can total 25 MB, and these would be 26 MB.'}}, 413);
+        for (const file of [draftOf(draft)?.files ?? []].flat()) known.set(file.id, file);
+        const taken = ids.flatMap(id => (known.has(id) ? [known.get(id)!] : []));
+        if (row) row.files = [...row.files.filter(file => !ids.includes(file.id)), ...taken];
+        return answer({files: row?.files ?? taken});
+      }
+      if (match[2] && method === 'DELETE') {
+        routes.removed.push({draft, id: Number(match[2])});
+        if (row) row.files = row.files.filter(file => file.id !== Number(match[2]));
+        return Promise.resolve(new Response(null, {status: 204}));
+      }
+      return null;
+    },
+  };
+  return routes;
 }
 
 /** The reading pane on the email, the windows' row beside it, and the composers mounted once, as the app has them. */
@@ -528,4 +599,185 @@ test('a new message in the pane gives it to an email shown, kept in Drafts with 
   expect(openComposers()).toEqual([]);
   await expect.poll(() => saves.at(-1)).toEqual({draft: fresh.id, subject: 'Hike'});
   expect(discarded).toEqual([]);
+});
+
+// ---- Attached files ----
+
+const fileChips = () => [...document.querySelectorAll('.composer .cmp-file')].map(file => `${file.textContent}${file.classList.contains('uploading') ? ' (uploading)' : ''}`);
+const fileError = () => document.querySelector('.composer .cmp-attached [role="alert"]')?.textContent ?? null;
+const MB = 1024 * 1024;
+const fileOf = (name: string, size: number, type = 'application/octet-stream') => new File([new Uint8Array(size)], name, {type});
+const carrying = (...files: File[]) => {
+  const transfer = new DataTransfer();
+  for (const file of files) transfer.items.add(file);
+  return transfer;
+};
+/** The attach button's file picker, as the user would answer it. */
+const pick = (...files: File[]) => {
+  const input = document.querySelector<HTMLInputElement>('.composer input[type="file"]')!;
+  input.files = carrying(...files).files;
+  input.dispatchEvent(new Event('change', {bubbles: true}));
+};
+const drop = (target: Element, transfer: DataTransfer) => target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: transfer}));
+const paste = (target: Element, transfer: DataTransfer) => target.dispatchEvent(new ClipboardEvent('paste', {bubbles: true, cancelable: true, clipboardData: transfer}));
+const NOTES: DraftFileOut = {id: 7, filename: 'Notes.txt', mime_type: 'text/plain', size_bytes: 12};
+
+test('files come by the attach button, a drop on the composer or a pasted image: each a chip uploading, then its name and size, and × takes one off the server', async () => {
+  const fake = await compose(draftOf({}));
+  await expect.element(page.getByRole('button', {name: 'Attach files'})).toBeVisible();
+  fake.hold();
+  pick(fileOf('Notes.txt', 12, 'text/plain'));
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes (uploading)']);
+  fake.release();
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes']);
+
+  // A drop anywhere on the composer, the body included; a drag of words attaches nothing.
+  const message = document.querySelector('.composer .desc-edit')!;
+  drop(message, carrying(fileOf('Floor plan.pdf', 2 * MB, 'application/pdf')));
+  const words = new DataTransfer();
+  words.setData('text/plain', 'just words');
+  drop(message, words);
+  paste(message, carrying(fileOf('image.png', 40 * 1024, 'image/png')));
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes', 'Floor plan.pdf2 MB', 'image.png40 KB']);
+  expect(fake.uploads.map(one => [one.name, one.type, one.size])).toEqual([
+    ['Notes.txt', 'text/plain', 12], ['Floor plan.pdf', 'application/pdf', 2 * MB], ['image.png', 'image/png', 40 * 1024],
+  ]);
+  expect(body()).toBe('');
+
+  const notes = [...fake.known.values()].find(file => file.filename === 'Notes.txt')!;
+  await userEvent.click(page.getByRole('button', {name: 'Remove Notes.txt'}));
+  expect(fileChips()).toEqual(['Floor plan.pdf2 MB', 'image.png40 KB']);
+  await expect.poll(() => fake.removed).toEqual([{draft: fake.uploads[0]!.draft, id: notes.id}]);
+});
+
+test('a file removed and attached again is one chip', async () => {
+  const fake = await compose(draftOf({files: [NOTES]}));
+  await userEvent.click(page.getByRole('button', {name: 'Remove Notes.txt'}));
+  pick(fileOf('Notes.txt', 12, 'text/plain'));
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes']);
+  expect(fake.removed.map(one => one.id)).toEqual([NOTES.id]);
+  // The picker is left empty, so choosing the same file again is a change.
+  expect(document.querySelector<HTMLInputElement>('.composer input[type="file"]')!.value).toBe('');
+});
+
+test.each([
+  ['attached', false],
+  ['still uploading', true],
+])('a reply with nothing but a file %s is kept when Esc closes it', async (_, uploading) => {
+  const draft = draftOf({});
+  const fake = await compose(draft);
+  if (uploading) fake.hold();
+  pick(fileOf('Notes.txt', 12, 'text/plain'));
+  await expect.poll(fileChips).toEqual([uploading ? 'Notes.txt12 bytes (uploading)' : 'Notes.txt12 bytes']);
+  await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
+  await userEvent.keyboard('{Escape}');
+  await expect.poll(() => document.querySelector('.composer')).toBeNull();
+  fake.release();
+  await expect.poll(() => draft.files.map(file => file.filename)).toEqual(['Notes.txt']);
+  expect(fake.discarded).toEqual([]);
+});
+
+test('a forward\'s originals come first in the row; a file that would cross 25 MB with them is refused in words before it uploads, and an original taken off makes room', async () => {
+  const message = {...MESSAGE, attachments: [{id: 31, filename: 'Lease.pdf', mime_type: 'application/pdf', size_bytes: 24 * MB, previewable: true}]} as MessageOut;
+  const fake = await compose(draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?', files: [{...NOTES, size_bytes: MB / 2}]}), [], message);
+  await expect.poll(fileChips).toEqual(['Lease.pdf24 MB', 'Notes.txt512 KB']);
+  pick(fileOf('Photos.zip', MB));
+  await expect.poll(fileError).toBe('Couldn\'t attach Photos.zip, attachments can total 25 MB, and these would be 25.5 MB.');
+  expect(fake.uploads).toEqual([]);
+  await userEvent.click(page.getByRole('button', {name: 'Dismiss'}));
+  expect(fileError()).toBeNull();
+
+  await userEvent.click(page.getByRole('button', {name: 'Remove Lease.pdf'}));
+  pick(fileOf('Photos.zip', MB));
+  await expect.poll(fileChips).toEqual(['Notes.txt512 KB', 'Photos.zip1 MB']);
+  expect(fileError()).toBeNull();
+});
+
+test('Send waits for an upload under way; one that fails stops it with its words, the composer kept', async () => {
+  const fake = await compose(draftOf({}));
+  fake.hold();
+  fake.failUploads = 1;
+  pick(fileOf('Notes.txt', 12, 'text/plain'));
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes (uploading)']);
+  await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
+  await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+  fake.release();
+  await expect.poll(fileError).toMatch(/^Couldn't attach Notes\.txt/);
+  await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
+  expect(fake.sends).toBe(0);
+
+  // Attached, it sends.
+  fake.hold();
+  pick(fileOf('Notes.txt', 12, 'text/plain'));
+  await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
+  await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+  expect(fake.sends).toBe(0);
+  fake.release();
+  await expect.poll(() => fake.sends).toBe(1);
+});
+
+test('Discard\'s Undo takes the files back onto the draft it starts', async () => {
+  const draft = draftOf({files: [NOTES]});
+  const fake = await compose(draft);
+  fake.known.set(NOTES.id, NOTES);
+  expect(fileChips()).toEqual(['Notes.txt12 bytes']);
+  holdSaves();
+  await userEvent.click(page.getByRole('button', {name: 'Discard'}));
+  await expect.poll(() => document.querySelector('.composer')).toBeNull();
+  await userEvent.click(page.getByRole('button', {name: 'Undo'}));
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes']);
+  expect(fake.takes).toEqual([{draft: draft.id, ids: [NOTES.id]}]);
+});
+
+test.each([
+  ['in the pane', false],
+  ['in a window', true],
+])('the reply-type menu carries the files %s to the forward, after the forward\'s originals', async (_, floating) => {
+  const message = {...MESSAGE, attachments: [{id: 31, filename: 'Menu.pdf', mime_type: 'application/pdf', size_bytes: 184 * 1024, previewable: true}]} as MessageOut;
+  const reply = draftOf({files: [NOTES]});
+  const forward = draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?'});
+  const fake = await compose(reply, [], message, [forward]);
+  fake.known.set(NOTES.id, NOTES);
+  if (floating) {
+    await userEvent.click(page.getByRole('button', {name: 'Pop out'}));
+    await expect.poll(inWindow).not.toBeNull();
+  }
+  expect(fileChips()).toEqual(['Notes.txt12 bytes']);
+  await userEvent.click(page.getByRole('button', {name: 'Reply, change'}));
+  await userEvent.click(page.getByRole('menuitemradio', {name: 'Forward'}));
+  await expect.element(page.getByRole('button', {name: 'Forward, change'})).toBeVisible();
+  await expect.poll(fileChips).toEqual(['Menu.pdf184 KB', 'Notes.txt12 bytes']);
+  expect(fake.takes).toEqual([{draft: forward.id, ids: [NOTES.id]}]);
+  expect([inWindow() !== null, inPane() !== null]).toEqual([floating, !floating]);
+});
+
+test('a switch while a file uploads waits for it, and the forward takes it', async () => {
+  const reply = draftOf({});
+  const forward = draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?'});
+  const fake = await compose(reply, [], MESSAGE, [forward]);
+  fake.hold();
+  pick(fileOf('Notes.txt', 12, 'text/plain'));
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes (uploading)']);
+  await userEvent.click(page.getByRole('button', {name: 'Reply, change'}));
+  await userEvent.click(page.getByRole('menuitemradio', {name: 'Forward'}));
+  // The forward is started and saved; the take waits for the upload.
+  await expect.poll(() => fake.saves.some(one => one.draft === forward.id)).toBe(true);
+  expect(fake.takes).toEqual([]);
+  fake.release();
+  await expect.element(page.getByRole('button', {name: 'Forward, change'})).toBeVisible();
+  await expect.poll(fileChips).toEqual(['Notes.txt12 bytes']);
+  expect(fake.takes).toEqual([{draft: forward.id, ids: [[...fake.known.values()].find(file => file.filename === 'Notes.txt')!.id]}]);
+});
+
+test('a switch the server refuses for the limit keeps the reply as it was, files and all, and drops the forward it started', async () => {
+  const reply = draftOf({files: [NOTES]});
+  const forward = draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?'});
+  const fake = await compose(reply, [], MESSAGE, [forward]);
+  fake.refuseTakes = true;
+  await userEvent.click(page.getByRole('button', {name: 'Reply, change'}));
+  await userEvent.click(page.getByRole('menuitemradio', {name: 'Forward'}));
+  await expect.element(page.getByText(/^Couldn't start the forward/)).toBeVisible();
+  await expect.poll(() => fake.discarded).toEqual([forward.id]);
+  await expect.element(page.getByRole('button', {name: 'Reply, change'})).toBeVisible();
+  expect(fileChips()).toEqual(['Notes.txt12 bytes']);
 });

@@ -6,6 +6,9 @@
 // without the user's say.
 import {SEED_NOW, SEND_HOLD_MS} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {describe, expect, onTestFinished, test, vi} from 'vitest';
 import * as t from '../src/db/schema.ts';
 import {ICloudAdapter, icloudConnector} from '../src/providers/icloud/index.ts';
@@ -37,11 +40,13 @@ async function setup({appendSent = true}: {appendSent?: boolean} = {}) {
   const adapter = new ICloudAdapter({endpoint: {host: imap.host, port: imap.port, secure: false}, smtp: {host: smtp.host, port: smtp.port, requireTLS: false}, appendSent, connectTimeoutMs: 2000});
   // Its pooled connection and the pool's sweeper go with the test.
   onTestFinished(() => adapter.close());
+  const filesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-icloud-files-'));
+  onTestFinished(() => fs.rmSync(filesDir, {recursive: true, force: true}));
   const engine: SyncEngine = new SyncEngine({store: w.store, adapters: new Adapters({icloud: adapter}), timeoutMs: 5000, workers: [new SendWorker({
-    store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
+    store: w.store, filesDir, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
     attachment: (sourceId, message, id) => engine.attachment(sourceId, message, id),
   })]});
-  const api = await signedIn(w, {engine, connectors: {icloud: icloudConnector(w.store, adapter)}});
+  const api = await signedIn(w, {engine, connectors: {icloud: icloudConnector(w.store, adapter)}, draftFiles: filesDir});
   const drain = async () => {
     for (let round = 0; round < 40; round += 1) {
       await engine.tick();
@@ -99,6 +104,21 @@ describe('iCloud: sending', () => {
     await poll();
     expect(sentRows(w)).toHaveLength(1);
     expect(sentRows(w)[0]!.trashedAt).toBeNull();
+  });
+
+  test('the user\'s own files go over SMTP and in the copy filed in Sent', async () => {
+    const {w, imap, smtp, api, drain} = await setup();
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'new'}})).body;
+    await api.send('PATCH', `/api/mail/drafts/${draft.id}`, {body: {to: [{name: null, address: 'sam.ortiz@example.org'}], subject: 'Plans'}});
+    const uploaded = await api.app.request(`/api/mail/drafts/${draft.id}/files?name=Floor%20plan.pdf`, {method: 'POST', headers: {origin: 'http://localhost', cookie: api.cookie!, 'content-type': 'application/pdf'}, body: Buffer.from('%PDF-1.4 floor plan')});
+    expect(uploaded.status).toBe(201);
+    await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
+    w.advance(SEND_HOLD_MS);
+    await drain();
+    for (const raw of [smtp.accepted[0]!.data, imap.appends[0]!.raw]) {
+      expect((await parseEmail(raw)).attachments.map(file => [file.filename, file.mimeType, file.sizeBytes])).toEqual([['Floor plan.pdf', 'application/pdf', 19]]);
+    }
+    expect(w.store.db.select().from(t.draftFiles).all()).toEqual([]);
   });
 
   test('a copy with its Message-ID already in Sent is not filed twice', async () => {
