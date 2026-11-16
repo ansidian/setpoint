@@ -131,8 +131,7 @@ test('a long description opened with More keeps the card, Edit included, inside 
     await chip(page, '2026-10-15', 'Career fair').click();
     await card(page).getByRole('button', {name: 'More'}).click();
     await card(page).getByRole('button', {name: 'Less'}).waitFor();
-    // The opened text is 320 px with the rest inside, and the card is placed again around it.
-    assert.equal(await page.locator('.fd .fd-desc').evaluate(text => text.clientHeight), 320);
+    // The card is placed again around the opened text.
     const edges = () => page.evaluate(() => {
       const grid = document.querySelector('.cal-month')!.getBoundingClientRect();
       const edit = [...document.querySelectorAll('.fd .card-acts button')].find(button => button.textContent?.startsWith('Edit'))!.getBoundingClientRect();

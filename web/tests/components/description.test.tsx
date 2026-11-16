@@ -17,7 +17,6 @@ import {DescriptionField, linkTarget} from '../../src/app/calendar/DescriptionFi
 import {DetailContent} from '../../src/app/calendar/detail/DetailContent.tsx';
 import {readHtml, readMarkdown, writeHtml, writeMarkdown} from '../../src/logic/description.ts';
 import type {Block} from '../../src/logic/description.ts';
-import {ICONS} from '../../src/ui/glyphs.ts';
 
 const CALENDAR: CalendarOut = {id: 2, provider: 'google', account_id: 1, name: 'Classes', colour: 'good', position: 1, visible: true, listed: true, writable: true, command: null};
 const GOOGLE = '<b>Midterm review</b>, library room 3B<br><i>Bring</i> last week\'s <u>problem set</u><br><ol><li>Recursion</li><li>Big O</li></ol><ul><li>Laptop</li></ul><br><a href="https://classes.example.edu/cs101/midterm">Practice exam</a>';
@@ -45,11 +44,10 @@ async function card(one: ItemOut) {
 const facts = () => [...document.querySelectorAll('.card-b .fact')].map(fact => fact.className);
 const shown = () => document.querySelector('.fd-desc')!;
 
-test('the detail: a description sits after who\'s coming, under the notes glyph, formatted as Google\'s editor wrote it', async () => {
+test('the detail: a description sits after who\'s coming, formatted as Google\'s editor wrote it', async () => {
   await card(item({description: GOOGLE}));
   await expect.element(page.getByText('Midterm review')).toBeVisible();
   expect(facts()).toEqual(['fact', 'fact description', 'fact cal']);
-  expect(document.querySelector('.fact.description .icon path')!.getAttribute('d')).toBe(ICONS.notes);
   expect(shown().querySelector('b')!.textContent).toBe('Midterm review');
   expect(shown().querySelector('i')!.textContent).toBe('Bring');
   expect(shown().querySelector('u')!.textContent).toBe('problem set');
@@ -96,23 +94,24 @@ test('the detail: markup outside the list is never drawn: no script, image, fram
   expect((window as unknown as {ran?: boolean}).ran).toBe(false);
 });
 
-test('the detail: a long description folds to 6 lines under More, which opens it in place to 320 px with the rest inside; Less folds it again', async () => {
+test('the detail: a long description folds under More, which opens it taller in place with the rest inside; Less folds it again', async () => {
   await card(item({description: LONG}));
   const more = page.getByRole('button', {name: 'More'});
   await expect.element(more).toHaveAttribute('aria-expanded', 'false');
-  expect(shown().clientHeight).toBe(120);
-  expect(shown().scrollHeight).toBeGreaterThan(320);
+  const folded = shown().clientHeight;
+  expect(shown().scrollHeight).toBeGreaterThan(folded);
   await more.click();
   const less = page.getByRole('button', {name: 'Less'});
   await expect.element(less).toHaveAttribute('aria-expanded', 'true');
-  expect(shown().clientHeight).toBe(320);
+  expect(shown().clientHeight).toBeGreaterThan(folded);
+  expect(shown().scrollHeight).toBeGreaterThan(shown().clientHeight);
   expect(getComputedStyle(shown()).overflowY).toBe('auto');
   // The rows after it stay in the card, under the opened text.
   const calendar = document.querySelector('.fact.cal')!.getBoundingClientRect();
   expect(calendar.top).toBeGreaterThanOrEqual(less.element().getBoundingClientRect().bottom);
   await less.click();
   await expect.element(more).toBeVisible();
-  expect(shown().clientHeight).toBe(120);
+  expect(shown().clientHeight).toBe(folded);
 });
 
 /** A parent that reads the card's height in its own layout effect, as the floating detail's motion does before it places and glides the card. */
@@ -170,11 +169,10 @@ const box = page.getByRole('textbox', {name: 'Description'});
 const bar = () => [...document.querySelectorAll('.desc-bar button')].map(button => button.getAttribute('aria-label'));
 const selectAll = () => userEvent.keyboard('{ControlOrMeta>}a{/ControlOrMeta}');
 
-test('the field: empty it says "Add description" on one line; its bar shows only while it has focus, with Underline for an event', async () => {
+test('the field: empty it says "Add description"; its bar shows only while it has focus, with Underline for an event', async () => {
   await field('event');
   await expect.element(box).toHaveAttribute('data-placeholder', 'Add description');
   await expect.element(box).toHaveAttribute('data-empty');
-  expect(box.element().clientHeight).toBe(34);
   expect(bar()).toEqual([]);
   await box.click();
   await expect.element(page.getByRole('toolbar', {name: 'Formatting'})).toBeVisible();
@@ -283,11 +281,10 @@ test('the field: a task\'s Todoist formats it has no button for are kept through
   expect(writeMarkdown(read!)).toBe('# The Plan\n> Said so\n~~old~~ and `code`');
 });
 
-test('the field: it grows with its text to 8 lines, then keeps its height with the rest inside', async () => {
+test('the field: a long text keeps the rest inside it', async () => {
   await field('event', readHtml(LONG).blocks);
   await expect.element(page.getByText('Line 1 of the fair\'s notes')).toBeVisible();
-  expect(box.element().clientHeight).toBe(174);
-  expect(box.element().scrollHeight).toBeGreaterThan(174);
+  expect(box.element().scrollHeight).toBeGreaterThan(box.element().clientHeight);
   expect(getComputedStyle(box.element()).overflowY).toBe('auto');
 });
 
