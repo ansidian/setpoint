@@ -274,13 +274,17 @@ test('typing asks for people from the user\'s mail; ↓ and Enter pick one, and 
   await expect.element(field('To')).toHaveValue('');
 });
 
-test('⌘⇧B shows Cc and Bcc on a reply without them; left empty, they fold away when the caret leaves', async () => {
+test('⌘⇧B shows Cc and Bcc on a reply without them; left empty, they stay when the caret leaves, and ⌘⇧B hides them again', async () => {
   await compose(draftOf({}));
   expect(document.querySelector('.composer input[aria-label="Cc"]')).toBeNull();
   await userEvent.keyboard('{Meta>}{Shift>}b{/Shift}{/Meta}');
   await expect.element(field('Cc')).toHaveFocus();
   await expect.element(field('Bcc')).toBeVisible();
   await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
+  await expect.element(page.getByRole('textbox', {name: 'Message'})).toHaveFocus();
+  await expect.element(field('Cc')).toBeVisible();
+  await expect.element(field('Bcc')).toBeVisible();
+  await userEvent.keyboard('{Meta>}{Shift>}b{/Shift}{/Meta}');
   await expect.poll(() => document.querySelector('.composer input[aria-label="Cc"]')).toBeNull();
   // The button does it too, and a Cc kept keeps them.
   await userEvent.click(page.getByRole('button', {name: 'Cc Bcc'}));

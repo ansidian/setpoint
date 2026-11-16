@@ -1,8 +1,8 @@
 // The composer, in the reading pane under the email it answers (the email scrolls above it). From
 // is the account's colour and label, its Gmail aliases under each account. Popped out, a title bar
 // leads it: the subject, or "New message". To is always there; Cc
-// and Bcc show together with ⌘⇧B (and by themselves when the draft has them), and hide again when
-// both are empty and the caret leaves them. A recipient is a chip with a name or an address; typing
+// and Bcc show together with ⌘⇧B or the Cc Bcc button (and by themselves when the draft has them),
+// stay once shown, and hide again on ⌘⇧B when both are empty. A recipient is a chip with a name or an address; typing
 // suggests people from the user's mail. A new message has a subject field; a reply's or a
 // forward's subject is the server's ("Re: …", "Fwd: …"), shown as the window's title.
 // The body is the description field's rich text, with its format row always there; a reply's quote
@@ -85,7 +85,6 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   const body = useRef<HTMLDivElement>(null);
   const to = useRef<HTMLInputElement>(null);
   const cc = useRef<HTMLInputElement>(null);
-  const copiesRow = useRef<HTMLDivElement>(null);
   // The fields as of the last change, for Send right after one (an address typed, then ⌘Enter).
   const latest = useRef(fields);
   const change = <K extends keyof typeof fields>(key: K, value: (typeof fields)[K]) => {
@@ -206,13 +205,6 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         event.preventDefault();
         event.stopPropagation();
         attach(files);
-      }}
-      onBlur={event => {
-        // Cc and Bcc fold away again when both are empty and the caret has left them.
-        if (copies && !fields.cc.length && !fields.bcc.length && !copiesRow.current?.contains(event.relatedTarget as Node | null)) {
-          const typed = [...(copiesRow.current?.querySelectorAll('input') ?? [])].some(input => input.value.trim());
-          if (!typed && copiesRow.current?.contains(event.target as Node)) setCopies(false);
-        }
       }}>
       {/* Popped out: the title folds the window to its bar and back, and the pop-out button docks
           it. The caret stays where it was as the composer moves. */}
@@ -253,7 +245,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         {!copies && <button className="btn quiet sm cmp-copies" type="button" tabIndex={-1} data-tip="Cc and Bcc · ⌘⇧B" onClick={showCopies}>Cc Bcc</button>}
       </div>
       {copies && (
-        <div ref={copiesRow}>
+        <div>
           <div className="cmp-row">
             <span className="cmp-label">Cc</span>
             <RecipientField label="Cc" recipients={fields.cc} inputRef={cc} onChange={value => change('cc', value)} />
