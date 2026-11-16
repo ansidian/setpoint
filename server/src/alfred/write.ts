@@ -24,7 +24,6 @@ import {AI_ENDPOINTS, anthropicConversation} from '../providers/ai/index.ts';
 import type {AiEndpoints, ConverseTurn, ToolResult, ToolSpec} from '../providers/ai/index.ts';
 import {assertEditable, getDraftRow, sendAddresses} from '../sending/drafts.ts';
 import type {DraftRow} from '../sending/drafts.ts';
-import {getSettings} from '../settings.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 import {ProviderError} from '../sync/errors.ts';
@@ -210,7 +209,7 @@ export async function writeDraft(store: Store, draftId: number, input: {prompt: 
   const ask = {prompt: input.prompt.trim(), body: input.body, selection};
 
   const keys = aiKeys(store);
-  const chosen = chooseDraftModel(getSettings(store).ai, keys);
+  const chosen = chooseDraftModel(keys);
   const apiKey = chosen.choice ? anthropicKey(store) : null;
   if (!chosen.choice || !apiKey) {
     if (options.canned) {

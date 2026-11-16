@@ -8,6 +8,7 @@ import {counterpartOf, DRAFT_HISTORY, draftEvidence, withoutQuote} from '../src/
 import * as t from '../src/db/schema.ts';
 import {getDraftRow} from '../src/sending/drafts.ts';
 import {setSecret} from '../src/secrets/store.ts';
+import {updateSettings} from '../src/settings.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
 import type {FakeRequest} from './fakeModels.ts';
 import {signedIn, world} from './helpers.ts';
@@ -133,6 +134,15 @@ describe('Writing through the model', () => {
     expect(getDraftRow(w.store, draft.id).body).toEqual([]);
   });
 
+  test('drafts are Opus 5.5\'s whatever model Alfred is set to', async () => {
+    const {w, api, fake, start} = await setup();
+    updateSettings(w.store, {ai: {alfred_model: 'claude-haiku-5-5'}});
+    const draft = await start('reply', THEO);
+    fake.answer(() => ({calls: [{name: 'write_draft', input: {text: 'Sure.'}}]}));
+    await api.send('POST', `/api/mail/drafts/${draft.id}/write`, {body: {prompt: 'say yes', body: []}});
+    expect(fake.requests.map(request => request.model)).toEqual(['claude-opus-5-5']);
+  });
+
   test('a lookup the ask needs runs Alfred\'s real tool, then the draft uses what it found', async () => {
     const {w, api, fake, start} = await setup();
     const draft = await start('reply', THEO);
@@ -217,7 +227,7 @@ describe('Writing through the model', () => {
     const draft = await plain.start('reply', THEO);
     const refused = await plain.api.send('POST', `/api/mail/drafts/${draft.id}/write`, {body: {prompt: 'say 4 works', body: []}});
     expect(refused.status).toBe(503);
-    expect(refused.body.error.message).toBe('Alfred needs an Anthropic key in Settings › AI.');
+    expect(refused.body.error.message).toBe('Help me write needs an Anthropic key in Settings › AI.');
 
     const asks: unknown[] = [];
     const dev = await setup({key: false, canned: async ask => (asks.push(ask), 'Hi Theo,\n\nSure.')});

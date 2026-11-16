@@ -22,7 +22,13 @@ export function chooseAlfredModel(ai: Settings['ai'], keys: Record<AiProvider, b
 }
 
 /**
- * Help me write's model: Alfred's, as Settings › AI chooses it. It writes in the user's name, so it
- * gets the same most capable default.
+ * Help me write's model: Claude Opus 5.5, whatever Alfred is set to, since a draft goes out in the
+ * user's name (the owner's choice; about $0.035 a simple draft, $0.07 with two lookups). It needs
+ * the Anthropic key.
  */
-export const chooseDraftModel = chooseAlfredModel;
+export const DRAFT_MODEL = 'claude-opus-5-5';
+
+export function chooseDraftModel(keys: Record<AiProvider, boolean>): {choice: AiModelChoiceOut | null; missing: string | null} {
+  if (!keys.anthropic) return {choice: null, missing: 'Help me write needs an Anthropic key in Settings › AI.'};
+  return {choice: {provider: 'anthropic', model: DRAFT_MODEL}, missing: null};
+}
