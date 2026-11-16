@@ -156,13 +156,14 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     // How far the meter fills is capMeter's, a table in news.test.ts. Its width on screen is by eye.
     const meter = news.locator('.meter');
 
-    // Usage this month: Triage, Search terms, Search reading, Alfred, News and Jobs, News and Jobs in their parts.
+    // Usage this month: Triage, Search terms, Search reading, Alfred, Help me write (none in the seed), News and Jobs, News and Jobs in their parts.
     const usage = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: 'Usage this month'})});
     assert.deepEqual(await usage.locator('.set-row').evaluateAll(rows => rows.map(element => [element.querySelector('.t')?.textContent, element.querySelector('.s')?.textContent, element.querySelector('.cost')?.textContent])), [
       ['Triage', '1,214 calls · 2.4M tokens in · 49k out', '$2.10'],
       ['Search terms', '312 calls · 468k tokens in · 11k out', '$0.04'],
       ['Search reading', '48 calls · 60k tokens in · 2k out', '$0.01'],
       ['Alfred', '18 calls · 112k tokens in · 8k out', '$0.85'],
+      ['Help me write', '0 calls · 0 tokens in · 0 out', '$0.00'],
       ['News', 'Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20', '$18.40'],
       ['Jobs', 'Emails $0.62 · finding JDs $2.71 · reading JDs $0.52 · no cap', '$3.85'],
     ]);
