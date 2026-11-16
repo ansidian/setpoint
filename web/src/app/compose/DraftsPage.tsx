@@ -15,11 +15,11 @@ import {chipLabel} from '../../logic/composer.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
 import {tabTitle} from '../../logic/title.ts';
-import {Icon} from '../../ui/Icon.tsx';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {EmptyPane} from '../EmptyPane.tsx';
+import {DraftsEmptyView} from '../EmptyView.tsx';
 import {EmailOnly, PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {navigate} from '../router.ts';
@@ -116,7 +116,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
       <div className="content" style={accountWidth}>
         <section className="list drafts-list" aria-label="Drafts">
           {!load.data ? (failed ? <LoadFailed what="Drafts" loads={[load]} /> : <AllSkeleton />) : rows.length === 0 ? (
-            <div className="drafts-empty ink3"><Icon name="draft" size={20} />No drafts</div>
+            <DraftsEmptyView onNew={() => newMessage()} />
           ) : rows.map(row => {
             const account = accounts.get(row.account_id);
             const classes = ['row', at === row.id && 'cur', shown === row.id && 'open'].filter(Boolean).join(' ');

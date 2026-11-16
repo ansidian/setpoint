@@ -373,11 +373,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ve-block.attention .ve-art .accent { stroke: var(--caution); }
 .ve-block.fyi .ve-art .accent { stroke: var(--cool); }
 .ve-block.sent .ve-art .accent { stroke: var(--c, var(--ink3)); }
+.ve-block.drafts .ve-art .accent { stroke: var(--accent); }
 @keyframes ve-draw { from { stroke-dashoffset: 1; } }
 @media (prefers-reduced-motion: reduce) { .ve-art path { animation: none; } }
 .ve-head { margin: 0; color: var(--ink); font-size: 15px; font-weight: 500; }
 .ve-quiet { margin: 6px 0 0; color: var(--ink3); font-size: 12.5px; }
 .ve-block > .btn { margin-top: 14px; }
+.ve-block > .btn .kbd { margin-right: -5px; background: var(--sub3); }
 @container (min-width: 1200px) { .ve-head { font-size: 17px; } .ve-quiet { font-size: 13px; } }
 .ve-block > :not(.ve-art) { animation: fade-in var(--dur-medium) var(--ease) 200ms backwards; }
 .mark.settle > g { animation: mark-settle var(--dur-slow) var(--ease) backwards; }

@@ -54,6 +54,16 @@ const SENT_DRAWING: Stroke[] = [
   {d: 'M72 80 L80 98 L96 104', accent: true},
 ];
 
+// Drafts': a blank page, its corner folded, a pencil laid across it with its lead in `accent`.
+const DRAFTS_DRAWING: Stroke[] = [
+  {d: 'M44 20 a4 4 0 0 1 4 -4 H90 L106 32 V100 a4 4 0 0 1 -4 4 H48 a4 4 0 0 1 -4 -4 Z', solid: true},
+  {d: 'M90 16 V28 a4 4 0 0 0 4 4 H106'},
+  {d: 'M83 84 L119.7 47.2 a5 5 0 0 1 7.07 7.07 L90 91 Z', solid: true},
+  {d: 'M114.1 52.9 L121.1 59.9'},
+  {d: 'M83 84 L78 96 L90 91', solid: true},
+  {d: 'M81.3 88 L78 96 L86 92.7 Z', accent: true},
+];
+
 function Art({strokes}: {strokes: Stroke[]}) {
   return (
     <svg className="ve-art" viewBox="0 0 160 120" aria-hidden="true">
@@ -93,6 +103,19 @@ export function SentEmptyView({account, style, onAll}: {account: {label: string;
         <p className="ve-head">{account ? `Nothing sent from ${account.label}` : 'Nothing sent yet'}</p>
         {account && <p className="ve-quiet">{account.address}</p>}
         {account && <button className="btn ghost sm" type="button" onClick={onAll}>Show All</button>}
+      </div>
+    </div>
+  );
+}
+
+/** Drafts with none waiting: "No drafts", with New message (C). */
+export function DraftsEmptyView({onNew}: {onNew: () => void}) {
+  return (
+    <div className="view-empty">
+      <div className="ve-block drafts">
+        <Art strokes={DRAFTS_DRAWING} />
+        <p className="ve-head">No drafts</p>
+        <button className="btn ghost sm" type="button" onClick={onNew}>New message<span className="kbd">C</span></button>
       </div>
     </div>
   );

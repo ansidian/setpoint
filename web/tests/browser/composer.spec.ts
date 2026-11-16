@@ -2,7 +2,8 @@
 // seed's moment so a held send stays held: Reply all from the keyboard, sent behind the "Sending"
 // toast and brought back by Undo as it was; a send the provider refused, back on its email with the
 // provider's words and Try again; a draft that outlives a reload, its row saying "Draft"; a new
-// message from C in a window, kept in Drafts, its sidebar row and its page; From's alias and Sent's
+// message from C in a window, kept in Drafts, its sidebar row and its page; Drafts with none and
+// its New message; From's alias and Sent's
 // account; a composer left with nothing written, which leaves no draft; a forward, its attachment
 // taken off; a file attached by the attach button, kept on the server through a pop-out and
 // Discard's Undo and held with the reply; and a reply popped out, kept up while other mail and Calendar show, and docked back on
@@ -173,6 +174,21 @@ test('C writes a new message in a window from the account last sent from; closed
     assert.equal(await page.locator('.pane .rd-subj').count(), 0);
     await page.keyboard.press('Escape');
     await until('Esc empties the pane', async () => new URL(page.url()).pathname, path => path === '/drafts');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Drafts with none says so, and its New message writes one in a window, as C does', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/drafts`);
+    await page.locator('.drafts-list .view-empty .ve-head', {hasText: 'No drafts'}).waitFor();
+    await page.locator('.drafts-list .view-empty .btn', {hasText: 'New message'}).click();
+    await page.locator('.cmp-window .composer').waitFor();
+    assert.equal(await page.locator('.cmp-window .cmp-title-text').textContent(), 'New message');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
