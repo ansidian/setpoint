@@ -877,6 +877,66 @@ test('R on a draft left with words: what\'s typed across the answer goes on afte
   await expect.poll(bodyLines).toEqual(['Old words', 'hello']);
 });
 
+test('Esc, R again, the first start answered and the second refused: the composer keeps the draft, quietly', async () => {
+  const draft = draftOf({});
+  const fake = await composeHeld(draft);
+  await caretIn('Message');
+  await userEvent.keyboard('{Escape}');
+  startComposer({kind: 'reply', message_id: EMAIL});
+  await caretIn('Message');
+  fake.releaseNextStart();
+  await expect.poll(() => openComposers().map(one => one.draftId)).toEqual([draft.id]);
+  fake.refuseStart = true;
+  fake.releaseNextStart();
+  await expect.poll(() => fake.startsAnswered).toBe(2);
+  await answerRead();
+  expect(openComposers().map(one => one.draftId)).toEqual([draft.id]);
+  expect(document.body.textContent).not.toMatch(/Couldn't/);
+});
+
+test('a start refused after Esc with nothing typed says nothing', async () => {
+  const fake = await composeHeld(draftOf({}));
+  await caretIn('Message');
+  await userEvent.keyboard('{Escape}');
+  fake.refuseStart = true;
+  fake.releaseStart();
+  await expect.poll(() => fake.startsAnswered).toBe(1);
+  await answerRead();
+  expect(document.body.textContent).not.toMatch(/Couldn't/);
+});
+
+test('a start refused after Esc with words typed says they weren\'t kept', async () => {
+  const fake = await composeHeld(draftOf({}));
+  await caretIn('Message');
+  await userEvent.keyboard('hello{Escape}');
+  fake.refuseStart = true;
+  fake.releaseStart();
+  await expect.element(page.getByText(/Couldn't start the reply/)).toBeVisible();
+});
+
+test('a refused start gives the pane back as it was: the composer it took the place of opens again', async () => {
+  const kept = draftOf({kind: 'reply_all', to: [SAM, JUNE], cc: [RAVI], body: [para('Kept words')]});
+  const fake = await compose(kept);
+  fake.refuseStart = true;
+  startComposer({kind: 'reply', message_id: EMAIL});
+  await expect.element(page.getByText(/Couldn't start the reply/)).toBeVisible();
+  await expect.poll(() => openComposers().map(one => one.draftId)).toEqual([kept.id]);
+  await expect.poll(bodyLines).toEqual(['Kept words']);
+});
+
+test('a refused start leaves a reply closed with Esc closed', async () => {
+  const draft = draftOf({});
+  const fake = await compose(draft);
+  await userEvent.keyboard('Count me in{Escape}');
+  fake.refuseStart = true;
+  startComposer({kind: 'forward', message_id: EMAIL});
+  await expect.element(page.getByText(/Couldn't start the forward/)).toBeVisible();
+  const fetched = vi.mocked(window.fetch).mock.calls.length;
+  showEmail(EMAIL, [{id: draft.id, message_id: EMAIL, updated_at: SEED_NOW, send_state: null} as DraftRowOut]);
+  expect(vi.mocked(window.fetch).mock.calls.length).toBe(fetched);
+  expect(openComposers()).toEqual([]);
+});
+
 test('a second start\'s late answer doesn\'t stand over what was saved since: Esc keeps the draft', async () => {
   const draft = draftOf({});
   const fake = await composeHeld(draft);

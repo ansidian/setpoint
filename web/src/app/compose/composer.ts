@@ -55,6 +55,7 @@
 // few minutes for that).
 import {ATTACHMENTS_MAX_BYTES, attachmentsTotal} from '@setpoint/shared';
 import type {DraftCreateInput, DraftKind, DraftOut, DraftRowOut, DraftUpdateInput, FromOut, MessageOut} from '@setpoint/shared';
+import {isEmpty} from '@setpoint/shared/richText';
 import {useSyncExternalStore} from 'react';
 import {ApiFailure, getCached, getJson, setCached} from '../../api/client.ts';
 import {discardDraft, draftPath, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
@@ -265,16 +266,41 @@ export function startComposer(input: DraftCreateInput) {
     rest = rest.filter(one => one !== pane);
   }
   const key = ++opened;
+  // What a refused start puts back: the pane's composer it took the place of, and the closed mark.
+  const gaveWay = pane?.draftId ?? null;
+  const wasClosedOn = closedOn;
   if (!floating) closedOn = null;
   setComposers([...rest, {
     draftId: null, messageId: input.kind === 'new' ? null : input.message_id ?? null, kind: input.kind,
     focus: input.kind === 'reply' || input.kind === 'reply_all' ? 'body' : 'to', subjectEdited: false, key, floating, minimized: false, touched: ++touches,
   }]);
   void startDraft(input).then(draft => arrive(key, draft), (error: unknown) => {
-    typedWhileWaiting.delete(key);
-    if (byKey(key)) setComposers(composers.filter(one => one.key !== key));
+    const typed = takeTyped(key);
+    const waiting = byKey(key);
+    // It took another start's draft meanwhile (Esc, then R again): nothing was lost.
+    if (waiting && waiting.draftId !== null) return;
+    if (waiting) {
+      setComposers(composers.filter(one => one.key !== key));
+      if (closedOn === null) closedOn = wasClosedOn;
+      if (gaveWay !== null) bringBack(gaveWay);
+    } else if (!wroteIn(typed)) {
+      // Closed with nothing written: there's nothing to say.
+      return;
+    }
     toastFailure(input.kind === 'forward' ? 'Couldn\'t start the forward' : input.kind === 'new' ? 'Couldn\'t start a message' : 'Couldn\'t start the reply')(error);
   });
+}
+
+/** Whether anything was written in a waiting composer: words, a recipient or a subject. */
+const wroteIn = (typed: DraftUpdateInput) => !isEmpty(typed.body ?? []) || (typed.to?.length ?? 0) + (typed.cc?.length ?? 0) + (typed.bcc?.length ?? 0) > 0 || !!typed.subject?.trim();
+
+/** A refused start gives the pane back: the draft it took the place of opens again, if it was kept. */
+function bringBack(draftId: number) {
+  if (discarded.has(draftId)) return;
+  void loadDraft(draftId).then(draft => {
+    if (docked() || byDraft(draftId) || discarded.has(draftId) || sending.has(draftId)) return;
+    show(draft, {caret: false});
+  }, () => {});
 }
 
 // What was typed in each waiting composer, by its opening, until its draft arrives.
