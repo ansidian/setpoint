@@ -291,6 +291,24 @@ test('⌘⇧B shows Cc and Bcc on a reply without them; left empty, they fold aw
   await expect.element(field('Bcc')).toBeVisible();
 });
 
+test('Tab from To goes to Subject, past the Cc Bcc button', async () => {
+  await compose(draftOf({kind: 'new', message_id: null, to: [], subject: ''}));
+  await expect.element(field('To')).toHaveFocus();
+  await userEvent.keyboard('{Tab}');
+  await expect.element(field('Subject')).toHaveFocus();
+});
+
+test('with Cc and Bcc showing, Tab from To goes through them to Subject', async () => {
+  await compose(draftOf({kind: 'new', message_id: null, to: [], cc: [RAVI], subject: ''}));
+  await userEvent.click(field('To'));
+  await userEvent.keyboard('{Tab}');
+  await expect.element(field('Cc')).toHaveFocus();
+  await userEvent.keyboard('{Tab}');
+  await expect.element(field('Bcc')).toHaveFocus();
+  await userEvent.keyboard('{Tab}');
+  await expect.element(field('Subject')).toHaveFocus();
+});
+
 test('the quote folds behind "…"; opened, it shows its line and the email, and a trim is saved as the quote', async () => {
   const {saves} = await compose(draftOf({}));
   holdSaves();

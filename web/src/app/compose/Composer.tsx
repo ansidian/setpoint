@@ -249,7 +249,8 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
       <div className="cmp-row">
         <span className="cmp-label">To</span>
         <RecipientField label="To" recipients={fields.to} inputRef={to} onChange={value => change('to', value)} />
-        {!copies && <button className="btn quiet sm cmp-copies" type="button" data-tip="Cc and Bcc · ⌘⇧B" onClick={showCopies}>Cc Bcc</button>}
+        {/* Click-only (and ⌘⇧B): Tab from To goes on to Subject. */}
+        {!copies && <button className="btn quiet sm cmp-copies" type="button" tabIndex={-1} data-tip="Cc and Bcc · ⌘⇧B" onClick={showCopies}>Cc Bcc</button>}
       </div>
       {copies && (
         <div ref={copiesRow}>
