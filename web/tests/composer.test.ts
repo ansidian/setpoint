@@ -218,6 +218,7 @@ describe('what was typed before the server answered, put into the draft it answe
     ['a recipient typed joins the server\'s', draft, {to: [JUNE]}, {to: [SAM, JUNE]}],
     ['a recipient the server already has is there once', draft, {to: [SAM, JUNE]}, {to: [SAM, JUNE]}],
     ['a subject typed is the subject', draft, {subject: 'Lunch'}, {subject: 'Lunch'}],
+    ['words typed and taken back on a draft with words change nothing', {...draft, body: left}, {body: [{type: 'paragraph' as const, runs: []}]}, {}],
   ])('%s', (_, answered, typed, saved) => {
     expect(fillAround(answered, typed)).toEqual(saved);
   });

@@ -24,7 +24,7 @@
 // It is mounted once, by ComposerRoot, into the host element its places take in turn (place.ts):
 // the reader under its email, a new message's pane, Drafts' pane and the floating window.
 import type {AccountOut, DraftOut, DraftsOut, DraftUpdateInput, FromOut, MessageOut, Recipient} from '@setpoint/shared';
-import {isEmpty} from '@setpoint/shared/richText';
+import {isEmpty, sameDescription} from '@setpoint/shared/richText';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {ClipboardEvent, CSSProperties, DragEvent, KeyboardEvent, ReactNode, RefObject} from 'react';
@@ -45,7 +45,7 @@ import {PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
 import {arrangeWindows, placeWindows} from '../../logic/composer.ts';
-import {attachFiles, canReplyAll, closeComposer, closeComposerAt, discard, dismissFileError, dock, foldWindows, popOut, queueSave, queueTyped, removeFile, switchKind, toggleMinimized, send, unsaved, useComposers, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
+import {attachFiles, canReplyAll, closeComposer, closeComposerAt, discard, dismissFileError, dock, foldWindows, popOut, queueSave, queueTyped, removeFile, switchKind, toggleMinimized, send, unsaved, useComposers, useFills, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
 import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
 import {Bar, Dot, Sk} from '../states/Loading.tsx';
@@ -130,26 +130,45 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   // Files wait for the draft: there's nowhere to upload them before it.
   const attach = (files: File[]) => draft && attachFiles(draft.id, files, originals, removed);
 
-  // The draft arrived: what the server filled comes in around what was typed (already saved into
-  // it), before the frame is drawn. A draft left with words before draws them, the typed after.
+  // The draft arrived, or words typed before Esc came in with it while this composer had it open:
+  // what came in goes around what was typed (already saved into it), before the frame is drawn. The
+  // body is drawn again only when it changed, the caret after what was typed here.
   const [arrived, setArrived] = useState(false);
+  const fills = useFills(open.key);
+  const drawnFills = useRef(fills);
   useLayoutEffect(() => {
-    if (!draft || !waitedFor.current) return;
+    if (!draft) return;
+    const arriving = waitedFor.current;
+    if (!arriving && fills === drawnFills.current) return;
     waitedFor.current = false;
+    drawnFills.current = fills;
     const now = {...draft, ...unsaved(draft.id)} as DraftOut;
+    const shown = latest.current.body;
     latest.current = {from: now.from, to: now.to, cc: now.cc, bcc: now.bcc, subject: now.subject, body: now.body};
     setFields(latest.current);
     if (now.cc.length + now.bcc.length > 0) setCopies(true);
     setRemoved(now.removed_attachments);
-    help.adopt(now.write);
-    if (!isEmpty(draft.body) && body.current) mountBlocks(body.current, now.body);
+    if (arriving) help.adopt(now.write);
+    const field = body.current;
+    if (field && !sameDescription(now.body, shown)) {
+      const caret = document.activeElement === field;
+      mountBlocks(field, now.body);
+      if (caret) {
+        // After what was typed here, which is last; at the start when nothing was.
+        const range = document.createRange();
+        range.selectNodeContents(field);
+        range.collapse(isEmpty(shown));
+        document.getSelection()?.removeAllRanges();
+        document.getSelection()?.addRange(range);
+      }
+    }
     // No one to send to after all, and nothing written yet: the caret goes to To, as it would have.
     const someone = now.to.length + now.cc.length + now.bcc.length > 0;
-    if (!someone && isEmpty(now.body) && document.activeElement === body.current) to.current?.focus();
-    setArrived(true);
-    // Once, as it arrives.
+    if (arriving && !someone && isEmpty(now.body) && document.activeElement === field) to.current?.focus();
+    if (arriving) setArrived(true);
+    // As it arrives, and as each fill comes in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft?.id]);
+  }, [draft?.id, fills]);
   const picker = useRef<HTMLInputElement>(null);
   // A drag with files over the composer: it says where they'll go.
   const [dropping, setDropping] = useState(false);

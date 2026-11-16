@@ -13,7 +13,9 @@ export const draftPath = (id: number) => `/mail/drafts/${id}`;
 /** Starts a draft, or answers the one this email already has of that kind. */
 export async function startDraft(input: DraftCreateInput): Promise<DraftOut> {
   const draft = await sendJson<DraftOut>('POST', DRAFTS_PATH, input);
-  setCached(draftPath(draft.id), draft);
+  // An email's draft this tab already has stays as the tab has it: the answer may be older than a
+  // save that landed meanwhile (two starts of the same draft).
+  if (!getCached<DraftOut>(draftPath(draft.id))) setCached(draftPath(draft.id), draft);
   refreshIfShown(DRAFTS_PATH);
   return draft;
 }

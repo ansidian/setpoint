@@ -299,17 +299,41 @@ function takeTyped(key: number): DraftUpdateInput {
  */
 function arrive(key: number, draft: DraftOut) {
   const own = byKey(key);
-  const typed = takeTyped(key);
   const taker = own ?? (draft.message_id === null ? null : composers.find(one => one.draftId === null && one.messageId === draft.message_id && one.kind === draft.kind) ?? null);
-  const changes = taker && taker !== own ? {...typed, ...takeTyped(taker.key)} : typed;
-  const fill = fillAround(draft, changes);
-  if (Object.keys(fill).length) queueSave(draft.id, fill);
+  // Each composer's words go in turn around the draft as this tab has it (the cache, which a late
+  // answer doesn't replace, with what it still owes): the closed one's first, then the taker's.
+  const typed = [takeTyped(key), ...(taker && taker !== own ? [takeTyped(taker.key)] : [])];
+  let now = {...getCached<DraftOut>(draftPath(draft.id)) ?? draft, ...owedOf(draft.id)} as DraftOut;
+  let fill: DraftUpdateInput = {};
+  for (const words of typed) {
+    const more = fillAround(now, words);
+    fill = {...fill, ...more};
+    now = {...now, ...more} as DraftOut;
+  }
+  const filled = Object.keys(fill).length > 0;
+  if (filled) queueSave(draft.id, fill);
   if (taker && taker.draftId === null) {
     setComposers(composers.map(one => (one === taker ? {...one, draftId: draft.id, messageId: draft.message_id} : one)));
     return;
   }
-  if (!taker && !byDraft(draft.id)) letGo(draft.id);
+  const open = byDraft(draft.id);
+  // Open in a composer already (it opened again by itself meanwhile): it draws what came in.
+  if (open) {
+    if (filled) fillComposer(open.key);
+    return;
+  }
+  if (!taker) letGo(draft.id);
 }
+
+// Each open composer's count of fills from outside it (words typed before Esc arriving with its
+// draft), so it draws them.
+const fills = new Map<number, number>();
+function fillComposer(key: number) {
+  fills.set(key, (fills.get(key) ?? 0) + 1);
+  notify();
+}
+/** How many times composer `key` was filled from outside it. */
+export const useFills = (key: number) => useSyncExternalStore(subscribe, () => fills.get(key) ?? 0);
 
 /** Whether email `id` has anyone for Reply all, from the email and From as they've loaded, else null. */
 export function canReplyAll(id: number): boolean | null {

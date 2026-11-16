@@ -112,7 +112,9 @@ export function fillAround(draft: Pick<DraftOut, 'to' | 'cc' | 'bcc' | 'body'>, 
     const added = typed[field];
     if (added) saved[field] = withRecipients(draft[field], added);
   }
-  if (typed.body && !isEmpty(draft.body)) saved.body = [...draft.body, ...typed.body];
+  // Words typed and taken back leave the body as the server has it.
+  if (typed.body && isEmpty(typed.body)) delete saved.body;
+  else if (typed.body && !isEmpty(draft.body)) saved.body = [...draft.body, ...typed.body];
   return saved;
 }
 

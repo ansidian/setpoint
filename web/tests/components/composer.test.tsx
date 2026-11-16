@@ -58,18 +58,22 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
   const asked: string[] = [];
   const discarded: number[] = [];
   const started = new Set<number>();
-  // `holdStart` keeps the answers to starting a draft until `releaseStart`, as a slow server would;
-  // `refuseStart` refuses them.
-  let starting: {promise: Promise<void>; open: () => void} | null = null;
+  // `holdStart` keeps the answers to starting a draft until `releaseStart` (all of them) or
+  // `releaseNextStart` (the oldest), as a slow server would; `refuseStart` refuses those let go.
+  // `startsAnswered` counts the answers given.
+  let holding = false;
+  const heldStarts: (() => void)[] = [];
   const fake = Object.assign(fileRoutes(id => [draft, ...others].find(one => one.id === id)), {
-    saves, landed, asked, discarded, failSaves: 0, sends: 0, refuseStart: false,
+    saves, landed, asked, discarded, failSaves: 0, sends: 0, refuseStart: false, startsAnswered: 0,
     holdStart() {
-      let open = () => {};
-      starting = {promise: new Promise<void>(resolve => (open = resolve)), open};
+      holding = true;
     },
     releaseStart() {
-      starting?.open();
-      starting = null;
+      holding = false;
+      for (const open of heldStarts.splice(0)) open();
+    },
+    releaseNextStart() {
+      heldStarts.shift()?.();
     },
   });
   const answer = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}}));
@@ -84,8 +88,11 @@ function server(draft: DraftOut, people: Recipient[] = [], message: MessageOut =
       const kind = (JSON.parse(String(init?.body)) as {kind: string}).kind;
       const next = kind === draft.kind ? undefined : others.find(one => one.kind === kind && !started.has(one.id));
       if (next) started.add(next.id);
-      const reply = () => (fake.refuseStart ? answer({error: {code: 'unavailable', message: 'Setpoint is restarting.'}}, 503) : answer(next ?? draft, 201));
-      return starting ? starting.promise.then(reply) : reply();
+      const reply = () => {
+        fake.startsAnswered += 1;
+        return fake.refuseStart ? answer({error: {code: 'unavailable', message: 'Setpoint is restarting.'}}, 503) : answer(next ?? draft, 201);
+      };
+      return holding ? new Promise<void>(open => heldStarts.push(open)).then(reply) : reply();
     }
     if (other && method === 'GET') return answer(other);
     if (other && method === 'DELETE') {
@@ -798,6 +805,100 @@ test('a start the server refuses closes the waiting composer with its toast', as
   await expect.element(page.getByText(/Couldn't start the reply/)).toBeVisible();
   expect(document.querySelector('.composer')).toBeNull();
   expect(openComposers()).toEqual([]);
+});
+
+// ---- Races while the draft is on its way ----
+
+const para = (text: string) => ({type: 'paragraph' as const, runs: [{text, marks: [], href: null}]});
+/** The body's paragraphs as the composer shows them. */
+const bodyLines = () => [...document.querySelector('.composer .desc-edit')?.childNodes ?? []].map(node => node.textContent).filter(Boolean);
+const caretIn = (label: string) => expect.poll(() => document.activeElement?.getAttribute('aria-label')).toBe(label);
+/**
+ * Lets a start the server answered run its course: the answer is read and handed on within a task
+ * or two. Used only where the check is that nothing happens.
+ */
+const answerRead = async () => {
+  for (let task = 0; task < 3; task++) await new Promise(resolve => window.setTimeout(resolve, 0));
+};
+
+test('Esc with words, then R again within one wait: what was typed in each is kept, the first then the second, and shown', async () => {
+  const fake = await composeHeld(draftOf({}));
+  await caretIn('Message');
+  await userEvent.keyboard('hello{Escape}');
+  startComposer({kind: 'reply', message_id: EMAIL});
+  await caretIn('Message');
+  await userEvent.keyboard('there');
+  holdSaves();
+  fake.releaseStart();
+  await expect.poll(() => chips('To')).toEqual(['Sam Lee']);
+  await expect.poll(bodyLines).toEqual(['hello', 'there']);
+  saveNow();
+  await expect.poll(() => fake.saves.at(-1)?.body).toEqual([para('hello'), para('there')]);
+});
+
+test('Esc with words, then R again with nothing typed: the words typed first show in the composer that takes the draft, and stay', async () => {
+  const fake = await composeHeld(draftOf({}));
+  await caretIn('Message');
+  await userEvent.keyboard('hello{Escape}');
+  startComposer({kind: 'reply', message_id: EMAIL});
+  await caretIn('Message');
+  holdSaves();
+  fake.releaseStart();
+  await expect.poll(bodyLines).toEqual(['hello']);
+  await userEvent.keyboard('!');
+  saveNow();
+  await expect.poll(() => JSON.stringify(fake.saves.at(-1)?.body ?? null)).toContain('hello');
+});
+
+test('words typed before Esc reach the draft when it\'s open again by the time the answer comes, and show there', async () => {
+  const draft = draftOf({});
+  const fake = await composeHeld(draft);
+  await caretIn('Message');
+  await userEvent.keyboard('hello{Escape}');
+  // Another email shown and this one again: its draft opens again by itself.
+  showEmail(EMAIL + 1, []);
+  showEmail(EMAIL, [{id: draft.id, message_id: EMAIL, updated_at: SEED_NOW, send_state: null} as DraftRowOut]);
+  await expect.poll(() => openComposers().map(one => one.draftId)).toEqual([draft.id]);
+  await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
+  holdSaves();
+  fake.releaseStart();
+  await expect.poll(bodyLines).toEqual(['hello']);
+  saveNow();
+  await expect.poll(() => fake.saves.at(-1)?.body).toEqual([para('hello')]);
+});
+
+test('R on a draft left with words: what\'s typed across the answer goes on after them, the caret where it was', async () => {
+  const fake = await composeHeld(draftOf({body: [para('Old words')]}));
+  await caretIn('Message');
+  await userEvent.keyboard('hel');
+  fake.releaseStart();
+  await expect.poll(bodyLines).toEqual(['Old words', 'hel']);
+  await userEvent.keyboard('lo');
+  await expect.poll(bodyLines).toEqual(['Old words', 'hello']);
+});
+
+test('a second start\'s late answer doesn\'t stand over what was saved since: Esc keeps the draft', async () => {
+  const draft = draftOf({});
+  const fake = await composeHeld(draft);
+  await caretIn('Message');
+  await userEvent.keyboard('{Escape}');
+  startComposer({kind: 'reply', message_id: EMAIL});
+  await caretIn('Message');
+  fake.releaseNextStart();
+  await expect.poll(() => openComposers().map(one => one.draftId)).toEqual([draft.id]);
+  holdSaves();
+  await userEvent.keyboard('Count me in');
+  saveNow();
+  await expect.poll(() => fake.landed.length).toBe(1);
+  vi.useRealTimers();
+  // The second start's answer: the draft as it was before the save.
+  fake.releaseNextStart();
+  await expect.poll(() => fake.startsAnswered).toBe(2);
+  await answerRead();
+  await userEvent.keyboard('{Escape}');
+  await expect.poll(() => document.querySelector('.composer')).toBeNull();
+  await answerRead();
+  expect(fake.discarded).toEqual([]);
 });
 
 // ---- Attached files ----
