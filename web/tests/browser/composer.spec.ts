@@ -1,5 +1,6 @@
 // The composer's journeys, at the design target on a fresh seed each, the server's clock held at the
-// seed's moment so a held send stays held: Reply all from the keyboard, sent behind the "Sending"
+// seed's moment so a held send stays held: R and C with the draft's start held, the composer there at
+// the key and taking what's typed; Reply all from the keyboard, sent behind the "Sending"
 // toast and brought back by Undo as it was; a send the provider refused, back on its email with the
 // provider's words and Try again; a draft that outlives a reload, its row saying "Draft"; a new
 // message from C in a window, kept in Drafts, its sidebar row and its page; Drafts with none and
@@ -16,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {Page} from 'playwright-core';
+import type {Page, Route} from 'playwright-core';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred} from './fakeAlfred.ts';
 import {cleanUp, holdToast, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -33,6 +34,31 @@ const drafts = async (setpoint: Setpoint) => (await setpoint.api<DraftsOut>('GET
 const composer = (page: Page) => page.locator('.composer');
 const chips = (page: Page, field: string) => composer(page).locator(`.cmp-row:has(input[aria-label="${field}"]) .cmp-chip`).evaluateAll(found => found.map(chip => chip.firstChild?.textContent));
 const body = (page: Page) => composer(page).getByRole('textbox', {name: 'Message'});
+// The composer has its draft: From is drawn once the server's answer is in (a skeleton until then).
+const answered = async (page: Page) => {
+  await composer(page).locator('.cmp-from > button').waitFor();
+  await body(page).waitFor();
+};
+
+/**
+ * Holds the page's asks to start a draft (POST /api/mail/drafts) at the server's door until the
+ * returned release, as a slow server would. Installed before the key.
+ */
+async function holdStarts(page: Page): Promise<() => Promise<void>> {
+  const waiting: Route[] = [];
+  let held = true;
+  const matches = (url: URL) => url.pathname === '/api/mail/drafts';
+  const handler = (route: Route) => {
+    if (held && route.request().method() === 'POST') waiting.push(route);
+    else void route.continue();
+  };
+  await page.route(matches, handler);
+  return async () => {
+    held = false;
+    await Promise.all(waiting.splice(0).map(route => route.continue()));
+    await page.unroute(matches, handler);
+  };
+}
 
 async function openEmail(setpoint: Setpoint, id: number): Promise<Page> {
   const page = await setpoint.page('target');
@@ -48,7 +74,7 @@ test('A answers everyone: the composer opens under the email, ⌘Enter sends beh
     const page = await openEmail(setpoint, id);
     await page.locator('.rd-tools .tool', {hasText: 'Reply all'}).waitFor();
     await page.keyboard.press('a');
-    await body(page).waitFor();
+    await answered(page);
     assert.deepEqual(await chips(page, 'To'), ['Sam Lee', 'June Park']);
     assert.deepEqual(await chips(page, 'Cc'), ['Ravi Menon']);
     // The email stays above it.
@@ -108,7 +134,7 @@ test('a draft outlives a reload: its row says "Draft", its composer opens again 
     const id = await idOf(setpoint, 'Dinner Friday?');
     const page = await openEmail(setpoint, id);
     await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().click();
-    await body(page).waitFor();
+    await answered(page);
     assert.deepEqual(await chips(page, 'To'), ['Sam Lee']);
     await page.keyboard.type('Count me in.');
     await until('it saves as it\'s typed', () => drafts(setpoint), found => found[0]?.snippet === 'Count me in.');
@@ -174,6 +200,47 @@ test('C writes a new message in a window from the account last sent from; closed
     assert.equal(await page.locator('.pane .rd-subj').count(), 0);
     await page.keyboard.press('Escape');
     await until('Esc empties the pane', async () => new URL(page.url()).pathname, path => path === '/drafts');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('with the server\'s answer held, R and C open the composer at the key: letters typed land in it, not on the page\'s shortcuts, and the answer fills it around them', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const id = await idOf(setpoint, 'Dinner Friday?');
+    const page = await openEmail(setpoint, id);
+    let release = await holdStarts(page);
+    await page.keyboard.press('r');
+    // Under the email at once, From a placeholder until the answer, the caret in the body.
+    await composer(page).locator('[data-skeleton="composer-from"]').waitFor();
+    await until('the caret is in the body', () => body(page).evaluate(field => field === document.activeElement), focused => focused);
+    // E, U, ⇧U, J and K are the Inbox's own keys; here they're words.
+    await page.keyboard.type('Sure, just ask Uncle Joe and Kim.');
+    await body(page).filter({hasText: 'Sure, just ask Uncle Joe and Kim.'}).waitFor();
+    assert.equal(new URL(page.url()).pathname, `/inbox/${id}`);
+    await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
+    assert.deepEqual(await drafts(setpoint), []);
+    await release();
+    await answered(page);
+    assert.deepEqual(await chips(page, 'To'), ['Sam Lee']);
+    await body(page).filter({hasText: 'Sure, just ask Uncle Joe and Kim.'}).waitFor();
+    await until('what was typed is saved into the draft', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'Sure, just ask Uncle Joe and Kim.');
+    await page.keyboard.press('Escape');
+    await until('Esc closes it', () => composer(page).count(), count => count === 0);
+
+    // C: a window at once over the page, the caret in To.
+    release = await holdStarts(page);
+    await page.keyboard.press('c');
+    await page.locator('.cmp-window .composer [data-skeleton="composer-from"]').waitFor();
+    await until('the caret is in To', () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')), label => label === 'To');
+    await page.keyboard.type('sam.ortiz@example.org,');
+    await release();
+    const window = page.locator('.cmp-window .composer');
+    await window.locator('.cmp-from > button').waitFor();
+    assert.deepEqual(await window.locator('.cmp-row:has(input[aria-label="To"]) .cmp-chip').evaluateAll(found => found.map(chip => chip.firstChild?.textContent)), ['sam.ortiz@example.org']);
+    await until('the new message keeps its recipient', () => drafts(setpoint), found => found.some(one => one.kind === 'new' && one.to[0]?.address === 'sam.ortiz@example.org'));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -261,7 +328,7 @@ test('a composer left with nothing written leaves nothing in Drafts: C, then Esc
     await until('the untouched message is gone', () => drafts(setpoint), found => found.length === 0);
     await draftsRow.waitFor({state: 'detached'});
     await page.keyboard.press('r');
-    await body(page).waitFor();
+    await answered(page);
     await draftsRow.waitFor();
     await page.keyboard.press('Escape');
     await until('the untouched reply is gone too', () => drafts(setpoint), found => found.length === 0);
@@ -279,7 +346,7 @@ test('F forwards: the email in full under the body with its attachment as a chip
     const page = await openEmail(setpoint, id);
     await page.locator('.rd-tools .tool', {hasText: 'Forward'}).waitFor();
     await page.keyboard.press('f');
-    await body(page).waitFor();
+    await answered(page);
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'To');
     // Its subject is the server's, with no field for it until Edit subject asks.
     assert.equal(await composer(page).getByRole('textbox', {name: 'Subject'}).count(), 0);
@@ -312,7 +379,7 @@ test('a file attached by the attach button is a chip and kept on the server; pop
     const page = await openEmail(setpoint, id);
     await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().waitFor();
     await page.keyboard.press('r');
-    await body(page).waitFor();
+    await answered(page);
     await page.keyboard.type('The menu is attached.');
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), composer(page).getByRole('button', {name: 'Attach files'}).click()]);
     await chooser.setFiles({name: 'Menu.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 menu')});
@@ -355,7 +422,7 @@ test('a reply popped out stays up while other mail and Calendar show, clear of t
     const lease = await idOf(setpoint, 'Lease renewal terms');
     const page = await openEmail(setpoint, dinner);
     await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().click();
-    await body(page).waitFor();
+    await answered(page);
     await page.keyboard.type('Count me in.');
     await composer(page).getByRole('button', {name: 'Pop out'}).click();
     const window = page.locator('.cmp-window');
@@ -406,7 +473,7 @@ test('help me write: ⌘J opens the line, the draft reads the email and Sam\'s m
     await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
     const page = await openEmail(setpoint, await idOf(setpoint, 'Dinner Friday?'));
     await page.keyboard.press('r');
-    await body(page).waitFor();
+    await answered(page);
     await until('the caret is in the body', () => body(page).evaluate(field => field === document.activeElement), focused => focused);
     await page.keyboard.press('Meta+j');
     const line = composer(page).getByRole('textbox', {name: 'Help me write'});

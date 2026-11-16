@@ -98,6 +98,8 @@ test('with the caret in a composer, ⌘J opens help me write and the theme stays
     await page.keyboard.press('r');
     const body = page.locator('.composer').getByRole('textbox', {name: 'Message'});
     await until('the caret is in the body', () => body.evaluate(field => field === document.activeElement), focused => focused);
+    // Help me write waits for the draft, which is in once From is drawn.
+    await page.locator('.composer .cmp-from > button').waitFor();
     await page.keyboard.press('ControlOrMeta+j');
     await page.locator('.composer').getByRole('textbox', {name: 'Help me write'}).waitFor();
     assert.equal(await theme(page), 'light');
