@@ -295,6 +295,21 @@ test('⌘⇧B shows Cc and Bcc on a reply without them; left empty, they stay wh
   await expect.element(field('Bcc')).toBeVisible();
 });
 
+test('⌘⇧B from an empty Cc hides the rows with the caret in To; with words typed in Cc, it keeps them', async () => {
+  await compose(draftOf({}));
+  await userEvent.keyboard('{Meta>}{Shift>}b{/Shift}{/Meta}');
+  await expect.element(field('Cc')).toHaveFocus();
+  await userEvent.keyboard('{Meta>}{Shift>}b{/Shift}{/Meta}');
+  await expect.poll(() => document.querySelector('.composer input[aria-label="Cc"]')).toBeNull();
+  await expect.element(field('To')).toHaveFocus();
+  await userEvent.keyboard('{Meta>}{Shift>}b{/Shift}{/Meta}');
+  await expect.element(field('Cc')).toHaveFocus();
+  await userEvent.keyboard('june');
+  await userEvent.keyboard('{Meta>}{Shift>}b{/Shift}{/Meta}');
+  await expect.element(field('Cc')).toHaveFocus();
+  await expect.element(field('Cc')).toHaveValue('june');
+});
+
 test('Tab from To goes to Subject, past the Cc Bcc button', async () => {
   await compose(draftOf({kind: 'new', message_id: null, to: [], subject: ''}));
   await expect.element(field('To')).toHaveFocus();

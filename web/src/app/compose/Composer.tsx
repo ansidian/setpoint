@@ -85,6 +85,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   const body = useRef<HTMLDivElement>(null);
   const to = useRef<HTMLInputElement>(null);
   const cc = useRef<HTMLInputElement>(null);
+  const bcc = useRef<HTMLInputElement>(null);
   // The fields as of the last change, for Send right after one (an address typed, then ⌘Enter).
   const latest = useRef(fields);
   const change = <K extends keyof typeof fields>(key: K, value: (typeof fields)[K]) => {
@@ -147,10 +148,15 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     setCopies(true);
     requestAnimationFrame(() => cc.current?.focus());
   };
+  // ⌘⇧B again hides them when both are empty, words typed in them included; the caret, if it was
+  // in them, goes to To.
   const toggleCopies = () => {
     if (!copies) return showCopies();
-    if (!fields.cc.length && !fields.bcc.length) setCopies(false);
-    else cc.current?.focus();
+    const typed = [cc, bcc].some(field => field.current?.value.trim());
+    if (fields.cc.length || fields.bcc.length || typed) return cc.current?.focus();
+    const inside = [cc, bcc].some(field => field.current === document.activeElement);
+    setCopies(false);
+    if (inside) to.current?.focus();
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -252,7 +258,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
           </div>
           <div className="cmp-row">
             <span className="cmp-label">Bcc</span>
-            <RecipientField label="Bcc" recipients={fields.bcc} onChange={value => change('bcc', value)} />
+            <RecipientField label="Bcc" recipients={fields.bcc} inputRef={bcc} onChange={value => change('bcc', value)} />
           </div>
         </div>
       )}
