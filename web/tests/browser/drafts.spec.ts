@@ -23,7 +23,10 @@ const drafts = async (setpoint: Setpoint) => (await setpoint.api<DraftsOut>('GET
 const subjects = async (setpoint: Setpoint) => (await drafts(setpoint)).map(draft => draft.subject);
 const row = (page: Page, subject: string) => page.locator('.drafts-list .row', {hasText: subject});
 const selection = (page: Page) => page.locator('section.pane.selection');
-const lines = (page: Page) => selection(page).locator('.sel-list > li[data-id]').evaluateAll(found => found.map(one => `${one.querySelector('.from')?.textContent} | ${one.querySelector('.subj')?.textContent}`));
+// The stack, front first: the front card's subject, then each strip's who and subject, nearest first.
+const lines = (page: Page) => selection(page).locator('.sel-stack > [data-id]').evaluateAll(found => found.reverse().map(one => (one.classList.contains('sel-card')
+  ? one.querySelector('.rd-subj')?.textContent ?? ''
+  : `${one.querySelector('.from')?.textContent} | ${one.querySelector('.subj')?.textContent}`)));
 const tools = (page: Page) => selection(page).locator('.rd-tools .tool').allTextContents();
 const menu = (page: Page) => page.locator('.ctx-menu');
 const items = (page: Page) => menu(page).locator('.menu-i').allTextContents();
@@ -139,14 +142,17 @@ test('several drafts selected: the docked one gives way, a window stays; Discard
     await selection(page).waitFor();
     await docked(page).waitFor({state: 'detached'});
     await until('the address opens nothing', async () => pathOf(page), at => at === '/drafts');
-    assert.deepEqual(await lines(page), ['To June Park | Beta', 'To Sam Lee +2 | Alpha']);
-    assert.equal(await selection(page).locator('.rd-subj').textContent(), '2 drafts selected');
+    assert.deepEqual(await lines(page), ['Beta', 'To Sam Lee +2 | Alpha']);
+    assert.equal(await selection(page).locator('.sel-head .rd-subj').textContent(), '2 drafts selected');
+    // The one in front reads as the draft would, not as a composer.
+    assert.equal(await selection(page).locator('.sel-card .rd-meta .who').textContent(), 'To June Park');
+    assert.equal(await selection(page).locator('.sel-card .composer, .sel-card [contenteditable]').count(), 0);
     assert.deepEqual(await windows(page), ['Epsilon'], 'the window stays up');
 
     // ⇧-click: the range from the last one clicked, Delta being sent among it.
     await row(page, 'Delta').locator('.from').click({modifiers: ['Shift']});
     await until('four selected', () => lines(page), found => found.length === 4);
-    assert.deepEqual(await lines(page), ['To Sam Lee | Delta', 'To Ravi Menon | Gamma', 'To June Park | Beta', 'To Sam Lee +2 | Alpha']);
+    assert.deepEqual(await lines(page), ['Delta', 'To Ravi Menon | Gamma', 'To June Park | Beta', 'To Sam Lee +2 | Alpha']);
     assert.deepEqual(await tools(page), ['Open↵', 'Discard 3', 'ClearEsc']);
     assert.equal(await page.locator('.drafts-list .row.sel').count(), 4);
     await rightClick(row(page, 'Gamma'));
@@ -203,7 +209,7 @@ test('⌘A in the docked composer selects its words only; from the list it selec
     await page.keyboard.press('ControlOrMeta+a');
     await selection(page).waitFor();
     await docked(page).waitFor({state: 'detached'});
-    assert.equal(await selection(page).locator('.rd-subj').textContent(), `${count} drafts selected`);
+    assert.equal(await selection(page).locator('.sel-head .rd-subj').textContent(), `${count} drafts selected`);
     assert.equal(await page.locator('.drafts-list .row.sel').count(), count);
     assert.equal(pathOf(page), '/drafts');
 

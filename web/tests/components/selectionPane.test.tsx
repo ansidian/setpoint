@@ -14,7 +14,7 @@ const THREE = [line(1, 'To Sam Lee +2', 'Dinner'), line(2, 'To June Park', 'Lab 
 function Drafts({lines, onFront = () => {}, onClear = () => {}, onDiscard = () => {}}: {lines: SelectionLine[]; onFront?: (id: number) => void; onClear?: () => void; onDiscard?: () => void}) {
   const [shown, setShown] = useState(lines);
   return (
-    <SelectionPane label="Selected drafts" heading={`${shown.length} drafts selected`} lines={shown} front={null} onClear={onClear} onFront={onFront}
+    <SelectionPane label="Selected drafts" heading={`${shown.length} drafts selected`} lines={shown} front={<p style={{height: 200}}>{shown[0]?.subject}</p>} onClear={onClear} onFront={onFront}
       onDrop={id => setShown(shown.filter(one => one.id !== id))}
       tools={<button className="tool trash" type="button" onClick={onDiscard}>Discard 2</button>} />
   );
@@ -38,6 +38,14 @@ test('its × takes one out, and a click on a strip asks for that one in front', 
   expect(listed()).toEqual(['No recipientsNo subject']);
   await page.getByRole('button', {name: 'No recipients No subject'}).click();
   expect(onFront.mock.calls).toEqual([[3]]);
+});
+
+test('the front card has its own ×, and the next one takes its place', async () => {
+  await render(<Drafts lines={THREE} />);
+  await page.getByRole('article', {name: 'Dinner'}).getByRole('button', {name: 'Unselect Dinner'}).click();
+  await expect.element(page.getByRole('heading')).toHaveTextContent('2 drafts selected');
+  await expect.element(page.getByRole('article', {name: 'Lab notes'})).toBeInTheDocument();
+  expect(listed()).toEqual(['No recipientsNo subject']);
 });
 
 test('the page\'s tools come first, then Clear', async () => {

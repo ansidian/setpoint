@@ -111,13 +111,16 @@ test('several selected in Sent: the first ⌘-click takes the open email, ⇧-cl
     await page.locator('section.pane[aria-label="Reading pane"]').waitFor({state: 'detached'});
     // ⇧-click: the range from the last one clicked.
     await row(picked[2]!).locator('.from').click({modifiers: ['Shift']});
-    const listed = () => selection(page).locator('.sel-list > li[data-id]').evaluateAll(found => found.map(one => Number((one as HTMLElement).dataset.id)));
+    // The stack's cards, the front one first: the last one clicked in front.
+    const listed = () => selection(page).locator('.sel-stack > [data-id]').evaluateAll(found => found.map(one => Number((one as HTMLElement).dataset.id)).reverse());
     await until('three selected', listed, shown => shown.length === 3);
-    assert.deepEqual(await listed(), picked);
-    assert.equal(await selection(page).locator('.rd-subj').textContent(), '3 emails selected');
-    // Each line names who it went to, as its row does.
+    assert.deepEqual(await listed(), [...picked].reverse());
+    assert.equal(await selection(page).locator('.sel-head .rd-subj').textContent(), '3 emails selected');
+    // Each strip names who it went to, as its row does, and so does the front card, once it's in.
     const who = (from: Locator) => from.evaluateAll(found => found.map(one => one.querySelector('.from')?.getAttribute('aria-label')));
-    assert.deepEqual(await who(selection(page).locator('.sel-list > li[data-id]')), await who(page.locator(picked.map(id => `.list .row[data-id="${id}"]`).join(', '))));
+    const rowWho = await who(page.locator(picked.map(id => `.list .row[data-id="${id}"]`).join(', ')));
+    assert.deepEqual((await who(selection(page).locator('.sel-strip'))).reverse(), rowWho.slice(0, 2).reverse());
+    await until('the front card says who it went to', () => selection(page).locator('.sel-card .rd-meta .to').textContent(), to => to === rowWho[2]?.replace(/^To /, 'to '));
     assert.deepEqual(await selection(page).locator('.rd-tools .tool').allTextContents(), ['TrashE', 'ReplyR', 'Reply allA', 'ForwardF', 'ClearEsc']);
     assert.equal(await page.locator('.list .row.sel').count(), 3);
 
@@ -160,7 +163,7 @@ test('⌘A in Sent selects every email listed, the reader giving way; Esc ends i
     await page.keyboard.press('ControlOrMeta+a');
     await selection(page).waitFor();
     await page.locator('section.pane[aria-label="Reading pane"]').waitFor({state: 'detached'});
-    assert.equal(await selection(page).locator('.rd-subj').textContent(), `${ids.length} emails selected`);
+    assert.equal(await selection(page).locator('.sel-head .rd-subj').textContent(), `${ids.length} emails selected`);
     assert.deepEqual(await listed(), ids);
 
     await page.keyboard.press('ControlOrMeta+a');
@@ -189,7 +192,7 @@ test('F and Reply all on a few selected in Sent open a window for each, in the l
     assert.ok(withOthers !== undefined && alone.length === 2, 'a sent email with others, and two to one person');
     const ids = shown.filter(id => id === withOthers || alone.includes(id));
     for (const id of ids) await page.locator(`.list .row[data-id="${id}"] .from`).click({modifiers: ['ControlOrMeta']});
-    await until('three selected', () => selection(page).locator('.sel-list > li[data-id]').count(), n => n === 3);
+    await until('three selected', () => selection(page).locator('.sel-stack > [data-id]').count(), n => n === 3);
 
     // F: a forward of each, a window each, in the list's order.
     await page.keyboard.press('f');

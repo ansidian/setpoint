@@ -12,9 +12,9 @@ export interface Selection {
   ids: number[];
   // The email a ⇧-click's range starts from: the last one clicked.
   anchor: number | null;
-  // The email the pane's stack shows in front: the last one selected, or the one a strip brought
-  // forward. Unset, or dropped, the stack's front is the top-most selected email in the list.
-  front?: number | null;
+  // The pane's stack, front first, as the user has made it: what's selected joins at the front and a
+  // strip clicked swaps places with the front card. Selected ones it lacks follow in `ids`' order.
+  stack?: number[];
 }
 
 export const NO_SELECTION: Selection = {ids: [], anchor: null};
@@ -24,14 +24,26 @@ function rowIds(stops: Stop[]): number[] {
   return [...new Set(stops.flatMap(stop => (stop.kind === 'row' ? [stop.id] : [])))];
 }
 
-/** ⌘-click on `id`: in, or out if it was in. The first one takes the open email too. */
-export function toggled(selection: Selection, id: number, open: number | null): Selection {
-  if (!selection.ids.length) return {ids: open !== null && open !== id ? [open, id] : [id], anchor: id, front: id};
-  if (selection.ids.includes(id)) return {ids: selection.ids.filter(one => one !== id), anchor: id, front: selection.front ?? null};
-  return {ids: [...selection.ids, id], anchor: id, front: id};
+/** The stack as it stands: its own order for what it has, then the rest of `ids` in their order. */
+function order(selection: Selection): number[] {
+  const kept = (selection.stack ?? []).filter(id => selection.ids.includes(id));
+  return [...kept, ...selection.ids.filter(id => !kept.includes(id))];
 }
 
-/** ⇧-click on `id`: every email from the anchor (else the open email) to it, added to what's selected. */
+/** `front` ahead of the stack, each once, only what `ids` holds. */
+const restacked = (front: number[], selection: Selection, ids: number[]) => [...new Set([...front, ...order(selection)])].filter(id => ids.includes(id));
+
+/** ⌘-click on `id`: in (at the stack's front), or out if it was in. The first one takes the open email too. */
+export function toggled(selection: Selection, id: number, open: number | null): Selection {
+  if (!selection.ids.length) {
+    const ids = open !== null && open !== id ? [open, id] : [id];
+    return {ids, anchor: id, stack: restacked([id], selection, ids)};
+  }
+  const ids = selection.ids.includes(id) ? selection.ids.filter(one => one !== id) : [...selection.ids, id];
+  return {ids, anchor: id, stack: restacked(ids.includes(id) ? [id] : [], selection, ids)};
+}
+
+/** ⇧-click on `id`: every email from the anchor (else the open email) to it, added to what's selected, `id` in front and the rest of the range behind it in the list's order. */
 export function ranged(selection: Selection, stops: Stop[], id: number, open: number | null): Selection {
   const rows = rowIds(stops);
   const to = rows.indexOf(id);
@@ -39,36 +51,40 @@ export function ranged(selection: Selection, stops: Stop[], id: number, open: nu
   const start = selection.anchor ?? open;
   const from = start === null ? -1 : rows.indexOf(start);
   const span = from < 0 ? [id] : rows.slice(Math.min(from, to), Math.max(from, to) + 1);
-  const ids = [...selection.ids, ...span.filter(one => !selection.ids.includes(one))];
+  const added = span.filter(one => !selection.ids.includes(one));
+  const listed = [...selection.ids, ...added];
   // The open email the range started from is selected too, as the first ⌘-click takes it.
-  return {ids: open !== null && from >= 0 && start === open && !ids.includes(open) ? [open, ...ids] : ids, anchor: selection.anchor ?? start ?? id, front: id};
+  const ids = open !== null && from >= 0 && start === open && !listed.includes(open) ? [open, ...listed] : listed;
+  return {ids, anchor: selection.anchor ?? start ?? id, stack: restacked([id, ...added], selection, ids)};
 }
 
-/** ⌘A: every email the list holds now, in its order; the anchor and the front stay. A second ⌘A changes nothing. */
+/** ⌘A: every email the list holds now, in its order; the anchor and the stack stay, the rest behind it. A second ⌘A changes nothing. */
 export function selectedAll(selection: Selection, stops: Stop[]): Selection {
-  return {ids: rowIds(stops), anchor: selection.anchor, front: selection.front ?? null};
+  const ids = rowIds(stops);
+  return {ids, anchor: selection.anchor, stack: restacked([], selection, ids)};
 }
 
-/** A strip in the pane's stack, clicked: its email comes to the front, and the selection stays. */
-export const broughtForward = (selection: Selection, id: number): Selection => ({...selection, front: id});
+/** A strip in the pane's stack, clicked: its card and the front card swap places, and the selection stays. */
+export function broughtForward(selection: Selection, id: number): Selection {
+  const stack = order(selection);
+  const at = stack.indexOf(id);
+  if (at <= 0) return selection;
+  [stack[0], stack[at]] = [id, stack[0] as number];
+  return {...selection, stack};
+}
 
 /**
- * The pane's stack, front first: the email last selected or brought forward, else (after ⌘A from
- * nothing) the top-most selected email in the list. Behind it the rest in the list's order from the
- * front one on, the next one nearest, then round from the top. `selected` is in the list's order.
+ * The pane's stack, front first: the email last selected, or a strip's swapped forward. After ⌘A
+ * from nothing, the list's order, its top-most in front. `selected` is the selection in the list's order.
  */
-export function stacked(selection: Selection, selected: readonly number[]): number[] {
-  const at = selection.front != null ? selected.indexOf(selection.front) : -1;
-  const start = Math.max(at, 0);
-  return [...selected.slice(start), ...selected.slice(0, start)];
+export const stacked = (selection: Selection, selected: readonly number[]): number[] => order({...selection, ids: [...selected]});
+
+/** An × in the pane's stack: that email leaves the selection and the rest stay in place; the front one's makes way for the card behind it. */
+export function dropped(selection: Selection, selected: readonly number[], id: number): Selection {
+  const ids = selected.filter(one => one !== id);
+  return {...selection, ids, stack: stacked(selection, selected).filter(one => one !== id)};
 }
 
-/** An × in the pane's stack: that email leaves the selection. The front one's makes way for the card behind it. */
-export function dropped(selection: Selection, selected: readonly number[], id: number): Selection {
-  const order = stacked(selection, selected);
-  const front = order[0] === id ? order[1] ?? null : selection.front ?? null;
-  return {...selection, ids: selected.filter(one => one !== id), front};
-}
 /** What's selected and still in the list, in the list's order: Trash takes an email out, and a search swaps the list. */
 export function inListOrder(ids: readonly number[], stops: Stop[]): number[] {
   if (!ids.length) return [];

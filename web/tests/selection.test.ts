@@ -1,10 +1,10 @@
 // Selecting several emails as tables: ⌘-click in and out, the first taking the open email,
-// ⇧-click's range from the anchor, ⌘A's every row, the selection in list order, and what its tools
-// offer. Then drafts: which can be discarded, and how Discard's toasts count them.
+// ⇧-click's range from the anchor, ⌘A's every row, the selection in list order, the pane's stack
+// (which card is in front, and what a strip's click and an × do to it), and what its tools offer. Then drafts: which can be discarded, and how Discard's toasts count them.
 import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Stop} from '../src/logic/inbox.ts';
-import {broughtBackLine, discardable, discardedLine, discardFailedLine, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, toggled} from '../src/logic/selection.ts';
+import {broughtBackLine, broughtForward, discardable, discardedLine, discardFailedLine, draftOffers, dropped, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, stacked, toggled} from '../src/logic/selection.ts';
 import type {Selection} from '../src/logic/selection.ts';
 
 // New's 1 and 2, the shelf's 3, then a day's 4, 3 again (pinned, in its day too), 5, and a Noise fold.
@@ -17,31 +17,33 @@ const stops: Stop[] = [
   {key: 'noise:2026-10-07', kind: 'noise', date: '2026-10-07'},
   {key: 'all:5', kind: 'row', group: 'all', id: 5},
 ];
-const sel = (ids: number[], anchor: number | null, front: number | null = null): Selection => ({ids, anchor, front});
+const sel = (ids: number[], anchor: number | null): Selection => ({ids, anchor});
+// What's selected and the anchor; the stack has its own table.
+const plain = ({ids, anchor}: Selection): Selection => ({ids, anchor});
 
 describe('toggled (⌘-click)', () => {
   test.each([
-    ['the first, nothing open: that one', NO_SELECTION, 4, null, sel([4], 4, 4)],
-    ['the first, an email open: it and the open one', NO_SELECTION, 4, 2, sel([2, 4], 4, 4)],
-    ['the first, on the open email: just it', NO_SELECTION, 2, 2, sel([2], 2, 2)],
-    ['another: added', sel([2, 4], 4), 5, null, sel([2, 4, 5], 5, 5)],
+    ['the first, nothing open: that one', NO_SELECTION, 4, null, sel([4], 4)],
+    ['the first, an email open: it and the open one', NO_SELECTION, 4, 2, sel([2, 4], 4)],
+    ['the first, on the open email: just it', NO_SELECTION, 2, 2, sel([2], 2)],
+    ['another: added', sel([2, 4], 4), 5, null, sel([2, 4, 5], 5)],
     ['a selected one: taken out', sel([2, 4, 5], 5), 4, null, sel([2, 5], 4)],
     ['the last one: none left', sel([4], 4), 4, null, sel([], 4)],
   ])('%s', (_, selection, id, open, after) => {
-    expect(toggled(selection, id, open)).toEqual(after);
+    expect(plain(toggled(selection, id, open))).toEqual(after);
   });
 });
 
 describe('ranged (⇧-click)', () => {
   test.each([
-    ['down from the anchor', sel([1], 1), 4, null, sel([1, 2, 3, 4], 1, 4)],
-    ['up from the anchor', sel([5], 5), 2, null, sel([5, 2, 3, 4], 5, 2)],
-    ['from the open email, nothing selected: it too', NO_SELECTION, 4, 2, sel([2, 3, 4], 2, 4)],
-    ['nothing selected or open: that one', NO_SELECTION, 4, null, sel([4], 4, 4)],
-    ['an email no longer listed as anchor: that one', sel([9], 9), 4, null, sel([9, 4], 9, 4)],
+    ['down from the anchor', sel([1], 1), 4, null, sel([1, 2, 3, 4], 1)],
+    ['up from the anchor', sel([5], 5), 2, null, sel([5, 2, 3, 4], 5)],
+    ['from the open email, nothing selected: it too', NO_SELECTION, 4, 2, sel([2, 3, 4], 2)],
+    ['nothing selected or open: that one', NO_SELECTION, 4, null, sel([4], 4)],
+    ['an email no longer listed as anchor: that one', sel([9], 9), 4, null, sel([9, 4], 9)],
     ['onto an email not in the list: unchanged', sel([1], 1), 9, null, sel([1], 1)],
   ])('%s', (_, selection, id, open, after) => {
-    expect(ranged(selection, stops, id, open)).toEqual(after);
+    expect(plain(ranged(selection, stops, id, open))).toEqual(after);
   });
 });
 
@@ -55,7 +57,43 @@ describe('selectedAll (⌘A)', () => {
     ['after more rows load: those too', sel([1, 2, 3, 4, 5], null), more, sel([1, 2, 3, 4, 5, 6, 7], null)],
     ['an empty list: none', NO_SELECTION, [], sel([], null)],
   ])('%s', (_, selection, list, after) => {
-    expect(selectedAll(selection, list)).toEqual(after);
+    expect(plain(selectedAll(selection, list))).toEqual(after);
+  });
+});
+
+describe('the pane\'s stack, front first', () => {
+  // The list in order: 1, 2, 3, 4, 5. Each step acts on the selection the step before left, as a
+  // page does: the selection in the list's order, its stack carried along.
+  type Step = (selection: Selection, selected: number[]) => Selection;
+  const click = (id: number): Step => selection => toggled(selection, id, null);
+  const shift = (id: number): Step => selection => ranged(selection, stops, id, null);
+  const all: Step = selection => selectedAll(selection, stops);
+  const strip = (id: number): Step => selection => broughtForward(selection, id);
+  const drop = (id: number): Step => (selection, selected) => dropped(selection, selected, id);
+  test.each<[string, Step[], number[]]>([
+    ['each one selected comes to the front, the one before it nearest', [click(1), click(4), click(2)], [2, 4, 1]],
+    ['a ⇧-click\'s row in front, the rest of its range behind it in the list\'s order', [click(5), shift(2)], [2, 3, 4, 5]],
+    ['a strip clicked swaps places with the front card, nothing else moves', [click(1), click(3), click(4), click(2), strip(3)], [3, 4, 2, 1]],
+    ['a strip clicked twice swaps them back', [click(1), click(3), click(4), strip(1), strip(4)], [4, 3, 1]],
+    ['the front card already in front: no change', [click(1), click(3), strip(3)], [3, 1]],
+    ['an × behind closes the gap, the rest stay', [click(1), click(3), click(4), click(2), drop(3)], [2, 4, 1]],
+    ['the front one\'s ×: the nearest comes forward', [click(1), click(3), click(4), drop(4)], [3, 1]],
+    ['a ⌘-click taking the front one out: the nearest comes forward', [click(1), click(3), click(4), click(4)], [3, 1]],
+    ['⌘A from nothing: the list\'s order, its top in front', [all], [1, 2, 3, 4, 5]],
+    ['⌘A keeps the stack, the rest behind in the list\'s order', [click(4), click(2), strip(4), all], [4, 2, 1, 3, 5]],
+    ['joining after a swap: the new one in front, the order behind kept', [click(1), click(3), click(4), strip(1), click(5)], [5, 1, 3, 4]],
+  ])('%s', (_, steps, after) => {
+    let selection = NO_SELECTION;
+    for (const step of steps) {
+      const shown = {...selection, ids: inListOrder(selection.ids, stops)};
+      selection = step(shown, shown.ids);
+    }
+    expect(stacked(selection, inListOrder(selection.ids, stops))).toEqual(after);
+  });
+
+  test('what has left the list leaves the stack', () => {
+    const selection = [1, 3, 4].reduce((at, id) => toggled(at, id, null), NO_SELECTION);
+    expect(stacked(selection, [1, 4])).toEqual([4, 1]);
   });
 });
 

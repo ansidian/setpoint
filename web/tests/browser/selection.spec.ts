@@ -1,5 +1,6 @@
 // Selecting several emails. ⌘-click and ⇧-click select rows without opening or reading them, and the
-// reading pane shows the selection. The first ⌘-click takes the open email, and a plain click ends
+// reading pane shows the selection as a stack of cards, the last selected in front and read nothing.
+// A strip's click brings its card to the front. The first ⌘-click takes the open email, and a plain click ends
 // it and opens. A selected row's right-click offers the selection's actions, and another row's
 // offers its own. E trashes every one with one toast, and ⌘Z brings every one back. Mark read, Pin
 // and Done act on all of it. ⌘A selects every email the list holds, and in the search field its text.
@@ -16,7 +17,8 @@ after(cleanUp);
 const row = (page: Page, id: number) => page.locator(`.list .row[data-id="${id}"]`).first();
 const pane = (page: Page) => page.locator('section.pane.selection');
 const reader = (page: Page) => page.locator('section.pane[aria-label="Reading pane"]');
-const listed = (page: Page) => pane(page).locator('.sel-list > li[data-id]').evaluateAll(items => items.map(item => Number((item as HTMLElement).dataset.id)));
+// The stack's cards, the front one first (the strips are drawn farthest first, the front card last).
+const listed = (page: Page) => pane(page).locator('.sel-stack > [data-id]').evaluateAll(items => items.map(item => Number((item as HTMLElement).dataset.id)).reverse());
 const selectedRows = (page: Page) => page.locator('.list .row.sel').evaluateAll(rows => [...new Set(rows.map(one => Number((one as HTMLElement).dataset.id)))]);
 const menu = (page: Page) => page.locator('.ctx-menu');
 const items = (page: Page) => menu(page).locator('.menu-i').allTextContents();
@@ -66,25 +68,25 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     // ⌘-click: selected, the pane up, nothing opened or read.
     await row(page, first!.id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await pane(page).waitFor();
-    assert.equal(await pane(page).locator('.rd-subj').textContent(), '1 email selected');
+    assert.equal(await pane(page).locator('.sel-head .rd-subj').textContent(), '1 email selected');
     assert.equal(await reader(page).count(), 0, 'nothing opened');
     // Whatever the click sent answered before the server is read.
     await setpoint.idle();
     assert.equal((await message(setpoint, first!.id)).unread, first!.unread, 'nothing read');
     assert.ok(!new URL(page.url()).searchParams.has('open') && !page.url().includes('/open/'), 'the address opens nothing');
 
-    // ⇧-click: every email from the last one clicked to this one, in the list's order.
+    // ⇧-click: every email from the last one clicked to this one, the one clicked in front.
     await row(page, third!.id).locator('.from').click({modifiers: ['Shift']});
     await until('three selected', () => listed(page), ids => ids.length === 3);
-    assert.deepEqual(await listed(page), [first!.id, second!.id, third!.id]);
+    assert.deepEqual(await listed(page), [third!.id, second!.id, first!.id]);
     assert.deepEqual(await selectedRows(page), [first!.id, second!.id, third!.id]);
-    assert.equal(await pane(page).locator('.rd-subj').textContent(), '3 emails selected');
+    assert.equal(await pane(page).locator('.sel-head .rd-subj').textContent(), '3 emails selected');
     assert.equal(await page.evaluate(() => getSelection()?.toString() ?? ''), '', 'the ⇧-click selected no text');
     // A selected row is drawn as the open one is: `sub3` and the accent bar.
     await until('drawn selected', () => row(page, second!.id).evaluate(element => getComputedStyle(element).boxShadow), shadow => /2px 0px 0px 0px inset/.test(shadow));
 
     // × takes one out; ⌘-click on a selected row does too.
-    await pane(page).locator(`li[data-id="${second!.id}"] .sel-drop`).click();
+    await pane(page).locator(`.sel-stack > [data-id="${second!.id}"] > .sel-drop`).click();
     await until('two listed', () => listed(page), ids => ids.length === 2);
     await row(page, third!.id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await until('one listed', () => listed(page), ids => ids.length === 1);
@@ -94,6 +96,39 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     await page.keyboard.press('Escape');
     await pane(page).waitFor({state: 'detached'});
     assert.deepEqual(await selectedRows(page), []);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the stack shows the last selected in front, read as the reader reads it, and reads nothing; a strip\'s click swaps it to the front, the selection kept', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openInbox(page, setpoint.base);
+    const shown = await onScreen(page);
+    const [first, second] = (await allRows(setpoint)).filter(one => one.unread && shown.includes(one.id));
+    assert.ok(first && second, 'two unread emails listed');
+    for (const id of [first.id, second.id]) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
+    await until('two selected', () => listed(page), ids => ids.length === 2);
+    assert.deepEqual(await listed(page), [second.id, first.id]);
+
+    // The front card is the email: its subject, and its body once it's in.
+    const front = pane(page).locator('.sel-card');
+    assert.equal(await front.locator('.rd-subj').textContent(), second.subject);
+    await front.locator('.rd-body .mailtext, .rd-body .mailframe').first().waitFor();
+
+    // A strip's click: that one in front, the other behind, both still selected.
+    await pane(page).locator(`.sel-strip[data-id="${first.id}"] .sel-front-it`).click();
+    await until('the strip in front', () => listed(page), ids => ids[0] === first.id);
+    assert.deepEqual(await listed(page), [first.id, second.id]);
+    assert.equal(await pane(page).locator('.sel-head .rd-subj').textContent(), '2 emails selected');
+    await front.locator('.rd-body .mailtext, .rd-body .mailframe').first().waitFor();
+
+    // Shown in front, neither was read.
+    await setpoint.idle();
+    assert.deepEqual([(await message(setpoint, first.id)).unread, (await message(setpoint, second.id)).unread], [true, true]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -114,13 +149,13 @@ test('⌘A selects every email listed, the reader giving way, and again changes 
     await page.keyboard.press('ControlOrMeta+a');
     await pane(page).waitFor();
     await reader(page).waitFor({state: 'detached'});
-    assert.equal(await pane(page).locator('.rd-subj').textContent(), `${shown.length} emails selected`);
+    assert.equal(await pane(page).locator('.sel-head .rd-subj').textContent(), `${shown.length} emails selected`);
     assert.deepEqual(await selectedRows(page), shown);
     assert.equal(await page.evaluate(() => getSelection()?.toString() ?? ''), '', 'no page text selected');
 
     // Again: the same.
     await page.keyboard.press('ControlOrMeta+a');
-    assert.equal(await pane(page).locator('.rd-subj').textContent(), `${shown.length} emails selected`);
+    assert.equal(await pane(page).locator('.sel-head .rd-subj').textContent(), `${shown.length} emails selected`);
     assert.deepEqual(await selectedRows(page), shown);
 
     // Esc ends it.
@@ -153,7 +188,7 @@ test('the first ⌘-click takes the open email, its reader giving way; a plain c
     await reader(page).waitFor();
     await row(page, second!.id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await pane(page).waitFor();
-    assert.deepEqual(await listed(page), [first!.id, second!.id]);
+    assert.deepEqual(await listed(page), [second!.id, first!.id]);
     await reader(page).waitFor({state: 'detached'});
     await setpoint.idle();
     assert.equal((await message(setpoint, second!.id)).unread, second!.unread, 'the one ⌘-clicked isn\'t read');
@@ -196,7 +231,7 @@ test('a selected row\'s right-click offers the selection\'s actions; E trashes e
     assert.equal((await items(page))[0], 'Open↵');
     await page.keyboard.press('Escape');
     await menu(page).waitFor({state: 'detached'});
-    assert.deepEqual(await listed(page), ids, 'the selection kept');
+    assert.deepEqual(await listed(page), [...ids].reverse(), 'the selection kept');
 
     // E: every one leaves at once, one toast, the selection ended.
     await page.keyboard.press('e');
@@ -297,7 +332,7 @@ test('R, A and F on two to five selected open one composer window per email, in 
     const forwards = await draftsOf('forward');
     await until('three windows in order', () => windowTitles(page), titles => titles.join('|') === forwards.map(one => one.subject).join('|'));
     assert.equal(await page.locator('.pane .composer').count(), 0, 'none in the reading pane');
-    assert.deepEqual(await listed(page), ids, 'still selected');
+    assert.deepEqual(await listed(page), [ids[1], ids[0], ids[2]], 'still selected');
 
     // R, back on the page (the caret leaves the last window): a reply to each, after the forwards.
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
