@@ -4,7 +4,7 @@ import type {HealthOut, RuleMatch, RuleOut, SourceOut} from '@setpoint/shared';
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  connectFailed, connectNote, DOMAINS_SHOWN, domainTools, todoistConnected, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, fixedFilters, fixedLines, fixedSenders, ruleDestination, ruleFormStart, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, wordsMatch,
+  connectFailed, connectNote, DOMAINS_SHOWN, domainTools, todoistConnected, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, fixedLines, ruleDestination, ruleFormStart, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, sendersMatch, wordsMatch,
   shifts, splitRules, stateTip, taskTime, waitingChoices, waitingTitle, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
@@ -53,26 +53,32 @@ describe('Settings', () => {
     ['sam@example.com', {from_addresses: ['sam@example.com']}], ['woodgrove', null], ['', null], ['a b.com', null],
   ])('Add rule\'s From %j matches %j', (text, match) => expect(senderMatch(text)).toEqual(match));
 
-  test('Add rule\'s filters add each phrase to its key, leaving blank ones out', () => {
-    expect(wordsMatch({subject: ' delivered ', subjectNot: 'return', name: '', nameNot: 'Billing', body: undefined, bodyNot: 'unsubscribe'}))
-      .toEqual({subject_includes: ['delivered'], subject_excludes: ['return'], from_name_excludes: ['Billing'], body_excludes: ['unsubscribe']});
+  test('the rule form\'s filters add each one\'s phrases to its key, leaving blank lines and blank filters out', () => {
+    expect(wordsMatch({subject: [' delivered ', '', 'Shipped'], subjectNot: ['return'], name: ['', ' '], nameNot: ['Billing', 'Support'], body: undefined, bodyNot: ['unsubscribe']}))
+      .toEqual({subject_includes: ['delivered', 'Shipped'], subject_excludes: ['return'], from_name_excludes: ['Billing', 'Support'], body_excludes: ['unsubscribe']});
   });
+
+  // The rule form's sender lines: each a domain or an address, blank ones left out.
+  test.each<[string[], RuleMatch | null]>([
+    [['northwind.example', ' Sam@Example.com ', '', 'tailspintoys.example'], {from_domains: ['northwind.example', 'tailspintoys.example'], from_addresses: ['sam@example.com']}],
+    [['woodgrovebank.example'], {from_domains: ['woodgrovebank.example']}],
+    [['', ' '], {}],
+    [['northwind.example', 'woodgrove'], null],
+  ])('the sender lines %j match %j', (texts, match) => expect(sendersMatch(texts)).toEqual(match));
 
   // Edit: what the rule form draws of a written rule, and what it keeps fixed.
   test.each<[string, RuleMatch, ReturnType<typeof ruleFormStart>]>([
-    ['one sender and one phrase', {from_domains: ['woodgrovebank.example'], subject_includes: ['Statement']}, {from: 'woodgrovebank.example', words: {subject: 'Statement'}, fixed: {}}],
-    ['an address', {from_addresses: ['sam@example.com'], body_excludes: ['unsubscribe']}, {from: 'sam@example.com', words: {bodyNot: 'unsubscribe'}, fixed: {}}],
-    ['no sender', {subject_includes: ['Registrar']}, {from: '', words: {subject: 'Registrar'}, fixed: {}}],
-    ['several senders', {from_domains: ['northwind.example'], from_addresses: ['sam@example.com']}, {from: null, words: {}, fixed: {from_domains: ['northwind.example'], from_addresses: ['sam@example.com']}}],
+    ['one sender and one phrase', {from_domains: ['woodgrovebank.example'], subject_includes: ['Statement']}, {from: ['woodgrovebank.example'], words: {subject: ['Statement']}, fixed: {}}],
+    ['an address', {from_addresses: ['sam@example.com'], body_excludes: ['unsubscribe']}, {from: ['sam@example.com'], words: {bodyNot: ['unsubscribe']}, fixed: {}}],
+    ['no sender', {subject_includes: ['Registrar']}, {from: [''], words: {subject: ['Registrar']}, fixed: {}}],
+    ['several senders, domains first', {from_domains: ['northwind.example'], from_addresses: ['sam@example.com']}, {from: ['northwind.example', 'sam@example.com'], words: {}, fixed: {}}],
     ['several phrases in a field, a pattern and words found nowhere', {from_domains: ['northwind.example'], subject_includes: ['Your order', 'Shipment'], body_regex: 'tracking', none_includes: ['refund'], from_name_includes: ['Orders']},
-      {from: 'northwind.example', words: {name: 'Orders'}, fixed: {subject_includes: ['Your order', 'Shipment'], body_regex: 'tracking', none_includes: ['refund']}}],
+      {from: ['northwind.example'], words: {subject: ['Your order', 'Shipment'], name: ['Orders']}, fixed: {body_regex: 'tracking', none_includes: ['refund']}}],
   ])('the form draws %s', (_, match, start) => expect(ruleFormStart(match)).toEqual(start));
 
-  test('a fixed part is named on its own line, its field leaves "and…", and fixed senders read as alternatives', () => {
-    const fixed: RuleMatch = {from_domains: ['northwind.example', 'tailspintoys.example'], subject_includes: ['Your order', 'Shipment'], subject_regex: 'order #\\d+', from_name_excludes: ['Billing', 'Support'], body_regex: 'tracking', none_includes: ['refund'], organisation: 'Northwind', type: 'newsletter'};
-    expect(fixedLines(fixed)).toEqual(['Subject contains “Your order” or “Shipment”', 'Subject matches /order #\\d+/', 'Sender name doesn’t contain “Billing” or “Support”', 'Body matches /tracking/', '“refund” nowhere in the email', 'Northwind newsletters']);
-    expect(fixedFilters(fixed)).toEqual(['subject', 'nameNot']);
-    expect(fixedSenders(fixed)).toBe('northwind.example or tailspintoys.example');
+  test('a fixed part is named on its own line', () => {
+    const fixed: RuleMatch = {subject_regex: 'order #\\d+', body_regex: 'tracking', none_includes: ['refund', 'return'], organisation: 'Northwind', type: 'newsletter'};
+    expect(fixedLines(fixed)).toEqual(['Subject matches /order #\\d+/', 'Body matches /tracking/', '“refund” or “return” nowhere in the email', 'Northwind newsletters']);
     expect(fixedLines({})).toEqual([]);
   });
 

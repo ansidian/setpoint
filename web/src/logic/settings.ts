@@ -134,78 +134,79 @@ export const dropIndex = (middles: number[], y: number) => middles.filter(middle
 /** "From woodgrovebank.example" in Add rule: a domain or an address. */
 /** Add rule's filters: a field's words it contains, or doesn't ("Not"). */
 export type RuleFilter = 'subject' | 'subjectNot' | 'name' | 'nameNot' | 'body' | 'bodyNot';
-export type RuleWordsInput = Partial<Record<RuleFilter, string | undefined>>;
+export type RuleWordsInput = Partial<Record<RuleFilter, string[]>>;
 
 // Each filter's field in a rule's match.
 const FILTER_KEYS = {subject: 'subject_includes', subjectNot: 'subject_excludes', name: 'from_name_includes', nameNot: 'from_name_excludes', body: 'body_includes', bodyNot: 'body_excludes'} as const;
 const FILTER_ENTRIES = Object.entries(FILTER_KEYS) as [RuleFilter, (typeof FILTER_KEYS)[RuleFilter]][];
 
-/** What Add rule's filters add to the sender's match: each one's phrase, blank ones left out. */
+/** What the rule form's filters add to the sender's match: each one's phrases, blank ones left out. */
 export function wordsMatch(input: RuleWordsInput): RuleMatch {
   const match: RuleMatch = {};
   for (const [field, key] of FILTER_ENTRIES) {
-    const text = input[field]?.trim();
-    if (text) match[key] = [text];
+    const phrases = (input[field] ?? []).map(text => text.trim()).filter(Boolean);
+    if (phrases.length) match[key] = phrases;
+  }
+  return match;
+}
+
+/** The server's limits on a rule: phrases in one field, and senders in one list (domains, addresses). */
+export const RULE_PHRASES_MAX = 50;
+export const RULE_SENDERS_MAX = 50;
+
+/**
+ * The rule form's senders as a match, each line a domain or an address and blank lines left out:
+ * {} when every line is blank, null when one isn't a domain or an address.
+ */
+export function sendersMatch(texts: string[]): RuleMatch | null {
+  const match: RuleMatch = {};
+  for (const text of texts) {
+    if (!text.trim()) continue;
+    const one = senderMatch(text);
+    if (!one) return null;
+    if (one.from_domains) match.from_domains = [...match.from_domains ?? [], ...one.from_domains];
+    if (one.from_addresses) match.from_addresses = [...match.from_addresses ?? [], ...one.from_addresses];
   }
   return match;
 }
 
 /**
- * A written rule as the rule form draws it, for Edit: its one sender ('' for none, null when it has
- * several), each filter with one phrase, and what the form can't draw (several senders, several
- * phrases in a field, a pattern, words to find nowhere), which a save puts back as it was.
+ * A written rule as the rule form draws it, for Edit: its senders (one blank line for none), each
+ * filter's phrases, and what the form can't draw (a pattern, words to find nowhere, organisation and
+ * type), which a save puts back as it was.
  */
 export interface RuleFormStart {
-  from: string | null;
-  words: Partial<Record<RuleFilter, string>>;
+  from: string[];
+  words: RuleWordsInput;
   fixed: RuleMatch;
 }
 
 export function ruleFormStart(match: RuleMatch): RuleFormStart {
-  const fixed: RuleMatch = {...match};
-  const senders = [...match.from_domains ?? [], ...match.from_addresses ?? []];
-  let from: string | null = null;
-  if (senders.length <= 1) {
-    from = senders[0] ?? '';
-    delete fixed.from_domains;
-    delete fixed.from_addresses;
-  }
-  const words: Partial<Record<RuleFilter, string>> = {};
+  const {from_domains: domains = [], from_addresses: addresses = [], ...fixed} = match;
+  const senders = [...domains, ...addresses];
+  const words: RuleWordsInput = {};
   for (const [field, key] of FILTER_ENTRIES) {
     const phrases = match[key];
-    if (phrases?.length !== 1) continue;
-    words[field] = phrases[0];
+    if (!phrases?.length) continue;
+    words[field] = phrases;
     delete fixed[key];
   }
-  return {from, words, fixed};
+  return {from: senders.length ? senders : [''], words, fixed};
 }
 
-/** The filters the form can't add to a rule because a fixed part already holds that field. */
-export const fixedFilters = (fixed: RuleMatch): RuleFilter[] => FILTER_ENTRIES.filter(([, key]) => fixed[key]).map(([field]) => field);
-
 /**
- * A rule's fixed parts as the form's lines name them: "Subject contains “a” or “b”", "Body matches
- * /…/", "“x” nowhere in the email". The senders aren't among them: they stand where From's field would.
+ * A rule's fixed parts as the form's lines name them: "Subject matches /…/", "“x” nowhere in the
+ * email", "Woodgrove receipts".
  */
 export function fixedLines(fixed: RuleMatch): string[] {
   const quoted = (values: string[]) => values.map(text => `“${text}”`).join(' or ');
   const lines: string[] = [];
-  const add = (values: string[] | undefined, words: string) => values && lines.push(`${words} ${quoted(values)}`);
-  add(fixed.subject_includes, 'Subject contains');
-  add(fixed.subject_excludes, 'Subject doesn’t contain');
   if (fixed.subject_regex) lines.push(`Subject matches /${fixed.subject_regex}/`);
-  add(fixed.from_name_includes, 'Sender name contains');
-  add(fixed.from_name_excludes, 'Sender name doesn’t contain');
-  add(fixed.body_includes, 'Body contains');
-  add(fixed.body_excludes, 'Body doesn’t contain');
   if (fixed.body_regex) lines.push(`Body matches /${fixed.body_regex}/`);
   if (fixed.none_includes) lines.push(`${quoted(fixed.none_includes)} nowhere in the email`);
   if (fixed.organisation || fixed.type) lines.push(ruleWords({organisation: fixed.organisation, type: fixed.type}).map(run => run.text).join('').replace(/^ · /, ''));
   return lines;
 }
-
-/** The fixed senders, where From's field would be: "a.example or b@c.example". */
-export const fixedSenders = (fixed: RuleMatch) => [...fixed.from_domains ?? [], ...fixed.from_addresses ?? []].join(' or ');
 
 export function senderMatch(text: string): RuleMatch | null {
   const value = text.trim().toLowerCase();

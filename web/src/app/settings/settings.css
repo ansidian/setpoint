@@ -181,7 +181,8 @@
 .settings .rule-form .rule-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .settings .rule-form .rule-line.add { grid-column: 2; }
 .settings .rule-form .filter { min-width: 170px; }
-/* Edit's fixed parts (several senders, several phrases, a pattern): read-only words in the field's
+.settings .rule-form .filter.or { color: var(--ink3); }
+/* Edit's fixed parts (a pattern, words to find nowhere, organisation and type): read-only words in the field's
    place, a lock first, so they read as kept rather than as something to type over. */
 .settings .rule-form .fixed { display: inline-flex; align-items: center; gap: 6px; min-width: 0; height: 30px; color: var(--ink2); font-size: 13px; }
 .settings .rule-form .fixed > svg { flex: none; color: var(--ink3); }
@@ -207,6 +208,7 @@
   .settings .rule-form .rule-line { flex-wrap: wrap; }
   .settings .rule-form .rule-line.add { grid-column: 1; }
   .settings .rule-form .filter { min-width: 0; }
+  .settings .rule-form .lead:empty { display: none; }
   .settings .rule-form .pair { flex-wrap: wrap; }
   .settings .rule-form :is(.lead, .filter, .pair > .s) { line-height: 18px; }
   .settings .rule-form .seg > * { padding: 0 6px; }

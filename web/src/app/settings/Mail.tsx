@@ -15,7 +15,7 @@ import {SETTINGS_PATH} from '../../api/items.ts';
 import type {RuleFields} from '../../api/settings.ts';
 import {createRule, deleteRule, editRule, patchSettings, reorderRules, RULES_PATH, setRuleEnabled, TRUSTED_PATH, untrustDomain} from '../../api/settings.ts';
 import {localDate} from '../../logic/format.ts';
-import {DOMAINS_SHOWN, domainTools, expiryLabel, fixedFilters, fixedLines, fixedSenders, laneTag, matchesThisMonth, moved, ruleActionWords, ruleDestination, ruleFormStart, ruleWords, senderMatch, splitRules, TRASH_LABELS, waitingChoices, waitingTitle, wordsMatch} from '../../logic/settings.ts';
+import {DOMAINS_SHOWN, domainTools, expiryLabel, fixedLines, laneTag, matchesThisMonth, moved, ruleActionWords, ruleDestination, ruleFormStart, ruleWords, RULE_PHRASES_MAX, RULE_SENDERS_MAX, sendersMatch, splitRules, TRASH_LABELS, waitingChoices, waitingTitle, wordsMatch} from '../../logic/settings.ts';
 import {placeMenu} from '../../ui/popover.ts';
 import {ScopePrompt} from '../calendar/ScopePrompt.tsx';
 import {Icon} from '../../ui/Icon.tsx';
@@ -25,7 +25,7 @@ import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
 import {clearRuleDraft, useRuleDraft} from './store.ts';
 import type {RuleDraft} from './store.ts';
-import type {RuleFilter} from '../../logic/settings.ts';
+import type {RuleFilter, RuleWordsInput} from '../../logic/settings.ts';
 import type {DragProps} from './order.ts';
 import {escapeCancels, Line, Menu, Page, Section, Select, SkeletonRows, Switch, useAttempt} from './parts.tsx';
 
@@ -202,66 +202,95 @@ function LearnedRule({rule}: {rule: RuleOut}) {
 // A fixed part's tip: why it can't be changed here.
 const FIXED_TIP = 'The form can’t change this part, a save keeps it as it is';
 
+// One of the form's text lines: its words, and a key that stays with it as lines come and go.
+interface FormLine {
+  id: number;
+  text: string;
+}
+let lastLineId = 0;
+const formLine = (text = ''): FormLine => ({id: ++lastLineId, text});
+
 /**
  * The rule form, read as a sentence: "If from" a domain or address, "and" each filter added from
  * the menu (a field's words it contains or doesn't, each at most once), "then send to" a lane and
- * kind. Add rule's starts empty, or from an email's draft (its sender and where it is now). Edit's
- * starts from the rule, and shows the parts it can't draw as fixed lines that a save puts back as
- * they were.
+ * kind. A sender or a filter takes alternatives as "or" lines under it, any one matching (for
+ * "doesn't contain", none of them), up to the server's limit; a blank one is left out. Add rule's
+ * starts empty, or from an email's draft (its sender and where it is now). Edit's starts from the
+ * rule, and shows the parts it can't draw as fixed lines that a save puts back as they were.
  */
 export function RuleForm({draft = null, rule, save, onDone}: {draft?: RuleDraft | null; rule?: RuleOut; save: (fields: RuleFields) => Promise<unknown>; onDone: () => void}) {
-  const [start] = useState(() => (rule ? ruleFormStart(rule.match) : {from: draft?.from ?? '', words: {}, fixed: {}}));
+  const [start] = useState(() => (rule ? ruleFormStart(rule.match) : {from: [draft?.from ?? ''], words: {} as RuleWordsInput, fixed: {}}));
   const [destination, setDestination] = useState(() => (rule ? ruleDestination(rule.lane, rule.kind) : draft?.destination ?? 'fyi:other'));
-  // The filters shown, and those added since the form opened (which take the focus).
-  const [filters, setFilters] = useState<RuleFilter[]>(() => RULE_FILTERS.map(filter => filter.key).filter(key => start.words[key] !== undefined));
-  const [added, setAdded] = useState<RuleFilter[]>([]);
+  const [from, setFrom] = useState(() => start.from.map(text => formLine(text)));
+  // The filters shown with their lines, in the menu's order as they were added.
+  const [filters, setFilters] = useState<{key: RuleFilter; lines: FormLine[]}[]>(() => RULE_FILTERS.filter(filter => start.words[filter.key]).map(filter => ({key: filter.key, lines: start.words[filter.key]!.map(text => formLine(text))})));
+  // The lines added since the form opened, which take the focus.
+  const [added, setAdded] = useState<number[]>([]);
   const [markRead, setMarkRead] = useState(rule?.mark_read ?? false);
   const [trash, setTrash] = useState<RuleTrash>(rule?.trash ?? 'never');
   const send = useAttempt();
-  const held = fixedFilters(start.fixed);
-  const left = RULE_FILTERS.filter(filter => !filters.includes(filter.key) && !held.includes(filter.key));
+  const left = RULE_FILTERS.filter(filter => !filters.some(one => one.key === filter.key));
   const lines = fixedLines(start.fixed);
-  // The form holds the focus from the start, so Esc reaches it, even when From is fixed and has no field.
+  const hadSender = start.from.some(text => text.trim());
+  const newLine = (): FormLine => {
+    const line = formLine();
+    setAdded([...added, line.id]);
+    return line;
+  };
+  const setFilterLines = (key: RuleFilter, next: FormLine[]) => setFilters(filters.flatMap(one => (one.key !== key ? [one] : next.length ? [{key, lines: next}] : [])));
+  // The form holds the focus from the start, so Esc reaches it.
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
     const form = formRef.current;
     if (form && !form.contains(document.activeElement)) form.querySelector<HTMLElement>('input, button')?.focus();
   }, []);
+  const orButton = (label: string, onClick: () => void) => <button className="btn quiet sm" type="button" aria-label={`Or ${label.toLowerCase()}`} onClick={onClick}>or…</button>;
   return (
     <form ref={formRef} className="set-row ctl form rule-form" data-editing={rule?.id} onKeyDown={escapeCancels(onDone)} onSubmit={event => {
       event.preventDefault();
-      const form = new FormData(event.currentTarget);
       // A rule with no sender keeps none when From is left blank; Add rule always needs one.
-      const fromText = form.get('from')?.toString() ?? '';
-      const sender = start.from === null ? {} : rule && !start.from && !fromText.trim() ? {} : senderMatch(fromText);
-      if (!sender) return void send.attempt(() => Promise.reject(new Error('From needs a domain such as woodgrovebank.example, or an address.')));
-      const words = wordsMatch(Object.fromEntries(filters.map(key => [key, form.get(key)?.toString()])));
+      const senders = sendersMatch(from.map(line => line.text));
+      const blank = senders !== null && !senders.from_domains && !senders.from_addresses;
+      if (!senders || (blank && (!rule || hadSender))) return void send.attempt(() => Promise.reject(new Error('From needs a domain such as woodgrovebank.example, or an address.')));
+      const words = wordsMatch(Object.fromEntries(filters.map(one => [one.key, one.lines.map(line => line.text)])));
       const [lane, kind] = destination.split(':') as [Lane, Kind | undefined];
-      const fields = {match: {...start.fixed, ...sender, ...words}, lane, kind: kind ?? null, mark_read: markRead, trash};
+      const fields = {match: {...start.fixed, ...senders, ...words}, lane, kind: kind ?? null, mark_read: markRead, trash};
       void send.attempt(() => save(fields)).then(saved => saved && onDone());
     }}>
-      <span className="lead">If from</span>
-      <span className="rule-line">{start.from === null
-        ? <span className="fixed ell" data-tip={FIXED_TIP}><Icon name="lock" size={16} /><b>{fixedSenders(start.fixed)}</b></span>
-        : <input className="fld" name="from" placeholder="woodgrovebank.example" aria-label="From" defaultValue={start.from} autoFocus style={{width: 200}} />}</span>
+      {from.map((line, index) => (
+        <Fragment key={line.id}>
+          <span className="lead">{index ? 'or' : 'If from'}</span>
+          <span className="rule-line">
+            <input className="fld" name={index ? undefined : 'from'} placeholder={index ? undefined : 'woodgrovebank.example'} aria-label={index ? `From ${index + 1}` : 'From'} value={line.text} autoFocus={index ? added.includes(line.id) : true} style={{width: 200}}
+              onChange={event => setFrom(from.map(one => (one.id === line.id ? {...one, text: event.target.value} : one)))} />
+            {from.length > 1 && <button className="ibtn sm" type="button" aria-label={index ? `Remove From ${index + 1}` : 'Remove From'} onClick={() => setFrom(from.filter(one => one.id !== line.id))}><Icon name="close" size={16} /></button>}
+            {index === from.length - 1 && from.length < RULE_SENDERS_MAX && orButton('From', () => setFrom([...from, newLine()]))}
+          </span>
+        </Fragment>
+      ))}
       {lines.map(line => (
         <Fragment key={line}>
           <span className="lead">and</span>
           <span className="rule-line"><span className="fixed ell" data-tip={FIXED_TIP}><Icon name="lock" size={16} />{line}</span></span>
         </Fragment>
       ))}
-      {filters.map(key => {
+      {filters.map(({key, lines: phrases}) => {
         const label = RULE_FILTERS.find(filter => filter.key === key)!.label;
-        return (
-          <Fragment key={key}>
-            <span className="lead">and</span>
-            <span className="rule-line">
-              <span className="s filter">{label}</span>
-              <input className="fld" name={key} aria-label={label} defaultValue={start.words[key]} autoFocus={added.includes(key)} style={{width: 200}} />
-              <button className="ibtn sm" type="button" aria-label={`Remove ${label}`} onClick={() => setFilters(filters.filter(one => one !== key))}><Icon name="close" size={16} /></button>
-            </span>
-          </Fragment>
-        );
+        return phrases.map((line, index) => {
+          const name = index ? `${label} ${index + 1}` : label;
+          return (
+            <Fragment key={line.id}>
+              {index ? <span className="lead" /> : <span className="lead">and</span>}
+              <span className="rule-line">
+                <span className={index ? 's filter or' : 's filter'}>{index ? 'or' : label}</span>
+                <input className="fld" aria-label={name} value={line.text} autoFocus={added.includes(line.id)} style={{width: 200}}
+                  onChange={event => setFilterLines(key, phrases.map(one => (one.id === line.id ? {...one, text: event.target.value} : one)))} />
+                <button className="ibtn sm" type="button" aria-label={`Remove ${name}`} onClick={() => setFilterLines(key, phrases.filter(one => one.id !== line.id))}><Icon name="close" size={16} /></button>
+                {index === phrases.length - 1 && phrases.length < RULE_PHRASES_MAX && orButton(label, () => setFilterLines(key, [...phrases, newLine()]))}
+              </span>
+            </Fragment>
+          );
+        });
       })}
       {left.length > 0 && (
         <span className="rule-line add">
@@ -269,8 +298,7 @@ export function RuleForm({draft = null, rule, save, onDone}: {draft?: RuleDraft 
             {close => left.map(filter => (
               <button key={filter.key} className="menu-i" type="button" role="menuitem" onClick={() => {
                 close();
-                setFilters([...filters, filter.key]);
-                setAdded([...added, filter.key]);
+                setFilters([...filters, {key: filter.key, lines: [newLine()]}]);
               }}>{filter.label}</button>
             ))}
           </Menu>

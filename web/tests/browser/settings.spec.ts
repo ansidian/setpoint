@@ -360,7 +360,7 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
   }
 });
 
-test('Mail: a written rule\'s Edit turns its row into the form, one form open at a time; Save reaches the server, keeps what the form can\'t draw, and the row\'s line shows the change', async () => {
+test('Mail: a written rule\'s Edit turns its row into the form, one form open at a time; Save reaches the server with an "or" phrase added, keeps what the form can\'t draw, and the row\'s line shows the change', async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
   try {
     const match = {from_domains: ['northwind.example', 'tailspintoys.example'], subject_includes: ['Your order', 'Shipment'], body_regex: 'tracking (number|#)'};
@@ -394,10 +394,13 @@ test('Mail: a written rule\'s Edit turns its row into the form, one form open at
     assert.deepEqual(await order(), before);
     await choose(page, 'Send to', 'FYI · Updates');
     await page.getByRole('radio', {name: '1 day'}).click();
+    await form.getByRole('button', {name: 'Or subject contains'}).click();
+    await form.getByRole('textbox', {name: 'Subject contains 3'}).fill('Delivered');
     await page.getByRole('button', {name: 'Save'}).click();
     await form.waitFor({state: 'detached'});
     await settled('the rule edited', rules, list => list.some(rule => rule.id === id && rule.kind === 'updates' && rule.trash === '1d'));
-    assert.deepEqual((await rules()).find(rule => rule.id === id)!.match, match);
+    assert.deepEqual((await rules()).find(rule => rule.id === id)!.match, {...match, subject_includes: ['Your order', 'Shipment', 'Delivered']});
+    await row.locator('.rule', {hasText: 'with “Your order” or “Shipment” or “Delivered” in the subject'}).waitFor();
     await row.locator('.rule', {hasText: 'FYI · Updates, trash after 1 day'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
