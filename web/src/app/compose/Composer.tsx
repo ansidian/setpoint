@@ -13,7 +13,8 @@
 // formats, and ends with Discard (no key). Files come by Attach, a drop anywhere on the composer or
 // a pasted image; each is a chip under the user's text with its name and size, a forward's kept
 // originals among them, and the reason one was refused shows over them. The top right pops it out into a floating window (no
-// key), and the same button docks it again; the format row keeps a place for buttons of its own.
+// key). The window's × closes it as Esc does, or, on a reply or forward whose own email the reader
+// shows, puts it back in the pane under that email; the format row keeps a place for buttons of its own.
 //
 // Waiting for the server to start its draft (composer.ts), it shows its fields in their places at
 // once: To, the subject of a new message, the body and the format row are live, and what the server
@@ -45,7 +46,8 @@ import {PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
 import {arrangeWindows, placeWindows} from '../../logic/composer.ts';
-import {attachFiles, canReplyAll, closeComposer, closeComposerAt, discard, dismissFileError, dock, foldWindows, popOut, queueSave, queueTyped, removeFile, switchKind, toggleMinimized, send, unsaved, useComposers, useFills, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
+import {attachFiles, canReplyAll, closeComposer, closeComposerAt, discard, dismissFileError, dock, foldWindows, popOut, queueSave, queueTyped, removeFile, shownEmail, switchKind, toggleMinimized, send, unsaved, useComposers, useFills, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
+import {useRoute} from '../router.ts';
 import type {OpenComposer} from './composer.ts';
 import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
 import {Bar, Dot, Sk} from '../states/Loading.tsx';
@@ -92,6 +94,9 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   });
   const kind = open.kind;
   const waiting = draft === null;
+  // A reply's or forward's window over its own email: its × docks it there rather than closing.
+  const route = useRoute();
+  const home = open.floating && open.messageId !== null && shownEmail(route) === open.messageId;
   // Cc and Bcc show when the draft has them, and while it's on its way when it will (Reply all's
   // other recipients), so their rows don't push in when it comes.
   const [copies, setCopies] = useState(() => (draft ? draft.cc.length + draft.bcc.length > 0 : startsWithCopies(kind, message, from)));
@@ -275,18 +280,19 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         event.stopPropagation();
         attach(files);
       }}>
-      {/* Popped out: the title folds the window to its bar and back, and the pop-out button docks
-          it. The caret stays where it was as the composer moves. */}
+      {/* Popped out: the title folds the window to its bar and back, and × closes it, or docks it
+          when the reader shows its own email. The caret stays where it was as the composer moves. */}
       {open.floating && (
         <div className="cmp-title" onMouseDown={event => event.preventDefault()} onClick={() => draft && toggleMinimized(draft.id)}>
           <button className="cmp-title-text ell" type="button" aria-expanded={!open.minimized} aria-label={open.minimized ? 'Open the window' : 'Minimize the window'}>
             {kind === 'new' ? 'New message' : fields.subject || (draft ? 'No subject' : '')}
           </button>
-          <button className="ibtn sm" type="button" aria-label="Back in the reading pane" data-tip="Back in the reading pane"
+          <button className="ibtn sm" type="button" aria-label={home ? 'Back in the reading pane' : 'Close'} data-tip={home ? 'Back in the reading pane' : 'Close'}
             onClick={event => {
               event.stopPropagation();
-              if (draft) dock(draft.id);
-            }}><Icon name="pip" size={16} /></button>
+              if (!home) closeComposerAt(open.key);
+              else if (draft) dock(draft.id);
+            }}><Icon name="close" size={16} /></button>
         </div>
       )}
       <div className="cmp-row cmp-head">

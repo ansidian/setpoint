@@ -41,11 +41,12 @@
 // the caret carry across. A window's title (the subject, or "New message") folds it to its title
 // bar and back; when the windows don't all fit, the one touched longest ago folds first, and once
 // even the bars don't fit the oldest go into a "+N" chip (logic/composer.ts › arrangeWindows). A
-// window's pop-out button docks it: the pane shows the draft's own email with the composer under
-// it, or the new message by itself (Drafts' pane off the mail pages), and the pane's composer, if
-// another, gives way. Esc in a window closes it, the draft kept, as in the pane; Esc outside the
-// windows leaves them alone. R, A and F open in the pane, beside any windows. On a selection of a
-// few emails they open popped out, a window for each in the list's order (answerEach).
+// window's × closes it as Esc does, except on a reply or forward whose own email the reader shows
+// (not a selection's stack, which shows no one email): there it docks, the composer under that
+// email, and the pane's composer, if another, gives way. A new message's × always closes it. Esc
+// in a window closes it, the draft kept, as in the pane; Esc outside the windows leaves them alone.
+// R, A and F open in the pane, beside any windows. On a selection of a few emails they open popped
+// out, a window for each in the list's order (answerEach).
 //
 // Files: the attach button, a drop on the composer or a pasted image uploads each file to the draft
 // at once, a chip showing it while it goes; one that would take the attachments over 25 MB (with a
@@ -401,9 +402,8 @@ export function answerEach(ids: readonly number[], kind: 'reply' | 'reply_all' |
   })).then(others => ids.forEach((id, at) => others[at] && start(id)));
 }
 
-/** The email the reading pane shows, on the Inbox or Sent. */
-function shownEmail(): number | null {
-  const route = currentRoute();
+/** The email the reading pane shows, on the Inbox or Sent (none while a selection's stack is up). */
+export function shownEmail(route = currentRoute()): number | null {
   return route.page === 'inbox' || route.page === 'sent' ? route.open : null;
 }
 
@@ -447,7 +447,7 @@ export function foldWindows(keys: number[]) {
   setComposers(composers.map(one => (keys.includes(one.key) ? {...one, minimized: true} : one)));
 }
 
-/** A window's pop-out button: the composer goes back into the reading pane, under its email or by itself. */
+/** A window's × over its own email: the composer goes back into the reading pane, under that email. */
 export function dock(draftId: number) {
   const target = byDraft(draftId);
   if (!target?.floating) return;

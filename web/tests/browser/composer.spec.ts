@@ -415,7 +415,7 @@ test('a file attached by the attach button is a chip and kept on the server; pop
   }
 });
 
-test('a reply popped out stays up while other mail and Calendar show, clear of the reader\'s tools, and its window\'s pop-out button docks it back on its email as it was', async () => {
+test('a reply popped out stays up while other mail and Calendar show, clear of the reader\'s tools, and back on its email its window\'s × docks it under it as it was', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const dinner = await idOf(setpoint, 'Dinner Friday?');
@@ -444,9 +444,14 @@ test('a reply popped out stays up while other mail and Calendar show, clear of t
     await page.keyboard.press('2');
     await until('Calendar opens', async () => new URL(page.url()).pathname, path => path.startsWith('/calendar'));
     await window.getByRole('textbox', {name: 'Message'}).filter({hasText: 'Count me in.'}).waitFor();
+    // Away from its email, × would close it.
+    await window.getByRole('button', {name: 'Close', exact: true}).waitFor();
 
+    // Its email again: × puts it back under it.
+    await page.keyboard.press('1');
+    await page.locator(`.list .row[data-id="${dinner}"]`).click();
+    await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
     await window.getByRole('button', {name: 'Back in the reading pane'}).click();
-    await until('its email opens', async () => new URL(page.url()).pathname, path => path === `/inbox/${dinner}`);
     await page.locator('.pane .composer').getByRole('textbox', {name: 'Message'}).filter({hasText: 'Count me in.'}).waitFor();
     assert.equal(await page.locator('.cmp-window').count(), 0);
     await setpoint.idle();

@@ -6,7 +6,8 @@
 // back by Discard's Undo and carried by the reply-type menu), a failed send's words with Try again, the draft saved as it's typed, once after a pause or at once on
 // Esc, and the reply-type menu, its kinds and Edit subject. Popped out into a window and docked
 // back, it is one composer: what's typed, a recipient, the open fold and the caret carry across, and
-// the window's title folds it. The store's rules around windows: Undo brings a send back where it
+// the window's title folds it. The window's × docks a reply over its own email and closes it
+// anywhere else, as Esc does. The store's rules around windows: Undo brings a send back where it
 // was, an email shown opens no second composer for a draft in a window, docking saves the pane's
 // one as it gives way, a draft's row docks its window, a docked new message gives the pane to an
 // email shown, and windows that don't fit fold and hide by when each was touched.
@@ -24,6 +25,7 @@ import {messagePath} from '../../src/api/mail.ts';
 import {ComposerRoot, ComposerSlot, ComposerWindows} from '../../src/app/compose/Composer.tsx';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
 import {dismissToast} from '../../src/app/toast.ts';
+import {navigate} from '../../src/app/router.ts';
 import {closeComposerAt, dock, DRAFT_SAVE_MS, newMessage, openComposers, openDraft, showEmail, startComposer, useComposers, useOpenComposer} from '../../src/app/compose/composer.ts';
 
 const SAM: Recipient = {name: 'Sam Lee', address: 'sam.lee@example.com'};
@@ -450,6 +452,13 @@ test('Send never sends while a change is owed and its save fails again: the comp
 const inWindow = () => document.querySelector('.cmp-window .composer');
 const inPane = () => document.querySelector('.pane .composer');
 
+/** The reader shows `open` on the Inbox (none: the list alone), the address as it was again after the test. */
+function reading(open: number | null) {
+  const was = `${window.location.pathname}${window.location.search}`;
+  onTestFinished(() => window.history.replaceState(null, '', was));
+  navigate({page: 'inbox', open});
+}
+
 test('popped out and docked again, it is one composer: what\'s typed, a recipient, the open fold and the caret carry across', async () => {
   await compose(draftOf({}));
   await userEvent.keyboard('Count me in');
@@ -474,6 +483,8 @@ test('popped out and docked again, it is one composer: what\'s typed, a recipien
   // The caret stays where it was: typing goes on at the end.
   await userEvent.keyboard('.');
 
+  // Over its own email, the window's × puts it back under it.
+  reading(EMAIL);
   await userEvent.click(page.getByRole('button', {name: 'Back in the reading pane'}));
   await expect.poll(inPane).not.toBeNull();
   expect(inWindow()).toBeNull();
@@ -494,6 +505,49 @@ test('the window\'s title folds it to its bar and brings it back; Esc in the win
   await userEvent.keyboard('{Escape}');
   await expect.poll(() => document.querySelector('.composer')).toBeNull();
   await expect.poll(() => saves.at(-1)?.body).toEqual([{type: 'paragraph', runs: [{text: 'Count me in', marks: [], href: null}]}]);
+});
+
+test.each([
+  ['a new message', 'new', null, 'Hike', 'kept'],
+  ['a new message with nothing written', 'new', null, '', 'discarded'],
+  ['a reply with no email shown', 'reply', null, 'Count me in', 'kept'],
+  ['a reply with another email shown', 'reply', 99, 'Count me in', 'kept'],
+  ['a reply with nothing written, another email shown', 'reply', 99, '', 'discarded'],
+] as const)('the window\'s × on %s closes it: the draft %s', async (_, kind, shown, words, outcome) => {
+  const draft = kind === 'new' ? draftOf({kind: 'new', message_id: null, to: [], subject: ''}) : draftOf({});
+  // A new message is one of the server's `others`, its saves named by draft.
+  const {saves, discarded} = kind === 'new' ? server(draftOf({}), [], MESSAGE, [draft]) : server(draft);
+  await render(<Pane />);
+  reading(shown);
+  if (kind === 'new') newMessage();
+  else startComposer({kind: 'reply', message_id: EMAIL}, {floating: true});
+  await expect.poll(inWindow).not.toBeNull();
+  if (words && kind === 'new') await userEvent.fill(page.getByRole('textbox', {name: 'Subject'}), words);
+  if (words && kind === 'reply') {
+    await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
+    await userEvent.keyboard(words);
+  }
+  await userEvent.click(page.getByRole('button', {name: 'Close', exact: true}));
+  expect(openComposers()).toEqual([]);
+  if (outcome === 'discarded') {
+    await expect.poll(() => discarded).toEqual([draft.id]);
+  } else {
+    await expect.poll(() => saves.at(-1)).toEqual(kind === 'new' ? {draft: draft.id, subject: words} : {body: paragraph(words)});
+    expect(discarded).toEqual([]);
+  }
+});
+
+test('a reply\'s window says what its × will do as the reader moves: back under its own email, else Close', async () => {
+  await compose(draftOf({}));
+  reading(EMAIL);
+  await userEvent.click(page.getByRole('button', {name: 'Pop out'}));
+  const button = () => document.querySelector('.cmp-title .ibtn');
+  await expect.poll(() => [button()?.getAttribute('aria-label'), button()?.getAttribute('data-tip')]).toEqual(['Back in the reading pane', 'Back in the reading pane']);
+  reading(99);
+  await expect.poll(() => [button()?.getAttribute('aria-label'), button()?.getAttribute('data-tip')]).toEqual(['Close', 'Close']);
+  // The list alone, as while a selection's stack is up: no one email is shown.
+  reading(null);
+  await expect.poll(() => button()?.getAttribute('aria-label')).toBe('Close');
 });
 
 test('the reply-type menu\'s Edit subject turns a reply into a forward that keeps its recipients and words, its subject a field, the menu gone, the caret in the body', async () => {
