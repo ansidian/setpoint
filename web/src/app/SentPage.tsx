@@ -37,7 +37,6 @@ import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers
 import type {Selection} from '../logic/selection.ts';
 import {tabTitle} from '../logic/title.ts';
 import {skeleton} from '../tokens.ts';
-import {Icon} from '../ui/Icon.tsx';
 import {commandKey, echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
@@ -55,7 +54,7 @@ import type {ReaderActions, Travel} from './Reader.tsx';
 import {navigate} from './router.ts';
 import {SearchField, SearchResults} from './search/Search.tsx';
 import {useSearch} from './search/mailSearch.ts';
-import {AnswerTools, SelectionPane} from './SelectionPane.tsx';
+import {AnswerTools, PaneTool, SelectionPane} from './SelectionPane.tsx';
 import {ALL_ACCOUNTS, SentAccounts} from './SentAccounts.tsx';
 import {SentFrom} from './SentFrom.tsx';
 import {LoadFailed, useAfter, useArrival, useLoadFailed} from './states/Loading.tsx';
@@ -451,7 +450,7 @@ export function SentPage({route}: {route: SentRoute}) {
         {writing && <NewMessagePane open={writing} />}
         {showsSelection && (
           <SelectionPane label="Selected emails" fit={String(selectionOffers(selectedRows).answer)} heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)}
-            tools={<><button className="tool trash" type="button" data-hint="e" onClick={forSelection.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
+            tools={<><PaneTool kind="trash" words="Trash" icon="delete" hint="e" kbd="E" run={forSelection.trash} />
               <AnswerTools rows={selectedRows} on={forSelection} /></>}
             lines={selectedRows.map(row => ({id: row.id, from: from(row), subject: row.subject, name: row.subject}))}
             onClear={clearSelection} onOpen={id => openEmail(id)} onDrop={id => setSelection({...selection, ids: selected.filter(one => one !== id)})} />

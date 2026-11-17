@@ -790,7 +790,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}
         {writing && <NewMessagePane open={writing} />}
         {showsSelection && (
-          <SelectionPane label="Selected emails" fit={Object.values(selectionOffers(selectedRows)).join()} heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)} tools={<EmailTools rows={selectedRows} on={forSelection} />}
+          <SelectionPane label="Selected emails" fit={[selectedRows.length, ...Object.values(selectionOffers(selectedRows))].join()} heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)} tools={<EmailTools rows={selectedRows} on={forSelection} />}
             lines={emailLines(selectedRows)} onClear={clearSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
         )}
         {pane.drawn && <InboxDay settle={pane.settle} />}

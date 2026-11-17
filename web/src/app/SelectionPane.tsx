@@ -3,8 +3,8 @@
 // (or drafts) sits where the subject goes. Each one follows in the list's order, who it's from or to
 // and its subject as its row reads them (on the Inbox a summary in the subject's place, the subject
 // its tooltip), with an × that takes it out. A click on one opens it.
-// When the tools' words don't fit, Reply, Reply all and Forward give way to their glyphs first, as
-// the reader's do (Reader.tsx › useToolsFit), each named in its tip then.
+// When the tools' words don't fit, Reply, Reply all and Forward give way to their glyphs first, then
+// every tool (PaneTool), as the reader's do (Reader.tsx › useToolsFit), each named in its tip then.
 // From 640 to 1099 px, where a pane covers the list, it stays out of the way. The rows show the
 // selection, and the keys and right-click act on it.
 //
@@ -61,7 +61,7 @@ export function SelectionPane({label, heading, tools, fit = '', lines, onClear, 
       <div ref={bar} className="rd-tools" data-size={size}>
         <ToolsRoom.Provider value={size}>{tools}</ToolsRoom.Provider>
         <span className="grow" />
-        <button className="tool" type="button" data-hint="escape" onClick={onClear}><Icon name="close" />Clear<span className="kbd">Esc</span></button>
+        <ToolsRoom.Provider value={size}><PaneTool words="Clear" icon="close" hint="escape" kbd="Esc" run={onClear} /></ToolsRoom.Provider>
       </div>
       <div className="rd-scroll">
         <div className="rd-head">
@@ -95,31 +95,46 @@ export function EmailTools({rows, on}: {rows: MessageRowOut[]; on: SelectionHand
   const offer = selectionOffers(rows);
   return (
     <>
-      {offer.done > 0 && <button className="tool done" type="button" data-hint="h" onClick={on.done}><Icon name="check" />{offer.done === rows.length ? 'Done' : `Done ${offer.done}`}<span className="kbd">H</span></button>}
-      <button className="tool trash" type="button" data-hint="e" onClick={on.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
-      <button className="tool" type="button" data-hint="p" onClick={on.pin}><Icon name={offer.pin ? 'keep' : 'keep_off'} />{offer.pin ? 'Pin' : 'Unpin'}<span className="kbd">P</span></button>
+      {offer.done > 0 && <PaneTool kind="done" words={offer.done === rows.length ? 'Done' : `Done ${offer.done}`} icon="check" hint="h" kbd="H" run={on.done} />}
+      <PaneTool kind="trash" words="Trash" icon="delete" hint="e" kbd="E" run={on.trash} />
+      <PaneTool words={offer.pin ? 'Pin' : 'Unpin'} icon={offer.pin ? 'keep' : 'keep_off'} hint="p" kbd="P" run={on.pin} />
       <AnswerTools rows={rows} on={on} />
       {offer.read
-        ? <button className="tool" type="button" onClick={on.markRead}><Icon name="mark_email_read" />Mark read</button>
-        : <button className="tool" type="button" data-hint="shift+u" onClick={on.markUnread}><Icon name="mark_email_unread" />Mark unread<span className="kbd">⇧U</span></button>}
+        ? <PaneTool words="Mark read" icon="mark_email_read" run={on.markRead} />
+        : <PaneTool words="Mark unread" icon="mark_email_unread" hint="shift+u" kbd="⇧U" run={on.markUnread} />}
     </>
   );
 }
 
 /** Reply R, Reply all A and Forward F, on a selection that offers them (2 to 5 emails). */
 export function AnswerTools({rows, on}: {rows: MessageRowOut[]; on: AnswerHandlers}) {
-  const room = useContext(ToolsRoom);
   if (!selectionOffers(rows).answer) return null;
-  const tool = (hint: string, icon: IconName, words: string, run: () => void) => (
-    <button className="tool answering" type="button" data-hint={hint} aria-label={words} data-tip={room === 'wide' ? undefined : `${words} · ${hint.toUpperCase()}`} onClick={run}>
-      <Icon name={icon} /><span className="lbl">{words}</span><span className="kbd">{hint.toUpperCase()}</span>
-    </button>
-  );
   return (
     <>
-      {tool('r', 'reply', 'Reply', on.reply)}
-      {tool('a', 'reply_all', 'Reply all', on.replyAll)}
-      {tool('f', 'forward', 'Forward', on.forward)}
+      <PaneTool kind="answering" words="Reply" icon="reply" hint="r" kbd="R" run={on.reply} />
+      <PaneTool kind="answering" words="Reply all" icon="reply_all" hint="a" kbd="A" run={on.replyAll} />
+      <PaneTool kind="answering" words="Forward" icon="forward" hint="f" kbd="F" run={on.forward} />
     </>
+  );
+}
+
+/**
+ * One of the pane's tools: its glyph, words and key. Its words give way to the glyph when they
+ * don't fit (Reply, Reply all and Forward first, `answering`), and its tip names it then.
+ */
+export function PaneTool({words, icon, hint, kbd, run, kind}: {
+  words: string;
+  icon: IconName;
+  hint?: string;
+  kbd?: string;
+  run: () => void;
+  kind?: 'done' | 'trash' | 'answering';
+}) {
+  const room = useContext(ToolsRoom);
+  const hidden = room === 'tight' || (room === 'narrow' && kind === 'answering');
+  return (
+    <button className={kind ? `tool ${kind}` : 'tool'} type="button" data-hint={hint} aria-label={words} data-tip={hidden ? (kbd ? `${words} · ${kbd}` : words) : undefined} onClick={run}>
+      <Icon name={icon} /><span className="lbl">{words}</span>{kbd && <span className="kbd">{kbd}</span>}
+    </button>
   );
 }
