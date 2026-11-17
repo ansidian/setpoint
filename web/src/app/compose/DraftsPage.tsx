@@ -10,8 +10,8 @@
 // header's button, as on the Inbox (EmptyPane.tsx).
 //
 // A row's right-click has Open (docked, as a click), Pop out (a window, the page as it was) and
-// Discard with Undo; a draft being sent has no Discard. ⌘ or Ctrl-click and ⇧-click select drafts, as
-// on the Inbox: the first takes the open draft too, its composer closing (the draft kept), and the
+// Discard with Undo; a draft being sent has no Discard. ⌘ or Ctrl-click, ⇧-click and ⌘A select
+// drafts, as on the Inbox: the first takes the open draft too, its composer closing (the draft kept), and the
 // pane shows the selection (SelectionPane) with Open ↵, which opens each in a window, and Discard
 // for the ones that can go, under one toast with Undo. A draft up in a window stays up. A selected
 // row's right-click has the same, Esc ends the selection, and a plain click opens the one clicked.
@@ -25,11 +25,11 @@ import {chipLabel} from '../../logic/composer.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Stop} from '../../logic/inbox.ts';
 import type {Route} from '../../logic/route.ts';
-import {counted, discardable, draftOffers, inListOrder, NO_SELECTION, ranged, toggled} from '../../logic/selection.ts';
+import {counted, discardable, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, toggled} from '../../logic/selection.ts';
 import type {Selection} from '../../logic/selection.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {echoKey, isTyping, keepTextUnselected, plainKey} from '../../ui/keys.ts';
+import {commandKey, echoKey, isTyping, keepTextUnselected, plainKey} from '../../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {openContextMenu} from '../ContextMenu.tsx';
@@ -153,6 +153,13 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
     else if (shown !== null) navigate({page: 'drafts', open: null});
   }
 
+  /** ⌘A: every draft listed is selected, the docked one's composer closing (the draft kept). */
+  function selectAll() {
+    setSelection(selectedAll({ids: selected, anchor: selection.anchor}, stops));
+    if (open) closeComposer();
+    else if (shown !== null) navigate({page: 'drafts', open: null});
+  }
+
   /** Discard on rows: they leave the list at once, and the toast's Undo brings them back. */
   function discardRows(ids: number[]) {
     if (!ids.length) return;
@@ -211,6 +218,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
       else if (plainKey(event, 'Enter') && onSelection) run(forSelection.open, 'enter');
       else if (plainKey(event, 'Enter') && at !== null) run(() => openRow(at));
       else if (plainKey(event, 'c')) run(() => newMessage());
+      else if (commandKey(event, 'a')) run(selectAll);
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
         else if (open) run(closeComposer);

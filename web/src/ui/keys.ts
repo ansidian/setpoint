@@ -13,6 +13,12 @@ export function plainKey(event: KeyboardEvent, key: string, {shift = false} = {}
   return event.key.toLowerCase() === key.toLowerCase();
 }
 
+/** A ⌘ key (Ctrl on other systems): no ⇧ or ⌥. */
+export function commandKey(event: KeyboardEvent, key: string): boolean {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.isComposing) return false;
+  return event.key.toLowerCase() === key.toLowerCase();
+}
+
 /**
  * A shortcut presses the visible button that shows its hint (`data-hint="h"` on Done H), as a click
  * would: it takes its press (styles.css › Every press registers) and lets go, so H is seen pressing Done.

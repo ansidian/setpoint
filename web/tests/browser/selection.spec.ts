@@ -2,7 +2,7 @@
 // reading pane shows the selection. The first ⌘-click takes the open email, and a plain click ends
 // it and opens. A selected row's right-click offers the selection's actions, and another row's
 // offers its own. E trashes every one with one toast, and ⌘Z brings every one back. Mark read, Pin
-// and Done act on all of it.
+// and Done act on all of it. ⌘A selects every email the list holds, and in the search field its text.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AllOut, MessageOut, MessageRowOut} from '@setpoint/shared';
@@ -90,6 +90,48 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     await page.keyboard.press('Escape');
     await pane(page).waitFor({state: 'detached'});
     assert.deepEqual(await selectedRows(page), []);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('⌘A selects every email listed, the reader giving way, and again changes nothing; Esc ends it; in the search field it selects the field\'s text', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openInbox(page, setpoint.base);
+    const shown = await onScreen(page);
+    assert.ok(shown.length > 3, 'several emails listed');
+
+    // With an email open: every one listed, in the list's order, the reader giving way.
+    await row(page, shown[1]!).locator('.from').click();
+    await reader(page).waitFor();
+    await page.keyboard.press('ControlOrMeta+a');
+    await pane(page).waitFor();
+    await reader(page).waitFor({state: 'detached'});
+    assert.equal(await pane(page).locator('.rd-subj').textContent(), `${shown.length} emails selected`);
+    assert.deepEqual(await selectedRows(page), shown);
+    assert.equal(await page.evaluate(() => getSelection()?.toString() ?? ''), '', 'no page text selected');
+
+    // Again: the same.
+    await page.keyboard.press('ControlOrMeta+a');
+    assert.equal(await pane(page).locator('.rd-subj').textContent(), `${shown.length} emails selected`);
+    assert.deepEqual(await selectedRows(page), shown);
+
+    // Esc ends it.
+    await page.keyboard.press('Escape');
+    await pane(page).waitFor({state: 'detached'});
+    assert.deepEqual(await selectedRows(page), []);
+
+    // In the search field, the field's words and nothing else.
+    await page.keyboard.press('/');
+    await page.keyboard.type('order');
+    await page.locator('.search-list:not(.pending) :is(.bar, .no-results, .arow)').first().waitFor();
+    await page.keyboard.press('ControlOrMeta+a');
+    assert.ok(await page.locator('.hd .search input').evaluate((field: HTMLInputElement) => field.selectionStart === 0 && field.selectionEnd === field.value.length && field.value.length > 0), 'the field\'s text selected');
+    await setpoint.idle();
+    assert.equal(await pane(page).count(), 0, 'no email selected');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

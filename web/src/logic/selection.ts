@@ -1,7 +1,8 @@
 // Selecting several emails or drafts. ⌘ or Ctrl-click adds a row or takes it out, and the first one
 // takes the open one too. ⇧-click adds every row from the last one clicked (or the open one) to this
-// one. This file also has what the selection's tools and menu offer, from its rows, and how Drafts'
-// Discard counts in its toasts.
+// one. ⌘A (Ctrl-A) selects every row the list holds now, and again after more load. This file also
+// has what the selection's tools and menu offer, from its rows, and how Drafts' Discard counts in its
+// toasts.
 import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import type {Stop} from './inbox.ts';
 import {readerActions} from './reader.ts';
@@ -37,6 +38,11 @@ export function ranged(selection: Selection, stops: Stop[], id: number, open: nu
   const ids = [...selection.ids, ...span.filter(one => !selection.ids.includes(one))];
   // The open email the range started from is selected too, as the first ⌘-click takes it.
   return {ids: open !== null && from >= 0 && start === open && !ids.includes(open) ? [open, ...ids] : ids, anchor: selection.anchor ?? start ?? id};
+}
+
+/** ⌘A: every email the list holds now, in its order; the anchor stays. A second ⌘A changes nothing. */
+export function selectedAll(selection: Selection, stops: Stop[]): Selection {
+  return {ids: rowIds(stops), anchor: selection.anchor};
 }
 
 /** What's selected and still in the list, in the list's order: Trash takes an email out, and a search swaps the list. */

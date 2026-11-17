@@ -12,7 +12,7 @@
 // cursor (with an email open, they open the next and previous one), Enter opens, E Trash (with Undo in
 // the toast, and ⌘Z), O Open in Gmail, Esc closes the reader, then the search.
 //
-// ⌘ or Ctrl-click and ⇧-click select several emails, as on the Inbox. The pane shows the selection
+// ⌘ or Ctrl-click, ⇧-click and ⌘A select several emails, as on the Inbox. The pane shows the selection
 // (SelectionPane) with Trash E, and E, a selected row's right-click (Trash, Clear selection) and
 // Esc act on it. Trash takes every one with one toast and one Undo. A plain click or Enter ends the
 // selection and opens the email; another account ends it too.
@@ -32,12 +32,12 @@ import {keepCursor, moveCursor, neighbour, nextAfterLeaving, searchStops, stopOf
 import type {Stop} from '../logic/inbox.ts';
 import type {Route} from '../logic/route.ts';
 import {leftOutSection, resultSections} from '../logic/search.ts';
-import {counted, inListOrder, NO_SELECTION, ranged, toggled} from '../logic/selection.ts';
+import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
 import {tabTitle} from '../logic/title.ts';
 import {skeleton} from '../tokens.ts';
 import {Icon} from '../ui/Icon.tsx';
-import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
+import {commandKey, echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
 import {useNow} from './clock.ts';
@@ -204,6 +204,12 @@ export function SentPage({route}: {route: SentRoute}) {
     if (open !== null) go({open: null});
   }
 
+  /** ⌘A: every email the list holds now is selected, the open one's reader giving way. */
+  function selectAll() {
+    setSelection(selectedAll({ids: selected, anchor: selection.anchor}, stops));
+    if (open !== null) go({open: null});
+  }
+
   // From the reader: an email of its conversation the user didn't send is received mail, not
   // Sent's, so it opens in the Inbox with the Inbox's tools. The rest open here.
   const openFromReader = (id: number, sent?: boolean) => (sent === false ? navigate({page: 'inbox', open: id}) : openEmail(id));
@@ -335,6 +341,7 @@ export function SentPage({route}: {route: SentRoute}) {
         else if (cursorStop?.kind === 'mentions') run(search.toggleMentions);
         else if (cursorStop?.kind === 'leftOut') run(search.toggleLeftOut);
       } else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
+      else if (commandKey(event, 'a') && !phone) run(selectAll);
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
       // R, A and F answer the open email, or the one under the cursor, which opens with its composer.

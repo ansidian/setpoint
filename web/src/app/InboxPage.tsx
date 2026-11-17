@@ -9,8 +9,8 @@
 // C a new message, ⇧I Mark all as read, ⇧U Mark unread, U to the next unread email. Esc closes the composer, then the
 // reader. Done or Trash on the open email opens the next one.
 //
-// ⌘ or Ctrl-click and ⇧-click select several emails. The reading pane shows the selection
-// (SelectionPane), and H, E, P, ⇧U, a selected row's right-click and ⌘K act on all of it. Each
+// ⌘ or Ctrl-click and ⇧-click select several emails, and ⌘A every one the list holds (its reader
+// giving way). The reading pane shows the selection (SelectionPane), and H, E, P, ⇧U, a selected row's right-click and ⌘K act on all of it. Each
 // email's change is its own command, with one toast and one Undo. A plain click or Enter ends the
 // selection and opens the email. Esc ends it first.
 //
@@ -45,7 +45,7 @@ import {
 } from '../logic/inbox.ts';
 import {phoneSlide} from '../logic/phone.ts';
 import {readerActions} from '../logic/reader.ts';
-import {counted, inListOrder, NO_SELECTION, ranged, toggled} from '../logic/selection.ts';
+import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
 import type {HeldRow, PatternPrompt, Stop} from '../logic/inbox.ts';
 import type {InboxView, Route} from '../logic/route.ts';
@@ -53,7 +53,7 @@ import {INBOX_VIEWS} from '../logic/route.ts';
 import {tabTitle} from '../logic/title.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
 import {Segmented} from '../ui/Segmented.tsx';
-import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
+import {commandKey, echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
 import {Count} from './Count.tsx';
@@ -318,6 +318,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
     const now = {ids: selected, anchor: selection.anchor};
     select(adding ? toggled(now, id, open) : ranged(now, stops, id, open));
     setCursor(key);
+    if (open !== null) go({open: null});
+  }
+
+  /** ⌘A: every email the list holds now is selected, the open one's reader giving way. */
+  function selectAll() {
+    select(selectedAll({ids: selected, anchor: selection.anchor}, stops));
     if (open !== null) go({open: null});
   }
 
@@ -624,6 +630,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       } else if (plainKey(event, 'h')) run(actions.done, 'h');
       else if (plainKey(event, 'c') && !phone) run(() => newMessage());
       else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
+      else if (commandKey(event, 'a') && !phone) run(selectAll);
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'p')) run(actions.pin, 'p');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');

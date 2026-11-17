@@ -1,7 +1,8 @@
 // Sent in the browser, at the design target on a fresh seed each. The seed has sent mail from
 // Personal, Work and iCloud, and none from Business or Jobs. From the sidebar's Sent to its list,
 // each row naming who it went to, to an email with Sent's tools, Trash with Undo, and an empty
-// account's view. Several selected as in the Inbox, trashed together with one Undo. Then search
+// account's view. Several selected as in the Inbox, trashed together with one Undo, and ⌘A selecting
+// every one listed. Then search
 // from Sent (sent mail only, in its account, found by its recipients too) and from the Inbox (sent
 // mail with the rest). Tab and the quiet segments are components/sentAccounts.test.tsx's.
 import assert from 'node:assert/strict';
@@ -136,6 +137,35 @@ test('several selected in Sent: the first ⌘-click takes the open email, ⇧-cl
     await toast.locator('button', {hasText: 'Undo'}).click();
     for (const id of picked) await until(`${id} back`, () => sentIds(setpoint), found => found.includes(id));
     for (const id of picked) await row(id).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('⌘A in Sent selects every email listed, the reader giving way; Esc ends it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/sent`);
+    await rows(page).nth(4).waitFor();
+    const ids = await rows(page).evaluateAll(found => found.map(row => Number((row as HTMLElement).dataset.id)));
+    // The rows drawn selected: the pane lists only its first few.
+    const listed = () => page.locator('.list .row.sel').evaluateAll(found => found.map(one => Number((one as HTMLElement).dataset.id)));
+
+    await rows(page).nth(1).click();
+    await page.locator('section.pane[aria-label="Reading pane"]').waitFor();
+    await page.keyboard.press('ControlOrMeta+a');
+    await selection(page).waitFor();
+    await page.locator('section.pane[aria-label="Reading pane"]').waitFor({state: 'detached'});
+    assert.equal(await selection(page).locator('.rd-subj').textContent(), `${ids.length} emails selected`);
+    assert.deepEqual(await listed(), ids);
+
+    await page.keyboard.press('ControlOrMeta+a');
+    assert.deepEqual(await listed(), ids, 'again: the same');
+    await page.keyboard.press('Escape');
+    await selection(page).waitFor({state: 'detached'});
+    assert.deepEqual(await listed(), []);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

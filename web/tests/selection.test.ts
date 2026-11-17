@@ -1,10 +1,10 @@
 // Selecting several emails as tables: ⌘-click in and out, the first taking the open email,
-// ⇧-click's range from the anchor, the selection in list order, and what its tools offer. Then
-// drafts: which can be discarded, and how Discard's toasts count them.
+// ⇧-click's range from the anchor, ⌘A's every row, the selection in list order, and what its tools
+// offer. Then drafts: which can be discarded, and how Discard's toasts count them.
 import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Stop} from '../src/logic/inbox.ts';
-import {broughtBackLine, discardable, discardedLine, discardFailedLine, draftOffers, inListOrder, NO_SELECTION, ranged, selectionOffers, toggled} from '../src/logic/selection.ts';
+import {broughtBackLine, discardable, discardedLine, discardFailedLine, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, toggled} from '../src/logic/selection.ts';
 import type {Selection} from '../src/logic/selection.ts';
 
 // New's 1 and 2, the shelf's 3, then a day's 4, 3 again (pinned, in its day too), 5, and a Noise fold.
@@ -42,6 +42,20 @@ describe('ranged (⇧-click)', () => {
     ['onto an email not in the list: unchanged', sel([1], 1), 9, null, sel([1], 1)],
   ])('%s', (_, selection, id, open, after) => {
     expect(ranged(selection, stops, id, open)).toEqual(after);
+  });
+});
+
+describe('selectedAll (⌘A)', () => {
+  // More rows loaded: the list's own rows, then 6 and 7 after them.
+  const more: Stop[] = [...stops, {key: 'all:6', kind: 'row', group: 'all', id: 6}, {key: 'all:7', kind: 'row', group: 'all', id: 7}];
+  test.each([
+    ['nothing selected: every row, each once, the fold left out', NO_SELECTION, stops, sel([1, 2, 3, 4, 5], null)],
+    ['some selected: every row, the anchor kept', sel([4, 2], 4), stops, sel([1, 2, 3, 4, 5], 4)],
+    ['a second time: the same', sel([1, 2, 3, 4, 5], null), stops, sel([1, 2, 3, 4, 5], null)],
+    ['after more rows load: those too', sel([1, 2, 3, 4, 5], null), more, sel([1, 2, 3, 4, 5, 6, 7], null)],
+    ['an empty list: none', NO_SELECTION, [], sel([], null)],
+  ])('%s', (_, selection, list, after) => {
+    expect(selectedAll(selection, list)).toEqual(after);
   });
 });
 

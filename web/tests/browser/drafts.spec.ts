@@ -2,7 +2,8 @@
 // check. A row's right-click has Open (docked, as a click), Pop out (a window, the page as it was)
 // and Discard with Undo; a draft being sent has no Discard. ⌘-click and ⇧-click select drafts: the
 // docked composer gives way to the selection's pane, a window stays up, Discard counts what can go
-// and one toast's Undo brings every one back, and Enter opens every selected draft in a window.
+// and one toast's Undo brings every one back, and Enter opens every selected draft in a window. ⌘A
+// in the docked composer selects its words; from the list, every draft.
 import type {DraftOut, DraftsOut, Recipient} from '@setpoint/shared';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -175,6 +176,40 @@ test('several drafts selected: the docked one gives way, a window stays; Discard
     await selection(page).waitFor({state: 'detached'});
     await until('three windows', () => windows(page), titles => [...titles].sort().join() === 'Beta,Epsilon,Gamma');
     assert.equal(pathOf(page), '/drafts');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('⌘A in the docked composer selects its words only; from the list it selects every draft, the composer closing; Esc ends it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    await makeDrafts(setpoint, [{subject: 'Alpha', to: [SAM]}, {subject: 'Beta', to: [JUNE]}, {subject: 'Gamma', to: [RAVI]}]);
+    const page = await openDrafts(setpoint, 3);
+    const count = await page.locator('.drafts-list .row').count();
+
+    // In the composer's subject: its words, and no draft.
+    await row(page, 'Beta').click();
+    await docked(page).waitFor();
+    const subject = docked(page).locator('input[aria-label="Subject"]');
+    await subject.click();
+    await page.keyboard.press('ControlOrMeta+a');
+    assert.ok(await subject.evaluate((field: HTMLInputElement) => field.selectionStart === 0 && field.selectionEnd === field.value.length && field.value === 'Beta'), 'the subject\'s words selected');
+    assert.equal(await selection(page).count(), 0, 'no draft selected');
+
+    // From the list: every draft, the docked composer closing (the draft kept).
+    await page.locator('.hd-title').click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await selection(page).waitFor();
+    await docked(page).waitFor({state: 'detached'});
+    assert.equal(await selection(page).locator('.rd-subj').textContent(), `${count} drafts selected`);
+    assert.equal(await page.locator('.drafts-list .row.sel').count(), count);
+    assert.equal(pathOf(page), '/drafts');
+
+    await page.keyboard.press('Escape');
+    await selection(page).waitFor({state: 'detached'});
+    assert.equal(await page.locator('.drafts-list .row.sel').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
