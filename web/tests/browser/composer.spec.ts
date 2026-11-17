@@ -459,8 +459,8 @@ test('a reply popped out stays up while other mail and Calendar show, clear of t
     await window.getByRole('button', {name: 'Back in the reading pane'}).click();
     await page.locator('.pane .composer').getByRole('textbox', {name: 'Message'}).filter({hasText: 'Count me in.'}).waitFor();
     assert.equal(await page.locator('.cmp-window').count(), 0);
-    await setpoint.idle();
-    assert.equal((await drafts(setpoint)).length, 1);
+    // One draft, listed once its words are saved (an untouched one isn't).
+    await until('the reply is saved', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'Count me in.');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
