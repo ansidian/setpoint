@@ -48,7 +48,7 @@ import {useCommands} from '../palette/commands.ts';
 import {useCompact} from '../Phone.tsx';
 import {SearchField} from '../search/Search.tsx';
 import {useCalendarSearch} from '../search/state.ts';
-import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
+import {dismissToast, failureWhy, showToast, toastFailure} from '../toast.ts';
 import {AnchoredCard} from './AnchoredCard.tsx';
 import {setVisible, showHidden} from './CalendarSidebar.tsx';
 import './calendar.css';
@@ -533,7 +533,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       setSearching(false);
       setDayPane(false);
       openReview(file.name, read);
-    }, error => showToast(error instanceof ApiFailure && error.code === 'invalid_input' ? error.message : failureLine(`Couldn't read ${file.name}`, error), null, 'failed'));
+    }, error => (error instanceof ApiFailure && error.code === 'invalid_input' ? showToast(error.message, null, 'failed') : showToast(`Couldn't read ${file.name}`, null, {tone: 'failed', why: failureWhy(error)})));
   };
   // Only the grid takes a dropped file, and shows while one is over it (FileDrop.tsx).
   const fileDrop = useFileDrop(openIcs);
@@ -785,9 +785,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const watchUndated = (command: CommandOut, title: string) => {
     void untilSettled(command).then(settled => {
       if (settled.state !== 'failed') return;
-      showToast(`Couldn't create ${title}, ${settled.provider_message ?? 'Todoist refused it.'}`, {
+      showToast(`Couldn't create ${title}`, {
         label: 'Try again', run: () => void retryChange(settled.id).then(next => watchUndated(next, title), toastFailure('Couldn\'t try again')),
-      }, 'failed');
+      }, {tone: 'failed', why: settled.provider_message ?? 'Todoist refused it.'});
     }, () => {});
   };
 

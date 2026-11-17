@@ -180,7 +180,7 @@ test('typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" 
   }
 });
 
-test('Sign out from ⌘K asks once in the toast; nothing happens until its Sign out', async () => {
+test('Sign out from ⌘K asks once in the toast, and the Enter that asked doesn\'t answer; Esc cancels it, Enter signs out', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -195,7 +195,15 @@ test('Sign out from ⌘K asks once in the toast; nothing happens until its Sign 
     await page.waitForTimeout(300);
     await setpoint.idle();
     assert.equal(await page.locator('.sign-in').count(), 0, 'still signed in');
-    await ask.getByRole('button', {name: 'Sign out'}).click();
+    // Esc cancels it.
+    await page.keyboard.press('Escape');
+    await ask.waitFor({state: 'detached'});
+    // Asked again, Enter answers it.
+    await page.keyboard.press('Meta+k');
+    await page.keyboard.type('sign out');
+    await page.keyboard.press('Enter');
+    await ask.waitFor();
+    await page.keyboard.press('Enter');
     await page.locator('.sign-in').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

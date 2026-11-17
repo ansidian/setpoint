@@ -628,7 +628,7 @@ export function watchSends(drafts: DraftRowOut[] | undefined) {
     sending.delete(id);
     void loadDraft(id).then(draft => {
       const words = draft.send?.error ?? 'the provider refused it';
-      showToast(`Couldn't send ${subject ? `"${subject}"` : 'it'}, ${words}`, {label: 'Open', run: () => reopen(draft)}, 'failed');
+      showToast(`Couldn't send ${subject ? `"${subject}"` : 'it'}`, {label: 'Open', run: () => reopen(draft)}, {tone: 'failed', why: words});
       if (draft.message_id !== null && docked() === null && !byDraft(draft.id)) {
         const route = currentRoute();
         if ((route.page === 'inbox' || route.page === 'sent') && route.open === draft.message_id) show(draft, {caret: false});

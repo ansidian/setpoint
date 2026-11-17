@@ -522,13 +522,13 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
   : the floating detail's Delete, the editor's More › Delete, and the phone's card's Complete. */
 .ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
 .ibtn.affirm:hover { background: color-mix(in oklch, var(--good) 16%, transparent); color: var(--good); }
-/* The app's one toast: the export's `.toast`, a 40 px pill at the bottom centre of the main area,
-   24 px up, as on the phone, covering no header control,
-   and above Settings (30–31). */
-.toast { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); height: 40px; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 16px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); white-space: nowrap; z-index: 35;
+/* The app's one toast: a 40 px pill at the bottom centre of the main area, 24 px up, as on the
+   phone, covering no header control, and above Settings (30–31). */
+.toast { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); min-height: 40px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 7px 0 9px; border-radius: 999px; background: var(--toast); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); white-space: nowrap; z-index: 35;
   translate: var(--dx, 0px) var(--lift, 0px); transition: translate var(--dur-fast) var(--ease); user-select: none; -webkit-user-select: none; }
-/* A line with no button keeps the same room on both sides. */
+/* A line with no button keeps the room its disc has on the other side; a confirm, with no disc, the same at its start. */
 .toast:not(:has(button)) { padding-right: 16px; }
+.toast.confirm { padding-left: 16px; }
 /* Each toast rises in over 180 ms, one replacing another afresh (App.tsx keys it), and fades out over
    120 ms, sinking 4 px, taking no clicks meanwhile. */
 .toast { animation: toast-in var(--dur-medium) var(--ease); }
@@ -542,23 +542,56 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .toast.dragging { transition: none; cursor: grabbing; }
 .toast.leaving.swiped { animation: toast-swipe-out var(--dur-fast) var(--ease) forwards; }
 @keyframes toast-swipe-out { to { opacity: 0; translate: calc(var(--dx, 0px) + var(--out, 0) * 48px) 0; } }
-/* Its tone's 16 px glyph leads, 10 px before the words: done `check` in `good`, taken away `delete` in
-   `ink3`, a failure `error` in `alert` with an `alert` ring and an 8% `alert` wash. */
-.toast.done, .toast.gone, .toast.failed, .toast.pinned { padding-left: 12px; }
-/* A pin made out of the shelf's sight leads with `keep` in `ink3`. */
-.toast.pinned .tone { color: var(--ink3); }
-.toast .tone { width: 18px; height: 18px; display: grid; place-items: center; margin-right: -4px; flex: none; }
-.toast.done .tone { color: var(--good); }
-.toast.gone .tone { color: var(--ink3); }
-.toast.failed .tone { color: var(--alert); }
-.toast.failed { background: color-mix(in oklch, var(--alert) 8%, var(--cardOn)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent), var(--shadow-pill); }
-/* A line with an action shows its time draining as a 2 px hairline, never waiting. It runs the
-   pill's whole width, clipped by the pill's own shape, so it starts out in the rounded ends, its ends
-   cut along their curve, rather than where the flat edge begins. */
-.toast.timed { overflow: hidden; }
-.toast.timed::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: color-mix(in oklch, var(--ink3) 45%, transparent);
+/* Its colour says what happened (logic/toast.ts): done and marked read `good`, taken away and failed
+   `alert`, Sending `accent`, a pin `sunGlyph`, any other line `ink2`. */
+.toast { --tone: var(--ink2); }
+.toast.t-done, .toast.t-read { --tone: var(--good); }
+.toast.t-gone, .toast.t-failed { --tone: var(--alert); }
+.toast.t-send { --tone: var(--accent); }
+.toast.t-pinned { --tone: var(--sunGlyph); }
+/* A 22 px disc of 14% of its colour holds its 14 px glyph, its time a 1.5 px ring around it: a track
+   of 26% and an arc draining over the toast's time. A toast that waits has the disc alone. */
+.toast .disc { position: relative; width: 22px; height: 22px; display: grid; place-items: center; flex: none; border-radius: 999px; color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }
+.toast .disc .time { position: absolute; inset: 0; width: 22px; height: 22px; transform: rotate(-90deg); pointer-events: none; }
+.toast .disc circle { fill: none; stroke-width: 1.5; }
+.toast .disc .trk { stroke: color-mix(in srgb, var(--tone) 26%, transparent); }
+.toast .disc .arc { stroke: currentColor; stroke-linecap: round; stroke-dasharray: 100 100; animation: toast-ring var(--toast-ms) linear forwards; }
+.toast.leaving .disc .arc { animation-play-state: paused; }
+@keyframes toast-ring { to { stroke-dasharray: 0 100; } }
+/* Its action, a 26 px small button, with its key's hint where the page takes one (⌘Z). */
+.toast .tb { height: 26px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; margin-left: 4px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; font-weight: 500; white-space: nowrap; flex: none; }
+.toast .tb:has(.kbd) { padding-right: 4px; }
+@media (hover: hover) { .toast .tb:hover { background: var(--sub3); } }
+.toast .tb:active { background: var(--sub4); }
+/* A confirm's Cancel is quiet and its action solid `ink`, side by side. */
+.toast .tb.quiet { background: transparent; color: var(--ink2); }
+@media (hover: hover) { .toast .tb.quiet:hover { background: var(--sub2); color: var(--ink); } }
+.toast .tb.solid { margin-left: 0; background: var(--ink); color: var(--toast); }
+@media (hover: hover) { .toast .tb.solid:hover { background: color-mix(in srgb, var(--ink) 88%, var(--toast)); } }
+.toast .tb.solid .kbd { background: color-mix(in srgb, var(--toast) 14%, transparent); color: color-mix(in srgb, var(--toast) 70%, var(--ink)); }
+/* A failure has an `alert` edge, and stacks what failed over why (12.5 px, `ink2`), 380 px at most. */
+.toast.t-failed { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent), var(--shadow-pill); }
+.toast.stack { align-items: flex-start; width: max-content; max-width: min(380px, calc(100% - 32px)); white-space: normal; border-radius: 20px; padding: 9px 7px 9px 9px; }
+.toast.stack:not(:has(button)) { padding-right: 16px; }
+.toast.stack .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding-top: 2px; }
+.toast.stack .why { font-size: 12.5px; color: var(--ink2); }
+.toast.stack .tb { align-self: center; }
+/* The comma that joins them, for a reader that hears them as one line. */
+.toast .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The phone's toast as it was (its layout is frozen): `cardOn`, 14 px apart, its tone's 16 px glyph
+   bare, and a line with an action shows its time draining as a 2 px hairline along its bottom. */
+.toast.ph { height: 40px; gap: 14px; padding: 0 6px 0 16px; background: var(--cardOn); }
+.toast.ph:not(:has(button)) { padding-right: 16px; }
+.toast.ph.done, .toast.ph.gone, .toast.ph.failed, .toast.ph.pinned { padding-left: 12px; }
+.toast.ph .tone { width: 18px; height: 18px; display: grid; place-items: center; margin-right: -4px; flex: none; }
+.toast.ph.done .tone { color: var(--good); }
+.toast.ph.gone .tone, .toast.ph.pinned .tone { color: var(--ink3); }
+.toast.ph.failed .tone { color: var(--alert); }
+.toast.ph.failed { background: color-mix(in oklch, var(--alert) 8%, var(--cardOn)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent), var(--shadow-pill); }
+.toast.ph.timed { overflow: hidden; }
+.toast.ph.timed::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: color-mix(in oklch, var(--ink3) 45%, transparent);
   transform-origin: left; animation: toast-time var(--toast-ms) linear; pointer-events: none; }
-.toast.leaving::after { animation-play-state: paused; }
+.toast.ph.leaving::after { animation-play-state: paused; }
 @keyframes toast-time { to { transform: scaleX(0); } }
 
 /* The reader's tools: Pin on a pinned email is Unpin, held (board 10). */

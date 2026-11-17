@@ -412,7 +412,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (wasOpen !== null) reopen(wasOpen);
     };
     undos.push(back);
-    toastId = showToast(toast, {label: 'Undo', run: back});
+    toastId = showToast(toast, {label: 'Undo', run: back, key: '⌘Z'});
   }
 
   // What each action does to emails `ids`: one email for H, E, P and the rest on `target` or a row's
@@ -517,7 +517,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         });
       };
       undos.push(back);
-      toast = showToast(counted(unread.length, 'Marked as read', n => `Marked ${n} as read`), {label: 'Undo', run: back});
+      toast = showToast(counted(unread.length, 'Marked as read', n => `Marked ${n} as read`), {label: 'Undo', run: back, key: '⌘Z'});
     },
   };
 
@@ -588,7 +588,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         ids.forEach(id => void markUnread(id).catch((error: Error) => showToast(error.message, null, 'failed')));
       };
       undos.push(back);
-      toast = showToast(`Marked ${ids.length} as read`, {label: 'Undo', run: back});
+      toast = showToast(`Marked ${ids.length} as read`, {label: 'Undo', run: back, key: '⌘Z'});
     },
     close,
   };

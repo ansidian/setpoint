@@ -52,7 +52,8 @@ account names). The UI says "Done", never "handled".
 | `page` | `#050506` | `#f6f6f4` | app background |
 | `panel` | `#0b0c0e` | `#f1f1ee` | sidebar, group headers, Settings nav |
 | `card` | `#0c0d0f` | `#ffffff` | floating detail, prompt, attachments; in Light the proposal and Answer card |
-| `cardOn` | `#131417` | `#ffffff` | focused search and fields, toast, drag tip, News's pill; in Night the proposal and Answer card |
+| `cardOn` | `#131417` | `#ffffff` | focused search and fields, drag tip, News's pill, the phone's toast; in Night the proposal and Answer card |
+| `toast` | `#1b1c20` | `#ffffff` | the toast, a step above `cardOn` |
 | `chip` | `#0f1013` | `#ffffff` | inputs, tags |
 | `modal` | `#0c0d0f` | `#ffffff` | Settings, popovers, ⌘K |
 | `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#8b8d92` | `#1d1e21` / `#4b4d52` / `#606267` | primary / secondary / tertiary text and icons |
@@ -237,8 +238,18 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   "Esc", "⌘K", "⇧I".
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed
   in place with the provider's message otherwise. Nothing quietly reverts.
-- **Undo** comes as a 6-second toast at the bottom centre, its time draining as a hairline; a swipe
-  takes it away sooner. Send joins it: the server holds a sent email 6 seconds, and the toast reads
+- **Undo** comes as a 6-second toast at the bottom centre, its time a ring draining around its glyph;
+  a swipe takes it away sooner. Every toast leads with a 22 px disc of 14% of its colour holding its
+  14 px glyph, the ring around it (track 26%, 1.5 px), then the line, then its action as a 26 px
+  button with its key's hint where the page takes one (⌘Z on the Inbox's and Sent's Undo). Its
+  colour and glyph say what happened: done `good` `check`, marked read `good` `mark_email_read`,
+  Trash, deleted and discarded `alert` `delete`, Sending `accent` `send`, a pin `sunGlyph` `keep`,
+  a failure `alert` `error`, any other line `ink2` with a glyph that fits (Copied `content_copy`,
+  otherwise `info`). A failure stays 8 seconds and stacks what failed over why (12.5 px `ink2`),
+  380 px at most, with an `alert` edge. A failure with an action (Open, Try again) and a confirm
+  (Sign out) wait for an answer, with no ring; a confirm has a quiet Cancel (Esc) and a solid `ink`
+  action (↵), and takes those keys outside a field. The phone's toast is as it was: `cardOn`, a bare
+  glyph, a hairline, and everything runs its time. Send joins it: the server holds a sent email 6 seconds, and the toast reads
   "Sending" with Undo, which opens the composer again as it was.
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
 - **Right-click** opens an item's actions at the pointer; selected text, links and fields keep the

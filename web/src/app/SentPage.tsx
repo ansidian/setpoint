@@ -271,7 +271,7 @@ export function SentPage({route}: {route: SentRoute}) {
       }
     };
     undos.push(back);
-    toastId = showToast(counted(ids.length, 'Moved to Trash', n => `Moved ${n} to Trash`), {label: 'Undo', run: back});
+    toastId = showToast(counted(ids.length, 'Moved to Trash', n => `Moved ${n} to Trash`), {label: 'Undo', run: back, key: '⌘Z'});
   }
 
   // The email's Gmail link. The open one's is in. A row's comes with the email, asked for as its menu opened.

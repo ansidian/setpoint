@@ -6,7 +6,11 @@ import {usePhone} from './Phone.tsx';
 import {dismissToast, useToast} from './toast.ts';
 import type {Toast} from './toast.ts';
 
-const TONE_GLYPHS = {done: 'check', gone: 'delete', failed: 'error', pinned: 'keep'} as const;
+// The phone keeps its toast as it was (its layout is frozen): these tones' glyphs alone, bare.
+const PHONE_TONES = {done: 'done', read: 'done', gone: 'gone', failed: 'failed', pinned: 'pinned'} as const;
+const PHONE_GLYPHS = {done: 'check', gone: 'delete', failed: 'error', pinned: 'keep'} as const;
+// The time ring's radius in its 22 px disc, its 1.5 px stroke inside the disc's edge.
+const RING_R = 10.25;
 
 // A swipe: past this far, let go, and the toast goes. Short of it, it snaps back.
 const SWIPE_PX = 72;
@@ -28,12 +32,13 @@ export function ToastPill() {
 }
 
 /**
- * It leads with its tone's glyph, and a line with an action shows its time draining as a hairline.
+ * It leads with its tone's glyph in a tinted disc, its time a ring draining around it (none while it
+ * waits). A failure stacks what failed over why. A confirm has Cancel (Esc) and its action (Enter).
  * Swiped left or right, by a drag or two fingers on a trackpad, it follows and fades, and goes once
  * past SWIPE_PX. There's no ×, and no hint that it swipes.
  */
 function Pill({toast}: {toast: Toast}) {
-  const {action, tone} = toast;
+  const {action, tone, confirm} = toast;
   const phone = usePhone();
   const ref = useRef<HTMLDivElement>(null);
   const [dx, setDx] = useState(0);
@@ -87,6 +92,27 @@ function Pill({toast}: {toast: Toast}) {
   }, [toast.id]);
 
   /**
+   * A confirm takes Enter and Esc while it's up, ahead of the page's own keys (Esc closing Settings,
+   * Enter pressing a focused button). Not in a field, where Enter and Esc are the field's, nor a held
+   * key's repeats. The Enter that asked (⌘K's) has gone by before this listens.
+   */
+  useEffect(() => {
+    if (!confirm || phone || toast.leaving) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (event.key !== 'Enter' && event.key !== 'Escape') return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (event.key === 'Enter') action?.run();
+      dismissToast(toast.id);
+    };
+    window.addEventListener('keydown', onKey, {capture: true});
+    return () => window.removeEventListener('keydown', onKey, {capture: true});
+  }, [confirm, phone, toast.leaving, toast.id, action]);
+
+  /**
    * A press on the pill, followed on the window, so a flick that leaves the pill in one move still
    * drags it. It's a drag once it has moved DRAG_PX, so a click on the button stays a click. Let go
    * past SWIPE_PX, it goes. Short of it (or cancelled), it snaps back.
@@ -135,21 +161,53 @@ function Pill({toast}: {toast: Toast}) {
     window.addEventListener('pointercancel', end);
   };
 
-  const className = ['toast', tone, action && 'timed', dragging && 'dragging', toast.leaving && 'leaving', out && 'swiped'].filter(Boolean).join(' ');
   const style = {
-    '--toast-ms': `${toast.ms}ms`, '--dx': `${dx}px`, '--out': out,
+    '--toast-ms': `${toast.ms ?? 0}ms`, '--dx': `${dx}px`, '--out': out,
     // Kept as it's swiped off: its fade-out starts from here.
     opacity: 1 - (1 - FADED) * Math.min(1, Math.abs(dx) / SWIPE_PX),
   } as CSSProperties;
+  const motionClasses = [dragging && 'dragging', toast.leaving && 'leaving', out && 'swiped'];
+  const run = () => {
+    action!.run();
+    dismissToast(toast.id);
+  };
+
+  if (phone) {
+    const phoneTone = tone in PHONE_TONES ? PHONE_TONES[tone as keyof typeof PHONE_TONES] : null;
+    const className = ['toast', 'ph', phoneTone, action && 'timed', ...motionClasses].filter(Boolean).join(' ');
+    return (
+      <div ref={ref} className={className} role="status" style={style} onPointerDown={press}>
+        {phoneTone && <span className="tone"><Icon name={PHONE_GLYPHS[phoneTone]} size={16} /></span>}
+        <span>{toast.why ? `${toast.text}, ${toast.why}` : toast.text}</span>
+        {action && <button className="btn ghost sm" type="button" onClick={run}>{action.label}</button>}
+      </div>
+    );
+  }
+
+  const className = ['toast', `t-${tone}`, confirm && 'confirm', toast.why && 'stack', ...motionClasses].filter(Boolean).join(' ');
   return (
-    <div ref={ref} className={className} role="status" style={style}
-      onPointerDown={press}>
-      {tone && <span className="tone"><Icon name={TONE_GLYPHS[tone]} size={16} /></span>}
-      <span>{toast.text}</span>
-      {action && <button className="btn ghost sm" type="button" onClick={() => {
-        action.run();
-        dismissToast(toast.id);
-      }}>{action.label}</button>}
+    <div ref={ref} className={className} role="status" style={style} onPointerDown={press}>
+      {!confirm && (
+        <span className="disc">
+          <Icon name={toast.glyph} size={14} />
+          {toast.ms !== null && (
+            <svg className="time" viewBox="0 0 22 22" aria-hidden="true">
+              <circle className="trk" cx="11" cy="11" r={RING_R} />
+              <circle className="arc" cx="11" cy="11" r={RING_R} pathLength={100} />
+            </svg>
+          )}
+        </span>
+      )}
+      {toast.why
+        ? <span className="txt"><span>{toast.text}<span className="vh">, </span></span><span className="why">{toast.why}</span></span>
+        : <span className="txt">{toast.text}</span>}
+      {confirm && <button className="tb quiet" type="button" onClick={() => dismissToast(toast.id)}>Cancel<span className="kbd">Esc</span></button>}
+      {action && (
+        <button className={confirm ? 'tb solid' : 'tb'} type="button" onClick={run}>
+          {action.label}
+          {confirm ? <span className="kbd">↵</span> : action.key && <span className="kbd">{action.key}</span>}
+        </button>
+      )}
     </div>
   );
 }

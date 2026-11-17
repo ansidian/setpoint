@@ -144,7 +144,7 @@ test('several selected in Sent: the first ⌘-click takes the open email, ⇧-cl
     // E: every one leaves at once, one toast, the selection ended.
     await page.keyboard.press('e');
     const toast = await holdToast(page);
-    assert.equal(await toast.textContent(), 'Moved 3 to TrashUndo');
+    assert.equal(await toast.textContent(), 'Moved 3 to TrashUndo⌘Z');
     await selection(page).waitFor({state: 'detached'});
     for (const id of picked) await until(`${id} trashed`, () => sentIds(setpoint), found => !found.includes(id));
     for (const id of picked) await row(id).waitFor({state: 'detached'});

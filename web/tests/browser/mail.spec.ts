@@ -536,7 +536,7 @@ test('a pin out of the shelf\'s sight says so, with Undo, and lands on the shelf
     const exams = page.locator('.row:not(.shelf):has(b[data-tip^="Final exam schedule"])');
     await point(exams);
     await page.keyboard.press('p');
-    const toast = page.locator('.toast.pinned', {hasText: 'Pinned'});
+    const toast = page.locator('.toast.t-pinned', {hasText: 'Pinned'});
     await toast.waitFor();
     await page.locator('.row.shelf:has(b[data-tip^="Final exam schedule"])').waitFor();
     await until('it left Attention', () => exams.count(), count => count === 0);

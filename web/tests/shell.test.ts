@@ -11,7 +11,7 @@ import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
 import {sidebarChoice, sidebarFoldable, sidebarFolded} from '../src/logic/sidebar.ts';
 import {byTime, nextUp, shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
-import {toastTone} from '../src/logic/toast.ts';
+import {TOAST_MS, toastGlyph, toastMs, toastTone} from '../src/logic/toast.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -317,16 +317,40 @@ describe('the keys offline refuses', () => {
   ])('%s: refused %s', (_name, event, refused) => expect(offlineRefuses(event)).toBe(refused));
 });
 
-describe('the toast\'s tone by its words (the one toast: done, taken away, failed, pinned)', () => {
+describe('the toast\'s tone by its words (its colour and glyph: done, read, taken away, sending, pinned, failed, plain)', () => {
   test.each([
     // A pin made out of the shelf's sight says so with its glyph.
-    ['Pinned', 'pinned'],
-    ['Marked Done', 'done'], ['Completed Pay rent', 'done'],
-    ['Moved to Trash', 'gone'], ['Deleted Dentist', 'gone'],
-    ['Couldn\'t pin it, Gmail didn\'t answer in time.', 'failed'], ['Couldn’t reorder rules, Can’t reach Setpoint', 'failed'],
-    // Every other line has no glyph.
-    ['Moved Dentist to Thu, Oct 8', null], ['Reopened Pay rent', null],
+    ['Pinned', 'pinned'], ['Pinned 3', 'pinned'],
+    ['Marked Done', 'done'], ['Marked 3 Done', 'done'], ['Completed Pay rent', 'done'],
+    ['Marked as read', 'read'], ['Marked 5 as read', 'read'],
+    ['Moved to Trash', 'gone'], ['Moved 3 to Trash', 'gone'], ['Deleted Dentist', 'gone'], ['Draft discarded', 'gone'], ['Discarded 2 drafts', 'gone'],
+    ['Sending', 'send'],
+    ['Couldn\'t pin it', 'failed'], ['Couldn’t reorder rules', 'failed'],
+    // Every other line is plain.
+    ['Moved Dentist to Thu, Oct 8', 'plain'], ['Reopened Pay rent', 'plain'], ['Copied 482913', 'plain'], ['Sending soon', 'plain'],
   ])('%s: %s', (text, tone) => expect(toastTone(text)).toBe(tone));
+});
+
+describe('the toast\'s glyph: its tone\'s, or for a plain line one that fits it', () => {
+  test.each([
+    ['done', 'Completed Pay rent', 'check'], ['read', 'Marked 5 as read', 'mark_email_read'], ['gone', 'Moved to Trash', 'delete'],
+    ['send', 'Sending', 'send'], ['pinned', 'Pinned', 'keep'], ['failed', 'Couldn\'t pin it', 'error'],
+    ['plain', 'Copied 482913', 'content_copy'], ['plain', 'Save or cancel your changes first', 'info'],
+  ] as const)('%s %s: %s', (tone, text, glyph) => expect(toastGlyph(tone, text)).toBe(glyph));
+});
+
+// How long a toast stays, or null while it waits for an answer. The phone's toast can't be swiped or
+// cancelled, so there everything runs its time.
+describe('how long the toast stays', () => {
+  test.each([
+    ['a line', {tone: 'plain', action: false}, TOAST_MS.line],
+    ['an Undo', {tone: 'gone', action: true}, TOAST_MS.line],
+    ['a failure', {tone: 'failed', action: false}, TOAST_MS.failed],
+    ['a failure with an action waits', {tone: 'failed', action: true}, null],
+    ['a confirm waits', {tone: 'plain', action: true, confirm: true}, null],
+    ['on the phone, a failure with an action', {tone: 'failed', action: true, phone: true}, TOAST_MS.failed],
+    ['on the phone, a confirm', {tone: 'plain', action: true, confirm: true, phone: true}, TOAST_MS.line],
+  ] as const)('%s: %s', (_name, toast, ms) => expect(toastMs(toast)).toBe(ms));
 });
 
 // The folded rail's one slot, today's next timed item alike for an event or a task (the seed's

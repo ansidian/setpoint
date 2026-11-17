@@ -13,6 +13,8 @@ export const colour = {
   panel: '#0b0c0e',
   card: '#0c0d0f',
   cardOn: '#131417',
+  // The toast: a step above `cardOn`, so it lifts off whatever page it's over.
+  toast: '#1b1c20',
   chip: '#0f1013',
   modal: '#0c0d0f',
   ink: '#ecebe7',
@@ -87,6 +89,7 @@ export const lightColour: Record<ColourToken, string> = {
   panel: '#f1f1ee',
   card: '#ffffff',
   cardOn: '#ffffff',
+  toast: '#ffffff',
   chip: '#ffffff',
   modal: '#ffffff',
   ink: '#1d1e21',

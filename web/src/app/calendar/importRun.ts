@@ -162,9 +162,9 @@ export async function importFromEditor(calendarId: number, calendarName: string,
   try {
     const command = await untilSettled(await importIcsEvent(calendarId, event));
     if (command.state === 'failed') {
-      showToast(`Couldn't import ${event.title || 'it'}, ${command.provider_message ?? 'Google Calendar refused it.'}`, {
+      showToast(`Couldn't import ${event.title || 'it'}`, {
         label: 'Try again', run: () => void retryChange(command.id).catch(toastFailure('Couldn\'t try again')),
-      }, 'failed');
+      }, {tone: 'failed', why: command.provider_message ?? 'Google Calendar refused it.'});
       return;
     }
     showToast(importedLine(1, calendarName).replace('1 event', event.title || '1 event'), command.kind === 'item_create' ? {label: 'Undo', run: () => void undoImport([command.target_id])} : null);

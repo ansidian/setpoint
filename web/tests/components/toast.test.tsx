@@ -1,12 +1,14 @@
 // The one toast (ToastPill.tsx on toast.ts). A new one replaces the last. It doesn't wait under the
 // pointer, it swipes away and it fades out. A failure stays longer. What's held back until it goes
-// is let go however it goes. Its look and its motion are by eye, and a swipe is read by its outcome.
+// is let go however it goes. A failure with an action and a confirm wait for an answer; a confirm takes
+// Enter and Esc. Its look and its motion are by eye, and a swipe is read by its outcome.
 // The clock is Vitest's, so its six and eight seconds pass at once.
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
-import {dismissToast, showToast, UNDO_MS} from '../../src/app/toast.ts';
+import {dismissToast, showConfirm, showToast, toastFailure, UNDO_MS} from '../../src/app/toast.ts';
+import {ApiFailure} from '../../src/api/client.ts';
 import {motion} from '../../src/tokens.ts';
 
 const toast = page.getByRole('status');
@@ -47,17 +49,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test('a new line replaces the last as a new toast, so it drops in afresh, and a line with no tone has no glyph', async () => {
+test('a new line replaces the last as a new toast, so it drops in afresh', async () => {
   showToast('Marked Done', {label: 'Undo', run: () => {}});
   await expect.element(toast).toMatchTextContent('Marked Done');
   const first = toast.element();
   showToast('Moved to Trash', {label: 'Undo', run: () => {}});
   await expect.element(toast).toMatchTextContent('Moved to Trash');
   expect(toast.element()).not.toBe(first);
-  // A line with no tone of its own has no glyph.
-  showToast('Added to Classes');
-  await expect.element(toast).toMatchTextContent('Added to Classes');
-  expect(toast.element().querySelector('.tone')).toBeNull();
 });
 
 test('under the pointer it doesn\'t wait: it goes at its six seconds all the same', async () => {
@@ -163,8 +161,87 @@ test('a failure stays eight seconds', async () => {
   const seen = classes();
   const shown = Date.now();
   showToast('Couldn\'t pin it, Gmail didn\'t answer in time.', null, 'failed');
-  await expect.element(toast).toHaveClass('failed');
+  await expect.element(toast).toHaveClass('t-failed');
   advanceTo(shown + 8000);
   await expect.element(toast).not.toBeInTheDocument();
   expect(Math.abs(seen().find(worn => wearing(worn, 'leaving'))!.at - shown - 8000)).toBeLessThan(1000);
+});
+
+test('a failure says what failed, then why, in the server\'s words', async () => {
+  toastFailure('Couldn\'t pin it')(new ApiFailure(502, 'provider', 'Gmail didn\'t answer in time.'));
+  await expect.element(toast).toMatchTextContent('Couldn\'t pin it, Gmail didn\'t answer in time.');
+});
+
+test('a failure with an action waits past its eight seconds, and goes by its action, a swipe or a newer toast', async () => {
+  const run = vi.fn();
+  const fail = () => showToast('Couldn\'t send "Lease renewal"', {label: 'Open', run}, {tone: 'failed', why: 'Gmail refused it.'});
+  const shown = Date.now();
+  fail();
+  advanceTo(shown + 8000 * 3);
+  await expect.element(toast).not.toHaveClass('leaving');
+  await toast.getByRole('button', {name: 'Open'}).click();
+  expect(run).toHaveBeenCalledTimes(1);
+  vi.advanceTimersByTime(motion.fast);
+  await expect.element(toast).not.toBeInTheDocument();
+
+  fail();
+  await expect.element(toast).toBeVisible();
+  drag(150);
+  vi.advanceTimersByTime(motion.fast);
+  await expect.element(toast).not.toBeInTheDocument();
+
+  fail();
+  showToast('Moved to Trash');
+  await expect.element(toast).toMatchTextContent('Moved to Trash');
+});
+
+/** A key pressed on what has focus, as the keyboard does, answering whether the page saw it. */
+function press(key: string, on: Element = document.body, init: KeyboardEventInit = {}) {
+  let pageSaw = false;
+  const seen = () => { pageSaw = true; };
+  window.addEventListener('keydown', seen);
+  on.dispatchEvent(new KeyboardEvent('keydown', {key, bubbles: true, cancelable: true, ...init}));
+  window.removeEventListener('keydown', seen);
+  return pageSaw;
+}
+
+test('a confirm waits for its answer: Enter runs its action once, Esc and Cancel take it away, and the page doesn\'t see those keys', async () => {
+  const run = vi.fn();
+  const shown = Date.now();
+  showConfirm('Sign out of Setpoint?', {label: 'Sign out', run});
+  advanceTo(shown + UNDO_MS * 3);
+  await expect.element(toast).not.toHaveClass('leaving');
+  // A held key's repeat isn't an answer.
+  press('Enter', document.body, {repeat: true});
+  expect(run).not.toHaveBeenCalled();
+  expect(press('Enter')).toBe(false);
+  expect(run).toHaveBeenCalledTimes(1);
+  vi.advanceTimersByTime(motion.fast);
+  await expect.element(toast).not.toBeInTheDocument();
+  press('Enter');
+  expect(run).toHaveBeenCalledTimes(1);
+
+  showConfirm('Sign out of Setpoint?', {label: 'Sign out', run});
+  await expect.element(toast).toBeVisible();
+  expect(press('Escape')).toBe(false);
+  vi.advanceTimersByTime(motion.fast);
+  await expect.element(toast).not.toBeInTheDocument();
+
+  showConfirm('Sign out of Setpoint?', {label: 'Sign out', run});
+  await toast.getByRole('button', {name: /Cancel/}).click();
+  vi.advanceTimersByTime(motion.fast);
+  await expect.element(toast).not.toBeInTheDocument();
+  expect(run).toHaveBeenCalledTimes(1);
+});
+
+test('a confirm leaves Enter and Esc to a field that has focus', async () => {
+  const run = vi.fn();
+  const field = document.body.appendChild(document.createElement('input'));
+  showConfirm('Sign out of Setpoint?', {label: 'Sign out', run});
+  await expect.element(toast).toBeVisible();
+  expect(press('Enter', field)).toBe(true);
+  expect(press('Escape', field)).toBe(true);
+  expect(run).not.toHaveBeenCalled();
+  await expect.element(toast).not.toHaveClass('leaving');
+  field.remove();
 });

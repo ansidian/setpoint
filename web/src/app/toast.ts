@@ -5,16 +5,22 @@
 // with its action:
 // showToast("Moved to Trash", {label: 'Undo', run}) or {label: 'Try again', run}. One at a time: a new
 // one replaces the last, whose action is then gone. A failed change says what failed and why with
-// toastFailure("Couldn't pin it"). A line leads with its tone's glyph (logic/toast.ts) and stays 6
-// seconds (a failure 8), the pointer resting on it or not. Swiping it away ends it sooner.
+// toastFailure("Couldn't pin it"), drawn as two lines, what failed over why. A line leads with its
+// tone's glyph in a disc (logic/toast.ts), its time a ring draining around it, and stays 6 seconds (a
+// failure 8), the pointer resting on it or not. A failure with an action, and a confirm
+// (showConfirm), wait instead. Swiping it away ends it sooner.
 // Going, it stays drawn for motion.fast to fade out, unless a new one takes its place. A caller that
 // holds something back until the toast goes (Calendar's delete) passes `onGone`, run once however it
 // goes: its time ended, swiped away, replaced, or its action run.
 import {useSyncExternalStore} from 'react';
 import {ApiFailure} from '../api/client.ts';
-import {TOAST_MS, toastMs, toastTone} from '../logic/toast.ts';
+import {TOAST_MS, toastGlyph, toastMs, toastTone} from '../logic/toast.ts';
 import type {ToastTone} from '../logic/toast.ts';
-import {motion} from '../tokens.ts';
+import {motion, viewport} from '../tokens.ts';
+import type {IconName} from '../ui/glyphs.ts';
+
+/** Whether the page is laid out for the phone (Phone.tsx's isPhone, read here without its components). */
+const isPhone = () => window.matchMedia(`(max-width: ${viewport.phoneBelow - 1}px)`).matches;
 
 /** How long a toast, and its Undo, stays. */
 export const UNDO_MS = TOAST_MS.line;
@@ -22,15 +28,29 @@ export const UNDO_MS = TOAST_MS.line;
 export interface ToastAction {
   label: string;
   run: () => void;
+  // Its key, shown as a hint where the page already takes it: ⌘Z on the Inbox's and Sent's Undo.
+  key?: string;
+}
+
+/** More than a tone: a glyph of the caller's, and a failure's reason, drawn on a second line. */
+export interface ToastLook {
+  tone?: ToastTone;
+  glyph?: IconName;
+  why?: string;
 }
 
 export interface Toast {
   id: number;
   text: string;
+  // A failure's reason, under what failed.
+  why: string | null;
   action: ToastAction | null;
-  tone: ToastTone | null;
-  // How long it stays.
-  ms: number;
+  tone: ToastTone;
+  glyph: IconName;
+  // A question with Cancel and its action, rather than a line.
+  confirm: boolean;
+  // How long it stays, or null while it waits.
+  ms: number | null;
   // Going: drawn for its fade only, taking no clicks.
   leaving: boolean;
 }
@@ -58,19 +78,29 @@ function ended() {
   then?.();
 }
 
-function startTimer(id: number, ms: number) {
+function startTimer(id: number, ms: number | null) {
   window.clearTimeout(timer);
+  if (ms === null) return;
   timer = window.setTimeout(() => (heldForCheck() ? startTimer(id, ms) : dismissToast(id)), ms);
 }
 
 /**
  * Shows the line, replacing any other (whose `onGone` then runs), with its tone (by default the one its
- * words have). It answers its id, for dismissToast(id). `onGone` runs once when this toast goes, however.
+ * words have), or a look: its tone, glyph and a failure's reason. It answers its id, for
+ * dismissToast(id). `onGone` runs once when this toast goes, however.
  */
-export function showToast(text: string, action: ToastAction | null = null, tone: ToastTone | null = toastTone(text), onGone: (() => void) | null = null): number {
+export function showToast(text: string, action: ToastAction | null = null, look: ToastTone | ToastLook | null = null, onGone: (() => void) | null = null): number {
+  const {tone = toastTone(text), glyph, why = null} = typeof look === 'string' ? {tone: look} : (look ?? {});
+  return show({text, why, action, tone, glyph: glyph ?? toastGlyph(tone, text), confirm: false}, onGone);
+}
+
+/** Asks before something that can't be taken back: the question, Cancel, and its action, waiting for an answer. */
+export const showConfirm = (text: string, action: ToastAction) => show({text, why: null, action, tone: 'plain', glyph: 'info', confirm: true}, null);
+
+function show(said: Omit<Toast, 'id' | 'ms' | 'leaving'>, onGone: (() => void) | null): number {
   ended();
-  const ms = toastMs(tone);
-  const toast: Toast = {id: nextId++, text, action, tone, ms, leaving: false};
+  const ms = toastMs({tone: said.tone, action: said.action !== null, confirm: said.confirm, phone: isPhone()});
+  const toast: Toast = {...said, id: nextId++, ms, leaving: false};
   current = toast;
   gone = onGone;
   startTimer(toast.id, ms);
@@ -82,14 +112,17 @@ export function showToast(text: string, action: ToastAction | null = null, tone:
  * A failed change's line, its parts joined by a comma, in
  * the server's or the provider's words: "Couldn't reorder rules, Can’t reach Setpoint".
  */
-export const failureLine = (what: string, error: unknown) => `${what}, ${error instanceof ApiFailure ? error.message : 'Setpoint couldn\'t send it.'}`;
+export const failureLine = (what: string, error: unknown) => `${what}, ${failureWhy(error)}`;
+
+/** Why a change failed, in the server's or the provider's words. */
+export const failureWhy = (error: unknown) => (error instanceof ApiFailure ? error.message : 'Setpoint couldn\'t send it.');
 
 /**
  * A change's `.catch` that says in the toast what failed and why: `.catch(toastFailure('Couldn\'t pin it'))`.
  * Not while Setpoint is offline: the offline pill already says changes are refused.
  */
 export const toastFailure = (what: string) => (error: unknown) => {
-  if (!(error instanceof ApiFailure && error.code === 'offline')) showToast(failureLine(what, error), null, 'failed');
+  if (!(error instanceof ApiFailure && error.code === 'offline')) showToast(what, null, {tone: 'failed', why: failureWhy(error)});
 };
 
 /** Takes the toast away (its action with it). With an id, only if it's still that one. It fades out over motion.fast. */
