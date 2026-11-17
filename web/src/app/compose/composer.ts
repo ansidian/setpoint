@@ -254,8 +254,10 @@ function change(draftId: number, changes: Partial<OpenComposer>) {
 export function startComposer(input: DraftCreateInput, {floating = input.kind === 'new'} = {}) {
   const already = input.kind === 'new' ? null : composers.find(one => one.messageId === input.message_id && one.kind === input.kind);
   if (already) {
-    // Already open: R again brings its window back and puts the caret in it.
+    // Already open: R again brings its window back and puts the caret in it. Asked for in a window
+    // (a selection's), one in the pane pops out, last in line, as the others open.
     if (already.floating) setComposers(composers.map(one => (one === already ? {...one, minimized: false, touched: ++touches} : one)));
+    else if (floating) setComposers([...composers.filter(one => one !== already), {...already, floating: true, minimized: false, touched: ++touches}]);
     whenPlaced(already.key, () => composerHost(already.key).querySelector<HTMLElement>('.desc-edit')?.focus());
     return;
   }

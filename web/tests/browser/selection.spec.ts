@@ -310,3 +310,29 @@ test('R, A and F on two to five selected open one composer window per email, in 
     await setpoint.stop();
   }
 });
+
+test('a reply open under an email that joins a selection pops out with the rest when R answers the selection', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openInbox(page, setpoint.base);
+    const [first, second] = await fourInADay(page, setpoint);
+    await row(page, first!.id).locator('.from').click();
+    await reader(page).waitFor();
+    await page.keyboard.press('r');
+    await page.locator('.pane .composer').waitFor();
+
+    // ⌘-click: the open email and this one, the reader (and its reply) giving way.
+    await row(page, second!.id).locator('.from').click({modifiers: ['ControlOrMeta']});
+    await until('two selected', () => listed(page), shown => shown.length === 2);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('r');
+    const found = await until('a reply to each', () => drafts(setpoint), all => [first!.id, second!.id].every(id => all.some(one => one.message_id === id && one.kind === 'reply')));
+    const subjects = [first!.id, second!.id].map(id => found.find(one => one.message_id === id && one.kind === 'reply')!.subject);
+    await until('two windows in order', () => windowTitles(page), titles => titles.join('|') === subjects.join('|'));
+    assert.equal(found.length, 2, 'the first reply\'s own draft, not another');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
