@@ -174,7 +174,7 @@ test('⌘A in Sent selects every email listed, the reader giving way; Esc ends i
   }
 });
 
-test('Reply all on a few selected in Sent opens a window for each with others to reply to, none for the rest; past five A does nothing', async () => {
+test('F and Reply all on a few selected in Sent open a window for each, in the list\'s order, Reply all only where there are others; past five A does nothing', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -191,13 +191,19 @@ test('Reply all on a few selected in Sent opens a window for each with others to
     for (const id of ids) await page.locator(`.list .row[data-id="${id}"] .from`).click({modifiers: ['ControlOrMeta']});
     await until('three selected', () => selection(page).locator('.sel-list > li[data-id]').count(), n => n === 3);
 
+    // F: a forward of each, a window each, in the list's order.
+    await page.keyboard.press('f');
+    const forwards = await until('a forward of each', () => drafts(setpoint), all => ids.every(id => all.some(one => one.message_id === id && one.kind === 'forward')));
+    const subjects = ids.map(id => forwards.find(one => one.message_id === id && one.kind === 'forward')!.subject);
+    const titles = () => page.locator('.cmp-windows .cmp-window .cmp-title-text').allTextContents();
+    await until('three windows in order', titles, all => all.join('|') === subjects.join('|'));
+
     // The pane's Reply all: a window for the one with others, none for the two to one person.
     await selection(page).locator('.rd-tools .tool', {hasText: 'Reply all'}).click();
     const found = await until('a reply all to it', () => drafts(setpoint), all => all.some(one => one.message_id === withOthers && one.kind === 'reply_all'));
-    const titles = () => page.locator('.cmp-windows .cmp-window .cmp-title-text').allTextContents();
-    await until('its window', titles, all => all.join('|') === found.find(one => one.message_id === withOthers)!.subject);
+    await until('its window after them', titles, all => all.join('|') === [...subjects, found.find(one => one.message_id === withOthers && one.kind === 'reply_all')!.subject].join('|'));
     await setpoint.idle();
-    assert.equal((await drafts(setpoint)).length, 1, 'none to the ones to one person');
+    assert.equal((await drafts(setpoint)).length, 4, 'none to the ones to one person');
 
     // Every one, back on the page (the caret leaves the window): past five, A does nothing.
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -205,8 +211,8 @@ test('Reply all on a few selected in Sent opens a window for each with others to
     await until('every one selected', () => page.locator('.list .row.sel').count(), n => n > 5);
     await page.keyboard.press('a');
     await setpoint.idle();
-    assert.equal((await drafts(setpoint)).length, 1, 'no draft started');
-    assert.equal(await page.locator('.cmp-window').count(), 1, 'no window opened');
+    assert.equal((await drafts(setpoint)).length, 4, 'no draft started');
+    assert.equal(await page.locator('.cmp-window').count(), 4, 'no window opened');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
