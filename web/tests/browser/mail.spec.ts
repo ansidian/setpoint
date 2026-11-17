@@ -1488,14 +1488,16 @@ test('an answered email: its row has the reply mark, the reader says "You replie
     const line = page.locator('.rd-replied');
     await until('the reader has the reply line', () => line.textContent(), text => text === 'You replied Oct 4');
     assert.equal(await page.locator(`.list .row[data-id="${latest!.id}"] .replied`).getAttribute('aria-label'), 'You replied Oct 4');
-    assert.equal(await page.locator('.rd-conv-h').textContent(), 'In this conversation');
+    assert.equal(await page.locator('.rd-conv-h').textContent(), 'In this conversation8');
+    assert.equal(await page.locator('.rd-conv-line[aria-current]').textContent(), 'Oct 38:45 PMTheo WalshThis email');
 
     await line.click();
     await page.locator('.mailtext', {hasText: '4 PM works.'}).waitFor();
     assert.equal(new URL(page.url()).pathname, `/inbox/${reply}`);
-    // The reply answers nothing itself, and lists the rest as earlier.
+    // The reply answers nothing itself, and is the last row of its conversation, as "You".
     assert.equal(await page.locator('.rd-replied').count(), 0);
-    await page.locator('.rd-conv-h', {hasText: 'Earlier in this conversation'}).waitFor();
+    await page.locator('.rd-conv-line[aria-current]', {hasText: 'Oct 48:30 AMYouThis email'}).waitFor();
+    assert.equal(await page.locator('.rd-conv-line').last().getAttribute('aria-current'), 'true');
 
     await page.locator('.rd-conv-line.more').click();
     await page.locator('.rd-conv-line', {hasText: 'Hey! A few of us'}).click();

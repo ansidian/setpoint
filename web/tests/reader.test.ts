@@ -1,10 +1,10 @@
 // The reader's rules as tables: the sender's
-// line, the actions offered, the facts card, which remote images load, attachments and CSV, and how
-// the tools give way when they don't fit.
-import type {MessageOut, RemoteContentOut} from '@setpoint/shared';
+// line, the actions offered, the facts card, which remote images load, attachments and CSV, how
+// the tools give way when they don't fit, and the conversation's timeline.
+import type {ConversationEmailOut, MessageOut, RemoteContentOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attachmentLabel, attachmentType, factRows, fileSize, fitTools, hasRemoteContent, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, whenLabel} from '../src/logic/reader.ts';
+import {attachmentLabel, attachmentType, conversationLines, factRows, fileSize, fitTools, hasRemoteContent, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, whenLabel} from '../src/logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../src/logic/reader.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -206,5 +206,79 @@ describe('the reader\'s tools give way to their glyphs when their words don\'t f
     ['a pixel of rounding is no overflow', 'wide', none, 600, 601, {size: 'wide', need: none}],
   ])('%s', (_name, size, need, width, used, expected) => {
     expect(fitTools(size, need, width, used)).toEqual(expected);
+  });
+});
+
+describe('the conversation\'s timeline', () => {
+  // Local times are the seed zone's (UTC−7 in October, UTC−8 in January).
+  const READ = '2026-10-04T03:45:00.000Z';
+  const other = (id: number, at: string, sent = false, excerpt = `Words of ${id}`): ConversationEmailOut => ({
+    id, from_name: sent ? 'User' : 'Theo Walsh', from_address: sent ? 'user@example.com' : 'theo.walsh@example.org', sent, received_at: at, subject: 'Re: Cabin weekend', excerpt,
+  });
+  const read = (conversation: ConversationEmailOut[], fields: Partial<MessageOut> = {}) => ({id: 100, received_at: READ, from_name: 'Theo Walsh', from_address: 'theo.walsh@example.org', conversation, ...fields});
+  const ids = (message: ReturnType<typeof read>, unfolded = false) => conversationLines(message, unfolded, zone)!.rows.map(row => (row.current ? 'read' : row.id));
+  /** `count` emails before the read one, an hour apart, oldest first. */
+  const earlier = (count: number) => Array.from({length: count}, (_, at) => other(at + 1, `2026-10-01T${String(10 + at).padStart(2, '0')}:00:00.000Z`));
+
+  test('an email alone in its thread has none', () => {
+    expect(conversationLines(read([]), false, zone)).toBeNull();
+    expect(conversationLines({...read([]), conversation: undefined}, false, zone)).toBeNull();
+  });
+
+  test.each([
+    ['others only before: the read email is last', [other(1, '2026-10-02T00:30:00.000Z'), other(2, '2026-10-02T02:02:00.000Z', true)], [1, 2, 'read']],
+    ['others only after: it is first', [other(1, '2026-10-04T15:30:00.000Z', true), other(2, '2026-10-05T01:00:00.000Z')], ['read', 1, 2]],
+    ['others on both sides: it sits between', [other(1, '2026-10-02T00:30:00.000Z'), other(2, '2026-10-04T15:30:00.000Z', true)], [1, 'read', 2]],
+    ['the same instant goes by id', [other(99, READ), other(101, READ)], [99, 'read', 101]],
+  ])('%s', (_name, conversation, expected) => {
+    const view = conversationLines(read(conversation), false, zone)!;
+    expect(ids(read(conversation))).toEqual(expected);
+    expect([view.heading, view.count, view.folded]).toEqual(['In this conversation', conversation.length + 1, 0]);
+  });
+
+  test.each([
+    ['five before all show: a fold never hides just one', 5, false, 0, [1, 2, 3, 4, 5, 'read', 50]],
+    ['six before fold the two oldest, keeping the nearest four', 6, false, 2, [3, 4, 5, 6, 'read', 50]],
+    ['unfolded, every one shows', 6, true, 0, [1, 2, 3, 4, 5, 6, 'read', 50]],
+  ])('%s', (_name, before, unfolded, folded, expected) => {
+    const message = read([...earlier(before), other(50, '2026-10-05T01:00:00.000Z')]);
+    const view = conversationLines(message, unfolded, zone)!;
+    expect(ids(message, unfolded)).toEqual(expected);
+    // The count is of the conversation, folded or not.
+    expect([view.folded, view.count]).toEqual([folded, before + 2]);
+  });
+
+  test('many after the read email never fold', () => {
+    const later = Array.from({length: 8}, (_, at) => other(at + 1, `2026-10-05T${String(10 + at).padStart(2, '0')}:00:00.000Z`));
+    expect(conversationLines(read(later), false, zone)).toMatchObject({folded: 0, count: 9});
+    expect(ids(read(later))).toHaveLength(9);
+  });
+
+  test.each([
+    ['the read email\'s own', READ, READ, ['Oct 3', '8:45 PM']],
+    ['the same local day', READ, '2026-10-03T16:05:00.000Z', ['Oct 3', '9:05 AM']],
+    ['the same UTC day but the local day after', READ, '2026-10-04T15:30:00.000Z', ['Oct 4', '8:30 AM']],
+    ['an earlier day', READ, '2026-09-29T16:40:00.000Z', ['Sep 29', '9:40 AM']],
+    ['another year than the read email\'s: the year too', READ, '2025-12-30T18:00:00.000Z', ['Dec 30, 2025', '10:00 AM']],
+    ['the year is the read email\'s, not today\'s', '2025-01-10T18:00:00.000Z', '2025-01-08T18:00:00.000Z', ['Jan 8', '10:00 AM']],
+  ])('a row\'s date and time: %s', (_name, readAt, at, expected) => {
+    const view = conversationLines(read([other(1, at)], {received_at: readAt}), false, zone)!;
+    const row = view.rows.find(one => (at === readAt ? one.current : !one.current))!;
+    expect([row.day, row.time]).toEqual(expected);
+  });
+
+  test('who and the words: the sender with their address or "You", the first words or the subject, and "This email"', () => {
+    const view = conversationLines(read([other(1, '2026-10-02T00:30:00.000Z'), other(2, '2026-10-02T02:02:00.000Z', true), other(3, '2026-10-02T03:00:00.000Z', false, '')]), false, zone)!;
+    expect(view.rows.map(row => [row.who, row.address, row.words, row.current, row.sent])).toEqual([
+      ['Theo Walsh', 'theo.walsh@example.org', 'Words of 1', false, false],
+      ['You', null, 'Words of 2', false, true],
+      ['Theo Walsh', 'theo.walsh@example.org', 'Re: Cabin weekend', false, false],
+      ['Theo Walsh', 'theo.walsh@example.org', 'This email', true, false],
+    ]);
+  });
+
+  test('a read email the user sent is "You"', () => {
+    const view = conversationLines(read([other(1, '2026-10-02T00:30:00.000Z')], {from_name: 'User', from_address: 'user@example.com', sent_only: true}), false, zone)!;
+    expect(view.rows.at(-1)).toMatchObject({current: true, who: 'You', address: null, sent: true, words: 'This email'});
   });
 });

@@ -456,20 +456,27 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* "You replied Oct 4" under the sender: a quiet line, the reply glyph in `ink3`. A click opens the reply. */
 .rd-replied { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; margin: -4px 0 -4px -8px; border-radius: 999px; color: var(--ink3); font-size: 12.5px; }
 @media (hover: hover) { .rd-replied:enabled:hover { background: var(--sub); color: var(--ink2); } }
-/* The conversation under the body, which then stops growing so the list follows it. Each line is the
-   sender's name ("You" quieter), the first words in `ink3` and the age. This email's place, when
-   the list holds emails on both sides of it, is `accent`'s short bar, as the open row's is. */
+/* The conversation under the body, which then stops growing so the list follows it: a timeline of
+   the thread, a hairline above its heading and count. Its rows share four columns: the date and the clock time in `ink3`, each lined up, who ("You" quieter) and the first
+   words in `ink3`. Every row but the open email's is a link, with a list row's hover. The open
+   email's row has `accent`'s short bar, as the open row of a list has, and reads "This email". */
 .rd-body:has(+ .rd-conv) { flex-grow: 0; }
-.rd-conv { padding: 4px 28px 28px; display: flex; flex-direction: column; flex: none; }
-.rd-conv-h { margin: 0 0 6px; padding-top: 14px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
-.rd-conv-line { display: flex; align-items: center; gap: 12px; height: 32px; padding: 0 8px; margin: 0 -8px; border-radius: 10px; color: var(--ink2); text-align: left; min-width: 0; }
+.rd-conv { padding: 4px 28px 28px; display: grid; grid-template-columns: max-content max-content fit-content(168px) minmax(0, 1fr); column-gap: 16px; flex: none; }
+.rd-conv-h { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px; padding-top: 14px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
+.rd-conv-h .num { letter-spacing: 0; }
+.rd-conv-line { position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; height: 32px; padding: 0 8px; margin: 0 -8px; border-radius: 10px; color: var(--ink2); text-align: left; min-width: 0; }
 @media (hover: hover) { button.rd-conv-line:hover { background: var(--sub); } }
-.rd-conv-line .who { flex: none; width: 136px; display: inline-flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+button.rd-conv-line:focus-visible { background: var(--sub2); }
+.rd-conv-line > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-conv-line :is(.day, .time) { color: var(--ink3); font-size: 12.5px; }
+.rd-conv-line .time { text-align: right; margin-left: -6px; }
+.rd-conv-line .who { color: var(--ink); }
 .rd-conv-line.you .who { color: var(--ink2); }
-.rd-conv-line .words { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink3); }
-.rd-conv-line .age { flex: none; color: var(--ink3); font-size: 12px; }
-.rd-conv-line.more .who, .rd-conv-line.here .who { width: auto; color: var(--ink3); }
-.rd-conv-line.here::before { content: ""; width: 2px; height: 14px; margin-right: -6px; border-radius: 1px; background: var(--accent); }
+.rd-conv-line .words { color: var(--ink3); }
+.rd-conv-line.more { display: flex; gap: 4px; color: var(--ink3); }
+.rd-conv-line.here { cursor: default; }
+.rd-conv-line.here .words { color: var(--ink2); }
+.rd-conv-line.here::before { content: ""; position: absolute; left: -1px; top: 9px; width: 2px; height: 14px; border-radius: 1px; background: var(--accent); }
 .mailtext { color: var(--ink); font-size: 14px; line-height: 1.55; max-width: 600px; overflow-wrap: anywhere; }
 .mailtext p { margin: 0 0 12px; }
 

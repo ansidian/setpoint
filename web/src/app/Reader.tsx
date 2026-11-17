@@ -494,7 +494,7 @@ function Email({listed, message, load, accounts, now, timeZone, marks, cards, un
       {message ? <Body message={message} marks={marks} arrived={arrived} /> : (
         <div className="rd-body">{failed ? <LoadFailed what="this email" loads={[load]} /> : <BodySkeleton attachment={(listed?.attachment_count ?? 0) > 0} />}</div>
       )}
-      {message && conversation && <Conversation key={message.id} message={message} now={now} timeZone={timeZone} onOpen={conversation} />}
+      {message && conversation && <Conversation key={message.id} message={message} timeZone={timeZone} onOpen={conversation} />}
     </>
   );
 }

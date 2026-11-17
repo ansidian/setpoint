@@ -1,7 +1,8 @@
-// The reader's conversation list: the other emails of the open email's thread, one line each with
-// the sender's name or "You", the first words and the age, oldest first. Its heading says where they
-// sit, this email's place is marked when they sit on both sides, and a long run of earlier emails
-// folds behind "N more", keeping the nearest in view. A line opens its email, a sent one included, saying which.
+// The reader's conversation list: the open email's thread as a timeline, one row each with its date, its time,
+// the sender's name or "You" and the first words, oldest first, under one heading with their count.
+// The open email is a row in its place, marked as current and no link; any other row opens its email,
+// a sent one included, saying which. A long run of earlier emails folds behind "N more". The rows'
+// order, times and fold are logic/reader.ts › conversationLines, tested as tables in reader.test.ts.
 import type {ConversationEmailOut, MessageOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {expect, test, vi} from 'vitest';
@@ -19,49 +20,58 @@ const email = (id: number, days: number, sent: boolean, excerpt = `Words of ${id
 });
 
 /** The open email, ten days back unless asked, with its thread's other emails. */
-const open = (conversation: ConversationEmailOut[], days = 10) => ({id: 100, received_at: ago(days), conversation} as unknown as MessageOut);
+const open = (conversation: ConversationEmailOut[], days = 10) => ({id: 100, received_at: ago(days), from_name: 'Theo Walsh', from_address: 'theo.walsh@example.org', conversation} as unknown as MessageOut);
 
 async function list(message: MessageOut, onOpen = vi.fn()) {
-  await render(<div style={{width: 640}}><Conversation message={message} now={NOW} timeZone={SEED_TIME_ZONE} onOpen={onOpen} /></div>);
+  await render(<div style={{width: 640}}><Conversation message={message} timeZone={SEED_TIME_ZONE} onOpen={onOpen} /></div>);
   return onOpen;
 }
 
 const lines = () => [...document.querySelectorAll('.rd-conv-line')].map(line => [...line.children].map(part => part.textContent).join(' | '));
+const heading = () => page.getByRole('heading', {name: /^In this conversation/});
 
-test('earlier emails, oldest first: the sender or "You", the first words and the age; a click opens a sent one too', async () => {
-  const onOpen = await list(open([email(1, 14, false), email(2, 13, true), email(3, 12, false, '')]));
-  await expect.element(page.getByRole('heading', {name: 'Earlier in this conversation'})).toBeVisible();
+test('every email is a row, oldest first, the open one in its place: its date, its time, the sender or "You", the first words', async () => {
+  await list(open([email(1, 14, false), email(2, 13, true), email(3, 9, false, '')]));
+  await expect.element(heading()).toHaveTextContent('In this conversation4');
   // An email with no words shows its subject.
-  expect(lines()).toEqual(['Theo Walsh | Words of 1 | Sep 23', 'You | Words of 2 | Sep 24', 'Theo Walsh | Re: Cabin weekend in November | Sep 25']);
-  await userEvent.click(page.getByRole('button', {name: /^You/}));
-  expect(onOpen).toHaveBeenCalledWith(2, true);
+  expect(lines()).toEqual([
+    'Sep 23 | 9:12 AM | Theo Walsh | Words of 1', 'Sep 24 | 9:12 AM | You | Words of 2', 'Sep 27 | 9:12 AM | Theo Walsh | This email', 'Sep 28 | 9:12 AM | Theo Walsh | Re: Cabin weekend in November',
+  ]);
 });
 
-test('only later emails say so, and emails on both sides mark this one between them', async () => {
-  await list(open([email(1, 9, true), email(2, 8, false)]));
-  await expect.element(page.getByRole('heading', {name: 'Later in this conversation'})).toBeVisible();
-  expect(document.querySelector('.rd-conv-line.here')).toBeNull();
-  document.body.replaceChildren();
-
-  await list(open([email(1, 14, false), email(2, 9, true)]));
-  await expect.element(page.getByRole('heading', {name: 'In this conversation'})).toBeVisible();
-  expect(lines()).toEqual(['Theo Walsh | Words of 1 | Sep 23', 'This email', 'You | Words of 2 | Sep 28']);
+test('a click on another row opens its email, a sent one too; the open email\'s row is current and no link', async () => {
+  const onOpen = await list(open([email(1, 14, false), email(2, 13, true)]));
+  await expect.element(heading()).toBeVisible();
+  const current = document.querySelector('.rd-conv [aria-current="true"]')!;
+  expect([current.tagName, current.textContent]).toEqual(['DIV', 'Sep 279:12 AMTheo WalshThis email']);
+  expect(page.getByRole('button').elements().map(button => button.textContent)).toEqual(['Sep 239:12 AMTheo WalshWords of 1', 'Sep 249:12 AMYouWords of 2']);
+  await userEvent.click(page.getByRole('button', {name: /You/}));
+  expect(onOpen).toHaveBeenCalledWith(2, true);
+  await userEvent.click(page.getByRole('button', {name: /Theo Walsh/}));
+  expect(onOpen).toHaveBeenLastCalledWith(1, false);
 });
 
 test('a long run folds its oldest behind "N more", and that line opens them', async () => {
   const thread = [1, 2, 3, 4, 5, 6, 7].map(id => email(id, 20 - id, id % 2 === 0));
   await list(open(thread));
   await expect.element(page.getByRole('button', {name: '3 more'})).toBeVisible();
-  expect(lines().slice(1).map(line => line.split(' | ')[1])).toEqual(['Words of 4', 'Words of 5', 'Words of 6', 'Words of 7']);
+  // The count is the whole conversation's, folded or not.
+  await expect.element(heading()).toHaveTextContent('In this conversation8');
+  expect(lines().slice(1).map(line => line.split(' | ')[3])).toEqual(['Words of 4', 'Words of 5', 'Words of 6', 'Words of 7', 'This email']);
   await userEvent.click(page.getByRole('button', {name: '3 more'}));
-  await expect.poll(() => lines().length).toBe(7);
-  expect(lines().map(line => line.split(' | ')[1])).toEqual(thread.map(one => one.excerpt));
+  await expect.poll(() => lines().length).toBe(8);
+  expect(lines().map(line => line.split(' | ')[3])).toEqual([...thread.map(one => one.excerpt), 'This email']);
 });
 
-test('five earlier emails all show: a fold never hides just one', async () => {
-  await list(open([1, 2, 3, 4, 5].map(id => email(id, 20 - id, false))));
-  await expect.element(page.getByRole('heading', {name: 'Earlier in this conversation'})).toBeVisible();
-  expect(lines()).toHaveLength(5);
+test('a row\'s parts fit its width: a long sender and long words are cut short, the date and time whole', async () => {
+  await list(open([{...email(1, 14, false, 'Words '.repeat(60)), from_name: 'A sender whose name runs on and on and on and on'}]));
+  await expect.element(heading()).toBeVisible();
+  const row = document.querySelector('button.rd-conv-line')!;
+  const [day, time, who, words] = [...row.children] as HTMLElement[];
+  for (const part of [day!, time!]) expect(part.scrollWidth).toBeLessThanOrEqual(part.clientWidth);
+  expect(who!.scrollWidth).toBeGreaterThan(who!.clientWidth);
+  expect(words!.clientWidth).toBeGreaterThan(100);
+  expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth);
 });
 
 test('an email alone in its thread has no list', async () => {

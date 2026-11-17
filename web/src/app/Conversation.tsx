@@ -1,39 +1,42 @@
-// The reader's conversation list: the other emails of the open email's thread, under its body.
+// The reader's conversation list: the open email's thread as a timeline, under its body.
 // What it holds and how it folds is logic/reader.ts › conversationLines.
-import type {ConversationEmailOut, MessageOut} from '@setpoint/shared';
+import type {MessageOut} from '@setpoint/shared';
 import {useState} from 'react';
-import {age, fullTimestamp} from '../logic/format.ts';
+import {fullTimestamp} from '../logic/format.ts';
 import {conversationLines} from '../logic/reader.ts';
+import type {ConversationRow} from '../logic/reader.ts';
 import {Icon} from '../ui/Icon.tsx';
 
 /**
- * The other emails of its thread, under the body: one line each, oldest first, with who sent it
- * ("You" for the user), its first words and its age. A click opens that email. The heading says where
- * they sit: all earlier, all later, or both, with this email's place marked between. A long run of
- * earlier emails folds behind one line, keeping the nearest in view.
+ * Every email of the open email's thread, under its body: one row each, oldest first, with its date
+ * and clock time in columns of their own, who sent it ("You" for the user) and its first words. The open email is a row too, in its
+ * place, marked with the accent bar and reading "This email"; a click on any other row opens that
+ * email. The heading counts them all. A long run of earlier emails folds behind one line, keeping
+ * the nearest in view.
  */
-export function Conversation({message, now, timeZone, onOpen}: {message: MessageOut; now: number; timeZone: string; onOpen: (id: number, sent: boolean) => void}) {
+export function Conversation({message, timeZone, onOpen}: {message: MessageOut; timeZone: string; onOpen: (id: number, sent: boolean) => void}) {
   const [unfolded, setUnfolded] = useState(false);
-  const view = conversationLines(message, unfolded);
+  const view = conversationLines(message, unfolded, timeZone);
   if (!view) return null;
-  const line = (email: ConversationEmailOut) => (
-    <button key={email.id} type="button" className={email.sent ? 'rd-conv-line you' : 'rd-conv-line'} onClick={() => onOpen(email.id, email.sent)}>
-      <span className="who" data-tip={email.sent ? undefined : email.from_address} data-tip-quick>{email.sent ? 'You' : email.from_name}</span>
-      <span className="words">{email.excerpt || email.subject}</span>
-      <span className="age num" data-tip={fullTimestamp(email.received_at, timeZone)} data-tip-quick>{age(email.received_at, now, timeZone)}</span>
-    </button>
+  const parts = (row: ConversationRow) => (
+    <>
+      <span className="day num">{row.day}</span>
+      <span className="time num" data-tip={fullTimestamp(row.received_at, timeZone)} data-tip-quick>{row.time}</span>
+      <span className="who" data-tip={row.address ?? undefined} data-tip-quick>{row.who}</span>
+      <span className="words">{row.words}</span>
+    </>
   );
   return (
     <section className="rd-conv" aria-label={view.heading}>
-      <h2 className="rd-conv-h">{view.heading}</h2>
+      <h2 className="rd-conv-h">{view.heading}<span className="num">{view.count}</span></h2>
       {view.folded > 0 && (
         <button type="button" className="rd-conv-line more" onClick={() => setUnfolded(true)}>
-          <span className="who"><Icon name="expand_more" size={16} />{view.folded} more</span>
+          <Icon name="expand_more" size={16} />{view.folded} more
         </button>
       )}
-      {view.earlier.map(line)}
-      {view.marked && <div className="rd-conv-line here" aria-current="true"><span className="who">This email</span></div>}
-      {view.later.map(line)}
+      {view.rows.map(row => (row.current
+        ? <div key={row.id} className="rd-conv-line here" aria-current="true">{parts(row)}</div>
+        : <button key={row.id} type="button" className={row.sent ? 'rd-conv-line you' : 'rd-conv-line'} onClick={() => onOpen(row.id, row.sent)}>{parts(row)}</button>))}
     </section>
   );
 }

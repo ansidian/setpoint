@@ -289,7 +289,7 @@ test('a conversation from Sent: a sent reply lists its thread, Theo\'s email ope
     await rows(page).filter({has: page.locator('.from[aria-label="To Theo Walsh"]')}).first().click();
     await page.locator('.mailtext', {hasText: '4 PM works.'}).waitFor();
     assert.equal(await page.locator('.rd-replied').count(), 0);
-    await page.locator('.rd-conv-h', {hasText: 'Earlier in this conversation'}).waitFor();
+    await page.locator('.rd-conv-line[aria-current]', {hasText: 'Oct 48:30 AMYouThis email'}).waitFor();
     assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO', 'ReplyR', 'ForwardF']);
 
     // Theo's email is received mail: it opens in the Inbox, with Pin, and says the user replied.
