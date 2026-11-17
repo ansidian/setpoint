@@ -22,6 +22,7 @@
 import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import type {Db, OpenDatabase} from '../../db/open.ts';
+import {insertMessage} from '../../db/bodies.ts';
 import * as t from '../../db/schema.ts';
 import {searchBody} from '../../domain/searchBody.ts';
 import {zoned} from '../sample.ts';
@@ -201,7 +202,7 @@ const bySubject = (db: Db, subject: string) => {
 };
 
 const setHtml = (db: Db, subject: string, html: string) =>
-  db.update(t.messages).set({bodyHtml: html}).where(eq(t.messages.id, bySubject(db, subject).id)).run();
+  db.update(t.messageBodies).set({bodyHtml: html}).where(eq(t.messageBodies.messageId, bySubject(db, subject).id)).run();
 
 export const coffeeHtml = ({db}: OpenDatabase) => setHtml(db, 'The Contoso Coffee Journal · October', CONTOSO_COFFEE_HTML);
 
@@ -227,14 +228,14 @@ export function newDigest({db}: OpenDatabase) {
   const jobs = db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get();
   if (!jobs) throw new Error('The new-digest fixture needs the seed\'s Jobs account: run `npm run seed` first.');
   for (const [date, label] of [['2026-09-02', 'September 2'], ['2026-09-09', 'September 9'], ['2026-09-16', 'September 16'], ['2026-09-23', 'September 23']] as const) {
-    db.insert(t.messages).values({
+    insertMessage(db, {
       accountId: jobs.id, providerId: `fixture-09-digest-${date}`, threadId: `fixture-09-digest-${date}-thread`, ...DIGEST_FROM,
       subject: `Northwind Engineering Digest · ${label}`, summary: 'New posts from the team', snippet: DIGEST_BODY.split('\n')[0]!, bodyText: DIGEST_BODY, searchBody: searchBody(DIGEST_BODY),
       receivedAt: zoned(date, '06:30'), unread: false, lane: 'attention', kind: 'updates', type: 'newsletter',
       doneAt: zoned(date, '07:40'), openedBeforeDone: false,
-    }).run();
+    });
   }
-  db.insert(t.messages).values({
+  insertMessage(db, {
     accountId: jobs.id, providerId: 'fixture-09-digest', threadId: 'fixture-09-digest-thread',
     fromName: 'Northwind Engineering', fromAddress: 'digest@eng.northwind.example', organisation: 'Northwind Engineering',
     subject: 'Northwind Engineering Digest · October 7', summary: 'How we rebuilt search, and four more posts from the team',
@@ -242,7 +243,7 @@ export function newDigest({db}: OpenDatabase) {
     bodyText: 'This week on the Northwind Engineering blog: how we rebuilt search, and four more posts from the team.\n\nYou\'re receiving this because you applied to Northwind.',
     searchBody: searchBody('This week on the Northwind Engineering blog: how we rebuilt search, and four more posts from the team.\n\nYou\'re receiving this because you applied to Northwind.'),
     receivedAt: SEED_NOW, unread: true, lane: 'attention', kind: 'updates', type: 'newsletter',
-  }).run();
+  });
 }
 
 export const codeExpiring = ({db}: OpenDatabase) =>
@@ -268,18 +269,18 @@ export function ledgerAudit({db}: OpenDatabase) {
     email(at + 120, `Depot notes, part ${at + 1}`, 'A vault came up in the meeting, and later on there may well be an inventory.', '2026-08-11'),
     ...(at < 3 ? [email(at + 180, `Vault inventory, part ${at + 1}`, 'The figures for this part.', '2026-08-12')] : []),
   ]).flat();
-  db.insert(t.messages).values(rows).run();
+  for (const row of rows) insertMessage(db, row);
 }
 
 export function lastYear({db}: OpenDatabase) {
   const jobs = db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get();
   if (!jobs) throw new Error('The last-year fixture needs the seed\'s Jobs account: run `npm run seed` first.');
-  db.insert(t.messages).values({
+  insertMessage(db, {
     accountId: jobs.id, providerId: 'fixture-search-last-year', threadId: 'fixture-search-last-year-thread',
     fromName: 'Northwind Recruiting', fromAddress: 'no-reply@northwind.example', organisation: 'Northwind Talent', via: 'Greenhouse',
     subject: 'Thank you for applying to Northwind', snippet: 'Thank you for applying to Northwind. We\'ve filled the Support Engineer role.',
     bodyText: 'Thank you for applying to Northwind. We\'ve filled the Support Engineer role, and we\'ll keep your profile on file.',
     searchBody: searchBody('Thank you for applying to Northwind. We\'ve filled the Support Engineer role, and we\'ll keep your profile on file.'),
     receivedAt: zoned('2025-12-20', '11:05'), unread: false, lane: 'fyi', kind: 'career', type: 'rejection',
-  }).run();
+  });
 }

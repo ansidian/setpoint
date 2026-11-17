@@ -3,6 +3,7 @@
 // at most once per prompt, it resumes after a restart, and with no key nothing changes.
 import {eq} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
+import {insertMessage} from '../src/db/bodies.ts';
 import * as t from '../src/db/schema.ts';
 import {searchBody} from '../src/domain/searchBody.ts';
 import {matchSearch} from '../src/search/search.ts';
@@ -110,10 +111,10 @@ describe('new mail', () => {
   test('a nudge that never comes costs only the wait: the next round queues it', async () => {
     const {world, drain, asked} = await setup();
     await drain();
-    const id = world.store.db.insert(t.messages).values({
+    const id = insertMessage(world.store.db, {
       accountId: world.accountId('Jobs'), providerId: 'p-quiet', threadId: 't', fromName: 'Sender', fromAddress: 'sender@example.com', subject: 'Sorted elsewhere', snippet: '', bodyText: '',
       receivedAt: world.store.now().toISOString(), unread: false, lane: 'fyi',
-    }).returning().get().id;
+    });
     await drain();
     expect(asked()).toEqual([]);
     world.advance(FIVE_MINUTES);

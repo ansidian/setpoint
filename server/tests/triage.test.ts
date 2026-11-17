@@ -573,7 +573,8 @@ describe('a verification code\'s trash at its expiry', () => {
 
   test('reading it again and finding no code takes its trash away', async () => {
     const {world, id} = await coded();
-    world.store.db.update(t.messages).set({subject: 'Welcome to Contoso', snippet: '', bodyText: 'Glad to have you.'}).where(eq(t.messages.id, id)).run();
+    world.store.db.update(t.messages).set({subject: 'Welcome to Contoso', snippet: ''}).where(eq(t.messages.id, id)).run();
+    world.store.db.update(t.messageBodies).set({bodyText: 'Glad to have you.'}).where(eq(t.messageBodies.messageId, id)).run();
     rereadCodes(world.store, {apply: true});
     expect(world.message(id)).toMatchObject({code: null, codeTrash: false, trashDueAt: null});
   });

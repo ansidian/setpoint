@@ -5,6 +5,7 @@
 // every few minutes and whenever triage recovers or its keys change, so it's re-sorted once triage
 // is back.
 import {and, eq, inArray, isNull} from 'drizzle-orm';
+import {bodyOf} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {ruleActions} from '../commands/mail.ts';
 import {enqueueJob} from '../sync/jobs.ts';
@@ -22,9 +23,10 @@ export const triageKey = (messageId: number) => `triage:${messageId}`;
 /** The email as triage reads it. */
 export function triageEmailOf(store: Store, message: MessageRow): TriageEmail {
   const account = store.db.select({label: t.accounts.label}).from(t.accounts).where(eq(t.accounts.id, message.accountId)).get();
+  const {bodyText, bodyHtml} = bodyOf(store.db, message.id);
   return {
-    fromName: message.fromName, fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText,
-    bodyHtml: message.bodyHtml, receivedAt: message.receivedAt, accountLabel: account?.label ?? null,
+    fromName: message.fromName, fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText,
+    bodyHtml, receivedAt: message.receivedAt, accountLabel: account?.label ?? null,
   };
 }
 

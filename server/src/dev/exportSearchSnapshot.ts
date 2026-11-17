@@ -15,7 +15,7 @@
 import {DatabaseSync} from 'node:sqlite';
 import {gzipSync} from 'node:zlib';
 
-const KEPT = new Set(['__drizzle_migrations', 'jobs_migrations', 'accounts', 'messages', 'attachments', 'triage_rules']);
+const KEPT = new Set(['__drizzle_migrations', 'jobs_migrations', 'accounts', 'messages', 'message_bodies', 'attachments', 'triage_rules']);
 const isKept = (table: string) => KEPT.has(table) || table.startsWith('messages_fts');
 
 // What must be gone. These tables are emptied like any other. This is the check that they were.

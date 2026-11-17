@@ -4,6 +4,7 @@
 // emails that still have no code, the detector's likely misses. Unsorted mail is left alone: it gets
 // its code when triage sorts it.
 import {and, eq, inArray, isNotNull} from 'drizzle-orm';
+import {withBodies} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {detectVerificationCode} from '../domain/verificationCode.ts';
 import {getSettings} from '../settings.ts';
@@ -34,7 +35,7 @@ export function rereadCodes(store: Store, {apply}: {apply: boolean}): CodeReport
   const ids = store.db.select({id: t.messages.id}).from(t.messages).where(isNotNull(t.messages.lane)).orderBy(t.messages.id).all().map(row => row.id);
   const report: CodeReport = {changes: [], missing: []};
   for (let at = 0; at < ids.length; at += BATCH) {
-    const rows = store.db.select().from(t.messages).where(inArray(t.messages.id, ids.slice(at, at + BATCH))).all();
+    const rows = withBodies(store.db, store.db.select().from(t.messages).where(inArray(t.messages.id, ids.slice(at, at + BATCH))).all());
     const writes: (() => void)[] = [];
     for (const row of rows) {
       const found = detectVerificationCode({

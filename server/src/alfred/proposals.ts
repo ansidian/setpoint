@@ -15,6 +15,7 @@
 import type {ItemKind, ProposalField, ProposalOut} from '@setpoint/shared';
 import {asc, eq} from 'drizzle-orm';
 import {readIcs} from '../domain/icsImport.ts';
+import {bodyOf} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {conflictLine, dayAfter, fromEmail, proposalFields} from '../domain/proposal.ts';
 import type {ProposalFields} from '../domain/proposal.ts';
@@ -108,7 +109,7 @@ export type ProposalOverrides = Partial<ProposalFields> & {all_day?: boolean};
 export function proposeFromMessage(store: Store, messageId: number, kind: ItemKind, overrides: ProposalOverrides = {}, invite: Invite | null = null): ProposalOut {
   const message = store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
   if (!message || message.trashedAt) throw notFound('No such email.');
-  const email = {subject: message.subject, organisation: message.organisation, bodyText: message.bodyText, keyDate: message.keyDate};
+  const email = {subject: message.subject, organisation: message.organisation, bodyText: bodyOf(store.db, message.id).bodyText, keyDate: message.keyDate};
   const fields: ProposalFields = {...proposalFields(email, store.timeZone)};
   const zone = store.timeZone;
   // The invite's when stands unless Alfred says a day or a time of his own.

@@ -7,6 +7,7 @@ import {crc32, deflateSync} from 'node:zlib';
 import {eq} from 'drizzle-orm';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import type {OpenDatabase} from '../db/open.ts';
+import {insertMessage} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {DIGEST_SENDER} from '../domain/mailpieces.ts';
 import {evaluateGmailSenderAuthentication, senderAuthenticated} from '../domain/senderAuthentication.ts';
@@ -187,13 +188,13 @@ export function insertDevDigests(db: Pick<OpenDatabase['db'], 'insert' | 'select
     // Gmail's verdict in a real digest's shape, DMARC on the parent domain, through the evaluator the
     // mirror uses, so the seed can't call a digest authenticated that the real path wouldn't.
     const senderAuth = evaluateGmailSenderAuthentication(DEV_DIGEST_AUTH, DIGEST_SENDER, new Date(receivedAt));
-    const message = db.insert(t.messages).values({
+    const messageId = insertMessage(db, {
       accountId, providerId: digest.providerId, threadId: `${digest.providerId}-thread`,
       fromName: 'USPS Informed Delivery', fromAddress: DIGEST_SENDER, organisation: 'USPS', subject: devDigestSubject(digest.day),
       snippet: body, bodyText: body, searchBody: searchBody(body), receivedAt, unread: false, senderAuth, senderAuthenticated: senderAuthenticated(senderAuth),
       lane: 'fyi', kind: 'deliveries', triageSource: 'rule', triagedAt: receivedAt, uspsDigest: true,
-    }).returning({id: t.messages.id}).get();
-    const row = db.insert(t.mailDigests).values({messageId: message.id, day: digest.day, pieces: kept, storedAt: receivedAt}).returning({id: t.mailDigests.id}).get();
+    });
+    const row = db.insert(t.mailDigests).values({messageId, day: digest.day, pieces: kept, storedAt: receivedAt}).returning({id: t.mailDigests.id}).get();
     devDigestScans(digest).forEach((bytes, position) => db.insert(t.mailScans).values({digestId: row.id, position, mimeType: 'image/png', bytes}).run());
   }
 }

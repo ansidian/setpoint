@@ -53,6 +53,28 @@ describe('the mirror', () => {
     expect(row(w, id!).pinnedAt).not.toBeNull();
   });
 
+  test('an email\'s bodies are written with it, refreshed with it and go with it', () => {
+    const w = world({seed: true});
+    const business = accountId(w, 'Business');
+    const bodies = () => w.store.db.select().from(t.messageBodies).all();
+    const before = bodies().length;
+    const [id] = upsertMessages(w.store, business, [fetched({bodyHtml: '<p>Arriving <b>Friday</b>.</p>'})]).inserted;
+    expect(messageDetail(w.store, id!)).toMatchObject({body_text: 'Arriving Friday with tracking.', body_html: '<p>Arriving <b>Friday</b>.</p>'});
+    upsertMessages(w.store, business, [fetched({bodyText: 'Arriving Saturday instead.', bodyHtml: null})]);
+    expect(messageDetail(w.store, id!)).toMatchObject({body_text: 'Arriving Saturday instead.', body_html: null});
+    expect(bodies()).toHaveLength(before + 1);
+    removeMessages(w.store, business, ['g-1']);
+    expect(bodies()).toHaveLength(before);
+    expect(bodies().some(body => body.messageId === id)).toBe(false);
+  });
+
+  test('every email the seed writes has its bodies, one row each', () => {
+    const w = world({seed: true});
+    const ids = w.store.db.select({id: t.messages.id}).from(t.messages).all().map(one => one.id).sort((a, b) => a - b);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(w.store.db.select({id: t.messageBodies.messageId}).from(t.messageBodies).all().map(one => one.id).sort((a, b) => a - b)).toEqual(ids);
+  });
+
   test('a refetch without a Message-ID or a verdict keeps the stored ones', () => {
     const w = world({seed: true});
     const business = accountId(w, 'Business');

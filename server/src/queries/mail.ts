@@ -6,6 +6,7 @@ import {and, count, desc, eq, getTableColumns, inArray, isNull, lt, or, sql} fro
 import type {SQL} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
+import {withBody} from '../db/bodies.ts';
 import {inboxCounts, inboxGroups, mailDay, nextInboxChange} from '../domain/inbox.ts';
 import type {InboxCandidate} from '../domain/inbox.ts';
 import {isTrustedDomain, trustDomainOf, remoteContent} from '../domain/remoteContent.ts';
@@ -19,9 +20,8 @@ import type {Store} from '../store.ts';
 
 type MessageRow = typeof t.messages.$inferSelect;
 
-// A list reads few columns of many emails. Most of a row's columns sit after its bodies, and reading
-// one makes SQLite walk the email's whole body, so the lists read these from messages_list, an index
-// that holds them all: a column added here goes in that index too, or every list reads every body.
+// A list reads few columns of many emails, from messages_list, an index that holds them all, which
+// is smaller to read than the table: a column added here goes in that index too.
 const listColumns = {
   id: t.messages.id, accountId: t.messages.accountId, lane: t.messages.lane, kind: t.messages.kind, unread: t.messages.unread,
   receivedAt: t.messages.receivedAt, organisation: t.messages.organisation, fromName: t.messages.fromName, pinnedAt: t.messages.pinnedAt,
@@ -29,9 +29,9 @@ const listColumns = {
   triagedAt: t.messages.triagedAt, triageSource: t.messages.triageSource,
 };
 
-// What a row shows, read only for the rows a list shows: everything but the bodies and search's text.
-const {bodyText: _text, bodyHtml: _html, searchBody: _body, searchTerms: _terms, searchRecipients: _recipients, ...rowColumns} = getTableColumns(t.messages);
-type ListedRow = Omit<MessageRow, 'bodyText' | 'bodyHtml' | 'searchBody' | 'searchTerms' | 'searchRecipients'>;
+// What a row shows, read only for the rows a list shows: everything but search's text.
+const {searchBody: _body, searchTerms: _terms, searchRecipients: _recipients, ...rowColumns} = getTableColumns(t.messages);
+type ListedRow = Omit<MessageRow, 'searchBody' | 'searchTerms' | 'searchRecipients'>;
 type Presented = ListedRow & {command: CommandOut | null; held: boolean; attachmentCount: number};
 type Candidate = {[K in keyof typeof listColumns]: ListedRow[K]} & InboxCandidate & {command: CommandOut | null; attachmentCount: number};
 
@@ -118,18 +118,16 @@ export function mailDayOf(store: Store): MailDayOut {
   const now = isoNow(store);
   const day = mailDay(candidates(store), now, zonedInstant(localDay(now, store.timeZone), '00:00', store.timeZone));
   const kept = and(isNull(t.messages.trashedAt), eq(t.messages.received, true));
-  // octet_length reads a body's size from its row's header, without reading the body. The oldest
-  // arrival comes from messages_list on its own, as received_at sits after the bodies.
-  const stored = store.db.select({
-    total: count(),
-    bytes: sql<number>`coalesce(sum(octet_length(${t.messages.bodyText}) + coalesce(octet_length(${t.messages.bodyHtml}), 0)), 0)`,
-  }).from(t.messages).where(kept).get()!;
+  // octet_length reads a body's size from its row's header, without reading the body.
+  const stored = store.db.select({total: count()}).from(t.messages).where(kept).get()!;
+  const bodies = store.db.select({bytes: sql<number>`coalesce(sum(octet_length(${t.messageBodies.bodyText}) + coalesce(octet_length(${t.messageBodies.bodyHtml}), 0)), 0)`})
+    .from(t.messageBodies).innerJoin(t.messages, eq(t.messages.id, t.messageBodies.messageId)).where(kept).get()!;
   const oldest = store.db.select({at: sql<string | null>`min(${t.messages.receivedAt})`}).from(t.messages).where(kept).get()!.at;
   const attached = store.db.select({bytes: sql<number>`coalesce(sum(${t.attachments.sizeBytes}), 0)`})
     .from(t.attachments).innerJoin(t.messages, eq(t.messages.id, t.attachments.messageId)).where(kept).get()!;
   return {
     done: day.done, need_you: day.needYou, overdue: day.overdue, sorted_fyi: day.sortedFyi, sorted_noise: day.sortedNoise,
-    total: stored.total, bytes: stored.bytes + attached.bytes, oldest_at: oldest,
+    total: stored.total, bytes: bodies.bytes + attached.bytes, oldest_at: oldest,
   };
 }
 
@@ -226,8 +224,9 @@ function isTrusted(store: Store, domain: string): boolean {
 
 /** One email for the reading pane. Reading it doesn't mark it read. Opening does (POST …/open). */
 export function messageDetail(store: Store, messageId: number): MessageOut {
-  const row = store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
-  if (!row) throw notFound('No such email.');
+  const found = store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
+  if (!found) throw notFound('No such email.');
+  const row = withBody(store.db, found);
   const account = store.db.select().from(t.accounts).where(eq(t.accounts.id, row.accountId)).get()!;
   const command = commandsByMessage(store).get(row.id) ?? null;
   const attachments = store.db.select().from(t.attachments).where(eq(t.attachments.messageId, row.id)).orderBy(t.attachments.id).all();

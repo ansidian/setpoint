@@ -22,6 +22,7 @@ import {SEED_NOW} from '@setpoint/shared';
 import type {RuleMatch, Settings} from '@setpoint/shared';
 import {and, eq, inArray} from 'drizzle-orm';
 import type {Db, OpenDatabase} from '../../db/open.ts';
+import {insertMessage} from '../../db/bodies.ts';
 import * as t from '../../db/schema.ts';
 import {searchBody} from '../../domain/searchBody.ts';
 import {zoned} from '../sample.ts';
@@ -99,7 +100,7 @@ export function triageDown({db}: OpenDatabase) {
   db.insert(t.triageHealth).values({id: 1, lastSuccessAt: zoned('2026-10-07', '09:09'), lastFailureAt: zoned('2026-10-07', '09:11'), lastError: 'Anthropic is overloaded. (529)'})
     .onConflictDoUpdate({target: t.triageHealth.id, set: {lastSuccessAt: zoned('2026-10-07', '09:09'), lastFailureAt: zoned('2026-10-07', '09:11')}}).run();
   const minutesAgo = (minutes: number) => new Date(Date.parse(SEED_NOW) - minutes * 60_000).toISOString();
-  db.insert(t.messages).values([
+  for (const email of [
     {
       accountId: account(db, 'Jobs').id, providerId: 'fixture-19a-assessment', threadId: 'fixture-19a-assessment-thread',
       fromName: 'Fabrikam', fromAddress: 'no-reply@fabrikam.example', via: 'Workday', subject: 'Online assessment · Data Analyst',
@@ -114,7 +115,7 @@ export function triageDown({db}: OpenDatabase) {
       searchBody: searchBody('Thanks for your order. We\'ll email you when it ships.'),
       receivedAt: minutesAgo(2), unread: true,
     },
-  ]).run();
+  ]) insertMessage(db, email);
 }
 
 export function backfill({db}: OpenDatabase) {

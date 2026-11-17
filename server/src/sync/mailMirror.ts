@@ -12,6 +12,7 @@
 // landed mustn't put it back (DESIGN.md › Interaction rules: nothing quietly reverts).
 import {and, asc, desc, eq, gte, inArray} from 'drizzle-orm';
 import {activeCommands} from '../commands/index.ts';
+import {writeBody} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {isDigest} from '../domain/mailpieces.ts';
 import {searchBody} from '../domain/searchBody.ts';
@@ -155,7 +156,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
       const threadId = options.threadsByHeaders ? (row?.threadId ?? joinedThread(store, accountId, message)) : message.threadId;
       const fields = {
         providerId: message.providerId, threadId, rfc822Id: message.rfc822Id, fromName: message.fromName,
-        fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText, searchBody: searchBody(message.bodyText), bodyHtml: message.bodyHtml,
+        fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, searchBody: searchBody(message.bodyText),
         receivedAt: message.receivedAt, senderAuth: message.senderAuth, senderAuthenticated: senderAuthenticated(message.senderAuth),
         ...(message.recipients ? headerColumns(message.recipients) : {}),
       };
@@ -167,6 +168,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
           accountId, ...fields, ...stateColumns(message, null, now, received), lane: null, backfill: options.backfill ?? false, sent, received,
           ...(digest ? {uspsDigest: true, lane: 'fyi', kind: 'deliveries', triageSource: 'rule', triagedAt: now} as const : {}),
         }).returning({id: t.messages.id}).get();
+        writeBody(store.db, created.id, message);
         for (const file of message.attachments) store.db.insert(t.attachments).values({messageId: created.id, ...file}).run();
         if (options.threadsByHeaders) gatherReplies(store, accountId, message, threadId);
         if (digest) enqueueJob(store, {kind: 'mailpieces', key: mailpiecesKey(created.id), messageId: created.id});
@@ -186,6 +188,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
         ...fields, ...kept, ...state, ...(digest ? {uspsDigest: true} : {}), sent: row.sent || sent, received: nowReceived,
         ...(arriving ? {backfill: options.backfill ?? false} : {}),
       }).where(eq(t.messages.id, row.id)).run();
+      writeBody(store.db, row.id, message);
       const known = store.db.select().from(t.attachments).where(eq(t.attachments.messageId, row.id)).all();
       const same = known.length === message.attachments.length
         && known.every((file, index) => file.providerId === message.attachments[index]!.providerId && file.filename === message.attachments[index]!.filename);

@@ -16,6 +16,7 @@ import type {Recipient} from '@setpoint/shared';
 import {plainText, readMarkdown, writeMarkdown} from '@setpoint/shared/richText';
 import type {Block} from '@setpoint/shared/richText';
 import {and, desc, eq, isNull, ne, or, sql} from 'drizzle-orm';
+import {withBodies, withBody} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {costMicros} from '../domain/aiCost.ts';
 import {localDay} from '../domain/time.ts';
@@ -132,7 +133,8 @@ export interface Evidence {
 export function draftEvidence(store: Store, draft: DraftRow): Evidence {
   const zone = store.timeZone;
   const to = counterpartOf(store, draft);
-  const email = draft.messageId === null ? null : store.db.select().from(t.messages).where(eq(t.messages.id, draft.messageId)).get() ?? null;
+  const found = draft.messageId === null ? undefined : store.db.select().from(t.messages).where(eq(t.messages.id, draft.messageId)).get();
+  const email = found ? withBody(store.db, found) : null;
   const shownEmail = email && !email.trashedAt ? fenced(email.id, [
     `From: ${named({name: email.fromName || null, address: email.fromAddress})}${email.organisation ? ` (${email.organisation})` : ''}`,
     ...(email.toRecipients?.length ? [`To: ${email.toRecipients.map(named).join(', ')}`] : []),
@@ -146,8 +148,8 @@ export function draftEvidence(store: Store, draft: DraftRow): Evidence {
   const address = to.address.toLowerCase();
   // Mail from them, and mail the user sent them (To or Cc), not in the trash, newest first.
   const wroteTo = (column: typeof t.messages.toRecipients | typeof t.messages.ccRecipients) => sql`exists (select 1 from json_each(${column}) where lower(json_extract(value, '$.address')) = ${address})`;
-  // The unary plus keeps `received` off an index: through one, SQLite reads every received email whole, bodies included, and
-  // sorts them, where walking `messages_received` newest first stops at the third match.
+  // The unary plus keeps `received` off an index: through one, SQLite reads every received email and sorts them, where
+  // walking `messages_received` newest first stops at the third match.
   const rows = store.db.select().from(t.messages).where(and(
     isNull(t.messages.trashedAt),
     draft.messageId === null ? undefined : ne(t.messages.id, draft.messageId),
@@ -156,9 +158,10 @@ export function draftEvidence(store: Store, draft: DraftRow): Evidence {
       and(eq(t.messages.sent, true), or(wroteTo(t.messages.toRecipients), wroteTo(t.messages.ccRecipients))),
     ),
   )).orderBy(desc(t.messages.receivedAt), desc(t.messages.id)).limit(DRAFT_HISTORY).all();
+  const shown = withBodies(store.db, rows);
   return {
     to, email: shownEmail, history_ids: rows.map(row => row.id),
-    history: rows.map(row => fenced(row.id, [
+    history: shown.map(row => fenced(row.id, [
       row.sent && row.fromAddress.toLowerCase() !== address ? `The user wrote to ${named(to)}` : `From: ${named({name: row.fromName || null, address: row.fromAddress})}`,
       `Date: ${localDay(row.receivedAt, zone)}`,
       `Subject: ${row.subject}`,

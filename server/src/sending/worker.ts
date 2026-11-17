@@ -20,6 +20,7 @@
 import type {Recipient} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {mailSourceId} from '../commands/mail.ts';
+import {bodyOf} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {composeBody} from '../domain/outgoingBody.ts';
 import {buildMessage, replyHeaders} from '../domain/outgoingMessage.ts';
@@ -155,7 +156,7 @@ export class SendWorker implements JobWorker {
     const answered: MessageRow | undefined = draft.messageId === null ? undefined : store.db.select().from(t.messages).where(eq(t.messages.id, draft.messageId)).get();
     const original = answered && draft.kind !== 'new' ? {kind: draft.kind === 'forward' ? 'forward' as const : 'reply' as const, email: {
       fromName: answered.fromName, fromAddress: answered.fromAddress, subject: answered.subject, receivedAt: answered.receivedAt,
-      to: answered.toRecipients, cc: answered.ccRecipients, bodyText: answered.bodyText, bodyHtml: answered.bodyHtml,
+      to: answered.toRecipients, cc: answered.ccRecipients, ...bodyOf(store.db, answered.id),
     }, quote: draft.quote} : null;
     const body = composeBody(draft.body, original, store.timeZone);
     const reply = original?.kind === 'reply' ? replyHeaders(answered!) : {inReplyTo: null, references: []};

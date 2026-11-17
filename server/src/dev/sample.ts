@@ -13,6 +13,7 @@ import type {Store} from '../store.ts';
 import {searchBody} from '../domain/searchBody.ts';
 import {DEFAULT_SCHEDULES} from '../domain/sources.ts';
 import {addDays, zonedInstant} from '../domain/time.ts';
+import {insertMessage} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {seedNews} from './news.ts';
 import {insertDevDigests} from './digest.ts';
@@ -462,7 +463,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
     SAMPLE_EMAILS.forEach((email, at) => {
       const receivedAt = iso(email.at);
       const providerId = `seed-${String(at + 1).padStart(3, '0')}`;
-      const row = tx.insert(t.messages).values({
+      const id = insertMessage(tx, {
         accountId: accountIds.get(email.account)!,
         providerId,
         threadId: `${providerId}-thread`,
@@ -494,9 +495,9 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         toRecipients: (email.to ?? [['User', ACCOUNTS.find(account => account.label === email.account)!.address]]).map(([name, address]) => ({name, address})),
         ccRecipients: (email.cc ?? []).map(([name, address]) => ({name, address})),
         replyTo: [], referenceIds: [], inReplyTo: null,
-      }).returning({id: t.messages.id}).get();
+      });
       email.attachments?.forEach((attachment, index) => {
-        tx.insert(t.attachments).values({messageId: row.id, providerId: `${providerId}-att-${index + 1}`, ...attachment}).run();
+        tx.insert(t.attachments).values({messageId: id, providerId: `${providerId}-att-${index + 1}`, ...attachment}).run();
       });
     });
 
@@ -508,11 +509,11 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
       const providerId = `seed-sent-${String(at + 1).padStart(3, '0')}`;
       const account = ACCOUNTS.find(one => one.label === email.account)!;
       const recipients = (list: [string, string][] = []) => list.map(([name, address]) => ({name, address}));
-      tx.insert(t.messages).values({
+      insertMessage(tx, {
         accountId: accountIds.get(email.account)!, providerId, threadId: `${providerId}-thread`, fromName: 'User', fromAddress: account.address,
         subject: email.subject, snippet: snippetOf(email.body), bodyText: email.body, searchBody: searchBody(email.body), receivedAt: iso(email.at),
         unread: false, lane: null, sent: true, received: false, toRecipients: recipients(email.to), ccRecipients: recipients(email.cc), replyTo: [], referenceIds: [], inReplyTo: null,
-      }).run();
+      });
     });
 
     // The conversation with Theo, after the sent mail.
@@ -525,13 +526,13 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
       const rfc822Id = `<cabin-${at + 1}@${email.sent ? 'mail.example.com' : 'example.org'}>`;
       const from = email.sent ? user : theo;
       const receivedAt = iso(email.at);
-      tx.insert(t.messages).values({
+      insertMessage(tx, {
         accountId: accountIds.get('Personal')!, providerId, threadId: 'seed-thread-cabin', rfc822Id, fromName: from.name, fromAddress: from.address,
         subject: at === 0 ? 'Cabin weekend in November' : 'Re: Cabin weekend in November', snippet: snippetOf(email.body), bodyText: email.body,
         searchBody: searchBody(email.body), receivedAt, unread: false, sent: email.sent, received: !email.sent,
         ...(email.sent ? {lane: null} : {lane: 'fyi', kind: 'people', triagedAt: receivedAt, archivedAt: receivedAt} as const),
         toRecipients: [email.sent ? theo : user], ccRecipients: [], replyTo: [], referenceIds: [...messageIds], inReplyTo: messageIds.at(-1) ?? null,
-      }).run();
+      });
       messageIds.push(rfc822Id);
     });
 

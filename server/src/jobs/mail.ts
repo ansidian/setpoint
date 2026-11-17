@@ -69,9 +69,10 @@ export function emailBody({text, html, snippet}: {text: string; html: string | n
 export function jobsEmail(store: MailReader, messageId: number): JobsEmail | null {
   const row = store.db.select({
     id: t.messages.id, accountId: t.messages.accountId, accountLabel: t.accounts.label, fromName: t.messages.fromName, fromAddress: t.messages.fromAddress,
-    subject: t.messages.subject, receivedAt: t.messages.receivedAt, bodyText: t.messages.bodyText, bodyHtml: t.messages.bodyHtml, snippet: t.messages.snippet,
+    subject: t.messages.subject, receivedAt: t.messages.receivedAt, bodyText: t.messageBodies.bodyText, bodyHtml: t.messageBodies.bodyHtml, snippet: t.messages.snippet,
     organisation: t.messages.organisation, via: t.messages.via, type: t.messages.type, kind: t.messages.kind, summary: t.messages.summary, lane: t.messages.lane,
-  }).from(t.messages).leftJoin(t.accounts, eq(t.accounts.id, t.messages.accountId)).where(eq(t.messages.id, messageId)).get();
+  }).from(t.messages).innerJoin(t.messageBodies, eq(t.messageBodies.messageId, t.messages.id)).leftJoin(t.accounts, eq(t.accounts.id, t.messages.accountId))
+    .where(eq(t.messages.id, messageId)).get();
   if (!row || row.lane === null) return null;
   const {bodyText, bodyHtml, snippet, lane: _, ...email} = row;
   return {...email, body: emailBody({text: bodyText, html: bodyHtml, snippet})};
@@ -80,15 +81,15 @@ export function jobsEmail(store: MailReader, messageId: number): JobsEmail | nul
 /** Which of these emails read differently from their text part or snippet alone. */
 export function readsDifferently(store: MailReader, ids: number[]): Set<number> {
   if (!ids.length) return new Set();
-  const rows = store.db.select({id: t.messages.id, text: t.messages.bodyText, html: t.messages.bodyHtml, snippet: t.messages.snippet})
-    .from(t.messages).where(inArray(t.messages.id, ids)).all();
+  const rows = store.db.select({id: t.messages.id, text: t.messageBodies.bodyText, html: t.messageBodies.bodyHtml, snippet: t.messages.snippet})
+    .from(t.messages).innerJoin(t.messageBodies, eq(t.messageBodies.messageId, t.messages.id)).where(inArray(t.messages.id, ids)).all();
   return new Set(rows.filter(row => emailBody(row) !== (row.text.trim() || row.snippet)).map(row => row.id));
 }
 
 /** An email as the JD lookup reads it for links: its sender, text and HTML, whether or not triage has sorted it. Null once it's gone. */
 export function lookupEmail(store: MailReader, messageId: number): {fromAddress: string; text: string; html: string | null} | null {
-  const row = store.db.select({fromAddress: t.messages.fromAddress, bodyText: t.messages.bodyText, bodyHtml: t.messages.bodyHtml, snippet: t.messages.snippet})
-    .from(t.messages).where(eq(t.messages.id, messageId)).get();
+  const row = store.db.select({fromAddress: t.messages.fromAddress, bodyText: t.messageBodies.bodyText, bodyHtml: t.messageBodies.bodyHtml, snippet: t.messages.snippet})
+    .from(t.messages).innerJoin(t.messageBodies, eq(t.messageBodies.messageId, t.messages.id)).where(eq(t.messages.id, messageId)).get();
   return row ? {fromAddress: row.fromAddress, text: row.bodyText.trim() || row.snippet, html: row.bodyHtml} : null;
 }
 

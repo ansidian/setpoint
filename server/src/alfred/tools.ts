@@ -11,6 +11,7 @@
 import type {ItemKind, ProposalOut} from '@setpoint/shared';
 import {searchInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
+import {bodyOf} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {chipWords} from '../domain/searchChips.ts';
 import {addDays, daysBetween, localDay, localTime} from '../domain/time.ts';
@@ -98,7 +99,8 @@ function emailTool(context: ToolContext, input: Record<string, unknown>): ToolOu
   if (!context.read.includes(row.id)) context.read.push(row.id);
   const attachments = context.store.db.select({filename: t.attachments.filename}).from(t.attachments).where(eq(t.attachments.messageId, row.id)).all();
   const zone = context.store.timeZone;
-  const body = row.bodyText.length > BODY_LIMIT ? `${row.bodyText.slice(0, BODY_LIMIT)}\n[…the rest of this email was cut]` : row.bodyText;
+  const {bodyText} = bodyOf(context.store.db, row.id);
+  const body = bodyText.length > BODY_LIMIT ? `${bodyText.slice(0, BODY_LIMIT)}\n[…the rest of this email was cut]` : bodyText;
   return ok({
     message_id: row.id,
     account: accountLabels(context.store).get(row.accountId) ?? null,

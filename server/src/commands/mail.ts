@@ -116,7 +116,7 @@ export function markAllRead(store: Store, accountId?: number): CommandRow[] {
   return transaction(store, () => {
     // USPS's digest and mail the user sent to others aren't in the Inbox, so Mark all as read leaves them as they are.
     const shown = and(eq(t.messages.uspsDigest, false), eq(t.messages.received, true));
-    // Only the columns it needs: a whole row carries the email's bodies, and sorting every one of them is most of the work.
+    // Only the columns it needs, as it sorts every email it reads.
     const candidates = store.db.select({
       id: t.messages.id, accountId: t.messages.accountId, unread: t.messages.unread, lane: t.messages.lane, kind: t.messages.kind,
       doneAt: t.messages.doneAt, trashedAt: t.messages.trashedAt, archivedAt: t.messages.archivedAt, openedAt: t.messages.openedAt,

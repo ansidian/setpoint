@@ -4,6 +4,7 @@ import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {setDone, trashMessage} from '../src/commands/mail.ts';
+import {withBodies} from '../src/db/bodies.ts';
 import * as t from '../src/db/schema.ts';
 import {mailDay} from '../src/domain/inbox.ts';
 import type {DayCandidate} from '../src/domain/inbox.ts';
@@ -48,7 +49,7 @@ describe('the mail day', () => {
   test('the size is every kept received email\'s text and HTML plus its attachments; Done and Trash move the numbers', () => {
     const w = world({seed: true});
     // The seed's sent mail is left out, as the user sent it rather than kept it.
-    const rows = w.store.db.select().from(t.messages).where(eq(t.messages.received, true)).all();
+    const rows = withBodies(w.store.db, w.store.db.select().from(t.messages).where(eq(t.messages.received, true)).all());
     const text = rows.reduce((sum, row) => sum + Buffer.byteLength(row.bodyText) + Buffer.byteLength(row.bodyHtml ?? ''), 0);
     const attached = w.store.db.select().from(t.attachments).all().reduce((sum, row) => sum + row.sizeBytes, 0);
     expect(mailDayOf(w.store).bytes).toBe(text + attached);

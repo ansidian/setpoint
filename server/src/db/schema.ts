@@ -62,8 +62,7 @@ export const messages = sqliteTable('messages', {
   // Triage's one line under the subject.
   summary: text('summary'),
   snippet: text('snippet').notNull(),
-  bodyText: text('body_text').notNull(),
-  bodyHtml: text('body_html'),
+  // The bodies are in `message_bodies`, read only where they're needed.
   receivedAt: text('received_at').notNull(),
   // The provider's read state, kept both ways.
   unread: integer('unread', {mode: 'boolean'}).notNull(),
@@ -131,8 +130,8 @@ export const messages = sqliteTable('messages', {
   // iCloud: where Trash keeps it ("uidvalidity:uid" in the Trash mailbox), for Undo.
   trashRef: text('trash_ref'),
 
-  // ---- Search: what the index holds in place of `body_text` ----
-  // `body_text` without its links and footers (src/domain/searchBody.ts), written with it.
+  // ---- Search: what the index holds in place of the body ----
+  // `message_bodies.body_text` without its links and footers (src/domain/searchBody.ts), written with it.
   searchBody: text('search_body').notNull().default(''),
   // Words for what the email is about, written after it arrives (src/search/terms.ts). Null
   // until then, and for an email the model had none for.
@@ -179,9 +178,8 @@ export const messages = sqliteTable('messages', {
   index('messages_triage_rule').on(table.triageRuleId),
   // The minute pass reads the due ones.
   index('messages_trash_due').on(table.trashDueAt),
-  // Reading a column stored after the bodies walks the whole body, so what reads many emails reads
-  // these instead, which hold every column it needs. The Inbox, All, the counts and the day:
-  // src/queries/mail.ts `listColumns`.
+  // What reads many emails' few columns reads these instead of the table, which hold every column it
+  // needs. The Inbox, All, the counts and the day: src/queries/mail.ts `listColumns`.
   index('messages_list').on(
     table.received, table.uspsDigest, table.accountId, table.lane, table.kind, table.unread, table.receivedAt, table.organisation, table.fromName,
     table.pinnedAt, table.doneAt, table.trashedAt, table.codeExpiresAt, table.archivedAt, table.triagedAt, table.triageSource,
@@ -189,6 +187,17 @@ export const messages = sqliteTable('messages', {
   // The pattern prompts' verdicts: Done Attention mail (src/triage/learning.ts).
   index('messages_verdicts').on(table.lane, table.backfill, table.doneAt, table.organisation, table.type, table.kind, table.protected, table.openedBeforeDone),
 ]);
+
+/**
+ * An email's bodies, one row per email, going with it. They are apart from `messages` because SQLite
+ * walks a row's earlier values to read a later one, so bodies in the row made every read of many
+ * emails read their bodies too. Only the reader, quoting, triage, codes, Jobs and Alfred read them.
+ */
+export const messageBodies = sqliteTable('message_bodies', {
+  messageId: integer('message_id').primaryKey().references(() => messages.id, {onDelete: 'cascade'}),
+  bodyText: text('body_text').notNull(),
+  bodyHtml: text('body_html'),
+});
 
 /** An email's attachment, previewed in the reader (PDF, image, CSV). */
 export const attachments = sqliteTable('attachments', {

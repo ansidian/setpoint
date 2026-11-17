@@ -21,6 +21,8 @@ const paragraph = (text: string) => ({type: 'paragraph', runs: text ? [{text, ma
 const ledger = (w: World) => w.store.db.select().from(t.aiUsage).all();
 const setHeaders = (w: World, id: number, fields: Partial<typeof t.messages.$inferInsert>) =>
   w.store.db.update(t.messages).set(fields).where(eq(t.messages.id, id)).run();
+const setBody = (w: World, id: number, bodyText: string) =>
+  w.store.db.update(t.messageBodies).set({bodyText}).where(eq(t.messageBodies.messageId, id)).run();
 
 /** The user turn a request opened with, and the tool results its last message carries. */
 function read(request: FakeRequest) {
@@ -64,7 +66,7 @@ describe('What a draft reads', () => {
     const draft = await start('reply', THEO);
     const [newest, second] = draftEvidence(w.store, getDraftRow(w.store, draft.id)).history_ids;
     w.store.db.update(t.messages).set({trashedAt: '2026-10-05T00:00:00.000Z'}).where(eq(t.messages.id, newest!)).run();
-    setHeaders(w, second!, {bodyText: 'Games and a cooler, done.\n\nOn Oct 1, 2026, Theo Walsh wrote:\n> Could you bring the board games?'});
+    setBody(w, second!, 'Games and a cooler, done.\n\nOn Oct 1, 2026, Theo Walsh wrote:\n> Could you bring the board games?');
     const evidence = draftEvidence(w.store, getDraftRow(w.store, draft.id));
     expect(evidence.history_ids).not.toContain(newest);
     expect(evidence.history[0]).toContain('Games and a cooler, done.');
@@ -75,8 +77,8 @@ describe('What a draft reads', () => {
     const {w, start} = await setup();
     const draft = await start('reply', THEO);
     const [newest] = draftEvidence(w.store, getDraftRow(w.store, draft.id)).history_ids;
-    setHeaders(w, THEO, {bodyText: '§'.repeat(EMAIL_LIMIT + 500)});
-    setHeaders(w, newest!, {bodyText: '¶'.repeat(HISTORY_LIMIT + 500)});
+    setBody(w, THEO, '§'.repeat(EMAIL_LIMIT + 500));
+    setBody(w, newest!, '¶'.repeat(HISTORY_LIMIT + 500));
     const evidence = draftEvidence(w.store, getDraftRow(w.store, draft.id));
     expect(evidence.email!.match(/§+/)![0]).toHaveLength(EMAIL_LIMIT);
     expect(evidence.email).toContain('[…the rest of this email was cut]');

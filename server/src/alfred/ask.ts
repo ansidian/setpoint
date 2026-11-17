@@ -12,6 +12,7 @@
 // Threads end after four idle hours.
 import type {AnswerOut, AnswerSourceOut, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
 import {asc, eq, inArray, lt} from 'drizzle-orm';
+import {withBody} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {costMicros} from '../domain/aiCost.ts';
 import {localDay, localTime} from '../domain/time.ts';
@@ -77,7 +78,7 @@ const BODY_LIMIT = 20_000;
 
 /** The email Ask about this email attaches to the thread's first question. */
 function aboutEmail(store: Store, messageId: number, question: string): string {
-  const row = store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get()!;
+  const row = withBody(store.db, store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get()!);
   const account = store.db.select({label: t.accounts.label}).from(t.accounts).where(eq(t.accounts.id, row.accountId)).get();
   const body = row.bodyText.length > BODY_LIMIT ? `${row.bodyText.slice(0, BODY_LIMIT)}\n[…the rest of this email was cut]` : row.bodyText;
   return [

@@ -5,6 +5,7 @@ import type {SearchOut} from '@setpoint/shared';
 import {searchInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
+import {bodyOf} from '../src/db/bodies.ts';
 import * as t from '../src/db/schema.ts';
 import {searchBody} from '../src/domain/searchBody.ts';
 import {searchMail} from '../src/search/search.ts';
@@ -68,7 +69,7 @@ describe('links', () => {
     const out = search(w, 'order campaign');
     expect(out).toMatchObject({partial: true, total: 1});
     expect(reasons(out)).toEqual(['Subject order']);
-    expect(row(w, id).bodyText).toContain('campaign');
+    expect(bodyOf(w.store.db, id).bodyText).toContain('campaign');
     expect(out.results[0]!.excerpt).not.toContain('campaign');
   });
 
@@ -178,7 +179,8 @@ describe('the index keeps up', () => {
 
   test('every email the seed writes carries its search body', () => {
     const w = world({seed: true});
-    const rows = w.store.db.select({bodyText: t.messages.bodyText, searchBody: t.messages.searchBody}).from(t.messages).all();
+    const rows = w.store.db.select({bodyText: t.messageBodies.bodyText, searchBody: t.messages.searchBody}).from(t.messages)
+      .innerJoin(t.messageBodies, eq(t.messageBodies.messageId, t.messages.id)).all();
     expect(rows.length).toBeGreaterThan(0);
     for (const email of rows) expect(email.searchBody).toBe(searchBody(email.bodyText));
     integrity(w);

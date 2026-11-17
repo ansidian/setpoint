@@ -365,6 +365,13 @@
       "when": 1794876198490,
       "tag": "0051_list_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "6",
+      "when": 1794879573325,
+      "tag": "0052_message_bodies",
+      "breakpoints": true
     }
   ]
 }

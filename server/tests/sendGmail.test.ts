@@ -264,6 +264,7 @@ describe('Gmail: sending', () => {
     const parsed = await parseEmail(sent!.raw);
     expect(parsed).toMatchObject({subject: 'Fwd: Thursday', inReplyTo: null, references: [], to: [{name: 'Mom', address: 'mom@example.net'}]});
     expect(parsed.text).toContain('---------- Forwarded message ---------\nFrom: Sam Ortiz <sam.ortiz@example.org>');
+    expect(parsed.text).toContain('Are we on for Thursday?');
     expect(parsed.attachments.map(file => [file.filename, file.sizeBytes])).toEqual([['Itinerary.pdf', 18]]);
   });
 

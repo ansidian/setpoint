@@ -76,6 +76,7 @@ describe('exportSearchSnapshot.ts', () => {
       expect(rows(table), table).toBe(0);
     }
     expect(rows('messages')).toBe((live.sqlite.prepare('SELECT count(*) AS rows FROM messages').get() as {rows: number}).rows);
+    expect(rows('message_bodies')).toBe(rows('messages'));
     expect(sqlite.prepare('SELECT count(*) AS rows FROM messages WHERE code IS NOT NULL OR code_expires_at IS NOT NULL').get()).toEqual({rows: 0});
     expect(sqlite.pragma('foreign_key_check')).toEqual([]);
     expect(sqlite.pragma('integrity_check')).toEqual([{integrity_check: 'ok'}]);
@@ -108,7 +109,7 @@ describe('exportSearchSnapshot.ts', () => {
   test('sends nothing when a credential would still be in it', () => {
     const dir = scratch();
     const live = liveDatabase(dir);
-    live.sqlite.prepare(`UPDATE messages SET body_text = 'invented session hash' WHERE id = (SELECT min(id) FROM messages)`).run();
+    live.sqlite.prepare(`UPDATE message_bodies SET body_text = 'invented session hash' WHERE message_id = (SELECT min(id) FROM messages)`).run();
     live.sqlite.close();
     const out = exportFrom(live.file);
     expect(out.status).not.toBe(0);

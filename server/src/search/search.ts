@@ -172,7 +172,7 @@ function rankedRows(store: Store, ids: number[]): Ranked[] {
 /** Moves those of the emails that match only by a link's domain to the links' tier. */
 function placeLinks(store: Store, emails: {row: Ranked; words: SearchWord[]; tier: number}[]) {
   const mentions = emails.filter(email => email.tier >= TIER.mention);
-  const bodies = new Map((store.sqlite.prepare('SELECT id, body_text AS body FROM messages WHERE id IN (SELECT value FROM json_each(?))')
+  const bodies = new Map((store.sqlite.prepare('SELECT message_id AS id, body_text AS body FROM message_bodies WHERE message_id IN (SELECT value FROM json_each(?))')
     .all(JSON.stringify(mentions.map(email => email.row.id))) as {id: number; body: string}[]).map(row => [row.id, row.body]));
   for (const email of mentions) if (isLinkOnly(email.row, email.words, withoutLinks(bodies.get(email.row.id) ?? ''))) email.tier = TIER.link;
 }
