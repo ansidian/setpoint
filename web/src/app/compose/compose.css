@@ -124,6 +124,8 @@
 .composer.dropping { outline: 2px dashed var(--accent); outline-offset: -4px; }
 .composer .cmp-file { height: 26px; max-width: 280px; display: inline-flex; align-items: center; gap: 6px; padding: 0 2px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; }
 .composer .cmp-file > .icon { color: var(--ink3); }
+/* A long name gives way, never the size: it stays on one line at its full width. */
+.composer .cmp-file > .num, .composer .cmp-file > .icon, .composer .cmp-file > .spin { flex: none; white-space: nowrap; }
 .composer .cmp-forward-body { margin-top: 12px; }
 
 /* Help me write's line, right above the format row and held with it at the composer's foot: a
