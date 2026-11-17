@@ -71,7 +71,7 @@ export function sortHistory(store: Store, messageIds: number[]) {
   const context = {rules: loadRules(store), codeExpiryMinutes: getSettings(store).mail.code_expiry_minutes};
   transaction(store, () => {
     for (let at = 0; at < messageIds.length; at += 500) {
-      const rows = store.db.select().from(t.messages).where(and(inArray(t.messages.id, messageIds.slice(at, at + 500)), isNull(t.messages.lane), eq(t.messages.received, true))).all();
+      const rows = store.db.select().from(t.messages).where(and(inArray(t.messages.id, messageIds.slice(at, at + 500)), isNull(t.messages.lane), eq(t.messages.received, true))).orderBy(t.messages.id).all();
       for (const row of rows) applyOutcome(store, row.id, triageHistory(context, triageEmailOf(store, row)));
     }
   });
@@ -89,7 +89,7 @@ export function triageIntake(store: Store, messageIds: number[], backfill: boole
  * sent to others has no lane and never gets one.
  */
 export function resortUnsorted(store: Store): {queued: number; sorted: number} {
-  const rows = store.db.select({id: t.messages.id, backfill: t.messages.backfill}).from(t.messages).where(and(isNull(t.messages.lane), eq(t.messages.received, true))).all();
+  const rows = store.db.select({id: t.messages.id, backfill: t.messages.backfill}).from(t.messages).where(and(isNull(t.messages.lane), eq(t.messages.received, true))).orderBy(t.messages.id).all();
   const history = rows.filter(row => row.backfill).map(row => row.id);
   const fresh = rows.filter(row => !row.backfill).map(row => row.id);
   sortHistory(store, history);

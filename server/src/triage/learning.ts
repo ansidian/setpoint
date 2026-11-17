@@ -29,9 +29,13 @@ const touched = (store: Store) => noteLive(store, {type: 'mail', messages: [], a
  * in the queue), and corrections imported at cutover in or out of Attention.
  */
 export function verdicts(store: Store): Verdict[] {
-  const done = store.db.select().from(t.messages).where(and(
+  // Only the columns messages_verdicts holds, so no email's body is read.
+  const done = store.db.select({
+    id: t.messages.id, organisation: t.messages.organisation, type: t.messages.type, kind: t.messages.kind, protected: t.messages.protected,
+    openedBeforeDone: t.messages.openedBeforeDone, doneAt: t.messages.doneAt,
+  }).from(t.messages).where(and(
     eq(t.messages.lane, 'attention'), isNotNull(t.messages.doneAt), eq(t.messages.backfill, false), isNotNull(t.messages.organisation), isNotNull(t.messages.type),
-  )).all().map(row => ({
+  )).orderBy(t.messages.id).all().map(row => ({
     organisation: row.organisation!, type: row.type!, kind: row.kind, protected: row.protected, opened: row.openedBeforeDone === true, at: row.doneAt!, messageId: row.id,
   }));
   const imported = store.db.select().from(t.triageEvidence).where(isNotNull(t.triageEvidence.type)).all()

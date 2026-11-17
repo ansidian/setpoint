@@ -14,7 +14,7 @@ export function suggestPeople(store: Store, query: string, limit: number): Peopl
     .where(and(eq(t.messages.sent, true), isNull(t.messages.trashedAt))).all();
   const written: Seen[] = sent.flatMap(row => [...(row.to ?? []), ...(row.cc ?? [])].map(recipient => ({address: recipient.address, name: recipient.name, at: row.at})));
   const heard: Seen[] = store.db.select({address: t.messages.fromAddress, name: t.messages.fromName, at: t.messages.receivedAt}).from(t.messages)
-    .where(and(eq(t.messages.received, true), eq(t.messages.kind, 'people'), isNull(t.messages.trashedAt))).all();
+    .where(and(eq(t.messages.received, true), eq(t.messages.kind, 'people'), isNull(t.messages.trashedAt))).orderBy(t.messages.id).all();
   const own = [...sendAddresses(store).values()].flat().map(address => address.address);
   return {people: rankPeople({written, heard, own, query, now: store.now().toISOString(), limit})};
 }

@@ -204,6 +204,27 @@ describe('All and an email', () => {
     expect(next.next_before).toBeNull();
   });
 
+  test('All\'s pages: emails at the same moment split across pages by id, a trashed email gone and a failed Trash kept in its place', () => {
+    const w = world({seed: true});
+    const ids = (page: ReturnType<typeof allMail>) => page.days.flatMap(day => day.rows.map(row => row.id));
+    const [a, b, c, d, e] = ids(allMail(w.store, {limit: 5}));
+    const at = w.store.db.select().from(t.messages).where(eq(t.messages.id, a!)).get()!.receivedAt;
+    for (const id of [b!, c!, d!]) w.store.db.update(t.messages).set({receivedAt: at}).where(eq(t.messages.id, id)).run();
+    confirmCommand(w.store, trashMessage(w.store, c!, true).id);
+    failCommand(w.store, trashMessage(w.store, d!, true).id, 'Connection reset');
+    const everything = ids(allMail(w.store, {limit: 1000}));
+    expect(everything.slice(0, 4)).toEqual([...[a!, b!, d!].sort((x, y) => y - x), e!]);
+    const walked: number[] = [];
+    let before: string | undefined;
+    do {
+      const page = allMail(w.store, {limit: 2, ...(before ? {before} : {})});
+      expect(ids(page).length).toBeLessThanOrEqual(2);
+      walked.push(...ids(page));
+      before = page.next_before ?? undefined;
+    } while (before);
+    expect(walked).toEqual(everything);
+  });
+
   test('the Parkside email, with its attachment; reading it doesn\'t mark it read', () => {
     const w = world({seed: true});
     const email = messageDetail(w.store, idOf(w, 'Lease renewal terms'));

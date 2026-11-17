@@ -116,7 +116,7 @@ export function markAllRead(store: Store, accountId?: number): CommandRow[] {
   return transaction(store, () => {
     // USPS's digest and mail the user sent to others aren't in the Inbox, so Mark all as read leaves them as they are.
     const shown = and(eq(t.messages.uspsDigest, false), eq(t.messages.received, true));
-    const candidates = store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all();
+    const candidates = store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).orderBy(t.messages.id).all();
     const busy = new Set(store.db.select({id: t.commands.targetId}).from(t.commands)
       .where(and(eq(t.commands.target, 'message'), inArray(t.commands.state, ['pending', 'failed']))).all().map(row => row.id));
     const byAccount = new Map<number, MessageRow[]>();

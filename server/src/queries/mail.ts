@@ -2,7 +2,7 @@
 // All by day, and one email. Every view is a query. Nothing is copied per view. The rules for what
 // the Inbox shows and counts are src/domain/inbox.ts.
 import type {AllOut, CommandOut, GmailLinkOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, SentOut, SentRowOut, TrustedDomainOut} from '@setpoint/shared';
-import {and, count, desc, eq, inArray, isNull, lt, or, sql} from 'drizzle-orm';
+import {and, count, desc, eq, getTableColumns, inArray, isNull, lt, or, sql} from 'drizzle-orm';
 import type {SQL} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
@@ -18,7 +18,31 @@ import {conversationOf, repliesOf} from './thread.ts';
 import type {Store} from '../store.ts';
 
 type MessageRow = typeof t.messages.$inferSelect;
-type Candidate = MessageRow & InboxCandidate & {command: CommandOut | null; attachmentCount: number};
+
+// A list reads few columns of many emails. Most of a row's columns sit after its bodies, and reading
+// one makes SQLite walk the email's whole body, so the lists read these from messages_list, an index
+// that holds them all: a column added here goes in that index too, or every list reads every body.
+const listColumns = {
+  id: t.messages.id, accountId: t.messages.accountId, lane: t.messages.lane, kind: t.messages.kind, unread: t.messages.unread,
+  receivedAt: t.messages.receivedAt, organisation: t.messages.organisation, fromName: t.messages.fromName, pinnedAt: t.messages.pinnedAt,
+  doneAt: t.messages.doneAt, trashedAt: t.messages.trashedAt, codeExpiresAt: t.messages.codeExpiresAt, archivedAt: t.messages.archivedAt,
+  triagedAt: t.messages.triagedAt, triageSource: t.messages.triageSource,
+};
+
+// What a row shows, read only for the rows a list shows: everything but the bodies and search's text.
+const {bodyText: _text, bodyHtml: _html, searchBody: _body, searchTerms: _terms, searchRecipients: _recipients, ...rowColumns} = getTableColumns(t.messages);
+type ListedRow = Omit<MessageRow, 'bodyText' | 'bodyHtml' | 'searchBody' | 'searchTerms' | 'searchRecipients'>;
+type Presented = ListedRow & {command: CommandOut | null; held: boolean; attachmentCount: number};
+type Candidate = {[K in keyof typeof listColumns]: ListedRow[K]} & InboxCandidate & {command: CommandOut | null; attachmentCount: number};
+
+/** The shown columns of these emails, by id. Missing ids are left out. */
+function listedRows(store: Store, ids: number[]): Map<number, ListedRow> {
+  const rows = new Map<number, ListedRow>();
+  for (let at = 0; at < ids.length; at += 500) {
+    for (const row of store.db.select(rowColumns).from(t.messages).where(inArray(t.messages.id, ids.slice(at, at + 500))).all()) rows.set(row.id, row);
+  }
+  return rows;
+}
 
 /** PDF, image and CSV open a preview. */
 const PREVIEWABLE = /^(application\/pdf|image\/(png|jpeg|gif|webp)|text\/csv)$/;
@@ -42,14 +66,14 @@ function candidates(store: Store, accountId?: number): Candidate[] {
   // USPS's digest is out of the Inbox and its counts. Its scans are the agenda rail's. Mail the user
   // sent to others never came in.
   const shown = and(eq(t.messages.uspsDigest, false), eq(t.messages.received, true));
-  return store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all().map(row => {
+  return store.db.select(listColumns).from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).all().map(row => {
     const command = commands.get(row.id) ?? null;
     return {...row, command, held: command?.state === 'failed', attachmentCount: attachments.get(row.id) ?? 0};
   });
 }
 
 /** The decisive fact on a security row: "New sign-in · MacBook Pro · Los Angeles". */
-function factOf(row: MessageRow): string | null {
+function factOf(row: ListedRow): string | null {
   const facts = row.securityFacts;
   if (!facts) return null;
   return [facts.what, facts.device, facts.location, facts.app].filter(Boolean).join(' · ');
@@ -57,7 +81,7 @@ function factOf(row: MessageRow): string | null {
 
 type Replies = Map<number, {id: number; at: string}>;
 
-function presentRow(row: Candidate, replies?: Replies, drafted?: Set<number>): MessageRowOut {
+function presentRow(row: Presented, replies?: Replies, drafted?: Set<number>): MessageRowOut {
   const reply = replies?.get(row.id);
   return {
     id: row.id, account_id: row.accountId, from_name: row.fromName, from_address: row.fromAddress, organisation: row.organisation, via: row.via,
@@ -94,16 +118,18 @@ export function mailDayOf(store: Store): MailDayOut {
   const now = isoNow(store);
   const day = mailDay(candidates(store), now, zonedInstant(localDay(now, store.timeZone), '00:00', store.timeZone));
   const kept = and(isNull(t.messages.trashedAt), eq(t.messages.received, true));
+  // octet_length reads a body's size from its row's header, without reading the body. The oldest
+  // arrival comes from messages_list on its own, as received_at sits after the bodies.
   const stored = store.db.select({
     total: count(),
-    bytes: sql<number>`coalesce(sum(length(cast(${t.messages.bodyText} as blob)) + coalesce(length(cast(${t.messages.bodyHtml} as blob)), 0)), 0)`,
-    oldest: sql<string | null>`min(${t.messages.receivedAt})`,
+    bytes: sql<number>`coalesce(sum(octet_length(${t.messages.bodyText}) + coalesce(octet_length(${t.messages.bodyHtml}), 0)), 0)`,
   }).from(t.messages).where(kept).get()!;
+  const oldest = store.db.select({at: sql<string | null>`min(${t.messages.receivedAt})`}).from(t.messages).where(kept).get()!.at;
   const attached = store.db.select({bytes: sql<number>`coalesce(sum(${t.attachments.sizeBytes}), 0)`})
     .from(t.attachments).innerJoin(t.messages, eq(t.messages.id, t.attachments.messageId)).where(kept).get()!;
   return {
     done: day.done, need_you: day.needYou, overdue: day.overdue, sorted_fyi: day.sortedFyi, sorted_noise: day.sortedNoise,
-    total: stored.total, bytes: stored.bytes + attached.bytes, oldest_at: stored.oldest,
+    total: stored.total, bytes: stored.bytes + attached.bytes, oldest_at: oldest,
   };
 }
 
@@ -113,12 +139,14 @@ export function inbox(store: Store, accountId?: number): InboxOut {
   const all = candidates(store);
   const shown = accountId ? all.filter(row => row.accountId === accountId) : all;
   const groups = inboxGroups(shown, now);
-  const replies = repliesOf(store, groups.flatMap(group => group.rows));
+  const rows = listedRows(store, [...new Set(groups.flatMap(group => group.rows.map(row => row.id)))]);
+  const replies = repliesOf(store, [...rows.values()]);
   const drafted = draftedMessages(store);
+  const present = (row: Candidate) => presentRow({...rows.get(row.id)!, command: row.command, held: row.held ?? false, attachmentCount: row.attachmentCount}, replies, drafted);
   return {
     account_id: accountId ?? null,
     groups: groups.map(group => ({
-      group: group.group, count: group.rows.length, unread: group.unread, rows: group.rows.map(row => presentRow(row, replies, drafted)),
+      group: group.group, count: group.rows.length, unread: group.unread, rows: group.rows.map(present),
     })),
     counts: countsOf(all, now, accountIdsOf(store)),
     next_change_at: nextInboxChange(shown, now),
@@ -128,16 +156,19 @@ export function inbox(store: Store, accountId?: number): InboxOut {
 type PageInput = {account_id?: number; before?: string; limit: number};
 
 /** A page of emails newest first, by local day, as All and Sent list them. Trashed mail is left out. */
-function pageByDay<R>(store: Store, shown: SQL | undefined, input: PageInput, present: (row: MessageRow, out: MessageRowOut) => R): {days: {date: string; rows: R[]}[]; next_before: string | null} {
+function pageByDay<R>(store: Store, shown: SQL | undefined, input: PageInput, present: (row: ListedRow, out: MessageRowOut) => R): {days: {date: string; rows: R[]}[]; next_before: string | null} {
   const commands = commandsByMessage(store);
   let where = input.account_id ? and(shown, eq(t.messages.accountId, input.account_id)) : shown;
   if (input.before) {
     const [at, id] = input.before.split('|') as [string, string];
     where = and(where, or(lt(t.messages.receivedAt, at), and(eq(t.messages.receivedAt, at), lt(t.messages.id, Number(id)))));
   }
-  const rows = store.db.select().from(t.messages).where(where).orderBy(desc(t.messages.receivedAt), desc(t.messages.id)).all()
+  // The order and the filter read only what messages_list holds; the page's own rows are read after.
+  const rows = store.db.select({id: t.messages.id, receivedAt: t.messages.receivedAt, trashedAt: t.messages.trashedAt}).from(t.messages)
+    .where(where).orderBy(desc(t.messages.receivedAt), desc(t.messages.id)).all()
     .filter(row => !row.trashedAt || commands.get(row.id)?.state === 'failed');
-  const page = rows.slice(0, input.limit);
+  const listed = listedRows(store, rows.slice(0, input.limit).map(row => row.id));
+  const page = rows.slice(0, input.limit).map(row => listed.get(row.id)!);
   const attachments = new Map(page.length
     ? store.db.select({id: t.attachments.messageId, n: count()}).from(t.attachments).where(inArray(t.attachments.messageId, page.map(row => row.id))).groupBy(t.attachments.messageId).all().map(row => [row.id, row.n])
     : []);

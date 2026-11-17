@@ -179,6 +179,15 @@ export const messages = sqliteTable('messages', {
   index('messages_triage_rule').on(table.triageRuleId),
   // The minute pass reads the due ones.
   index('messages_trash_due').on(table.trashDueAt),
+  // Reading a column stored after the bodies walks the whole body, so what reads many emails reads
+  // these instead, which hold every column it needs. The Inbox, All, the counts and the day:
+  // src/queries/mail.ts `listColumns`.
+  index('messages_list').on(
+    table.received, table.uspsDigest, table.accountId, table.lane, table.kind, table.unread, table.receivedAt, table.organisation, table.fromName,
+    table.pinnedAt, table.doneAt, table.trashedAt, table.codeExpiresAt, table.archivedAt, table.triagedAt, table.triageSource,
+  ),
+  // The pattern prompts' verdicts: Done Attention mail (src/triage/learning.ts).
+  index('messages_verdicts').on(table.lane, table.backfill, table.doneAt, table.organisation, table.type, table.kind, table.protected, table.openedBeforeDone),
 ]);
 
 /** An email's attachment, previewed in the reader (PDF, image, CSV). */
