@@ -2,12 +2,13 @@
 // Personal, Work and iCloud, and none from Business or Jobs. From the sidebar's Sent to its list,
 // each row naming who it went to, to an email with Sent's tools, Trash with Undo, and an empty
 // account's view. Several selected as in the Inbox, trashed together with one Undo, and ⌘A selecting
-// every one listed. Then search
+// every one listed; Reply all on a few of them opening a window for each with others. Then search
 // from Sent (sent mail only, in its account, found by its recipients too) and from the Inbox (sent
 // mail with the rest). Tab and the quiet segments are components/sentAccounts.test.tsx's.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {SentOut} from '@setpoint/shared';
+import type {DraftsOut, FromOut, MessageOut, SentOut} from '@setpoint/shared';
+import {hasOthers} from '../../src/logic/composer.ts';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, holdToast, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -23,6 +24,7 @@ const results = (page: Page) => page.locator('.search-list .arow').evaluateAll(f
 const sentIds = async (setpoint: Setpoint) => (await setpoint.api<SentOut>('GET', '/mail/sent?limit=500')).days.flatMap(day => day.rows.map(row => row.id));
 const selection = (page: Page) => page.locator('section.pane.selection');
 const menu = (page: Page) => page.locator('.ctx-menu');
+const drafts = async (setpoint: Setpoint) => (await setpoint.api<DraftsOut>('GET', '/mail/drafts')).drafts;
 
 /** Right-clicks `target`, and waits for the menu to open and take the keys. */
 async function rightClick(target: Locator) {
@@ -116,12 +118,12 @@ test('several selected in Sent: the first ⌘-click takes the open email, ⇧-cl
     // Each line names who it went to, as its row does.
     const who = (from: Locator) => from.evaluateAll(found => found.map(one => one.querySelector('.from')?.getAttribute('aria-label')));
     assert.deepEqual(await who(selection(page).locator('.sel-list > li[data-id]')), await who(page.locator(picked.map(id => `.list .row[data-id="${id}"]`).join(', '))));
-    assert.deepEqual(await selection(page).locator('.rd-tools .tool').allTextContents(), ['TrashE', 'ClearEsc']);
+    assert.deepEqual(await selection(page).locator('.rd-tools .tool').allTextContents(), ['TrashE', 'ReplyR', 'Reply allA', 'ForwardF', 'ClearEsc']);
     assert.equal(await page.locator('.list .row.sel').count(), 3);
 
     // A selected row's menu is the selection's.
     await rightClick(row(picked[1]!));
-    assert.deepEqual(await menu(page).locator('.menu-i').allTextContents(), ['TrashE', 'Clear selectionEsc']);
+    assert.deepEqual(await menu(page).locator('.menu-i').allTextContents(), ['TrashE', 'ReplyR', 'Reply allA', 'ForwardF', 'Clear selectionEsc']);
     await page.keyboard.press('Escape');
     await menu(page).waitFor({state: 'detached'});
 
@@ -166,6 +168,45 @@ test('⌘A in Sent selects every email listed, the reader giving way; Esc ends i
     await page.keyboard.press('Escape');
     await selection(page).waitFor({state: 'detached'});
     assert.deepEqual(await listed(), []);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Reply all on a few selected in Sent opens a window for each with others to reply to, none for the rest; past five A does nothing', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/sent`);
+    await rows(page).nth(6).waitFor();
+    const shown = await rows(page).evaluateAll(found => found.map(row => Number((row as HTMLElement).dataset.id)));
+    // Whether each has anyone for Reply all, as A on one email reads it: the seed's Lab notes went to two.
+    const from = await setpoint.api<FromOut>('GET', '/mail/from');
+    const others = new Map(await Promise.all(shown.map(async id => [id, hasOthers(await setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), from)] as const)));
+    const withOthers = shown.find(id => others.get(id));
+    const alone = shown.filter(id => !others.get(id)).slice(0, 2);
+    assert.ok(withOthers !== undefined && alone.length === 2, 'a sent email with others, and two to one person');
+    const ids = shown.filter(id => id === withOthers || alone.includes(id));
+    for (const id of ids) await page.locator(`.list .row[data-id="${id}"] .from`).click({modifiers: ['ControlOrMeta']});
+    await until('three selected', () => selection(page).locator('.sel-list > li[data-id]').count(), n => n === 3);
+
+    // The pane's Reply all: a window for the one with others, none for the two to one person.
+    await selection(page).locator('.rd-tools .tool', {hasText: 'Reply all'}).click();
+    const found = await until('a reply all to it', () => drafts(setpoint), all => all.some(one => one.message_id === withOthers && one.kind === 'reply_all'));
+    const titles = () => page.locator('.cmp-windows .cmp-window .cmp-title-text').allTextContents();
+    await until('its window', titles, all => all.join('|') === found.find(one => one.message_id === withOthers)!.subject);
+    await setpoint.idle();
+    assert.equal((await drafts(setpoint)).length, 1, 'none to the ones to one person');
+
+    // Every one, back on the page (the caret leaves the window): past five, A does nothing.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('ControlOrMeta+a');
+    await until('every one selected', () => page.locator('.list .row.sel').count(), n => n > 5);
+    await page.keyboard.press('a');
+    await setpoint.idle();
+    assert.equal((await drafts(setpoint)).length, 1, 'no draft started');
+    assert.equal(await page.locator('.cmp-window').count(), 1, 'no window opened');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

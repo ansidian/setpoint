@@ -44,7 +44,8 @@
 // window's pop-out button docks it: the pane shows the draft's own email with the composer under
 // it, or the new message by itself (Drafts' pane off the mail pages), and the pane's composer, if
 // another, gives way. Esc in a window closes it, the draft kept, as in the pane; Esc outside the
-// windows leaves them alone. R, A and F open in the pane, beside any windows.
+// windows leaves them alone. R, A and F open in the pane, beside any windows. On a selection of a
+// few emails they open popped out, a window for each in the list's order (answerEach).
 //
 // Files: the attach button, a drop on the composer or a pasted image uploads each file to the draft
 // at once, a chip showing it while it goes; one that would take the attachments over 25 MB (with a
@@ -247,9 +248,10 @@ function change(draftId: number, changes: Partial<OpenComposer>) {
 
 /**
  * Starts (or takes up again) a draft of `kind` on an email, or a new message: its composer opens at
- * once, waiting, and takes the draft when the server answers.
+ * once, waiting, and takes the draft when the server answers. A new message starts popped out, so
+ * the page stays as it is under it, and so does each answer to a selection (`floating`).
  */
-export function startComposer(input: DraftCreateInput) {
+export function startComposer(input: DraftCreateInput, {floating = input.kind === 'new'} = {}) {
   const already = input.kind === 'new' ? null : composers.find(one => one.messageId === input.message_id && one.kind === input.kind);
   if (already) {
     // Already open: R again brings its window back and puts the caret in it.
@@ -257,8 +259,6 @@ export function startComposer(input: DraftCreateInput) {
     whenPlaced(already.key, () => composerHost(already.key).querySelector<HTMLElement>('.desc-edit')?.focus());
     return;
   }
-  // A new message starts popped out, so the page stays as it is under it.
-  const floating = input.kind === 'new';
   let rest = composers;
   const pane = floating ? null : docked();
   if (pane) {
@@ -379,6 +379,24 @@ export function answerKey(id: number, kind: 'reply' | 'reply_all' | 'forward') {
   void Promise.all([getJson<MessageOut>(messagePath(id)), getJson<FromOut>(FROM_PATH)]).then(([message, from]) => {
     if (hasOthers(message, from)) startComposer({kind, message_id: id});
   }, () => {});
+}
+
+/**
+ * R, A or F on a selection: one composer per email, each in a window of its own, in the order
+ * given (the list's). Reply all only on those with others to reply to, as A on one email; an email
+ * that can't be read for it is left out.
+ */
+export function answerEach(ids: readonly number[], kind: 'reply' | 'reply_all' | 'forward') {
+  const start = (id: number) => startComposer({kind, message_id: id}, {floating: true});
+  if (kind !== 'reply_all') {
+    ids.forEach(start);
+    return;
+  }
+  void Promise.all(ids.map(id => {
+    const known = canReplyAll(id);
+    if (known !== null) return known;
+    return Promise.all([getJson<MessageOut>(messagePath(id)), getJson<FromOut>(FROM_PATH)]).then(([message, from]) => hasOthers(message, from), () => false);
+  })).then(others => ids.forEach((id, at) => others[at] && start(id)));
 }
 
 /** The email the reading pane shows, on the Inbox or Sent. */

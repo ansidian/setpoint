@@ -14,7 +14,8 @@
 //
 // ⌘ or Ctrl-click, ⇧-click and ⌘A select several emails, as on the Inbox. The pane shows the selection
 // (SelectionPane) with Trash E, and E, a selected row's right-click (Trash, Clear selection) and
-// Esc act on it. Trash takes every one with one toast and one Undo. A plain click or Enter ends the
+// Esc act on it. Trash takes every one with one toast and one Undo. On 2 to 5, Reply R, Reply all A
+// and Forward F (tools, keys and menu items) open a composer window for each. A plain click or Enter ends the
 // selection and opens the email; another account ends it too.
 //
 // Search: the header's field searches sent mail only, in the selected account when one is. Its words
@@ -32,7 +33,7 @@ import {keepCursor, moveCursor, neighbour, nextAfterLeaving, searchStops, stopOf
 import type {Stop} from '../logic/inbox.ts';
 import type {Route} from '../logic/route.ts';
 import {leftOutSection, resultSections} from '../logic/search.ts';
-import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, toggled} from '../logic/selection.ts';
+import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
 import {tabTitle} from '../logic/title.ts';
 import {skeleton} from '../tokens.ts';
@@ -43,18 +44,18 @@ import {AllList} from './AllList.tsx';
 import {useNow} from './clock.ts';
 import {openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
-import {emailActions} from './emailActions.ts';
+import {emailActions, selectionAnswers} from './emailActions.ts';
 import {SentEmptyView} from './EmptyView.tsx';
 import {beats} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
 import {askCard, Reader} from './Reader.tsx';
-import {answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
+import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
 import type {ReaderActions, Travel} from './Reader.tsx';
 import {navigate} from './router.ts';
 import {SearchField, SearchResults} from './search/Search.tsx';
 import {useSearch} from './search/mailSearch.ts';
-import {SelectionPane} from './SelectionPane.tsx';
+import {AnswerTools, SelectionPane} from './SelectionPane.tsx';
 import {ALL_ACCOUNTS, SentAccounts} from './SentAccounts.tsx';
 import {SentFrom} from './SentFrom.tsx';
 import {LoadFailed, useAfter, useArrival, useLoadFailed} from './states/Loading.tsx';
@@ -289,16 +290,22 @@ export function SentPage({route}: {route: SentRoute}) {
   }
 
   const nothing = () => {};
-  // The selection's actions, for its pane, its right-click menu and its keys. Trash ends it.
+  const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
+  // The selection's actions, for its pane, its right-click menu and its keys. Trash ends it; Reply,
+  // Reply all and Forward (a window for each, on 2 to 5) keep it.
   const forSelection = {
     trash: () => {
       trash(selected);
       clearSelection();
     },
+    reply: () => answerEach(selected, 'reply'),
+    replyAll: () => answerEach(selected, 'reply_all'),
+    forward: () => answerEach(selected, 'forward'),
     clear: clearSelection,
   };
   const selectionMenu: MenuAction[] = [
     {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: true, run: forSelection.trash},
+    ...selectionAnswers(selectedRows, forSelection),
     {id: 'clear', group: 'clear', label: 'Clear selection', icon: 'close', hint: 'Esc', run: forSelection.clear},
   ];
   // Whether the keys act on the selection: while nothing's open over it.
@@ -345,9 +352,11 @@ export function SentPage({route}: {route: SentRoute}) {
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
       // R, A and F answer the open email, or the one under the cursor, which opens with its composer.
-      else if ((plainKey(event, 'r') || plainKey(event, 'a') || plainKey(event, 'f')) && !onSelection && target !== null) {
+      else if ((plainKey(event, 'r') || plainKey(event, 'a') || plainKey(event, 'f')) && (onSelection ? selectionOffers(selectedRows).answer : target !== null)) {
         const kind = plainKey(event, 'r') ? 'reply' : plainKey(event, 'a') ? 'reply_all' : 'forward';
-        run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : kind === 'reply_all' ? 'a' : 'f');
+        const hint = kind === 'reply' ? 'r' : kind === 'reply_all' ? 'a' : 'f';
+        if (onSelection) run(() => answerEach(selected, kind), hint);
+        else if (target !== null) run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), hint);
       } else if (plainKey(event, 'c')) run(() => newMessage(account ?? undefined));
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
@@ -415,7 +424,6 @@ export function SentPage({route}: {route: SentRoute}) {
   // The pane beside the list: the open email, else the selection. From 640 to 1099 px a pane
   // covers the list, so the selection shows only on its rows there.
   const showsSelection = onSelection && !compact && !writing;
-  const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
 
   return (
     <>
@@ -442,8 +450,9 @@ export function SentPage({route}: {route: SentRoute}) {
         )}
         {writing && <NewMessagePane open={writing} />}
         {showsSelection && (
-          <SelectionPane label="Selected emails" heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)}
-            tools={<button className="tool trash" type="button" data-hint="e" onClick={forSelection.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>}
+          <SelectionPane label="Selected emails" fit={String(selectionOffers(selectedRows).answer)} heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)}
+            tools={<><button className="tool trash" type="button" data-hint="e" onClick={forSelection.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
+              <AnswerTools rows={selectedRows} on={forSelection} /></>}
             lines={selectedRows.map(row => ({id: row.id, from: from(row), subject: row.subject, name: row.subject}))}
             onClear={clearSelection} onOpen={id => openEmail(id)} onDrop={id => setSelection({...selection, ids: selected.filter(one => one !== id)})} />
         )}

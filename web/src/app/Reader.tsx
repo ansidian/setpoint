@@ -65,7 +65,7 @@ import {showToast, toastFailure} from './toast.ts';
  * paint, so no size shows that doesn't fit. A new set of tools (another email, Pin to Unpin) starts
  * from the widest again.
  */
-function useToolsFit(tools: string, paneWidth: number) {
+export function useToolsFit(tools: string, paneWidth: number) {
   const bar = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState<{tools: string; size: ToolsSize; need: ToolsNeed}>({tools, size: 'wide', need: {wide: 0, narrow: 0}});
   const [width, setWidth] = useState(0);

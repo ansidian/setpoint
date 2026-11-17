@@ -83,7 +83,14 @@ export function emailActions(row: MessageRowOut, gmail: boolean | null, on: Emai
   ];
 }
 
-export interface SelectionHandlers {
+/** Reply, Reply all and Forward on a selection: one composer window per email. */
+export interface AnswerHandlers {
+  reply: () => void;
+  replyAll: () => void;
+  forward: () => void;
+}
+
+export interface SelectionHandlers extends AnswerHandlers {
   done: () => void;
   trash: () => void;
   pin: () => void;
@@ -92,10 +99,18 @@ export interface SelectionHandlers {
   clear: () => void;
 }
 
+/** Reply R, Reply all A and Forward F on a selection, when it offers them (2 to 5 emails). */
+export const selectionAnswers = (rows: MessageRowOut[], on: AnswerHandlers): MenuAction[] => (selectionOffers(rows).answer ? [
+  {id: 'reply', group: 'act', label: 'Reply', icon: 'reply', hint: 'R', run: on.reply},
+  {id: 'reply-all', group: 'act', label: 'Reply all', icon: 'reply_all', hint: 'A', run: on.replyAll},
+  {id: 'forward', group: 'act', label: 'Forward', icon: 'forward', hint: 'F', run: on.forward},
+] : []);
+
 /**
  * A selection's actions, for its right-click menu and ⌘K, as its pane's tools: Done H
- * for the emails that can be ("Done 2" when not all of them), Trash E, Pin or Unpin P, Mark read or
- * Mark unread ⇧U, Clear selection. Nothing that's one email's only.
+ * for the emails that can be ("Done 2" when not all of them), Trash E, Pin or Unpin P, Reply R,
+ * Reply all A and Forward F on 2 to 5 emails, Mark read or Mark unread ⇧U, Clear selection. Nothing
+ * that's one email's only.
  */
 export function selectionActions(rows: MessageRowOut[], on: SelectionHandlers, where: 'menu' | 'palette'): MenuAction[] {
   const offer = selectionOffers(rows);
@@ -103,6 +118,7 @@ export function selectionActions(rows: MessageRowOut[], on: SelectionHandlers, w
     ...(offer.done ? [{id: 'done', group: 'act', label: offer.done === rows.length ? 'Done' : `Done ${offer.done}`, icon: 'check', hint: 'H', run: on.done} satisfies MenuAction] : []),
     {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: where === 'menu', run: on.trash},
     {id: 'pin', group: 'act', label: offer.pin ? 'Pin' : 'Unpin', icon: offer.pin ? 'keep' : 'keep_off', hint: 'P', run: on.pin},
+    ...selectionAnswers(rows, on),
     offer.read
       ? {id: 'read', group: 'read', label: 'Mark read', icon: 'mark_email_read', run: on.markRead}
       : {id: 'unread', group: 'read', label: 'Mark unread', icon: 'mark_email_unread', hint: '⇧U', run: on.markUnread},

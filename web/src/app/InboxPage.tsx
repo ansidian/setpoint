@@ -11,7 +11,8 @@
 //
 // ⌘ or Ctrl-click and ⇧-click select several emails, and ⌘A every one the list holds (its reader
 // giving way). The reading pane shows the selection (SelectionPane), and H, E, P, ⇧U, a selected row's right-click and ⌘K act on all of it. Each
-// email's change is its own command, with one toast and one Undo. A plain click or Enter ends the
+// email's change is its own command, with one toast and one Undo. R, A and F on 2 to 5 open a
+// composer window for each. A plain click or Enter ends the
 // selection and opens the email. Esc ends it first.
 //
 // Search: while the header's field holds a search, its results replace the list and the header
@@ -45,7 +46,7 @@ import {
 } from '../logic/inbox.ts';
 import {phoneSlide} from '../logic/phone.ts';
 import {readerActions} from '../logic/reader.ts';
-import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, toggled} from '../logic/selection.ts';
+import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
 import type {HeldRow, PatternPrompt, Stop} from '../logic/inbox.ts';
 import type {InboxView, Route} from '../logic/route.ts';
@@ -63,7 +64,7 @@ import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
 import {askCard, Reader} from './Reader.tsx';
-import {answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
+import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
 import {openContextMenu} from './ContextMenu.tsx';
 import {emailActions, selectionActions} from './emailActions.ts';
@@ -521,7 +522,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   };
 
   // The selection's actions, for its pane, its right-click menu, its keys and ⌘K. Done and Trash
-  // end it. Pin and the read changes keep it.
+  // end it. Pin, the read changes and Reply, Reply all and Forward (a window for each) keep it.
   const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
   const forSelection: SelectionHandlers = {
     done: () => {
@@ -535,6 +536,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
     pin: () => on.pin(selected),
     markRead: () => on.markRead(selected),
     markUnread: () => on.markUnread(selected),
+    reply: () => answerEach(selected, 'reply'),
+    replyAll: () => answerEach(selected, 'reply_all'),
+    forward: () => answerEach(selected, 'forward'),
     clear: clearSelection,
   };
   // Whether the keys act on the selection: while nothing's open over it.
@@ -635,9 +639,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'p')) run(actions.pin, 'p');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
       // R, A and F answer the open email, or the one under the cursor, which opens with its composer.
-      else if ((plainKey(event, 'r') || plainKey(event, 'a') || plainKey(event, 'f')) && !phone && !onSelection && target !== null) {
+      // On a selection they answer each one, in a window of its own, while it has 2 to 5 (else nothing).
+      else if ((plainKey(event, 'r') || plainKey(event, 'a') || plainKey(event, 'f')) && !phone && (onSelection ? selectionOffers(selectedRows).answer : target !== null)) {
         const kind = plainKey(event, 'r') ? 'reply' : plainKey(event, 'a') ? 'reply_all' : 'forward';
-        run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), kind === 'reply' ? 'r' : kind === 'reply_all' ? 'a' : 'f');
+        const hint = kind === 'reply' ? 'r' : kind === 'reply_all' ? 'a' : 'f';
+        if (onSelection) run(() => answerEach(selected, kind), hint);
+        else if (target !== null) run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), hint);
       } else if (plainKey(event, 'i', {shift: true}) && view !== 'attention') run(actions.markAllRead, 'shift+i');
       else if (plainKey(event, 'u', {shift: true})) run(actions.markUnread);
       // U goes to the next unread email. 1, the Inbox's key elsewhere, goes back to All from a
@@ -783,7 +790,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}
         {writing && <NewMessagePane open={writing} />}
         {showsSelection && (
-          <SelectionPane label="Selected emails" heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)} tools={<EmailTools rows={selectedRows} on={forSelection} />}
+          <SelectionPane label="Selected emails" fit={Object.values(selectionOffers(selectedRows)).join()} heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)} tools={<EmailTools rows={selectedRows} on={forSelection} />}
             lines={emailLines(selectedRows)} onClear={clearSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
         )}
         {pane.drawn && <InboxDay settle={pane.settle} />}

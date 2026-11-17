@@ -80,11 +80,29 @@ function row(fields: Partial<MessageRowOut>): MessageRowOut {
 describe('selectionOffers', () => {
   test.each([
     ['Done counts Attention mail not yet Done; Pin while any is unpinned; Mark read while any is unread',
-      [row({lane: 'attention'}), row({lane: 'attention', done: true}), row({unread: true, pinned: true})], {done: 1, pin: true, read: true}],
+      [row({lane: 'attention'}), row({lane: 'attention', done: true}), row({unread: true, pinned: true})], {done: 1, pin: true, read: true, answer: true}],
     ['every one pinned and read, none Attention: Unpin, Mark unread, no Done',
-      [row({pinned: true}), row({pinned: true, lane: 'noise'})], {done: 0, pin: false, read: false}],
+      [row({pinned: true}), row({pinned: true, lane: 'noise'})], {done: 0, pin: false, read: false, answer: true}],
   ])('%s', (_, rows, offers) => {
     expect(selectionOffers(rows)).toEqual(offers);
+  });
+});
+
+describe('Reply, Reply all and Forward on a selection: from 2 to 5 emails, in the Inbox and Sent, never in Drafts', () => {
+  const emails = (n: number, fields: Partial<MessageRowOut> = {}) => Array.from({length: n}, (_, at) => row({id: at + 1, ...fields}));
+  test.each<[string, MessageRowOut[], boolean]>([
+    ['one left selected in the Inbox', emails(1), false],
+    ['two in the Inbox', emails(2), true],
+    ['five in the Inbox', emails(5), true],
+    ['six in the Inbox', emails(6), false],
+    ['two in Sent', emails(2, {sent_only: true}), true],
+    ['five in Sent', emails(5, {sent_only: true}), true],
+    ['six in Sent', emails(6, {sent_only: true}), false],
+  ])('%s', (_, rows, answer) => {
+    expect(selectionOffers(rows).answer).toBe(answer);
+  });
+  test.each([2, 5, 6])('%i drafts: Discard only', n => {
+    expect(Object.keys(draftOffers(Array.from({length: n}, () => ({send_state: null}))))).toEqual(['discard']);
   });
 });
 

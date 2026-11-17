@@ -1,8 +1,8 @@
 // Selecting several emails or drafts. ⌘ or Ctrl-click adds a row or takes it out, and the first one
 // takes the open one too. ⇧-click adds every row from the last one clicked (or the open one) to this
 // one. ⌘A (Ctrl-A) selects every row the list holds now, and again after more load. This file also
-// has what the selection's tools and menu offer, from its rows, and how Drafts' Discard counts in its
-// toasts.
+// has what the selection's tools and menu offer, from its rows (Reply, Reply all and Forward on a few
+// emails only), and how Drafts' Discard counts in its toasts.
 import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import type {Stop} from './inbox.ts';
 import {readerActions} from './reader.ts';
@@ -51,15 +51,20 @@ export function inListOrder(ids: readonly number[], stops: Stop[]): number[] {
   return rowIds(stops).filter(id => ids.includes(id));
 }
 
+// The most emails Reply, Reply all and Forward answer at once, a window each.
+const ANSWER_MOST = 5;
+
 /**
  * What the selection's tools and menu offer: Done for the emails that can be, and how many. Pin
- * unless every one is pinned already. Mark read while any is unread, else Mark unread.
+ * unless every one is pinned already. Mark read while any is unread, else Mark unread. Reply, Reply
+ * all and Forward on 2 to 5 emails, in the Inbox and Sent (Drafts' selection has its own offers).
  */
-export function selectionOffers(rows: MessageRowOut[]): {done: number; pin: boolean; read: boolean} {
+export function selectionOffers(rows: MessageRowOut[]): {done: number; pin: boolean; read: boolean; answer: boolean} {
   return {
     done: rows.filter(row => readerActions(row).done).length,
     pin: rows.some(row => !row.pinned),
     read: rows.some(row => row.unread),
+    answer: rows.length >= 2 && rows.length <= ANSWER_MOST,
   };
 }
 

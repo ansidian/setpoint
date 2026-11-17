@@ -3,9 +3,10 @@
 // it and opens. A selected row's right-click offers the selection's actions, and another row's
 // offers its own. E trashes every one with one toast, and ⌘Z brings every one back. Mark read, Pin
 // and Done act on all of it. ⌘A selects every email the list holds, and in the search field its text.
+// R, A and F on two to five selected open a composer window for each, in the list's order.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {AllOut, MessageOut, MessageRowOut} from '@setpoint/shared';
+import type {AllOut, DraftsOut, MessageOut, MessageRowOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -22,6 +23,9 @@ const items = (page: Page) => menu(page).locator('.menu-i').allTextContents();
 const message = (setpoint: Setpoint, id: number) => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`);
 const allRows = async (setpoint: Setpoint) => (await setpoint.api<AllOut>('GET', '/mail/all?limit=500')).days.flatMap(day => day.rows);
 const inAll = async (setpoint: Setpoint, id: number) => (await allRows(setpoint)).some(one => one.id === id);
+const drafts = async (setpoint: Setpoint) => (await setpoint.api<DraftsOut>('GET', '/mail/drafts')).drafts;
+// The composer windows' titles, in the order they popped out (those folded into "+N" too).
+const windowTitles = (page: Page) => page.locator('.cmp-windows .cmp-window .cmp-title-text').allTextContents();
 
 /** The list's emails as the page shows them, top to bottom, each once. */
 const onScreen = (page: Page) => page.locator('.list .row[data-id]').evaluateAll(rows => [...new Set(rows.map(one => Number((one as HTMLElement).dataset.id)))]);
@@ -181,8 +185,9 @@ test('a selected row\'s right-click offers the selection\'s actions; E trashes e
     // On a selected row: the selection's, nothing that's one email's only.
     await rightClick(row(page, ids[1]!));
     const offered = await items(page);
-    assert.deepEqual(offered.filter(label => !/^Mark (un)?read/.test(label)), ['TrashE', picked.every(one => one.pinned) ? 'UnpinP' : 'PinP', 'Clear selectionEsc']);
-    assert.equal(offered.length, 4, 'and Mark read or Mark unread');
+    assert.deepEqual(offered.filter(label => !/^Mark (un)?read/.test(label)),
+      ['TrashE', picked.every(one => one.pinned) ? 'UnpinP' : 'PinP', 'ReplyR', 'Reply allA', 'ForwardF', 'Clear selectionEsc']);
+    assert.equal(offered.length, 7, 'and Mark read or Mark unread');
     await page.keyboard.press('Escape');
     await menu(page).waitFor({state: 'detached'});
 
@@ -226,7 +231,7 @@ test('Mark read, Pin and Done act on the whole selection: Pin keeps it, Done cou
     for (const id of ids) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await until('three selected', () => listed(page), listedIds => listedIds.length === 3);
     const tools = () => pane(page).locator('.rd-tools .tool').allTextContents();
-    assert.deepEqual(await tools(), ['Done 2H', 'TrashE', 'PinP', 'Mark read', 'ClearEsc']);
+    assert.deepEqual(await tools(), ['Done 2H', 'TrashE', 'PinP', 'ReplyR', 'Reply allA', 'ForwardF', 'Mark read', 'ClearEsc']);
 
     // Mark read: the unread ones, one toast. The selection stays.
     await pane(page).locator('.tool', {hasText: 'Mark read'}).click();
@@ -246,6 +251,60 @@ test('Mark read, Pin and Done act on the whole selection: Pin keeps it, Done cou
     for (const one of attention) await until(`${one.id} Done`, () => message(setpoint, one.id), found => found.done);
     await setpoint.idle();
     assert.equal((await message(setpoint, plain.id)).done, false);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('R, A and F on two to five selected open one composer window per email, in the list\'s order, from the keys and the menu; past five they aren\'t offered and the keys do nothing', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openInbox(page, setpoint.base);
+    const picked = (await fourInADay(page, setpoint)).slice(0, 3);
+    const ids = picked.map(one => one.id);
+
+    // ⌘A: more than five, so the pane and menu don't offer them and R, A and F do nothing.
+    await page.keyboard.press('ControlOrMeta+a');
+    await until('every one selected', () => listed(page), shown => shown.length > 5);
+    const tools = await pane(page).locator('.rd-tools .tool').allTextContents();
+    assert.ok(!tools.some(tool => /^(Reply|Forward)/.test(tool)), `no Reply, Reply all or Forward in ${tools.join()}`);
+    await rightClick(row(page, ids[0]!));
+    assert.ok(!(await items(page)).some(item => /^(Reply|Forward)/.test(item)), 'nor in the menu');
+    await page.keyboard.press('Escape');
+    await menu(page).waitFor({state: 'detached'});
+    for (const key of ['r', 'a', 'f']) await page.keyboard.press(key);
+    await setpoint.idle();
+    assert.deepEqual(await drafts(setpoint), [], 'no draft started');
+    assert.equal(await page.locator('.cmp-window').count(), 0, 'no window opened');
+    await page.keyboard.press('Escape');
+    await pane(page).waitFor({state: 'detached'});
+
+    // Three, ⌘-clicked out of order: the windows still follow the list.
+    for (const id of [ids[2]!, ids[0]!, ids[1]!]) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
+    await until('three selected', () => listed(page), shown => shown.length === 3);
+
+    /** Each email's draft of `kind`, by the email, once all of them are in. */
+    const draftsOf = async (kind: string) => {
+      const found = await until(`a ${kind} for each`, () => drafts(setpoint), all => ids.every(id => all.some(one => one.message_id === id && one.kind === kind)));
+      return ids.map(id => found.find(one => one.message_id === id && one.kind === kind)!);
+    };
+
+    // The menu's Forward: a forward of each, each in its own window, in the list's order. The selection stays.
+    await rightClick(row(page, ids[1]!));
+    await menu(page).locator('.menu-i', {hasText: /^ForwardF$/}).click();
+    const forwards = await draftsOf('forward');
+    await until('three windows in order', () => windowTitles(page), titles => titles.join('|') === forwards.map(one => one.subject).join('|'));
+    assert.equal(await page.locator('.pane .composer').count(), 0, 'none in the reading pane');
+    assert.deepEqual(await listed(page), ids, 'still selected');
+
+    // R, back on the page (the caret leaves the last window): a reply to each, after the forwards.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('r');
+    const replies = await draftsOf('reply');
+    await until('three more windows in order', () => windowTitles(page),
+      titles => titles.join('|') === [...forwards, ...replies].map(one => one.subject).join('|'));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
