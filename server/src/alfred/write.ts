@@ -146,11 +146,13 @@ export function draftEvidence(store: Store, draft: DraftRow): Evidence {
   const address = to.address.toLowerCase();
   // Mail from them, and mail the user sent them (To or Cc), not in the trash, newest first.
   const wroteTo = (column: typeof t.messages.toRecipients | typeof t.messages.ccRecipients) => sql`exists (select 1 from json_each(${column}) where lower(json_extract(value, '$.address')) = ${address})`;
+  // The unary plus keeps `received` off an index: through one, SQLite reads every received email whole, bodies included, and
+  // sorts them, where walking `messages_received` newest first stops at the third match.
   const rows = store.db.select().from(t.messages).where(and(
     isNull(t.messages.trashedAt),
     draft.messageId === null ? undefined : ne(t.messages.id, draft.messageId),
     or(
-      and(eq(t.messages.received, true), sql`lower(${t.messages.fromAddress}) = ${address}`),
+      and(sql`+${t.messages.received} = 1`, sql`lower(${t.messages.fromAddress}) = ${address}`),
       and(eq(t.messages.sent, true), or(wroteTo(t.messages.toRecipients), wroteTo(t.messages.ccRecipients))),
     ),
   )).orderBy(desc(t.messages.receivedAt), desc(t.messages.id)).limit(DRAFT_HISTORY).all();

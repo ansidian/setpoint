@@ -28,7 +28,7 @@ export function mailSourceId(store: Store, accountId: number): number | null {
     .where(and(eq(t.sources.accountId, accountId), inArray(t.sources.provider, ['gmail', 'icloud']))).get()?.id ?? null;
 }
 
-const before = (row: MessageRow): Previous => ({messages: [{id: row.id, unread: row.unread, trashedAt: row.trashedAt, openedAt: row.openedAt}]});
+const before = (row: Pick<MessageRow, 'id' | 'unread' | 'trashedAt' | 'openedAt'>): Previous => ({messages: [{id: row.id, unread: row.unread, trashedAt: row.trashedAt, openedAt: row.openedAt}]});
 
 /**
  * Opening an email (a click or Enter) records that it was opened and, if it was unread, marks it
@@ -116,10 +116,14 @@ export function markAllRead(store: Store, accountId?: number): CommandRow[] {
   return transaction(store, () => {
     // USPS's digest and mail the user sent to others aren't in the Inbox, so Mark all as read leaves them as they are.
     const shown = and(eq(t.messages.uspsDigest, false), eq(t.messages.received, true));
-    const candidates = store.db.select().from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).orderBy(t.messages.id).all();
+    // Only the columns it needs: a whole row carries the email's bodies, and sorting every one of them is most of the work.
+    const candidates = store.db.select({
+      id: t.messages.id, accountId: t.messages.accountId, unread: t.messages.unread, lane: t.messages.lane, kind: t.messages.kind,
+      doneAt: t.messages.doneAt, trashedAt: t.messages.trashedAt, archivedAt: t.messages.archivedAt, openedAt: t.messages.openedAt,
+    }).from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).orderBy(t.messages.id).all();
     const busy = new Set(store.db.select({id: t.commands.targetId}).from(t.commands)
       .where(and(eq(t.commands.target, 'message'), inArray(t.commands.state, ['pending', 'failed']))).all().map(row => row.id));
-    const byAccount = new Map<number, MessageRow[]>();
+    const byAccount = new Map<number, typeof candidates>();
     for (const row of markAllReadTargets(candidates)) {
       if (busy.has(row.id)) continue;
       byAccount.set(row.accountId, [...(byAccount.get(row.accountId) ?? []), row]);

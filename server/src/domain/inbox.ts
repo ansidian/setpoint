@@ -111,7 +111,7 @@ export function nextInboxChange(messages: InboxCandidate[], now: string): string
  * sign-in alert isn't swept away with the newsletters. Trashed and archived mail, which the Inbox
  * doesn't show, isn't touched.
  */
-export function markAllReadTargets<T extends InboxCandidate>(messages: T[]): T[] {
+export function markAllReadTargets<T extends Pick<InboxCandidate, 'unread' | 'trashedAt' | 'archivedAt' | 'lane' | 'doneAt' | 'kind'>>(messages: T[]): T[] {
   return messages.filter(message => message.unread && !message.trashedAt && !message.archivedAt
     && !(message.lane === 'attention' && !message.doneAt) && !(message.lane === 'fyi' && message.kind === 'security'));
 }
