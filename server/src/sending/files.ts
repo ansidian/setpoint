@@ -19,7 +19,7 @@ import * as t from '../db/schema.ts';
 import {notFound, SetpointError} from '../errors.ts';
 import {isoNow, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
-import {assertEditable, getDraftRow, noteDraft} from './drafts.ts';
+import {assertEditable, getDraftRow, isEmptyDraft, noteDraft} from './drafts.ts';
 import type {DraftRow} from './drafts.ts';
 
 export const DRAFT_FILES_DIR = 'draft-files';
@@ -87,12 +87,13 @@ export function addDraftFile(store: Store, dir: string, draftId: number, file: {
   try {
     const row = transaction(store, () => {
       const draft = check();
+      const wasEmpty = isEmptyDraft(store, draft);
       const inserted = store.db.insert(t.draftFiles).values({
         draftId, filename: cleanFilename(file.filename), mimeType: /^[\w.+-]+\/[\w.+-]+$/.test(file.mimeType) ? file.mimeType.toLowerCase() : 'application/octet-stream',
         sizeBytes: file.content.length, createdAt: isoNow(store),
       }).returning().get();
       fs.renameSync(temporary, filePath(dir, inserted.id));
-      touch(store, draft);
+      touch(store, draft, wasEmpty);
       return inserted;
     });
     return presentFile(row);
@@ -107,9 +108,10 @@ export function removeDraftFile(store: Store, dir: string, draftId: number, file
   transaction(store, () => {
     const draft = getDraftRow(store, draftId);
     assertEditable(draft);
+    const wasEmpty = isEmptyDraft(store, draft);
     const removed = store.db.delete(t.draftFiles).where(and(eq(t.draftFiles.id, fileId), eq(t.draftFiles.draftId, draftId))).run().changes;
     if (!removed) throw notFound('That file isn\'t on this draft.');
-    touch(store, draft);
+    touch(store, draft, wasEmpty);
   });
   fs.rmSync(filePath(dir, fileId), {force: true});
 }
@@ -133,12 +135,13 @@ export function takeDraftFiles(store: Store, draftId: number, ids: number[]): Dr
     const total = totalWith(store, draft, moving.reduce((sum, row) => sum + row.sizeBytes, 0));
     if (moving.length && total > ATTACHMENTS_MAX_BYTES) throw tooLarge(total);
     const others = new Set(moving.flatMap(row => (row.draftId === null ? [] : [row.draftId])));
+    const before = new Map([draft, ...[...others].flatMap(other => store.db.select().from(t.drafts).where(eq(t.drafts.id, other)).all())].map(row => [row.id, {row, empty: isEmptyDraft(store, row)}]));
     if (moving.length) store.db.update(t.draftFiles).set({draftId, releasedAt: null}).where(inArray(t.draftFiles.id, moving.map(row => row.id))).run();
     for (const other of others) {
-      const row = store.db.select().from(t.drafts).where(eq(t.drafts.id, other)).get();
-      if (row) touch(store, row);
+      const was = before.get(other);
+      if (was) touch(store, was.row, was.empty);
     }
-    touch(store, draft);
+    touch(store, draft, before.get(draft.id)!.empty);
     return draftFileRows(store, draftId).map(presentFile);
   });
 }
@@ -180,8 +183,11 @@ export function sweepDraftFiles(store: Store, dir: string, {disk = false} = {}):
   return gone.length;
 }
 
-/** A draft's files changed: its updated time moves and its composer hears of it, as of a save. */
-function touch(store: Store, draft: DraftRow) {
-  store.db.update(t.drafts).set({updatedAt: isoNow(store)}).where(eq(t.drafts.id, draft.id)).run();
-  noteDraft(store, draft, {saved: true});
+/**
+ * A draft's files changed: its updated time moves and its composer hears of it, as of a save. Its
+ * email hears of it too when that made it written or empty again (`wasEmpty`, from before).
+ */
+function touch(store: Store, draft: DraftRow, wasEmpty: boolean) {
+  const updated = store.db.update(t.drafts).set({updatedAt: isoNow(store)}).where(eq(t.drafts.id, draft.id)).returning().get()!;
+  noteDraft(store, updated, {saved: true, flipped: wasEmpty !== isEmptyDraft(store, updated)});
 }

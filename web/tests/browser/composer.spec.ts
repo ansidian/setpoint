@@ -30,6 +30,16 @@ async function idOf(setpoint: Setpoint, subject: string): Promise<number> {
 }
 
 const drafts = async (setpoint: Setpoint) => (await setpoint.api<DraftsOut>('GET', '/mail/drafts')).drafts;
+// Every draft the server keeps, from its database, the untouched ones too.
+const kept = async (setpoint: Setpoint) => {
+  const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+  try {
+    database.exec('PRAGMA busy_timeout = 5000');
+    return database.prepare('SELECT id, kind FROM drafts ORDER BY id').all() as {id: number; kind: string}[];
+  } finally {
+    database.close();
+  }
+};
 // The one composer each journey has open, in the pane or in a window.
 const composer = (page: Page) => page.locator('.composer');
 const chips = (page: Page, field: string) => composer(page).locator(`.cmp-row:has(input[aria-label="${field}"]) .cmp-chip`).evaluateAll(found => found.map(chip => chip.firstChild?.textContent));
@@ -309,30 +319,25 @@ test('Drafts lists the newest first: a reply opens under its email, a refused on
   }
 });
 
-test('a composer left with nothing written leaves nothing in Drafts: C, then Esc in its window; R, then Esc', async () => {
+test('a composer left with nothing written is in no Drafts list or sidebar row, and Esc leaves nothing behind: C in a window, then R', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const id = await idOf(setpoint, 'Dinner Friday?');
     const page = await openEmail(setpoint, id);
-    await page.keyboard.press('c');
-    await page.locator('.cmp-window .composer').waitFor();
-    await until('the new message is a draft', () => drafts(setpoint), found => found.length === 1);
-    // The sidebar's Drafts row is seen each time before it's read as gone: the sidebar learns of a
-    // draft's end by its own refresh, after the server's answer.
     const draftsRow = page.locator('.sb .nav.sub', {hasText: 'Drafts'});
-    await draftsRow.waitFor();
-    await page.keyboard.press('Escape');
-    await until('the window closes', () => page.locator('.cmp-window').count(), count => count === 0);
-    // The email the pane shows stays.
-    await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
-    await until('the untouched message is gone', () => drafts(setpoint), found => found.length === 0);
-    await draftsRow.waitFor({state: 'detached'});
-    await page.keyboard.press('r');
-    await answered(page);
-    await draftsRow.waitFor();
-    await page.keyboard.press('Escape');
-    await until('the untouched reply is gone too', () => drafts(setpoint), found => found.length === 0);
-    await draftsRow.waitFor({state: 'detached'});
+    for (const [key, what] of [['c', 'new message'], ['r', 'reply']] as const) {
+      await page.keyboard.press(key);
+      await answered(page);
+      const [started] = await until(`the ${what} is started`, () => kept(setpoint), found => found.length === 1);
+      await setpoint.idle();
+      assert.deepEqual(await drafts(setpoint), [], `the untouched ${what} isn't in Drafts`);
+      assert.equal(await draftsRow.count(), 0, 'no Drafts row in the sidebar');
+      await page.keyboard.press('Escape');
+      await until('the composer closes', () => composer(page).count(), count => count === 0);
+      // The email the pane shows stays.
+      await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
+      await until(`the untouched ${what} is gone`, () => kept(setpoint), found => !found.some(one => one.id === started!.id));
+    }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -1,8 +1,9 @@
-// How a draft starts: a reply's recipients, its subject and its From, as tables.
+// How a draft starts: a reply's recipients, its subject and its From, and whether a draft is still
+// as it started, as tables.
 import type {Recipient} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {draftSubject, fillAnswer, newMessageAccount, replyFrom} from '@setpoint/shared/draftFill';
-import type {AnsweredEmail} from '@setpoint/shared/draftFill';
+import {draftEmpty, draftSubject, fillAnswer, NEW_MESSAGE_FILL, newMessageAccount, replyFrom} from '@setpoint/shared/draftFill';
+import type {AnsweredEmail, DraftContent} from '@setpoint/shared/draftFill';
 
 const sam: Recipient = {name: 'Sam Ortiz', address: 'sam.ortiz@example.org'};
 const june: Recipient = {name: 'June Park', address: 'june.park@example.org'};
@@ -85,5 +86,40 @@ describe('newMessageAccount', () => {
     ['no accounts', [], null, null, null],
   ])('%s', (_name, accounts, asked, last, expected) => {
     expect(newMessageAccount(accounts, asked, last)).toBe(expected);
+  });
+});
+
+describe('draftEmpty: a draft exactly as the server filled it', () => {
+  const words = [{type: 'paragraph' as const, runs: [{text: 'Hi', marks: [], href: null}]}];
+  const reply = fillAnswer('reply', email(), ACCOUNT, OWN);
+  const forward = fillAnswer('forward', email(), ACCOUNT, OWN);
+  const as = (fill: {to: Recipient[]; cc: Recipient[]; subject: string}, fields: Partial<DraftContent> = {}): DraftContent => ({
+    to: fill.to, cc: fill.cc, bcc: [], subject: fill.subject, body: [], quote: null, removedAttachments: [], files: 0, sending: false, ...fields,
+  });
+  test.each<[string, DraftContent, typeof reply | typeof NEW_MESSAGE_FILL | null, boolean]>([
+    ['a new message with nothing', as(NEW_MESSAGE_FILL), NEW_MESSAGE_FILL, true],
+    ['a new message with only a blank line', as(NEW_MESSAGE_FILL, {body: [{type: 'paragraph', runs: []}]}), NEW_MESSAGE_FILL, true],
+    ['a new message with a blank subject', as(NEW_MESSAGE_FILL, {subject: '  '}), NEW_MESSAGE_FILL, true],
+    ['a new message with someone to send to', as(NEW_MESSAGE_FILL, {to: [sam]}), NEW_MESSAGE_FILL, false],
+    ['a new message with a subject', as(NEW_MESSAGE_FILL, {subject: 'Lunch'}), NEW_MESSAGE_FILL, false],
+    ['a new message with words', as(NEW_MESSAGE_FILL, {body: words}), NEW_MESSAGE_FILL, false],
+    ['a new message with only a file', as(NEW_MESSAGE_FILL, {files: 1}), NEW_MESSAGE_FILL, false],
+    ['a reply as it started', as(reply), reply, true],
+    ['a reply with its recipient written again in capitals and another name', as(reply, {to: [{name: 'Sam', address: 'SAM.ORTIZ@example.org'}]}), reply, true],
+    ['a reply with words', as(reply, {body: words}), reply, false],
+    ['a reply re-addressed', as(reply, {to: [june]}), reply, false],
+    ['a reply with someone added in Cc', as(reply, {cc: [june]}), reply, false],
+    ['a reply with its recipient taken off', as(reply, {to: []}), reply, false],
+    ['a reply with someone in Bcc', as(reply, {bcc: [june]}), reply, false],
+    ['a reply whose subject was edited', as(reply, {subject: 'Re: Thursday, moved'}), reply, false],
+    ['a reply whose quote was trimmed', as(reply, {quote: []}), reply, false],
+    ['a reply with only a file', as(reply, {files: 1}), reply, false],
+    ['a reply being sent', as(reply, {sending: true}), reply, false],
+    ['a forward as it started, no one to send to', as(forward), forward, true],
+    ['a forward with someone to send to', as(forward, {to: [june]}), forward, false],
+    ['a forward with an original taken off', as(forward, {removedAttachments: [7]}), forward, false],
+    ['a reply whose email is gone, so its start isn\'t known', as(reply), null, false],
+  ])('%s', (_name, draft, fill, expected) => {
+    expect(draftEmpty(draft, fill)).toBe(expected);
   });
 });

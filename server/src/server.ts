@@ -30,6 +30,7 @@ import {RuleTrashScheduler} from './triage/ruleTrash.ts';
 import {loadKeyring} from './secrets/crypto.ts';
 import {storeClock} from './store.ts';
 import type {Store} from './store.ts';
+import {sweepEmptyDrafts} from './sending/drafts.ts';
 import {draftFilesDir, sweepDraftFiles} from './sending/files.ts';
 import {SendWorker} from './sending/worker.ts';
 import {SyncEngine} from './sync/engine.ts';
@@ -92,6 +93,16 @@ const mailpiecesWorker = new MailpiecesWorker({store, fetchSource: (sourceId, me
 // files from the data directory's draft-files/ (what no draft will take is swept at start).
 const draftFiles = draftFilesDir(config.dataDir);
 sweepDraftFiles(store, draftFiles, {disk: true});
+// Empty drafts a closed tab or a crash left behind, untouched for a day: at start, then hourly.
+sweepEmptyDrafts(store);
+const emptyDrafts = setInterval(() => {
+  try {
+    sweepEmptyDrafts(store);
+  } catch (error) {
+    console.error('Empty drafts', error);
+  }
+}, 60 * 60_000);
+emptyDrafts.unref();
 const sender = new SendWorker({
   store, filesDir: draftFiles, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
   attachment: (sourceId, message, attachmentId) => engine.attachment(sourceId, message, attachmentId),
@@ -131,6 +142,7 @@ function shutdown(signal: NodeJS.Signals) {
   void icloud.close();
   reminders.stop();
   ruleTrash.stop();
+  clearInterval(emptyDrafts);
   server.close(() => {
     sqlite.close();
     process.exit(0);

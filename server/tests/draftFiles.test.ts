@@ -97,14 +97,20 @@ describe('Attaching', () => {
     expect(onDisk(dir)).toEqual([String(again.id)]);
   });
 
-  test('a reply\'s file attached or removed is a save: the live stream names the draft only, not its email', async () => {
+  test('a reply\'s file attached or removed is a save: the live stream names its email only when that makes it written or empty again', async () => {
     const {w, start, upload, api} = await setup();
     const reply = await start({kind: 'reply', message_id: THEO});
     const mailEvents = () => liveEvents(w).flatMap(event => (event.type === 'mail' ? [event] : []));
     const file = (await upload(reply.id, 'Notes.txt', 'Bring boots.')).body;
+    expect(mailEvents().at(-1)).toMatchObject({messages: [THEO], drafts: [reply.id]});
+    expect((await api.send('GET', '/api/mail/drafts')).body.count).toBe(1);
+    const second = (await upload(reply.id, 'Map.txt', 'North trail.')).body;
+    expect(mailEvents().at(-1)).toMatchObject({messages: [], drafts: [reply.id]});
+    await api.send('DELETE', `/api/mail/drafts/${reply.id}/files/${second.id}`);
     expect(mailEvents().at(-1)).toMatchObject({messages: [], drafts: [reply.id]});
     await api.send('DELETE', `/api/mail/drafts/${reply.id}/files/${file.id}`);
-    expect(mailEvents().at(-1)).toMatchObject({messages: [], drafts: [reply.id]});
+    expect(mailEvents().at(-1)).toMatchObject({messages: [THEO], drafts: [reply.id]});
+    expect((await api.send('GET', '/api/mail/drafts')).body.count).toBe(0);
   });
 
   test('Remove takes only the draft\'s own file: another draft\'s id is not found, and that file stays', async () => {

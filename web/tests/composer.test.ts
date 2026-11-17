@@ -4,7 +4,7 @@
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {attachmentsTotal, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {arrangeWindows, canRedo, canUndo, chipLabel, fillAround, forwardLines, hasOthers, megabytes, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, unwritten, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
+import {arrangeWindows, canRedo, canUndo, chipLabel, emptyDraft, fillAround, forwardLines, hasOthers, megabytes, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
 import type {Versions} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
@@ -84,24 +84,25 @@ describe('the quote', () => {
   });
 });
 
-describe('a draft nothing was written in, which closing leaves out of Drafts', () => {
+describe('a draft still as the server filled it, which closing leaves out of Drafts (the rule\'s own table is the server\'s draftFill test)', () => {
   const words = [{type: 'paragraph' as const, runs: [{text: 'Hi', marks: [], href: null}]}];
-  const blank = {kind: 'new' as const, to: [] as Recipient[], cc: [] as Recipient[], bcc: [] as Recipient[], subject: '', body: [], quote: null};
-  test.each<[string, Parameters<typeof unwritten>[0], boolean]>([
-    ['a new message with nothing', blank, true],
-    ['a new message with only a blank line', {...blank, body: [{type: 'paragraph', runs: []}]}, true],
-    ['a new message with someone to send to', {...blank, to: [SAM]}, false],
-    ['a new message with a subject', {...blank, subject: 'Lunch'}, false],
-    ['a new message with words', {...blank, body: words}, false],
-    ['a reply with its server-filled recipients and subject and no words', {...blank, kind: 'reply', to: [SAM], subject: 'Re: Dinner'}, true],
-    ['a reply with words', {...blank, kind: 'reply_all', to: [SAM], body: words}, false],
-    ['a reply whose quote was trimmed', {...blank, kind: 'reply', to: [SAM], quote: []}, false],
-    ['a forward with no one yet', {...blank, kind: 'forward', subject: 'Fwd: Dinner'}, true],
-    ['a forward with someone to send to', {...blank, kind: 'forward', to: [JUNE], subject: 'Fwd: Dinner'}, false],
-    ['a reply with only a file attached', {...blank, kind: 'reply', to: [SAM], files: [{id: 1, filename: 'Notes.txt', mime_type: 'text/plain', size_bytes: 12}]}, false],
-    ['a new message with only a file attached', {...blank, files: [{id: 1, filename: 'Notes.txt', mime_type: 'text/plain', size_bytes: 12}]}, false],
-  ])('%s', (_name, draft, expected) => {
-    expect(unwritten(draft)).toBe(expected);
+  const dinner = email({to: [ME, JUNE], cc: []});
+  const blank = {kind: 'new' as const, to: [] as Recipient[], cc: [] as Recipient[], bcc: [] as Recipient[], subject: '', body: [], quote: null, removed_attachments: [], send: null};
+  const reply = {...blank, kind: 'reply' as const, to: [SAM], subject: 'Re: Dinner'};
+  test.each<[string, Parameters<typeof emptyDraft>[0], Email | undefined, FromOut | undefined, boolean]>([
+    ['a new message with nothing, before anything loads', blank, undefined, undefined, true],
+    ['a new message with a subject', {...blank, subject: 'Lunch'}, undefined, undefined, false],
+    ['a reply as its email fills it', reply, dinner, FROM, true],
+    ['a reply to all as its email fills it', {...reply, kind: 'reply_all', to: [SAM, JUNE]}, dinner, FROM, true],
+    ['a reply only re-addressed', {...reply, to: [JUNE]}, dinner, FROM, false],
+    ['a reply with words', {...reply, body: words}, dinner, FROM, false],
+    ['a forward as its email fills it', {...blank, kind: 'forward', subject: 'Fwd: Dinner'}, dinner, FROM, true],
+    ['a reply whose email isn\'t loaded counts as written', reply, undefined, FROM, false],
+    ['a reply before From loads counts as written', reply, dinner, undefined, false],
+    ['a reply to mail the user sent, back to its own recipients', {...reply, to: [JUNE]}, email({from_name: 'User', from_address: ME.address, to: [JUNE], cc: []}), FROM, true],
+    ['a reply with only a file', {...reply, files: [{id: 1, filename: 'Notes.txt', mime_type: 'text/plain', size_bytes: 12}]}, dinner, FROM, false],
+  ])('%s', (_name, draft, message, from, expected) => {
+    expect(emptyDraft(draft, message, from)).toBe(expected);
   });
 });
 

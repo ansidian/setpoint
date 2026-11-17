@@ -52,7 +52,7 @@
 // at once, a chip showing it while it goes; one that would take the attachments over 25 MB (with a
 // forward's kept originals) is refused before it leaves, and the server refuses it again, the
 // reason on the composer either way. Send waits for the uploads under way, and stops, the composer
-// back, if one failed. A draft with a file or an upload is never "unwritten". Discard's Undo and the
+// back, if one failed. A draft with a file or an upload is never empty. Discard's Undo and the
 // reply-type menu take the files onto the new draft by id (the server keeps a gone draft's files a
 // few minutes for that).
 import {ATTACHMENTS_MAX_BYTES, attachmentsTotal} from '@setpoint/shared';
@@ -62,7 +62,7 @@ import {useSyncExternalStore} from 'react';
 import {ApiFailure, getCached, getJson, setCached} from '../../api/client.ts';
 import {discardDraft, draftPath, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
-import {fillAround, hasOthers, megabytes, NO_VERSIONS, recordVersion, unwritten} from '../../logic/composer.ts';
+import {emptyDraft, fillAround, hasOthers, megabytes, NO_VERSIONS, recordVersion} from '../../logic/composer.ts';
 import {broughtBackLine, counted, discardedLine, discardFailedLine} from '../../logic/selection.ts';
 import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
@@ -196,8 +196,11 @@ function forgetSaves(draftId: number) {
   saveErrors.delete(draftId);
 }
 
+// A closing tab: its open drafts still as they were filled go at once, and every change still
+// queued or owed goes as a last request.
 if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', () => {
+    for (const one of composers) if (one.draftId !== null) discardIfEmpty(one.draftId, {keepalive: true});
     for (const draftId of new Set([...queued.keys(), ...owed.keys()])) void flushSave(draftId, {keepalive: true}).catch(() => {});
   });
 }
@@ -205,19 +208,27 @@ if (typeof window !== 'undefined') {
 // ---- Opening and closing ----
 
 /**
- * The composer gives up its draft (closed, or another opening): saved now, or, when nothing was
- * written in it, discarded quietly, so an R or C let go of leaves nothing in Drafts.
+ * Discards the draft quietly when it is still as the server filled it (logic/composer.ts ›
+ * emptyDraft) with no upload under way, its queued changes dropped. Answers whether it went.
+ */
+function discardIfEmpty(draftId: number, {keepalive = false} = {}): boolean {
+  const draft = getCached<DraftOut>(draftPath(draftId));
+  if (!draft || uploadsOf(draftId).length) return false;
+  const now = {...draft, ...owedOf(draftId)} as DraftOut;
+  const message = now.message_id === null ? undefined : getCached<MessageOut>(messagePath(now.message_id));
+  if (!emptyDraft(now, message, getCached<FromOut>(FROM_PATH))) return false;
+  forgetSaves(draftId);
+  discarded.add(draftId);
+  void discardDraft(draftId, now.message_id, {keepalive}).catch(() => {}).finally(() => discarded.delete(draftId));
+  return true;
+}
+
+/**
+ * The composer gives up its draft (closed, or another opening): saved now, or, when it is still as
+ * the server filled it, discarded quietly, so an R or C let go of leaves nothing in Drafts.
  */
 function letGo(draftId: number) {
-  const draft = getCached<DraftOut>(draftPath(draftId));
-  const now = draft ? {...draft, ...owedOf(draftId)} as DraftOut : null;
-  if (now && !now.send && unwritten(now) && !uploadsOf(draftId).length) {
-    forgetSaves(draftId);
-    discarded.add(draftId);
-    void discardDraft(draftId, now.message_id).catch(() => {}).finally(() => discarded.delete(draftId));
-    return;
-  }
-  void flushSave(draftId).catch(() => {});
+  if (!discardIfEmpty(draftId)) void flushSave(draftId).catch(() => {});
 }
 
 /** A composer gives way: its draft let go of, or, still waiting, the draft once it arrives (arrive). */

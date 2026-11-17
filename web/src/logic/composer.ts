@@ -1,9 +1,10 @@
-// The composer's pure rules: whether an email has anyone for Reply all (the server's own fill rule,
-// shared/src/draftFill.ts), what a typed recipient is, a chip's words, the reply's quote as the
+// The composer's pure rules: whether an email has anyone for Reply all and whether a draft is still
+// as it was filled (the server's own rules, shared/src/draftFill.ts), what a typed recipient is, a chip's words, the reply's quote as the
 // composer shows it under its fold, and help me write's versions.
 import {DRAFT_VERSIONS_MAX} from '@setpoint/shared';
 import type {DraftOut, DraftUpdateInput, FromOut, MessageOut, Recipient} from '@setpoint/shared';
-import {fillAnswer} from '@setpoint/shared/draftFill';
+import {draftEmpty, fillAnswer, NEW_MESSAGE_FILL} from '@setpoint/shared/draftFill';
+import type {DraftFill} from '@setpoint/shared/draftFill';
 import {isEmpty, readHtml, sameDescription} from '@setpoint/shared/richText';
 import type {Block} from '@setpoint/shared/richText';
 import {paragraphs} from './body.ts';
@@ -89,16 +90,24 @@ export function quoteOf(message: Pick<MessageOut, 'body_html' | 'body_text'>): B
   return paragraphs(message.body_text).map(lines => ({type: 'paragraph' as const, runs: [{text: lines.join('\n'), marks: [], href: null}]}));
 }
 
+type Drafted = Pick<DraftOut, 'kind' | 'to' | 'cc' | 'bcc' | 'subject' | 'body' | 'quote' | 'removed_attachments' | 'send'> & Partial<Pick<DraftOut, 'files'>>;
+
 /**
- * Whether nothing was written in a draft, so closing it leaves nothing behind: no words in the body,
- * no file attached and the quote untouched; for a forward no one to send to either, and for a new message no subject
- * too. A reply's recipients and subject are the server's, so its body decides.
+ * Whether a draft is still exactly as the server filled it, so closing it leaves nothing behind
+ * (draftEmpty). A reply's or forward's start is the server's fill of `message`, read with From as
+ * they've loaded; while either isn't in, the draft counts as written, and the server, which leaves
+ * empty drafts out of Drafts, sweeps it later.
  */
-export function unwritten(draft: Pick<DraftOut, 'kind' | 'to' | 'cc' | 'bcc' | 'subject' | 'body' | 'quote'> & Partial<Pick<DraftOut, 'files'>>): boolean {
-  if (!isEmpty(draft.body) || draft.quote !== null || (draft.files?.length ?? 0) > 0) return false;
-  if (draft.kind === 'reply' || draft.kind === 'reply_all') return true;
-  if (draft.to.length + draft.cc.length + draft.bcc.length > 0) return false;
-  return draft.kind === 'forward' || !draft.subject.trim();
+export function emptyDraft(draft: Drafted, message: Answered | undefined, from: FromOut | undefined): boolean {
+  let fill: DraftFill | null = NEW_MESSAGE_FILL;
+  if (draft.kind !== 'new') {
+    const read = message ? readAnswered(message, from) : null;
+    fill = read ? fillAnswer(draft.kind, read.email, read.account, read.own) : null;
+  }
+  return draftEmpty({
+    to: draft.to, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body, quote: draft.quote,
+    removedAttachments: draft.removed_attachments, files: draft.files?.length ?? 0, sending: !!draft.send,
+  }, fill);
 }
 
 /**

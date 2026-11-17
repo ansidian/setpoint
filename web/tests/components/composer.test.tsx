@@ -26,6 +26,7 @@ import {ComposerRoot, ComposerSlot, ComposerWindows} from '../../src/app/compose
 import {ToastPill} from '../../src/app/ToastPill.tsx';
 import {dismissToast} from '../../src/app/toast.ts';
 import {navigate} from '../../src/app/router.ts';
+import {composerHost} from '../../src/app/compose/place.ts';
 import {closeComposerAt, dock, DRAFT_SAVE_MS, newMessage, openComposers, openDraft, showEmail, startComposer, useComposers, useOpenComposer} from '../../src/app/compose/composer.ts';
 
 const SAM: Recipient = {name: 'Sam Lee', address: 'sam.lee@example.com'};
@@ -535,6 +536,60 @@ test.each([
     await expect.poll(() => saves.at(-1)).toEqual(kind === 'new' ? {draft: draft.id, subject: words} : {body: paragraph(words)});
     expect(discarded).toEqual([]);
   }
+});
+
+test('the window\'s × on a reply only re-addressed keeps it: a recipient changed is something written', async () => {
+  const draft = draftOf({});
+  const {saves, discarded} = server(draft);
+  await render(<Pane />);
+  reading(99);
+  startComposer({kind: 'reply', message_id: EMAIL}, {floating: true});
+  await expect.poll(inWindow).not.toBeNull();
+  await userEvent.click(field('To'));
+  await userEvent.keyboard('june.park@example.org,');
+  await userEvent.click(page.getByRole('button', {name: 'Close', exact: true}));
+  expect(openComposers()).toEqual([]);
+  await expect.poll(() => saves.at(-1)?.to).toEqual([SAM, {name: null, address: JUNE.address}]);
+  expect(discarded).toEqual([]);
+});
+
+test('the window\'s × on a reply with nothing written, over its own email, docks it there: nothing is discarded', async () => {
+  const draft = draftOf({});
+  const {discarded} = server(draft);
+  await render(<Pane />);
+  reading(EMAIL);
+  startComposer({kind: 'reply', message_id: EMAIL}, {floating: true});
+  await expect.poll(inWindow).not.toBeNull();
+  await userEvent.click(page.getByRole('button', {name: 'Back in the reading pane'}));
+  await expect.poll(() => openComposers().map(one => [one.draftId, one.floating])).toEqual([[draft.id, false]]);
+  expect(discarded).toEqual([]);
+});
+
+test('a closing tab discards its open drafts with nothing written at once, and saves the rest as a last request', async () => {
+  const empty = draftOf({});
+  const written = draftOf({kind: 'new', message_id: null, to: [], subject: ''});
+  const fresh = draftOf({kind: 'new', message_id: null, to: [], subject: ''});
+  const {saves, discarded} = server(empty, [], MESSAGE, [written, fresh]);
+  const keepalive: string[] = [];
+  const answer = vi.mocked(window.fetch).getMockImplementation()!;
+  vi.mocked(window.fetch).mockImplementation((input, init) => {
+    if (init?.keepalive) keepalive.push(`${init.method} ${new URL(String(input), location.href).pathname}`);
+    return answer(input, init);
+  });
+  await render(<Pane />);
+  reading(EMAIL);
+  startComposer({kind: 'reply', message_id: EMAIL});
+  newMessage();
+  newMessage();
+  await expect.poll(() => openComposers().map(one => one.draftId).sort()).toEqual([empty.id, written.id, fresh.id].sort());
+  const subjectOf = (draftId: number) => composerHost(openComposers().find(one => one.draftId === draftId)!.key).querySelector<HTMLInputElement>('input[aria-label="Subject"]');
+  await expect.poll(() => subjectOf(written.id)).not.toBeNull();
+  holdSaves();
+  await userEvent.fill(subjectOf(written.id)!, 'Hike');
+  window.dispatchEvent(new PageTransitionEvent('pagehide'));
+  await expect.poll(() => [...discarded].sort()).toEqual([empty.id, fresh.id].sort());
+  await expect.poll(() => saves.at(-1)).toEqual({draft: written.id, subject: 'Hike'});
+  expect(keepalive.sort()).toEqual([`DELETE /api/mail/drafts/${empty.id}`, `DELETE /api/mail/drafts/${fresh.id}`, `PATCH /api/mail/drafts/${written.id}`].sort());
 });
 
 test('a reply\'s window says what its × will do as the reader moves: back under its own email, else Close', async () => {

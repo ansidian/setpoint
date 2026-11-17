@@ -11,8 +11,15 @@
 //   else that account's own address. A new message starts from the account asked for, else the
 //   one the user last sent from, else the first account.
 // Recipients a header never named are null (unknown): they add no one.
+//
+// A draft is empty while it is exactly as the server filled it (draftEmpty): what a reply or
+// forward starts with never makes it a draft, any change the user makes does. Empty drafts stay out
+// of Drafts, its count and an email's "Draft" mark, Esc discards them quietly, a closing tab
+// discards them, and the server sweeps those untouched for a day.
 import type {DraftKind} from './api/drafts.ts';
 import type {Recipient} from './message.ts';
+import {isEmpty} from './richText.ts';
+import type {Block} from './richText.ts';
 
 export interface AnsweredEmail {
   fromName: string;
@@ -99,4 +106,37 @@ export function newMessageAccount(accountIds: number[], asked: number | null, la
   if (asked !== null && accountIds.includes(asked)) return asked;
   if (lastSentFrom !== null && accountIds.includes(lastSentFrom)) return lastSentFrom;
   return accountIds[0] ?? null;
+}
+
+/** What a draft starts with that the user can change: its recipients and subject. */
+export type DraftFill = Pick<FilledDraft, 'to' | 'cc' | 'subject'>;
+
+/** A new message starts with no one to send to and no subject. */
+export const NEW_MESSAGE_FILL: DraftFill = {to: [], cc: [], subject: ''};
+
+/** What a draft holds, as draftEmpty reads it. `files` counts the user's own; `sending`: Send has it (held, sending or failed). */
+export interface DraftContent {
+  to: Recipient[];
+  cc: Recipient[];
+  bcc: Recipient[];
+  subject: string;
+  body: Block[];
+  quote: Block[] | null;
+  removedAttachments: number[];
+  files: number;
+  sending: boolean;
+}
+
+const addresses = (recipients: Recipient[]) => recipients.map(recipient => lower(recipient.address)).sort().join('\n');
+
+/**
+ * Whether a draft is still exactly as the server filled it (`fill`): no words, no file, the quote
+ * and a forward's originals untouched, no one in Bcc, and the same people (by address, in any
+ * order) and subject it started with. From and help me write's line don't count. A draft whose
+ * start isn't known (null: its email is gone) or that Send has is never empty.
+ */
+export function draftEmpty(draft: DraftContent, fill: DraftFill | null): boolean {
+  if (!fill || draft.sending || draft.files > 0 || draft.quote !== null || draft.removedAttachments.length > 0 || draft.bcc.length > 0) return false;
+  if (!isEmpty(draft.body)) return false;
+  return addresses(draft.to) === addresses(fill.to) && addresses(draft.cc) === addresses(fill.cc) && draft.subject.trim() === fill.subject.trim();
 }

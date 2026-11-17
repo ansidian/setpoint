@@ -4,6 +4,7 @@ import {SEED_NOW, SEND_HOLD_MS} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import * as t from '../src/db/schema.ts';
+import {sweepEmptyDrafts} from '../src/sending/drafts.ts';
 import {removeMessages} from '../src/sync/mailMirror.ts';
 import {liveEvents, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -16,6 +17,7 @@ const SAM_LEE = 21;
 const PERSONAL = 2;
 const BUSINESS = 1;
 const WORK = 3;
+const DAY = 24 * 60 * 60_000;
 
 async function setup() {
   const w = world({seed: true});
@@ -67,7 +69,8 @@ describe('Starting a draft', () => {
     const first = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'new'}})).body;
     const second = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'new'}})).body;
     expect(first.id).not.toBe(second.id);
-    expect((await api.send('GET', '/api/mail/drafts')).body.count).toBe(5);
+    // Only the reply has anything written.
+    expect((await api.send('GET', '/api/mail/drafts')).body.count).toBe(1);
   });
 
   test('a new message starts from the account last sent from, or the one asked for', async () => {
@@ -142,6 +145,7 @@ describe('Listing and discarding', () => {
     const reply = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: THEO}})).body;
     w.advance(60_000);
     const fresh = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'new'}})).body;
+    await api.send('PATCH', `/api/mail/drafts/${fresh.id}`, {body: {subject: 'Lunch'}});
     w.advance(60_000);
     await api.send('PATCH', `/api/mail/drafts/${reply.id}`, {body: {body: body('Count me in, see you Friday.')}});
     const listed = (await api.send('GET', '/api/mail/drafts')).body;
@@ -159,15 +163,76 @@ describe('Listing and discarding', () => {
     expect((await api.send('GET', `/api/mail/messages/${THEO}`)).body.draft).toBeUndefined();
   });
 
-  test('a reply\'s start and discard name its email on the live stream, a save the draft only', async () => {
+  test('a reply\'s start and discard name its email on the live stream, and a save that writes it or empties it again; other saves the draft only', async () => {
     const {w, api} = await setup();
     const mailEvents = () => liveEvents(w).flatMap(event => (event.type === 'mail' ? [event] : []));
     const reply = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: THEO}})).body;
     expect(mailEvents().at(-1)).toMatchObject({messages: [THEO], drafts: [reply.id]});
     await api.send('PATCH', `/api/mail/drafts/${reply.id}`, {body: {body: body('Count me in.')}});
+    expect(mailEvents().at(-1)).toMatchObject({messages: [THEO], drafts: [reply.id]});
+    await api.send('PATCH', `/api/mail/drafts/${reply.id}`, {body: {body: body('Count me in, see you Friday.')}});
+    expect(mailEvents().at(-1)).toMatchObject({messages: [], drafts: [reply.id]});
+    await api.send('PATCH', `/api/mail/drafts/${reply.id}`, {body: {body: []}});
+    expect(mailEvents().at(-1)).toMatchObject({messages: [THEO], drafts: [reply.id]});
+    await api.send('PATCH', `/api/mail/drafts/${reply.id}`, {body: {body: []}});
     expect(mailEvents().at(-1)).toMatchObject({messages: [], drafts: [reply.id]});
     await api.send('DELETE', `/api/mail/drafts/${reply.id}`);
     expect(mailEvents().at(-1)).toMatchObject({messages: [THEO], drafts: [reply.id]});
+  });
+
+  test.each([
+    ['a reply', {kind: 'reply', message_id: THEO}, {body: body('Count me in.')}],
+    ['a reply to all', {kind: 'reply_all', message_id: THEO}, {subject: 'Re: Cabin weekend, dates'}],
+    ['a forward', {kind: 'forward', message_id: THEO}, {to: [{name: null, address: 'june.park@example.org'}]}],
+    ['a reply re-addressed', {kind: 'reply', message_id: THEO}, {to: [{name: null, address: 'june.park@example.org'}]}],
+    ['a new message', {kind: 'new'}, {subject: 'Lunch'}],
+  ])('%s left as the server filled it is in no Drafts list, count or row mark; the first change shows it, and undoing it hides it', async (_name, start, change) => {
+    const {api} = await setup();
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: start})).body;
+    const shown = async () => {
+      const listed = (await api.send('GET', '/api/mail/drafts')).body;
+      const marked = (await api.send('GET', `/api/mail/messages/${THEO}`)).body.draft === true;
+      return {listed: listed.drafts.some((row: {id: number}) => row.id === draft.id), count: listed.count, marked};
+    };
+    const answers = start.kind !== 'new';
+    expect(await shown()).toEqual({listed: false, count: 0, marked: false});
+    await api.send('PATCH', `/api/mail/drafts/${draft.id}`, {body: change});
+    expect(await shown()).toEqual({listed: true, count: 1, marked: answers});
+    // Put back as it started.
+    const undo = Object.fromEntries(Object.keys(change).map(key => [key, key === 'body' ? [] : draft[key]]));
+    await api.send('PATCH', `/api/mail/drafts/${draft.id}`, {body: undo});
+    expect(await shown()).toEqual({listed: false, count: 0, marked: false});
+    // R again gets the same empty draft back.
+    if (answers) expect((await api.send('POST', '/api/mail/drafts', {body: start})).body.id).toBe(draft.id);
+  });
+
+  test('a draft being sent counts though nothing was written in it', async () => {
+    const {w, api} = await setup();
+    const reply = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: THEO}})).body;
+    w.store.db.update(t.drafts).set({sendState: 'failed', sendError: 'Refused.'}).where(eq(t.drafts.id, reply.id)).run();
+    expect((await api.send('GET', '/api/mail/drafts')).body.count).toBe(1);
+    expect((await api.send('GET', `/api/mail/messages/${THEO}`)).body.draft).toBe(true);
+  });
+
+  test('empty drafts untouched for a day are swept; written ones, ones being sent and ones touched since stay', async () => {
+    const {w, api} = await setup();
+    const start = async (input: object) => (await api.send('POST', '/api/mail/drafts', {body: input})).body.id as number;
+    const untouched = await start({kind: 'reply', message_id: THEO});
+    const fresh = await start({kind: 'new'});
+    const written = await start({kind: 'forward', message_id: THEO});
+    await api.send('PATCH', `/api/mail/drafts/${written}`, {body: {body: body('FYI')}});
+    const failed = await start({kind: 'reply_all', message_id: THEO});
+    w.store.db.update(t.drafts).set({sendState: 'failed', sendError: 'Refused.'}).where(eq(t.drafts.id, failed)).run();
+    w.advance(DAY - 60_000);
+    // Touched since: a save that leaves it empty.
+    await api.send('PATCH', `/api/mail/drafts/${fresh}`, {body: {subject: ''}});
+    expect(sweepEmptyDrafts(w.store)).toBe(0);
+    w.advance(60_000);
+    expect(sweepEmptyDrafts(w.store)).toBe(1);
+    const ids = w.store.db.select({id: t.drafts.id}).from(t.drafts).all().map(row => row.id);
+    expect(ids).not.toContain(untouched);
+    expect(ids).toEqual(expect.arrayContaining([fresh, written, failed]));
+    expect(liveEvents(w).at(-1)).toMatchObject({type: 'mail', messages: [THEO], drafts: [untouched]});
   });
 
   test('a draft outlives its email: the user\'s text stays, answering nothing', async () => {

@@ -6,8 +6,10 @@
 // from Sent (sent mail only, in its account, found by its recipients too) and from the Inbox (sent
 // mail with the rest). Tab and the quiet segments are components/sentAccounts.test.tsx's.
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {DraftsOut, FromOut, MessageOut, SentOut} from '@setpoint/shared';
+import type {FromOut, MessageOut, SentOut} from '@setpoint/shared';
 import {hasOthers} from '../../src/logic/composer.ts';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, holdToast, startSetpoint, test, until} from './harness.ts';
@@ -24,7 +26,16 @@ const results = (page: Page) => page.locator('.search-list .arow').evaluateAll(f
 const sentIds = async (setpoint: Setpoint) => (await setpoint.api<SentOut>('GET', '/mail/sent?limit=500')).days.flatMap(day => day.rows.map(row => row.id));
 const selection = (page: Page) => page.locator('section.pane.selection');
 const menu = (page: Page) => page.locator('.ctx-menu');
-const drafts = async (setpoint: Setpoint) => (await setpoint.api<DraftsOut>('GET', '/mail/drafts')).drafts;
+// Every draft the server keeps, read from its database: an untouched one is in no Drafts list.
+const drafts = async (setpoint: Setpoint) => {
+  const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+  try {
+    database.exec('PRAGMA busy_timeout = 5000');
+    return database.prepare('SELECT id, kind, message_id, subject FROM drafts ORDER BY id').all() as {id: number; kind: string; message_id: number | null; subject: string}[];
+  } finally {
+    database.close();
+  }
+};
 
 /** Right-clicks `target`, and waits for the menu to open and take the keys. */
 async function rightClick(target: Locator) {

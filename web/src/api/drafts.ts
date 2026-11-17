@@ -28,8 +28,9 @@ export async function saveDraft(id: number, changes: DraftUpdateInput, {keepaliv
   return saved;
 }
 
-export async function discardDraft(id: number, messageId: number | null): Promise<void> {
-  await sendJson<void>('DELETE', draftPath(id));
+/** Discards a draft; `keepalive` lets it outlive a closing tab. */
+export async function discardDraft(id: number, messageId: number | null, {keepalive = false} = {}): Promise<void> {
+  await sendJson<void>('DELETE', draftPath(id), undefined, {keepalive});
   refreshIfShown(DRAFTS_PATH);
   if (messageId !== null) refreshIfShown(messagePath(messageId));
 }

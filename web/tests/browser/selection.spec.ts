@@ -6,8 +6,10 @@
 // and Done act on all of it. ⌘A selects every email the list holds, and in the search field its text.
 // R, A and F on two to five selected open a composer window for each, in the list's order.
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AllOut, DraftsOut, MessageOut, MessageRowOut} from '@setpoint/shared';
+import type {AllOut, MessageOut, MessageRowOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -25,7 +27,16 @@ const items = (page: Page) => menu(page).locator('.menu-i').allTextContents();
 const message = (setpoint: Setpoint, id: number) => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`);
 const allRows = async (setpoint: Setpoint) => (await setpoint.api<AllOut>('GET', '/mail/all?limit=500')).days.flatMap(day => day.rows);
 const inAll = async (setpoint: Setpoint, id: number) => (await allRows(setpoint)).some(one => one.id === id);
-const drafts = async (setpoint: Setpoint) => (await setpoint.api<DraftsOut>('GET', '/mail/drafts')).drafts;
+// Every draft the server keeps, read from its database: an untouched one is in no Drafts list.
+const drafts = async (setpoint: Setpoint) => {
+  const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+  try {
+    database.exec('PRAGMA busy_timeout = 5000');
+    return database.prepare('SELECT id, kind, message_id, subject FROM drafts ORDER BY id').all() as {id: number; kind: string; message_id: number | null; subject: string}[];
+  } finally {
+    database.close();
+  }
+};
 // The composer windows' titles, in the order they popped out (those folded into "+N" too).
 const windowTitles = (page: Page) => page.locator('.cmp-windows .cmp-window .cmp-title-text').allTextContents();
 
