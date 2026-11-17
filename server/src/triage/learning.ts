@@ -57,12 +57,35 @@ const presentPrompt = (row: PromptRow): PatternPromptOut => ({
   id: row.id, organisation: row.organisation, type: row.type, count: row.count, protected: false, message_ids: row.messageIds, lane: 'fyi', kind: row.kind,
 });
 
+const sameIds = (a: readonly number[], b: readonly number[]) => a.length === b.length && a.every((id, i) => id === b[i]);
+
+/**
+ * The open prompts as already written down, or null when one is new or has changed (or was
+ * answered) since. Read under a deferred transaction: one snapshot, and no write lock.
+ */
+function unchangedPrompts(store: Store): PatternPromptOut[] | null {
+  return store.sqlite.transaction(() => {
+    const prompts = patternPrompts(verdicts(store), quietKeys(store));
+    if (!prompts.length) return [];
+    const keys = [...new Set(prompts.map(prompt => organisationKey(prompt.organisation)))];
+    const rows = new Map(store.db.select().from(t.patternPrompts).where(inArray(t.patternPrompts.organisationKey, keys)).all()
+      .map(row => [`${row.organisationKey}\u0000${row.type}`, row]));
+    const shown: PatternPromptOut[] = [];
+    for (const prompt of prompts) {
+      const row = rows.get(`${organisationKey(prompt.organisation)}\u0000${prompt.type}`);
+      if (!row || row.answer || row.organisation !== prompt.organisation || row.kind !== prompt.kind || row.count !== prompt.count || !sameIds(row.messageIds, prompt.messageIds)) return null;
+      shown.push(presentPrompt(row));
+    }
+    return shown;
+  }).deferred();
+}
+
 /**
  * The open pattern prompts, newest first, each written down the first time so its id and answer
- * last (and its count kept current).
+ * last (and its count kept current). A read that finds them as written writes nothing.
  */
 export function currentPrompts(store: Store): PatternPromptOut[] {
-  return transaction(store, () => {
+  return unchangedPrompts(store) ?? transaction(store, () => {
     const now = isoNow(store);
     return patternPrompts(verdicts(store), quietKeys(store)).map(prompt => {
       const key = organisationKey(prompt.organisation);

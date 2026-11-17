@@ -2,13 +2,18 @@
 // recovers, the health line, the ledger, backfilled history, once per email, and the learning loop
 // and its API (pattern prompts, Yes into a learned rule, No into quiet, rules, AI), and
 // new Attention and FYI mail sent by ntfy once sorted.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import Database from 'better-sqlite3';
 import {and, eq} from 'drizzle-orm';
-import {describe, expect, test, vi} from 'vitest';
+import {describe, expect, onTestFinished, test, vi} from 'vitest';
 import type {RuleTrash} from '@setpoint/shared';
 import {confirmCommand, failCommand, moveBackCommand} from '../src/commands/index.ts';
 import {openMessage, setDone, setPinned, trashMessage} from '../src/commands/mail.ts';
 import {trashDueAt} from '../src/domain/triageRules.ts';
 import {RuleTrashScheduler} from '../src/triage/ruleTrash.ts';
+import {openDatabase} from '../src/db/open.ts';
 import * as t from '../src/db/schema.ts';
 import {Notifier} from '../src/notify/index.ts';
 import {inbox} from '../src/queries/mail.ts';
@@ -683,6 +688,52 @@ describe('the learning loop', () => {
     expect(prompt!.message_ids).toHaveLength(4);
     // The same prompt keeps its id.
     expect(currentPrompts(world.store)[0]!.id).toBe(prompt!.id);
+  });
+
+  test('reading the prompts again with nothing changed writes nothing; a real change is written', () => {
+    const {world} = triageWorldOnly();
+    const changes = () => (world.store.sqlite.prepare('select total_changes() as n').get() as {n: number}).n;
+    const stored = () => world.store.db.select().from(t.patternPrompts).all();
+    // The first time the pattern is met, its prompt is written down.
+    const before = changes();
+    const first = currentPrompts(world.store);
+    expect(changes()).toBe(before + 1);
+    expect(stored()).toMatchObject([{id: first[0]!.id, organisation: 'Northwind Engineering', count: 4, answer: null}]);
+    const once = changes();
+    expect(currentPrompts(world.store)).toEqual(first);
+    expect(changes()).toBe(once);
+
+    // A fifth digest cleared unopened: the same prompt, its count and emails written.
+    const [fifth] = upsertMessages(world.store, world.accountId('Jobs'), [world.fetched({subject: 'Northwind Engineering Digest · October 8'})], {backfill: true}).inserted;
+    world.store.db.update(t.messages).set({backfill: false, lane: 'attention', organisation: 'Northwind Engineering', type: 'newsletter', kind: 'updates'}).where(eq(t.messages.id, fifth!)).run();
+    setDone(world.store, fifth!, true);
+    const grown = changes();
+    const [prompt] = currentPrompts(world.store);
+    expect(prompt).toMatchObject({id: first[0]!.id, count: 5});
+    expect(prompt!.message_ids).toContain(fifth);
+    expect(changes()).toBe(grown + 1);
+    expect(stored()).toMatchObject([{id: first[0]!.id, count: 5, messageIds: prompt!.message_ids}]);
+  });
+
+  test('an unchanged read of the prompts takes no write lock', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-prompts-'));
+    onTestFinished(() => fs.rmSync(dir, {recursive: true, force: true}));
+    const {world} = triageWorldOnly();
+    const file = path.join(dir, 'setpoint.db');
+    fs.writeFileSync(file, world.store.sqlite.serialize());
+    const {sqlite, db} = openDatabase(file);
+    const other = new Database(file);
+    onTestFinished(() => {
+      other.close();
+      sqlite.close();
+    });
+    const store = {...world.store, sqlite, db};
+    const [prompt] = currentPrompts(store);
+    // Another writer (the sync or triage worker) holds the write lock, and this one won't wait.
+    sqlite.pragma('busy_timeout = 0');
+    other.prepare('begin immediate').run();
+    expect(currentPrompts(store)).toMatchObject([{id: prompt!.id, count: 4}]);
+    other.prepare('rollback').run();
   });
 
   test('protected mail cleared unopened four times gets no prompt', () => {
