@@ -36,9 +36,19 @@ export function openDatabase(file: string): OpenDatabase {
   const sqlite = new Database(file);
   if (file !== ':memory:') sqlite.pragma('journal_mode = WAL');
   const opened = connected(sqlite);
+  const before = appliedMigrations(sqlite);
   migrate(opened.db, {migrationsFolder: MIGRATIONS});
+  // A migration that rewrites much leaves as much in the write-ahead log, and SQLite only shrinks the
+  // log when the last connection closes, which a running server never does. So once one has run,
+  // its pages go into the database and the log is emptied.
+  if (file !== ':memory:' && appliedMigrations(sqlite) !== before) sqlite.pragma('wal_checkpoint(TRUNCATE)');
   return opened;
 }
+
+const appliedMigrations = (sqlite: Database.Database): number => {
+  const table = sqlite.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '__drizzle_migrations'").get();
+  return table ? sqlite.prepare('SELECT count(*) FROM __drizzle_migrations').pluck().get() as number : 0;
+};
 
 /**
  * An in-memory copy of a database from its `sqlite.serialize()`, as it stood. Nothing migrates, and

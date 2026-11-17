@@ -53,3 +53,19 @@ test('a temporary directory the host chose stays', () => {
     fs.rmSync(dir, {recursive: true, force: true});
   }
 });
+
+test('once migrations ran, the write-ahead log they filled is emptied while the database stays open', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-open-'));
+  const file = path.join(dir, 'setpoint.sqlite');
+  try {
+    const {sqlite} = openDatabase(file);
+    try {
+      expect(fs.statSync(`${file}-wal`).size).toBe(0);
+      expect(sqlite.prepare('SELECT count(*) AS rows FROM __drizzle_migrations').get()).not.toEqual({rows: 0});
+    } finally {
+      sqlite.close();
+    }
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
