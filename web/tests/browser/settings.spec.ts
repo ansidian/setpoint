@@ -1,7 +1,7 @@
 // Settings in the browser: board 17 built and checked, then each page saving:
 // - the modal itself (⌘,, Esc, not in the address bar, a link straight to a page, Reconnect)
 // - Accounts (colour, rename, order, Connect Gmail's "not configured", Connect iCloud's form)
-// - Mail (a rule, Undo on a learned rule, a domain, code expiry)
+// - Mail (a rule, a rule edited in its row, Undo on a learned rule, a domain, code expiry)
 // - Notifications (Send test to a fake ntfy on 127.0.0.1, switches, defaults)
 // - Calendar (a calendar hidden, Home, weather, and calendar colours written to Google, waiting,
 //   refused, tried again and changed back)
@@ -354,6 +354,51 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
 
     await page.getByRole('radio', {name: '30 min'}).click();
     await settled('code expiry', () => setpoint.api<Settings>('GET', '/settings'), settings => settings.mail.code_expiry_minutes === 30);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Mail: a written rule\'s Edit turns its row into the form, one form open at a time; Save reaches the server, keeps what the form can\'t draw, and the row\'s line shows the change', async () => {
+  const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
+  try {
+    const match = {from_domains: ['northwind.example', 'tailspintoys.example'], subject_includes: ['Your order', 'Shipment'], body_regex: 'tracking (number|#)'};
+    const {id} = await setpoint.api<RuleOut>('POST', '/mail/rules', {match, lane: 'fyi', kind: 'deliveries'});
+    const page = await setpoint.page('target');
+    await openAt(page, setpoint.base, 'mail');
+    const rules = () => setpoint.api<RuleOut[]>('GET', '/mail/rules');
+    const row = page.locator(`.settings .set-row[data-rule="${id}"]`);
+    const form = page.locator(`.settings form[data-editing="${id}"]`);
+    const openEdit = async () => {
+      await row.getByRole('button', {name: 'Rule options'}).click();
+      await page.getByRole('menuitem', {name: 'Edit'}).click();
+      await form.waitFor();
+    };
+
+    // Edit closes Add rule, and Add rule closes the Edit, which leaves the row as it was.
+    await page.locator('.settings .set-label').getByRole('button', {name: 'Add rule'}).click();
+    await page.getByRole('button', {name: 'Add', exact: true}).waitFor();
+    await openEdit();
+    await page.getByRole('button', {name: 'Add', exact: true}).waitFor({state: 'detached'});
+    await row.waitFor({state: 'detached'});
+    await page.locator('.settings .set-label').getByRole('button', {name: 'Add rule'}).click();
+    await form.waitFor({state: 'detached'});
+    await row.waitFor();
+    await page.getByRole('button', {name: 'Cancel'}).click();
+
+    // The form takes the row's place among the written rules.
+    const order = () => page.locator('.settings .set-group').first().locator(':scope > *').evaluateAll(rows => rows.map(one => one.getAttribute('data-rule') ?? one.getAttribute('data-editing')));
+    const before = await order();
+    await openEdit();
+    assert.deepEqual(await order(), before);
+    await choose(page, 'Send to', 'FYI · Updates');
+    await page.getByRole('radio', {name: '1 day'}).click();
+    await page.getByRole('button', {name: 'Save'}).click();
+    await form.waitFor({state: 'detached'});
+    await settled('the rule edited', rules, list => list.some(rule => rule.id === id && rule.kind === 'updates' && rule.trash === '1d'));
+    assert.deepEqual((await rules()).find(rule => rule.id === id)!.match, match);
+    await row.locator('.rule', {hasText: 'FYI · Updates, trash after 1 day'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

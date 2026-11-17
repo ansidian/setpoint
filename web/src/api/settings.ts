@@ -2,7 +2,7 @@
 // routes). Each change shows its answer at once and refreshes what else it touches. Secrets are
 // write-only, so only whether one is set ever comes back.
 import type {
-  AccountOut, AuthMode, GmailAuthorizeOut, PairingOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleMatch, RuleOut, RuleWaiting, SecretName,
+  AccountOut, AuthMode, GmailAuthorizeOut, PairingOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleMatch, RuleOut, RuleUpdateInput, RuleWaiting, SecretName,
   SecurityOut, Settings, SettingsPatch, TodoistConnectOut, TrustedDomainOut,
 } from '@setpoint/shared';
 import {ACCOUNTS_PATH} from './mail.ts';
@@ -118,6 +118,19 @@ export async function setRuleMatch(id: number, match: RuleMatch): Promise<void> 
   updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, match} : rule)));
   try {
     await sendJson<RuleOut>('PATCH', `/mail/rules/${id}`, {match});
+  } finally {
+    refreshIfShown(RULES_PATH);
+  }
+}
+
+/** What the rule form saves: a rule's match, lane and kind, mark read and trash. */
+export type RuleFields = Required<Pick<RuleUpdateInput, 'match' | 'lane' | 'kind' | 'mark_read' | 'trash'>>;
+
+/** A written rule's Edit: its new match, lane and kind, mark read and trash. Its line shows them at once. */
+export async function editRule(id: number, changes: RuleFields): Promise<RuleOut> {
+  updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, ...changes} : rule)));
+  try {
+    return await sendJson<RuleOut>('PATCH', `/mail/rules/${id}`, changes);
   } finally {
     refreshIfShown(RULES_PATH);
   }

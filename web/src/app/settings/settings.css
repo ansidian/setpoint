@@ -181,6 +181,11 @@
 .settings .rule-form .rule-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .settings .rule-form .rule-line.add { grid-column: 2; }
 .settings .rule-form .filter { min-width: 170px; }
+/* Edit's fixed parts (several senders, several phrases, a pattern): read-only words in the field's
+   place, a lock first, so they read as kept rather than as something to type over. */
+.settings .rule-form .fixed { display: inline-flex; align-items: center; gap: 6px; min-width: 0; height: 30px; color: var(--ink2); font-size: 13px; }
+.settings .rule-form .fixed > svg { flex: none; color: var(--ink3); }
+.settings .rule-form .fixed b { font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
 /* One label size: a filter's, Mark read and Trash take the 13 px of If from and the other inline forms' labels. */
 .settings .rule-form :is(.filter, .pair > .s) { font-size: 13px; }
 /* The rule form's last line: Mark read's switch, Trash's presets, then Add

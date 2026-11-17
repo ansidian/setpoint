@@ -1,19 +1,21 @@
 // Settings › Mail (board 18a): written rules in their order (drag, or ↑ ↓ on the handle) with Add
 // rule. Add rule is open and filled in when an email's Add to rule asked for a New rule from its
-// sender. Mark read and Trash are under Send to. Turn off and Delete ask about a rule's waiting
+// sender. A written rule's Edit turns its row into the same form, filled in; one form is open at a
+// time. Mark read and Trash are under Send to. Turn off and Delete ask about a rule's waiting
 // trashes. Then the note that protected mail can't be moved, marked read or trashed by any rule.
 // Then learned rules (from pattern prompts), with Undo on the day they were learned and × after.
 // Then the trusted remote-content domains (their count and a filter once there are more than Show
 // all's 11), and Verification codes' expiry presets.
 import type {Kind, Lane, RuleOut, RuleTrash, RuleWaiting, Settings, TrustedDomainOut} from '@setpoint/shared';
 import {CODE_EXPIRY_PRESETS, KINDS, RULE_TRASH} from '@setpoint/shared';
-import {Fragment, useState} from 'react';
+import {Fragment, useEffect, useRef, useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {SETTINGS_PATH} from '../../api/items.ts';
-import {createRule, deleteRule, patchSettings, reorderRules, RULES_PATH, setRuleEnabled, TRUSTED_PATH, untrustDomain} from '../../api/settings.ts';
+import type {RuleFields} from '../../api/settings.ts';
+import {createRule, deleteRule, editRule, patchSettings, reorderRules, RULES_PATH, setRuleEnabled, TRUSTED_PATH, untrustDomain} from '../../api/settings.ts';
 import {localDate} from '../../logic/format.ts';
-import {DOMAINS_SHOWN, domainTools, expiryLabel, laneTag, matchesThisMonth, moved, ruleActionWords, ruleWords, senderMatch, splitRules, TRASH_LABELS, waitingChoices, waitingTitle, wordsMatch} from '../../logic/settings.ts';
+import {DOMAINS_SHOWN, domainTools, expiryLabel, fixedFilters, fixedLines, fixedSenders, laneTag, matchesThisMonth, moved, ruleActionWords, ruleDestination, ruleFormStart, ruleWords, senderMatch, splitRules, TRASH_LABELS, waitingChoices, waitingTitle, wordsMatch} from '../../logic/settings.ts';
 import {placeMenu} from '../../ui/popover.ts';
 import {ScopePrompt} from '../calendar/ScopePrompt.tsx';
 import {Icon} from '../../ui/Icon.tsx';
@@ -48,29 +50,40 @@ export function MailPage() {
   const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
   const settings = settingsLoad.data;
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
   const draft = useRuleDraft();
   const showForm = adding || draft !== null;
   const closeForm = () => {
     setAdding(false);
     clearRuleDraft();
   };
+  // One form at a time: Add rule (or an email's draft) closes an Edit, and Edit closes Add rule.
+  const openAdd = () => {
+    setEditing(null);
+    setAdding(true);
+  };
+  const openEdit = (id: number) => {
+    closeForm();
+    setEditing(id);
+  };
+  const editingId = showForm ? null : editing;
   const save = useAttempt();
   const {written, learned} = splitRules(rules ?? []);
   const order = useLiveOrder(written, 'text/x-setpoint-rule', ids => void reorderRules(ids).catch(toastFailure('Couldn\'t reorder rules')));
 
   return (
     <Page title="Mail" loads={[rulesLoad, domainsLoad, settingsLoad]}>
-      <Section label="Rules" right={<button className="btn quiet sm" type="button" onClick={() => (showForm ? closeForm() : setAdding(true))}><Icon name="add" size={17} />Add rule</button>}>
+      <Section label="Rules" right={<button className="btn quiet sm" type="button" onClick={() => (showForm ? closeForm() : openAdd())}><Icon name="add" size={17} />Add rule</button>}>
         {/* "No rules yet" only once the rules are known. */}
         {!rules && !showForm ? <SkeletonRows count={3} one /> : <div {...order.groupProps}>
-          {showForm && <AddRule key={draft?.from} draft={draft} onDone={closeForm} />}
-          {written.map((rule, index) => (
-            <WrittenRule key={rule.id} rule={rule} drag={order.rowProps(rule, index)} onMove={delta => {
+          {showForm && <RuleForm key={draft?.from} draft={draft} save={fields => createRule({...fields, enabled: true})} onDone={closeForm} />}
+          {written.map((rule, index) => (rule.id === editingId ? <RuleForm key={rule.id} rule={rule} save={fields => editRule(rule.id, fields)} onDone={() => setEditing(null)} /> : (
+            <WrittenRule key={rule.id} rule={rule} drag={order.rowProps(rule, index)} onEdit={() => openEdit(rule.id)} onMove={delta => {
               const next = moved(written, index, delta);
               if (next !== written) void reorderRules(next.map(one => one.id)).catch(toastFailure('Couldn\'t reorder rules'));
             }} />
-          ))}
-          {!written.length && !showForm && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={() => setAdding(true)}>Add rule</button></span></div>}
+          )))}
+          {!written.length && !showForm && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={openAdd}>Add rule</button></span></div>}
         </div>}
         <div className="note"><Icon name="shield" size={16} />Protected security mail always goes to Attention. It can’t be moved, marked read or trashed by any rule</div>
       </Section>
@@ -117,7 +130,7 @@ function RuleText({rule}: {rule: Pick<RuleOut, 'match' | 'lane' | 'kind' | 'enab
   );
 }
 
-function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; drag: DragProps; onMove: (delta: 1 | -1) => void}) {
+function WrittenRule({rule, drag: {dragging, ...drag}, onEdit, onMove}: {rule: RuleOut; drag: DragProps; onEdit: () => void; onMove: (delta: 1 | -1) => void}) {
   // Turn off or Delete on a rule with trashes waiting asks first. With none it just happens.
   const [ask, setAsk] = useState<'off' | 'delete' | null>(null);
   const [waiting, setWaiting] = useState<RuleWaiting>('cancel');
@@ -141,6 +154,10 @@ function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; 
         <Menu label="Rule options" button={<button className="ibtn" type="button" aria-label="Rule options"><Icon name="more_horiz" /></button>}>
           {close => (
             <>
+              <button className="menu-i" type="button" role="menuitem" onClick={() => {
+                close();
+                onEdit();
+              }}><Icon name="edit" size={16} />Edit</button>
               <button className="menu-i" type="button" role="menuitem" onClick={() => {
                 close();
                 if (rule.enabled) asking('off', () => turnOff());
@@ -182,31 +199,57 @@ function LearnedRule({rule}: {rule: RuleOut}) {
   );
 }
 
+// A fixed part's tip: why it can't be changed here.
+const FIXED_TIP = 'The form can’t change this part, a save keeps it as it is';
+
 /**
- * Add rule, read as a sentence: "If from" a domain or address, "and" each filter added from
+ * The rule form, read as a sentence: "If from" a domain or address, "and" each filter added from
  * the menu (a field's words it contains or doesn't, each at most once), "then send to" a lane and
- * kind. From an email's draft, its sender and where it is now.
+ * kind. Add rule's starts empty, or from an email's draft (its sender and where it is now). Edit's
+ * starts from the rule, and shows the parts it can't draw as fixed lines that a save puts back as
+ * they were.
  */
-function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void}) {
-  const [destination, setDestination] = useState(draft?.destination ?? 'fyi:other');
-  const [filters, setFilters] = useState<RuleFilter[]>([]);
-  const [markRead, setMarkRead] = useState(false);
-  const [trash, setTrash] = useState<RuleTrash>('never');
+export function RuleForm({draft = null, rule, save, onDone}: {draft?: RuleDraft | null; rule?: RuleOut; save: (fields: RuleFields) => Promise<unknown>; onDone: () => void}) {
+  const [start] = useState(() => (rule ? ruleFormStart(rule.match) : {from: draft?.from ?? '', words: {}, fixed: {}}));
+  const [destination, setDestination] = useState(() => (rule ? ruleDestination(rule.lane, rule.kind) : draft?.destination ?? 'fyi:other'));
+  // The filters shown, and those added since the form opened (which take the focus).
+  const [filters, setFilters] = useState<RuleFilter[]>(() => RULE_FILTERS.map(filter => filter.key).filter(key => start.words[key] !== undefined));
+  const [added, setAdded] = useState<RuleFilter[]>([]);
+  const [markRead, setMarkRead] = useState(rule?.mark_read ?? false);
+  const [trash, setTrash] = useState<RuleTrash>(rule?.trash ?? 'never');
   const send = useAttempt();
-  const left = RULE_FILTERS.filter(filter => !filters.includes(filter.key));
+  const held = fixedFilters(start.fixed);
+  const left = RULE_FILTERS.filter(filter => !filters.includes(filter.key) && !held.includes(filter.key));
+  const lines = fixedLines(start.fixed);
+  // The form holds the focus from the start, so Esc reaches it, even when From is fixed and has no field.
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const form = formRef.current;
+    if (form && !form.contains(document.activeElement)) form.querySelector<HTMLElement>('input, button')?.focus();
+  }, []);
   return (
-    <form className="set-row ctl form rule-form" onKeyDown={escapeCancels(onDone)} onSubmit={event => {
+    <form ref={formRef} className="set-row ctl form rule-form" data-editing={rule?.id} onKeyDown={escapeCancels(onDone)} onSubmit={event => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
-      const sender = senderMatch(form.get('from')?.toString() ?? '');
+      // A rule with no sender keeps none when From is left blank; Add rule always needs one.
+      const fromText = form.get('from')?.toString() ?? '';
+      const sender = start.from === null ? {} : rule && !start.from && !fromText.trim() ? {} : senderMatch(fromText);
       if (!sender) return void send.attempt(() => Promise.reject(new Error('From needs a domain such as woodgrovebank.example, or an address.')));
       const words = wordsMatch(Object.fromEntries(filters.map(key => [key, form.get(key)?.toString()])));
       const [lane, kind] = destination.split(':') as [Lane, Kind | undefined];
-      void send.attempt(() => createRule({match: {...sender, ...words}, lane, kind: kind ?? null, enabled: true, mark_read: markRead, trash}))
-        .then(rule => rule && onDone());
+      const fields = {match: {...start.fixed, ...sender, ...words}, lane, kind: kind ?? null, mark_read: markRead, trash};
+      void send.attempt(() => save(fields)).then(saved => saved && onDone());
     }}>
       <span className="lead">If from</span>
-      <span className="rule-line"><input className="fld" name="from" placeholder="woodgrovebank.example" aria-label="From" defaultValue={draft?.from} autoFocus style={{width: 200}} /></span>
+      <span className="rule-line">{start.from === null
+        ? <span className="fixed ell" data-tip={FIXED_TIP}><Icon name="lock" size={16} /><b>{fixedSenders(start.fixed)}</b></span>
+        : <input className="fld" name="from" placeholder="woodgrovebank.example" aria-label="From" defaultValue={start.from} autoFocus style={{width: 200}} />}</span>
+      {lines.map(line => (
+        <Fragment key={line}>
+          <span className="lead">and</span>
+          <span className="rule-line"><span className="fixed ell" data-tip={FIXED_TIP}><Icon name="lock" size={16} />{line}</span></span>
+        </Fragment>
+      ))}
       {filters.map(key => {
         const label = RULE_FILTERS.find(filter => filter.key === key)!.label;
         return (
@@ -214,7 +257,7 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
             <span className="lead">and</span>
             <span className="rule-line">
               <span className="s filter">{label}</span>
-              <input className="fld" name={key} aria-label={label} autoFocus style={{width: 200}} />
+              <input className="fld" name={key} aria-label={label} defaultValue={start.words[key]} autoFocus={added.includes(key)} style={{width: 200}} />
               <button className="ibtn sm" type="button" aria-label={`Remove ${label}`} onClick={() => setFilters(filters.filter(one => one !== key))}><Icon name="close" size={16} /></button>
             </span>
           </Fragment>
@@ -227,6 +270,7 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
               <button key={filter.key} className="menu-i" type="button" role="menuitem" onClick={() => {
                 close();
                 setFilters([...filters, filter.key]);
+                setAdded([...added, filter.key]);
               }}>{filter.label}</button>
             ))}
           </Menu>
@@ -234,7 +278,7 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
       )}
       <span className="lead">then send to</span>
       <span className="rule-line"><Select value={destination} options={DESTINATIONS} label="Send to" onChange={setDestination} /></span>
-      {/* The last line: each label wraps with its control, and Add and Cancel keep its right end. */}
+      {/* The last line: each label wraps with its control, and Add (Save) and Cancel keep its right end. */}
       <span className="rule-line add last">
         <span className="pair">
           <span className="s">Mark read</span>
@@ -245,7 +289,7 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
           <Segmented role="radio" label="Trash" value={trash} segments={RULE_TRASH.map(value => ({value, label: TRASH_LABELS[value]}))} onChange={setTrash} />
         </span>
         <span className="pair ends">
-          <button className="btn sm" type="submit" disabled={send.busy}>Add</button>
+          <button className="btn sm" type="submit" disabled={send.busy}>{rule ? 'Save' : 'Add'}</button>
           <button className="btn quiet sm" type="button" onClick={onDone}>Cancel</button>
         </span>
       </span>
