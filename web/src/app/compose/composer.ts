@@ -17,7 +17,8 @@
 // its words and Try again: on its email, in the toast (Open), and in Drafts.
 //
 // Discard has no key: the draft goes at once, and the toast's Undo starts it again as it was. A
-// draft nothing was written in goes quietly when its composer closes. Drafts discards rows too, one
+// draft still as the server filled it (logic/composer.ts › emptyDraft) goes quietly when its
+// composer closes or its tab does, and the server leaves it out of Drafts. Drafts discards rows too, one
 // or several under one toast ("Discarded 3 drafts"): Undo starts each again in its place in the
 // list, and opens again only those that were open, where they were. Drafts' Pop out and its
 // selection's Open put drafts straight into windows.
