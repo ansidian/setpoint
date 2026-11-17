@@ -815,7 +815,7 @@ function saveWritten(draftId: number, blocks: Block[]) {
   if (!draft || draft.send || sending.has(draftId) || discarded.has(draftId)) return;
   const now = {...draft, ...owedOf(draftId)} as DraftOut;
   const write = now.write ?? {prompt: '', open: false, ...NO_VERSIONS};
-  queueSave(draftId, {body: blocks, write: {...write, ...recordVersion(write, now.body, blocks)}});
+  queueSave(draftId, {body: blocks, write: {...write, ...recordVersion(write, now.body, blocks), prompt: ''}});
 }
 
 // ---- Files ----

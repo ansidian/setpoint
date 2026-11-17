@@ -1,14 +1,14 @@
 // Help me write: the Alfred-marked button in the composer's format row, or ⌘J, opens a one-line
 // prompt right above the row. Over an empty body it reads "Describe your message", over text
-// "Describe your change". Enter writes the draft into the body; with text selected in the body, only
-// the selection changes. The line stays open after a draft so the user can refine it, and undo and
-// redo beside it step between the body's versions (logic/composer.ts › recordVersion). Esc closes the
-// line and puts the caret back in the body. The line, what it asked and the versions are saved with
-// the draft.
+// "Describe your change", over text it wrote "Describe your follow-up changes". Enter writes the
+// draft into the body; with text selected in the body, only the selection changes. The line stays
+// open after a draft, emptied, so the user can refine it, and undo and redo beside it step between
+// the body's versions (logic/composer.ts › recordVersion). Esc closes the line and puts the caret
+// back in the body. The line, what's typed in it and the versions are saved with the draft.
 //
 // While it works the line says so and takes no new ask; the body stays the user's to type in, and the
 // answer replaces it as it is when the answer comes (undo brings that back). A failure leaves the body
-// as it was and says why under the line. The AI fills the body only: never recipients, the subject or
+// as it was and what was asked in the line, and says why under it. The AI fills the body only: never recipients, the subject or
 // the quote, and it never sends.
 import type {DraftWriteState} from '@setpoint/shared';
 import {plainText} from '@setpoint/shared/richText';
@@ -120,8 +120,8 @@ export function useHelpMeWrite({draftId, initial, body, current, onWrite}: {
     } else {
       replaceBody(blocks);
     }
-    const versions = recordVersion(write.current, before, current());
-    set(versions);
+    // Written: the line is empty for the next ask.
+    set({...recordVersion(write.current, before, current()), prompt: ''});
   })), [draftId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = () => {
@@ -199,7 +199,7 @@ export function WriteLine({help, body}: {help: HelpMeWrite; body: Block[]}) {
     <div className="cmp-write-wrap">
       <div className={writing.working ? 'cmp-write working' : 'cmp-write'} role="group" aria-label="Help me write" aria-busy={writing.working}>
         {writing.working ? <span className="spin"><Icon name="progress_activity" size={16} /></span> : <Icon name="auto_awesome" size={16} alfred />}
-        <input ref={input} className="grow" aria-label="Help me write" placeholder={writePlaceholder(body)} value={help.write.prompt} readOnly={writing.working} spellCheck={false}
+        <input ref={input} className="grow" aria-label="Help me write" placeholder={writePlaceholder(body, help.write)} value={help.write.prompt} readOnly={writing.working} spellCheck={false}
           onChange={event => help.prompt(event.target.value)}
           onFocus={help.showSelection} onBlur={() => highlight(null)}
           onKeyDown={event => {

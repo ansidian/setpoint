@@ -267,5 +267,8 @@ export function redoVersion(state: Versions, current: Block[]): {state: Versions
   return {state: {versions: state.versions, at}, body: state.versions[at]!};
 }
 
-/** The line's words: over an empty body, what to write; over text, what to change. */
-export const writePlaceholder = (body: Block[]) => (isEmpty(body) ? 'Describe your message' : 'Describe your change');
+/**
+ * The line's words: over an empty body, what to write; over text, what to change; over text help me
+ * write wrote (a version past the first shows, typed in since or not), a follow-up.
+ */
+export const writePlaceholder = (body: Block[], state: Versions) => (isEmpty(body) ? 'Describe your message' : state.at > 0 ? 'Describe your follow-up changes' : 'Describe your change');

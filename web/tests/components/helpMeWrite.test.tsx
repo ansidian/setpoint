@@ -147,15 +147,15 @@ test('⌘J opens the line over an empty body; Enter asks with the body, the line
   holdSaves();
   fake.answer(blocks('Hi Sam,', '', '7 works.'));
   await expect.poll(lines).toEqual(['Hi Sam,', '', '7 works.']);
-  // The line stays, to refine; it now asks what to change.
-  await expect.element(line()).toHaveValue('say 7 works');
-  await expect.element(line()).toHaveAttribute('placeholder', 'Describe your change');
+  // The line stays, emptied, to refine; it now asks for a follow-up.
+  await expect.element(line()).toHaveValue('');
+  await expect.element(line()).toHaveAttribute('placeholder', 'Describe your follow-up changes');
   await expect.element(step('Undo')).toBeEnabled();
   await expect.element(step('Redo')).toBeDisabled();
   saveNow();
   await expect.poll(() => fake.saves.at(-1)).toMatchObject({
     body: blocks('Hi Sam,', '', '7 works.'),
-    write: {prompt: 'say 7 works', open: true, versions: [[], blocks('Hi Sam,', '', '7 works.')], at: 1},
+    write: {prompt: '', open: true, versions: [[], blocks('Hi Sam,', '', '7 works.')], at: 1},
   });
 });
 
@@ -319,7 +319,7 @@ test('an answer for a composer closed meanwhile is saved into the draft, with a 
   fake.answer(blocks('Short.'));
   await expect.poll(() => vi.getTimerCount()).toBeGreaterThan(0);
   saveNow();
-  await expect.poll(() => fake.saves.at(-1)).toMatchObject({body: blocks('Short.'), write: {versions: [blocks('Draft me'), blocks('Short.')], at: 1}});
+  await expect.poll(() => fake.saves.at(-1)).toMatchObject({body: blocks('Short.'), write: {prompt: '', versions: [blocks('Draft me'), blocks('Short.')], at: 1}});
 });
 
 test('a composer opened again while the line works shows it working and takes the answer', async () => {
@@ -336,7 +336,7 @@ test('a composer opened again while the line works shows it working and takes th
   await expect.poll(lines).toEqual(['Short.']);
 });
 
-/** A draft help me write wrote into, its line open with what was asked. */
+/** A draft help me write wrote into, its line open with a follow-up typed and not yet asked. */
 async function written() {
   const fake = await compose(draftOf({body: blocks('Draft me')}));
   await userEvent.keyboard('{Meta>}j{/Meta}');
@@ -344,17 +344,18 @@ async function written() {
   await expect.poll(() => fake.asks.length).toBe(1);
   fake.answer(blocks('Short.'));
   await expect.poll(lines).toEqual(['Short.']);
+  await userEvent.fill(line(), 'warmer');
   return fake;
 }
 
-const WRITTEN = {prompt: 'shorter', open: true, versions: [blocks('Draft me'), blocks('Short.')], at: 1};
+const WRITTEN = {prompt: 'warmer', open: true, versions: [blocks('Draft me'), blocks('Short.')], at: 1};
 
-test('Discard\'s Undo brings the line back with what was asked and its versions', async () => {
+test('Discard\'s Undo brings the line back with what was typed in it and its versions', async () => {
   const fake = await written();
   await userEvent.click(page.getByRole('button', {name: 'Discard'}));
   expect(openComposers()).toEqual([]);
   await userEvent.click(page.getByRole('status').getByRole('button', {name: 'Undo'}));
-  await expect.element(line()).toHaveValue('shorter');
+  await expect.element(line()).toHaveValue('warmer');
   expect(lines()).toEqual(['Short.']);
   expect(fake.saves.at(-1)).toMatchObject({body: blocks('Short.'), write: WRITTEN});
   await userEvent.click(step('Undo'));
@@ -367,7 +368,7 @@ test('the reply-type menu\'s kind carries the line and its versions with the wor
   await userEvent.click(page.getByRole('button', {name: 'Reply, change'}));
   await userEvent.click(page.getByRole('menuitemradio', {name: 'Forward'}));
   await expect.poll(() => openComposers()[0]?.draftId).not.toBe(reply);
-  await expect.element(line()).toHaveValue('shorter');
+  await expect.element(line()).toHaveValue('warmer');
   expect(fake.saves.find(save => save.draft !== reply)).toMatchObject({body: blocks('Short.'), write: WRITTEN});
   await userEvent.click(step('Undo'));
   expect(lines()).toEqual(['Draft me']);

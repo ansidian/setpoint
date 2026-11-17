@@ -201,10 +201,16 @@ describe('help me write\'s versions', () => {
   });
 
   test.each([
-    ['an empty body asks what to write', '', 'Describe your message'],
-    ['a body with text asks what to change', 'Hi Sam,', 'Describe your change'],
-  ])('the line: %s', (_name, body, words) => {
-    expect(writePlaceholder(b(body))).toBe(words);
+    ['an empty body asks what to write', '', NO_VERSIONS, 'Describe your message'],
+    ['a body with text asks what to change', 'Hi Sam,', NO_VERSIONS, 'Describe your change'],
+    ['a body help me write wrote asks for a follow-up', 'B', v(['A', 'B'], 1), 'Describe your follow-up changes'],
+    ['typed in since, it still does', 'B typed', v(['A', 'B'], 1), 'Describe your follow-up changes'],
+    ['a saved draft opened with its versions does too', 'C', v(['A', 'B', 'C'], 2), 'Describe your follow-up changes'],
+    ['undone back to the user\'s own words, it asks what to change', 'A', v(['A', 'B'], 0), 'Describe your change'],
+    ['undone back to nothing, it asks what to write', '', v(['', 'B'], 0), 'Describe your message'],
+    ['a written body emptied asks what to write', '', v(['A', 'B'], 1), 'Describe your message'],
+  ])('the line: %s', (_name, body, state, words) => {
+    expect(writePlaceholder(b(body), state)).toBe(words);
   });
 });
 

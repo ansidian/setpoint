@@ -500,7 +500,8 @@ test('help me write: ⌘J opens the line, the draft reads the email and Sam\'s m
     assert.equal(fake.drafts.length, 1);
     assert.match(fake.drafts[0]!, /<email_content message_id="\d+">[^]*Blue Door at 7\?/);
     assert.match(fake.drafts[0]!, /The user asks: say Friday at 7 works$/);
-    assert.equal(await line.inputValue(), 'say Friday at 7 works');
+    // Written: the line is empty again, for a follow-up.
+    assert.deepEqual([await line.inputValue(), await line.getAttribute('placeholder')], ['', 'Describe your follow-up changes']);
 
     await page.keyboard.press('Meta+Enter');
     await holdToast(page);
