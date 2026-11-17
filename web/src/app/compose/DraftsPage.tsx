@@ -15,17 +15,17 @@
 // pane shows the selection (SelectionPane) with Open ↵, which opens each in a window, and Discard
 // for the ones that can go, under one toast with Undo. A draft up in a window stays up. A selected
 // row's right-click has the same, Esc ends the selection, and a plain click opens the one clicked.
-import type {DraftRowOut, DraftsOut} from '@setpoint/shared';
+import type {DraftOut, DraftRowOut, DraftsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
-import {DRAFTS_PATH} from '../../api/drafts.ts';
+import {DRAFTS_PATH, draftPath} from '../../api/drafts.ts';
 import {chipLabel} from '../../logic/composer.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Stop} from '../../logic/inbox.ts';
 import type {Route} from '../../logic/route.ts';
-import {counted, discardable, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, toggled} from '../../logic/selection.ts';
+import {broughtForward, counted, discardable, dropped, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, stacked, toggled} from '../../logic/selection.ts';
 import type {Selection} from '../../logic/selection.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -41,8 +41,9 @@ import {EmailOnly, PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {navigate} from '../router.ts';
 import {SelectionPane} from '../SelectionPane.tsx';
-import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
-import {AllSkeleton} from '../states/Skeletons.tsx';
+import {DescriptionText} from '../calendar/DescriptionText.tsx';
+import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
+import {AllSkeleton, BodySkeleton} from '../states/Skeletons.tsx';
 import {ComposerPlace} from './Composer.tsx';
 import {closeComposer, discardDrafts, newMessage, openDraft, popOutDrafts, useOpenComposer} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
@@ -92,6 +93,8 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
   const selected = useMemo(() => inListOrder(selection.ids, stops), [selection.ids, stops]);
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const selectedRows = selected.flatMap(id => rows.find(row => row.id === id) ?? []);
+  // The selection's front card in its pane.
+  const stackFront = rows.find(row => row.id === stacked(selection, selected)[0]);
   const clearSelection = () => setSelection(NO_SELECTION);
 
   // The address names the open draft: it opens in the pane. The composer closing (Esc, Send,
@@ -145,7 +148,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
       openRow(id);
       return;
     }
-    const current = {ids: selected, anchor: selection.anchor};
+    const current = {...selection, ids: selected};
     setSelection(adding ? toggled(current, id, shown) : ranged(current, stops, id, shown));
     setCursor(id);
     // The composer closing empties the pane and the address with it.
@@ -155,7 +158,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
 
   /** ⌘A: every draft listed is selected, the docked one's composer closing (the draft kept). */
   function selectAll() {
-    setSelection(selectedAll({ids: selected, anchor: selection.anchor}, stops));
+    setSelection(selectedAll({...selection, ids: selected}, stops));
     if (open) closeComposer();
     else if (shown !== null) navigate({page: 'drafts', open: null});
   }
@@ -267,9 +270,41 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
               <button className="tool" type="button" data-hint="enter" onClick={forSelection.open}><Icon name="draft" />Open<span className="kbd">↵</span></button>
               {offer.discard > 0 && <button className="tool trash" type="button" onClick={forSelection.discard}><Icon name="delete" />{discardLabel}</button>}
             </>}
-            lines={selectedRows.map(row => ({id: row.id, from: <span className="from">{toLine(row)}</span>, subject: subjectOf(row), name: subjectOf(row)}))}
-            onClear={clearSelection} onOpen={openRow} onDrop={id => setSelection({...selection, ids: selected.filter(one => one !== id)})} />
+            lines={stacked(selection, selected).flatMap(id => rows.find(row => row.id === id) ?? []).map(row => ({id: row.id, from: <span className="from">{toLine(row)}</span>, subject: subjectOf(row), name: subjectOf(row)}))}
+            front={stackFront && <DraftCard row={stackFront} accounts={accounts} now={now} timeZone={zone} />}
+            onClear={clearSelection} onFront={id => setSelection(broughtForward(selection, id))} onDrop={id => setSelection(dropped(selection, selected, id))} />
         ) : pane.drawn && <EmptyPane label="Draft" keys={KEYS}>{null}</EmptyPane>}
+      </div>
+    </>
+  );
+}
+
+/**
+ * A draft as the selection's stack shows it in front: as it would read, not a composer. Its subject,
+ * who it goes to, its account and when it changed, from its row at once; its body when it's in.
+ */
+function DraftCard({row, accounts, now, timeZone}: {row: DraftRowOut; accounts: ReturnType<typeof useAccounts>['byId']; now: number; timeZone: string}) {
+  const load = {path: draftPath(row.id), ...useResource<DraftOut>(draftPath(row.id))};
+  const draft = load.data?.id === row.id ? load.data : undefined;
+  const failed = useLoadFailed([load]);
+  const arrived = useArrival(draft !== undefined);
+  const account = accounts.get(row.account_id);
+  const to = draft ? [...draft.to, ...draft.cc] : row.to;
+  return (
+    <>
+      <div className="rd-head">
+        <h1 className="rd-subj">{subjectOf(row)}</h1>
+        <div className="rd-meta">
+          <div className="who grow"><div className="ell selectable">{to.length ? `To ${to.map(chipLabel).join(', ')}` : 'No recipients'}</div></div>
+          <div className="rd-right"><div>
+            <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
+            <span className="time" data-tip={fullTimestamp(row.updated_at, timeZone)} data-tip-quick>{age(row.updated_at, now, timeZone)}</span>
+          </div></div>
+        </div>
+      </div>
+      <div className={arrived ? 'rd-body sk-arrive' : 'rd-body'}>
+        {draft ? <div className="mailtext"><DescriptionText blocks={draft.body} /></div>
+          : failed ? <LoadFailed what="this draft" loads={[load]} /> : <BodySkeleton />}
       </div>
     </>
   );

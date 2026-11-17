@@ -17,14 +17,14 @@ const stops: Stop[] = [
   {key: 'noise:2026-10-07', kind: 'noise', date: '2026-10-07'},
   {key: 'all:5', kind: 'row', group: 'all', id: 5},
 ];
-const sel = (ids: number[], anchor: number | null): Selection => ({ids, anchor});
+const sel = (ids: number[], anchor: number | null, front: number | null = null): Selection => ({ids, anchor, front});
 
 describe('toggled (⌘-click)', () => {
   test.each([
-    ['the first, nothing open: that one', NO_SELECTION, 4, null, sel([4], 4)],
-    ['the first, an email open: it and the open one', NO_SELECTION, 4, 2, sel([2, 4], 4)],
-    ['the first, on the open email: just it', NO_SELECTION, 2, 2, sel([2], 2)],
-    ['another: added', sel([2, 4], 4), 5, null, sel([2, 4, 5], 5)],
+    ['the first, nothing open: that one', NO_SELECTION, 4, null, sel([4], 4, 4)],
+    ['the first, an email open: it and the open one', NO_SELECTION, 4, 2, sel([2, 4], 4, 4)],
+    ['the first, on the open email: just it', NO_SELECTION, 2, 2, sel([2], 2, 2)],
+    ['another: added', sel([2, 4], 4), 5, null, sel([2, 4, 5], 5, 5)],
     ['a selected one: taken out', sel([2, 4, 5], 5), 4, null, sel([2, 5], 4)],
     ['the last one: none left', sel([4], 4), 4, null, sel([], 4)],
   ])('%s', (_, selection, id, open, after) => {
@@ -34,11 +34,11 @@ describe('toggled (⌘-click)', () => {
 
 describe('ranged (⇧-click)', () => {
   test.each([
-    ['down from the anchor', sel([1], 1), 4, null, sel([1, 2, 3, 4], 1)],
-    ['up from the anchor', sel([5], 5), 2, null, sel([5, 2, 3, 4], 5)],
-    ['from the open email, nothing selected: it too', NO_SELECTION, 4, 2, sel([2, 3, 4], 2)],
-    ['nothing selected or open: that one', NO_SELECTION, 4, null, sel([4], 4)],
-    ['an email no longer listed as anchor: that one', sel([9], 9), 4, null, sel([9, 4], 9)],
+    ['down from the anchor', sel([1], 1), 4, null, sel([1, 2, 3, 4], 1, 4)],
+    ['up from the anchor', sel([5], 5), 2, null, sel([5, 2, 3, 4], 5, 2)],
+    ['from the open email, nothing selected: it too', NO_SELECTION, 4, 2, sel([2, 3, 4], 2, 4)],
+    ['nothing selected or open: that one', NO_SELECTION, 4, null, sel([4], 4, 4)],
+    ['an email no longer listed as anchor: that one', sel([9], 9), 4, null, sel([9, 4], 9, 4)],
     ['onto an email not in the list: unchanged', sel([1], 1), 9, null, sel([1], 1)],
   ])('%s', (_, selection, id, open, after) => {
     expect(ranged(selection, stops, id, open)).toEqual(after);

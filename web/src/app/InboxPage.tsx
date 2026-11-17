@@ -46,7 +46,7 @@ import {
 } from '../logic/inbox.ts';
 import {phoneSlide} from '../logic/phone.ts';
 import {readerActions} from '../logic/reader.ts';
-import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, toggled} from '../logic/selection.ts';
+import {broughtForward, counted, dropped, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, stacked, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
 import type {HeldRow, PatternPrompt, Stop} from '../logic/inbox.ts';
 import type {InboxView, Route} from '../logic/route.ts';
@@ -63,7 +63,7 @@ import {useNow} from './clock.ts';
 import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
-import {askCard, Reader} from './Reader.tsx';
+import {askCard, EmailCard, Reader} from './Reader.tsx';
 import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
 import {openContextMenu} from './ContextMenu.tsx';
@@ -316,7 +316,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       openEmail(id, key);
       return;
     }
-    const now = {ids: selected, anchor: selection.anchor};
+    const now = {...selection, ids: selected};
     select(adding ? toggled(now, id, open) : ranged(now, stops, id, open));
     setCursor(key);
     if (open !== null) go({open: null});
@@ -324,7 +324,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   /** ⌘A: every email the list holds now is selected, the open one's reader giving way. */
   function selectAll() {
-    select(selectedAll({ids: selected, anchor: selection.anchor}, stops));
+    select(selectedAll({...selection, ids: selected}, stops));
     if (open !== null) go({open: null});
   }
 
@@ -524,6 +524,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // The selection's actions, for its pane, its right-click menu, its keys and ⌘K. Done and Trash
   // end it. Pin, the read changes and Reply, Reply all and Forward (a window for each) keep it.
   const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
+  // The selection's front card in its pane.
+  const stackFront = stacked(selection, selected)[0];
   const forSelection: SelectionHandlers = {
     done: () => {
       on.done(selected);
@@ -791,7 +793,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {writing && <NewMessagePane open={writing} />}
         {showsSelection && (
           <SelectionPane label="Selected emails" fit={[selectedRows.length, ...Object.values(selectionOffers(selectedRows))].join()} heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)} tools={<EmailTools rows={selectedRows} on={forSelection} />}
-            lines={emailLines(selectedRows)} onClear={clearSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
+            lines={emailLines(stacked(selection, selected).flatMap(id => rowOf(id) ?? []))}
+            front={stackFront !== undefined && <EmailCard id={stackFront} row={rowOf(stackFront)} accounts={accounts} now={now} timeZone={zone} />}
+            onClear={clearSelection} onFront={id => select(broughtForward(selection, id))} onDrop={id => select(dropped(selection, selected, id))} />
         )}
         {pane.drawn && <InboxDay settle={pane.settle} />}
       </div>

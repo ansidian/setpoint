@@ -33,7 +33,7 @@ import {keepCursor, moveCursor, neighbour, nextAfterLeaving, searchStops, stopOf
 import type {Stop} from '../logic/inbox.ts';
 import type {Route} from '../logic/route.ts';
 import {leftOutSection, resultSections} from '../logic/search.ts';
-import {counted, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, toggled} from '../logic/selection.ts';
+import {broughtForward, counted, dropped, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, stacked, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
 import {tabTitle} from '../logic/title.ts';
 import {skeleton} from '../tokens.ts';
@@ -47,7 +47,7 @@ import {emailActions, selectionAnswers} from './emailActions.ts';
 import {SentEmptyView} from './EmptyView.tsx';
 import {beats} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
-import {askCard, Reader} from './Reader.tsx';
+import {askCard, EmailCard, Reader} from './Reader.tsx';
 import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
 import type {ReaderActions, Travel} from './Reader.tsx';
@@ -198,7 +198,7 @@ export function SentPage({route}: {route: SentRoute}) {
       openEmail(id, key);
       return;
     }
-    const current = {ids: selected, anchor: selection.anchor};
+    const current = {...selection, ids: selected};
     setSelection(adding ? toggled(current, id, open) : ranged(current, stops, id, open));
     setCursor(key);
     if (open !== null) go({open: null});
@@ -206,7 +206,7 @@ export function SentPage({route}: {route: SentRoute}) {
 
   /** ⌘A: every email the list holds now is selected, the open one's reader giving way. */
   function selectAll() {
-    setSelection(selectedAll({ids: selected, anchor: selection.anchor}, stops));
+    setSelection(selectedAll({...selection, ids: selected}, stops));
     if (open !== null) go({open: null});
   }
 
@@ -290,6 +290,8 @@ export function SentPage({route}: {route: SentRoute}) {
 
   const nothing = () => {};
   const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
+  // The selection's front card in its pane.
+  const stackFront = stacked(selection, selected)[0];
   // The selection's actions, for its pane, its right-click menu and its keys. Trash ends it; Reply,
   // Reply all and Forward (a window for each, on 2 to 5) keep it.
   const forSelection = {
@@ -452,8 +454,9 @@ export function SentPage({route}: {route: SentRoute}) {
           <SelectionPane label="Selected emails" fit={String(selectionOffers(selectedRows).answer)} heading={counted(selectedRows.length, '1 email selected', n => `${n} emails selected`)}
             tools={<><PaneTool kind="trash" words="Trash" icon="delete" hint="e" kbd="E" run={forSelection.trash} />
               <AnswerTools rows={selectedRows} on={forSelection} /></>}
-            lines={selectedRows.map(row => ({id: row.id, from: from(row), subject: row.subject, name: row.subject}))}
-            onClear={clearSelection} onOpen={id => openEmail(id)} onDrop={id => setSelection({...selection, ids: selected.filter(one => one !== id)})} />
+            lines={stacked(selection, selected).flatMap(id => rowOf(id) ?? []).map(row => ({id: row.id, from: from(row), subject: row.subject, name: row.subject}))}
+            front={stackFront !== undefined && <EmailCard id={stackFront} row={rowOf(stackFront)} accounts={accounts} now={now} timeZone={zone} />}
+            onClear={clearSelection} onFront={id => setSelection(broughtForward(selection, id))} onDrop={id => setSelection(dropped(selection, selected, id))} />
         )}
         {open !== null && (
           <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={openFromReader}

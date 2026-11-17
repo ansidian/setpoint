@@ -1,6 +1,7 @@
 // Selecting several emails or drafts. ⌘ or Ctrl-click adds a row or takes it out, and the first one
 // takes the open one too. ⇧-click adds every row from the last one clicked (or the open one) to this
-// one. ⌘A (Ctrl-A) selects every row the list holds now, and again after more load. This file also
+// one. ⌘A (Ctrl-A) selects every row the list holds now, and again after more load. The selection
+// pane stacks them as reader cards, one in front (`stacked`). This file also
 // has what the selection's tools and menu offer, from its rows (Reply, Reply all and Forward on a few
 // emails only), and how Drafts' Discard counts in its toasts.
 import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
@@ -11,6 +12,9 @@ export interface Selection {
   ids: number[];
   // The email a ⇧-click's range starts from: the last one clicked.
   anchor: number | null;
+  // The email the pane's stack shows in front: the last one selected, or the one a strip brought
+  // forward. Unset, or dropped, the stack's front is the top-most selected email in the list.
+  front?: number | null;
 }
 
 export const NO_SELECTION: Selection = {ids: [], anchor: null};
@@ -22,9 +26,9 @@ function rowIds(stops: Stop[]): number[] {
 
 /** ⌘-click on `id`: in, or out if it was in. The first one takes the open email too. */
 export function toggled(selection: Selection, id: number, open: number | null): Selection {
-  if (!selection.ids.length) return {ids: open !== null && open !== id ? [open, id] : [id], anchor: id};
-  const ids = selection.ids.includes(id) ? selection.ids.filter(one => one !== id) : [...selection.ids, id];
-  return {ids, anchor: id};
+  if (!selection.ids.length) return {ids: open !== null && open !== id ? [open, id] : [id], anchor: id, front: id};
+  if (selection.ids.includes(id)) return {ids: selection.ids.filter(one => one !== id), anchor: id, front: selection.front ?? null};
+  return {ids: [...selection.ids, id], anchor: id, front: id};
 }
 
 /** ⇧-click on `id`: every email from the anchor (else the open email) to it, added to what's selected. */
@@ -37,14 +41,34 @@ export function ranged(selection: Selection, stops: Stop[], id: number, open: nu
   const span = from < 0 ? [id] : rows.slice(Math.min(from, to), Math.max(from, to) + 1);
   const ids = [...selection.ids, ...span.filter(one => !selection.ids.includes(one))];
   // The open email the range started from is selected too, as the first ⌘-click takes it.
-  return {ids: open !== null && from >= 0 && start === open && !ids.includes(open) ? [open, ...ids] : ids, anchor: selection.anchor ?? start ?? id};
+  return {ids: open !== null && from >= 0 && start === open && !ids.includes(open) ? [open, ...ids] : ids, anchor: selection.anchor ?? start ?? id, front: id};
 }
 
-/** ⌘A: every email the list holds now, in its order; the anchor stays. A second ⌘A changes nothing. */
+/** ⌘A: every email the list holds now, in its order; the anchor and the front stay. A second ⌘A changes nothing. */
 export function selectedAll(selection: Selection, stops: Stop[]): Selection {
-  return {ids: rowIds(stops), anchor: selection.anchor};
+  return {ids: rowIds(stops), anchor: selection.anchor, front: selection.front ?? null};
 }
 
+/** A strip in the pane's stack, clicked: its email comes to the front, and the selection stays. */
+export const broughtForward = (selection: Selection, id: number): Selection => ({...selection, front: id});
+
+/**
+ * The pane's stack, front first: the email last selected or brought forward, else (after ⌘A from
+ * nothing) the top-most selected email in the list. Behind it the rest in the list's order from the
+ * front one on, the next one nearest, then round from the top. `selected` is in the list's order.
+ */
+export function stacked(selection: Selection, selected: readonly number[]): number[] {
+  const at = selection.front != null ? selected.indexOf(selection.front) : -1;
+  const start = Math.max(at, 0);
+  return [...selected.slice(start), ...selected.slice(0, start)];
+}
+
+/** An × in the pane's stack: that email leaves the selection. The front one's makes way for the card behind it. */
+export function dropped(selection: Selection, selected: readonly number[], id: number): Selection {
+  const order = stacked(selection, selected);
+  const front = order[0] === id ? order[1] ?? null : selection.front ?? null;
+  return {...selection, ids: selected.filter(one => one !== id), front};
+}
 /** What's selected and still in the list, in the list's order: Trash takes an email out, and a search swaps the list. */
 export function inListOrder(ids: readonly number[], stops: Stop[]): number[] {
   if (!ids.length) return [];

@@ -1,8 +1,12 @@
 // The reading pane while emails or drafts are selected (option B), on the Inbox, Sent and Drafts. It
 // shows the page's tools for the whole selection and Clear Esc at the right. Then "3 emails selected"
-// (or drafts) sits where the subject goes. Each one follows in the list's order, who it's from or to
-// and its subject as its row reads them (on the Inbox a summary in the subject's place, the subject
-// its tooltip), with an × that takes it out. A click on one opens it.
+// (or drafts) sits where the subject goes, and under it the selection as a stack of cards. The one
+// in front is the email last selected, read as the reader shows it (the page draws it: `front`), and
+// showing it there reads nothing. Behind it up to 5 strips, each who it's from or to and its subject
+// as its row reads them (on the Inbox a summary in the subject's place, the subject its tooltip),
+// then "and 4 more". A click on a strip brings its card to the front and the selection stays. Each
+// card has an × that takes it out. A card joining, leaving or coming forward moves briefly (none under
+// reduced motion).
 // When the tools' words don't fit, Reply, Reply all and Forward give way to their glyphs first, then
 // every tool (PaneTool), as the reader's do (Reader.tsx › useToolsFit), each named in its tip then.
 // From 640 to 1099 px, where a pane covers the list, it stays out of the way. The rows show the
@@ -12,7 +16,7 @@
 // and Forward F (on 2 to 5 emails, a window each), Mark read or Mark unread ⇧U. Sent's: Trash E, then
 // Reply, Reply all and Forward as the Inbox's. Drafts': Open ↵, and Discard for the ones that can go.
 import type {MessageRowOut} from '@setpoint/shared';
-import {createContext, useContext} from 'react';
+import {createContext, useContext, useLayoutEffect, useRef} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {allRowLine} from '../logic/all.ts';
 import type {ToolsSize} from '../logic/reader.ts';
@@ -20,19 +24,20 @@ import {selectionOffers} from '../logic/selection.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
 import type {AnswerHandlers, SelectionHandlers} from './emailActions.ts';
+import {zoomOf} from './calendar/geometry.ts';
 import {useReadingPaneWidth} from './readingPane.ts';
 import {PaneEdge, useToolsFit} from './Reader.tsx';
 
-// How many the pane lists before "and 4 more".
-const LISTED = 8;
+// How many strips the stack draws behind its front card before "and 4 more".
+const STRIPS = 5;
 
-/** One selected row as the pane lists it. */
+/** One selected row as the pane's stack shows it. */
 export interface SelectionLine {
   id: number;
   // Who it's from or to, as its row draws it (a `.from` element).
   from: ReactNode;
   subject: string;
-  // The tooltip on the line: the subject when a summary takes its place.
+  // The tooltip on the strip: the subject when a summary takes its place.
   tip?: string | null;
   // What the × names: "Unselect Dinner Friday?".
   name: string;
@@ -41,20 +46,26 @@ export interface SelectionLine {
 // How much room the pane's tools have, for their tips.
 const ToolsRoom = createContext<ToolsSize>('wide');
 
-export function SelectionPane({label, heading, tools, fit = '', lines, onClear, onOpen, onDrop}: {
+export function SelectionPane({label, heading, tools, fit = '', lines, front, onClear, onFront, onDrop}: {
   label: string;
   heading: string;
   tools: ReactNode;
   // What decides the tools (their offers), so their words are measured again when it changes.
   fit?: string;
+  // The selection, its front card first (logic/selection.ts › stacked).
   lines: SelectionLine[];
+  // The front card's email or draft, as it reads.
+  front: ReactNode;
   onClear: () => void;
-  onOpen: (id: number) => void;
+  onFront: (id: number) => void;
   onDrop: (id: number) => void;
 }) {
   const width = useReadingPaneWidth();
-  const more = lines.length - LISTED;
   const {bar, size} = useToolsFit(fit, width);
+  const [first, ...rest] = lines;
+  const behind = rest.slice(0, STRIPS);
+  const more = rest.length - behind.length;
+  const stack = useSettle(lines.map(line => line.id).join());
   return (
     <section className="pane selection" aria-label={label} style={{'--readingPane': `${width}px`} as CSSProperties}>
       <PaneEdge width={width} />
@@ -63,25 +74,72 @@ export function SelectionPane({label, heading, tools, fit = '', lines, onClear, 
         <span className="grow" />
         <ToolsRoom.Provider value={size}><PaneTool words="Clear" icon="close" hint="escape" kbd="Esc" run={onClear} /></ToolsRoom.Provider>
       </div>
-      <div className="rd-scroll">
-        <div className="rd-head">
-          <h1 className="rd-subj">{heading}</h1>
-        </div>
-        <ul className="sel-list">
-          {lines.slice(0, LISTED).map(line => (
-            <li key={line.id} data-id={line.id}>
-              <button className="sel-open" type="button" data-tip={line.tip ?? undefined} onClick={() => onOpen(line.id)}>
-                {line.from}
-                <span className="subj">{line.subject}</span>
-              </button>
-              <button className="ibtn sel-drop" type="button" aria-label={`Unselect ${line.name}`} data-tip="Unselect" onClick={() => onDrop(line.id)}><Icon name="close" size={16} /></button>
-            </li>
-          ))}
-          {more > 0 && <li className="sel-more">and {more} more</li>}
-        </ul>
+      <div className="rd-head sel-head">
+        <h1 className="rd-subj">{heading}</h1>
+        {more > 0 && <span className="sel-more">and {more} more</span>}
+      </div>
+      <div ref={stack} className="sel-stack">
+        {/* The farthest back first, so the nearest sits on the front card. */}
+        {[...behind].reverse().map(line => (
+          <div key={line.id} className="sel-strip" data-id={line.id} style={{'--depth': behind.indexOf(line) + 1} as CSSProperties}>
+            <button className="sel-front-it" type="button" data-tip={line.tip ?? undefined} onClick={() => onFront(line.id)}>
+              {line.from}
+              <span className="subj">{line.subject}</span>
+            </button>
+            <Drop line={line} onDrop={onDrop} />
+          </div>
+        ))}
+        {first && (
+          <article key={first.id} className="sel-card" data-id={first.id} aria-label={first.name}>
+            <Drop line={first} onDrop={onDrop} />
+            {front}
+          </article>
+        )}
       </div>
     </section>
   );
+}
+
+function Drop({line, onDrop}: {line: SelectionLine; onDrop: (id: number) => void}) {
+  return <button className="ibtn sel-drop" type="button" aria-label={`Unselect ${line.name}`} data-tip="Unselect" onClick={() => onDrop(line.id)}><Icon name="close" size={16} /></button>;
+}
+
+const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * The stack's cards glide to where they now sit when one joins, leaves or comes forward: each is
+ * drawn where it was and moves to its place over 180 ms. One new to the stack rises in. The first
+ * drawing and reduced motion move nothing.
+ */
+function useSettle(order: string) {
+  const stack = useRef<HTMLDivElement>(null);
+  const was = useRef<Map<string, number> | null>(null);
+  useLayoutEffect(() => {
+    const element = stack.current;
+    if (!element) return;
+    const cards = [...element.querySelectorAll<HTMLElement>(':scope > [data-id]')];
+    // In the page's pixels, not the window's: the wide screen's zoom scales what a rect reads.
+    const zoom = zoomOf(element);
+    const now = new Map(cards.map(card => [card.dataset.id ?? '', card.getBoundingClientRect().top / zoom]));
+    const before = was.current;
+    was.current = now;
+    if (!before || still()) return;
+    const timing = {duration: 180, easing: 'cubic-bezier(.2,0,0,1)'};
+    for (const card of cards) {
+      const id = card.dataset.id ?? '';
+      const from = before.get(id);
+      const to = now.get(id) ?? 0;
+      if (card.classList.contains('sel-card') && from !== undefined && from !== to) {
+        // A strip come to the front opens from where its strip was.
+        card.animate([{transform: `translateY(${from - to}px)`, opacity: 0.6}, {transform: 'none', opacity: 1}], timing);
+      } else if (from === undefined) {
+        card.animate([{transform: 'translateY(-6px)', opacity: 0}, {transform: 'none', opacity: 1}], timing);
+      } else if (from !== to) {
+        card.animate([{transform: `translateY(${from - to}px)`}, {transform: 'none'}], timing);
+      }
+    }
+  }, [order]);
+  return stack;
 }
 
 /** The Inbox's lines: the sender and the subject (or its summary) as the row reads them. */

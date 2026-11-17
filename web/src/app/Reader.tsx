@@ -304,6 +304,22 @@ export function EmailOnly({id, travel = null, accounts, now, timeZone}: {
   );
 }
 
+/**
+ * The email as the selection's stack shows it in front: its head from its row at once, its body
+ * when it's in (a skeleton until then). No tools, actions or slot, and showing it reads nothing.
+ */
+export function EmailCard({id, row, accounts, now, timeZone}: {
+  id: number;
+  row: MessageRowOut | undefined;
+  accounts: Map<number, AccountOut>;
+  now: number;
+  timeZone: string;
+}) {
+  const load = {path: messagePath(id), ...useResource<MessageOut>(messagePath(id))};
+  const message = load.data?.id === id ? load.data : undefined;
+  return <Email listed={row ?? message} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={[]} />;
+}
+
 type Panel = {kind: ItemKind; proposal: ProposalOut | null} | {kind: 'ask'} | null;
 type Cards = ReturnType<typeof useCards>;
 
