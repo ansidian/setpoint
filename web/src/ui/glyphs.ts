@@ -163,3 +163,9 @@ export const TASK_GLYPHS = {
   open: "<circle cx=\"8\" cy=\"8\" r=\"6.75\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/>",
   done: "<path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm3.6 5.2-4.4 4.7-2.2-2.1-1 1.1 3.2 3.1 5.4-5.8z\"/>"
 } as const;
+
+/** The overdue-task icon: a task ring with a check, open where a `caution` badge with an exclamation mark sits. */
+export const OVERDUE_GLYPH = {
+  viewBox: "0 0 24 24",
+  body: "<g stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12.56 19.36A8.5 8.5 0 1 1 19.36 12.56\"/><path d=\"M7 11.2 9.8 14 15 8.5\"/></g><circle cx=\"18.5\" cy=\"18.5\" r=\"4.5\" style=\"fill: var(--caution)\"/><path d=\"M18.5 16.2V19\" style=\"stroke: var(--onInk)\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><circle cx=\"18.5\" cy=\"20.9\" r=\".85\" style=\"fill: var(--onInk)\"/>"
+} as const;

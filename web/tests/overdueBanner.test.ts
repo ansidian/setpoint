@@ -1,11 +1,12 @@
 // The overdue banner's rules, as tables: which tasks an arrival lists for what this browser has
-// shown, their order, four and "and N more", the words for when each was due, and the record of
-// what's shown, which keeps a task by its due and drops what's past the 30 days.
+// shown, their order, four and "and N more", the words for when each was due, which titles return
+// to Today on the way out and how long it lasts, and the record of what's shown, which keeps a task
+// by its due and drops what's past the 30 days.
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Overdue} from '../src/logic/overdue.ts';
-import {addShown, arrivalTasks, bannerRange, dueLine, listed, readShown, shortDue, shownKey} from '../src/logic/overdueBanner.ts';
+import {addShown, arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, listed, readShown, shortDue, shownKey} from '../src/logic/overdueBanner.ts';
 
 let nextId = 1;
 function item(fields: Partial<ItemOut>): ItemOut {
@@ -53,6 +54,33 @@ describe('several tasks list four, then "and N more"', () => {
     const result = listed(Array.from({length: count}, (_, index) => index));
     expect(result.listed).toEqual(Array.from({length: shown}, (_, index) => index));
     expect(result.more).toBe(more);
+  });
+});
+
+describe('on the way out, the titles due today return and the rest fade', () => {
+  const today = (title: string) => timed('2026-10-07', '2026-10-07T15:00:00.000Z', title);
+  const earlier = (title: string) => untimed('2026-10-05', title);
+  test.each([
+    ['one task due today: it returns', [today('A')], ['A'], []],
+    ['one task from an earlier day: it fades', [earlier('A')], [], ['A']],
+    ['four, one due today', [today('A'), earlier('B'), earlier('C'), earlier('D')], ['A'], ['B', 'C', 'D']],
+    ['four, two due today', [today('A'), today('B'), earlier('C'), earlier('D')], ['A', 'B'], ['C', 'D']],
+    ['four, none due today', [earlier('A'), earlier('B'), earlier('C'), earlier('D')], [], ['A', 'B', 'C', 'D']],
+    ['six: those under "and 2 more" do neither', [earlier('A'), earlier('B'), earlier('C'), earlier('D'), today('E'), today('F')], [], ['A', 'B', 'C', 'D']],
+  ])('%s', (_, tasks, returning, fading) => {
+    const split = exitSplit(overdue(...tasks));
+    expect(titles(split.returning)).toEqual(returning);
+    expect(titles(split.fading)).toEqual(fading);
+  });
+
+  test.each([
+    ['nothing returns: until the veil has gone', 0, false, 420],
+    ['one to its line: it lands at 420, its tint 420 more', 1, false, 840],
+    ['two to their lines, 50 ms apart', 2, false, 890],
+    ['one to the icon: its tint 1200 more', 1, true, 1620],
+    ['two to the icon', 2, true, 1670],
+  ])('%s', (_, flying, toIcon, length) => {
+    expect(exitLength(flying, toIcon)).toBe(length);
   });
 });
 

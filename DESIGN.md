@@ -63,7 +63,7 @@ account names). The UI says "Done", never "handled".
 | `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(29,30,33,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor, open row, selection / tracks, segmented "on", a press / a ghost button pressed |
 | `stripe` | `rgba(255,255,255,.045)` | `rgba(29,30,33,.05)` | hatching (drag ghosts, hidden images) |
 | `scrim` | `rgba(0,0,0,.72)` | `rgba(20,26,32,.35)` | behind Settings and ⌘K |
-| `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | Attention's count, the phone's attention pill, needs-reconnect bar, failing lines |
+| `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | Attention's count, the phone's attention pill, needs-reconnect bar, failing lines, an overdue task |
 | `alert` | `oklch(0.72 0.17 25)` | `oklch(0.535 0.185 25)` | protected mail, failed changes, offline pill, destructive actions, now-line, Jobs's Rejected mark |
 | `warm` | `oklch(0.8 0.11 55)` | `oklch(0.54 0.12 55)` | Business |
 | `cool` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | Personal (account and calendar), rain |
@@ -95,7 +95,8 @@ account names). The UI says "Done", never "handled".
 - **Roles**: each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
   it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count,
-  Attention's band and dots, and health warnings, nothing else. **`alert`** says danger and now: protected
+  Attention's band and dots, health warnings, and an overdue task (the overdue banner's label and
+  a Today line's passed time), nothing else. **`alert`** says danger and now: protected
   mail, failed changes, destructive actions, offline, the now-line, today's disc and a row's "Draft".
   **`ink`** is the primary action (New, sign-in, OK: solid ink pills), except the composer's Send,
   a solid `accent` pill at the start of its format row. The identity swatches show only as dots, chip
@@ -167,6 +168,21 @@ press goes in over **80 ms** and lets go over 120 ms. The stories `N` brings ont
 settle in from `sub2` over 900 ms: the longer motions are kept for arrivals, as are a
 calendar change's landing (420 ms) and an editor field another's change moved (600 ms).
 
+The overdue banner, an arrival, has two more. **Reveal** brings it in: the veil fades in over
+320 ms and the label over 240 ms; the title slides up from behind its own baseline (from 112% of
+its height, in a mask 7 px taller above and below that clips only while it enters) from 80 ms over
+560 ms `cubic-bezier(.16,1,.3,1)`; then the due line, or the list, rises 6 px and fades in from
+320 ms over 320 ms. It takes a click once the title is up (640 ms); a press pushes its text in to
+.985, and its hint fades in over 260 ms from 1400 ms. **Return to its row** takes it out: what
+isn't a returning title fades over 120 ms; each title due today moves to the centre of its Today
+line's title and shrinks to that size over 420 ms `cubic-bezier(.5,0,.2,1)`, 50 ms apart, opaque
+until 80% of the way; the veil fades from 60 ms over 360 ms; and the line takes `caution` at 30%,
+fading to none over 420 ms, as a calendar change lands. Where Today's lines aren't on screen (the
+rail, Calendar) the titles go instead to the overdue-task icon, 18 px under the sidebar's nav,
+shrinking to a third of a line and opaque to 55% of the way. It scales in from .8 over 180 ms as
+they leave and, as they arrive, takes `caution` at 34%, settles to 12% by 45%, holds to 75%, then
+goes: 1200 ms in all.
+
 Overlays arrive on these timings: every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
 "+N", and a card anchored to a calendar item opens as the floating detail does; ⌘K rises 6 px over
@@ -208,6 +224,10 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   same colour at 14% inside, as a chip's tint; a ring that completes grows to 1.15 under the pointer,
   fills to 34% with a 3 px halo of its colour and shows an 11 px `check` centred on it; done is a filled disc with the check knocked
   out, in **`good`**, title struck through in `ink3`.
+- **Overdue task** (`glyphs/task-overdue.svg`): a task ring with a check, open where a `caution`
+  badge with an `onInk` exclamation mark sits; 20 px in `ink`, 1.5 stroke. One use: the icon the
+  overdue banner's titles land on where Today's lines aren't on screen, on a 32 px tile, radius 10,
+  there only for the landing.
 - **Unread:** a 6 px `ink` dot in a 12 px gutter at the row's start (Attention's `caution`, and a
   read Attention row not yet Done keeps a 6 px `caution` ring); unread sender and subject are
   `ink` at 500, read are `ink2` at 400. A Noise row recedes: unread, `ink2` at 400 with an `ink3` dot;

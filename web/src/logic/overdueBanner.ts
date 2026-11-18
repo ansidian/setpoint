@@ -1,9 +1,10 @@
 // The overdue banner's rules (app/OverdueBanner.tsx): which tasks an arrival lists, in what order,
-// how many before "and 3 more", the words for when each was due, and the browser's record of the
-// tasks it has shown. Which tasks are overdue is logic/overdue.ts's; this looks 30 days back.
+// how many before "and 3 more", the words for when each was due, which titles return to Today on
+// the way out and how long that takes, and the browser's record of the tasks it has shown. Which tasks are overdue is logic/overdue.ts's; this looks 30 days back.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, daysBetween, instantAt, localDate} from './format.ts';
 import type {Overdue} from './overdue.ts';
+import {overdue as timing} from '../tokens.ts';
 
 /** How many days back an arrival looks for overdue tasks. */
 export const OVERDUE_DAYS = 30;
@@ -37,6 +38,26 @@ export function arrivalTasks(overdue: readonly Overdue[], shown: ReadonlySet<str
 /** Several tasks' list: the first four, and how many more fold into "and N more". */
 export function listed<T>(tasks: readonly T[]): {listed: T[]; more: number} {
   return {listed: tasks.slice(0, LISTED), more: Math.max(0, tasks.length - LISTED)};
+}
+
+/**
+ * The way out: of the tasks drawn (one task's title, or several's listed four), the ones due today
+ * return to their line in Today, in the order drawn; the rest, from earlier days, fade where they
+ * are. Tasks under "and N more" aren't drawn, so they do neither.
+ */
+export function exitSplit(tasks: readonly Overdue[]): {returning: Overdue[]; fading: Overdue[]} {
+  const drawn = listed(tasks).listed;
+  return {returning: drawn.filter(task => task.today), fading: drawn.filter(task => !task.today)};
+}
+
+/**
+ * How long the way out lasts, once `flying` titles leave 50 ms apart: until the last has landed
+ * and its line's tint (or the icon's, `toIcon`) has gone. With none flying, until the veil has faded.
+ */
+export function exitLength(flying: number, toIcon: boolean): number {
+  const faded = Math.max(timing.rest, timing.veilOutDelay + timing.veilOut);
+  if (!flying) return faded;
+  return Math.max(faded, (flying - 1) * timing.flyStagger + timing.fly + (toIcon ? timing.iconLand : timing.land));
 }
 
 const onDay = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {...options, timeZone: 'UTC'});

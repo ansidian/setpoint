@@ -1,7 +1,7 @@
 // Icons and the Todoist rings, drawn from the bundled paths in glyphs.ts in currentColor, and the mark.
 // DESIGN.md's sizes: 18 in the sidebar and rows, 16 in buttons and tools, 14 in chips, 17 in facts.
 import type {CSSProperties} from 'react';
-import {ICON_VIEWBOX, ICONS, type IconName, TASK_GLYPHS} from './glyphs.ts';
+import {ICON_VIEWBOX, ICONS, type IconName, OVERDUE_GLYPH, TASK_GLYPHS} from './glyphs.ts';
 
 /**
  * An icon in currentColor. `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk).
@@ -37,6 +37,18 @@ export function TaskGlyph({done, size = 13}: {done: boolean; size?: number}) {
   return (
     <svg className={done ? 'task-glyph done' : 'task-glyph'} width={size} height={size} viewBox={TASK_GLYPHS.viewBox} aria-hidden="true"
       dangerouslySetInnerHTML={{__html: done ? TASK_GLYPHS.done : TASK_GLYPHS.open}} />
+  );
+}
+
+/**
+ * The overdue-task icon, 20 px in `ink` with a 1.5 stroke: a task ring with a check, open where a
+ * `caution` badge with an `onInk` exclamation mark sits. Drawn only as the overdue banner's titles
+ * land where Today's lines aren't on screen.
+ */
+export function OverdueGlyph({size = 20}: {size?: number}) {
+  return (
+    <svg className="overdue-glyph" width={size} height={size} viewBox={OVERDUE_GLYPH.viewBox} fill="none" role="img" aria-label="Overdue task"
+      dangerouslySetInnerHTML={{__html: OVERDUE_GLYPH.body}} />
   );
 }
 

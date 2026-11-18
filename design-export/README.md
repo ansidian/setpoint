@@ -19,6 +19,7 @@ local: the fonts are bundled, nothing loads from the network.
 | `glyphs/icons/*.svg`, `glyphs/icons.json` | Every Material Symbols icon the boards use, as SVG paths: Rounded, wght 300, FILL 0, GRAD 0, opsz 24, `viewBox="0 -960 960 960"`. `-fill` files are the FILL 1 uses. |
 | `glyphs/marks/*.svg` | The five mark options from board 24. `1-set-point.svg` is the stand-in in the sidebar (bare 18 px, `ink`). |
 | `glyphs/task-open.svg`, `glyphs/task-done.svg` | Todoist status glyphs: the open ring and a filled disc with the check knocked out. |
+| `glyphs/task-overdue.svg` | The overdue-task icon: a task ring with a check, open where a `caution` badge with an exclamation mark sits, in Night's `caution` and `onInk` (the app draws them from the theme). Added with the overdue banner, after the export. |
 | `glyphs/material-symbols-used.txt` | The icon names, for bundling. |
 | `motion/glide.json`, `motion/glide.css` | Board 12c's motion values, machine-readable. |
 | `boards.json` | Board index: number, title, size, section and canvas position. |

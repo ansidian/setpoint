@@ -1,6 +1,6 @@
-// Writes src/ui/glyphs.ts from design-export/glyphs/: every Material Symbols path the boards use
-// and the Todoist rings, so they ship in the bundle and never load from the network (DESIGN.md ›
-// Glyphs, icons and the mark). tests/glyphs.test.ts checks the file is current.
+// Writes src/ui/glyphs.ts from design-export/glyphs/: every Material Symbols path the boards use,
+// the Todoist rings and the overdue-task icon, so they ship in the bundle and never load from the
+// network (DESIGN.md › Glyphs, icons and the mark). tests/glyphs.test.ts checks the file is current.
 //
 //   npm run glyphs
 import fs from 'node:fs';
@@ -26,6 +26,17 @@ function svgParts(file: string): {viewBox: string; body: string} {
   return {viewBox: viewBox[1]!, body: svg.slice(open[0].length, -'</svg>'.length).replace(/><\/(circle|path)>/g, '/>')};
 }
 
+// The overdue-task icon's fixed colours are Night's; the app draws them from the theme's tokens.
+const THEMED = {'oklch(0.75 0.16 40)': 'caution', '#050506': 'onInk'} as const;
+
+/** The overdue-task icon's markup: without its title (it's named where it's drawn), its colours as tokens. */
+function overdueGlyph(): {viewBox: string; body: string} {
+  const {viewBox, body} = svgParts('task-overdue.svg');
+  const themed = body.replace(/<title>[^<]*<\/title>/, '').replace(/(fill|stroke)="([^"]+)"/g, (whole, property: string, colour: string) =>
+    (colour in THEMED ? `style="${property}: var(--${THEMED[colour as keyof typeof THEMED]})"` : whole));
+  return {viewBox, body: themed};
+}
+
 export function renderGlyphs(): string {
   const icons = JSON.parse(fs.readFileSync(new URL('icons.json', GLYPHS), 'utf8')) as Record<string, IconJson>;
   const viewBoxes = new Set(Object.values(icons).map(icon => icon.viewBox));
@@ -48,6 +59,9 @@ export function renderGlyphs(): string {
     '',
     '/** Todoist\'s glyphs: the open ring and the filled disc with the check knocked out. */',
     `export const TASK_GLYPHS = ${JSON.stringify({viewBox: open.viewBox, open: open.body, done: done.body}, null, 2).replace(/"(\w+)":/g, '$1:')} as const;`,
+    '',
+    '/** The overdue-task icon: a task ring with a check, open where a `caution` badge with an exclamation mark sits. */',
+    `export const OVERDUE_GLYPH = ${JSON.stringify(overdueGlyph(), null, 2).replace(/"(\w+)":/g, '$1:')} as const;`,
     '',
   ].join('\n');
 }

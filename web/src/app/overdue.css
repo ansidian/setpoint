@@ -1,27 +1,49 @@
 /* The overdue banner (OverdueBanner.tsx): the page's own colour over everything, 88% in Night and
    90% in Light, and the task large on it with no card. Over the composer (30), under the toast (35).
-   It fades in, taking no pointer until it has, and out over 120 ms with the veil over 180 ms. */
+   Its motion is tokens.ts's `overdue` (--ov-*). Reveal: the veil and label fade in, the title
+   slides up from behind its own baseline inside a mask that clips only while it enters, then the
+   due line or the list rises under it. It takes no pointer until the title is up, then a press
+   pushes the text in, and the hint (drawn late) fades in. On the way out what doesn't return fades
+   where it is; the returning titles and the icon move by script (overdueExit.ts). */
 .overdue { position: fixed; inset: 0; z-index: 34; cursor: default; outline: none; color: var(--ink); }
-.overdue-veil { position: absolute; inset: 0; background: color-mix(in srgb, var(--page) 88%, transparent); animation: fade-in var(--dur-medium) var(--ease) both; }
+.overdue-veil { position: absolute; inset: 0; background: color-mix(in srgb, var(--page) 88%, transparent); animation: fade-in var(--ov-veilIn) var(--ease) both; }
 :root[data-theme="light"] .overdue-veil { background: color-mix(in srgb, var(--page) 90%, transparent); }
 .overdue-place { position: absolute; inset: 0; display: grid; place-items: center; padding: 48px 32px; }
-.overdue-stack { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 820px; max-width: 100%; text-align: center; }
-.overdue-stack, .overdue-hint { animation: fade-in var(--dur-medium) var(--ease) both; }
+.overdue-stack { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 820px; max-width: 100%; text-align: center;
+  transition: transform var(--dur-fast) var(--ease); }
+.overdue.in:active .overdue-stack { transform: scale(var(--ov-pressScale)); transition-duration: var(--dur-press); }
 .overdue-label { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase;
-  color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); }
+  color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); animation: fade-in var(--ov-labelIn) var(--ease) both; }
 .overdue-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--caution); }
-.overdue-title { font-size: 56px; font-weight: 500; letter-spacing: -.03em; line-height: 1.06; text-wrap: balance; overflow-wrap: anywhere; }
+.overdue-mask { max-width: 100%; padding: var(--ov-maskPx) 4px; margin: calc(-1 * var(--ov-maskPx)) 0; }
+.overdue.entering .overdue-mask, .overdue.in .overdue-mask { overflow: hidden; }
+.overdue-title { font-size: 56px; font-weight: 500; letter-spacing: -.03em; line-height: 1.06; text-wrap: balance; overflow-wrap: anywhere;
+  animation: overdue-reveal var(--ov-title) var(--ov-titleEase) var(--ov-titleDelay) both; }
+@keyframes overdue-reveal { from { transform: translateY(var(--ov-titleFromPct)); } }
 .overdue-one { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .overdue .ring { margin: 0; }
 .overdue-due { display: flex; align-items: center; gap: 10px; font-size: 16px; color: var(--ink2); font-variant-numeric: tabular-nums; }
 .overdue-many { display: flex; flex-direction: column; align-items: center; gap: 28px; width: 100%; }
 .overdue-list { display: flex; flex-direction: column; width: 520px; max-width: 100%; margin: 0; padding: 0; list-style: none; text-align: left; }
+.overdue-due, .overdue-list { animation: overdue-rise var(--ov-due) var(--ease) var(--ov-dueDelay) both; }
+@keyframes overdue-rise { from { opacity: 0; transform: translateY(var(--ov-dueRisePx)); } }
 .overdue-list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--hair); font-size: 16px; }
-.overdue-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The title is its own clip, so it can leave its row whole on the way out. */
+.overdue-name { flex: 1 1 auto; min-width: 0; }
+.overdue-fly { display: inline-block; max-width: 100%; vertical-align: top; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .overdue-when { flex: none; color: var(--ink3); font-size: 13px; font-variant-numeric: tabular-nums; }
 .overdue-list .overdue-more { padding-left: 25px; color: var(--ink3); }
-.overdue-hint { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ink3); font-size: 12px; }
+.overdue-hint { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ink3); font-size: 12px;
+  animation: fade-in var(--ov-hint) var(--ease) both; }
 .overdue.entering, .overdue.out { pointer-events: none; }
-.overdue.out .overdue-stack, .overdue.out .overdue-hint { animation: overdue-out var(--dur-fast) var(--ease) forwards; }
-.overdue.out .overdue-veil { animation: overdue-out var(--dur-medium) var(--ease) forwards; }
+/* The way out: everything that isn't a returning title fades where it is, the row lines too; the veil after. */
+.overdue.out :is(.overdue-label, .overdue-due, .overdue-many .overdue-title, .overdue-list .ring, .overdue-when, .overdue-more, .overdue-hint, [data-exit="fade"]) {
+  animation: overdue-out var(--ov-rest) var(--ease) forwards; }
+.overdue.out .overdue-list { animation: none; }
+.overdue.out .overdue-list li { border-top-color: transparent; transition: border-top-color var(--ov-rest) var(--ease); }
+.overdue.out .overdue-veil { animation: overdue-out var(--ov-veilOut) var(--ease) var(--ov-veilOutDelay) forwards; }
 @keyframes overdue-out { to { opacity: 0; } }
+/* The overdue-task icon, only for the landing where Today's lines aren't on screen: a 32 px tile,
+   radius 10, that comes in as the titles leave and takes the tint as they arrive (by script). */
+.overdue-icon { position: absolute; display: grid; place-items: center; border-radius: 10px; color: var(--ink); opacity: 0; }
+.overdue-icon .overdue-glyph { display: block; }

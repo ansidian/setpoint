@@ -327,6 +327,29 @@ export const monthPaging = {glideMs: motion.slow, farRows: 10, leadRows: 5, titl
  */
 export const news = {seenAfterMs: 1000, landedMs: 900} as const;
 
+/**
+ * The overdue banner's two arrival motions (DESIGN.md › Motion), in ms on `motion.ease` unless an
+ * easing is given. Reveal: the veil fades in over `veilIn` and the label over `labelIn`; the title
+ * slides up from `titleFromPct`% of its height, behind a mask `maskPx` taller above and below, from
+ * `titleDelay` over `title` on `titleEase`; then the due line or the list rises `dueRisePx` and
+ * fades in from `dueDelay` over `due`. The press goes in to `pressScale`. The hint fades in over
+ * `hint`, `hintDelay` after the banner enters. Return to its row: what doesn't return fades over
+ * `rest`; each title due today flies to its Today line over `fly` on `flyEase`, `flyStagger`
+ * apart, opaque until `flyHoldPct`% of the way; the veil fades from `veilOutDelay` over `veilOut`;
+ * the line takes `caution` at `landTintPct`% fading to none over `land`, a calendar change's
+ * landing. Where no line is on screen, the titles shrink to `iconScale` of a line's size, opaque
+ * to `iconHoldPct`%, on the overdue-task icon, which scales in from `iconFrom` over `iconIn`, 18 px
+ * under the sidebar's nav, and on their arrival takes `caution` at `iconTintPct`%, settling to
+ * `iconSettlePct`% by `iconSettleAt`%, held to `iconHoldAt`%, then goes, over `iconLand`.
+ */
+export const overdue = {
+  veilIn: 320, labelIn: 240, titleDelay: 80, title: 560, titleEase: 'cubic-bezier(.16,1,.3,1)', titleFromPct: 112, maskPx: 7,
+  dueDelay: 320, due: 320, dueRisePx: 6, pressScale: 0.985, hintDelay: 1400, hint: 260,
+  rest: motion.fast, fly: 420, flyEase: 'cubic-bezier(.5,0,.2,1)', flyStagger: 50, flyHoldPct: 80, veilOutDelay: 60, veilOut: 360,
+  land: 420, landTintPct: 30,
+  iconScale: 0.3, iconHoldPct: 55, iconFrom: 0.8, iconIn: 180, iconGapPx: 18, iconLand: 1200, iconTintPct: 34, iconSettlePct: 12, iconSettleAt: 45, iconHoldAt: 75,
+} as const;
+
 /** Fixed sizes in px. */
 export const layout = {
   sidebar: 248,
@@ -387,6 +410,10 @@ export function cssVariables(): Record<string, string> {
   vars['--thumb-ink'] = `${thumb.inkMs}ms`;
   vars['--thumb-ink-delay'] = `${thumb.inkDelayMs}ms`;
   vars['--news-landed'] = `${news.landedMs}ms`;
+  // The overdue banner's: `--ov-<name>`, a time in ms, a percentage or a plain number.
+  for (const [name, value] of Object.entries(overdue)) {
+    vars[`--ov-${name}`] = typeof value === 'string' ? value : /(Pct|At)$/.test(name) ? `${value}%` : name.endsWith('Px') ? `${value}px` : /Scale|From$/.test(name) ? String(value) : `${value}ms`;
+  }
   vars['--skel'] = `var(--${skeleton.fill})`;
   vars['--skel-on-sub'] = `var(--${skeleton.fillOnSub})`;
   vars['--skel-delay'] = `${skeleton.delayMs}ms`;

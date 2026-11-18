@@ -4,25 +4,32 @@
 // overdue mid-use raises nothing until the next one, and a banner due while they're away waits for
 // their return. One task is its title over its ring, project and due ("Errands · Due today, 8:00
 // AM"). Several are "3 tasks" over a list, the most recently due first, four and "and 3 more".
-// It enters over the length of its fade, and until then takes no click or key: they go to the
-// page under it, as the click that brings the window back does. Then a click anywhere or Esc
-// dismisses it, and marks its tasks shown in this browser (overdueShown.ts) so it doesn't come
-// back for them. While it's up no other key acts, on it or the page under it, and its click
-// reaches nothing else. It sits over every page and the composer, under the toast. It waits while
-// Settings or ⌘K is open, and isn't drawn below 640 px (App.tsx). It fades in and out (120 ms, the
-// veil 180 ms).
+// It enters by Reveal: the veil and label fade in, the title slides up from behind its own
+// baseline, then the due line (or the list) rises under it. Until the title is up it takes no
+// click or key: they go to the page under it, as the click that brings the window back does. Then
+// a press pushes the text in, the hint fades in late, and a click anywhere or Esc dismisses it,
+// marking its tasks shown in this browser (overdueShown.ts) so it doesn't come back for them. It
+// leaves by Return to its row: each title due today goes back to its Today line, which takes the
+// landing tint, and the rest fades where it is (overdueExit.ts finds the lines, and the icon where
+// they aren't on screen). While it's up no other key acts, on it or the page under it, and its
+// click reaches nothing else. It sits over every page and the composer, under the toast. It waits
+// while Settings or ⌘K is open, and isn't drawn below 640 px (App.tsx). Timings are tokens.ts's
+// `overdue`.
 import type {ItemOut, ItemsOut} from '@setpoint/shared';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {SyntheticEvent} from 'react';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
 import {itemsPath} from '../api/items.ts';
 import {overdueTasks} from '../logic/overdue.ts';
 import type {Overdue} from '../logic/overdue.ts';
-import {arrivalTasks, bannerRange, dueLine, listed, shortDue, shownKey} from '../logic/overdueBanner.ts';
-import {motion} from '../tokens.ts';
+import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, listed, shortDue, shownKey} from '../logic/overdueBanner.ts';
+import {motion, overdue as timing} from '../tokens.ts';
+import {OverdueGlyph} from '../ui/Icon.tsx';
 import {useRingColour} from './calendar/Chip.tsx';
 import {useArrival} from './arrival.ts';
+import {planExit} from './overdueExit.ts';
+import type {ExitPlan} from './overdueExit.ts';
 import type {Arrival} from './arrival.ts';
 import {markShown, shownTasks} from './overdueShown.ts';
 import {usePaletteOpen} from './palette/Palette.tsx';
@@ -68,8 +75,44 @@ export function OverdueArrivals({arrival, present, items, timeZone: zone}: {arri
 
 const keep = (event: SyntheticEvent) => event.stopPropagation();
 
-/** How long the banner takes to enter, taking no click or key meanwhile: the length of its fade-in. */
-export const ENTRANCE_MS = motion.medium;
+/** How long the banner takes to enter, taking no click or key meanwhile: the Reveal's title. */
+export const ENTRANCE_MS = timing.titleDelay + timing.title;
+
+// A colour mix of the theme's `caution`, read where it's drawn so WAAPI keyframes get a value.
+const cautionMix = (element: Element, percent: number) => `color-mix(in oklch, ${getComputedStyle(element).getPropertyValue('--caution').trim()} ${percent}%, transparent)`;
+
+/** Plays the way out: the titles fly, each line lands, and the icon comes and goes. */
+function playExit(banner: HTMLElement, plan: ExitPlan) {
+  const ease = {easing: motion.ease};
+  const toIcon = plan.icon !== null;
+  const hold = (toIcon ? timing.iconHoldPct : timing.flyHoldPct) / 100;
+  plan.flights.forEach((flight, index) => {
+    const title = banner.querySelector<HTMLElement>(`[data-key="${CSS.escape(flight.key)}"]`);
+    const delay = index * timing.flyStagger;
+    // As a CSS animation's keyframes: the easing runs per stretch, so opacity holds, then fades.
+    title?.animate([
+      {offset: 0, transform: 'none', opacity: 1, easing: timing.flyEase},
+      {offset: hold, opacity: 1, easing: timing.flyEase},
+      {offset: 1, transform: `translate(${flight.x}px, ${flight.y}px) scale(${flight.scale})`, opacity: 0},
+    ], {duration: timing.fly, delay, fill: 'both'});
+    if (toIcon) return;
+    // Its line takes the landing tint as it arrives, fading to none (a lone keyframe at 0, as CSS's
+    // `from`). The animation is the line's, so it outlives the banner.
+    const line = document.querySelector(`.sb .today-row[data-key="${CSS.escape(flight.key)}"]`);
+    line?.animate([{offset: 0, background: cautionMix(line, timing.landTintPct), ...ease}], {duration: timing.land, delay: delay + timing.fly});
+  });
+  const icon = banner.querySelector<HTMLElement>('.overdue-icon');
+  if (!icon || !plan.flights.length) return;
+  icon.animate([{opacity: 0, transform: `scale(${timing.iconFrom})`, ...ease}, {opacity: 1, transform: 'none'}], {duration: timing.iconIn, fill: 'forwards'});
+  const tile = (percent: number) => cautionMix(icon, percent);
+  const arrived = (plan.flights.length - 1) * timing.flyStagger + timing.fly;
+  icon.animate([
+    {offset: 0, opacity: 1, background: tile(timing.iconTintPct), ...ease},
+    {offset: timing.iconSettleAt / 100, opacity: 1, background: tile(timing.iconSettlePct), ...ease},
+    {offset: timing.iconHoldAt / 100, opacity: 1, background: tile(timing.iconSettlePct), ...ease},
+    {offset: 1, opacity: 0, background: tile(0)},
+  ], {duration: timing.iconLand, delay: arrived, fill: 'forwards'});
+}
 
 /**
  * The banner over `overdue`, less what this browser has shown. Nothing when that's all of them.
@@ -78,6 +121,10 @@ export const ENTRANCE_MS = motion.medium;
 export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: readonly Overdue[]; now: number; timeZone: string; onGone?: () => void}) {
   const [tasks] = useState(() => arrivalTasks(overdue, shownTasks(), zone));
   const [phase, setPhase] = useState<'entering' | 'in' | 'out' | 'gone'>(tasks.length ? 'entering' : 'gone');
+  // The dismiss hint comes late, so a quick click never sees it.
+  const [hinted, setHinted] = useState(false);
+  // The way out, measured at the click.
+  const [exit, setExit] = useState<ExitPlan | null>(null);
   const ring = useRingColour();
   const banner = useRef<HTMLDivElement>(null);
   // Where focus was as it settled, given back once it's dismissed (a draft in the composer).
@@ -89,10 +136,18 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
     return () => window.clearTimeout(timer);
   }, [phase]);
 
-  // Shown once it's dismissed, not when it appears, so a reload before then shows it again.
+  useEffect(() => {
+    if (!tasks.length) return;
+    const timer = window.setTimeout(() => setHinted(true), timing.hintDelay);
+    return () => window.clearTimeout(timer);
+  }, [tasks]);
+
+  // Shown once it's dismissed, not when it appears, so a reload before then shows it again. The way
+  // out is measured now, from layout, and nothing waits on it.
   const dismiss = useCallback(() => {
     if (phase !== 'in') return;
     markShown(tasks.map(task => shownKey(task.item)), now, zone);
+    setExit(banner.current ? planExit(banner.current, exitSplit(tasks).returning.map(task => task.item.key)) : {flights: [], icon: null});
     setPhase('out');
   }, [phase, tasks, now, zone]);
 
@@ -115,12 +170,17 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
     };
   }, [phase, dismiss]);
 
+  // Played once its exit marks and the icon are drawn.
+  useLayoutEffect(() => {
+    if (phase === 'out' && exit && banner.current) playExit(banner.current, exit);
+  }, [phase, exit]);
+
   useEffect(() => {
     if (phase !== 'out') return;
     if (before.current instanceof HTMLElement && before.current.isConnected) before.current.focus();
-    const timer = window.setTimeout(() => setPhase('gone'), motion.medium);
+    const timer = window.setTimeout(() => setPhase('gone'), exitLength(exit?.flights.length ?? 0, Boolean(exit?.icon)));
     return () => window.clearTimeout(timer);
-  }, [phase]);
+  }, [phase, exit]);
 
   useEffect(() => {
     if (phase === 'gone') onGone?.();
@@ -129,6 +189,10 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
   if (phase === 'gone') return null;
   const one = tasks.length === 1 ? tasks[0]!.item : null;
   const {listed: rows, more} = listed(tasks);
+  // On the way out each drawn title says whether it returns or fades.
+  const flying = new Set(exit?.flights.map(flight => flight.key));
+  const exitOf = (key: string) => (exit ? (flying.has(key) ? 'return' : 'fade') : undefined);
+  const icon = exit?.icon;
   return (
     <div ref={banner} className={`overdue ${phase}`} role="dialog" aria-modal="true" aria-label="Overdue tasks" tabIndex={-1} data-state={phase}
       onClick={event => {
@@ -140,13 +204,20 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
         keep(event);
         event.preventDefault();
       }}>
+      {icon && (
+        <div className="overdue-icon" style={{left: icon.left, top: icon.top, width: icon.width, height: icon.height}}>
+          <OverdueGlyph />
+        </div>
+      )}
       <div className="overdue-veil" />
       <div className="overdue-place">
         <div className="overdue-stack">
           <div className="overdue-label"><span className="overdue-dot" />Overdue</div>
           {one ? (
             <div className="overdue-one">
-              <div className="overdue-title">{one.title}</div>
+              <div className="overdue-mask">
+                <div className="overdue-title" data-key={one.key} data-exit={exitOf(one.key)}>{one.title}</div>
+              </div>
               <div className="overdue-due">
                 <span className="ring" style={ring(one.project)} />
                 <span>{[one.project, dueLine(one, now, zone)].filter(Boolean).join(' · ')}</span>
@@ -154,12 +225,14 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
             </div>
           ) : (
             <div className="overdue-many">
-              <div className="overdue-title">{tasks.length} tasks</div>
+              <div className="overdue-mask">
+                <div className="overdue-title">{tasks.length} tasks</div>
+              </div>
               <ul className="overdue-list">
                 {rows.map(({item}) => (
                   <li key={item.key}>
                     <span className="ring" style={ring(item.project)} />
-                    <span className="overdue-name">{item.title}</span>
+                    <span className="overdue-name"><span className="overdue-fly" data-key={item.key} data-exit={exitOf(item.key)}>{item.title}</span></span>
                     <span className="overdue-when">{shortDue(item, now, zone)}</span>
                   </li>
                 ))}
@@ -169,7 +242,7 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
           )}
         </div>
       </div>
-      <div className="overdue-hint"><span>Click anywhere to dismiss</span><span className="kbd">Esc</span></div>
+      {hinted && <div className="overdue-hint"><span>Click anywhere to dismiss</span><span className="kbd">Esc</span></div>}
     </div>
   );
 }
