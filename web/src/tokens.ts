@@ -354,6 +354,19 @@ export const overdue = {
   snoozeIn: motion.medium, snoozeOut: motion.medium, closeUp: motion.medium,
 } as const;
 
+/**
+ * The completion moment (DESIGN.md › Motion), in ms on `motion.ease` unless an easing is given. Six
+ * `dotPx` dots in the ring's colour fly `dotFromPx` to `dotToPx` from its centre, 60° apart, fading over
+ * `dots`; the done check pops from `popFrom` through `popPeak` to 1 over `pop` on `popEase`. A `good`
+ * highlight at `sweepTintPct`% sweeps across the title over the first `sweepInPct`% of `moment`, then
+ * fades; the strike draws over `strike`, the title goes `ink3` over `ink` and moves `nudgePx` right and
+ * back over `nudge`. The Today block's line folds once `moment` is over.
+ */
+export const completion = {
+  moment: 640, dots: 420, dotPx: 3, dotFromPx: 4, dotToPx: 14, pop: 280, popEase: 'cubic-bezier(.3,0,.2,1)', popFrom: 0.5, popPeak: 1.18,
+  sweepInPct: 40, sweepTintPct: 24, strike: motion.slow, ink: motion.medium, nudge: 300, nudgePx: 3,
+} as const;
+
 /** Fixed sizes in px. */
 export const layout = {
   sidebar: 248,
@@ -418,6 +431,12 @@ export function cssVariables(): Record<string, string> {
   for (const [name, value] of Object.entries(overdue)) {
     vars[`--ov-${name}`] = typeof value === 'string' ? value : /(Pct|At)$/.test(name) ? `${value}%` : name.endsWith('Px') ? `${value}px` : /Scale|From$/.test(name) ? String(value) : `${value}ms`;
   }
+  // The completion moment's: `--done-<name>`, and the sweep's two parts, in and out.
+  for (const [name, value] of Object.entries(completion)) {
+    vars[`--done-${name}`] = typeof value === 'string' ? value : name.endsWith('Pct') ? `${value}%` : name.endsWith('Px') ? `${value}px` : /^pop[A-Z]/.test(name) ? String(value) : `${value}ms`;
+  }
+  vars['--done-sweepIn'] = `${completion.moment * completion.sweepInPct / 100}ms`;
+  vars['--done-sweepOut'] = `${completion.moment * (100 - completion.sweepInPct) / 100}ms`;
   vars['--skel'] = `var(--${skeleton.fill})`;
   vars['--skel-on-sub'] = `var(--${skeleton.fillOnSub})`;
   vars['--skel-delay'] = `${skeleton.delayMs}ms`;

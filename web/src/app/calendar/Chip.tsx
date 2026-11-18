@@ -14,7 +14,9 @@ import type {CSSProperties, MouseEvent, PointerEvent} from 'react';
 import {useResource} from '../../api/client.ts';
 import {TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {chipTime, isPast} from '../../logic/calendar.ts';
+import {Burst} from '../../ui/Burst.tsx';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
+import {useJustDone} from './done.ts';
 import {colourVar} from '../accounts.ts';
 import {useLanding} from './landing.ts';
 import {Saving} from './Saving.tsx';
@@ -58,6 +60,8 @@ export function useRingColour(): (project: string | null) => CSSProperties | und
 
 export function Chip({item, calendar, selected, look, now, timeZone, onSelect, onPress, onComplete, time: shownTime, label}: ChipProps) {
   const ring = useRingColour();
+  // A task ticked off here plays the completion moment.
+  const justDone = useJustDone(item.kind === 'task' ? [item] : []).has(item.key);
   // A calendar just toggled fades its items out or in.
   const fade = useCalendarFade()(item.calendar_id);
   // An event's change arriving brightens its tint once.
@@ -81,7 +85,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
     const taskShown = shownTime === undefined ? chipTime(item, timeZone) : shownTime;
     const toggle = onComplete && !item.read_only && !item.command && (!item.done || item.can_reopen) ? onComplete : undefined;
     return (
-      <div className={`tk${counted ? ' counted' : ''}${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
+      <div className={`tk${counted ? ' counted' : ''}${item.done ? ' done' : ''}${justDone ? ' just-done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
         {failed ? <Icon name="error" size={14} /> : (
           // A read-only task, one with a change in flight, or a done one that can't reopen takes no
           // click here: its ring selects and drags as the rest of the chip does.
@@ -91,10 +95,11 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
               toggle(item);
             } : undefined}>
             {item.done ? <TaskGlyph done size={12} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={10} /></span>}
+            {justDone && <Burst style={ring(item.project)} />}
           </span>
         )}
         {taskShown && <span className="t">{taskShown}</span>}
-        {counted ? <span className="title">{item.title}</span> : item.title}
+        <span className="title"><span className="done-tx">{item.title}</span></span>
         {counted && <span className="count num"><Icon name="subtask" size={12} />{subtaskCount(item)}</span>}
         {pending && <Saving command={item.command} timeZone={timeZone} size={14} />}
       </div>

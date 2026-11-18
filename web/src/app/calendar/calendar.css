@@ -125,12 +125,16 @@
 .tk { --tk-pad: 4px; }
 .tk .check { display: inline-flex; align-items: center; vertical-align: top; height: 100%; width: calc(var(--tk-pad) + 16px); margin: 0 2px 0 calc(-1 * var(--tk-pad)); padding-left: var(--tk-pad); flex: none; }
 .tk .check .ring, .tk .check .task-glyph { margin: 0; vertical-align: 0; }
-/* A task with subtasks is a row, its count at the right in `ink3` and its title cut before it. */
-.tk.counted { display: flex; align-items: center; }
-.tk.counted .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* A chip is a row whose title, not the chip, is cut short, so the completion moment's dots and sweep
+   reach past the chip; its box reaches 3 px past each side of the text for the sweep. The chip
+   clips while it folds. A task with subtasks ends in their count, in `ink3`, its title cut before it. */
+.tk:not(.lift) { display: flex; align-items: center; overflow: visible; }
+.tk:not(.lift) > .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-inline: 3px; margin-inline: -3px; }
+.tk .t { flex: none; }
+.tk.removing, .tk.restoring { overflow: hidden; }
 .tk.counted .count { display: inline-flex; align-items: center; gap: 2px; flex: none; margin-left: 6px; color: var(--ink3); font-size: 11px; }
 .task-glyph.done { color: var(--good); }
-.tk.done { color: var(--ink3); text-decoration: line-through; text-decoration-color: var(--ink3); }
+.tk.done { color: var(--ink3); }
 /* Under the pointer `sub`, so a hovered task doesn't look selected (`sub2`). */
 .tk.sel { background: var(--sub2); }
 @media (hover: hover) { .tk:not(.sel, .ghost, .lift):hover { background: var(--sub); } }
@@ -195,13 +199,8 @@
 .ag-task .ring { --ring-base: var(--ring, var(--ink2)); width: 15px; height: 15px; margin: 0 0 0 2px; }
 .ag-task .task-glyph { margin-left: 2px; }
 .ag-task .title { color: var(--ink); font-weight: 400; }
-/* Done, its title struck in `ink3`, the strike a line drawn under the text, so ticking it off draws
-   it left to right over 180 ms as its done check lands, as the Today block's does. */
+/* Done, its title struck in `ink3` (the completion moment, styles.css). */
 .ag-task.done .title { color: var(--ink3); }
-.ag-task.done .title > span { background: linear-gradient(currentColor, currentColor) 0 55% / 100% 1px no-repeat; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.ag-task.just-done .title > span { animation: strike-in var(--dur-medium) var(--ease); }
-.ag-task.just-done .task-glyph { animation: ring-done var(--dur-fast) var(--ease); }
-@keyframes strike-in { from { background-size: 0% 1px; } }
 .ag-task .spin { margin-right: 6px; }
 .ag-task .project { font-size: 12px; }
 /* A task's subtasks, done of all, before its project: a button that opens its checklist
@@ -218,7 +217,7 @@
 .subtask:hover .handle, .subtask .handle:focus-visible { opacity: 1; }
 .subtask .fd-mark { height: 19px; }
 .subtask .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.subtask.done .title { color: var(--ink3); text-decoration: line-through; }
+.subtask.done .title { color: var(--ink3); }
 .subtask.pending, .subtask.dragging { opacity: .5; }
 .subtask.failed .fd-mark .icon { color: var(--alert); }
 .subtask .fd-mark.retrying .icon { color: var(--caution); }

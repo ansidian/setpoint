@@ -32,6 +32,7 @@ import {Saving} from '../Saving.tsx';
 import {subtaskCount, Subtasks} from '../Subtasks.tsx';
 import {retryingLine} from '../../../logic/providerWords.ts';
 import {useJustDone} from '../done.ts';
+import {Burst} from '../../../ui/Burst.tsx';
 import type {DetailTarget} from './motion.ts';
 
 /** The card's icon actions, carried out by the Calendar page, or the ones another page offers. */
@@ -115,7 +116,8 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   // not to a repeating task's done occurrence, a row of its own.
   const addSubtask = item.kind === 'task' && !item.read_only && item.id > 0 && item.parent_id === null && !(item.recurring && item.done)
     && item.command?.kind !== 'item_create' ? actions?.addSubtask : undefined;
-  const markClass = `fd-mark${pending ? ' pending' : ''}${justDone.has(item.key) ? ' just-done' : ''}`;
+  const played = justDone.has(item.key);
+  const markClass = `fd-mark${pending ? ' pending' : ''}${played ? ' just-done' : ''}`;
   // With actions, a task's ring completes it, and its done check reopens it, as the
   // Today block's lines and the day pane's rows do. Without them (the phone) it's a mark.
   const stuck = !!item.command || (item.done && !item.can_reopen);
@@ -124,18 +126,22 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
       data-tip={item.command ? retryingLine(item.command, timeZone) ?? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
       onClick={act(task => !stuck && actions.complete(task))}>
       {item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
+      {played && <Burst style={ring(item.project)} />}
     </button>
   ) : (
     <span className={markClass}>
       {item.kind === 'event' ? <span className="dot" style={{...colour, width: 10, height: 10}} />
         : item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)} />}
+      {played && <Burst style={ring(item.project)} />}
     </span>
   );
   return (
     <>
       <div className="card-h">
         {mark}
-        <span className={`grow fd-title${item.kind === 'task' && item.done ? ' done' : ''}`} data-tip={item.title} data-tip-quick>{item.title}</span>
+        <span className={`grow fd-title${item.kind === 'task' && item.done ? ' done' : ''}${played ? ' just-done' : ''}`} data-tip={item.title} data-tip-quick>
+          {item.kind === 'task' ? <span className="done-tx">{item.title}</span> : item.title}
+        </span>
         {pending && <Saving command={item.command} timeZone={timeZone} size={16} />}
         <button className="ibtn sm" aria-label="Close" data-tip="Close · Esc" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>

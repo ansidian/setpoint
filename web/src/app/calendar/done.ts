@@ -1,6 +1,6 @@
-// One completion moment, the Today block's: a task
-// ticked off where it's drawn plays its done check in, as the Today block's line does, for
-// DONE_MOMENT_MS. A task already done when first drawn, or reopened, plays nothing.
+// One completion moment (styles.css): a task ticked off where it's drawn plays it, as the Today
+// block's line does, for DONE_MOMENT_MS. A task already done when first drawn, or reopened, plays
+// nothing, and one reopened while it plays stops.
 import {useEffect, useState} from 'react';
 import {playsDone} from '../../logic/calendar.ts';
 import {DONE_MOMENT_MS} from '../../logic/today.ts';
@@ -13,7 +13,9 @@ export function useJustDone(tasks: readonly {key: string; done: boolean}[]): Rea
     const turned = playsDone(last.done, tasks);
     const done = new Map(last.done);
     for (const task of tasks) done.set(task.key, task.done);
-    setLast({states, done, just: turned.length ? new Set([...last.just, ...turned]) : last.just});
+    // A task reopened while its moment plays stops playing it.
+    const playing = [...last.just].filter(key => done.get(key));
+    setLast({states, done, just: turned.length || playing.length < last.just.size ? new Set([...playing, ...turned]) : last.just});
   }
   useEffect(() => {
     if (!last.just.size) return;

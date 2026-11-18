@@ -36,6 +36,7 @@ import {useArrival} from '../states/Loading.tsx';
 import {AgendaSkeleton, DayLineSkeleton} from '../states/Skeletons.tsx';
 import {useRingColour} from './Chip.tsx';
 import {useJustDone} from './done.ts';
+import {Burst} from '../../ui/Burst.tsx';
 import {useCalendarFade} from './view.ts';
 
 interface DayPaneProps {
@@ -134,10 +135,11 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
                   onComplete(task);
                 }}>
                 {task.done ? <TaskGlyph done size={15} /> : <span className="ring" style={ring(task.project)}><Icon name="check" size={11} /></span>}
+                {justDone.has(task.key) && <Burst style={ring(task.project)} />}
               </button>
               {time
-                ? <span className="grow"><span className="title"><span>{task.title}</span></span><span className="ink3 num line">{time}</span></span>
-                : <span className="grow title"><span>{task.title}</span></span>}
+                ? <span className="grow"><span className="title"><span className="done-tx">{task.title}</span></span><span className="ink3 num line">{time}</span></span>
+                : <span className="grow title"><span className="done-tx">{task.title}</span></span>}
               {/* Waiting, the spinner comes before the project, which stays. */}
               {task.command?.state === 'pending' && <Saving command={task.command} timeZone={timeZone} size={16} />}
               {task.subtasks.length > 0 && (

@@ -16,7 +16,9 @@
 import type {ItemOut, SubtaskOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
+import {Burst} from '../../ui/Burst.tsx';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
+import {useJustDone} from './done.ts';
 import {subtaskDue} from '../../logic/calendar.ts';
 import {retryingLine} from '../../logic/providerWords.ts';
 import {localDate} from '../../logic/format.ts';
@@ -55,6 +57,8 @@ export function Subtasks({task, ring, timeZone, onComplete, onSettle, onReorder,
     void onReorder(task, ids).catch(() => undefined).finally(() => setDropped(null));
   };
   const order = useLiveOrder(list, 'text/x-setpoint-subtask', save, 'subtasks');
+  // A subtask ticked off here plays the completion moment.
+  const justDone = useJustDone(task.subtasks.map(subtask => ({key: String(subtask.id), done: subtask.done})));
   const move = (index: number, delta: 1 | -1) => {
     const to = index + delta;
     if (to < 0 || to >= list.length) return;
@@ -75,12 +79,16 @@ export function Subtasks({task, ring, timeZone, onComplete, onSettle, onReorder,
     <div {...order.groupProps} role="group" aria-label="Subtasks">
       {list.map((subtask, index) => {
         const {dragging, ...drag} = order.rowProps(subtask, index);
-        const glyph = subtask.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring}>{onComplete && <Icon name="check" size={11} />}</span>;
+        const played = justDone.has(String(subtask.id));
+        const glyph = <>
+          {subtask.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring}>{onComplete && <Icon name="check" size={11} />}</span>}
+          {played && <Burst style={ring} />}
+        </>;
         const failed = subtask.command?.state === 'failed';
         const retrying = retryingLine(subtask.command, timeZone);
         const due = subtaskDue(subtask, today, timeZone);
         return (
-          <div key={subtask.id} className={`subtask${subtask.done ? ' done' : ''}${subtask.command?.state === 'pending' ? ' pending' : ''}${failed ? ' failed' : ''}${dragging ? ' dragging' : ''}`}
+          <div key={subtask.id} className={`subtask${subtask.done ? ' done' : ''}${played ? ' just-done' : ''}${subtask.command?.state === 'pending' ? ' pending' : ''}${failed ? ' failed' : ''}${dragging ? ' dragging' : ''}`}
             draggable={movable} {...drag} data-subtask={subtask.id}
             onContextMenu={onMenu && (event => {
               event.stopPropagation();
@@ -103,8 +111,8 @@ export function Subtasks({task, ring, timeZone, onComplete, onSettle, onReorder,
                 onClick={() => !subtask.command && onComplete(subtask)}>{glyph}</button>
             ) : <span className="fd-mark">{glyph}</span>}
             {onOpen && !subtask.command
-              ? <button className="title" type="button" aria-label={`Edit ${subtask.title}`} onClick={() => onOpen(subtask)}>{subtask.title}{due && <Due text={due} bell={subtask.reminders.length > 0} />}</button>
-              : <span className="title">{subtask.title}{due && <Due text={due} bell={subtask.reminders.length > 0} />}</span>}
+              ? <button className="title" type="button" aria-label={`Edit ${subtask.title}`} onClick={() => onOpen(subtask)}><span className="done-tx">{subtask.title}</span>{due && <Due text={due} bell={subtask.reminders.length > 0} />}</button>
+              : <span className="title"><span className="done-tx">{subtask.title}</span>{due && <Due text={due} bell={subtask.reminders.length > 0} />}</span>}
             {failed && onSettle && (
               <span className="acts">
                 {subtask.command!.can_retry && <button className="ibtn sm" type="button" aria-label={`Try again: ${subtask.title}`} data-tip="Try again" onClick={() => onSettle(subtask, 'retry')}><Icon name="refresh" size={15} /></button>}

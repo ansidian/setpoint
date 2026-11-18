@@ -8,6 +8,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
+import {DONE_MOMENT_MS} from '../../src/logic/today.ts';
 import {cleanUp, describe, drawn, drawnTwice, holdToast, pagePx, pauseClock, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
@@ -287,6 +288,31 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await lines.filter({hasText: 'Pay rent'}).waitFor();
     assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a Today task ticked off plays the completion moment where it was, and its line folds only once the moment is over', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    await page.goto(`${setpoint.base}/inbox`);
+    const lines = page.locator('.sb .today-row');
+    await until('the Today block', () => lines.allTextContents(), texts => texts.length === 5);
+    await pauseClock(page);
+    const payRent = lines.filter({hasText: 'Pay rent'});
+    await payRent.getByRole('button', {name: 'Complete Pay rent'}).click();
+    await until('the moment', () => payRent.getAttribute('class'), names => names?.split(' ').includes('just-done') ?? false);
+    assert.equal(await payRent.locator('.burst > i').count(), 6);
+    // Still there, playing, until the moment is over; then it starts to fold away.
+    await page.clock.runFor(DONE_MOMENT_MS - 1);
+    await drawnTwice(page);
+    assert.equal((await payRent.getAttribute('class'))!.split(' ').includes('leaving'), false);
+    await page.clock.runFor(1);
+    await until('the fold', () => payRent.getAttribute('class'), names => names?.split(' ').includes('leaving') ?? false);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

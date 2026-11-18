@@ -8,9 +8,8 @@
 // event deletes, and Open in Calendar shows it there. Esc, the close button or a click elsewhere
 // closes the card. It follows a click on another line. The event leads with its calendar's bar, and
 // its "in 12m" warms to `caution` from 15 minutes before and `alert` once under way. A completed
-// task shows its done check for a moment (the one completion moment, `ring-done`, which the
-// calendar's pane and card share). Then its line folds away as the mail list's rows do
-// (app/fold.ts). Undo folds it back, a repeating task's too, and reopens the occurrence it completed.
+// task plays the completion moment (styles.css), as everywhere a task completes. Then its line
+// folds away as the mail list's rows do (app/fold.ts). Undo folds it back, a repeating task's too, and reopens the occurrence it completed.
 // Folded to the rail, it's one slot instead: a clock over the time until today's next timed item,
 // event or task alike. Its tooltip names that item with what else is left, and it opens the same
 // card. The slot shows nothing once no timed item is left today.
@@ -27,6 +26,7 @@ import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {byTime, DONE_MOMENT_MS, nextUp, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
 import type {TodayEvent, TodayTask, TomorrowEvent} from '../logic/today.ts';
+import {Burst} from '../ui/Burst.tsx';
 import {Icon, TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle} from './accounts.ts';
@@ -231,7 +231,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   const taskLine = ({key, item: {item, title, time, passed, done}, fold}: Folded) => {
     // A line folding away keeps its look, without its key or the pointer.
     const leaving = fold === 'out';
-    const classes = [lineClass(item), 'task', time && 'timed', done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
+    const classes = [lineClass(item), 'task', time && 'timed', done && 'completing just-done', leaving && 'leaving'].filter(Boolean).join(' ');
     return (
       <a key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : item.key}
         href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={leaving ? undefined : lineMenu(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
@@ -242,11 +242,12 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
             complete(item);
           }}>
           {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
+          {done && <Burst style={ring(item.project)} />}
         </button>
         {/* The title wraps to two lines, as the event's, over a timed task's time alone.
             The label says its day. */}
         <span className="lines">
-          <span className="ell title" data-tip={title}>{title}</span>
+          <span className="ell title" data-tip={title}><span className="done-tx">{title}</span></span>
           {time && <span className="when"><span className={passed ? 't num passed' : 't num'}>{time}</span></span>}
         </span>
       </a>

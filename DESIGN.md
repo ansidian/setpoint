@@ -188,6 +188,15 @@ the title is up; its menu offers 1 hour, 3 hours and Tomorrow, at Settings' task
 hidden task fading into the list as "and N more" counts down; it never returns to its Today line,
 and snoozing the last one closes the banner as a dismissal does.
 
+**Completing** a task has one moment wherever it completes (the Today block, the day pane, the
+card, the grid's chips and subtasks). It plays as the task turns done, never on reopening or Undo.
+Six 3 px dots in the ring's colour fly from 4 to 14 px out of its centre, 60° apart, fading over
+420 ms. The done check pops from .5 through 1.18 to 1 over 280 ms `cubic-bezier(.3,0,.2,1)`. A
+`good` highlight at 24%, 1 px over and 3 px past the text, sweeps across the title over the first
+40% of 640 ms, then fades. The strike draws left to right over 260 ms, and the title goes `ink3`
+over 180 ms and moves 3 px right and back over 300 ms. A Today line folds away once the 640 ms are
+over.
+
 Overlays arrive on these timings: every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
 "+N", and a card anchored to a calendar item opens as the floating detail does; ⌘K rises 6 px over
@@ -228,7 +237,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   stroke (12 px, `ink2` on the grid), or its project's colour clamped to the theme's band, with the
   same colour at 14% inside, as a chip's tint; a ring that completes grows to 1.15 under the pointer,
   fills to 34% with a 3 px halo of its colour and shows an 11 px `check` centred on it; done is a filled disc with the check knocked
-  out, in **`good`**, title struck through in `ink3`.
+  out, in **`good`**, its title struck through in `ink3` by a 1 px line at 55% of its height. Completing one plays the
+  completion moment (Motion).
 - **Overdue task** (`glyphs/task-overdue.svg`): a task ring with a check, open where a `caution`
   badge with an `onInk` exclamation mark sits; 20 px in `ink`, 1.5 stroke. One use: the icon the
   overdue banner's titles land on where Today's lines aren't on screen, on a 32 px tile, radius 10,

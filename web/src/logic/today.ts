@@ -5,6 +5,7 @@
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, localDate, startsIn} from './format.ts';
 import {isOverdue} from './overdue.ts';
+import {completion} from '../tokens.ts';
 
 export interface TodayEvent {
   item: ItemOut;
@@ -60,9 +61,9 @@ export interface Today {
 export const TODAY_TASKS = 3;
 
 /**
- * How long a completed task's line shows its done check before it folds away.
+ * How long a completed task plays the completion moment: the Today block's line folds away after it.
  */
-export const DONE_MOMENT_MS = 360;
+export const DONE_MOMENT_MS = completion.moment;
 
 /** The range to load for it: today and tomorrow, `to` exclusive. */
 export function todayRange(now: number, timeZone: string): {from: string; to: string} {

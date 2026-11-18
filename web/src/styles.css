@@ -115,15 +115,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row.on { background: var(--sub2); }
 .today-row .check { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; border-radius: 999px; flex: none; }
 .today-row .check .ring { margin: 0; }
-/* A completed task's done check lands (TaskGlyph, `good`, and `ring-done`, the one completion moment
-   the calendar's pane and card share) with its title struck through, going ink3 over 180 ms, for
-   DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing. Then
-   the line folds away (app/fold.ts). */
+/* A completed task plays the completion moment (below) with its title struck and `ink3` for
+   DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing. Then the line folds
+   away (app/fold.ts). The title's box reaches 3 px past each side, so its clip spares the sweep. */
 .today-row.completing, .today-row.leaving { pointer-events: none; }
-.today-row .title { transition: color var(--dur-medium) var(--ease); }
-.today-row.completing .title { color: var(--ink3); text-decoration: line-through; }
-.today-row.completing .check .task-glyph { animation: ring-done var(--dur-fast) var(--ease); }
-@keyframes ring-done { from { transform: scale(.6); opacity: .4; } }
+.today-row.completing .title { color: var(--ink3); }
+.today-row .lines > .title { padding-inline: 3px; margin-inline: -3px; }
 .today-row.leaving { overflow: hidden; }
 /* The next event leads with its calendar's bar, 3 × 14 in a 19 px box where tasks have their rings, so
    its time lines up with their titles. Its "in 12m" warms to `caution` from 15 minutes before and to
@@ -163,6 +160,39 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ring-shown); background: color-mix(in oklch, var(--ring-shown) 14%, transparent);
   flex: none; display: inline-block; margin: 0 3px 0 1px; position: relative; }
 .ring > .icon { position: absolute; inset: -1.5px; margin: auto; color: var(--ring-shown); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+/* The completion moment, one for every place a task completes (the Today block's lines, the day
+   pane's rows, the card, the grid's chips, subtasks), played on `.just-done` as a task turns done
+   (done.ts), never on reopening or Undo. Its timings are tokens (`--done-*`, tokens.ts). A done title's
+   text (`.done-tx`) is struck by a drawn line at 55%, under which the sweep's `good` highlight runs,
+   1 px over and 3 px past the text. As the moment plays: six dots in the ring's colour burst from
+   the check (Burst.tsx), the check pops past full size and settles, the highlight sweeps in and fades,
+   the strike draws, the title goes `ink3` and moves 3 px right and back. */
+@property --strike-w { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
+@property --sweep-w { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
+@property --sweep-c { syntax: '<color>'; inherits: false; initial-value: transparent; }
+.done-tx { position: relative; left: 0; padding: 1px 3px; margin: 0 -3px; border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.today-row.completing .done-tx, .ag-task.done .done-tx, .fd-title.done .done-tx, .subtask.done .done-tx, .tk.done .done-tx {
+  background: linear-gradient(currentColor, currentColor) 0 55% / var(--strike-w) 1px no-repeat content-box,
+    linear-gradient(var(--sweep-c), var(--sweep-c)) 0 0 / var(--sweep-w) 100% no-repeat padding-box; }
+.just-done .done-tx { transition: color var(--done-ink) var(--ease);
+  animation: done-strike var(--done-strike) var(--ease), done-sweep var(--done-sweepIn) var(--ease), done-fade var(--done-sweepOut) var(--ease) var(--done-sweepIn) backwards, done-nudge var(--done-nudge) var(--ease); }
+.just-done .task-glyph.done { animation: done-pop var(--done-pop) var(--done-popEase); }
+.today-row .check, .ag-task .check, .fd-mark, .tk .check { position: relative; }
+.burst { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  --ring-base: var(--ring, var(--ink3)); --burst-c: oklch(from var(--ring-base) clamp(var(--ringMin), l, var(--ringMax)) c h); }
+.tk .burst, .ag-task .burst { --ring-base: var(--ring, var(--ink2)); }
+.burst > i { grid-area: 1 / 1; width: var(--done-dotPx); height: var(--done-dotPx); border-radius: 999px; background: var(--burst-c); opacity: 0;
+  animation: done-burst var(--done-dots) var(--ease); }
+@keyframes done-burst {
+  from { opacity: 1; transform: rotate(var(--a)) translateX(var(--done-dotFromPx)); }
+  to { opacity: 0; transform: rotate(var(--a)) translateX(var(--done-dotToPx)); } }
+/* No end frame, so the pop settles at whatever scale the pointer holds the check at. */
+@keyframes done-pop { from { transform: scale(var(--done-popFrom)); } 60% { transform: scale(var(--done-popPeak)); } }
+@keyframes done-strike { from { --strike-w: 0%; } }
+@keyframes done-sweep { from { --sweep-w: 0%; --sweep-c: color-mix(in oklch, var(--good) var(--done-sweepTintPct), transparent); }
+  to { --sweep-c: color-mix(in oklch, var(--good) var(--done-sweepTintPct), transparent); } }
+@keyframes done-fade { from { --sweep-c: color-mix(in oklch, var(--good) var(--done-sweepTintPct), transparent); } }
+@keyframes done-nudge { 35% { left: var(--done-nudgePx); } }
 /* A ring that completes (the Today block's lines, the day pane's rows, the card's, the grid's chips) answers the
    pointer plainly: it grows to 1.15, its fill rises to 34% with a 3 px halo of its colour at 16%, and
    its check shows. A disabled one doesn't answer. */
