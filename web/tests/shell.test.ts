@@ -90,6 +90,22 @@ describe('the Today block', () => {
     expect(today.tasks.map(line => [line.title, line.time])).toEqual([['Call the bank', '8:00 AM'], ['Pay rent', null]]);
   });
 
+  // A timed task of today's shows its time in caution once that time has passed; an untimed one
+  // isn't late until its day is over, and tomorrow's never are.
+  test('a task whose time has passed', () => {
+    const at = (time: string, title: string, due = '2026-10-07') => task(title, due, {all_day: false, due_at: time});
+    const today = todayBlock([
+      at('2026-10-07T15:00:00.000Z', 'Passed'),
+      at('2026-10-07T16:13:00.000Z', 'In a minute'),
+      task('Any time', '2026-10-07'),
+      at('2026-10-08T15:00:00.000Z', 'Tomorrow at 8', '2026-10-08'),
+    ], now, zone);
+    expect(today.tasks.map(line => [line.title, line.passed])).toEqual([['Passed', true], ['In a minute', false], ['Any time', false], ['Tomorrow at 8', false]]);
+    // The clock's tick a minute on passes the next one; rescheduling later clears it.
+    expect(todayBlock([at('2026-10-07T16:13:00.000Z', 'In a minute')], now + 120_000, zone).tasks[0]!.passed).toBe(true);
+    expect(todayBlock([at('2026-10-07T23:00:00.000Z', 'Moved to 4 PM')], now, zone).tasks[0]!.passed).toBe(false);
+  });
+
   // A day's events and tasks in one list by time, an event first at the same time, and the untimed
   // tasks last in the order given. A task whose time has passed sorts by it, so it leads.
   test.each([

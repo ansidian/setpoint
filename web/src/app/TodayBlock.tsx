@@ -228,7 +228,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     </a>
   );
 
-  const taskLine = ({key, item: {item, title, time, done}, fold}: Folded) => {
+  const taskLine = ({key, item: {item, title, time, passed, done}, fold}: Folded) => {
     // A line folding away keeps its look, without its key or the pointer.
     const leaving = fold === 'out';
     const classes = [lineClass(item), 'task', time && 'timed', done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
@@ -247,7 +247,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
             The label says its day. */}
         <span className="lines">
           <span className="ell title" data-tip={title}>{title}</span>
-          {time && <span className="when"><span className="t num">{time}</span></span>}
+          {time && <span className="when"><span className={passed ? 't num passed' : 't num'}>{time}</span></span>}
         </span>
       </a>
     );

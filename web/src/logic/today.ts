@@ -4,6 +4,7 @@
 // in the same order. Confirmed data only, and nothing for an empty line.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, localDate, startsIn} from './format.ts';
+import {isOverdue} from './overdue.ts';
 
 export interface TodayEvent {
   item: ItemOut;
@@ -33,6 +34,8 @@ export interface TodayTask {
   time: string | null;
   // Which label it's under: Today's, or Tomorrow's.
   tomorrow: boolean;
+  // A timed task of today's whose time has passed while it's still open: its time shows in caution.
+  passed: boolean;
 }
 
 /** One of tomorrow's timed events: its time only ("9:00 AM"), the label saying the day. */
@@ -106,8 +109,8 @@ export function todayBlock(items: ItemOut[], now: number, timeZone: string): Tod
   return {
     event: next ? {item: next, id: next.id, key: next.key, title: next.title, time: clockTime(next.starts_at!, timeZone), in: startsIn(next.starts_at!, now), urgency: urgency(next.starts_at!, now), occurrence_start: next.occurrence_start} : null,
     tasks: [
-      ...byTime(due(today), item => item).map(item => ({item, title: item.title, time: taskTime(item), tomorrow: false})),
-      ...byTime(due(tomorrow), item => item).map(item => ({item, title: item.title, time: taskTime(item), tomorrow: true})),
+      ...byTime(due(today), item => item).map(item => ({item, title: item.title, time: taskTime(item), tomorrow: false, passed: isOverdue(item, now, today)})),
+      ...byTime(due(tomorrow), item => item).map(item => ({item, title: item.title, time: taskTime(item), tomorrow: true, passed: false})),
     ],
     tomorrowEvents: tomorrowEvents.map(item => ({item, key: item.key, title: item.title, time: clockTime(item.starts_at!, timeZone)})),
     today,

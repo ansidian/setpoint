@@ -145,6 +145,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row .when { color: var(--ink3); font-size: 12px; white-space: nowrap; }
 .today-row .when .in { margin-left: 0; }
 .today-row .in.soon { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); font-weight: 500; }
+/* A timed task of today's whose time has passed: its time in caution, as "in 12m" nearing. */
+.today-row .when .passed { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); font-weight: 500; }
 .today-row .in.now { color: color-mix(in oklch, var(--alert) var(--textTint), var(--ink)); font-weight: 500; }
 .today-more { width: 100%; text-align: left; color: var(--ink3); background: none; }
 .today-more .ring-space { width: 17px; flex: none; }
