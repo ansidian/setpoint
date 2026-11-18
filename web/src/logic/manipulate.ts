@@ -70,7 +70,7 @@ export function movedItem(item: ItemOut, changes: ItemChanges): ItemOut {
  * a negative id so it can't be selected or dragged, until the server's own item takes its place.
  */
 export function pendingItem(input: ItemCreateInput, id: number, at: string): ItemOut {
-  const command: CommandOut = {id: 0, target: 'item', target_id: id, kind: 'item_create', state: 'pending', provider: null, provider_message: null,
+  const command: CommandOut = {id: 0, target: 'item', target_id: id, kind: 'item_create', state: 'pending', provider: null, provider_message: null, retry: null,
     can_retry: false, can_move_back: false, previous: null, created_at: at, settled_at: null};
   return {
     // copyOf and the editor leave the server's defaults out (no repeat, no labels).
@@ -117,7 +117,7 @@ export function withCreating(items: ItemOut[], creating: Creating[]): ItemOut[] 
 export function asRetried(item: ItemOut, retried: ReadonlyMap<number, string | null>): ItemOut {
   const command = item.command;
   if (command?.state !== 'failed' || !retried.has(command.id) || retried.get(command.id) !== command.settled_at) return item;
-  return {...item, command: {...command, state: 'pending', provider_message: null, settled_at: null, can_retry: false, can_move_back: false}};
+  return {...item, command: {...command, state: 'pending', provider_message: null, retry: null, settled_at: null, can_retry: false, can_move_back: false}};
 }
 
 /** A delete asked for here: the item, and for a recurring event the occurrence and its scope. */

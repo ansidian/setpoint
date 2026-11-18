@@ -28,7 +28,9 @@ import {colourVar} from '../../accounts.ts';
 import {useNow} from '../../clock.ts';
 import {useRingColour} from '../Chip.tsx';
 import {DescriptionFold} from '../DescriptionText.tsx';
+import {Saving} from '../Saving.tsx';
 import {subtaskCount, Subtasks} from '../Subtasks.tsx';
+import {retryingLine} from '../../../logic/providerWords.ts';
 import {useJustDone} from '../done.ts';
 import type {DetailTarget} from './motion.ts';
 
@@ -119,7 +121,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const stuck = !!item.command || (item.done && !item.can_reopen);
   const mark = complete && actions ? (
     <button className={`${markClass} check`} type="button" aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled={fixed || stuck || undefined}
-      data-tip={item.command ? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
+      data-tip={item.command ? retryingLine(item.command, timeZone) ?? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
       onClick={act(task => !stuck && actions.complete(task))}>
       {item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
     </button>
@@ -134,7 +136,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
       <div className="card-h">
         {mark}
         <span className={`grow fd-title${item.kind === 'task' && item.done ? ' done' : ''}`} data-tip={item.title} data-tip-quick>{item.title}</span>
-        {pending && <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>}
+        {pending && <Saving command={item.command} timeZone={timeZone} size={16} />}
         <button className="ibtn sm" aria-label="Close" data-tip="Close · Esc" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
       <div className="card-b">
@@ -195,7 +197,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {/* The phone's card (no actions) keeps a footer Complete, unavailable. */}
         {complete && !actions && (
           <button className={item.done ? 'ibtn sm' : 'ibtn sm affirm'} aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled
-            data-tip={item.command ? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}>
+            data-tip={item.command ? retryingLine(item.command, timeZone) ?? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}>
             <Icon name={item.done ? 'undo' : 'task_alt'} size={16} />
           </button>
         )}

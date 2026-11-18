@@ -9,7 +9,7 @@
 //   one stays in place until Try again or Move back. Nothing quietly reverts.
 // One command per target at a time: a second change waits until the first settles (a partial
 // unique index enforces this too).
-import type {Colour, TodoistColour, CommandKind, CommandOut, CommandTarget, ItemWhen, SourceProvider} from '@setpoint/shared';
+import type {Colour, TodoistColour, CommandKind, CommandOut, CommandRetryOut, CommandTarget, ItemWhen, SourceProvider} from '@setpoint/shared';
 import {and, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {nextCommandState} from '../domain/commandStates.ts';
@@ -76,20 +76,29 @@ function sourceProviders(store: Store): Map<number, SourceProvider> {
   return new Map(store.db.select({id: t.sources.id, provider: t.sources.provider}).from(t.sources).all().map(row => [row.id, row.provider]));
 }
 
-export function presentCommand(row: CommandRow, providers: Map<number, SourceProvider>): CommandOut {
+export function presentCommand(row: CommandRow, providers: Map<number, SourceProvider>, retries: Map<number, CommandRetryOut> = new Map()): CommandOut {
   const failed = row.state === 'failed';
   return {
     id: row.id, target: row.target, target_id: row.targetId, kind: row.kind, state: row.state,
     provider: row.sourceId === null ? null : providers.get(row.sourceId) ?? null,
-    provider_message: row.providerMessage, can_retry: failed, can_move_back: failed,
+    provider_message: row.providerMessage, retry: row.state === 'pending' ? retries.get(row.id) ?? null : null, can_retry: failed, can_move_back: failed,
     previous: row.previousWhen ?? null, created_at: row.createdAt, settled_at: row.settledAt,
   };
 }
 
-/** Presents commands with their providers looked up once. */
+/** Commands waiting to try again: their jobs, queued after a failed try. */
+function pendingRetries(store: Store): Map<number, CommandRetryOut> {
+  const jobs = store.db.select({commandId: t.jobs.commandId, runAt: t.jobs.runAt, lastErrorAt: t.jobs.lastErrorAt}).from(t.jobs)
+    .where(and(eq(t.jobs.kind, 'command'), eq(t.jobs.state, 'queued'))).all();
+  return new Map(jobs.filter(job => job.commandId !== null && job.lastErrorAt !== null)
+    .map(job => [job.commandId!, {failed_at: job.lastErrorAt!, next_at: job.runAt}]));
+}
+
+/** Presents commands with their providers and retries looked up once. */
 export function commandPresenter(store: Store): (row: CommandRow) => CommandOut {
   const providers = sourceProviders(store);
-  return row => presentCommand(row, providers);
+  const retries = pendingRetries(store);
+  return row => presentCommand(row, providers, retries);
 }
 
 function noteTouched(store: Store, row: CommandRow, touched: Touched) {
@@ -170,6 +179,13 @@ export function confirmCommand(store: Store, commandId: number): CommandRow {
 /** The provider refused, in its own words. */
 export function failCommand(store: Store, commandId: number, providerMessage: string): CommandRow {
   return transition(store, commandId, 'fail', () => ({settledAt: isoNow(store), providerMessage}));
+}
+
+/** The provider couldn't take it for now. Still pending, it carries the provider's words until it's tried again. */
+export function noteRetrying(store: Store, commandId: number, providerMessage: string) {
+  const row = store.db.update(t.commands).set({providerMessage})
+    .where(and(eq(t.commands.id, commandId), eq(t.commands.state, 'pending'))).returning().get();
+  if (row) noteTouched(store, row, touchedOf(row));
 }
 
 /** Try again: pending once more, and back in the provider's queue. */

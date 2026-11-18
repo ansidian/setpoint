@@ -7,7 +7,9 @@
 // actions (the phone) the rings are marks.
 //
 // A dated subtask's date follows its title in `ink3`, with the bell when it has reminders. Its
-// title opens it in the editor, and a right-click opens its menu. The last row adds one:
+// title opens it in the editor, and a right-click opens its menu. A change Todoist can't take for
+// now shows `warning` in `caution` in its ring's place, why as its tip ("Todoist is down (scheduled
+// maintenance) as of 7:26 PM"), while it waits to try again. The last row adds one:
 // "Add subtask", a field in place once clicked. Enter adds what's typed at the end, at .5 until the
 // server has it, and the field clears for the next. Esc, or leaving it empty, puts the row back.
 // Leaving it with text adds that first.
@@ -16,6 +18,7 @@ import {useEffect, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {subtaskDue} from '../../logic/calendar.ts';
+import {retryingLine} from '../../logic/providerWords.ts';
 import {localDate} from '../../logic/format.ts';
 import {useNow} from '../clock.ts';
 import {useLiveOrder} from '../settings/order.ts';
@@ -73,6 +76,7 @@ export function Subtasks({task, ring, timeZone, onComplete, onSettle, onReorder,
         const {dragging, ...drag} = order.rowProps(subtask, index);
         const glyph = subtask.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring}>{onComplete && <Icon name="check" size={11} />}</span>;
         const failed = subtask.command?.state === 'failed';
+        const retrying = retryingLine(subtask.command, timeZone);
         const due = subtaskDue(subtask, today, timeZone);
         return (
           <div key={subtask.id} className={`subtask${subtask.done ? ' done' : ''}${subtask.command?.state === 'pending' ? ' pending' : ''}${failed ? ' failed' : ''}${dragging ? ' dragging' : ''}`}
@@ -90,6 +94,8 @@ export function Subtasks({task, ring, timeZone, onComplete, onSettle, onReorder,
             ) : <span className="handle" />}
             {failed ? (
               <span className="fd-mark" role="img" aria-label="Failed" data-tip={subtask.command!.provider_message ?? 'It didn\'t reach Todoist.'}><Icon name="error" size={15} /></span>
+            ) : retrying ? (
+              <span className="fd-mark retrying" role="img" aria-label={retrying} data-tip={retrying}><Icon name="warning" size={15} /></span>
             ) : onComplete ? (
               <button className="fd-mark check" type="button" aria-label={`${subtask.done ? 'Reopen' : 'Complete'} ${subtask.title}`} aria-disabled={!!subtask.command || undefined}
                 data-tip={subtask.command ? 'Waiting for Todoist' : subtask.done ? 'Reopen' : 'Complete'}

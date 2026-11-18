@@ -215,6 +215,7 @@
 .subtask.done .title { color: var(--ink3); text-decoration: line-through; }
 .subtask.pending, .subtask.dragging { opacity: .5; }
 .subtask.failed .fd-mark .icon { color: var(--alert); }
+.subtask .fd-mark.retrying .icon { color: var(--caution); }
 .subtask .acts { display: inline-flex; flex: none; margin: -4px 0; }
 /* A title that opens the editor reads as text. A dated one's date and bell come after it. */
 button.subtask, .subtask button.title { border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
@@ -363,6 +364,9 @@ button.subtask.add:hover { color: var(--ink2); }
 .tk.failed { color: var(--alert); box-shadow: inset 0 0 0 1px var(--alert); }
 /* Waiting shows at .5 at once, the shared spinner (states.css) only after a second. Its place is kept so the title doesn't shift. */
 .ev .spin, .tk .spin, .ag-item .spin, .cal-row .spin { animation: spin-later 0s 1s both; }
+/* A change waiting to try again says so at once, in `caution`, and holds still. */
+.spin.retrying { animation: none; color: var(--caution); }
+.spin.retrying .icon { animation: none; }
 .ev .spin { color: inherit; }
 
 /* Which occurrences (boards 14 and 15b): `.ropt` rows with a radio. */

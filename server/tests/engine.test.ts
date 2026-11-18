@@ -3,6 +3,7 @@
 // provider, which serves only dev sources.
 import {eq} from 'drizzle-orm';
 import {describe, expect, onTestFinished, test, vi} from 'vitest';
+import {commandPresenter} from '../src/commands/index.ts';
 import {openMessage} from '../src/commands/mail.ts';
 import {updateItem} from '../src/commands/items.ts';
 import * as t from '../src/db/schema.ts';
@@ -296,12 +297,36 @@ describe('commands through the engine', () => {
     await engine.tick();
     await engine.settled();
     const state = () => w.store.db.select().from(t.commands).where(eq(t.commands.id, command.id)).get()!;
-    expect(state()).toMatchObject({state: 'pending', providerMessage: null});
+    // Still pending, it carries the provider's words while it waits to try again, and says so live.
+    expect(state()).toMatchObject({state: 'pending', providerMessage: 'Backend Error'});
+    // And says when that was, and when it's tried next.
+    expect(commandPresenter(w.store)(state()).retry).toEqual({failed_at: w.store.now().toISOString(), next_at: new Date(w.store.now().getTime() + 30 * SECOND).toISOString()});
+    expect(liveEvents(w).filter(event => event.type === 'mail')).toEqual([
+      {type: 'mail', messages: [statement.id], accounts: [statement.accountId], commands: [command.id]},
+      {type: 'mail', messages: [statement.id], accounts: [statement.accountId], commands: [command.id]},
+    ]);
     fake.fail(new ProviderError('permanent', 'Requested entity was not found.', {status: 404}));
     w.advance(30 * SECOND);
     await engine.tick();
     await engine.settled();
     expect(state()).toMatchObject({state: 'failed', providerMessage: 'Requested entity was not found.'});
+  });
+
+  test('a change that retried and then went through settles with no words', async () => {
+    const w = world({seed: true});
+    const fake = fakeAdapter();
+    w.store.db.update(t.sources).set({dev: false}).run();
+    const engine = new SyncEngine({store: w.store, adapters: new Adapters({gmail: fake.adapter})});
+    const statement = w.store.db.select().from(t.messages).where(eq(t.messages.subject, 'Statement ready')).get()!;
+    fake.fail(new ProviderError('transient', 'Scheduled maintenance (503 Service Unavailable)', {status: 503}));
+    const command = openMessage(w.store, statement.id)!;
+    await engine.tick();
+    await engine.settled();
+    fake.succeed();
+    w.advance(30 * SECOND);
+    await engine.tick();
+    await engine.settled();
+    expect(w.store.db.select().from(t.commands).where(eq(t.commands.id, command.id)).get()).toMatchObject({state: 'confirmed', providerMessage: null});
   });
 
   test('a running engine sends a change on as it\'s made, not at its next tick', async () => {

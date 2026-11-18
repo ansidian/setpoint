@@ -65,11 +65,11 @@ export function failJob(store: Store, job: Job, error: ProviderError): boolean {
   const decision = retryAfterFailure(error.kind, job.attempts, error.retryAfterMs);
   const now = store.now();
   if (decision.retry) {
-    store.db.update(t.jobs).set({state: 'queued', runAt: new Date(now.getTime() + decision.delayMs).toISOString(), leaseUntil: null, lastError: error.message, again: false})
+    store.db.update(t.jobs).set({state: 'queued', runAt: new Date(now.getTime() + decision.delayMs).toISOString(), leaseUntil: null, lastError: error.message, lastErrorAt: now.toISOString(), again: false})
       .where(eq(t.jobs.id, job.id)).run();
     return true;
   }
-  store.db.update(t.jobs).set({state: 'failed', finishedAt: now.toISOString(), leaseUntil: null, lastError: error.message}).where(eq(t.jobs.id, job.id)).run();
+  store.db.update(t.jobs).set({state: 'failed', finishedAt: now.toISOString(), leaseUntil: null, lastError: error.message, lastErrorAt: now.toISOString()}).where(eq(t.jobs.id, job.id)).run();
   return false;
 }
 

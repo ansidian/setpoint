@@ -642,6 +642,8 @@ export const jobs = sqliteTable('jobs', {
   runAt: text('run_at').notNull(),
   leaseUntil: text('lease_until'),
   lastError: text('last_error'),
+  // When the last error came, for "as of" on a change waiting to try again.
+  lastErrorAt: text('last_error_at'),
   createdAt: text('created_at').notNull(),
   finishedAt: text('finished_at'),
   again: integer('again', {mode: 'boolean'}).notNull().default(false),

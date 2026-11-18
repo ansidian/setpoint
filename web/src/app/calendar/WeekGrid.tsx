@@ -23,6 +23,7 @@ import {drag as dragTokens, week as tokens} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {Chip, ghostly} from './Chip.tsx';
+import {Saving} from './Saving.tsx';
 import type {ChipLook} from './Chip.tsx';
 import {DayPopover} from './DayPopover.tsx';
 import {FileDropTip} from './FileDrop.tsx';
@@ -621,7 +622,7 @@ function TimedBlock({block, calendar, selected, look, lifted, now, timeZone, onS
       <span className="wb-title">{item.title}</span>
       {short ? <span className="t">, {clockTime(item.starts_at!, timeZone)}</span> : <span className="t">{narrow ? laneTime(item, timeZone) : time}</span>}
       {!short && item.place && lines.place && <span className="t">{item.place}</span>}
-      {pending && <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={14} /></span>}
+      {pending && <Saving command={item.command} timeZone={timeZone} size={14} />}
       {edges && offersTop(block as Segment) && <span className="wk-edge t" aria-hidden="true" onPointerDown={event => onPress(event, 'start')} />}
       {edges && !block.continues && <span className="wk-edge b" aria-hidden="true" onPointerDown={event => onPress(event, 'end')} />}
     </div>

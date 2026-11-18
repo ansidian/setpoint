@@ -120,6 +120,7 @@
 .wb .spin { position: absolute; right: 5px; top: 3px; margin: 0; }
 .wb .spin { animation: spin-later 0s 1s both; }
 .wb .spin .icon { animation: spin 900ms linear infinite; }
+.wb .spin.retrying, .wb .spin.retrying .icon { animation: none; color: var(--caution); }
 
 /* Where a press would start a new event: a 30-minute slot at the 15-minute step under the pointer.
    It shows + and its time in `ink3` and moves with the pointer over 120 ms. It shows only with a

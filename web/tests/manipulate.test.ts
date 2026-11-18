@@ -27,7 +27,7 @@ const item = (fields: Partial<ItemOut>): ItemOut => {
 const event = (title: string, date: string, start: string, end: string, fields: Partial<ItemOut> = {}) => item({title, starts_at: at(date, start), ends_at: at(date, end), ...fields});
 const task = (title: string, due: string, fields: Partial<ItemOut> = {}) => item({kind: 'task', title, all_day: true, due_date: due, calendar_id: 4, reminders: [], ...fields});
 const command = (fields: Partial<CommandOut>): CommandOut => ({
-  id: 1, target: 'item', target_id: 1, kind: 'item_update', state: 'failed', provider: 'google_calendar', provider_message: 'No.', can_retry: true, can_move_back: true,
+  id: 1, target: 'item', target_id: 1, kind: 'item_update', state: 'failed', provider: 'google_calendar', provider_message: 'No.', retry: null, can_retry: true, can_move_back: true,
   previous: null, created_at: at('2026-10-07', '09:05'), settled_at: at('2026-10-07', '09:06'), ...fields,
 });
 
@@ -207,7 +207,7 @@ describe('a create drawn at once, and ⌘Z', () => {
       ['another change retried: failed', failedDinner, new Map([[8, failure.settled_at]]), 'failed'],
     ])('%s', (_name, one, retried, state) => expect(asRetried(one, retried).command?.state).toBe(state));
     test('pending, it offers nothing and says nothing until the provider answers', () => {
-      expect(asRetried(failedDinner, new Map([[7, failure.settled_at]])).command).toMatchObject({provider_message: null, can_retry: false, can_move_back: false});
+      expect(asRetried(failedDinner, new Map([[7, failure.settled_at]])).command).toMatchObject({provider_message: null, retry: null, can_retry: false, can_move_back: false});
     });
   });
   describe('a create on its way is drawn once', () => {

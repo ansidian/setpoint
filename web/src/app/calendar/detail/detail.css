@@ -31,6 +31,7 @@
 .fd-mark.check { padding: 0; border-radius: 999px; }
 .fd-title.done { color: var(--ink3); text-decoration: line-through; }
 .fd .card-h .spin { margin-left: 0; height: 26px; display: grid; place-items: center; animation: spin-later 0s 1s both; }
+.fd .card-h .spin.retrying { animation: none; color: var(--caution); }
 .fd .fact-dot { width: 17px; height: 17px; display: grid; place-items: center; flex: none; margin-top: 1px; }
 .fd .fact-dot .dot { width: 9px; height: 9px; background: oklch(from var(--ring, var(--ink3)) clamp(var(--ringMin), l, var(--ringMax)) c h); }
 .fd-title { font-size: 16px; line-height: 22px; padding: 2px 0; font-weight: 500; letter-spacing: -.005em; min-width: 0; overflow-wrap: anywhere;

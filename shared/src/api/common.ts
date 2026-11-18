@@ -39,12 +39,20 @@ export interface CommandOut {
   // The provider that carries it out, for "Google Calendar · …", or null when it never reached one.
   provider: SourceProvider | null;
   provider_message: string | null;
+  // A pending change its provider couldn't take for now: when that last happened, and when it's
+  // tried next. Null otherwise.
+  retry: CommandRetryOut | null;
   can_retry: boolean;
   can_move_back: boolean;
   // An item change's earlier time, for "From Fri, Oct 9" (board 19b), or null otherwise.
   previous: ItemWhen | null;
   created_at: string;
   settled_at: string | null;
+}
+
+export interface CommandRetryOut {
+  failed_at: string;
+  next_at: string;
 }
 
 /** When an item happens: a timed event, an all-day event (end exclusive), or a task's due day. */

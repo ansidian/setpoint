@@ -73,7 +73,7 @@ test('a subtask\'s ring completes it, its done check reopens it, and neither com
 
 test('a subtask waiting for Todoist says so and its ring does nothing', async () => {
   const offered = actions();
-  const pending = {id: 9, target: 'item', target_id: 23, kind: 'item_complete', state: 'pending', provider: 'todoist', provider_message: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} as const;
+  const pending = {id: 9, target: 'item', target_id: 23, kind: 'item_complete', state: 'pending', provider: 'todoist', provider_message: null, retry: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} as const;
   await card(task({subtasks: CHECKLIST.map(one => (one.id === 23 ? {...one, command: pending} : one))}), offered);
   const ring = page.getByRole('button', {name: 'Complete Proofread'});
   await expect.element(ring).toHaveAttribute('data-tip', 'Waiting for Todoist');
@@ -83,7 +83,7 @@ test('a subtask waiting for Todoist says so and its ring does nothing', async ()
 
 test('a check Todoist refused stays in place and says so: its words as the tip, Try again and Undo on the row, no ring to press', async () => {
   const offered = actions();
-  const failed = {id: 9, target: 'item', target_id: 23, kind: 'item_complete', state: 'failed', provider: 'todoist', provider_message: 'Insufficient permissions (403 Forbidden)', can_retry: true, can_move_back: true, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: '2026-10-07T16:00:01.000Z'} as const;
+  const failed = {id: 9, target: 'item', target_id: 23, kind: 'item_complete', state: 'failed', provider: 'todoist', provider_message: 'Insufficient permissions (403 Forbidden)', retry: null, can_retry: true, can_move_back: true, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: '2026-10-07T16:00:01.000Z'} as const;
   const refused = {...CHECKLIST[2]!, done: true, command: failed};
   await card(task({subtasks: CHECKLIST.map(one => (one.id === 23 ? refused : one))}), offered);
   await expect.element(page.getByRole('img', {name: 'Failed'})).toHaveAttribute('data-tip', 'Insufficient permissions (403 Forbidden)');
@@ -112,7 +112,7 @@ test('without actions the rings are marks and nothing moves; a task waiting on a
   expect(document.querySelector('.subtask button')).toBeNull();
   expect(document.querySelector('.subtask[draggable="true"]')).toBeNull();
   await plain.unmount();
-  const waiting = {id: 9, target: 'item', target_id: 7, kind: 'item_update', state: 'pending', provider: 'todoist', provider_message: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} as const;
+  const waiting = {id: 9, target: 'item', target_id: 7, kind: 'item_update', state: 'pending', provider: 'todoist', provider_message: null, retry: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} as const;
   await card(task({command: waiting}), actions());
   expect(document.querySelector('.subtask button.handle')).toBeNull();
   await expect.element(page.getByRole('button', {name: 'Complete Proofread'})).toBeVisible();

@@ -159,7 +159,7 @@ function task(fields: Partial<ItemOut>): ItemOut {
   return event({key: '8', id: 8, kind: 'task', title: 'Pay rent', place: null, starts_at: null, ends_at: null, due_date: '2026-10-07', project: 'Home', ...fields});
 }
 
-const WAITING = {id: 1, target: 'item', target_id: 8, kind: 'item_complete', state: 'pending', provider: 'todoist', provider_message: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} satisfies ItemOut['command'];
+const WAITING = {id: 1, target: 'item', target_id: 8, kind: 'item_complete', state: 'pending', provider: 'todoist', provider_message: null, retry: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} satisfies ItemOut['command'];
 
 async function taskCard(item: ItemOut, complete: (task: ItemOut) => void) {
   return render(

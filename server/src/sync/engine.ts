@@ -7,7 +7,7 @@
 // hands them over. The worker finishes or fails each by the same retry policy.
 import type {HealthState} from '@setpoint/shared';
 import {and, eq} from 'drizzle-orm';
-import {confirmCommand, failCommand, getCommand} from '../commands/index.ts';
+import {confirmCommand, failCommand, getCommand, noteRetrying} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
 import {PROVIDER_NAMES} from '../domain/sources.ts';
 import type {Notifier} from '../notify/index.ts';
@@ -276,8 +276,9 @@ export class SyncEngine {
       transaction(this.store, () => {
         if (error.kind === 'auth') beganReconnect = recordFailure(this.store, found.source.id, error);
         const retrying = failJob(this.store, job, error);
-        // A retry keeps it pending. Otherwise it fails in place with the provider's words.
-        if (!retrying && getCommand(this.store, command.id).state === 'pending') failCommand(this.store, command.id, error.message);
+        // A retry keeps it pending, with the provider's words. Otherwise it fails in place with them.
+        if (retrying) noteRetrying(this.store, command.id, error.message);
+        else if (getCommand(this.store, command.id).state === 'pending') failCommand(this.store, command.id, error.message);
       });
       if (beganReconnect) await this.alertReconnect(found.source);
     }

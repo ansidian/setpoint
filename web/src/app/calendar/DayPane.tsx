@@ -15,6 +15,7 @@
 import type {CalendarOut, ItemOut, SourceOut, SubtaskOut, WeatherDayOut} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
 import {MailStrip} from './MailStrip.tsx';
+import {Saving} from './Saving.tsx';
 import {subtaskCount, Subtasks} from './Subtasks.tsx';
 import type {CSSProperties, MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import {useResource} from '../../api/client.ts';
@@ -69,7 +70,6 @@ interface DayPaneProps {
   onShowAll: () => void;
 }
 
-const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>;
 
 export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onCompleteSubtask, onSettleSubtask, onReorderSubtasks, onAddSubtask, onOpenSubtask, onSubtaskMenu, onShowAll}: DayPaneProps) {
   const arrived = useArrival(!loading, date);
@@ -139,7 +139,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
                 ? <span className="grow"><span className="title"><span>{task.title}</span></span><span className="ink3 num line">{time}</span></span>
                 : <span className="grow title"><span>{task.title}</span></span>}
               {/* Waiting, the spinner comes before the project, which stays. */}
-              {task.command?.state === 'pending' && <Spinner />}
+              {task.command?.state === 'pending' && <Saving command={task.command} timeZone={timeZone} size={16} />}
               {task.subtasks.length > 0 && (
                 <button className="num count" type="button" aria-expanded={open.has(task.key)}
                   aria-label={`${task.subtasks.filter(subtask => subtask.done).length} of ${task.subtasks.length} subtasks done`} data-tip={open.has(task.key) ? 'Hide subtasks' : 'Show subtasks'}
@@ -255,7 +255,7 @@ function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZon
           {leave && <span className={`leave${leave.state === 'due' ? ' due' : ''}`}><Icon name="directions_car" size={16} />{leave.text}</span>}
           {overlap && <span className="ink3 num overlap"><Icon name="layers" size={16} />{overlap}</span>}
         </span>
-        {item.command?.state === 'pending' && <Spinner />}
+        {item.command?.state === 'pending' && <Saving command={item.command} timeZone={timeZone} size={16} />}
         {(event.left ?? event.startsIn) && <span className="ink3 num in">{event.left ?? event.startsIn}</span>}
         {item.recurring && <span className="repeat"><Icon name="repeat" size={16} /></span>}
       </a>

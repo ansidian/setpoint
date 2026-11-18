@@ -15,6 +15,7 @@ import {chipTime, isPast} from '../../logic/calendar.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {useLanding} from './landing.ts';
+import {Saving} from './Saving.tsx';
 import {subtaskCount} from './Subtasks.tsx';
 import {useCalendarFade, useSearchDim} from './view.ts';
 
@@ -50,7 +51,6 @@ export function useRingColour(): (project: string | null) => CSSProperties | und
   };
 }
 
-const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={14} /></span>;
 
 export function Chip({item, calendar, selected, look, now, timeZone, onSelect, onPress, time: shownTime, label}: ChipProps) {
   const ring = useRingColour();
@@ -79,7 +79,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
         {shownTime && <span className="t">{shownTime}</span>}
         {counted ? <span className="title">{item.title}</span> : item.title}
         {counted && <span className="count num"><Icon name="subtask" size={12} />{subtaskCount(item)}</span>}
-        {pending && <Spinner />}
+        {pending && <Saving command={item.command} timeZone={timeZone} size={14} />}
       </div>
     );
   }
@@ -90,7 +90,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
       {failed && <Icon name="error" size={14} />}
       {time && <span className="t">{time}</span>}
       {item.title}
-      {pending && <Spinner />}
+      {pending && <Saving command={item.command} timeZone={timeZone} size={14} />}
     </div>
   );
 }

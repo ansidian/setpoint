@@ -134,7 +134,7 @@ function useMonths(months: string[]): {items: ItemOut[]; weather: Map<string, We
 /** A change on its way, as the grid draws it until the server's answer is in. */
 const sending = (item: ItemOut): ItemOut => ({
   ...item,
-  command: {id: 0, target: 'item', target_id: item.id, kind: 'item_update', state: 'pending', provider: null, provider_message: null, can_retry: false, can_move_back: false,
+  command: {id: 0, target: 'item', target_id: item.id, kind: 'item_update', state: 'pending', provider: null, provider_message: null, retry: null, can_retry: false, can_move_back: false,
     previous: null, created_at: new Date().toISOString(), settled_at: null} satisfies CommandOut,
 });
 
