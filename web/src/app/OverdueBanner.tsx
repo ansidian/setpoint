@@ -2,32 +2,42 @@
 // and the task sits on it large, with no card or chrome. An arrival is a page load or the user
 // coming back to the tab or the window (app/arrival.ts), never a page change inside the app, so a
 // task going overdue mid-use raises nothing until the next one, and a banner due while they're away
-// waits for their return. Every arrival shows every overdue task, until it's done. One task is its title over its ring, project and due ("Errands · Due today, 8:00
-// AM"). Several are "3 tasks" over a list, the most recently due first, four and "and 3 more".
+// waits for their return. Every arrival shows every overdue task not snoozed, until it's done. One
+// task is its title over its ring, project and due ("Errands · Due today, 8:00 AM"). Several are
+// "3 tasks" over a list, the most recently due first, four and "and 3 more".
 // It enters by Reveal: the veil and label fade in, the title slides up from behind its own
 // baseline, then the due line (or the list) rises under it. Until the title is up it takes no
 // click or key: they go to the page under it, as the click that brings the window back does. Then
 // a press pushes the text in, the hint fades in late, and a click anywhere or Esc dismisses it for
-// this visit, until the next arrival. It leaves by Return to its row: each title due today goes back to its Today line, which takes the
-// landing tint, and the rest fades where it is (overdueExit.ts finds the lines, and the icon where
-// they aren't on screen). While it's up no other key acts, on it or the page under it, and its
-// click reaches nothing else. It sits over every page and the composer, under the toast. It waits
-// while Settings or ⌘K is open, and isn't drawn below 640 px (App.tsx). Timings are tokens.ts's
-// `overdue`.
-import type {ItemOut, ItemsOut} from '@setpoint/shared';
+// this visit, until the next arrival. It leaves by Return to its row: each title due today goes
+// back to its Today line, which takes the landing tint, and the rest fades where it is
+// (overdueExit.ts finds the lines, and the icon where they aren't on screen).
+// Snooze: once the title is up each title has a snooze button after it, opening a menu of 1 hour,
+// 3 hours and Tomorrow. A pick keeps the snooze in this browser (overdueSnoozed.ts) and the title
+// fades where it is, its row closing up and the next hidden task taking its place; snoozing the
+// last one sends the banner out, that title fading rather than returning. The button and menu take
+// their own clicks, and a press outside an open menu closes only the menu. Esc closes a menu first,
+// then the banner. Tab and Shift-Tab move among the snooze buttons (or a menu's presets, where the
+// arrows move too), and Enter or Space presses one; no other key acts, on it or the page under it,
+// and its click reaches nothing else. It sits over every page and the composer, under the toast.
+// It waits while Settings or ⌘K is open, and isn't drawn below 640 px (App.tsx). Timings are
+// tokens.ts's `overdue`.
+import type {ItemOut, ItemsOut, Settings} from '@setpoint/shared';
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {SyntheticEvent} from 'react';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
-import {itemsPath} from '../api/items.ts';
+import {itemsPath, SETTINGS_PATH} from '../api/items.ts';
 import {overdueTasks} from '../logic/overdue.ts';
 import type {Overdue} from '../logic/overdue.ts';
-import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, listed, shortDue} from '../logic/overdueBanner.ts';
+import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, isSnoozed, keptSnoozes, listed, shortDue, snoozeFor, SNOOZES, snoozeUntil} from '../logic/overdueBanner.ts';
+import type {SnoozeChoice} from '../logic/overdueBanner.ts';
 import {motion, overdue as timing} from '../tokens.ts';
-import {OverdueGlyph} from '../ui/Icon.tsx';
+import {Icon, OverdueGlyph} from '../ui/Icon.tsx';
 import {useRingColour} from './calendar/Chip.tsx';
 import {useArrival} from './arrival.ts';
 import {planExit} from './overdueExit.ts';
+import {readSnoozes, writeSnoozes} from './overdueSnoozed.ts';
 import type {ExitPlan} from './overdueExit.ts';
 import type {Arrival} from './arrival.ts';
 import {usePaletteOpen} from './palette/Palette.tsx';
@@ -49,40 +59,73 @@ function forgetShown() {
   }
 }
 
-/** The arrivals' banner: the last 30 days' items, judged as each arrival comes. */
+/** The arrivals' banner: the last 30 days' items, judged as each arrival comes, and Settings' task time for Tomorrow. */
 export function OverdueArrival() {
   const zone = timeZone();
   const {arrival, present} = useArrival();
   // The range follows the day of the latest arrival, so a tab left open overnight looks at the new one.
   const range = bannerRange(arrival?.at ?? serverNow(), zone);
   const {data} = useResource<ItemsOut>(itemsPath(range.from, range.to));
-  return <OverdueArrivals arrival={arrival} present={present} items={data?.items} timeZone={zone} />;
+  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
+  return <OverdueArrivals arrival={arrival} present={present} items={data?.items} taskTime={settings?.reminders.task_time ?? null} timeZone={zone} />;
 }
 
 /**
  * The banner for each arrival over `items`: judged once the user is there and the items are in, and
- * shown unless one is up already. An arrival with nothing to show is done with, so a task that goes
- * overdue later waits for the next one, as does one dismissed. It waits while Settings or ⌘K is open.
+ * shown unless one is up already, without the tasks a snooze holds off. An arrival with nothing to
+ * show is done with, so a task that goes overdue later waits for the next one, as do one dismissed
+ * and one whose snooze ends mid-use. Each arrival drops the snoozes no longer needed. It waits
+ * while Settings or ⌘K is open. A snooze picked on it is kept from then, Tomorrow at `taskTime`.
  */
-export function OverdueArrivals({arrival, present, items, timeZone: zone}: {arrival: Arrival | null; present: boolean; items: readonly ItemOut[] | undefined; timeZone: string}) {
+export function OverdueArrivals({arrival, present, items, taskTime, timeZone: zone}: {arrival: Arrival | null; present: boolean; items: readonly ItemOut[] | undefined; taskTime: string | null; timeZone: string}) {
   const [judged, setJudged] = useState(0);
   const [shown, setShown] = useState<{tasks: Overdue[]; at: number; key: number} | null>(null);
+  // What the latest arrival was judged over, for its snoozes to be pruned once it's drawn.
+  const [pruning, setPruning] = useState<{items: readonly ItemOut[]; at: number} | null>(null);
   const settings = useSettingsPage();
   const palette = usePaletteOpen();
   useEffect(forgetShown, []);
   if (arrival && arrival.count > judged && items && present) {
     setJudged(arrival.count);
+    setPruning({items, at: arrival.at});
     if (!shown) {
-      const tasks = arrivalTasks(overdueTasks(items, arrival.at, zone), zone);
+      const snoozes = readSnoozes();
+      const tasks = arrivalTasks(overdueTasks(items, arrival.at, zone), zone).filter(task => !isSnoozed(task.item, snoozes, arrival.at));
       if (tasks.length) setShown({tasks, at: arrival.at, key: arrival.count});
     }
   }
+  useEffect(() => {
+    if (pruning) writeSnoozes(keptSnoozes(readSnoozes(), pruning.items, pruning.at));
+  }, [pruning]);
   const gone = useCallback(() => setShown(null), []);
+  const snooze = useCallback((item: ItemOut, choice: SnoozeChoice) => {
+    const until = snoozeUntil(choice, serverNow(), taskTime, zone);
+    writeSnoozes([...readSnoozes().filter(kept => kept.id !== item.id), snoozeFor(item, until)]);
+  }, [taskTime, zone]);
   if (!shown || settings !== null || palette) return null;
-  return <OverdueBanner key={shown.key} overdue={shown.tasks} now={shown.at} timeZone={zone} onGone={gone} />;
+  return <OverdueBanner key={shown.key} overdue={shown.tasks} now={shown.at} timeZone={zone} onGone={gone} onSnooze={snooze} />;
 }
 
 const keep = (event: SyntheticEvent) => event.stopPropagation();
+
+/** A title's snooze button and, when `open`, its menu of presets under it. `large` beside one task's title: 30 px with an 18 px glyph. */
+function SnoozeButton({task, large, open, onOpen, onPick}: {task: string; large: boolean; open: boolean; onOpen: (open: boolean) => void; onPick: (choice: SnoozeChoice) => void}) {
+  return (
+    <span className="overdue-snooze" data-for={task}>
+      <button type="button" className={large ? 'ibtn overdue-snooze-button' : 'ibtn sm overdue-snooze-button'} aria-label="Snooze" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : 'Snooze'}
+        onClick={() => onOpen(!open)}>
+        <Icon name="snooze" size={large ? 18 : 16} />
+      </button>
+      {open && (
+        <div className="pop menu overdue-menu" role="menu" aria-label="Snooze">
+          {SNOOZES.map(({choice, label}) => (
+            <button key={choice} type="button" role="menuitem" className="menu-i" onClick={() => onPick(choice)}>{label}</button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
 
 /** How long the banner takes to enter, taking no click or key meanwhile: the Reveal's title. */
 export const ENTRANCE_MS = timing.titleDelay + timing.title;
@@ -127,17 +170,29 @@ function playExit(banner: HTMLElement, plan: ExitPlan) {
  * The banner over `overdue`, the most recently due first. Nothing when there are none. `onGone`
  * hears when it has left, or that it had nothing to show.
  */
-export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: readonly Overdue[]; now: number; timeZone: string; onGone?: () => void}) {
-  const [tasks] = useState(() => arrivalTasks(overdue, zone));
+export function OverdueBanner({overdue, now, timeZone: zone, onGone, onSnooze}: {overdue: readonly Overdue[]; now: number; timeZone: string; onGone?: () => void; onSnooze?: (item: ItemOut, choice: SnoozeChoice) => void}) {
+  // The tasks still on it: a snoozed one goes once its row has closed up.
+  const [tasks, setTasks] = useState(() => arrivalTasks(overdue, zone));
+  // The arrival's layout holds: several stay a list as they're snoozed down to one.
+  const [many] = useState(() => tasks.length > 1);
+  // The keys listed as it arrived; a task drawn later takes a snoozed one's place.
+  const [arrived] = useState(() => new Set(listed(tasks).listed.map(task => task.item.key)));
   const [phase, setPhase] = useState<'entering' | 'in' | 'out' | 'gone'>(tasks.length ? 'entering' : 'gone');
   // The dismiss hint comes late, so a quick click never sees it.
   const [hinted, setHinted] = useState(false);
   // The way out, measured at the click.
   const [exit, setExit] = useState<ExitPlan | null>(null);
+  // The snooze menu open, by its task's key.
+  const [menu, setMenu] = useState<string | null>(null);
+  // The snoozed titles leaving, by key.
+  const [leaving, setLeaving] = useState<ReadonlySet<string>>(() => new Set());
+  // A press that closed the menu, so its click doesn't dismiss the banner too.
+  const closing = useRef(false);
   const ring = useRingColour();
   const banner = useRef<HTMLDivElement>(null);
   // Where focus was as it settled, given back once it's dismissed (a draft in the composer).
   const before = useRef<Element | null>(null);
+  const timers = useRef<number[]>([]);
 
   useEffect(() => {
     if (phase !== 'entering') return;
@@ -146,36 +201,99 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
   }, [phase]);
 
   useEffect(() => {
-    if (!tasks.length) return;
     const timer = window.setTimeout(() => setHinted(true), timing.hintDelay);
     return () => window.clearTimeout(timer);
-  }, [tasks]);
+  }, []);
 
-  // The way out is measured now, from layout, and nothing waits on it.
-  const dismiss = useCallback(() => {
+  useEffect(() => () => timers.current.forEach(timer => window.clearTimeout(timer)), []);
+
+  // The way out is measured now, from layout, and nothing waits on it. The titles in `gone`, snoozed,
+  // fade rather than return.
+  const leave = useCallback((gone: ReadonlySet<string>) => {
     if (phase !== 'in') return;
-    setExit(banner.current ? planExit(banner.current, exitSplit(tasks).returning.map(task => task.item.key)) : {flights: [], icon: null});
+    const returning = exitSplit(tasks).returning.filter(task => !gone.has(task.item.key)).map(task => task.item.key);
+    setExit(banner.current ? planExit(banner.current, returning) : {flights: [], icon: null});
+    setMenu(null);
     setPhase('out');
   }, [phase, tasks]);
+  const dismiss = useCallback(() => leave(leaving), [leave, leaving]);
+
+  const closeMenu = useCallback(() => {
+    banner.current?.querySelector<HTMLElement>(`.overdue-snooze[data-for="${CSS.escape(menu ?? '')}"] > button`)?.focus();
+    setMenu(null);
+  }, [menu]);
+
+  /** Snoozes a task: its title fades and its row closes up, or with none left the banner goes. */
+  const pick = (task: Overdue, choice: SnoozeChoice) => {
+    if (phase !== 'in') return;
+    const {key} = task.item;
+    onSnooze?.(task.item, choice);
+    setMenu(null);
+    banner.current?.focus();
+    const gone = new Set(leaving).add(key);
+    setLeaving(gone);
+    if (tasks.every(each => gone.has(each.item.key))) {
+      leave(gone);
+      return;
+    }
+    timers.current.push(window.setTimeout(() => {
+      setTasks(now => now.filter(each => each.item.key !== key));
+      setLeaving(now => new Set([...now].filter(each => each !== key)));
+    }, timing.snoozeOut + timing.closeUp));
+  };
 
   useEffect(() => {
     if (phase !== 'in') return;
     before.current = document.activeElement;
     banner.current?.focus();
+  }, [phase]);
+
+  // A menu opened takes the focus to its first preset.
+  useEffect(() => {
+    if (menu) banner.current?.querySelector<HTMLElement>('.overdue-menu [role="menuitem"]')?.focus();
+  }, [menu]);
+
+  useEffect(() => {
+    if (phase !== 'in') return;
     keysUp = event => {
       event.stopImmediatePropagation();
+      const root = banner.current;
+      const active = document.activeElement;
       if (event.key === 'Escape') {
         event.preventDefault();
-        dismiss();
-      } else if (!event.metaKey && !event.ctrlKey) {
-        // A plain key does nothing (Tab, Space, Enter). The browser's own shortcuts still work.
-        event.preventDefault();
+        if (menu) closeMenu();
+        else dismiss();
+        return;
       }
+      // Tab and the arrows move among the snooze buttons, or an open menu's presets, never out to the page.
+      const stops = [...root?.querySelectorAll<HTMLElement>(menu ? '.overdue-menu [role="menuitem"]' : ':not([data-leaving]) > .overdue-snooze > button') ?? []];
+      const step = event.key === 'Tab' ? (event.shiftKey ? -1 : 1) : menu && event.key === 'ArrowDown' ? 1 : menu && event.key === 'ArrowUp' ? -1 : 0;
+      if (step) {
+        event.preventDefault();
+        const at = stops.indexOf(active as HTMLElement);
+        const next = at < 0 ? (step > 0 ? 0 : stops.length - 1) : (at + step + stops.length) % stops.length;
+        stops[next]?.focus();
+        return;
+      }
+      // Enter or Space presses the snooze button or preset that has the focus.
+      if ((event.key === 'Enter' || event.key === ' ') && active instanceof HTMLElement && stops.includes(active)) return;
+      // Any other plain key does nothing. The browser's own shortcuts still work.
+      if (!event.metaKey && !event.ctrlKey) event.preventDefault();
     };
     return () => {
       keysUp = null;
     };
-  }, [phase, dismiss]);
+  }, [phase, dismiss, menu, closeMenu]);
+
+  // A snoozed row fades where it is, then closes up.
+  useLayoutEffect(() => {
+    for (const row of banner.current?.querySelectorAll<HTMLElement>('.overdue-list li[data-leaving]:not([data-closing])') ?? []) {
+      row.dataset.closing = '';
+      row.animate([{opacity: 1}, {opacity: 0}], {duration: timing.snoozeOut, easing: motion.ease, fill: 'forwards'});
+      row.animate([{height: `${row.offsetHeight}px`}, {height: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px'}],
+        {duration: timing.closeUp, delay: timing.snoozeOut, easing: motion.ease, fill: 'forwards'});
+    }
+  }, [leaving]);
 
   // Played once its exit marks and the icon are drawn.
   useLayoutEffect(() => {
@@ -194,19 +312,34 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
   }, [phase, onGone]);
 
   if (phase === 'gone') return null;
-  const one = tasks.length === 1 ? tasks[0]!.item : null;
+  const one = many ? null : tasks[0]!.item;
   const {listed: rows, more} = listed(tasks);
+  const count = tasks.length - leaving.size;
   // On the way out each drawn title says whether it returns or fades.
   const flying = new Set(exit?.flights.map(flight => flight.key));
   const exitOf = (key: string) => (exit ? (flying.has(key) ? 'return' : 'fade') : undefined);
   const icon = exit?.icon;
+  // The snooze buttons are there once the title is up, and gone on the way out.
+  const snoozeable = phase === 'in';
+  const snoozeOf = (task: Overdue, large = false) => (
+    <SnoozeButton key="snooze" task={task.item.key} large={large} open={menu === task.item.key} onOpen={open => setMenu(open ? task.item.key : null)} onPick={choice => pick(task, choice)} />
+  );
   return (
     <div ref={banner} className={`overdue ${phase}`} role="dialog" aria-modal="true" aria-label="Overdue tasks" tabIndex={-1} data-state={phase}
       onClick={event => {
         keep(event);
+        // A snooze button or menu takes its own click, and a press that closed a menu ends there.
+        if (closing.current || (event.target as Element).closest('.overdue-snooze')) {
+          closing.current = false;
+          return;
+        }
         dismiss();
       }}
-      onPointerDown={keep} onMouseDown={keep} onPointerUp={keep} onMouseUp={keep} onDoubleClick={keep}
+      onPointerDown={event => {
+        keep(event);
+        closing.current = menu !== null && !(event.target as Element).closest('.overdue-snooze');
+        if (closing.current) setMenu(null);
+      }} onMouseDown={keep} onPointerUp={keep} onMouseUp={keep} onDoubleClick={keep}
       onContextMenu={event => {
         keep(event);
         event.preventDefault();
@@ -223,7 +356,7 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
           {one ? (
             <div className="overdue-one">
               <div className="overdue-mask">
-                <div className="overdue-title" data-key={one.key} data-exit={exitOf(one.key)}>{one.title}</div>
+                <div className="overdue-title" data-key={one.key} data-exit={exitOf(one.key)}>{one.title}{snoozeable && snoozeOf(tasks[0]!, true)}</div>
               </div>
               <div className="overdue-due">
                 <span className="ring" style={ring(one.project)} />
@@ -233,14 +366,15 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
           ) : (
             <div className="overdue-many">
               <div className="overdue-mask">
-                <div className="overdue-title">{tasks.length} tasks</div>
+                <div className="overdue-title">{count} {count === 1 ? 'task' : 'tasks'}</div>
               </div>
               <ul className="overdue-list">
-                {rows.map(({item}) => (
-                  <li key={item.key}>
-                    <span className="ring" style={ring(item.project)} />
-                    <span className="overdue-name"><span className="overdue-fly" data-key={item.key} data-exit={exitOf(item.key)}>{item.title}</span></span>
-                    <span className="overdue-when">{shortDue(item, now, zone)}</span>
+                {rows.map(task => (
+                  <li key={task.item.key} className={arrived.has(task.item.key) ? undefined : 'refill'} data-leaving={leaving.has(task.item.key) ? '' : undefined}>
+                    <span className="ring" style={ring(task.item.project)} />
+                    <span className="overdue-name"><span className="overdue-fly" data-key={task.item.key} data-exit={exitOf(task.item.key)}>{task.item.title}</span></span>
+                    {snoozeable && snoozeOf(task)}
+                    <span className="overdue-when">{shortDue(task.item, now, zone)}</span>
                   </li>
                 ))}
                 {more > 0 && <li className="overdue-more">and {more} more</li>}

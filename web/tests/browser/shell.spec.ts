@@ -484,6 +484,65 @@ test('a task going overdue mid-use raises no banner, only its Today line, nor do
   }
 });
 
+test('a snoozed task stays off the banner until its snooze ends, and comes back on the next arrival after it, not mid-use', async () => {
+  const setpoint = await startSetpoint({fixtures: ['overdue-tasks'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    const loaded = page.waitForResponse(response => response.url().includes('/api/items?from=2026-09-07&to=2026-10-08'));
+    await page.goto(`${setpoint.base}/inbox`);
+    await drawn(page, await loaded);
+    const banner = page.getByRole('dialog', {name: 'Overdue tasks'});
+    await banner.waitFor();
+    await page.clock.fastForward(1000);
+    await page.locator('.overdue[data-state="in"]').waitFor();
+    const rows = banner.locator('.overdue-list li');
+
+    // Call the landlord snoozed for an hour: it leaves, and the banner stays with the other two.
+    await rows.filter({hasText: 'Call the landlord'}).getByRole('button', {name: 'Snooze'}).click();
+    await page.getByRole('menuitem', {name: '1 hour'}).click();
+    await page.clock.fastForward(1000);
+    await until('the snoozed title gone', () => rows.allTextContents(), texts => texts.length === 2);
+    assert.deepEqual(await rows.allTextContents(), ['Submit the parking permit formMon', 'Renew the library cardSep 24']);
+    assert.equal(await banner.locator('.overdue-title').textContent(), '2 tasks');
+
+    const tab = (state: 'hidden' | 'visible') => page.evaluate(shown => {
+      Object.defineProperty(document, 'visibilityState', {configurable: true, get: () => shown});
+      Object.defineProperty(document, 'hidden', {configurable: true, get: () => shown === 'hidden'});
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, state);
+    const dismiss = async () => {
+      await page.keyboard.press('Escape');
+      await page.locator('.overdue[data-state="out"]').waitFor();
+      await page.clock.fastForward(2000);
+      await page.locator('.overdue').waitFor({state: 'detached'});
+    };
+    await dismiss();
+
+    // A return within the hour: the other two alone.
+    await page.clock.fastForward(30 * 60_000);
+    await tab('hidden');
+    await tab('visible');
+    await banner.waitFor();
+    assert.equal(await banner.locator('.overdue-title').textContent(), '2 tasks');
+    await page.clock.fastForward(1000);
+    await page.locator('.overdue[data-state="in"]').waitFor();
+    await dismiss();
+
+    // The hour ends mid-use: nothing comes until the next arrival, which brings all three.
+    await page.clock.fastForward(31 * 60_000);
+    await drawnTwice(page);
+    assert.equal(await page.locator('.overdue').count(), 0);
+    await tab('hidden');
+    await tab('visible');
+    await banner.waitFor();
+    assert.equal(await banner.locator('.overdue-title').textContent(), '3 tasks');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('below 1600 px the sidebar starts as the rail with its next-up slot; [, its edge and ⌘K open and fold it, kept on reload; the pointer resting on it brings it out over the page', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

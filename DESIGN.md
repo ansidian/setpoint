@@ -181,7 +181,12 @@ fading to none over 420 ms, as a calendar change lands. Where Today's lines aren
 rail, Calendar) the titles go instead to the overdue-task icon, 18 px under the sidebar's nav,
 shrinking to a third of a line and opaque to 55% of the way. It scales in from .8 over 180 ms as
 they leave and, as they arrive, takes `caution` at 34%, settles to 12% by 45%, holds to 75%, then
-goes: 1200 ms in all.
+goes: 1200 ms in all. Each title has a snooze button after it, `snooze` in `ink3` (`ink` under
+the pointer), 16 px in a row and 18 at the end of one task's title, that fades in over 180 ms once
+the title is up; its menu offers 1 hour, 3 hours and Tomorrow, at Settings' task time or else
+9:00 AM. A snoozed title fades where it is over 180 ms and its row closes up over 180 ms, the next
+hidden task fading into the list as "and N more" counts down; it never returns to its Today line,
+and snoozing the last one closes the banner as a dismissal does.
 
 Overlays arrive on these timings: every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
@@ -209,7 +214,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, Reply and an email the user answered (its row's mark, "You replied") `reply`,
   Reply all `reply_all`, Forward `forward`, popping the composer out `pip` (its window's × is `close`), help me write's undo and redo `undo` and `redo`, attaching a file `attach_file`, Drafts `draft` (an email's row says "Draft" in `alert`
-  instead), an attachment of an unknown type `unknown_document`,
+  instead), an attachment of an unknown type `unknown_document`, snoozing an overdue task `snooze`,
   a Settings page its nav's glyph wherever it's named.
 - **Tones**: `caution` and `alert` are close in hue, so a state's shape says how serious it is
   before its words do. **Caution**, something Setpoint depends on struggling (a source failing or

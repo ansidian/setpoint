@@ -341,6 +341,9 @@ export const news = {seenAfterMs: 1000, landedMs: 900} as const;
  * to `iconHoldPct`%, on the overdue-task icon, which scales in from `iconFrom` over `iconIn`, 18 px
  * under the sidebar's nav, and on their arrival takes `caution` at `iconTintPct`%, settling to
  * `iconSettlePct`% by `iconSettleAt`%, held to `iconHoldAt`%, then goes, over `iconLand`.
+ * The snooze buttons fade in over `snoozeIn` once the title is up. A snoozed title fades where it is
+ * over `snoozeOut`, then its row closes up over `closeUp`, and a task taking its place fades in
+ * over `closeUp`.
  */
 export const overdue = {
   veilIn: 320, labelIn: 240, titleDelay: 80, title: 560, titleEase: 'cubic-bezier(.16,1,.3,1)', titleFromPct: 112, maskPx: 7,
@@ -348,6 +351,7 @@ export const overdue = {
   rest: motion.fast, fly: 420, flyEase: 'cubic-bezier(.5,0,.2,1)', flyStagger: 50, flyHoldPct: 80, veilOutDelay: 60, veilOut: 360,
   land: 420, landTintPct: 30,
   iconScale: 0.3, iconHoldPct: 55, iconFrom: 0.8, iconIn: 180, iconGapPx: 18, iconLand: 1200, iconTintPct: 34, iconSettlePct: 12, iconSettleAt: 45, iconHoldAt: 75,
+  snoozeIn: motion.medium, snoozeOut: motion.medium, closeUp: motion.medium,
 } as const;
 
 /** Fixed sizes in px. */

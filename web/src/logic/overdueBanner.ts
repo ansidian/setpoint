@@ -1,11 +1,62 @@
 // The overdue banner's rules (app/OverdueBanner.tsx): which tasks an arrival lists, in what order,
-// how many before "and 3 more", the words for when each was due, and which titles return to Today on
-// the way out and how long that takes. Which tasks are overdue is logic/overdue.ts's; this looks 30
-// days back.
+// how many before "and 3 more", the words for when each was due, which titles return to Today on
+// the way out and how long that takes, and the snooze: when each preset ends, which tasks a snooze
+// holds off, and which snoozes the browser keeps (app/overdueSnoozed.ts). Which tasks are overdue
+// is logic/overdue.ts's; this looks 30 days back.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, daysBetween, instantAt, localDate} from './format.ts';
 import type {Overdue} from './overdue.ts';
+import {taskTimeMinutes} from './reminders.ts';
 import {overdue as timing} from '../tokens.ts';
+
+/** A snooze's presets, in the menu's order. */
+export type SnoozeChoice = 'hour' | 'threeHours' | 'tomorrow';
+export const SNOOZES: readonly {choice: SnoozeChoice; label: string}[] = [
+  {choice: 'hour', label: '1 hour'},
+  {choice: 'threeHours', label: '3 hours'},
+  {choice: 'tomorrow', label: 'Tomorrow'},
+];
+
+/** A snooze: a task by its id, at the due it had, held off the banner until `until` (ms). */
+export interface Snooze {
+  id: number;
+  due: string;
+  until: number;
+}
+
+const HOUR = 3_600_000;
+const dueOf = (item: ItemOut) => item.due_at ?? item.due_date ?? '';
+
+/** A snooze of `item` at its due now, until `until`. */
+export function snoozeFor(item: ItemOut, until: number): Snooze {
+  return {id: item.id, due: dueOf(item), until};
+}
+
+/**
+ * When a preset picked at `now` ends: an hour or three on, or tomorrow, the user's next date, at
+ * Settings' task time (`taskTime`, "08:30"), else the untimed tasks' default.
+ */
+export function snoozeUntil(choice: SnoozeChoice, now: number, taskTime: string | null, timeZone: string): number {
+  if (choice === 'hour') return now + HOUR;
+  if (choice === 'threeHours') return now + 3 * HOUR;
+  return Date.parse(instantAt(addDays(localDate(now, timeZone), 1), taskTimeMinutes(taskTime), timeZone));
+}
+
+const holds = (snooze: Snooze, item: ItemOut) => snooze.id === item.id && snooze.due === dueOf(item);
+
+/** Whether a snooze holds `item` off the banner at `now`: one for it at its current due, not yet ended. */
+export function isSnoozed(item: ItemOut, snoozes: readonly Snooze[], now: number): boolean {
+  return snoozes.some(snooze => snooze.until > now && holds(snooze, item));
+}
+
+/**
+ * The snoozes still worth keeping at an arrival over `items`: those not yet ended whose task is
+ * still there, open, at the same due. A task rescheduled, completed, or gone from the banner's days
+ * is no longer snoozed; one whose change is still on its way to Todoist keeps it, in case it fails.
+ */
+export function keptSnoozes(snoozes: readonly Snooze[], items: readonly ItemOut[], now: number): Snooze[] {
+  return snoozes.filter(snooze => snooze.until > now && items.some(item => item.kind === 'task' && !item.done && holds(snooze, item)));
+}
 
 /** How many days back an arrival looks for overdue tasks. */
 export const OVERDUE_DAYS = 30;

@@ -1,11 +1,13 @@
 // The overdue banner's rules, as tables: the order an arrival lists its tasks in, four and "and N
-// more", the words for when each was due, and which titles return to Today on the way out and how
-// long it lasts.
+// more", the words for when each was due, which titles return to Today on the way out and how
+// long it lasts, and the snooze: when each preset ends, which tasks it holds off, and which
+// snoozes a browser keeps.
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Overdue} from '../src/logic/overdue.ts';
-import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, listed, shortDue} from '../src/logic/overdueBanner.ts';
+import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, isSnoozed, keptSnoozes, listed, shortDue, snoozeFor, snoozeUntil} from '../src/logic/overdueBanner.ts';
+import type {Snooze, SnoozeChoice} from '../src/logic/overdueBanner.ts';
 
 let nextId = 1;
 function item(fields: Partial<ItemOut>): ItemOut {
@@ -109,5 +111,52 @@ describe('when each was due', () => {
 describe('the load looks 30 days back through today', () => {
   test('from Sep 7 to Oct 8, `to` exclusive', () => {
     expect(bannerRange(now, SEED_TIME_ZONE)).toEqual({from: '2026-09-07', to: '2026-10-08'});
+  });
+});
+
+describe('a snooze ends at its preset', () => {
+  const at = (iso: string) => Date.parse(iso);
+  test.each<[string, SnoozeChoice, string, string | null, string]>([
+    ['1 hour', 'hour', '2026-10-07T16:12:00.000Z', null, '2026-10-07T17:12:00.000Z'],
+    ['3 hours', 'threeHours', '2026-10-07T16:12:00.000Z', null, '2026-10-07T19:12:00.000Z'],
+    ['3 hours, late in the evening: past midnight', 'threeHours', '2026-10-08T05:30:00.000Z', null, '2026-10-08T08:30:00.000Z'],
+    ['Tomorrow, at the Settings task time', 'tomorrow', '2026-10-07T16:12:00.000Z', '08:30', '2026-10-08T15:30:00.000Z'],
+    ['Tomorrow, with no task time: at the untimed default, 9:00 AM', 'tomorrow', '2026-10-07T16:12:00.000Z', null, '2026-10-08T16:00:00.000Z'],
+    ['Tomorrow, picked at 11:50 PM: the next morning', 'tomorrow', '2026-10-08T06:50:00.000Z', null, '2026-10-08T16:00:00.000Z'],
+    ['Tomorrow, picked just after midnight: the day after the one begun', 'tomorrow', '2026-10-08T07:10:00.000Z', null, '2026-10-09T16:00:00.000Z'],
+    ['Tomorrow, across the clock change: 9:00 AM in standard time', 'tomorrow', '2026-10-31T16:12:00.000Z', null, '2026-11-01T17:00:00.000Z'],
+  ])('%s', (_name, choice, now, taskTime, until) => {
+    expect(snoozeUntil(choice, at(now), taskTime, SEED_TIME_ZONE)).toBe(at(until));
+  });
+});
+
+describe('a snooze holds a task and its due until it ends', () => {
+  const task = timed('2026-10-07', '2026-10-07T15:00:00.000Z', 'Call the landlord');
+  const errand = untimed('2026-10-05', 'Return the drill');
+  const snoozes: Snooze[] = [snoozeFor(task, now + 3_600_000), snoozeFor(errand, now + 60_000)];
+  test.each([
+    ['a timed task, before its snooze ends: held', task, now, true],
+    ['an untimed task, by its date: held', errand, now, true],
+    ['as its snooze ends: back', errand, now + 60_000, false],
+    ['rescheduled to a new time: back, as a new task', {...task, due_at: '2026-10-07T15:30:00.000Z'}, now, false],
+    ['rescheduled to another day: back', {...errand, due_date: '2026-10-06'}, now, false],
+    ['another task: not held', untimed('2026-10-05', 'Pay the water bill'), now, false],
+  ])('%s', (_name, item, at, held) => {
+    expect(isSnoozed(item, snoozes, at)).toBe(held);
+  });
+});
+
+describe('a browser keeps a snooze while its task is still overdue with that due, until it ends', () => {
+  const task = timed('2026-10-07', '2026-10-07T15:00:00.000Z', 'Call the landlord');
+  const snooze = snoozeFor(task, now + 3_600_000);
+  test.each([
+    ['still overdue, before its end: kept', [task], now, true],
+    ['ended: dropped', [task], now + 3_600_000, false],
+    ['rescheduled: dropped', [{...task, due_at: '2026-10-07T15:30:00.000Z'}], now, false],
+    ['completed: dropped', [{...task, done: true}], now, false],
+    ['gone from the items (moved past today, or deleted): dropped', [], now, false],
+    ['its completion still on its way: kept, as the change may yet fail', [{...task, command: {state: 'pending'} as ItemOut['command']}], now, true],
+  ])('%s', (_name, items, at, kept) => {
+    expect(keptSnoozes([snooze], items, at)).toEqual(kept ? [snooze] : []);
   });
 });

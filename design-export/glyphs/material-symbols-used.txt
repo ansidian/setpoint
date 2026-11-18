@@ -142,3 +142,4 @@ unknown_document
 pip
 redo
 attach_file
+snooze

@@ -4,7 +4,8 @@
    slides up from behind its own baseline inside a mask that clips only while it enters, then the
    due line or the list rises under it. It takes no pointer until the title is up, then a press
    pushes the text in, and the hint (drawn late) fades in. On the way out what doesn't return fades
-   where it is; the returning titles and the icon move by script (overdueExit.ts). */
+   where it is; the returning titles and the icon move by script (overdueExit.ts). The snooze
+   buttons and their menu are at the end. */
 .overdue { position: fixed; inset: 0; z-index: 34; cursor: default; outline: none; color: var(--ink); }
 .overdue-veil { position: absolute; inset: 0; background: color-mix(in srgb, var(--page) 88%, transparent); animation: fade-in var(--ov-veilIn) var(--ease) both; }
 :root[data-theme="light"] .overdue-veil { background: color-mix(in srgb, var(--page) 90%, transparent); }
@@ -47,3 +48,22 @@
    radius 10, that comes in as the titles leave and takes the tint as they arrive (by script). */
 .overdue-icon { position: absolute; display: grid; place-items: center; border-radius: 10px; color: var(--ink); opacity: 0; }
 .overdue-icon .overdue-glyph { display: block; }
+/* Snooze: each title's button, a `snooze` in `ink3` (`ink` under the pointer, with no fill), after
+   the title: 26 px with a 16 px glyph in a row, 30 px with 18 inline at the end of one task's title,
+   where the mask stops clipping while its menu is open. They're drawn once the title is up and fade
+   in. The menu hangs under its button and grows from its corner as every menu does, over the rows
+   below. A press on either doesn't push the text in. */
+.overdue-title > .overdue-snooze { vertical-align: middle; margin-left: 10px; }
+.overdue.in .overdue-mask:has(.overdue-menu) { overflow: visible; }
+.overdue-snooze { position: relative; display: inline-flex; flex: none; animation: fade-in var(--ov-snoozeIn) var(--ease) both; }
+.overdue-snooze:has(.overdue-menu) { z-index: 2; }
+.overdue-snooze-button { color: var(--ink3); transition: color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .overdue .overdue-snooze-button:hover { background: none; color: var(--ink); } }
+.overdue .overdue-snooze-button[aria-expanded="true"] { background: none; color: var(--ink); }
+.overdue-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 1; min-width: 148px; font-size: 13px; font-weight: 400; letter-spacing: normal; line-height: normal; text-align: left; }
+.overdue-list .overdue-name { flex: 0 1 auto; }
+.overdue-list .overdue-when { margin-left: auto; }
+.overdue.in:has(.overdue-snooze:active) .overdue-stack, .overdue.in:has(.overdue-menu) .overdue-stack { transform: none; }
+/* A snoozed row (by script) fades and closes up, and the one taking its place fades in. */
+.overdue-list li[data-leaving] { box-sizing: border-box; overflow: hidden; pointer-events: none; }
+.overdue-list li.refill { animation: fade-in var(--ov-closeUp) var(--ease) both; }

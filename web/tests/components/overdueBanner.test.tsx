@@ -2,7 +2,9 @@
 // or Esc dismisses it, and no other key acts on it or the page under it. While it enters, a click
 // reaches the page under it and Esc waits. Its arrivals: with the user there, a task going overdue
 // draws nothing; the next arrival does, and every arrival after a dismissal draws it again. The old
-// record of tasks shown is removed. When an arrival comes is logic/arrival.ts's, as a table, and
+// record of tasks shown is removed. The snooze: each title's button and its menu, their clicks and
+// keys, a snoozed title leaving and the next taking its place, and a snooze kept by the browser
+// holding its task off later arrivals until it ends. When an arrival comes is logic/arrival.ts's, as a table, and
 // the page's events are checked in the browser (shell.spec.ts). Its look and its fades are by eye.
 import type {ItemOut, TodoistProjectOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
@@ -274,8 +276,8 @@ test.each(['rail', 'calendar'] as const)('with no Today lines on screen (%s), th
   }
 });
 
-function arrivals(arrival: Arrival | null, items: ItemOut[], present = true) {
-  return <OverdueArrivals arrival={arrival} present={present} items={items} timeZone={SEED_TIME_ZONE} />;
+function arrivals(arrival: Arrival | null, items: ItemOut[], present = true, taskTime: string | null = null) {
+  return <OverdueArrivals arrival={arrival} present={present} items={items} taskTime={taskTime} timeZone={SEED_TIME_ZONE} />;
 }
 
 test('with the user there, a task going overdue draws nothing; the next arrival draws it', async () => {
@@ -317,4 +319,210 @@ test('the old record of tasks shown is no longer read, and is removed', async ()
   await render(arrivals({count: 1, at: now}, [one.item]));
   await expect.element(banner).toBeVisible();
   expect(localStorage.getItem(OLD_KEY)).toBeNull();
+});
+
+// The snooze.
+const snoozeButtons = () => [...document.querySelectorAll<HTMLButtonElement>('.overdue .overdue-snooze-button')];
+const snoozeMenu = page.getByRole('menu', {name: 'Snooze'});
+const listedRows = () => [...document.querySelectorAll('.overdue-list li')].map(row => row.textContent);
+const SNOOZED_KEY = 'setpoint.overdueSnoozed';
+
+test('each title has a snooze button after it, there once the title is up, with the tip "Snooze"', async () => {
+  vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+  await render(<OverdueBanner overdue={several()} now={now} timeZone={SEED_TIME_ZONE} />);
+  await expect.element(banner).toBeInTheDocument();
+  expect(snoozeButtons()).toHaveLength(0);
+  vi.advanceTimersByTime(ENTRANCE_MS);
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  const buttons = snoozeButtons();
+  expect(buttons).toHaveLength(4);
+  for (const button of buttons) {
+    expect(button.getAttribute('aria-label')).toBe('Snooze');
+    expect(button.dataset.tip).toBe('Snooze');
+    expect(button.parentElement?.previousElementSibling?.classList.contains('overdue-name')).toBe(true);
+  }
+});
+
+test('a snooze button opens its menu, 1 hour, 3 hours and Tomorrow, and the banner stays; Esc closes only the menu, then the banner', async () => {
+  await draw(several());
+  await userEvent.click(snoozeButtons()[1]!);
+  await expect.element(snoozeMenu).toBeVisible();
+  expect([...document.querySelectorAll('.overdue-menu [role="menuitem"]')].map(item => item.textContent)).toEqual(['1 hour', '3 hours', 'Tomorrow']);
+  expect(state()).toBe('in');
+  await userEvent.keyboard('{Escape}');
+  await expect.element(snoozeMenu).not.toBeInTheDocument();
+  expect(state()).toBe('in');
+  await userEvent.keyboard('{Escape}');
+  await expect.poll(state).toBe('out');
+});
+
+test('a click outside the menu closes only the menu; the next click dismisses the banner', async () => {
+  await draw(several());
+  await userEvent.click(snoozeButtons()[0]!);
+  await expect.element(snoozeMenu).toBeVisible();
+  await userEvent.click(page.getByText('6 tasks'));
+  await expect.element(snoozeMenu).not.toBeInTheDocument();
+  expect(state()).toBe('in');
+  await userEvent.click(banner);
+  await expect.poll(state).toBe('out');
+});
+
+test('picking a preset snoozes that task: its title leaves, the next hidden one takes its place and "and N more" counts down', async () => {
+  vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+  const picked: [string, string][] = [];
+  await render(<OverdueBanner overdue={several()} now={now} timeZone={SEED_TIME_ZONE} onSnooze={(item, choice) => picked.push([item.title, choice])} />);
+  vi.advanceTimersByTime(ENTRANCE_MS);
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  await userEvent.click(snoozeButtons()[1]!);
+  await userEvent.click(page.getByRole('menuitem', {name: '3 hours'}));
+  expect(picked).toEqual([['Return the drill', 'threeHours']]);
+  await expect.element(snoozeMenu).not.toBeInTheDocument();
+  // It fades where it is, then closes up, and the banner stays.
+  expect(document.querySelector('.overdue-list li[data-leaving]')?.textContent).toBe('Return the drillYesterday');
+  await expect.element(page.getByText('5 tasks')).toBeInTheDocument();
+  vi.advanceTimersByTime(timing.snoozeOut + timing.closeUp);
+  await expect.poll(listedRows).toEqual([
+    'Call the landlord8:00 AM',
+    'Submit the parking permit formMon',
+    'Pay the water billFri',
+    'Book a haircutSep 30',
+    'and 1 more',
+  ]);
+  expect(state()).toBe('in');
+});
+
+test('from two to one, it stays a list and reads "1 task"', async () => {
+  vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+  await render(<OverdueBanner overdue={several().slice(0, 2)} now={now} timeZone={SEED_TIME_ZONE} />);
+  vi.advanceTimersByTime(ENTRANCE_MS);
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  await userEvent.click(snoozeButtons()[0]!);
+  await userEvent.click(page.getByRole('menuitem', {name: '1 hour'}));
+  vi.advanceTimersByTime(timing.snoozeOut + timing.closeUp);
+  await expect.poll(listedRows).toEqual(['Submit the parking permit formMon']);
+  expect(document.querySelector('.overdue-title')?.textContent).toBe('1 task');
+  expect(state()).toBe('in');
+});
+
+test('snoozing the last one closes the banner, the snoozed title fading rather than returning to its Today line', async () => {
+  const one = landlord();
+  const aside = sidebar({lines: [one]});
+  try {
+    await draw([one]);
+    await userEvent.click(snoozeButtons()[0]!);
+    await userEvent.click(page.getByRole('menuitem', {name: 'Tomorrow'}));
+    await expect.poll(state).toBe('out');
+    expect(exits()).toEqual({'Call the landlord': 'fade'});
+  } finally {
+    aside.remove();
+  }
+});
+
+test('Tab moves among the snooze buttons and never to the page under it; Enter or Space opens one, the arrows move in its menu and Enter picks', async () => {
+  const under = document.createElement('button');
+  under.textContent = 'Under';
+  document.body.append(under);
+  const picked: string[] = [];
+  try {
+    await render(<OverdueBanner overdue={several().slice(0, 3)} now={now} timeZone={SEED_TIME_ZONE} onSnooze={(item, choice) => picked.push(`${item.title} ${choice}`)} />);
+    await expect.element(banner).toHaveAttribute('data-state', 'in');
+    const buttons = snoozeButtons();
+    await userEvent.keyboard('{Tab}');
+    expect(document.activeElement).toBe(buttons[0]);
+    await userEvent.keyboard('{Tab}{Tab}{Tab}');
+    expect(document.activeElement).toBe(buttons[0]);
+    await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(document.activeElement).toBe(buttons[2]);
+
+    await userEvent.keyboard(' ');
+    await expect.element(snoozeMenu).toBeVisible();
+    expect(document.activeElement?.textContent).toBe('1 hour');
+    await userEvent.keyboard('{Escape}');
+    await expect.element(snoozeMenu).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(buttons[2]);
+
+    await userEvent.keyboard('{Enter}');
+    await expect.element(snoozeMenu).toBeVisible();
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}');
+    expect(document.activeElement?.textContent).toBe('Tomorrow');
+    await userEvent.keyboard('{Enter}');
+    expect(picked).toEqual(['Renew the library card tomorrow']);
+    expect(state()).toBe('in');
+    expect(document.activeElement).not.toBe(under);
+  } finally {
+    under.remove();
+  }
+});
+
+test('a snooze is kept by the browser: later arrivals leave its task off until it ends, then the next one brings it back', async () => {
+  vi.useFakeTimers({toFake: ['Date']});
+  vi.setSystemTime(now);
+  const one = landlord();
+  const other = task('Return the drill', {due_date: '2026-10-06'});
+  const {rerender} = await render(arrivals({count: 1, at: now}, [one.item, other.item]));
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  await userEvent.click(snoozeButtons()[0]!);
+  await userEvent.click(page.getByRole('menuitem', {name: '1 hour'}));
+  // An hour from the pick, on the page's clock.
+  const [kept] = JSON.parse(localStorage.getItem(SNOOZED_KEY)!) as {id: number; due: string; until: number}[];
+  expect({id: kept!.id, due: kept!.due}).toEqual({id: one.item.id, due: one.item.due_at});
+  expect(kept!.until - now).toBeGreaterThanOrEqual(3_600_000);
+  expect(kept!.until - now).toBeLessThan(3_660_000);
+  await userEvent.keyboard('{Escape}');
+  await expect.poll(() => document.querySelector('.overdue')).toBeNull();
+
+  // Within the hour: the other alone.
+  await rerender(arrivals({count: 2, at: now + 30 * 60_000}, [one.item, other.item]));
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  expect(document.querySelector('.overdue-title')?.textContent).toBe('Return the drill');
+  await userEvent.keyboard('{Escape}');
+  await expect.poll(() => document.querySelector('.overdue')).toBeNull();
+
+  // Past it: both, and the ended snooze is no longer kept.
+  await rerender(arrivals({count: 3, at: now + 61 * 60_000}, [one.item, other.item]));
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  expect(document.querySelector('.overdue-title')?.textContent).toBe('2 tasks');
+  await expect.poll(() => localStorage.getItem(SNOOZED_KEY)).toBeNull();
+});
+
+test('Tomorrow is tomorrow at the Settings task time', async () => {
+  vi.useFakeTimers({toFake: ['Date']});
+  vi.setSystemTime(now);
+  const one = landlord();
+  await render(arrivals({count: 1, at: now}, [one.item], true, '08:30'));
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  await userEvent.click(snoozeButtons()[0]!);
+  await userEvent.click(page.getByRole('menuitem', {name: 'Tomorrow'}));
+  expect(JSON.parse(localStorage.getItem(SNOOZED_KEY)!)).toEqual([{id: one.item.id, due: one.item.due_at, until: Date.parse('2026-10-08T15:30:00.000Z')}]);
+});
+
+test('a snooze ends when its task is rescheduled', async () => {
+  const one = landlord();
+  localStorage.setItem(SNOOZED_KEY, JSON.stringify([{id: one.item.id, due: one.item.due_at, until: now + 3_600_000}]));
+  await render(arrivals({count: 1, at: now}, [{...one.item, due_at: '2026-10-07T15:30:00.000Z'}]));
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  expect(document.querySelector('.overdue-title')?.textContent).toBe('Call the landlord');
+  await expect.poll(() => localStorage.getItem(SNOOZED_KEY)).toBeNull();
+});
+
+test('a browser that refuses storage still takes a snoozed title off the banner', async () => {
+  const real = Object.getOwnPropertyDescriptor(window, 'localStorage')!;
+  Object.defineProperty(window, 'localStorage', {configurable: true, get: () => {
+    throw new DOMException('Refused', 'SecurityError');
+  }});
+  try {
+    await render(arrivals({count: 1, at: now}, several().slice(0, 2).map(one => one.item)));
+    await expect.element(banner).toHaveAttribute('data-state', 'in');
+    await userEvent.click(snoozeButtons()[0]!);
+    await userEvent.click(page.getByRole('menuitem', {name: '1 hour'}));
+    await expect.element(page.getByText('1 task')).toBeInTheDocument();
+  } finally {
+    Object.defineProperty(window, 'localStorage', real);
+  }
+});
+
+test('a malformed record is read as no snoozes', async () => {
+  localStorage.setItem(SNOOZED_KEY, '{"not": "a list"');
+  await render(arrivals({count: 1, at: now}, [landlord().item]));
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
 });
