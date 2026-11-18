@@ -8,7 +8,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, describe, drawn, holdToast, pagePx, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, describe, drawn, drawnTwice, holdToast, pagePx, pauseClock, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -382,6 +382,8 @@ test('a load with overdue tasks opens on their banner over the Inbox; a click se
     })));
     assert.deepEqual(covered, [true, true]);
 
+    // Once it has entered, it takes the click.
+    await page.locator('.overdue[data-state="in"]').waitFor();
     await banner.click();
     await page.locator('.overdue[data-state="in"]').waitFor({state: 'detached'});
     // The click opened nothing under it: the Inbox has no email open.
@@ -393,6 +395,60 @@ test('a load with overdue tasks opens on their banner over the Inbox; a click se
     await drawn(page, await again);
     await page.locator('.list .row').first().waitFor();
     assert.equal(await page.locator('.overdue').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a task going overdue mid-use raises no banner, only its Today line; the next arrival, the tab shown again, raises it with one that went overdue while away', async () => {
+  // Pay rent at 9:15 AM and the lab report at 9:20 AM, just after the seed's 9:12 AM. The server's
+  // clock holds; the page's is the check's, moved on in steps under the 5 minutes that make idle.
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      const timed = database.prepare('UPDATE items SET due_at = ? WHERE title = ?');
+      timed.run('2026-10-07T16:15:00.000Z', 'Pay rent');
+      timed.run('2026-10-07T16:20:00.000Z', 'CS 101 lab report');
+    } finally {
+      database.close();
+    }
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    const loaded = page.waitForResponse(response => response.url().includes('/api/items?from=2026-09-07&to=2026-10-08'));
+    await page.goto(`${setpoint.base}/inbox`);
+    await drawn(page, await loaded);
+    const payRent = page.locator('.sb .today-row', {hasText: 'Pay rent'}).locator('.t');
+    await payRent.waitFor();
+    await pauseClock(page);
+    assert.equal(await payRent.getAttribute('class'), 't num');
+
+    // Here throughout: past 9:15 AM, Pay rent's time turns, and no banner comes.
+    await page.mouse.move(400, 300);
+    await page.clock.fastForward(4 * 60_000);
+    await until('Pay rent past its time', () => payRent.getAttribute('class'), names => names === 't num passed');
+    await drawnTwice(page);
+    assert.equal(await page.locator('.overdue').count(), 0);
+
+    // Away: the tab hidden past 9:20 AM. Nothing is drawn while it is.
+    const tab = (state: 'hidden' | 'visible') => page.evaluate(shown => {
+      Object.defineProperty(document, 'visibilityState', {configurable: true, get: () => shown});
+      Object.defineProperty(document, 'hidden', {configurable: true, get: () => shown === 'hidden'});
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, state);
+    await tab('hidden');
+    await page.clock.fastForward(4 * 60_000);
+    await drawnTwice(page);
+    assert.equal(await page.locator('.overdue').count(), 0);
+
+    // Back: the banner enters with both, the latest due first.
+    await tab('visible');
+    const banner = page.getByRole('dialog', {name: 'Overdue tasks'});
+    await banner.waitFor();
+    assert.equal(await banner.locator('.overdue-title').textContent(), '2 tasks');
+    assert.deepEqual(await banner.locator('.overdue-list li').allTextContents(), ['CS 101 lab report9:20 AM', 'Pay rent9:15 AM']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

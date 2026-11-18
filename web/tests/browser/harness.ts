@@ -497,7 +497,7 @@ async function answered(page: Page, loading: Set<Request>, what = 'the page\'s r
  * task queue instead, which React's renders are scheduled on (a MessageChannel, which the clock
  * leaves alone).
  */
-async function drawnTwice(page: Page): Promise<void> {
+export async function drawnTwice(page: Page): Promise<void> {
   await page.evaluate(() => {
     if (!('__pwClock' in window)) return new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn)));
     const turn = () => new Promise(next => {

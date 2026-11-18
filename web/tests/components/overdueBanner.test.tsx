@@ -1,15 +1,18 @@
 // The overdue banner (OverdueBanner.tsx) on its own: one task and several draw their parts, a click
 // or Esc dismisses it and marks its tasks shown in this browser, no other key acts on it or the
-// page under it, and it draws nothing when every task is shown. Which load raises it is App's,
-// checked in the browser (shell.spec.ts). Its look and its fades are by eye.
+// page under it, and it draws nothing when every task is shown. While it enters, a click reaches
+// the page under it and Esc waits. Its arrivals: with the user there, a task going overdue draws
+// nothing; the next arrival does. When an arrival comes is logic/arrival.ts's, as a table, and the
+// page's events are checked in the browser (shell.spec.ts). Its look and its fades are by eye.
 import type {ItemOut, TodoistProjectOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
-import {afterEach, beforeEach, expect, test} from 'vitest';
+import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {clearCache, setCached} from '../../src/api/client.ts';
 import {TODOIST_PROJECTS_PATH} from '../../src/api/items.ts';
-import {OverdueBanner} from '../../src/app/OverdueBanner.tsx';
+import type {Arrival} from '../../src/app/arrival.ts';
+import {ENTRANCE_MS, OverdueArrivals, OverdueBanner} from '../../src/app/OverdueBanner.tsx';
 import type {Overdue} from '../../src/logic/overdue.ts';
 import {shownKey} from '../../src/logic/overdueBanner.ts';
 
@@ -39,7 +42,13 @@ const several = () => [
 
 const banner = page.getByRole('dialog', {name: 'Overdue tasks'});
 const stored = () => JSON.parse(localStorage.getItem(KEY) ?? '[]') as string[];
-const draw = (overdue: Overdue[]) => render(<OverdueBanner overdue={overdue} now={now} timeZone={SEED_TIME_ZONE} />);
+const state = () => document.querySelector('.overdue')?.getAttribute('data-state') ?? 'gone';
+/** Drawn and entered: it takes clicks and keys from here. */
+async function draw(overdue: Overdue[]) {
+  const drawn = await render(<OverdueBanner overdue={overdue} now={now} timeZone={SEED_TIME_ZONE} />);
+  if (overdue.length) await expect.element(banner).toHaveAttribute('data-state', 'in');
+  return drawn;
+}
 
 beforeEach(() => {
   localStorage.clear();
@@ -51,6 +60,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   localStorage.clear();
   clearCache();
 });
@@ -87,7 +97,7 @@ test('a click anywhere dismisses it and marks every task shown, the ones under "
   await expect.element(banner).toBeVisible();
   expect(stored()).toEqual([]);
   await userEvent.click(page.getByText('Click anywhere to dismiss'));
-  await expect.poll(() => document.querySelector('.overdue')?.getAttribute('data-state') ?? 'gone').not.toBe('in');
+  await expect.poll(state).not.toBe('in');
   expect(stored().sort()).toEqual(tasks.map(one => shownKey(one.item)).sort());
 });
 
@@ -111,7 +121,7 @@ test('Esc dismisses it', async () => {
   await expect.element(banner).toBeVisible();
   await userEvent.keyboard('{Escape}');
   await expect.poll(() => stored()).toEqual([shownKey(one.item)]);
-  await expect.poll(() => document.querySelector('.overdue')?.getAttribute('data-state') ?? 'gone').not.toBe('in');
+  await expect.poll(state).not.toBe('in');
 });
 
 test('another key does nothing, on the banner or the page under it', async () => {
@@ -125,7 +135,7 @@ test('another key does nothing, on the banner or the page under it', async () =>
     await userEvent.keyboard('c{Enter} `');
     await userEvent.keyboard('{Control>}k{/Control}');
     expect(reached).toEqual([]);
-    expect(document.querySelector('.overdue')?.getAttribute('data-state')).toBe('in');
+    expect(state()).toBe('in');
     expect(stored()).toEqual([]);
   } finally {
     document.removeEventListener('keydown', listen);
@@ -136,9 +146,9 @@ test('another key does nothing, on the banner or the page under it', async () =>
 test('nothing draws when every task is shown, and an unshown one still does', async () => {
   const tasks = several();
   localStorage.setItem(KEY, JSON.stringify(tasks.map(one => shownKey(one.item))));
-  const {unmount} = await draw(tasks);
+  const {unmount} = await render(<OverdueBanner overdue={tasks} now={now} timeZone={SEED_TIME_ZONE} />);
   expect(document.querySelector('.overdue')).toBeNull();
-  unmount();
+  await unmount();
 
   // The same task rescheduled to yesterday and missed again shows once more.
   const moved = {...tasks[0]!, item: {...tasks[0]!.item, due_date: '2026-10-06'}};
@@ -156,8 +166,71 @@ test('a browser that refuses storage shows it all the same', async () => {
     await draw([landlord()]);
     await expect.element(banner).toBeVisible();
     await userEvent.keyboard('{Escape}');
-    await expect.poll(() => document.querySelector('.overdue')?.getAttribute('data-state') ?? 'gone').not.toBe('in');
+    await expect.poll(state).not.toBe('in');
   } finally {
     Object.defineProperty(window, 'localStorage', real);
   }
+});
+
+test('while it enters, a click reaches what is under it and leaves it up, and Esc waits; once in, a click dismisses it', async () => {
+  vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+  const clicked: string[] = [];
+  const under = document.createElement('button');
+  under.textContent = 'Under';
+  under.style.cssText = 'position: fixed; inset: 0;';
+  under.addEventListener('click', () => clicked.push('under'));
+  document.body.append(under);
+  try {
+    const one = landlord();
+    await render(<OverdueBanner overdue={[one]} now={now} timeZone={SEED_TIME_ZONE} />);
+    await expect.element(banner).toBeInTheDocument();
+    expect(state()).toBe('entering');
+    await userEvent.click(page.getByText('Click anywhere to dismiss'), {force: true});
+    expect(clicked).toEqual(['under']);
+    await userEvent.keyboard('{Escape}');
+    expect(state()).toBe('entering');
+    expect(stored()).toEqual([]);
+
+    vi.advanceTimersByTime(ENTRANCE_MS);
+    await expect.element(banner).toHaveAttribute('data-state', 'in');
+    await userEvent.click(page.getByText('Click anywhere to dismiss'));
+    await expect.poll(state).not.toBe('in');
+    expect(clicked).toEqual(['under']);
+    expect(stored()).toEqual([shownKey(one.item)]);
+  } finally {
+    under.remove();
+  }
+});
+
+function arrivals(arrival: Arrival | null, items: ItemOut[], present = true) {
+  return <OverdueArrivals arrival={arrival} present={present} items={items} timeZone={SEED_TIME_ZONE} />;
+}
+
+test('with the user there, a task going overdue draws nothing; the next arrival draws it', async () => {
+  // At the load, Call the landlord isn't due yet: no banner.
+  const later = {...landlord().item, due_at: '2026-10-07T17:00:00.000Z'};
+  const load = {count: 1, at: now};
+  const {rerender} = await render(arrivals(load, [later]));
+  // Now past its time, and the same arrival: nothing.
+  const passed = {...later, due_at: '2026-10-07T16:00:00.000Z'};
+  await rerender(arrivals(load, [passed]));
+  expect(document.querySelector('.overdue')).toBeNull();
+  // The user goes away; an arrival that comes while they're away waits for them.
+  await rerender(arrivals({count: 2, at: now + 60_000}, [passed], false));
+  expect(document.querySelector('.overdue')).toBeNull();
+  await rerender(arrivals({count: 2, at: now + 60_000}, [passed]));
+  await expect.element(banner).toBeVisible();
+  expect(document.querySelector('.overdue-title')?.textContent).toBe('Call the landlord');
+});
+
+test('an arrival while the banner is up leaves it as it is; once dismissed, an arrival with nothing new draws nothing', async () => {
+  const one = landlord();
+  const {rerender} = await render(arrivals({count: 1, at: now}, [one.item]));
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  await rerender(arrivals({count: 2, at: now + 60_000}, [one.item]));
+  expect(state()).toBe('in');
+  await userEvent.keyboard('{Escape}');
+  await expect.poll(() => document.querySelector('.overdue')).toBeNull();
+  await rerender(arrivals({count: 3, at: now + 120_000}, [one.item]));
+  expect(document.querySelector('.overdue')).toBeNull();
 });
