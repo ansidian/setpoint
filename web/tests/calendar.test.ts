@@ -197,6 +197,12 @@ describe('items on days', () => {
     expect(chipTime(one, zone)).toBe(chip);
     expect(timeRange(one, zone)).toBe(span);
   });
+
+  test.each([
+    ['a timed task on the hour', task('Call the landlord', '2026-10-07', {all_day: false, due_at: at('2026-10-07', '08:00')}), '8 AM'],
+    ['a timed task with minutes', task('Pay rent', '2026-10-07', {all_day: false, due_at: at('2026-10-07', '14:30')}), '2:30 PM'],
+    ['an untimed task', task('Renew the library card', '2026-10-07'), null],
+  ])('%s: chip %s', (_name, one, chip) => expect(chipTime(one, zone)).toBe(chip));
 });
 
 describe('the right pane', () => {

@@ -259,7 +259,8 @@ export function isPast(item: ItemOut, now: number, timeZone: string): boolean {
 
 /** A chip's time: "7 AM", "2:30 PM". All-day events have none. */
 export function chipTime(item: ItemOut, timeZone: string): string | null {
-  if (item.kind === 'task' || item.all_day || !item.starts_at) return null;
+  if (item.kind === 'task') return item.due_at ? clockTime(item.due_at, timeZone).replace(':00 ', ' ') : null;
+  if (item.all_day || !item.starts_at) return null;
   return clockTime(item.starts_at, timeZone).replace(':00 ', ' ');
 }
 

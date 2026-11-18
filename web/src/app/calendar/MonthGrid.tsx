@@ -357,7 +357,7 @@ export function MonthGrid(props: MonthGridProps) {
           <div className={drag.item.kind === 'task' ? 'tk sel lift' : 'ev sel lift'} aria-hidden="true"
             style={{left: drag.at.left, top: drag.at.top, width: drag.width, '--c': liftedColour} as CSSProperties}>
             {drag.item.kind === 'task'
-              ? <><span className="ring" style={ring(drag.item.project)} />{drag.item.title}</>
+              ? <><span className="ring" style={ring(drag.item.project)} />{chipTime(drag.item, timeZone) && <span className="t">{chipTime(drag.item, timeZone)}</span>}{drag.item.title}</>
               : <>{chipTime(drag.item, timeZone) && <span className="t">{chipTime(drag.item, timeZone)}</span>}{drag.item.title}</>}
           </div>
           <div className="drag-tip num" role="status" style={{left: drag.at.left + dragTokens.tipOffset.left, top: drag.at.top + dragTokens.tipOffset.top}}>

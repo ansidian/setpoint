@@ -73,10 +73,12 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   if (item.kind === 'task') {
     // A task with subtasks ends in their count, done of all. Its title gives way to it.
     const counted = item.subtasks.length > 0;
+    // A timed task shows its time after its ring, as an event does ("9 AM"); the week's all-day row passes its own.
+    const taskShown = shownTime === undefined ? chipTime(item, timeZone) : shownTime;
     return (
       <div className={`tk${counted ? ' counted' : ''}${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
         {failed ? <Icon name="error" size={14} /> : item.done ? <TaskGlyph done size={12} /> : <span className="ring" style={ring(item.project)} />}
-        {shownTime && <span className="t">{shownTime}</span>}
+        {taskShown && <span className="t">{taskShown}</span>}
         {counted ? <span className="title">{item.title}</span> : item.title}
         {counted && <span className="count num"><Icon name="subtask" size={12} />{subtaskCount(item)}</span>}
         {pending && <Saving command={item.command} timeZone={timeZone} size={14} />}

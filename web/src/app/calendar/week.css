@@ -58,7 +58,6 @@
 .wk-piece.cont-l > .ev { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: none; }
 .wk-piece.cont-r > .ev { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .wk-piece.lift > .ev, .wk-line .tk.lift { box-shadow: var(--shadow-pop); }
-.wk-line .tk .t { color: var(--ink2); font-variant-numeric: tabular-nums; margin-right: 5px; }
 
 /* The hours: 44 px each, `hair` lines, labels in the gutter. */
 .wk-body { position: relative; display: flex; height: calc(24 * var(--weekHour)); }
