@@ -1,15 +1,14 @@
-// The overdue banner: on an arrival with Todoist tasks overdue that this browser hasn't shown, the
-// page dims under its own colour and the task sits on it large, with no card or chrome. An arrival
-// is a page load or the user coming back after being away (app/arrival.ts), so a task going
-// overdue mid-use raises nothing until the next one, and a banner due while they're away waits for
-// their return. One task is its title over its ring, project and due ("Errands · Due today, 8:00
+// The overdue banner: on an arrival with Todoist tasks overdue, the page dims under its own colour
+// and the task sits on it large, with no card or chrome. An arrival is a page load or the user
+// coming back to the tab or the window (app/arrival.ts), never a page change inside the app, so a
+// task going overdue mid-use raises nothing until the next one, and a banner due while they're away
+// waits for their return. Every arrival shows every overdue task, until it's done. One task is its title over its ring, project and due ("Errands · Due today, 8:00
 // AM"). Several are "3 tasks" over a list, the most recently due first, four and "and 3 more".
 // It enters by Reveal: the veil and label fade in, the title slides up from behind its own
 // baseline, then the due line (or the list) rises under it. Until the title is up it takes no
 // click or key: they go to the page under it, as the click that brings the window back does. Then
-// a press pushes the text in, the hint fades in late, and a click anywhere or Esc dismisses it,
-// marking its tasks shown in this browser (overdueShown.ts) so it doesn't come back for them. It
-// leaves by Return to its row: each title due today goes back to its Today line, which takes the
+// a press pushes the text in, the hint fades in late, and a click anywhere or Esc dismisses it for
+// this visit, until the next arrival. It leaves by Return to its row: each title due today goes back to its Today line, which takes the
 // landing tint, and the rest fades where it is (overdueExit.ts finds the lines, and the icon where
 // they aren't on screen). While it's up no other key acts, on it or the page under it, and its
 // click reaches nothing else. It sits over every page and the composer, under the toast. It waits
@@ -23,7 +22,7 @@ import {useResource} from '../api/client.ts';
 import {itemsPath} from '../api/items.ts';
 import {overdueTasks} from '../logic/overdue.ts';
 import type {Overdue} from '../logic/overdue.ts';
-import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, listed, shortDue, shownKey} from '../logic/overdueBanner.ts';
+import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, listed, shortDue} from '../logic/overdueBanner.ts';
 import {motion, overdue as timing} from '../tokens.ts';
 import {OverdueGlyph} from '../ui/Icon.tsx';
 import {useRingColour} from './calendar/Chip.tsx';
@@ -31,7 +30,6 @@ import {useArrival} from './arrival.ts';
 import {planExit} from './overdueExit.ts';
 import type {ExitPlan} from './overdueExit.ts';
 import type {Arrival} from './arrival.ts';
-import {markShown, shownTasks} from './overdueShown.ts';
 import {usePaletteOpen} from './palette/Palette.tsx';
 import {useSettingsPage} from './settings/store.ts';
 import './overdue.css';
@@ -40,6 +38,16 @@ import './overdue.css';
 // every page's own listeners, so none of them sees a key before the banner has kept it.
 let keysUp: ((event: KeyboardEvent) => void) | null = null;
 window.addEventListener('keydown', event => keysUp?.(event), true);
+
+// The record an earlier banner kept of the tasks it had shown, so as not to show them again. Nothing
+// reads it now; it's removed from this browser.
+function forgetShown() {
+  try {
+    localStorage.removeItem('setpoint.overdueShown');
+  } catch {
+    // Storage refused: there's nothing kept to remove.
+  }
+}
 
 /** The arrivals' banner: the last 30 days' items, judged as each arrival comes. */
 export function OverdueArrival() {
@@ -54,17 +62,18 @@ export function OverdueArrival() {
 /**
  * The banner for each arrival over `items`: judged once the user is there and the items are in, and
  * shown unless one is up already. An arrival with nothing to show is done with, so a task that goes
- * overdue later waits for the next one. It waits while Settings or ⌘K is open.
+ * overdue later waits for the next one, as does one dismissed. It waits while Settings or ⌘K is open.
  */
 export function OverdueArrivals({arrival, present, items, timeZone: zone}: {arrival: Arrival | null; present: boolean; items: readonly ItemOut[] | undefined; timeZone: string}) {
   const [judged, setJudged] = useState(0);
   const [shown, setShown] = useState<{tasks: Overdue[]; at: number; key: number} | null>(null);
   const settings = useSettingsPage();
   const palette = usePaletteOpen();
+  useEffect(forgetShown, []);
   if (arrival && arrival.count > judged && items && present) {
     setJudged(arrival.count);
     if (!shown) {
-      const tasks = arrivalTasks(overdueTasks(items, arrival.at, zone), shownTasks(), zone);
+      const tasks = arrivalTasks(overdueTasks(items, arrival.at, zone), zone);
       if (tasks.length) setShown({tasks, at: arrival.at, key: arrival.count});
     }
   }
@@ -115,11 +124,11 @@ function playExit(banner: HTMLElement, plan: ExitPlan) {
 }
 
 /**
- * The banner over `overdue`, less what this browser has shown. Nothing when that's all of them.
- * `onGone` hears when it has left, or that it had nothing to show.
+ * The banner over `overdue`, the most recently due first. Nothing when there are none. `onGone`
+ * hears when it has left, or that it had nothing to show.
  */
 export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: readonly Overdue[]; now: number; timeZone: string; onGone?: () => void}) {
-  const [tasks] = useState(() => arrivalTasks(overdue, shownTasks(), zone));
+  const [tasks] = useState(() => arrivalTasks(overdue, zone));
   const [phase, setPhase] = useState<'entering' | 'in' | 'out' | 'gone'>(tasks.length ? 'entering' : 'gone');
   // The dismiss hint comes late, so a quick click never sees it.
   const [hinted, setHinted] = useState(false);
@@ -142,14 +151,12 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone}: {overdue: 
     return () => window.clearTimeout(timer);
   }, [tasks]);
 
-  // Shown once it's dismissed, not when it appears, so a reload before then shows it again. The way
-  // out is measured now, from layout, and nothing waits on it.
+  // The way out is measured now, from layout, and nothing waits on it.
   const dismiss = useCallback(() => {
     if (phase !== 'in') return;
-    markShown(tasks.map(task => shownKey(task.item)), now, zone);
     setExit(banner.current ? planExit(banner.current, exitSplit(tasks).returning.map(task => task.item.key)) : {flights: [], icon: null});
     setPhase('out');
-  }, [phase, tasks, now, zone]);
+  }, [phase, tasks]);
 
   useEffect(() => {
     if (phase !== 'in') return;

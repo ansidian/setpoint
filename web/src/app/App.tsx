@@ -5,8 +5,9 @@
 // and `` ` `` to open or fold the sidebar from 1100 px (sidebarRail.ts). Settings is a modal over
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
 // phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings, ⌘K, News,
-// Jobs and Sent stay on the desktop (their addresses open the Inbox). On the desktop a load with an
-// overdue task not shown before opens on its banner (OverdueBanner.tsx), over everything but the toast.
+// Jobs and Sent stay on the desktop (their addresses open the Inbox). On the desktop every arrival (a
+// load, a return to the tab) with an overdue task opens on its banner (OverdueBanner.tsx), over
+// everything but the toast.
 import {useEffect} from 'react';
 import {useDown, useOfflineSince} from '../api/live.ts';
 import {connectFailed, connectNote} from '../logic/settings.ts';

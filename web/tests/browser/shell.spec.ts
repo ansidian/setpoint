@@ -359,7 +359,7 @@ test('a timed task shows its time and takes its place by it, among the Today blo
   }
 });
 
-test('a load with overdue tasks opens on their banner over the Inbox; a click sends it, and a reload doesn\'t bring it back', async () => {
+test('a load with overdue tasks opens on their banner over the Inbox; a click sends it, a page change in the app doesn\'t bring it back, and a reload does', async () => {
   // Three overdue tasks: one due at 8:00 AM today, before the seed's 9:12 AM, one from Monday and one
   // from Sep 24. The seed itself has none, so no other check meets the banner.
   const setpoint = await startSetpoint({fixtures: ['overdue-tasks']});
@@ -368,7 +368,8 @@ test('a load with overdue tasks opens on their banner over the Inbox; a click se
     const loaded = () => page.waitForResponse(response => response.url().includes('/api/items?from=2026-09-07&to=2026-10-08'));
     const first = loaded();
     await page.goto(`${setpoint.base}/inbox`);
-    await drawn(page, await first);
+    const answer = await first;
+    await drawn(page, answer);
     const banner = page.getByRole('dialog', {name: 'Overdue tasks'});
     await banner.waitFor();
     assert.equal(await banner.locator('.overdue-title').textContent(), '3 tasks');
@@ -389,21 +390,31 @@ test('a load with overdue tasks opens on their banner over the Inbox; a click se
     // The click opened nothing under it: the Inbox has no email open.
     assert.equal(new URL(page.url()).pathname, '/inbox');
 
-    // Shown in this browser, it doesn't come back once the reload's own load has answered.
-    const again = loaded();
-    await page.reload();
-    await drawn(page, await again);
-    await page.locator('.list .row').first().waitFor();
+    // A page change inside the app is no arrival: Calendar opens with no banner.
+    await page.locator('.overdue').waitFor({state: 'detached'});
+    await page.keyboard.press('2');
+    await page.waitForURL(url => url.pathname.startsWith('/calendar'));
+    await setpoint.idle();
     assert.equal(await page.locator('.overdue').count(), 0);
+
+    // The old record of tasks shown, as the last release left it, isn't read: a reload brings the
+    // banner back with all three, and the record is gone.
+    const {items} = await answer.json() as {items: {id: number; kind: string; due_at: string | null; due_date: string | null}[]};
+    const old = items.filter(item => item.kind === 'task').map(item => `${item.id}@${item.due_at ?? item.due_date}`);
+    await page.evaluate(keys => localStorage.setItem('setpoint.overdueShown', JSON.stringify(keys)), old);
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.overdue[data-state="in"]').waitFor();
+    assert.equal(await banner.locator('.overdue-title').textContent(), '3 tasks');
+    assert.equal(await page.evaluate(() => localStorage.getItem('setpoint.overdueShown')), null);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
 });
 
-test('a task going overdue mid-use raises no banner, only its Today line; the next arrival, the tab shown again, raises it with one that went overdue while away', async () => {
+test('a task going overdue mid-use raises no banner, only its Today line, nor does input after idle minutes; the next arrival, the tab shown again, raises it with one that went overdue while away, and so does every return after a dismissal', async () => {
   // Pay rent at 9:15 AM and the lab report at 9:20 AM, just after the seed's 9:12 AM. The server's
-  // clock holds; the page's is the check's, moved on in steps under the 5 minutes that make idle.
+  // clock holds; the page's is the check's, moved on in steps.
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
@@ -432,7 +443,13 @@ test('a task going overdue mid-use raises no banner, only its Today line; the ne
     await drawnTwice(page);
     assert.equal(await page.locator('.overdue').count(), 0);
 
-    // Away: the tab hidden past 9:20 AM. Nothing is drawn while it is.
+    // Six minutes with no input, past 9:20 AM, then a move: time alone makes no arrival.
+    await page.clock.fastForward(6 * 60_000);
+    await page.mouse.move(420, 320);
+    await drawnTwice(page);
+    assert.equal(await page.locator('.overdue').count(), 0);
+
+    // Away: the tab hidden. Nothing is drawn while it is.
     const tab = (state: 'hidden' | 'visible') => page.evaluate(shown => {
       Object.defineProperty(document, 'visibilityState', {configurable: true, get: () => shown});
       Object.defineProperty(document, 'hidden', {configurable: true, get: () => shown === 'hidden'});
@@ -449,6 +466,18 @@ test('a task going overdue mid-use raises no banner, only its Today line; the ne
     await banner.waitFor();
     assert.equal(await banner.locator('.overdue-title').textContent(), '2 tasks');
     assert.deepEqual(await banner.locator('.overdue-list li').allTextContents(), ['CS 101 lab report9:20 AM', 'Pay rent9:15 AM']);
+
+    // Dismissed, it lasts for this visit: the next return to the tab raises it again.
+    await page.clock.fastForward(1000);
+    await page.locator('.overdue[data-state="in"]').waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('.overdue[data-state="out"]').waitFor();
+    await page.clock.fastForward(2000);
+    await page.locator('.overdue').waitFor({state: 'detached'});
+    await tab('hidden');
+    await tab('visible');
+    await banner.waitFor();
+    assert.equal(await banner.locator('.overdue-title').textContent(), '2 tasks');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -1,9 +1,9 @@
 // The overdue banner (OverdueBanner.tsx) on its own: one task and several draw their parts, a click
-// or Esc dismisses it and marks its tasks shown in this browser, no other key acts on it or the
-// page under it, and it draws nothing when every task is shown. While it enters, a click reaches
-// the page under it and Esc waits. Its arrivals: with the user there, a task going overdue draws
-// nothing; the next arrival does. When an arrival comes is logic/arrival.ts's, as a table, and the
-// page's events are checked in the browser (shell.spec.ts). Its look and its fades are by eye.
+// or Esc dismisses it, and no other key acts on it or the page under it. While it enters, a click
+// reaches the page under it and Esc waits. Its arrivals: with the user there, a task going overdue
+// draws nothing; the next arrival does, and every arrival after a dismissal draws it again. The old
+// record of tasks shown is removed. When an arrival comes is logic/arrival.ts's, as a table, and
+// the page's events are checked in the browser (shell.spec.ts). Its look and its fades are by eye.
 import type {ItemOut, TodoistProjectOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
@@ -15,9 +15,9 @@ import type {Arrival} from '../../src/app/arrival.ts';
 import {ENTRANCE_MS, OverdueArrivals, OverdueBanner} from '../../src/app/OverdueBanner.tsx';
 import {overdue as timing} from '../../src/tokens.ts';
 import type {Overdue} from '../../src/logic/overdue.ts';
-import {shownKey} from '../../src/logic/overdueBanner.ts';
 
-const KEY = 'setpoint.overdueShown';
+// The old record of tasks already shown, which nothing reads any more.
+const OLD_KEY = 'setpoint.overdueShown';
 const now = Date.parse(SEED_NOW);
 
 let nextId = 1;
@@ -42,7 +42,6 @@ const several = () => [
 ];
 
 const banner = page.getByRole('dialog', {name: 'Overdue tasks'});
-const stored = () => JSON.parse(localStorage.getItem(KEY) ?? '[]') as string[];
 const state = () => document.querySelector('.overdue')?.getAttribute('data-state') ?? 'gone';
 /** Drawn and entered: it takes clicks and keys from here. */
 async function draw(overdue: Overdue[]) {
@@ -103,14 +102,11 @@ test('several: their count, the four most recently due with their short dues, th
   expect(document.querySelectorAll('.overdue-list .ring')).toHaveLength(4);
 });
 
-test('a click anywhere dismisses it and marks every task shown, the ones under "and 2 more" too', async () => {
-  const tasks = several();
-  await draw(tasks);
+test('a click anywhere dismisses it', async () => {
+  await draw(several());
   await expect.element(banner).toBeVisible();
-  expect(stored()).toEqual([]);
   await userEvent.click(banner);
   await expect.poll(state).not.toBe('in');
-  expect(stored().sort()).toEqual(tasks.map(one => shownKey(one.item)).sort());
 });
 
 test('the click reaches nothing under it', async () => {
@@ -120,7 +116,7 @@ test('the click reaches nothing under it', async () => {
   try {
     await draw([landlord()]);
     await userEvent.click(banner);
-    await expect.poll(() => stored()).toHaveLength(1);
+    await expect.poll(state).not.toBe('in');
     expect(reached).toEqual([]);
   } finally {
     for (const type of ['pointerdown', 'mousedown', 'click']) document.removeEventListener(type, listen);
@@ -128,11 +124,9 @@ test('the click reaches nothing under it', async () => {
 });
 
 test('Esc dismisses it', async () => {
-  const one = landlord();
-  await draw([one]);
+  await draw([landlord()]);
   await expect.element(banner).toBeVisible();
   await userEvent.keyboard('{Escape}');
-  await expect.poll(() => stored()).toEqual([shownKey(one.item)]);
   await expect.poll(state).not.toBe('in');
 });
 
@@ -148,25 +142,10 @@ test('another key does nothing, on the banner or the page under it', async () =>
     await userEvent.keyboard('{Control>}k{/Control}');
     expect(reached).toEqual([]);
     expect(state()).toBe('in');
-    expect(stored()).toEqual([]);
   } finally {
     document.removeEventListener('keydown', listen);
     window.removeEventListener('keydown', listen, true);
   }
-});
-
-test('nothing draws when every task is shown, and an unshown one still does', async () => {
-  const tasks = several();
-  localStorage.setItem(KEY, JSON.stringify(tasks.map(one => shownKey(one.item))));
-  const {unmount} = await render(<OverdueBanner overdue={tasks} now={now} timeZone={SEED_TIME_ZONE} />);
-  expect(document.querySelector('.overdue')).toBeNull();
-  await unmount();
-
-  // The same task rescheduled to yesterday and missed again shows once more.
-  const moved = {...tasks[0]!, item: {...tasks[0]!.item, due_date: '2026-10-06'}};
-  await draw([moved, ...tasks.slice(1)]);
-  await expect.element(banner).toBeVisible();
-  expect(document.querySelector('.overdue-title')?.textContent).toBe('Submit the parking permit form');
 });
 
 test('a browser that refuses storage shows it all the same', async () => {
@@ -175,8 +154,8 @@ test('a browser that refuses storage shows it all the same', async () => {
     throw new DOMException('Refused', 'SecurityError');
   }});
   try {
-    await draw([landlord()]);
-    await expect.element(banner).toBeVisible();
+    await render(arrivals({count: 1, at: now}, [landlord().item]));
+    await expect.element(banner).toHaveAttribute('data-state', 'in');
     await userEvent.keyboard('{Escape}');
     await expect.poll(state).not.toBe('in');
   } finally {
@@ -193,22 +172,19 @@ test('while it enters, a click reaches what is under it and leaves it up, and Es
   under.addEventListener('click', () => clicked.push('under'));
   document.body.append(under);
   try {
-    const one = landlord();
-    await render(<OverdueBanner overdue={[one]} now={now} timeZone={SEED_TIME_ZONE} />);
+    await render(<OverdueBanner overdue={[landlord()]} now={now} timeZone={SEED_TIME_ZONE} />);
     await expect.element(banner).toBeInTheDocument();
     expect(state()).toBe('entering');
     await userEvent.click(banner, {force: true});
     expect(clicked).toEqual(['under']);
     await userEvent.keyboard('{Escape}');
     expect(state()).toBe('entering');
-    expect(stored()).toEqual([]);
 
     vi.advanceTimersByTime(ENTRANCE_MS);
     await expect.element(banner).toHaveAttribute('data-state', 'in');
     await userEvent.click(banner);
     await expect.poll(state).not.toBe('in');
     expect(clicked).toEqual(['under']);
-    expect(stored()).toEqual([shownKey(one.item)]);
   } finally {
     under.remove();
   }
@@ -286,7 +262,6 @@ test.each(['rail', 'calendar'] as const)('with no Today lines on screen (%s), th
     expect(exits()).toEqual({'Call the landlord': 'return'});
     await expect.element(page.getByRole('img', {name: 'Overdue task'})).toBeInTheDocument();
     await unmount();
-    localStorage.clear();
 
     // From an earlier day only: nothing returns, and no icon.
     await draw([task('Return the drill', {due_date: '2026-10-06'})]);
@@ -320,7 +295,7 @@ test('with the user there, a task going overdue draws nothing; the next arrival 
   expect(document.querySelector('.overdue-title')?.textContent).toBe('Call the landlord');
 });
 
-test('an arrival while the banner is up leaves it as it is; once dismissed, an arrival with nothing new draws nothing', async () => {
+test('an arrival while the banner is up leaves it as it is; a dismissal lasts until the next arrival, which draws it again', async () => {
   const one = landlord();
   const {rerender} = await render(arrivals({count: 1, at: now}, [one.item]));
   await expect.element(banner).toHaveAttribute('data-state', 'in');
@@ -328,6 +303,18 @@ test('an arrival while the banner is up leaves it as it is; once dismissed, an a
   expect(state()).toBe('in');
   await userEvent.keyboard('{Escape}');
   await expect.poll(() => document.querySelector('.overdue')).toBeNull();
-  await rerender(arrivals({count: 3, at: now + 120_000}, [one.item]));
+  // The same visit: the items coming in again raise nothing.
+  await rerender(arrivals({count: 2, at: now + 60_000}, [{...one.item}]));
   expect(document.querySelector('.overdue')).toBeNull();
+  await rerender(arrivals({count: 3, at: now + 120_000}, [one.item]));
+  await expect.element(banner).toHaveAttribute('data-state', 'in');
+  expect(document.querySelector('.overdue-title')?.textContent).toBe('Call the landlord');
+});
+
+test('the old record of tasks shown is no longer read, and is removed', async () => {
+  const one = landlord();
+  localStorage.setItem(OLD_KEY, JSON.stringify([`${one.item.id}@${one.item.due_at}`]));
+  await render(arrivals({count: 1, at: now}, [one.item]));
+  await expect.element(banner).toBeVisible();
+  expect(localStorage.getItem(OLD_KEY)).toBeNull();
 });

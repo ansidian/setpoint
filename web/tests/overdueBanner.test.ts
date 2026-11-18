@@ -1,12 +1,11 @@
-// The overdue banner's rules, as tables: which tasks an arrival lists for what this browser has
-// shown, their order, four and "and N more", the words for when each was due, which titles return
-// to Today on the way out and how long it lasts, and the record of what's shown, which keeps a task
-// by its due and drops what's past the 30 days.
+// The overdue banner's rules, as tables: the order an arrival lists its tasks in, four and "and N
+// more", the words for when each was due, and which titles return to Today on the way out and how
+// long it lasts.
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Overdue} from '../src/logic/overdue.ts';
-import {addShown, arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, listed, readShown, shortDue, shownKey} from '../src/logic/overdueBanner.ts';
+import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, listed, shortDue} from '../src/logic/overdueBanner.ts';
 
 let nextId = 1;
 function item(fields: Partial<ItemOut>): ItemOut {
@@ -25,7 +24,7 @@ const titles = (tasks: Overdue[]) => tasks.map(task => task.item.title);
 // The seed's clock: 9:12 AM Pacific on Wed, Oct 7 (16:12Z).
 const now = Date.parse(SEED_NOW);
 
-describe('which tasks an arrival lists, and in what order', () => {
+describe('an arrival lists every overdue task, the most recently due first', () => {
   const eight = timed('2026-10-07', '2026-10-07T15:00:00.000Z', 'Today 8:00 AM');
   const sevenThirty = timed('2026-10-07', '2026-10-07T14:30:00.000Z', 'Today 7:30 AM');
   const yesterday = untimed('2026-10-06', 'Yesterday');
@@ -33,14 +32,11 @@ describe('which tasks an arrival lists, and in what order', () => {
   const monday = untimed('2026-10-05', 'Monday');
   const sep = untimed('2026-09-24', 'Sep 24');
   test.each([
-    ['nothing shown: all, the most recently due first', [sep, monday, eight, yesterday, sevenThirty], [], ['Today 8:00 AM', 'Today 7:30 AM', 'Yesterday', 'Monday', 'Sep 24']],
-    ['an untimed task falls due as its day ends, after that day\'s timed ones', [yesterdayFive, yesterday], [], ['Yesterday', 'Yesterday 5:00 PM']],
-    ['the shown ones are left out', [eight, monday, sep], [shownKey(monday)], ['Today 8:00 AM', 'Sep 24']],
-    ['all of them shown: none', [eight, monday], [shownKey(eight), shownKey(monday)], []],
-    ['a task rescheduled and missed again is new', [{...monday, due_date: '2026-10-06'}], [shownKey(monday)], ['Monday']],
-    ['a timed task moved to another time is new', [{...eight, due_at: '2026-10-07T15:30:00.000Z'}], [shownKey(eight)], ['Today 8:00 AM']],
-  ])('%s', (_name, tasks, shown, expected) => {
-    expect(titles(arrivalTasks(overdue(...tasks), new Set(shown), SEED_TIME_ZONE))).toEqual(expected);
+    ['all of them, the most recently due first', [sep, monday, eight, yesterday, sevenThirty], ['Today 8:00 AM', 'Today 7:30 AM', 'Yesterday', 'Monday', 'Sep 24']],
+    ['an untimed task falls due as its day ends, after that day\'s timed ones', [yesterdayFive, yesterday], ['Yesterday', 'Yesterday 5:00 PM']],
+    ['none overdue: none', [], []],
+  ])('%s', (_name, tasks, expected) => {
+    expect(titles(arrivalTasks(overdue(...tasks), SEED_TIME_ZONE))).toEqual(expected);
   });
 });
 
@@ -113,26 +109,5 @@ describe('when each was due', () => {
 describe('the load looks 30 days back through today', () => {
   test('from Sep 7 to Oct 8, `to` exclusive', () => {
     expect(bannerRange(now, SEED_TIME_ZONE)).toEqual({from: '2026-09-07', to: '2026-10-08'});
-  });
-});
-
-describe('the record of what\'s shown', () => {
-  test.each([
-    ['nothing stored', null, []],
-    ['a list of keys', '["4@2026-10-05","9@2026-10-07T15:00:00.000Z"]', ['4@2026-10-05', '9@2026-10-07T15:00:00.000Z']],
-    ['not JSON', 'nope', []],
-    ['not a list', '{"4": true}', []],
-    ['what isn\'t a key is left out', '["4@2026-10-05", 7, null]', ['4@2026-10-05']],
-  ])('reads back: %s', (_name, stored, expected) => {
-    expect(readShown(stored)).toEqual(expected);
-  });
-
-  test.each([
-    ['adds the shown keys once each', ['4@2026-10-05'], ['4@2026-10-05', '9@2026-10-07T15:00:00.000Z'], ['4@2026-10-05', '9@2026-10-07T15:00:00.000Z']],
-    ['keeps a task due on the window\'s first day', ['1@2026-09-07'], ['2@2026-10-06'], ['1@2026-09-07', '2@2026-10-06']],
-    ['drops a task due before the 30 days', ['1@2026-09-06', '3@2026-09-01T16:00:00.000Z'], ['2@2026-10-06'], ['2@2026-10-06']],
-    ['drops what it can\'t read a due from', ['1@nothing', 'junk'], ['2@2026-10-06'], ['2@2026-10-06']],
-  ])('%s', (_name, stored, keys, expected) => {
-    expect(addShown(stored, keys, now, SEED_TIME_ZONE)).toEqual(expected);
   });
 });

@@ -1,6 +1,7 @@
 // The overdue banner's rules (app/OverdueBanner.tsx): which tasks an arrival lists, in what order,
-// how many before "and 3 more", the words for when each was due, which titles return to Today on
-// the way out and how long that takes, and the browser's record of the tasks it has shown. Which tasks are overdue is logic/overdue.ts's; this looks 30 days back.
+// how many before "and 3 more", the words for when each was due, and which titles return to Today on
+// the way out and how long that takes. Which tasks are overdue is logic/overdue.ts's; this looks 30
+// days back.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, daysBetween, instantAt, localDate} from './format.ts';
 import type {Overdue} from './overdue.ts';
@@ -17,22 +18,15 @@ export function bannerRange(now: number, timeZone: string): {from: string; to: s
   return {from: addDays(today, -OVERDUE_DAYS), to: addDays(today, 1)};
 }
 
-/**
- * A task as this browser remembers it: its id with its due. A task rescheduled and missed again is
- * a new one, so it shows again.
- */
-export const shownKey = (item: ItemOut): string => `${item.id}@${item.due_at ?? item.due_date}`;
-
 const dueDay = (item: ItemOut, timeZone: string) => (item.due_at ? localDate(item.due_at, timeZone) : item.due_date!);
 
 // When it fell due: a timed task at its time, an untimed one as its day ends.
 const fellDue = (item: ItemOut, timeZone: string) =>
   (item.due_at ? Date.parse(item.due_at) : Date.parse(instantAt(item.due_date!, 1440, timeZone)));
 
-/** The tasks an arrival lists: the overdue ones this browser hasn't shown, the most recently due first. */
-export function arrivalTasks(overdue: readonly Overdue[], shown: ReadonlySet<string>, timeZone: string): Overdue[] {
-  return overdue.filter(task => !shown.has(shownKey(task.item)))
-    .sort((a, b) => fellDue(b.item, timeZone) - fellDue(a.item, timeZone));
+/** The tasks an arrival lists: every overdue one, the most recently due first. */
+export function arrivalTasks(overdue: readonly Overdue[], timeZone: string): Overdue[] {
+  return [...overdue].sort((a, b) => fellDue(b.item, timeZone) - fellDue(a.item, timeZone));
 }
 
 /** Several tasks' list: the first four, and how many more fold into "and N more". */
@@ -81,28 +75,4 @@ export function shortDue(item: ItemOut, now: number, timeZone: string): string {
   if (days === 0) return item.due_at ? clockTime(item.due_at, timeZone) : 'Today';
   if (days === 1) return 'Yesterday';
   return days < 7 ? onDay(day, {weekday: 'short'}) : dateOf(day, today);
-}
-
-/** The stored record as it reads back: its keys, or none if it isn't one. */
-export function readShown(stored: string | null): string[] {
-  try {
-    const keys: unknown = JSON.parse(stored ?? '[]');
-    return Array.isArray(keys) ? keys.filter((key): key is string => typeof key === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
-/**
- * The record after showing `keys`: once each, without the ones due before the 30 days an arrival
- * looks back, which can't show again, so it doesn't grow.
- */
-export function addShown(stored: readonly string[], keys: readonly string[], now: number, timeZone: string): string[] {
-  const from = bannerRange(now, timeZone).from;
-  const kept = (key: string) => {
-    const due = key.slice(key.indexOf('@') + 1);
-    const day = /^\d{4}-\d{2}-\d{2}$/.test(due) ? due : Number.isNaN(Date.parse(due)) ? null : localDate(due, timeZone);
-    return day !== null && day >= from;
-  };
-  return [...new Set([...stored, ...keys])].filter(kept);
 }
