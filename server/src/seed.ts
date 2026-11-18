@@ -9,6 +9,7 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {newsSnapshotIn} from './dev/newsSnapshot.ts';
+import {applyFixtures} from './dev/fixtures/index.ts';
 import {seedFile} from './dev/seedFile.ts';
 
 const args = process.argv.slice(2);
@@ -25,6 +26,8 @@ const file = path.join(dataDir, 'setpoint.sqlite');
 try {
   const newsSnapshot = args.includes('--sample-news') ? null : newsSnapshotIn(fileURLToPath(new URL('../../data', import.meta.url)));
   const {now, emails, items, stories} = seedFile(file, {reset: args.includes('--reset'), newsSnapshot});
+  // A few overdue tasks, so a load shows the overdue banner (the browser checks' seed has none).
+  applyFixtures(file, ['overdue-tasks']);
   console.log(`Seeded ${emails} emails, ${items} calendar items and ${stories} news stories into ${file} (now is ${now}).`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);

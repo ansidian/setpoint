@@ -14,6 +14,7 @@ import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHt
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
 import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, staleIcloud, stalePersonal, staleTodoist, todoistOff, triageDown} from './states.ts';
 import {freeReview} from './freeReview.ts';
+import {overdueTasks} from './overdueTasks.ts';
 import {linkPlaces} from './linkPlaces.ts';
 import {timeToLeave} from './timeToLeave.ts';
 import {weekendForecast} from './weekendForecast.ts';
@@ -67,6 +68,8 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'news-quiet-tech': {board: '29a', apply: newsQuietTech},
   'news-first-run': {board: '29b', apply: newsFirstRun},
   'news-capped': {board: 'settings checks', apply: newsCapped},
+  // Not a board: the overdue banner's tasks, which the dev Setpoint also holds (seed.ts, try.ts).
+  'overdue-tasks': {board: 'shell checks', apply: overdueTasks},
 };
 
 /** Applies fixtures by name to a seeded database file. */

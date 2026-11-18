@@ -4,7 +4,7 @@
 // the ones that only have a key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill. Enter
 // runs. Esc closes it, and focus goes back where it was. It rises in over 180 ms and closes at once
 // (DESIGN.md › Motion).
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState, useSyncExternalStore} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {markAllRead} from '../../api/mail.ts';
 import {matchedRuns, paletteList, SECTION_LABELS, stepCursor} from '../../logic/palette.ts';
@@ -73,8 +73,25 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
   ];
 }
 
+// Whether it's open, for what waits until it closes (the overdue banner).
+let isOpen = false;
+const openListeners = new Set<() => void>();
+const subscribeOpen = (listener: () => void) => {
+  openListeners.add(listener);
+  return () => {
+    openListeners.delete(listener);
+  };
+};
+/** Whether ⌘K is open, followed. */
+export const usePaletteOpen = () => useSyncExternalStore(subscribeOpen, () => isOpen);
+
 export function Palette() {
   const [offer, setOffer] = useState<Offer | null>(null);
+
+  useEffect(() => {
+    isOpen = offer !== null;
+    openListeners.forEach(listener => listener());
+  }, [offer]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

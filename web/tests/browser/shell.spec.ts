@@ -8,7 +8,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, describe, holdToast, pagePx, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, describe, drawn, holdToast, pagePx, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -353,6 +353,46 @@ test('a timed task shows its time and takes its place by it, among the Today blo
     await until('the day\'s tasks', () => tasks.allTextContents(), texts => texts.length === 2);
     // The lab report's subtasks, done of all, before its project.
     assert.deepEqual(await tasks.allTextContents(), ['Pay rent8:00 AMHome', 'CS 101 lab report1/4School']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a load with overdue tasks opens on their banner over the Inbox; a click sends it, and a reload doesn\'t bring it back', async () => {
+  // Three overdue tasks: one due at 8:00 AM today, before the seed's 9:12 AM, one from Monday and one
+  // from Sep 24. The seed itself has none, so no other check meets the banner.
+  const setpoint = await startSetpoint({fixtures: ['overdue-tasks']});
+  try {
+    const page = await setpoint.page('target');
+    const loaded = () => page.waitForResponse(response => response.url().includes('/api/items?from=2026-09-07&to=2026-10-08'));
+    const first = loaded();
+    await page.goto(`${setpoint.base}/inbox`);
+    await drawn(page, await first);
+    const banner = page.getByRole('dialog', {name: 'Overdue tasks'});
+    await banner.waitFor();
+    assert.equal(await banner.locator('.overdue-title').textContent(), '3 tasks');
+    assert.deepEqual(await banner.locator('.overdue-list li').allTextContents(),
+      ['Call the landlord about the heater8:00 AM', 'Submit the parking permit formMon', 'Renew the library cardSep 24']);
+    // Over the Inbox and the sidebar: what's under a row and the Today block is the banner.
+    await page.locator('.list .row').first().waitFor();
+    const covered = await rested(() => page.evaluate(() => ['.list .row', '.sb .today-row'].map(selector => {
+      const rect = document.querySelector(selector)!.getBoundingClientRect();
+      return Boolean(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.closest('.overdue'));
+    })));
+    assert.deepEqual(covered, [true, true]);
+
+    await banner.click();
+    await page.locator('.overdue[data-state="in"]').waitFor({state: 'detached'});
+    // The click opened nothing under it: the Inbox has no email open.
+    assert.equal(new URL(page.url()).pathname, '/inbox');
+
+    // Shown in this browser, it doesn't come back once the reload's own load has answered.
+    const again = loaded();
+    await page.reload();
+    await drawn(page, await again);
+    await page.locator('.list .row').first().waitFor();
+    assert.equal(await page.locator('.overdue').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

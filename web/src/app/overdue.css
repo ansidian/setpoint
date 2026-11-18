@@ -1,0 +1,27 @@
+/* The overdue banner (OverdueBanner.tsx): the page's own colour over everything, 88% in Night and
+   90% in Light, and the task large on it with no card. Over the composer (30), under the toast (35).
+   It fades in, and out over 120 ms with the veil over 180 ms. */
+.overdue { position: fixed; inset: 0; z-index: 34; cursor: default; outline: none; color: var(--ink); }
+.overdue-veil { position: absolute; inset: 0; background: color-mix(in srgb, var(--page) 88%, transparent); animation: fade-in var(--dur-medium) var(--ease) both; }
+:root[data-theme="light"] .overdue-veil { background: color-mix(in srgb, var(--page) 90%, transparent); }
+.overdue-place { position: absolute; inset: 0; display: grid; place-items: center; padding: 48px 32px; }
+.overdue-stack { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 820px; max-width: 100%; text-align: center; }
+.overdue-stack, .overdue-hint { animation: fade-in var(--dur-medium) var(--ease) both; }
+.overdue-label { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase;
+  color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); }
+.overdue-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--caution); }
+.overdue-title { font-size: 56px; font-weight: 500; letter-spacing: -.03em; line-height: 1.06; text-wrap: balance; overflow-wrap: anywhere; }
+.overdue-one { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.overdue .ring { margin: 0; }
+.overdue-due { display: flex; align-items: center; gap: 10px; font-size: 16px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.overdue-many { display: flex; flex-direction: column; align-items: center; gap: 28px; width: 100%; }
+.overdue-list { display: flex; flex-direction: column; width: 520px; max-width: 100%; margin: 0; padding: 0; list-style: none; text-align: left; }
+.overdue-list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--hair); font-size: 16px; }
+.overdue-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.overdue-when { flex: none; color: var(--ink3); font-size: 13px; font-variant-numeric: tabular-nums; }
+.overdue-list .overdue-more { padding-left: 25px; color: var(--ink3); }
+.overdue-hint { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ink3); font-size: 12px; }
+.overdue.out { pointer-events: none; }
+.overdue.out .overdue-stack, .overdue.out .overdue-hint { animation: overdue-out var(--dur-fast) var(--ease) forwards; }
+.overdue.out .overdue-veil { animation: overdue-out var(--dur-medium) var(--ease) forwards; }
+@keyframes overdue-out { to { opacity: 0; } }

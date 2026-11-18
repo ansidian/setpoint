@@ -58,6 +58,7 @@ const {cliLine} = await import('./dev/cliLine.ts');
 const {ensureDevOwner} = await import('./dev/devOwner.ts');
 const {newsSnapshotIn} = await import('./dev/newsSnapshot.ts');
 const {seedFile} = await import('./dev/seedFile.ts');
+const {applyFixtures} = await import('./dev/fixtures/index.ts');
 
 if (worktree && !own) await frontShared();
 else await runOwn();
@@ -105,6 +106,8 @@ async function runOwn() {
   if (args.includes('--reset') || !fs.existsSync(file)) {
     fs.mkdirSync(dataDir, {recursive: true});
     const {emails, items} = seedFile(file, {reset: true, newsSnapshot: newsSnapshotIn(path.join(own ? mainCheckout() : ROOT, 'data'))});
+    // A few overdue tasks, so a load shows the overdue banner (the browser checks' seed has none).
+    applyFixtures(file, ['overdue-tasks']);
     console.log(`Seeded ${emails} emails and ${items} calendar items into ${own ? file : path.relative(ROOT, file)}.`);
   }
   await ensureDevOwner(file, DEV_PASSWORD);
