@@ -163,22 +163,23 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ring-shown); background: color-mix(in oklch, var(--ring-shown) 14%, transparent);
   flex: none; display: inline-block; margin: 0 3px 0 1px; position: relative; }
 .ring > .icon { position: absolute; inset: -1.5px; margin: auto; color: var(--ring-shown); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
-/* A ring that completes (the Today block's lines, the day pane's rows, the card's) answers the
+/* A ring that completes (the Today block's lines, the day pane's rows, the card's, the grid's chips) answers the
    pointer plainly: it grows to 1.15, its fill rises to 34% with a 3 px halo of its colour at 16%, and
    its check shows. A disabled one doesn't answer. */
-.today-row .check .ring, .ag-task .check .ring, .fd-mark.check .ring {
+.today-row .check .ring, .ag-task .check .ring, .fd-mark.check .ring, .tk .check .ring {
   transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 @media (hover: hover) {
-  .today-row .check:hover .ring, .ag-task .check:enabled:hover .ring, .fd-mark.check:not([aria-disabled]):hover .ring {
+  .today-row .check:hover .ring, .ag-task .check:enabled:hover .ring, .fd-mark.check:not([aria-disabled]):hover .ring, .tk .check:not(.off):hover .ring {
     background: color-mix(in oklch, var(--ring-shown) 34%, transparent); transform: scale(1.15);
     box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring-shown) 16%, transparent); }
-  .today-row .check:hover .ring > .icon, .ag-task .check:enabled:hover .ring > .icon, .fd-mark.check:not([aria-disabled]):hover .ring > .icon { opacity: 1; }
+  .today-row .check:hover .ring > .icon, .ag-task .check:enabled:hover .ring > .icon, .fd-mark.check:not([aria-disabled]):hover .ring > .icon,
+  .tk .check:not(.off):hover .ring > .icon { opacity: 1; }
 }
-/* A done check that reopens (the day pane's rows, Calendar's card) answers the same way in its `good`:
+/* A done check that reopens (the day pane's rows, Calendar's card, the grid's chips) answers the same way in its `good`:
    1.15 and a 3 px `good` halo at 16%. */
-.ag-task .check .task-glyph.done, .fd-mark.check .task-glyph.done { border-radius: 999px; transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.ag-task .check .task-glyph.done, .fd-mark.check .task-glyph.done, .tk .check .task-glyph.done { border-radius: 999px; transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 @media (hover: hover) {
-  .ag-task .check:enabled:hover .task-glyph.done, .fd-mark.check:not([aria-disabled]):hover .task-glyph.done {
+  .ag-task .check:enabled:hover .task-glyph.done, .fd-mark.check:not([aria-disabled]):hover .task-glyph.done, .tk .check:not(.off):hover .task-glyph.done {
     transform: scale(1.15); box-shadow: 0 0 0 3px color-mix(in oklch, var(--good) 16%, transparent); }
 }
 

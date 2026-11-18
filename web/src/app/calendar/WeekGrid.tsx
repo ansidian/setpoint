@@ -69,6 +69,8 @@ export interface WeekGridProps {
   onChange: (item: ItemOut, changes: ItemChanges, from: string, to: string, kind: 'move' | 'resize') => void;
   // A right-click on empty hours: the day and the 15-minute step under the pointer.
   onSlotMenu?: (event: ReactMouseEvent<HTMLElement>, date: string, minutes: number) => void;
+  // A task chip's ring in the all-day row or the "+N" popover: complete the task, or reopen a done one.
+  onComplete?: (task: ItemOut) => void;
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   overlays?: ReactNode;
   // A file dragged over the section, which takes its drop (FileDrop.tsx).
@@ -101,7 +103,7 @@ interface Drag {
 const resizable = (item: ItemOut) => item.kind === 'event' && canMove(item) && item.id > 0;
 
 export function WeekGrid(props: WeekGridProps) {
-  const {week, weekJump, today, selectedDay, selected, looks, items, byDay, weather, calendars, now, timeZone, scroll, popover, onSelectDay, onSelectItem, onPopover, onWeek, detail, overlays, fileDrop, enter = null, onEntered} = props;
+  const {week, weekJump, today, selectedDay, selected, looks, items, byDay, weather, calendars, now, timeZone, scroll, popover, onSelectDay, onSelectItem, onPopover, onWeek, onComplete, detail, overlays, fileDrop, enter = null, onEntered} = props;
   const section = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -458,7 +460,7 @@ export function WeekGrid(props: WeekGridProps) {
                         data-date={piece.date} style={{gridColumn: `${piece.from + 1} / ${piece.to + 2}`, gridRow: piece.lane + 1}}>
                         <Chip item={piece.item} calendar={calendars.get(piece.item.calendar_id)} selected={selected.has(piece.item.key)} look={look} now={now} timeZone={timeZone}
                           label={blockLabel(piece.item, piece.date, calendarName(piece.item), timeZone)}
-                          onSelect={(one, chip, additive) => selectFrom(one, piece.date, chip, additive)} onPress={(one, event) => pressItem(one, piece.date, 'all', event)} />
+                          onSelect={(one, chip, additive) => selectFrom(one, piece.date, chip, additive)} onPress={(one, event) => pressItem(one, piece.date, 'all', event)} onComplete={onComplete} />
                         {resizable(piece.item) && piece.item.all_day && !look && (
                           <>
                             {!piece.before && <span className="wk-edge l" aria-hidden="true" onPointerDown={event => pressItem(piece.item, piece.date, 'all', event, 'start')} />}
@@ -472,7 +474,7 @@ export function WeekGrid(props: WeekGridProps) {
                     <div key={line.item.key} className="wk-line" data-date={line.date} style={{gridColumn: line.column + 1, gridRow: line.line + 1}}>
                       <Chip item={line.item} calendar={calendars.get(line.item.calendar_id)} selected={selected.has(line.item.key)} look={lookOf(line.item.key)} now={now} timeZone={timeZone}
                         time={taskTime(line.item, timeZone)} label={blockLabel(line.item, line.date, calendarName(line.item), timeZone)}
-                        onSelect={(one, chip, additive) => selectFrom(one, line.date, chip, additive)} onPress={(one, event) => pressItem(one, line.date, 'all', event)} />
+                        onSelect={(one, chip, additive) => selectFrom(one, line.date, chip, additive)} onPress={(one, event) => pressItem(one, line.date, 'all', event)} onComplete={onComplete} />
                     </div>
                   ))}
                   {allDay.more.map(more => (
@@ -541,7 +543,7 @@ export function WeekGrid(props: WeekGridProps) {
       {popover && popoverItems.length > 0 && (
         <DayPopover key={popover} date={popover} items={popoverItems} section={section} {...{selected, calendars, now, timeZone}}
           onSelectItem={(item, chip, additive) => onSelectItem(item, popover, rectIn(chip, section.current!), additive)} onClose={() => onPopover(null)}
-          onPress={(item, event) => pressItem(item, popover, 'all', event, undefined, true)} />
+          onPress={(item, event) => pressItem(item, popover, 'all', event, undefined, true)} onComplete={onComplete} />
       )}
       {detail && <FloatingDetail {...detail} section={section} scroller={scroller} />}
       {overlays}

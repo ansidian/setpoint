@@ -22,9 +22,10 @@ interface DayPopoverProps {
   onSelectItem: (item: ItemOut, chip: HTMLElement, additive: boolean) => void;
   onClose: () => void;
   onPress: (item: ItemOut, event: ReactPointerEvent<HTMLElement>) => void;
+  onComplete?: (task: ItemOut) => void;
 }
 
-export function DayPopover({date, items, section, selected, calendars, now, timeZone, onSelectItem, onClose, onPress}: DayPopoverProps) {
+export function DayPopover({date, items, section, selected, calendars, now, timeZone, onSelectItem, onClose, onPress, onComplete}: DayPopoverProps) {
   const card = useRef<HTMLDivElement>(null);
   // Where it hangs, and the point it grows from: its "+N", at its top when it hangs below, its foot when above.
   const [place, setPlace] = useState<{left: number; top: number; from: {x: number; y: number}; up: boolean} | null>(null);
@@ -68,7 +69,7 @@ export function DayPopover({date, items, section, selected, calendars, now, time
       </div>
       <div className="daypop-list">
         {items.map(item => (
-          <Chip key={item.key} item={item} calendar={calendars.get(item.calendar_id)} selected={selected.has(item.key)} now={now} timeZone={timeZone} onSelect={onSelectItem} onPress={onPress} />
+          <Chip key={item.key} item={item} calendar={calendars.get(item.calendar_id)} selected={selected.has(item.key)} now={now} timeZone={timeZone} onSelect={onSelectItem} onPress={onPress} onComplete={onComplete} />
         ))}
       </div>
     </div>

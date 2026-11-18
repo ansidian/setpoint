@@ -1150,12 +1150,12 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         {mode === 'week' ? (
           <WeekGrid enter={zoom?.to === 'week' ? zoom.y : null} onEntered={() => setZoom(null)} week={week} weekJump={view.weekJump} today={today} selectedDay={paneDay} selected={selected} looks={looks} items={weekItems} byDay={byDay} weather={weather}
             calendars={calendarsById} now={now} timeZone={zone} scroll={view.scroll} popover={popover} onSelectDay={clickDay} onSelectItem={selectItem} onPopover={setPopover}
-            onWeek={showWeek} onCreate={createAt} onChange={onWeekChange} onSlotMenu={(event, date, minutes) => openContextMenu(event, event.currentTarget, dayMenu(date, minutes))}
+            onWeek={showWeek} onCreate={createAt} onChange={onWeekChange} onSlotMenu={(event, date, minutes) => openContextMenu(event, event.currentTarget, dayMenu(date, minutes))} onComplete={task => complete(task)}
             detail={detailProps} overlays={overlays} fileDrop={fileDrop} />
         ) : (
           <MonthGrid enter={zoom?.to === 'month' ? zoom.y : null} onEntered={() => setZoom(null)} shown={shown} today={today} selectedDay={paneDay} selected={selected} looks={looks} byDay={byDay} weather={weather} calendars={calendarsById}
             now={now} timeZone={zone} scroll={view.scroll} popover={popover} onShownMonth={setShownMonth} onSelectDay={clickDay}
-            onSelectItem={selectItem} onPopover={setPopover} onDrop={onDrop} onNew={newOn} detail={detailProps} overlays={overlays} fileDrop={fileDrop} />
+            onSelectItem={selectItem} onPopover={setPopover} onDrop={onDrop} onNew={newOn} onComplete={task => complete(task)} detail={detailProps} overlays={overlays} fileDrop={fileDrop} />
         )}
         {editor ? (
           <Editor key={editor.seq} open={editor} calendars={calendars} today={today} timeZone={zone} handed={editor.handed}

@@ -120,6 +120,11 @@
 .tk .t { color: var(--ink2); font-variant-numeric: tabular-nums; margin-right: 5px; }
 .tk .ring { --ring-base: var(--ring, var(--ink2)); width: 12px; height: 12px; vertical-align: -2px; margin: 0 6px 0 0; }
 .tk .task-glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
+/* A task's ring, or its done check, is its own target: the chip's full height from its left edge to
+   4 px past the ring (20 px in a cell), the ring where it was and the title where it was. */
+.tk { --tk-pad: 4px; }
+.tk .check { display: inline-flex; align-items: center; vertical-align: top; height: 100%; width: calc(var(--tk-pad) + 16px); margin: 0 2px 0 calc(-1 * var(--tk-pad)); padding-left: var(--tk-pad); flex: none; }
+.tk .check .ring, .tk .check .task-glyph { margin: 0; vertical-align: 0; }
 /* A task with subtasks is a row, its count at the right in `ink3` and its title cut before it. */
 .tk.counted { display: flex; align-items: center; }
 .tk.counted .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -149,7 +154,7 @@
 .daypop-head .grow { font-weight: 500; }
 .daypop-list { display: flex; flex-direction: column; gap: 2px; }
 .daypop .ev, .daypop .tk { height: 26px; line-height: 26px; font-size: 12.5px; }
-.daypop .tk { padding: 0 8px 0 9px; }
+.daypop .tk { --tk-pad: 9px; padding: 0 8px 0 9px; }
 
 /* ---------- The right pane (400 px) ---------- */
 .rpane { width: var(--rightPane); flex: none; border-left: 1px solid var(--hair); min-height: 0; display: flex; flex-direction: column; overflow: hidden; }

@@ -5,7 +5,9 @@
 // While dragged, or while a drop waits on its scope, the item's own place shows a dashed ghost
 // (boards 15 and 15b), as a new draft does (board 13). A click selects it (⌘, Ctrl or ⇧ adds it to
 // the selection) and hands over the chip's box for the floating detail. A press starts a drag
-// (MonthGrid).
+// (MonthGrid). A task's ring, or its done check, completes or reopens it: the chip's full height
+// over its first 20 px, never selecting or dragging. Chips have no tab stop, so it's the pointer's
+// alone and stays out of the chip's name; the keyboard completes from the menu and the card.
 import type {CalendarOut, ItemOut, TodoistProjectOut} from '@setpoint/shared';
 import {TODOIST_COLOURS} from '@setpoint/shared';
 import type {CSSProperties, MouseEvent, PointerEvent} from 'react';
@@ -37,6 +39,8 @@ export interface ChipProps {
   timeZone: string;
   onSelect: (item: ItemOut, chip: HTMLElement, additive: boolean) => void;
   onPress?: (item: ItemOut, event: PointerEvent<HTMLElement>) => void;
+  // A task's ring completes it, or reopens a done one (CalendarPage's `complete`).
+  onComplete?: (task: ItemOut) => void;
   // The week view's all-day row: a timed task's time before its title, and what it reads to assistive tech.
   time?: string | null;
   label?: string;
@@ -52,7 +56,7 @@ export function useRingColour(): (project: string | null) => CSSProperties | und
 }
 
 
-export function Chip({item, calendar, selected, look, now, timeZone, onSelect, onPress, time: shownTime, label}: ChipProps) {
+export function Chip({item, calendar, selected, look, now, timeZone, onSelect, onPress, onComplete, time: shownTime, label}: ChipProps) {
   const ring = useRingColour();
   // A calendar just toggled fades its items out or in.
   const fade = useCalendarFade()(item.calendar_id);
@@ -75,9 +79,20 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
     const counted = item.subtasks.length > 0;
     // A timed task shows its time after its ring, as an event does ("9 AM"); the week's all-day row passes its own.
     const taskShown = shownTime === undefined ? chipTime(item, timeZone) : shownTime;
+    const toggle = onComplete && !item.read_only && !item.command && (!item.done || item.can_reopen) ? onComplete : undefined;
     return (
       <div className={`tk${counted ? ' counted' : ''}${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
-        {failed ? <Icon name="error" size={14} /> : item.done ? <TaskGlyph done size={12} /> : <span className="ring" style={ring(item.project)} />}
+        {failed ? <Icon name="error" size={14} /> : (
+          // A read-only task, one with a change in flight, or a done one that can't reopen takes no
+          // click here: its ring selects and drags as the rest of the chip does.
+          <span className={`check${toggle ? '' : ' off'}`} aria-hidden="true" onPointerDown={toggle ? event => event.stopPropagation() : undefined}
+            onClick={toggle ? event => {
+              event.stopPropagation();
+              toggle(item);
+            } : undefined}>
+            {item.done ? <TaskGlyph done size={12} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={10} /></span>}
+          </span>
+        )}
         {taskShown && <span className="t">{taskShown}</span>}
         {counted ? <span className="title">{item.title}</span> : item.title}
         {counted && <span className="count num"><Icon name="subtask" size={12} />{subtaskCount(item)}</span>}

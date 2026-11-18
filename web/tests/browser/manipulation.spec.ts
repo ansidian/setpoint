@@ -58,9 +58,10 @@ async function passUndo(page: Page, ...deleted: [date: string, title: string][])
 async function drag(page: Page, from: Locator, to: string, {held = false} = {}) {
   const box = (await rested(() => from.boundingBox()))!;
   const target = (await rested(() => page.locator(`.cell[data-date="${to}"]`).boundingBox()))!;
-  await page.mouse.move(box.x + 20, box.y + box.height / 2);
+  // Pressed past a task's ring, which completes rather than drags.
+  await page.mouse.move(box.x + 40, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + 40, box.y + box.height / 2 + 10, {steps: 3});
+  await page.mouse.move(box.x + 60, box.y + box.height / 2 + 10, {steps: 3});
   await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, {steps: 5});
   if (!held) await page.mouse.up();
 }
@@ -734,6 +735,45 @@ test('subtasks added from the card land in Todoist in the order typed; one opens
     await chip(page, '2026-10-09', 'Print the cover page').waitFor({state: 'detached'});
     await toast.getByRole('button', {name: 'Undo'}).click();
     await until('dated again', report, task => quiet(task) && task.subtasks[4]!.due_date === '2026-10-09', AFTER_UNDO);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a task chip\'s ring completes it from a month cell and from the "+3" popover, each with an Undo, and opens no card', async () => {
+  const setpoint = await startSetpoint({fixtures: ['busy-saturday'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const toast = (text: string) => page.locator('.toast', {hasText: text});
+    const undo = async (text: string) => {
+      await toast(text).locator('button', {hasText: 'Undo'}).click();
+      await toast(text).waitFor({state: 'detached'});
+    };
+    const named = async (date: string, title: string) => (await items(setpoint, date)).filter(item => item.title === title);
+
+    // From the month cell, the ring being the chip's first 20 px.
+    const ring = {position: {x: 10, y: 10}};
+    await chip(page, '2026-10-07', 'Pay rent').click(ring);
+    await toast('Completed Pay rent').waitFor();
+    await until('Pay rent done', () => named('2026-10-07', 'Pay rent'), list => list[0]!.done && !list[0]!.command);
+    await page.locator('.cell[data-date="2026-10-07"] .tk.done', {hasText: 'Pay rent'}).waitFor();
+    await setpoint.idle();
+    assert.equal(await page.locator('.fd').count(), 0, 'the ring opens no card');
+    assert.equal(await page.locator('.tk.sel').count(), 0, 'the ring selects nothing');
+    await undo('Completed Pay rent');
+    await until('Pay rent open again', () => named('2026-10-07', 'Pay rent'), list => !list[0]!.done && !list[0]!.command);
+
+    // From the popover, which stays open with the task done in it (Undo, outside it, puts it away).
+    await page.locator('.cell[data-date="2026-10-17"] .more').click();
+    const popover = page.locator('.daypop');
+    await popover.locator('.tk', {hasText: 'Laundry'}).click(ring);
+    await toast('Completed Laundry').waitFor();
+    await until('Laundry done', () => named('2026-10-17', 'Laundry'), list => list[0]!.done && !list[0]!.command);
+    await popover.locator('.tk.done', {hasText: 'Laundry'}).waitFor();
+    await undo('Completed Laundry');
+    await until('Laundry open again', () => named('2026-10-17', 'Laundry'), list => !list[0]!.done && !list[0]!.command);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

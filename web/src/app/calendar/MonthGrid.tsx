@@ -62,6 +62,8 @@ export interface MonthGridProps {
   onDrop: (item: ItemOut, from: string, to: string) => void;
   // A day's + : a new event on it.
   onNew: (date: string) => void;
+  // A task chip's ring: complete the task, or reopen a done one.
+  onComplete?: (task: ItemOut) => void;
   // The floating detail, drawn in the month section over the grid and placed by its geometry.
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   // Overlays anchored to items (the drop prompt, the failed card), drawn in the month section.
@@ -84,7 +86,7 @@ interface Drag {
 }
 
 export function MonthGrid(props: MonthGridProps) {
-  const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, onNew, detail, overlays, fileDrop, enter = null, onEntered} = props;
+  const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, onNew, onComplete, detail, overlays, fileDrop, enter = null, onEntered} = props;
   const section = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [rows, setRows] = useState(() => rowsInView(monthTopRow(monthOf(selectedDay)) * ROW, 1000));
@@ -328,7 +330,7 @@ export function MonthGrid(props: MonthGridProps) {
       cells.push(
         <DayCell key={date} date={date} {...{shown, today, selectedDay, selected, now, timeZone, calendars, section}} looks={cellLooks}
           items={byDay.get(date) ?? []} slot={slotFor(date)} liftedColour={liftedColour} forecast={weather.get(date)} open={popover === date} dropping={!!drag && drag.to === date && drag.to !== drag.from}
-          onSelectDay={onSelectDay} onSelectItem={onSelectItem} onPopover={onPopover} onPress={onPress} onNew={onNew} />,
+          onSelectDay={onSelectDay} onSelectItem={onSelectItem} onPopover={onPopover} onPress={onPress} onNew={onNew} onComplete={onComplete} />,
       );
     }
   }
@@ -347,7 +349,7 @@ export function MonthGrid(props: MonthGridProps) {
       {popover && popoverItems.length > 0 && (
         <DayPopover key={popover} date={popover} items={popoverItems} section={section} {...{selected, calendars, now, timeZone}}
           onSelectItem={(item, chip, additive) => onSelectItem(item, popover, rectIn(chip, section.current!), additive)} onClose={() => onPopover(null)}
-          onPress={(item, event) => onPress(item, popover, event)} />
+          onPress={(item, event) => onPress(item, popover, event)} onComplete={onComplete} />
       )}
       {detail && <FloatingDetail {...detail} section={section} scroller={scroller} />}
       {overlays}
@@ -392,9 +394,10 @@ interface DayCellProps {
   onPopover: (date: string | null) => void;
   onPress: (item: ItemOut, date: string, event: ReactPointerEvent<HTMLElement>) => void;
   onNew: (date: string) => void;
+  onComplete?: (task: ItemOut) => void;
 }
 
-function DayCell({date, shown, today, selectedDay, selected, looks, items: own, slot, liftedColour, forecast, calendars, now, timeZone, open, dropping, section, onSelectDay, onSelectItem, onPopover, onPress, onNew}: DayCellProps) {
+function DayCell({date, shown, today, selectedDay, selected, looks, items: own, slot, liftedColour, forecast, calendars, now, timeZone, open, dropping, section, onSelectDay, onSelectItem, onPopover, onPress, onNew, onComplete}: DayCellProps) {
   const head = dayHead(date);
   const items = slot ? withSlot(own, slot) : own;
   const {shown: fits, more} = fitDay(items.length);
@@ -418,7 +421,7 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items: own, 
       {items.slice(0, fits).map(item => (item.key.startsWith('slot:')
         ? <div key={item.key} className="ev slot" aria-hidden="true" style={{'--c': liftedColour} as CSSProperties} />
         : <Chip key={item.key} item={item} calendar={calendars.get(item.calendar_id)} selected={selected.has(item.key)} look={looks.get(item.key)} now={now} timeZone={timeZone}
-          onSelect={(one, chip, additive) => onSelectItem(one, date, rectIn(chip, section.current!), additive)} onPress={(one, event) => onPress(one, date, event)} />
+          onSelect={(one, chip, additive) => onSelectItem(one, date, rectIn(chip, section.current!), additive)} onPress={(one, event) => onPress(one, date, event)} onComplete={onComplete} />
       ))}
       {more > 0 && (
         <button className={`more num${open ? ' open' : ''}`} aria-expanded={open} aria-label={`${more} more on ${dayTitle(date)}`} data-more={date}
