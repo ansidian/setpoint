@@ -487,8 +487,7 @@ export interface JobsLiveEvent {
 }
 
 /**
- * One application's latest status change: an email that set a new status, turning Ghosted (30 days
- * after its last email, computed) or a status set by hand (the latest only, its `from` the status
+ * One application's latest status change: an email that set a new status or a status set by hand (the latest only, its `from` the status
  * its emails had set before it). `from` is null for a new application, which reads "Applied".
  */
 export interface JobMoveOut {
@@ -496,7 +495,7 @@ export interface JobMoveOut {
   company: string;
   title: string;
   from: JobStatus | null;
-  to: JobStatus | 'ghosted';
+  to: JobStatus;
   by_hand: boolean;
   at: string;
 }

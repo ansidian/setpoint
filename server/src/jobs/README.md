@@ -235,8 +235,8 @@ the lint rule still refuses an import of Jobs from triage.
   event refreshes it.
 - **The empty pane's recent movement**: `GET /api/jobs/movement` ([`queries.ts`](queries.ts)
   `jobsMovement`) answers each application's latest status change, newest first, the last eight: an email
-  that set a status it didn't have, a status set by hand (from what its emails had set), or turning
-  Ghosted; with the accounts Jobs reads and its earliest email, for the pane's quiet line. Not in the
+  that set a status it didn't have or a status set by hand (from what its emails had set). Turning
+  Ghosted isn't a move: it's the clock, not news. With the accounts Jobs reads and its earliest email, for the pane's quiet line. Not in the
   iPhone app's contract. It's under `/jobs`, so the `jobs` event refreshes it.
 
 ## Needs you's answers and the corrections

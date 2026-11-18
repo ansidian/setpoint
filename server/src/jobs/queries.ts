@@ -6,10 +6,10 @@ import type {
   ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsCheckOut, JobsMailApplicationOut, JobMoveOut, JobsMovementOut, JobsMailMessageOut, JobsMailOut, JobsNavOut,
   JobsPageOut, JobsSearchOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
-import {GHOSTED_AFTER_DAYS, isQuietJobEvent, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
+import {isQuietJobEvent, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
 import type {JobStatus} from '@setpoint/shared';
 import {and, asc, desc, eq, inArray, isNotNull, isNull} from 'drizzle-orm';
-import {addDays, localDay, zonedInstant} from '../domain/time.ts';
+import {localDay} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -237,13 +237,11 @@ export const MOVES_SHOWN = 8;
  * GET /api/jobs/movement: each application's latest status change, newest first, the
  * last MOVES_SHOWN. Its emails, oldest first, change it when one sets a status it didn't have (the
  * first from nothing, a new application). A status set by hand changes it from what its emails had
- * set before (it keeps no history, so only the latest hand move shows). Turning Ghosted changes it
- * from Applied, at the start of the day 30 days after its last email of any kind. Nothing here
- * writes, and there are no counts.
+ * set before (it keeps no history, so only the latest hand move shows). Turning Ghosted is never a
+ * move: it's the clock, not news. Nothing here writes, and there are no counts.
  */
 export function jobsMovement(store: Store): JobsMovementOut {
   const db = jobsDb(store.sqlite);
-  const now = isoNow(store);
   const settings = db.select({accounts: j.jobsSettings.accounts}).from(j.jobsSettings).get();
   const events = new Map<number, {at: string; kind: typeof j.jobsEvents.$inferSelect.kind}[]>();
   for (const event of db.select({applicationId: j.jobsEvents.applicationId, at: j.jobsEvents.at, kind: j.jobsEvents.kind}).from(j.jobsEvents)
@@ -272,10 +270,6 @@ export function jobsMovement(store: Store): JobsMovementOut {
       if (!isQuietJobEvent(event.kind)) change(STATUS_OF_JOB_EVENT[event.kind], event.at, false);
     }
     if (hand !== null) change(application.status, hand, true);
-    const lastEmail = own.at(-1)?.at ?? application.appliedAt;
-    if (isGhosted(application.status, lastEmail, now, store.timeZone)) {
-      latest = {...base, from: 'applied', to: 'ghosted', by_hand: false, at: zonedInstant(addDays(localDay(lastEmail, store.timeZone), GHOSTED_AFTER_DAYS), '00:00', store.timeZone)};
-    }
     // Tracked by hand with no email that set a status: it's new, from when it was applied.
     latest ??= {...base, from: null, to: 'applied', by_hand: false, at: application.appliedAt};
     moves.push(latest);

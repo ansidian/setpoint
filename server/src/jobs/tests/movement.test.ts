@@ -1,8 +1,7 @@
 // The Jobs pane's recent movement against an ephemeral database: each application's
 // latest status change, newest first, the last eight. An email changes it only when it sets a status
-// the application didn't have. A hand move comes from what its emails had set. Turning Ghosted comes
-// from Applied at the start of the day 30 days after the last email of any kind. A new application
-// has no `from`. The quiet line's accounts and earliest month come with it.
+// the application didn't have. A hand move comes from what its emails had set. Turning Ghosted is
+// never a move: it's the clock, not news. A new application has no `from`. The quiet line's accounts and earliest month come with it.
 import type {JobEventKind, JobStatus} from '@setpoint/shared';
 import {expect, test} from 'vitest';
 import {world} from '../../../tests/helpers.ts';
@@ -38,7 +37,7 @@ function movement(applications: Setup[], accounts: number[] = []) {
 
 const moves = (applications: Setup[]) => movement(applications).moves.map(({company, from, to, by_hand, at}) => ({company, from, to, by_hand, at}));
 
-test.each<{case: string; setup: Setup; move: {from: JobStatus | null; to: JobStatus | 'ghosted'; by_hand: boolean; at: string}}>([
+test.each<{case: string; setup: Setup; move: {from: JobStatus | null; to: JobStatus; by_hand: boolean; at: string}}>([
   {case: 'a new application reads Applied, from nothing', setup: {company: 'Fabrikam', appliedAt: '2026-10-07T09:14:00.000Z', events: [['2026-10-07T09:14:00.000Z', 'applied']]},
     move: {from: null, to: 'applied', by_hand: false, at: '2026-10-07T09:14:00.000Z'}},
   {case: 'a rejection moves it from Applied', setup: {company: 'Fabrikam', appliedAt: '2026-10-01T09:00:00.000Z', status: 'rejected',
@@ -54,8 +53,8 @@ test.each<{case: string; setup: Setup; move: {from: JobStatus | null; to: JobSta
     events: [['2026-09-01T09:00:00.000Z', 'applied'], ['2026-09-20T09:00:00.000Z', 'offer']]}, move: {from: 'offer', to: 'withdrawn', by_hand: true, at: '2026-10-07T16:00:00.000Z'}},
   {case: 'a hand move with no email that set a status comes from Applied', setup: {company: 'Tailspin', appliedAt: '2026-09-01T09:00:00.000Z', status: 'offer', hand: '2026-10-03T16:00:00.000Z'},
     move: {from: 'applied', to: 'offer', by_hand: true, at: '2026-10-03T16:00:00.000Z'}},
-  {case: 'turning Ghosted, at the start of the day 30 days after the last email, quiet ones included', setup: {company: 'Lamna', appliedAt: '2026-08-20T09:00:00.000Z',
-    events: [['2026-08-20T09:00:00.000Z', 'applied'], ['2026-08-25T20:00:00.000Z', 'account']]}, move: {from: 'applied', to: 'ghosted', by_hand: false, at: '2026-09-24T07:00:00.000Z'}},
+  {case: 'turning Ghosted isn\'t a move: it keeps its last one', setup: {company: 'Lamna', appliedAt: '2026-08-20T09:00:00.000Z',
+    events: [['2026-08-20T09:00:00.000Z', 'applied'], ['2026-08-25T20:00:00.000Z', 'account']]}, move: {from: null, to: 'applied', by_hand: false, at: '2026-08-20T09:00:00.000Z'}},
 ])('$case', ({setup, move}) => {
   expect(moves([setup])).toEqual([{company: setup.company, ...move}]);
 });

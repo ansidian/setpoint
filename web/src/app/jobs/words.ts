@@ -406,9 +406,8 @@ export function jobsUsageParts(month: JobsAiOut['this_month']): string {
 /** Why Jobs has no cap, in the Jobs usage line's tip. */
 export const NO_CAP_WHY = 'No cap: a JD is worth finding while the posting is up';
 
-/** A side of a pane row's change: its label and the table's mark, Ghosted its own. */
-export const moveSide = (status: JobMoveOut['to']): {label: string; mark: Mark} =>
-  status === 'ghosted' ? {label: 'Ghosted', mark: 'ghost'} : {label: STATUS_LABELS[status], mark: markOf({status, ghosted: false})};
+/** A side of a pane row's change: its label and the table's mark. */
+export const moveSide = (status: JobMoveOut['to']): {label: string; mark: Mark} => ({label: STATUS_LABELS[status], mark: markOf({status, ghosted: false})});
 
 /** When it moved: "Today", "Yesterday", the weekday within the week ("Fri"), else the day ("Oct 28"). */
 export function moveDay(at: string, timeZone: string, today: string): string {

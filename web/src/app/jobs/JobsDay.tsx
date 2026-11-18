@@ -1,7 +1,7 @@
 // Jobs's pane with nothing open, in the Inbox's and News's shape (InboxDay.tsx, NewsDay.tsx): one
 // block centred across the pane, a third of the way down. It holds the mark, then Recent movement as
 // a neutral band over one row per application. Each row is its latest status change, newest first
-// ("Applied → Rejected": an email that set it, turning Ghosted, a status set by hand). Each opens its
+// ("Applied → Rejected": an email that set it or a status set by hand; turning Ghosted isn't a move). Each opens its
 // detail, and its right-click is the table's menu condensed. In the foot over the keys, the quiet
 // line names what Jobs reads, led by any trouble's chip (EmptyPane). No counts, and nothing asks
 // anything of the user.

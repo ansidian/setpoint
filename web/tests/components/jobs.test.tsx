@@ -908,10 +908,10 @@ test('Setpoint on LinkedIn\'s chip says an application\'s standing, and steps a 
 
 // ---- The empty pane's recent movement ----
 
-test('a move\'s sides are the table\'s labels and marks, Ghosted its own', () => {
-  expect((['applied', 'in_process', 'offer', 'rejected', 'withdrawn', 'ghosted'] as const).map(moveSide)).toEqual([
+test('a move\'s sides are the table\'s labels and marks', () => {
+  expect((['applied', 'in_process', 'offer', 'rejected', 'withdrawn'] as const).map(moveSide)).toEqual([
     {label: 'Applied', mark: 'applied'}, {label: 'In process', mark: 'proc'}, {label: 'Offer', mark: 'offer'}, {label: 'Rejected', mark: 'rej'},
-    {label: 'Withdrawn', mark: 'wd'}, {label: 'Ghosted', mark: 'ghost'},
+    {label: 'Withdrawn', mark: 'wd'},
   ]);
 });
 
@@ -938,19 +938,18 @@ const MOVE: JobMoveOut = {application_id: 7, company: 'Northwind Talent', title:
 test('a row reads the company, "Applied → Rejected", the day and the role; a press opens it and a right-click asks for the menu', async () => {
   const onOpen = vi.fn();
   const onMenu = vi.fn((event: {preventDefault: () => void}) => event.preventDefault());
-  const moves: JobMoveOut[] = [MOVE, {...MOVE, application_id: 8, company: 'Contoso', to: 'ghosted'}, {...MOVE, application_id: 9, company: 'Fabrikam', from: null, to: 'applied'},
+  const moves: JobMoveOut[] = [MOVE, {...MOVE, application_id: 9, company: 'Fabrikam', from: null, to: 'applied'},
     {...MOVE, application_id: 10, company: 'Woodgrove Bank', from: 'offer', to: 'withdrawn', by_hand: true}];
   await render(<ol className="nd-list" style={{width: 460}}>{moves.map(move => <li key={move.application_id}><MoveRow move={move} timeZone={ZONE} today={TODAY} onOpen={onOpen} onMenu={onMenu} /></li>)}</ol>);
   const rows = [...document.querySelectorAll<HTMLElement>('.jd-move')];
   expect(rows.map(row => row.textContent)).toEqual([
     'Northwind TalentApplied→RejectedYesterdaySoftware Engineer I',
-    'ContosoApplied→GhostedYesterdaySoftware Engineer I',
     'FabrikamAppliedYesterdaySoftware Engineer I',
     'Woodgrove BankOffer→WithdrawnYesterdaySoftware Engineer I',
   ]);
-  expect(rows[2]!.querySelector('.jd-arrow')).toBeNull();
+  expect(rows[1]!.querySelector('.jd-arrow')).toBeNull();
   await expect.element(page.getByRole('img', {name: 'Set by you'})).toBeVisible();
-  expect(rows[3]!.contains(page.getByRole('img', {name: 'Set by you'}).element())).toBe(true);
+  expect(rows[2]!.contains(page.getByRole('img', {name: 'Set by you'}).element())).toBe(true);
   await userEvent.click(rows[0]!);
   expect(onOpen).toHaveBeenCalledOnce();
   rows[0]!.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true}));
@@ -970,7 +969,7 @@ test('the menu a pane row gets is the table row\'s without Not this posting and 
 });
 
 test('every status a row can name reads at 4.5:1 on the list\'s panel, in Night and in Light (the sweep caught Light\'s Offer)', async () => {
-  const sides = (['applied', 'in_process', 'offer', 'rejected', 'withdrawn', 'ghosted'] as const);
+  const sides = (['applied', 'in_process', 'offer', 'rejected', 'withdrawn'] as const);
   const moving = still();
   await render(<div style={{background: 'var(--panel)'}}><ol className="nd-list">{sides.map((to, index) => <li key={to}><MoveRow move={{...MOVE, application_id: index + 1, from: null, to}} timeZone={ZONE} today={TODAY} onOpen={() => {}} onMenu={() => {}} /></li>)}</ol></div>);
   try {
