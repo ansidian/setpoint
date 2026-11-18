@@ -102,7 +102,7 @@ export function copyText(text: string, said = text, copied?: () => void) {
   writing.then(() => {
     showToast(`Copied ${said}`);
     copied?.();
-  }, () => showToast('Couldn\'t copy it'));
+  }, () => showToast('Failed to copy'));
 }
 
 // A right-click (or a Ctrl-click) pressed while a popover is open only closes it: its menu, and the

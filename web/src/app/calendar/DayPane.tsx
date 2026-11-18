@@ -190,7 +190,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
 }
 
 /**
- * "Todoist, as of 8:40 AM" (board 19b), muted while stale, in `caution` with the reason while
+ * "Todoist as of 8:40 AM" (board 19b), muted while stale, in `caution` with the reason while
  * failing, wrapping so the provider's words show in full. Each has Check now on it. They fold in
  * as they come and out as they go.
  */
@@ -206,7 +206,7 @@ function HealthLine({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase
   return (
     <div ref={ref} className={`rp-health ${line.state}`}>
       <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
-      <span className={line.state === 'failing' ? 'num' : 'num ell'} data-tip={line.text}>{line.text}</span>
+      <span className={line.state === 'failing' ? 'num' : 'num ell'} data-tip={line.tip}>{line.text}</span>
       {line.source !== null && <span className="rp-act"><CheckNow check={check} /></span>}
     </div>
   );

@@ -105,7 +105,7 @@ export function reconnectFrom(accounts: AccountOut[]) {
     return;
   }
   const label = accounts.find(account => account.id === target.gmail)?.label ?? 'the account';
-  authorizeGmail(target.gmail).then(({url}) => window.location.assign(url), toastFailure(`Couldn't reconnect ${label}`));
+  authorizeGmail(target.gmail).then(({url}) => window.location.assign(url), toastFailure(`Failed to reconnect ${label}`));
 }
 
 /** A stale or failing account's line, with its fix on it: Check now, "Checking…" until the check lands. */
@@ -115,7 +115,7 @@ function HealthBar({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase;
   return (
     <div ref={ref} className={`hbar ${line.state === 'failing' ? 'failing' : 'muted'}`}>
       <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
-      <span className="num ell" data-tip={line.text}>{line.text}</span>
+      <span className="num ell" data-tip={line.tip}>{line.text}</span>
       {line.source !== null && <CheckNow check={check} />}
     </div>
   );

@@ -58,13 +58,13 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     await chip.hover();
     const card = page.locator('.pane.idle .pt-card');
     await card.waitFor();
-    assert.deepEqual(await card.locator('.pt-line').allTextContents(), ['12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retrying', 'AI, as of 7:02 AM']);
+    assert.deepEqual(await card.locator('.pt-line').allTextContents(), ['12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retrying', 'AI as of 7:02 AM']);
     await page.locator('.hd-title').hover();
     await until('folded again', () => card.count(), count => count === 0);
 
     // AI's muted line under its header, its stories still there.
     const aiLine = page.locator('.nw-sec', {hasText: 'AI'}).locator('xpath=following-sibling::*[1]');
-    assert.equal(await aiLine.textContent(), 'AI, as of 7:02 AM');
+    assert.equal(await aiLine.textContent(), 'AI as of 7:02 AM');
     assert.equal(await aiLine.getAttribute('class'), 'nw-line stale');
     await row(page, 'Anthropic releases Claude Haiku 5.5').waitFor();
     assert.equal(await page.locator('.nw-line').count(), 1, 'only the stale section has a line');

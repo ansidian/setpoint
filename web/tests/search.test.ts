@@ -397,11 +397,12 @@ describe('a task proposal\'s project', () => {
   });
 });
 
-describe('failedLine: a failed Create, in the provider\'s own words', () => {
+describe('failedLine: a failed Create, in the provider\'s own sentence or its trouble', () => {
   test.each<[Parameters<typeof failedLine>, string]>([
-    [['google_calendar', 'The calendar is read-only. (403 Forbidden)'], 'Google Calendar, The calendar is read-only. (403 Forbidden)'],
-    [['todoist', null], 'Todoist, It wasn’t created.'],
-    [[null, 'Can’t reach Setpoint'], 'Can’t reach Setpoint'],
+    [['google_calendar', 'The calendar is read-only. (403 Forbidden)'], 'The calendar is read-only.'],
+    [['todoist', 'Scheduled maintenance (503 Service Unavailable)'], 'Todoist is down (scheduled maintenance).'],
+    [['todoist', null], 'It wasn’t created.'],
+    [[null, 'Can’t reach Setpoint'], 'Can’t reach Setpoint.'],
   ])('%j', (args, line) => {
     expect(failedLine(...args)).toBe(line);
   });

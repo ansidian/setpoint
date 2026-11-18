@@ -33,7 +33,7 @@ export function setVisible(calendar: Pick<CalendarOut, 'id' | 'name'>, visible: 
   window.clearTimeout(hiding.get(calendar.id));
   hiding.delete(calendar.id);
   window.clearTimeout(entered.get(calendar.id));
-  const failed = toastFailure(`Couldn't ${visible ? 'show' : 'hide'} ${calendar.name}`);
+  const failed = toastFailure(`Failed to ${visible ? 'show' : 'hide'} ${calendar.name}`);
   if (visible) {
     fadeCalendar(calendar.id, 'entering');
     entered.set(calendar.id, window.setTimeout(() => fadeCalendar(calendar.id, null), motion.medium));
@@ -56,12 +56,12 @@ export function showHidden(calendars: CalendarOut[]) {
   if (!hidden.length) return;
   const what = hidden.length === 1 ? hidden[0]!.name : `${hidden.length} calendars`;
   const show = (visible: boolean) => Promise.all(hidden.map(calendar => setCalendarVisible(calendar.id, visible)));
-  showToast(`Showed ${what}`, {label: 'Undo', run: () => void show(false).catch(toastFailure(`Couldn't hide ${what}`))});
+  showToast(`Showed ${what}`, {label: 'Undo', run: () => void show(false).catch(toastFailure(`Failed to hide ${what}`))});
   hidden.forEach(calendar => {
     fadeCalendar(calendar.id, 'entering');
     entered.set(calendar.id, window.setTimeout(() => fadeCalendar(calendar.id, null), motion.medium));
   });
-  void show(true).catch(toastFailure(`Couldn't show ${what}`));
+  void show(true).catch(toastFailure(`Failed to show ${what}`));
 }
 
 export function CalendarSidebar({route}: {route: Extract<Route, {page: 'calendar'}>}) {

@@ -7,7 +7,8 @@ import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {SETTINGS_PATH} from '../../api/items.ts';
 import {NOTIFY_STATUS_PATH, patchSettings, SECRETS_PATH, sendTestNotification} from '../../api/settings.ts';
-import {asOf} from '../../logic/health.ts';
+import {asOf, failingWords} from '../../logic/health.ts';
+import {failureText} from '../../logic/providerWords.ts';
 import {EVENT_REMINDERS, minutesBefore, TASK_TIMES, taskTime} from '../../logic/settings.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -53,11 +54,11 @@ export function NotificationsPage() {
   const noServer = !ntfy.ntfy_server;
   // ntfy failing is a source struggling: `caution`, as every failing source is.
   const state = !status ? null : !status.configured ? {dot: 'okdot off', text: 'Not set up'}
-    : status.last_error ? {dot: 'okdot warn', text: `Failing, ${status.last_error}`}
+    : status.last_error ? {dot: 'okdot warn', text: failingWords(status.last_error, null)}
       : {dot: 'okdot', text: status.last_sent_at ? `Connected · last sent ${asOf(status.last_sent_at, now, timeZone())}` : 'Connected · nothing sent yet'};
   // Send test answers clearly: anything but sent is a failure, in `alert`.
   const sendTest = () => void test.attempt(sendTestNotification, out => {
-    if (out.state !== 'sent') throw new Error(`Not sent, ${out.error ?? out.state}`);
+    if (out.state !== 'sent') throw new Error(failureText('Failed to send', out.error ?? out.state));
     flashSent();
     return {text: `Sent to ${ntfy.topics.reminders}`, tone: 'done'};
   });

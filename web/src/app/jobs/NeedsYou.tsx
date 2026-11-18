@@ -160,13 +160,13 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
     answer(item, candidate.id, () => act(() => pickCandidate(item.application_id!, candidate.id), said(item, done, failed)));
   };
   const none = (item: NeedsYouItemOut) => answer(item, 'none',
-    () => act(() => noneOfThese(item.application_id!), said(item, `None of these for ${item.company}`, 'Couldn\'t turn them down')));
+    () => act(() => noneOfThese(item.application_id!), said(item, `None of these for ${item.company}`, 'Failed to turn them down')));
   const assign = (item: NeedsYouItemOut, row: ApplicationRowOut) => answer(item, null,
-    () => act(() => assignItem(item.id, row.id), said(item, `Assigned to ${titleOf(row)}`, 'Couldn\'t assign it')));
+    () => act(() => assignItem(item.id, row.id), said(item, `Assigned to ${titleOf(row)}`, 'Failed to assign')));
   const notJob = (item: NeedsYouItemOut) => answer(item, null,
-    () => act(() => notAJob(item.id), said(item, 'Not about a job', 'Couldn\'t set it aside', 'gone')));
+    () => act(() => notAJob(item.id), said(item, 'Not about a job', 'Failed to set aside', 'gone')));
   const track = (item: NeedsYouItemOut) => answer(item, null,
-    () => act(() => trackItem(item.id), said(item, `Tracking ${item.company}`, 'Couldn\'t track it')), id => id !== null && onOpen(id));
+    () => act(() => trackItem(item.id), said(item, `Tracking ${item.company}`, 'Failed to track')), id => id !== null && onOpen(id));
 
   const openMenu = (owner: string, spec: MenuSpec, element: HTMLElement) =>
     setMenu(current => (current?.owner === owner ? null : {spec, anchor: {element, corner: 'left'}, owner}));
@@ -181,10 +181,10 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
     setGone(set => new Set([...set, ...ids]));
     void dismissFromHistory().then(dismissed => showToast(`Dismissed ${dismissed.length} from history`, {
       label: 'Undo',
-      run: () => void undoDismiss(dismissed).then(() => setGone(set => new Set([...set].filter(id => !dismissed.includes(id)))), toastFailure('Couldn\'t undo it')),
+      run: () => void undoDismiss(dismissed).then(() => setGone(set => new Set([...set].filter(id => !dismissed.includes(id)))), toastFailure('Failed to undo')),
     }, 'gone'), error => {
       setGone(set => new Set([...set].filter(id => !ids.includes(id))));
-      toastFailure('Couldn\'t dismiss them')(error);
+      toastFailure('Failed to dismiss')(error);
     });
   };
 

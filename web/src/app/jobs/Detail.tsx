@@ -226,14 +226,14 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
   const paste = (text: string) => actInPlace(() => pastePosting(detail.id, text), {done: `JD saved for ${detail.company}`});
   const lookItUp = () => {
     setAsking(true);
-    void lookUp(detail.id).catch(toastFailure('Couldn\'t look it up')).finally(() => setAsking(false));
+    void lookUp(detail.id).catch(toastFailure('Failed to look it up')).finally(() => setAsking(false));
   };
   // Paste the posting while it's looked up: the area opens at once, and the lookup stops.
   const pasteInstead = () => {
     setPasting(true);
     void stopLookup(detail.id).catch((error: unknown) => {
       setPasting(false);
-      toastFailure('Couldn\'t stop the lookup')(error);
+      toastFailure('Failed to stop the lookup')(error);
     });
   };
   // The location in place: shown at once, then saved, with Undo. Empty takes it away.
@@ -242,7 +242,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
     const location = value || null;
     const setAt = new Date().toISOString();
     updateCached<ApplicationOut>(applicationPath(detail.id), data => (data.id === detail.id && data.posting ? {...data, posting: {...data.posting, location, location_set_at: setAt}} : data));
-    void act(() => editApplication(detail.id, {location}), {done: location ? 'Location set' : 'Location removed', failed: 'Couldn\'t change the location'});
+    void act(() => editApplication(detail.id, {location}), {done: location ? 'Location set' : 'Location removed', failed: 'Failed to change the location'});
   };
   const saved = detail.posting;
   // The area stays until the JD has come, and doesn't come back with Undo.

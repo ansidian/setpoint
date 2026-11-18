@@ -69,7 +69,7 @@ export function MailPage() {
   const editingId = showForm ? null : editing;
   const save = useAttempt();
   const {written, learned} = splitRules(rules ?? []);
-  const order = useLiveOrder(written, 'text/x-setpoint-rule', ids => void reorderRules(ids).catch(toastFailure('Couldn\'t reorder rules')));
+  const order = useLiveOrder(written, 'text/x-setpoint-rule', ids => void reorderRules(ids).catch(toastFailure('Failed to reorder rules')));
 
   return (
     <Page title="Mail" loads={[rulesLoad, domainsLoad, settingsLoad]}>
@@ -80,7 +80,7 @@ export function MailPage() {
           {written.map((rule, index) => (rule.id === editingId ? <RuleForm key={rule.id} rule={rule} save={fields => editRule(rule.id, fields)} onDone={() => setEditing(null)} /> : (
             <WrittenRule key={rule.id} rule={rule} drag={order.rowProps(rule, index)} onEdit={() => openEdit(rule.id)} onMove={delta => {
               const next = moved(written, index, delta);
-              if (next !== written) void reorderRules(next.map(one => one.id)).catch(toastFailure('Couldn\'t reorder rules'));
+              if (next !== written) void reorderRules(next.map(one => one.id)).catch(toastFailure('Failed to reorder rules'));
             }} />
           )))}
           {!written.length && !showForm && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={openAdd}>Add rule</button></span></div>}
@@ -134,8 +134,8 @@ function WrittenRule({rule, drag: {dragging, ...drag}, onEdit, onMove}: {rule: R
   // Turn off or Delete on a rule with trashes waiting asks first. With none it just happens.
   const [ask, setAsk] = useState<'off' | 'delete' | null>(null);
   const [waiting, setWaiting] = useState<RuleWaiting>('cancel');
-  const turnOff = (answer?: RuleWaiting) => void setRuleEnabled(rule.id, false, answer).catch(toastFailure('Couldn\'t turn the rule off'));
-  const remove = (answer?: RuleWaiting) => void deleteRule(rule.id, answer).catch(toastFailure('Couldn\'t delete the rule'));
+  const turnOff = (answer?: RuleWaiting) => void setRuleEnabled(rule.id, false, answer).catch(toastFailure('Failed to turn the rule off'));
+  const remove = (answer?: RuleWaiting) => void deleteRule(rule.id, answer).catch(toastFailure('Failed to delete the rule'));
   const asking = (what: 'off' | 'delete', now: () => void) => {
     if (!rule.trashes_waiting) return now();
     setWaiting('cancel');
@@ -161,7 +161,7 @@ function WrittenRule({rule, drag: {dragging, ...drag}, onEdit, onMove}: {rule: R
               <button className="menu-i" type="button" role="menuitem" onClick={() => {
                 close();
                 if (rule.enabled) asking('off', () => turnOff());
-                else void setRuleEnabled(rule.id, true).catch(toastFailure('Couldn\'t turn the rule on'));
+                else void setRuleEnabled(rule.id, true).catch(toastFailure('Failed to turn the rule on'));
               }}><Icon name={rule.enabled ? 'toggle_off' : 'toggle_on'} size={16} />{rule.enabled ? 'Turn off' : 'Turn on'}</button>
               <button className="menu-i" type="button" role="menuitem" onClick={() => {
                 close();
@@ -188,7 +188,7 @@ function LearnedRule({rule}: {rule: RuleOut}) {
   const zone = timeZone();
   const today = localDate(rule.created_at, zone) === localDate(now, zone);
   const learnedOn = new Date(rule.created_at).toLocaleDateString('en-US', {timeZone: zone, month: 'short', day: 'numeric'});
-  const remove = () => void deleteRule(rule.id).catch(toastFailure('Couldn\'t remove the learned rule'));
+  const remove = () => void deleteRule(rule.id).catch(toastFailure('Failed to remove the learned rule'));
   return (
     <div className="set-row one" data-rule={rule.id}>
       <RuleText rule={rule} />
@@ -347,7 +347,7 @@ function TrustedDomains({domains}: {domains: TrustedDomainOut[] | undefined}) {
             {shown.map(row => (
               <div key={row.domain} className="dom" data-domain={row.domain}>
                 <span className="ell selectable">{row.domain}</span>
-                <button className="x" type="button" aria-label={`Remove ${row.domain}`} onClick={() => void untrustDomain(row.domain).catch(toastFailure(`Couldn't remove ${row.domain}`))}><Icon name="close" size={16} /></button>
+                <button className="x" type="button" aria-label={`Remove ${row.domain}`} onClick={() => void untrustDomain(row.domain).catch(toastFailure('Failed to remove'))}><Icon name="close" size={16} /></button>
               </div>
             ))}
             {shown.length < matching.length && (

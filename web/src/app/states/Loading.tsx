@@ -80,7 +80,7 @@ export function useLoadFailed(loads: Load[]): boolean {
 }
 
 /**
- * "Couldn’t load the Inbox, Something went wrong. · Try again", in place of what didn't load:
+ * "Failed to load the Inbox, something went wrong · Try again", in place of what didn't load:
  * the failing health line's look, its glyph `warning` in `caution`. Try again loads each failed one
  * again. Nothing while they're loading or loaded, or while Setpoint is offline.
  */
@@ -96,7 +96,7 @@ export function LoadFailed({what, loads, className}: {what: string; loads: Load[
   return (
     <div className={className ? `load-failed ${className}` : 'load-failed'} role="alert">
       <Icon name="warning" size={16} />
-      <span className="ell" data-tip={failureLine(`Couldn’t load ${what}`, first.error)}>{failureLine(`Couldn’t load ${what}`, first.error)}</span>
+      <span className="ell" data-tip={failureLine(`Failed to load ${what}`, first.error)}>{failureLine(`Failed to load ${what}`, first.error)}</span>
       <button className="act" type="button" disabled={trying} onClick={again}><Icon name="refresh" size={16} />Try again</button>
     </div>
   );

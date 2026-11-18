@@ -26,7 +26,7 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.hbar.caution', {hasText: 'Business needs sign-in'}).waitFor();
-    await page.locator('.hbar.muted', {hasText: 'iCloud, as of 8:40 AM'}).waitFor();
+    await page.locator('.hbar.muted', {hasText: 'iCloud as of 8:40 AM'}).waitFor();
     await page.locator('.lh', {hasText: 'Unsorted'}).locator('.gh-note', {hasText: 'Triage is down, as of 9:09 AM'}).waitFor();
     await page.locator('.today-row').first().waitFor();
     await network(page, false);
@@ -174,8 +174,8 @@ test('a failing account says why in caution', async () => {
     await page.goto(`${setpoint.base}/inbox`);
     const line = page.locator('.hbar.failing');
     await line.waitFor();
-    assert.equal(await line.locator('.num').textContent(), 'Work, as of 9:06 AM, Gmail answered 503.');
-    assert.equal(await line.locator('.num').getAttribute('data-tip'), 'Work, as of 9:06 AM, Gmail answered 503.');
+    assert.equal(await line.locator('.num').textContent(), 'Work is down (backend error) as of 9:06 AM');
+    assert.equal(await line.locator('.num').getAttribute('data-tip'), 'Work is down (backend error) as of 9:06 AM · 503 Service Unavailable');
     assert.equal(await page.locator('.hbar.caution').count(), 0);
 
     // The fix is on the line: it checks Work's own source, reading "Checking…" until the check lands.
@@ -210,13 +210,13 @@ test('the calendar\'s own sources, Todoist stale and Weather failing, atop the r
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     const lines = page.locator('.rpane > .rp-health');
     await until('both lines', () => lines.count(), count => count === 2);
-    assert.deepEqual(await lines.locator('.num').allTextContents(), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
+    assert.deepEqual(await lines.locator('.num').allTextContents(), ['Todoist as of 8:40 AM', 'Pirate Weather answered 500 Internal Server Error as of 8:30 AM']);
     assert.deepEqual(await lines.evaluateAll(all => all.map(line => line.className)), ['rp-health stale', 'rp-health failing']);
     // Each line carries Check now, whole after its words.
     assert.deepEqual(await lines.locator('.check-now').allTextContents(), ['Check now', 'Check now']);
     // A failing line shows the provider's words in full, wrapping rather than cutting them off. Each line's title holds it too.
     assert.equal(await lines.nth(1).locator('.num').evaluate(text => text.scrollWidth <= text.clientWidth && text.scrollHeight <= text.clientHeight), true);
-    assert.deepEqual(await lines.locator('.num').evaluateAll(all => all.map(text => text.getAttribute('data-tip'))), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
+    assert.deepEqual(await lines.locator('.num').evaluateAll(all => all.map(text => text.getAttribute('data-tip'))), ['Todoist as of 8:40 AM', 'Pirate Weather answered 500 Internal Server Error as of 8:30 AM']);
     // The lines stay above the day as another day is picked.
     await page.locator('.cell[data-date="2026-10-09"]').click({position: {x: 100, y: 150}});
     await page.locator('.rpane .rp-date', {hasText: 'Fri, Oct 9'}).waitFor();
@@ -252,7 +252,7 @@ test('Check now clears a failing line: its source healthy again, it goes', async
     const page = await setpoint.page('target');
     // Work's failing line, checked now and healthy again, goes.
     await page.goto(`${setpoint.base}/inbox`);
-    const line = page.locator('.hbar', {hasText: 'Work, as of'});
+    const line = page.locator('.hbar', {hasText: 'Work is down'});
     await line.getByRole('button', {name: 'Check now'}).click();
     await line.waitFor({state: 'detached'});
     assert.deepEqual(setpoint.pageErrors, []);

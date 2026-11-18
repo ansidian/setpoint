@@ -166,10 +166,10 @@ describe('drafts: Discard', () => {
   test.each<[string, string, string]>([
     ['one', discardedLine(1), 'Draft discarded'],
     ['several', discardedLine(3), 'Discarded 3 drafts'],
-    ['one refused', discardFailedLine(1), 'Couldn\'t discard the draft'],
-    ['several refused', discardFailedLine(2), 'Couldn\'t discard 2 drafts'],
-    ['Undo, the one not back', broughtBackLine(0, 1), 'Couldn\'t bring the draft back'],
-    ['Undo, none of several back', broughtBackLine(0, 3), 'Couldn\'t bring the drafts back'],
+    ['one refused', discardFailedLine(1), 'Failed to discard'],
+    ['several refused', discardFailedLine(2), 'Failed to discard 2'],
+    ['Undo, the one not back', broughtBackLine(0, 1), 'Failed to bring it back'],
+    ['Undo, none of several back', broughtBackLine(0, 3), 'Failed to bring them back'],
     ['Undo, some back', broughtBackLine(2, 3), 'Brought back 2 of 3 drafts'],
   ])('the toast: %s', (_, line, reads) => {
     expect(line).toBe(reads);

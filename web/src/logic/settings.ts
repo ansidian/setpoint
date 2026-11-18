@@ -3,6 +3,7 @@ import type {HealthOut, HealthState, Kind, Lane, MessageType, RuleMatch, RuleOut
 import type {ScopeChoice} from './scope.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import type {SettingsPage} from './route.ts';
+import {splitProviderMessage} from './providerWords.ts';
 import {repeats} from './tip.ts';
 
 /** Settings' pages as its nav names them, each with its glyph. ⌘K's "Settings › Mail" carries the same. */
@@ -83,10 +84,18 @@ export function ruleWords(match: RuleMatch): {text: string; bold: boolean}[] {
 
 /** "2 this month", "None this month". */
 /**
- * A source's state's tip: its words, then its reason after a comma unless they already say
- * it, so the words cut at the narrow modal can still be read: "Needs sign-in, Token has been expired".
+ * A source's state's tip, so the words cut at the narrow modal can still be read: its words, the
+ * provider's in brackets unless they already say them, then the status code as metadata:
+ * "Needs sign-in (token has been expired)", "Down (scheduled maintenance) since 6:02 AM · 503 Service Unavailable".
  */
-export const stateTip = (words: string, reason: string | null | undefined) => (reason && !repeats(words, reason) ? `${words}, ${reason}` : words);
+export function stateTip(words: string, reason: string | null | undefined): string {
+  if (!reason) return words;
+  const {words: said, code} = splitProviderMessage(reason);
+  const plain = said.replace(/\.$/, '');
+  const lowered = `${plain.charAt(0).toLowerCase()}${plain.slice(1)}`;
+  const told = !plain || repeats(words.toLowerCase(), plain.toLowerCase()) ? words : `${words} (${lowered})`;
+  return code ? `${told} · ${code}` : told;
+}
 
 export const matchesThisMonth = (count: number) => (count ? `${count} this month` : 'None this month');
 

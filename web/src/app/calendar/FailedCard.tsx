@@ -1,19 +1,23 @@
 // A change that failed, in place (board 19b): a card anchored to the
-// outlined chip saying what couldn't happen ("Couldn't move Dinner with Sam"), where it was going and
+// outlined chip saying what couldn't happen ("Failed to move Dinner with Sam"), where it was going and
 // from ("Sat, Oct 10 · 7:00 – 9:00 PM", "From Fri, Oct 9"), the place and calendar, the provider and
 // its own words, then Try again and Move back. Nothing quietly reverts: Move back is the user's.
-import type {CalendarOut, ItemOut, SourceProvider} from '@setpoint/shared';
+import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {useState} from 'react';
 import type {CSSProperties} from 'react';
 import {detailWhen} from '../../logic/detail.ts';
+import {failingWords} from '../../logic/health.ts';
 import {failedFrom, failedTitle} from '../../logic/manipulate.ts';
 import {placeLines} from '../../logic/place.ts';
+import {PROVIDER_NAMES, splitProviderMessage} from '../../logic/providerWords.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 
-const PROVIDERS: Record<SourceProvider, string> = {
-  gmail: 'Gmail', icloud: 'iCloud', google_calendar: 'Google Calendar', todoist: 'Todoist', weather: 'Weather',
-};
+// Under the provider's name, its trouble without it: "Down (scheduled maintenance).", or its own sentence.
+// The provider's code, "409 Conflict", in the words' tip.
+const codeOf = (message: string | null) => (message ? splitProviderMessage(message).code ?? undefined : undefined);
+const failedWords = (message: string | null) => (message ? `${failingWords(message, null)}.` : 'It didn’t reach the provider.');
+
 
 /** Move back's words for what it undoes. */
 const BACK: Record<string, string> = {item_update: 'Move back', item_create: 'Discard', item_delete: 'Keep it', item_complete: 'Undo', item_reopen: 'Undo'};
@@ -48,8 +52,8 @@ export function FailedCard({item, calendar, timeZone, onRetry, onMoveBack, onClo
         {place && <div className="fact"><Icon name="location_on" size={17} /><span>{[place.name, place.address].filter(Boolean).join(' · ')}</span></div>}
         <div className="fact"><span className="cal-icon" style={{'--c': colourVar(item.colour ?? calendar?.colour ?? undefined)} as CSSProperties}><Icon name="calendar_today" size={17} /></span><span>{calendar?.name ?? 'Calendar'}</span></div>
         <div className="provider-says">
-          <div className="ink3 provider">{command.provider ? PROVIDERS[command.provider] : 'Setpoint'}</div>
-          {command.provider_message ?? 'It didn\'t reach the provider.'}
+          <div className="ink3 provider">{command.provider ? PROVIDER_NAMES[command.provider] : 'Setpoint'}</div>
+          <span data-tip={codeOf(command.provider_message)}>{failedWords(command.provider_message)}</span>
         </div>
         <div className="failed-acts">
           {command.can_retry && <button className="btn sm" disabled={busy} onClick={() => run(onRetry)}><Icon name="refresh" size={17} />Try again</button>}

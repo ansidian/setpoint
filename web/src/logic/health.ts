@@ -4,6 +4,7 @@
 // source's state on its row, and the calendar's right pane has its own sources' lines.
 import type {AccountOut, HealthOut, SourceOut, TriageStatusOut} from '@setpoint/shared';
 import {clockTime, readerTime} from './format.ts';
+import {troubleLine, troubleWords, withCode} from './providerWords.ts';
 import {mergeSources} from './settings.ts';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -38,14 +39,27 @@ export function reconnectTarget(accounts: Pick<AccountOut, 'id' | 'provider' | '
 export interface HealthLine {
   state: 'stale' | 'failing';
   text: string;
+  // The line's tooltip, with the provider's code when it gave one.
+  tip: string;
 }
 
-/** "Personal, as of 9:14 PM" (stale), "Personal, as of 9:14 PM, <reason>" (failing), nothing for healthy. Status lines take commas. */
+// A failing source's words: "Todoist is down (scheduled maintenance)", or the reason's own sentence,
+// naming the source when it doesn't already, as an account's often doesn't: "Couldn't reach Gmail for Work".
+function failingLead(name: string, reason: string): string {
+  const line = troubleLine(name, reason);
+  return troubleWords(reason) !== null || line.toLowerCase().includes(name.toLowerCase()) ? line : `${line} for ${name}`;
+}
+
+/**
+ * A sentence, never a list: "Todoist is down (scheduled maintenance) as of 7:26 PM" (failing),
+ * "Personal as of 9:14 PM" (stale), nothing for healthy.
+ */
 export function healthLine(name: string, health: HealthOut, now: number, timeZone: string): HealthLine | null {
   if (health.state !== 'stale' && health.state !== 'failing') return null;
-  const since = health.as_of ? `as of ${asOf(health.as_of, now, timeZone)}` : 'not checked yet';
-  const reason = health.state === 'failing' && health.reason ? `, ${health.reason}` : '';
-  return {state: health.state, text: `${name}, ${since}${reason}`};
+  const since = health.as_of ? ` as of ${asOf(health.as_of, now, timeZone)}` : '';
+  const lead = health.state === 'failing' && health.reason ? failingLead(name, health.reason) : health.as_of ? name : `${name} not checked yet`;
+  const text = `${lead}${since}`;
+  return {state: health.state, text, tip: withCode(text, health.state === 'failing' ? health.reason : null)};
 }
 
 /**
@@ -70,7 +84,7 @@ export function inboxHealthLines(accounts: Pick<AccountOut, 'label' | 'health' |
 const CALENDAR_SOURCES = [['google_calendar', 'Google Calendar'], ['todoist', 'Todoist'], ['weather', 'Weather']] as const;
 
 /**
- * The calendar's right pane lines (board 19b's "Todoist, as of 8:40 AM"), stale or failing,
+ * The calendar's right pane lines ("Todoist as of 8:40 AM"), stale or failing,
  * for Google Calendar (its accounts' sources as one, the worst, as Settings › Accounts shows it),
  * Todoist and Weather.
  */
@@ -104,6 +118,17 @@ export interface SourceState {
   kind: HealthKind;
 }
 
+/**
+ * A Settings row's failing words, which its name already leads: "Down (scheduled maintenance) since
+ * 6:02 AM", or the reason's own sentence ("Todoist didn't answer in time").
+ */
+export function failingWords(reason: string | null, since: string | null | undefined): string {
+  const words = reason ? troubleWords(reason) : 'is failing';
+  if (words === null) return troubleLine(null, reason!);
+  const said = words.replace(/^is /, '');
+  return `${said.charAt(0).toUpperCase()}${said.slice(1)}${since ? ` ${since}` : ''}`;
+}
+
 export function sourceState(health: HealthOut, now: number, timeZone: string): SourceState {
   switch (health.state) {
     case 'needs_reconnect':
@@ -111,7 +136,7 @@ export function sourceState(health: HealthOut, now: number, timeZone: string): S
     case 'stale':
       return {tone: 'muted', text: health.as_of ? `Checks stopped, as of ${asOf(health.as_of, now, timeZone)}` : 'Checks stopped', reconnect: false, kind: 'stale'};
     case 'failing':
-      return {tone: 'caution', text: health.reason ?? 'Failing', reconnect: false, kind: 'failing'};
+      return {tone: 'caution', text: failingWords(health.reason, null), reconnect: false, kind: 'failing'};
     case 'healthy':
       return health.last_check_at
         ? {tone: 'muted', text: `Checked ${asOf(health.last_check_at, now, timeZone)}`, reconnect: false, kind: 'healthy'}

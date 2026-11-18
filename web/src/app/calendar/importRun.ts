@@ -13,6 +13,7 @@ import {icsLanding, importedLine, importOf, initialTicks, runCounts} from '../..
 import type {RowState} from '../../logic/icsImport.ts';
 import {navigate} from '../router.ts';
 import {showToast, toastFailure} from '../toast.ts';
+import {failureText, refusalWords} from '../../logic/providerWords.ts';
 
 export interface ImportReview {
   // The file's name, for the pane's heading.
@@ -98,7 +99,7 @@ async function settle(uid: string, sent: Promise<Awaited<ReturnType<typeof impor
   try {
     const command = await untilSettled(await sent);
     if (review?.read !== owner.read) return;
-    if (command.state === 'failed') setRow(uid, {state: 'failed', message: command.provider_message ?? 'Google Calendar refused it.', commandId: command.id});
+    if (command.state === 'failed') setRow(uid, {state: 'failed', message: refusalWords('google_calendar', command.provider_message, 'Google Calendar refused it.'), commandId: command.id});
     else setRow(uid, {state: 'done', created: command.kind === 'item_create', itemId: command.target_id});
   } catch (error) {
     if (review?.read !== owner.read) return;
@@ -153,7 +154,7 @@ async function undoImport(itemIds: number[]) {
   try {
     for (const id of itemIds) await deleteItem(id, {scope: 'all'});
   } catch (error) {
-    toastFailure('Couldn\'t undo the import')(error);
+    toastFailure('Failed to undo the import')(error);
   }
 }
 
@@ -162,13 +163,13 @@ export async function importFromEditor(calendarId: number, calendarName: string,
   try {
     const command = await untilSettled(await importIcsEvent(calendarId, event));
     if (command.state === 'failed') {
-      showToast(`Couldn't import ${event.title || 'it'}`, {
-        label: 'Try again', run: () => void retryChange(command.id).catch(toastFailure('Couldn\'t try again')),
-      }, {tone: 'failed', why: command.provider_message ?? 'Google Calendar refused it.'});
+      showToast(failureText(`Failed to import ${event.title || 'it'}`, refusalWords('google_calendar', command.provider_message, 'Google Calendar refused it.')), {
+        label: 'Try again', run: () => void retryChange(command.id).catch(toastFailure('Failed to try again')),
+      }, 'failed');
       return;
     }
     showToast(importedLine(1, calendarName).replace('1 event', event.title || '1 event'), command.kind === 'item_create' ? {label: 'Undo', run: () => void undoImport([command.target_id])} : null);
   } catch (error) {
-    toastFailure(`Couldn't import ${event.title || 'it'}`)(error);
+    toastFailure(`Failed to import ${event.title || 'it'}`)(error);
   }
 }

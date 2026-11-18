@@ -159,9 +159,9 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
       // A repeating task's Undo reopens the done occurrence the completion made.
       .then(done => showToast(`Completed ${task.title}`, {
         label: 'Undo',
-        run: () => void completeItem(task.recurring ? done.target_id : task.id, false).catch(toastFailure(`Couldn't reopen ${task.title}`)),
+        run: () => void completeItem(task.recurring ? done.target_id : task.id, false).catch(toastFailure('Failed to reopen')),
       }))
-      .catch(toastFailure(`Couldn't complete ${task.title}`))
+      .catch(toastFailure('Failed to complete'))
       .finally(() => unhide(task));
   };
 
@@ -169,7 +169,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     hide(item);
     void deleteItem(item.id, {occurrence_start: item.occurrence_start})
       .then(() => showToast(`Deleted ${item.title}`))
-      .catch(toastFailure(`Couldn't delete ${item.title}`))
+      .catch(toastFailure('Failed to delete'))
       .finally(() => unhide(item));
   };
 
@@ -179,14 +179,14 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
     completeSubtask: subtask => void completeItem(subtask.id, !subtask.done)
       .then(done => showToast(`${subtask.done ? 'Reopened' : 'Completed'} ${subtask.title}`, {
         label: 'Undo',
-        run: () => void completeItem(done.target_id, subtask.done).catch(toastFailure(`Couldn't ${subtask.done ? 'complete' : 'reopen'} ${subtask.title}`)),
+        run: () => void completeItem(done.target_id, subtask.done).catch(toastFailure(subtask.done ? 'Failed to complete' : 'Failed to reopen')),
       }))
-      .catch(toastFailure(`Couldn't ${subtask.done ? 'reopen' : 'complete'} ${subtask.title}`)),
+      .catch(toastFailure(subtask.done ? 'Failed to reopen' : 'Failed to complete')),
     settleSubtask: (subtask, how) => void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id)
-      .catch(toastFailure(how === 'retry' ? `Couldn't try ${subtask.title} again` : `Couldn't undo ${subtask.title}`)),
-    reorderSubtasks: (task, ids) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`)),
+      .catch(toastFailure(how === 'retry' ? 'Failed to try again' : 'Failed to undo')),
+    reorderSubtasks: (task, ids) => reorderSubtasks(task.id, ids).catch(toastFailure('Failed to reorder')),
     // Added here as on Calendar. Editing one and its menu are Calendar's, through Open.
-    addSubtask: (task, title) => createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure(`Couldn't add ${title}`)),
+    addSubtask: (task, title) => createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure('Failed to add')),
     open: one => navigate(itemRoute(one)),
     // A repeating event asks which of its events go. Calendar asks that.
     ...(item.kind === 'event' && item.recurring ? {} : {remove}),

@@ -723,7 +723,7 @@ describe('a calendar\'s colour, written to Google', () => {
     google.fault({method: 'PATCH', path: /\/users\/me\/calendarList\//, response: scope});
     const picked = setCalendarColour(w.store, calendar(PERSONAL).id, 'violet');
     await run();
-    const words = 'Request had insufficient authentication scopes. (403 Forbidden), Reconnect this Google account in Settings › Accounts to allow colour changes';
+    const words = 'Request had insufficient authentication scopes. Reconnect this Google account in Settings › Accounts to allow colour changes. (403 Forbidden)';
     expect(command(picked.id)).toMatchObject({state: 'failed', providerMessage: words});
     expect(calendarList(w.store).find(entry => entry.name === 'Personal')).toMatchObject({colour: 'violet', command: {state: 'failed', can_retry: true, can_move_back: true}});
     const health = (id: number) => sourceList(w.store).find(row => row.id === id)!.health.state;

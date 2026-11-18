@@ -132,7 +132,7 @@ test('a schedule dropped on the grid is reviewed, imported one at a time, a refu
 
     await pane.getByRole('button', {name: 'Import 4 events'}).click();
     // Google refuses the poster session: it stays, with Google's words and Retry, and the rest go in.
-    await row(page, 'Poster session').getByText('Invalid start time. (400 Bad Request)').waitFor({timeout: 20_000});
+    await row(page, 'Poster session').getByText('Invalid start time.', {exact: true}).waitFor({timeout: 20_000});
     await pane.getByRole('status').filter({hasText: '1 event wasn\'t imported'}).waitFor();
     await page.locator('.toast', {hasText: 'Imported 3 events to Jobs'}).waitFor();
     // The review is the one place to retry it while it's open: the grid's failed card waits.

@@ -368,8 +368,8 @@ test('a candidate Jobs can\'t read says so, however long its title, and its arro
 });
 
 test('a pick\'s toast says "Link kept" of a candidate Jobs can\'t read, never "JD saved"', () => {
-  expect(pickWords(UNREADABLE, 'Lucerne Publishing')).toEqual({done: 'Link kept for Lucerne Publishing', failed: 'Couldn\'t keep the link'});
-  expect(pickWords(CANDIDATES[0]!, 'Lucerne Publishing')).toEqual({done: 'JD saved for Lucerne Publishing', failed: 'Couldn\'t save the JD'});
+  expect(pickWords(UNREADABLE, 'Lucerne Publishing')).toEqual({done: 'Link kept for Lucerne Publishing', failed: 'Failed to keep the link'});
+  expect(pickWords(CANDIDATES[0]!, 'Lucerne Publishing')).toEqual({done: 'JD saved for Lucerne Publishing', failed: 'Failed to save the JD'});
 });
 
 test('Choose… says the same of a candidate Jobs can\'t read, its arrow still there', () => {
@@ -712,7 +712,7 @@ test('Esc closes the popover at once, and goes no further (it would close the re
 
 test.each<[string, ApplicationOut, string]>([
   ['No JD found', detailOf(null, {state: 'not_found', looked_at: '2026-10-01T18:33:00.000Z'}), 'No JD found · Greenhouse and a web search had nothing for it on Oct 1'],
-  ['Couldn\'t read the posting you picked', detailOf(null, {state: 'not_found', looked_at: '2026-10-01T18:33:00.000Z', link: 'https://www.glassdoor.example/job-listing/2291'}), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Oct 1'],
+  ['Failed to read the posting', detailOf(null, {state: 'not_found', looked_at: '2026-10-01T18:33:00.000Z', link: 'https://www.glassdoor.example/job-listing/2291'}), 'Failed to read the posting · glassdoor.example gave Jobs no text on Oct 1'],
   ['Looking for the posting…', detailOf(null, {state: 'looking', looked_at: '2026-10-07T16:00:00.000Z'}), 'Looking for the posting… · the email\'s link, then the platforms, then search'],
   ['Lookup stopped', detailOf(null, {state: 'not_found', stopped: true, looked_at: '2026-10-07T16:00:00.000Z'}), 'Lookup stopped · You stopped it on Oct 7'],
   ['Is this the posting?', detailOf(null, {state: 'candidates', candidates: 2}), 'Is this the posting? · 2 candidates in Needs you'],

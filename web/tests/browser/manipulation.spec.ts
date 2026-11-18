@@ -187,7 +187,7 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     await openCalendar(page, setpoint.base);
     const card = page.locator('.failed-card');
     await card.waitFor();
-    await card.locator('.provider-says', {hasText: 'The requested event was modified by another client. (409 Conflict)'}).waitFor();
+    await card.locator('.provider-says', {hasText: 'The requested event was modified by another client.'}).waitFor();
     await card.locator('.card-b', {hasText: 'From Fri, Oct 9'}).waitFor();
     await page.locator('.cell[data-date="2026-10-10"] .ev.failed .icon').waitFor();
     await page.locator('.cell[data-date="2026-10-07"] .tk.pending .spin').waitFor();
@@ -230,7 +230,7 @@ test('a drag the provider refuses fails in place, and its card says so', async (
     await openCalendar(page, setpoint.base);
     await drag(page, chip(page, '2026-10-09', 'Dinner with Sam'), '2026-10-10');
     await page.locator('.cell[data-date="2026-10-10"] .ev.failed', {hasText: 'Dinner with Sam'}).waitFor();
-    await page.locator('.failed-card', {hasText: 'Couldn\'t move Dinner with Sam'}).waitFor();
+    await page.locator('.failed-card', {hasText: 'Failed to move Dinner with Sam'}).waitFor();
     // Closing the card leaves the failure outlined. Clicking the chip brings the card back.
     await page.locator('.failed-card').getByRole('button', {name: 'Close'}).click();
     await page.locator('.failed-card').waitFor({state: 'detached'});

@@ -33,7 +33,7 @@ export function ToastPill() {
 
 /**
  * It leads with its tone's glyph in a tinted disc, its time a ring draining around it (none while it
- * waits). A failure stacks what failed over why. A confirm has Cancel (Esc) and its action (Enter).
+ * waits). A failure is one line, wrapping when long. A confirm has Cancel (Esc) and its action (Enter).
  * Swiped left or right, by a drag or two fingers on a trackpad, it follows and fades, and goes once
  * past SWIPE_PX. There's no ×, and no hint that it swipes.
  */
@@ -178,13 +178,13 @@ function Pill({toast}: {toast: Toast}) {
     return (
       <div ref={ref} className={className} role="status" style={style} onPointerDown={press}>
         {phoneTone && <span className="tone"><Icon name={PHONE_GLYPHS[phoneTone]} size={16} /></span>}
-        <span>{toast.why ? `${toast.text}, ${toast.why}` : toast.text}</span>
+        <span>{toast.text}</span>
         {action && <button className="btn ghost sm" type="button" onClick={run}>{action.label}</button>}
       </div>
     );
   }
 
-  const className = ['toast', `t-${tone}`, confirm && 'confirm', toast.why && 'stack', ...motionClasses].filter(Boolean).join(' ');
+  const className = ['toast', `t-${tone}`, confirm && 'confirm', tone === 'failed' && 'wraps', ...motionClasses].filter(Boolean).join(' ');
   return (
     <div ref={ref} className={className} role="status" style={style} onPointerDown={press}>
       {!confirm && (
@@ -198,9 +198,7 @@ function Pill({toast}: {toast: Toast}) {
           )}
         </span>
       )}
-      {toast.why
-        ? <span className="txt"><span>{toast.text}<span className="vh">, </span></span><span className="why">{toast.why}</span></span>
-        : <span className="txt">{toast.text}</span>}
+      <span className="txt">{toast.text}</span>
       {confirm && <button className="tb quiet" type="button" onClick={() => dismissToast(toast.id)}>Cancel<span className="kbd">Esc</span></button>}
       {action && (
         <button className={confirm ? 'tb solid' : 'tb'} type="button" onClick={run}>

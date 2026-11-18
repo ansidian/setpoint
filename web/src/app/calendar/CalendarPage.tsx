@@ -48,7 +48,7 @@ import {useCommands} from '../palette/commands.ts';
 import {useCompact} from '../Phone.tsx';
 import {SearchField} from '../search/Search.tsx';
 import {useCalendarSearch} from '../search/state.ts';
-import {dismissToast, failureWhy, showToast, toastFailure} from '../toast.ts';
+import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
 import {AnchoredCard} from './AnchoredCard.tsx';
 import {setVisible, showHidden} from './CalendarSidebar.tsx';
 import './calendar.css';
@@ -70,6 +70,7 @@ import {SearchPane} from './SearchPane.tsx';
 import {rememberMode} from './mode.ts';
 import {knownDay, pulseToday, rememberDay, revealDay, scrollToMonth, setAnchor, setSearchMatches, setSelectedDay, setShownMonth, showWeek, useCalendarView} from './view.ts';
 import {WeekGrid} from './WeekGrid.tsx';
+import {failureText, refusalWords} from '../../logic/providerWords.ts';
 
 type CalendarRoute = Extract<Route, {page: 'calendar'}>;
 
@@ -533,7 +534,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       setSearching(false);
       setDayPane(false);
       openReview(file.name, read);
-    }, error => (error instanceof ApiFailure && error.code === 'invalid_input' ? showToast(error.message, null, 'failed') : showToast(`Couldn't read ${file.name}`, null, {tone: 'failed', why: failureWhy(error)})));
+    }, error => (error instanceof ApiFailure && error.code === 'invalid_input' ? showToast(error.message, null, 'failed') : showToast(failureLine(`Failed to read ${file.name}`, error), null, 'failed')));
   };
   // Only the grid takes a dropped file, and shows while one is over it (FileDrop.tsx).
   const fileDrop = useFileDrop(openIcs);
@@ -637,7 +638,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     setSending(map => new Map(map).set(item.key, sending(moved)));
     void updateItem(item.id, {changes, scope, occurrence_start: item.occurrence_start})
       .then(() => {
-        if (!undoing) said(line, item.recurring ? null : () => send(moved, inverseOf(item, changes), 'this', `Couldn't undo ${item.title}`, null, true));
+        if (!undoing) said(line, item.recurring ? null : () => send(moved, inverseOf(item, changes), 'this', 'Failed to undo', null, true));
       })
       .catch(toastFailure(what))
       .finally(() => setSending(map => {
@@ -652,7 +653,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     if (!changes) return;
     const line = `Moved ${item.title} to ${dayTitle(to)}`;
     if (item.kind === 'event' && item.recurring) setAsk({kind: 'move', item, from, to, changes, scope: DEFAULT_SCOPE, line});
-    else send(item, changes, 'this', `Couldn't move ${item.title}`, line);
+    else send(item, changes, 'this', 'Failed to move', line);
   };
 
   /** A block moved or resized on the week: sent as a drop is, a recurring event's scope asked first. */
@@ -661,11 +662,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     if (kind === 'move') {
       const line = movedLine(item, changes, zone);
       if (recurring) setAsk({kind: 'move', item, from, to, changes, scope: DEFAULT_SCOPE, line});
-      else send(item, changes, 'this', `Couldn't move ${item.title}`, line);
+      else send(item, changes, 'this', 'Failed to move', line);
       return;
     }
     if (recurring) setAsk({kind: 'resize', item, from, to, changes, scope: DEFAULT_SCOPE});
-    else send(item, changes, 'this', `Couldn't change ${item.title}`, resizedLine(item, changes, zone));
+    else send(item, changes, 'this', 'Failed to change', resizedLine(item, changes, zone));
   };
 
   const remove = (targets: ItemOut[]) => {
@@ -679,14 +680,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   };
 
   /** Sends deletes, off the grid until the provider confirms. A refusal brings one back and says why. */
-  const sendDeletes = (entries: (Deleting & {sent: boolean})[], titles: string[], keepalive = false) => {
+  const sendDeletes = (entries: (Deleting & {sent: boolean})[], keepalive = false) => {
     setDeleting(current => [...current, ...entries]);
-    entries.forEach((entry, index) => {
+    entries.forEach(entry => {
       void deleteItem(entry.id, {scope: entry.scope, occurrence_start: entry.occurrence_start}, {keepalive})
         .then(() => setDeleting(current => current.map(one => (one === entry ? {...one, sent: true} : one))))
         .catch(error => {
           setDeleting(current => current.filter(one => one !== entry));
-          toastFailure(`Couldn't delete ${titles[index]}`)(error);
+          toastFailure('Failed to delete')(error);
         });
     });
   };
@@ -711,7 +712,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     const send = (keepalive = false) => {
       if (!held()) return;
       letGo();
-      sendDeletes(entries, list.map(({item}) => item.title), keepalive);
+      sendDeletes(entries, keepalive);
     };
     const keys = list.map(({item}) => item.key);
     let toast = 0;
@@ -741,13 +742,13 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         next.delete(id);
         return next;
       });
-      toastFailure('Couldn\'t try again')(error);
+      toastFailure('Failed to try again')(error);
     });
   };
 
   const recolour = (item: ItemOut, colour: EventColour | null) => {
     if (item.recurring) setAsk({kind: 'colour', item, from: dayOf(item, zone) ?? selectedDay, colour, scope: DEFAULT_SCOPE});
-    else send(item, {colour}, 'this', `Couldn't colour ${item.title}`, `Changed the colour of ${item.title}`);
+    else send(item, {colour}, 'this', 'Failed to colour', `Changed the colour of ${item.title}`);
   };
 
   /** Draws the new items at once, pending, and creates them, saying so. Undo or ⌘Z deletes them again. */
@@ -772,7 +773,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         // so there's no Undo, and a failure, with no place to show in, comes as a toast.
         const undated = commands.filter((_, index) => inputs[index]!.kind === 'task' && !inputs[index]!.due_date);
         said(line?.(drafts) ?? null, undated.length ? null : () => {
-          sendDeletes(commands.map(command => ({id: command.target_id, scope: 'this', occurrence_start: null, sent: false})), commands.map(() => 'it'));
+          sendDeletes(commands.map(command => ({id: command.target_id, scope: 'this', occurrence_start: null, sent: false})));
         });
         undated.forEach(command => watchUndated(command, inputs[commands.indexOf(command)]!.title));
       }, error => {
@@ -785,9 +786,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const watchUndated = (command: CommandOut, title: string) => {
     void untilSettled(command).then(settled => {
       if (settled.state !== 'failed') return;
-      showToast(`Couldn't create ${title}`, {
-        label: 'Try again', run: () => void retryChange(settled.id).then(next => watchUndated(next, title), toastFailure('Couldn\'t try again')),
-      }, {tone: 'failed', why: settled.provider_message ?? 'Todoist refused it.'});
+      showToast(failureText(`Failed to create ${title}`, refusalWords('todoist', settled.provider_message, 'Todoist refused it.')), {
+        label: 'Try again', run: () => void retryChange(settled.id).then(next => watchUndated(next, title), toastFailure('Failed to try again')),
+      }, 'failed');
     }, () => {});
   };
 
@@ -801,33 +802,33 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const paste = (day = selectedDay) => {
     if (!clipboard.current.length) return;
     const list = clipboard.current;
-    create(pasteOn(list, day, zone), 'Couldn\'t paste', () => `Pasted ${list.length === 1 ? list[0]!.title : `${list.length} items`} on ${dayTitle(day)}`);
+    create(pasteOn(list, day, zone), 'Failed to paste', () => `Pasted ${list.length === 1 ? list[0]!.title : `${list.length} items`} on ${dayTitle(day)}`);
   };
 
   const answer = () => {
     if (!ask) return;
     setAsk(null);
-    if (ask.kind === 'move') send(ask.item, ask.changes, ask.scope, `Couldn't move ${ask.item.title}`, ask.line);
-    else if (ask.kind === 'resize') send(ask.item, ask.changes, ask.scope, `Couldn't change ${ask.item.title}`, resizedLine(ask.item, ask.changes, zone));
-    else if (ask.kind === 'colour') send(ask.item, {colour: ask.colour}, ask.scope, `Couldn't colour ${ask.item.title}`, `Changed the colour of ${ask.item.title}`);
+    if (ask.kind === 'move') send(ask.item, ask.changes, ask.scope, 'Failed to move', ask.line);
+    else if (ask.kind === 'resize') send(ask.item, ask.changes, ask.scope, 'Failed to change', resizedLine(ask.item, ask.changes, zone));
+    else if (ask.kind === 'colour') send(ask.item, {colour: ask.colour}, ask.scope, 'Failed to colour', `Changed the colour of ${ask.item.title}`);
     else drop([{item: ask.item, scope: ask.scope}]);
   };
 
   const settleSubtask = (subtask: SubtaskOut, how: 'retry' | 'move-back') =>
-    void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id).catch(toastFailure(how === 'retry' ? `Couldn't try ${subtask.title} again` : `Couldn't undo ${subtask.title}`));
-  const reorder = (task: ItemOut, ids: number[]) => reorderSubtasks(task.id, ids).catch(toastFailure(`Couldn't reorder ${task.title}'s subtasks`));
+    void (how === 'retry' ? retryChange : moveBack)(subtask.command!.id).catch(toastFailure(how === 'retry' ? 'Failed to try again' : 'Failed to undo'));
+  const reorder = (task: ItemOut, ids: number[]) => reorderSubtasks(task.id, ids).catch(toastFailure('Failed to reorder'));
   // A subtask added from the checklist says nothing. Its row is the answer, as a create's is.
   const addSubtask = (task: ItemOut, title: string) =>
-    createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure(`Couldn't add ${title}`));
+    createSubtask({kind: 'task', calendar_id: task.calendar_id, title, parent_id: task.id}).catch(toastFailure('Failed to add'));
   // A subtask from its checklist row in the editor, read as the item it is (an undated one is in no range).
   const openSubtask = (subtask: Pick<SubtaskOut, 'id' | 'title'>) =>
-    void getJson<ItemOut>(itemPath(subtask.id)).then(item => openEditor({kind: 'task', date: item.due_date ?? selectedDay, item}, false, addressOf(route), true), toastFailure(`Couldn't open ${subtask.title}`));
+    void getJson<ItemOut>(itemPath(subtask.id)).then(item => openEditor({kind: 'task', date: item.due_date ?? selectedDay, item}, false, addressOf(route), true), toastFailure('Failed to open'));
   // Clone keeps the parent. The new subtask goes at the end of the same checklist.
   const cloneSubtask = (subtask: Pick<SubtaskOut, 'id' | 'title' | 'parent_id'>) =>
     void getJson<ItemOut>(itemPath(subtask.id))
       .then(item => createSubtask({...copyOf(item, 0, zone), parent_id: subtask.parent_id}))
-      .then(command => said(`Cloned ${subtask.title}`, () => sendDeletes([{id: command.target_id, scope: 'this', occurrence_start: null, sent: false}], [subtask.title])),
-        toastFailure(`Couldn't clone ${subtask.title}`));
+      .then(command => said(`Cloned ${subtask.title}`, () => sendDeletes([{id: command.target_id, scope: 'this', occurrence_start: null, sent: false}])),
+        toastFailure('Failed to clone'));
 
   const actions: DetailActions = {
     complete: task => complete(task),
@@ -838,7 +839,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     openSubtask: subtask => openSubtask(subtask),
     subtaskMenu: (event, subtask) => checklistMenu(event, subtask),
     // A subtask's clone goes at the end of the same checklist.
-    clone: item => (item.parent_id !== null ? cloneSubtask({...item, parent_id: item.parent_id}) : create([copyOf(item, 0, zone)], `Couldn't clone ${item.title}`, () => `Cloned ${item.title}`)),
+    clone: item => (item.parent_id !== null ? cloneSubtask({...item, parent_id: item.parent_id}) : create([copyOf(item, 0, zone)], 'Failed to clone', () => `Cloned ${item.title}`)),
     copy: item => copy([item]),
     colour: recolour,
     remove: item => remove([item]),
@@ -851,7 +852,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     if (item.command?.state === 'failed') {
       return [
         {id: 'retry', label: 'Try again', icon: 'refresh', run: () => void retry(item)},
-        {id: 'move-back', label: 'Move back', icon: 'undo', run: () => void moveBack(item.command!.id).catch(toastFailure('Couldn\'t move it back'))},
+        {id: 'move-back', label: 'Move back', icon: 'undo', run: () => void moveBack(item.command!.id).catch(toastFailure('Failed to move it back'))},
       ];
     }
     // A dated subtask's chip or agenda row has its checklist row's menu.
@@ -974,7 +975,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       .then(command => {
         if (!undoing) said(`${task.done ? 'Reopened' : 'Completed'} ${task.title}`, () => complete({...task, id: command.target_id, key: String(command.target_id), done: !task.done}, true));
       })
-      .catch(toastFailure(`Couldn't complete ${task.title}`))
+      .catch(toastFailure('Failed to complete'))
       .finally(() => setSending(map => {
         const next = new Map(map);
         next.delete(task.key);
@@ -989,7 +990,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       .then(command => {
         if (!undoing) said(`${subtask.done ? 'Reopened' : 'Completed'} ${subtask.title}`, () => completeSubtask({...subtask, id: command.target_id, done: !subtask.done}, true));
       })
-      .catch(toastFailure(`Couldn't ${subtask.done ? 'reopen' : 'complete'} ${subtask.title}`));
+      .catch(toastFailure(subtask.done ? 'Failed to reopen' : 'Failed to complete'));
   };
 
   useEffect(() => {
@@ -1079,7 +1080,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           anchor={{date: dayOf(failed, zone) ?? selectedDay, key: failed.key}}>
           <FailedCard item={failed} calendar={calendarsById.get(failed.calendar_id)} timeZone={zone}
             onRetry={() => retry(failed)}
-            onMoveBack={() => moveBack(failed.command!.id).catch(toastFailure('Couldn\'t move it back'))}
+            onMoveBack={() => moveBack(failed.command!.id).catch(toastFailure('Failed to move it back'))}
             onClose={() => {
               setDismissed(set => new Set(set).add(failed.command!.id));
               if (selectedItem?.key === failed.key) selectDay(selectedDay);
@@ -1165,12 +1166,12 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
               const imported = editor.ics ? inputs[0]! : null;
               if (editor.ics && imported) void importFromEditor(imported.calendar_id, calendarsById.get(imported.calendar_id)?.name ?? 'the calendar', editedImport(editor.ics, imported));
               const rest = imported ? inputs.slice(1) : inputs;
-              if (rest.length) create(rest, rest.length > 1 ? 'Couldn\'t create them' : `Couldn't create ${rest[0]!.title}`, null);
+              if (rest.length) create(rest, rest.length > 1 ? 'Failed to create them' : `Failed to create ${rest[0]!.title}`, null);
             }}
             onSave={(item, changes, scope) => {
               closeEditor();
               // A subtask whose date came off leaves the grid, so the change says so, with Undo.
-              send(item, changes, scope, `Couldn't change ${item.title}`, changes.due_date === null ? `Took the date off ${item.title}` : null);
+              send(item, changes, scope, 'Failed to change', changes.due_date === null ? `Took the date off ${item.title}` : null);
             }}
             onDelete={item => {
               closeEditor();

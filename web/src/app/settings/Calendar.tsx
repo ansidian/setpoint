@@ -18,6 +18,7 @@ import {dotStyle} from '../accounts.ts';
 import {Line, Menu, Page, Row, Section, Select, SkeletonRows, Stepper, Switch, useAttempt} from './parts.tsx';
 import {KeyRow, SecretRow} from './Ai.tsx';
 import {openSettings} from './store.ts';
+import {refusalWords, withCode} from '../../logic/providerWords.ts';
 
 const INBOX = '';
 const BUFFER_STEP = 5;
@@ -161,7 +162,7 @@ function CalendarRow({calendar, onShow}: {calendar: CalendarOut; onShow: (on: bo
       )}
       <div className="lines grow">
         <span className="t">{calendar.name}</span>
-        {failed && <span className="s failed" role="alert">{`Couldn't change its colour, Google Calendar, ${command.provider_message ?? 'No answer'}`}</span>}
+        {failed && <span className="s failed" role="alert" data-tip={withCode(refusalWords('google_calendar', command.provider_message, 'Google Calendar didn’t answer.'), command.provider_message)}>{refusalWords('google_calendar', command.provider_message, 'Google Calendar didn’t answer.')}</span>}
         {(pick.line ?? settle.line) && <span className="s failed" role="alert">{(pick.line ?? settle.line)!.text}</span>}
       </div>
       {command?.state === 'pending' && <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>}
@@ -208,7 +209,7 @@ function ProjectRow({project}: {project: TodoistProjectOut}) {
       </Menu>
       <div className="lines grow">
         <span className="t">{project.name}</span>
-        {failed && <span className="s failed" role="alert">{`Couldn't change its colour, Todoist, ${command.provider_message ?? 'No answer'}`}</span>}
+        {failed && <span className="s failed" role="alert" data-tip={withCode(refusalWords('todoist', command.provider_message, 'Todoist didn’t answer.'), command.provider_message)}>{refusalWords('todoist', command.provider_message, 'Todoist didn’t answer.')}</span>}
         {(pick.line ?? settle.line) && <span className="s failed" role="alert">{(pick.line ?? settle.line)!.text}</span>}
       </div>
       {command?.state === 'pending' && <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>}

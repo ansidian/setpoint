@@ -62,7 +62,7 @@ export function AccountsPage() {
     window.location.assign(url);
     return null;
   });
-  const order = useLiveOrder(list, 'text/x-setpoint-account', ids => void reorderAccounts(ids).catch(toastFailure('Couldn\'t reorder accounts')));
+  const order = useLiveOrder(list, 'text/x-setpoint-account', ids => void reorderAccounts(ids).catch(toastFailure('Failed to reorder accounts')));
 
   return (
     <Page title="Accounts" loads={[accountsLoad, sourcesLoad, calendarsLoad, projectsLoad, settingsLoad]} actions={(
@@ -79,7 +79,7 @@ export function AccountsPage() {
             <AccountRow key={account.id} account={account} source={mailSource(account)} now={now} drag={order.rowProps(account, index)}
               onMove={delta => {
                 const next = moved(list, index, delta);
-                if (next !== list) void reorderAccounts(next.map(one => one.id)).catch(toastFailure('Couldn\'t reorder accounts'));
+                if (next !== list) void reorderAccounts(next.map(one => one.id)).catch(toastFailure('Failed to reorder accounts'));
               }}
               onReconnect={() => reconnect(account)} />
           ))}
@@ -131,7 +131,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
             {SWATCH_COLOURS.map(colour => (
               <button key={colour} type="button" className={colour === account.colour ? 'sw on' : 'sw'} style={dotStyle(colour)} aria-label={colour} onClick={() => {
                 close();
-                void updateAccount(account.id, {colour}).catch(toastFailure(`Couldn't change ${account.label}'s colour`));
+                void updateAccount(account.id, {colour}).catch(toastFailure('Failed to change the colour'));
               }} />
             ))}
           </div>
@@ -180,7 +180,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
               {ACCOUNT_ICONS.map(icon => (
                 <button key={icon} type="button" className={icon === account.icon ? 'on' : undefined} aria-label={`Icon ${icon}`} onClick={() => {
                   close();
-                  void updateAccount(account.id, {icon}).catch(toastFailure(`Couldn't change ${account.label}'s icon`));
+                  void updateAccount(account.id, {icon}).catch(toastFailure('Failed to change the icon'));
                 }}><Icon name={icon} size={16} /></button>
               ))}
             </div>

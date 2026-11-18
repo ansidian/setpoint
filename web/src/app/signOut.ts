@@ -4,4 +4,4 @@
 import {signOut} from '../api/auth.ts';
 import {showConfirm, toastFailure} from './toast.ts';
 
-export const askSignOut = () => showConfirm('Sign out of Setpoint?', {label: 'Sign out', run: () => void signOut().catch(toastFailure('Couldn\'t sign out'))});
+export const askSignOut = () => showConfirm('Sign out of Setpoint?', {label: 'Sign out', run: () => void signOut().catch(toastFailure('Failed to sign out'))});

@@ -178,7 +178,7 @@ test('a load that fails says so in place, and Try again loads it', async () => {
     await visit(page, `${setpoint.base}/inbox`);
     const line = page.locator('section.list .load-failed');
     await line.waitFor();
-    assert.equal(await line.innerText(), 'Couldn’t load the Inbox, Something went wrong.\nTry again');
+    assert.equal(await line.innerText(), 'Failed to load the Inbox, something went wrong\nTry again');
     assert.equal(await page.locator('[data-skeleton="all"]').count(), 0, 'no skeleton says it\'s still coming');
     failing = false;
     await line.getByRole('button', {name: 'Try again'}).click();
@@ -199,20 +199,20 @@ test('the reader\'s body, Calendar\'s day, News and a Settings page each say in 
     // Opening it would answer with the email too (POST …/open), so it fails as well.
     await failWhile(page, /^\/api\/(mail\/messages\/\d+(\/open)?|items\?.*|news|ai)$/, () => true);
     await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
-    await page.locator('.pane .load-failed', {hasText: 'Couldn’t load this email, Something went wrong.'}).waitFor();
+    await page.locator('.pane .load-failed', {hasText: 'Failed to load this email, something went wrong'}).waitFor();
     // Its head is drawn from its row all the same.
     await page.locator('.pane .rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
 
     await page.keyboard.press('2');
-    await page.locator('.rpane .load-failed', {hasText: 'Couldn’t load this day, Something went wrong.'}).waitFor();
+    await page.locator('.rpane .load-failed', {hasText: 'Failed to load this day, something went wrong'}).waitFor();
     assert.equal(await page.locator('[data-skeleton="agenda"]').count(), 0);
 
     await page.keyboard.press('3');
-    await page.locator('.nw-list .load-failed', {hasText: 'Couldn’t load News, Something went wrong.'}).waitFor();
+    await page.locator('.nw-list .load-failed', {hasText: 'Failed to load News, something went wrong'}).waitFor();
 
     await page.keyboard.press('Meta+,');
     await page.locator('.settings .set-nav').getByRole('button', {name: 'AI', exact: true}).click();
-    await page.locator('.settings .load-failed', {hasText: 'Couldn’t load Settings › AI, Something went wrong.'}).waitFor();
+    await page.locator('.settings .load-failed', {hasText: 'Failed to load Settings › AI, something went wrong'}).waitFor();
     assert.equal(await page.locator('.settings [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

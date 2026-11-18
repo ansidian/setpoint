@@ -12,9 +12,9 @@ export type ToastTone = 'done' | 'read' | 'gone' | 'send' | 'pinned' | 'failed' 
 /** How long a toast, and its Undo, stays: six seconds, a failure eight, so the provider's words can be read. */
 export const TOAST_MS = {line: 6000, failed: 8000} as const;
 
-/** A line's tone by what it says it did: "Marked 3 as read", "Completed Pay rent", "Moved to Trash", "Couldn't pin it". */
+/** A line's tone by what it says it did: "Marked 3 as read", "Completed Pay rent", "Moved to Trash", "Failed to pin". */
 export function toastTone(text: string): ToastTone {
-  if (/^Couldn['’]t /.test(text)) return 'failed';
+  if (/^Failed to /.test(text)) return 'failed';
   if (/^Marked (\d+ )?as read$/.test(text)) return 'read';
   if (/^(Marked|Completed) /.test(text)) return 'done';
   if (/^(Moved (\d+ )?to Trash|Deleted |Discarded |Draft discarded$)/.test(text)) return 'gone';

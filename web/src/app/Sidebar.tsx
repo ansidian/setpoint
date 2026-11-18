@@ -57,7 +57,7 @@ function Link({to, className, style, tip, onContextMenu, children}: {
 function markAllReadNow(): () => void {
   const page = offered().commands.find(command => command.id === 'mark-all-read');
   if (page && currentRoute().page === 'inbox') return page.run;
-  return () => void markAllRead().catch(toastFailure('Couldn\'t mark all as read'));
+  return () => void markAllRead().catch(toastFailure('Failed to mark all read'));
 }
 
 // How long the pointer rests on the rail before the sidebar comes out, so a pass or a quick click on an

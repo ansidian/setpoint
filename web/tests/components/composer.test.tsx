@@ -422,7 +422,7 @@ test('a change whose save failed stays owed: it goes out again with the next sav
   holdSaves();
   await userEvent.click(page.getByRole('button', {name: 'Remove June Park'}));
   saveNow();
-  await expect.element(page.getByText(/^Couldn't save the draft, Setpoint is restarting/)).toBeVisible();
+  await expect.element(page.getByText(/^Failed to save the draft, Setpoint is restarting/)).toBeVisible();
   expect(fake.landed).toEqual([]);
   // The next save carries it, under what was typed since.
   await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
@@ -439,7 +439,7 @@ test('Send never sends while a change is owed and its save fails again: the comp
   holdSaves();
   await userEvent.click(page.getByRole('button', {name: 'Remove June Park'}));
   saveNow();
-  await expect.element(page.getByText(/^Couldn't save the draft/)).toBeVisible();
+  await expect.element(page.getByText(/^Failed to save the draft/)).toBeVisible();
   await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
   await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
   // Its second try was refused too: nothing was sent, and the composer is back with what the user had.
@@ -877,7 +877,7 @@ test('Esc before the answer with nothing typed: the draft that then arrives is d
   await expect.poll(() => fake.discarded).toEqual([draft.id]);
   expect(fake.saves).toEqual([]);
   // Quietly: no toast says it went, or that something failed.
-  expect(document.body.textContent).not.toMatch(/Discarded|Couldn't/);
+  expect(document.body.textContent).not.toMatch(/Discarded|Failed to/);
 });
 
 test('Esc before the answer with words typed: they are saved into the draft that arrives', async () => {
@@ -911,7 +911,7 @@ test('a start the server refuses closes the waiting composer with its toast', as
   fake.refuseStart = true;
   await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
   fake.releaseStart();
-  await expect.element(page.getByText(/Couldn't start the reply/)).toBeVisible();
+  await expect.element(page.getByText(/Failed to start the reply/)).toBeVisible();
   expect(document.querySelector('.composer')).toBeNull();
   expect(openComposers()).toEqual([]);
 });
@@ -1000,7 +1000,7 @@ test('Esc, R again, the first start answered and the second refused: the compose
   await expect.poll(() => fake.startsAnswered).toBe(2);
   await answerRead();
   expect(openComposers().map(one => one.draftId)).toEqual([draft.id]);
-  expect(document.body.textContent).not.toMatch(/Couldn't/);
+  expect(document.body.textContent).not.toMatch(/Failed to/);
 });
 
 test('a start refused after Esc with nothing typed says nothing', async () => {
@@ -1011,7 +1011,7 @@ test('a start refused after Esc with nothing typed says nothing', async () => {
   fake.releaseStart();
   await expect.poll(() => fake.startsAnswered).toBe(1);
   await answerRead();
-  expect(document.body.textContent).not.toMatch(/Couldn't/);
+  expect(document.body.textContent).not.toMatch(/Failed to/);
 });
 
 test('a start refused after Esc with words typed says they weren\'t kept', async () => {
@@ -1020,7 +1020,7 @@ test('a start refused after Esc with words typed says they weren\'t kept', async
   await userEvent.keyboard('hello{Escape}');
   fake.refuseStart = true;
   fake.releaseStart();
-  await expect.element(page.getByText(/Couldn't start the reply/)).toBeVisible();
+  await expect.element(page.getByText(/Failed to start the reply/)).toBeVisible();
 });
 
 test('a refused start gives the pane back as it was: the composer it took the place of opens again', async () => {
@@ -1028,7 +1028,7 @@ test('a refused start gives the pane back as it was: the composer it took the pl
   const fake = await compose(kept);
   fake.refuseStart = true;
   startComposer({kind: 'reply', message_id: EMAIL});
-  await expect.element(page.getByText(/Couldn't start the reply/)).toBeVisible();
+  await expect.element(page.getByText(/Failed to start the reply/)).toBeVisible();
   await expect.poll(() => openComposers().map(one => one.draftId)).toEqual([kept.id]);
   await expect.poll(bodyLines).toEqual(['Kept words']);
 });
@@ -1039,7 +1039,7 @@ test('a refused start leaves a reply closed with Esc closed', async () => {
   await userEvent.keyboard('Count me in{Escape}');
   fake.refuseStart = true;
   startComposer({kind: 'forward', message_id: EMAIL});
-  await expect.element(page.getByText(/Couldn't start the forward/)).toBeVisible();
+  await expect.element(page.getByText(/Failed to start the forward/)).toBeVisible();
   const fetched = vi.mocked(window.fetch).mock.calls.length;
   showEmail(EMAIL, [{id: draft.id, message_id: EMAIL, updated_at: SEED_NOW, send_state: null} as DraftRowOut]);
   expect(vi.mocked(window.fetch).mock.calls.length).toBe(fetched);
@@ -1169,7 +1169,7 @@ test('a forward\'s originals come first in the row; a file that would cross 25 M
   const fake = await compose(draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?', files: [{...NOTES, size_bytes: MB / 2}]}), [], message);
   await expect.poll(fileChips).toEqual(['Lease.pdf24 MB', 'Notes.txt512 KB']);
   pick(fileOf('Photos.zip', MB));
-  await expect.poll(fileError).toBe('Couldn\'t attach Photos.zip, attachments can total 25 MB, and these would be 25.5 MB.');
+  await expect.poll(fileError).toBe('Failed to attach Photos.zip, attachments can total 25 MB and these would be 25.5 MB');
   expect(fake.uploads).toEqual([]);
   await userEvent.click(page.getByRole('button', {name: 'Dismiss'}));
   expect(fileError()).toBeNull();
@@ -1186,7 +1186,7 @@ test('files still uploading count toward 25 MB; the reason goes once the next fi
   pick(fileOf('Photos.zip', 20 * MB));
   await expect.poll(fileChips).toEqual(['Photos.zip20 MB (uploading)']);
   pick(fileOf('Video.mov', 6 * MB));
-  await expect.poll(fileError).toBe('Couldn\'t attach Video.mov, attachments can total 25 MB, and these would be 26 MB.');
+  await expect.poll(fileError).toBe('Failed to attach Video.mov, attachments can total 25 MB and these would be 26 MB');
   expect(fake.uploads.map(one => one.name)).toEqual(['Photos.zip']);
   fake.release();
   pick(fileOf('Notes.txt', 12, 'text/plain'));
@@ -1198,7 +1198,7 @@ test('a Remove the server refuses says so, and the chip comes back: the file is 
   const fake = await compose(draftOf({files: [NOTES]}));
   fake.failRemoves = 1;
   await userEvent.click(page.getByRole('button', {name: 'Remove Notes.txt'}));
-  await expect.poll(fileError).toMatch(/^Couldn't remove the file/);
+  await expect.poll(fileError).toMatch(/^Failed to remove the file/);
   await expect.poll(fileChips).toEqual(['Notes.txt12 bytes']);
 });
 
@@ -1211,7 +1211,7 @@ test('Send waits for an upload under way; one that fails stops it with its words
   await userEvent.click(page.getByRole('textbox', {name: 'Message'}));
   await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
   fake.release();
-  await expect.poll(fileError).toMatch(/^Couldn't attach Notes\.txt/);
+  await expect.poll(fileError).toMatch(/^Failed to attach Notes\.txt/);
   await expect.element(page.getByRole('textbox', {name: 'Message'})).toBeVisible();
   expect(fake.sends).toBe(0);
 
@@ -1285,7 +1285,7 @@ test('a switch the server refuses for the limit keeps the reply as it was, files
   fake.refuseTakes = true;
   await userEvent.click(page.getByRole('button', {name: 'Reply, change'}));
   await userEvent.click(page.getByRole('menuitemradio', {name: 'Forward'}));
-  await expect.element(page.getByText(/^Couldn't start the forward/)).toBeVisible();
+  await expect.element(page.getByText(/^Failed to start the forward/)).toBeVisible();
   await expect.poll(() => fake.discarded).toEqual([forward.id]);
   await expect.element(page.getByRole('button', {name: 'Reply, change'})).toBeVisible();
   expect(fileChips()).toEqual(['Notes.txt12 bytes']);

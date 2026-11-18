@@ -160,21 +160,21 @@ test('its action runs once, and the toast goes with it', async () => {
 test('a failure stays eight seconds', async () => {
   const seen = classes();
   const shown = Date.now();
-  showToast('Couldn\'t pin it, Gmail didn\'t answer in time.', null, 'failed');
+  showToast('Failed to pin, Gmail didn\'t answer in time', null, 'failed');
   await expect.element(toast).toHaveClass('t-failed');
   advanceTo(shown + 8000);
   await expect.element(toast).not.toBeInTheDocument();
   expect(Math.abs(seen().find(worn => wearing(worn, 'leaving'))!.at - shown - 8000)).toBeLessThan(1000);
 });
 
-test('a failure says what failed, then why, in the server\'s words', async () => {
-  toastFailure('Couldn\'t pin it')(new ApiFailure(502, 'provider', 'Gmail didn\'t answer in time.'));
-  await expect.element(toast).toMatchTextContent('Couldn\'t pin it, Gmail didn\'t answer in time.');
+test('a failure says what failed, then why, in one line in the server\'s words', async () => {
+  toastFailure('Failed to pin')(new ApiFailure(502, 'provider', 'Can’t reach Setpoint.'));
+  await expect.element(toast).toMatchTextContent('Failed to pin, can’t reach Setpoint');
 });
 
 test('a failure with an action waits past its eight seconds, and goes by its action, a swipe or a newer toast', async () => {
   const run = vi.fn();
-  const fail = () => showToast('Couldn\'t send "Lease renewal"', {label: 'Open', run}, {tone: 'failed', why: 'Gmail refused it.'});
+  const fail = () => showToast('Failed to send "Lease renewal", Gmail refused it', {label: 'Open', run}, 'failed');
   const shown = Date.now();
   fail();
   advanceTo(shown + 8000 * 3);

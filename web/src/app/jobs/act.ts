@@ -11,7 +11,7 @@ export interface Said {
   // What it did: "Set to Rejected".
   done: string;
   tone?: Extract<ToastTone, 'done' | 'gone' | 'pinned'>;
-  // What failed, should it: "Couldn't set the status".
+  // What failed, should it: "Failed to set the status".
   failed: string;
   // After Undo has put things back (an item folding back in, a row coming back).
   undone?: () => void;
@@ -22,7 +22,7 @@ export async function actInPlace(send: () => Promise<JobsChangeOut>, said: Omit<
   const change = await send();
   showToast(said.done, {
     label: 'Undo',
-    run: () => void undoChange(change).then(said.undone, toastFailure('Couldn\'t undo it')),
+    run: () => void undoChange(change).then(said.undone, toastFailure('Failed to undo')),
   }, said.tone ?? 'done');
   return change;
 }

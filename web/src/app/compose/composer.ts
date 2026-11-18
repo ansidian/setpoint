@@ -69,6 +69,7 @@ import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
 import {composerHost, whenPlaced} from './place.ts';
+import {failureText, refusalWords} from '../../logic/providerWords.ts';
 
 /** How long after the last change a draft is saved. */
 export const DRAFT_SAVE_MS = 600;
@@ -174,7 +175,7 @@ async function saveOwed(draftId: number, keepalive: boolean) {
     if (error instanceof ApiFailure && (error.status === 404 || error.code === 'draft_held' || error.code === 'draft_sending')) return;
     // Owed again, under anything queued meanwhile, which is newer.
     owed.set(draftId, changes);
-    saveErrors.set(draftId, failureLine('Couldn\'t save the draft', error));
+    saveErrors.set(draftId, failureLine('Failed to save the draft', error));
     notify();
     throw error;
   }
@@ -302,7 +303,7 @@ export function startComposer(input: DraftCreateInput, {floating = input.kind ==
       // Closed with nothing written: there's nothing to say.
       return;
     }
-    toastFailure(input.kind === 'forward' ? 'Couldn\'t start the forward' : input.kind === 'new' ? 'Couldn\'t start a message' : 'Couldn\'t start the reply')(error);
+    toastFailure(input.kind === 'forward' ? 'Failed to start the forward' : input.kind === 'new' ? 'Failed to start the message' : 'Failed to start the reply')(error);
   });
 }
 
@@ -513,7 +514,7 @@ export function openDraft(draftId: number) {
     setComposers(composers.filter(one => one !== pane).map(one => (one === target ? {...one, floating: false, minimized: false, touched: ++touches} : one)));
     return;
   }
-  void loadDraft(draftId).then(draft => show(draft), toastFailure('Couldn\'t open the draft'));
+  void loadDraft(draftId).then(draft => show(draft), toastFailure('Failed to open the draft'));
 }
 
 /**
@@ -548,7 +549,7 @@ export function switchKind(current: DraftOut, kind: Exclude<DraftKind, 'new'>, {
     composers = without(current.id);
     void discardDraft(current.id, messageId).catch(() => {}).finally(() => discarded.delete(current.id));
     show(editSubject ? {...next, to, cc, bcc} : next, {floating, subject: editSubject});
-  }).catch(toastFailure(kind === 'forward' ? 'Couldn\'t start the forward' : 'Couldn\'t start the reply'));
+  }).catch(toastFailure(kind === 'forward' ? 'Failed to start the forward' : 'Failed to start the reply'));
 }
 
 /**
@@ -598,7 +599,7 @@ export function send(draft: DraftOut) {
       reopen(back, {floating});
     }, (error: unknown) => {
       if (error instanceof ApiFailure && error.code === 'draft_not_held') showToast('Too late to undo, it\'s already sending', null, 'failed');
-      else if (!(error instanceof ApiFailure && error.code === 'draft_sending')) toastFailure('Couldn\'t undo it')(error);
+      else if (!(error instanceof ApiFailure && error.code === 'draft_sending')) toastFailure('Failed to undo')(error);
     });
   };
   toastId = showToast('Sending', {label: 'Undo', run: undo});
@@ -607,7 +608,7 @@ export function send(draft: DraftOut) {
     // comes back with what the user had, the server still owed what didn't land.
     sending.delete(draft.id);
     dismissToast(toastId);
-    toastFailure('Couldn\'t send it')(error);
+    toastFailure('Failed to send')(error);
     void loadDraft(draft.id).then(back => reopen(back, {floating}), () => {});
   });
 }
@@ -627,8 +628,8 @@ export function watchSends(drafts: DraftRowOut[] | undefined) {
     if (row.send_state !== 'failed') continue;
     sending.delete(id);
     void loadDraft(id).then(draft => {
-      const words = draft.send?.error ?? 'the provider refused it';
-      showToast(`Couldn't send ${subject ? `"${subject}"` : 'it'}`, {label: 'Open', run: () => reopen(draft)}, {tone: 'failed', why: words});
+      const words = refusalWords(null, draft.send?.error ?? null, 'the provider refused it');
+      showToast(failureText(subject ? `Failed to send "${subject}"` : 'Failed to send', words), {label: 'Open', run: () => reopen(draft)}, 'failed');
       if (draft.message_id !== null && docked() === null && !byDraft(draft.id)) {
         const route = currentRoute();
         if ((route.page === 'inbox' || route.page === 'sent') && route.open === draft.message_id) show(draft, {caret: false});
@@ -746,7 +747,7 @@ export function popOutDrafts(ids: number[]) {
       else if (up) popOut(id);
       else if (load.value && !discarded.has(id)) show(load.value, {floating: true, caret: at === ids.length - 1});
     });
-    if (failed) toastFailure(counted(failed, 'Couldn\'t open the draft', n => `Couldn't open ${n} drafts`))(failure);
+    if (failed) toastFailure(counted(failed, 'Failed to open the draft', n => `Failed to open ${n} drafts`))(failure);
   });
 }
 
@@ -797,7 +798,7 @@ export async function helpMeWrite(draftId: number, input: {prompt: string; body:
   try {
     blocks = (await writeDraft(draftId, input)).blocks;
   } catch (error) {
-    writes.set(draftId, {working: false, error: failureLine('Couldn\'t write it', error)});
+    writes.set(draftId, {working: false, error: failureLine('Failed to write', error)});
     notify();
     return;
   }
@@ -881,14 +882,14 @@ export function attachFiles(draftId: number, files: File[], originals: {id: numb
     const held = filesNow(draftId, {files: []});
     const total = attachmentsTotal([...held, ...uploadsOf(draftId).map(one => ({size_bytes: one.size}))], originals, removed) + file.size;
     if (total > ATTACHMENTS_MAX_BYTES) {
-      setFileError(draftId, `Couldn't attach ${file.name}, attachments can total 25 MB, and these would be ${megabytes(total)}.`);
+      setFileError(draftId, failureText(`Failed to attach ${file.name}`, `attachments can total 25 MB and these would be ${megabytes(total)}`));
       continue;
     }
     const upload: Upload = {key: ++uploadKeys, name: file.name, size: file.size};
     uploads.set(draftId, [...uploadsOf(draftId), upload]);
     notify();
     const done = uploadDraftFile(draftId, file).then(() => true, (error: unknown) => {
-      setFileError(draftId, failureLine(`Couldn't attach ${file.name}`, error));
+      setFileError(draftId, failureLine(`Failed to attach ${file.name}`, error));
       return false;
     }).finally(() => {
       uploads.set(draftId, uploadsOf(draftId).filter(one => one !== upload));
@@ -903,7 +904,7 @@ export function attachFiles(draftId: number, files: File[], originals: {id: numb
 export function removeFile(draftId: number, fileId: number) {
   setFileError(draftId, null);
   void removeDraftFile(draftId, fileId).catch((error: unknown) => {
-    setFileError(draftId, failureLine('Couldn\'t remove the file', error));
+    setFileError(draftId, failureLine('Failed to remove the file', error));
     void loadDraft(draftId).then(draft => setCached(draftPath(draftId), draft), () => {});
   });
 }

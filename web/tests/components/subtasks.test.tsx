@@ -86,7 +86,7 @@ test('a check Todoist refused stays in place and says so: its words as the tip, 
   const failed = {id: 9, target: 'item', target_id: 23, kind: 'item_complete', state: 'failed', provider: 'todoist', provider_message: 'Insufficient permissions (403 Forbidden)', retry: null, can_retry: true, can_move_back: true, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: '2026-10-07T16:00:01.000Z'} as const;
   const refused = {...CHECKLIST[2]!, done: true, command: failed};
   await card(task({subtasks: CHECKLIST.map(one => (one.id === 23 ? refused : one))}), offered);
-  await expect.element(page.getByRole('img', {name: 'Failed'})).toHaveAttribute('data-tip', 'Insufficient permissions (403 Forbidden)');
+  await expect.element(page.getByRole('img', {name: 'Failed'})).toHaveAttribute('data-tip', 'Todoist is refusing Setpoint (insufficient permissions).');
   expect(document.querySelector('[aria-label="Reopen Proofread"], [aria-label="Complete Proofread"]')).toBeNull();
   await page.getByRole('button', {name: 'Try again: Proofread'}).click();
   expect(offered.settleSubtask).toHaveBeenLastCalledWith(refused, 'retry');

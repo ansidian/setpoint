@@ -21,7 +21,7 @@ import {openSettings} from '../settings/store.ts';
 import {askSignOut} from '../signOut.ts';
 import {isRail, toggleSidebar} from '../sidebarRail.ts';
 import {setThemeChoice, useThemeChoice} from '../theme.ts';
-import {showToast} from '../toast.ts';
+import {toastFailure} from '../toast.ts';
 import {toInbox} from '../toInbox.ts';
 import {offered} from './commands.ts';
 import type {Command, Offer} from './commands.ts';
@@ -65,7 +65,7 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
     {id: 'new-event', section: 'more', label: 'New event', icon: 'event', hint: 'C', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null}})},
     {id: 'new-task', section: 'more', label: 'New task', icon: 'task_alt', hint: 'D', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'task', message: null}})},
     {id: 'mark-all-read', section: 'more', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I',
-      run: () => void markAllRead().catch((error: Error) => showToast(error.message, null, 'failed'))},
+      run: () => void markAllRead().catch(toastFailure('Failed to mark all read'))},
     ...SETTINGS_SECTIONS.map(({page, keywords}): Command => ({
       id: `settings-${page}`, section: 'more', label: `Settings › ${SETTINGS_NAV[page].label}`, icon: SETTINGS_NAV[page].icon, keywords, run: () => openSettings(page),
     })),

@@ -566,7 +566,7 @@ test('a new task\'s × takes its date off, its time and repeat with it; Todoist 
     await line.pressSequentially('Renew passport');
     await page.getByRole('button', {name: 'Remove due date'}).click();
     await page.getByRole('button', {name: 'Create task'}).click();
-    await page.locator('.toast', {hasText: 'Couldn\'t create Renew passport, Insufficient permissions (403 Forbidden)'}).getByRole('button', {name: 'Try again'}).waitFor();
+    await page.locator('.toast', {hasText: 'Failed to create Renew passport, Todoist is refusing Setpoint (insufficient permissions)'}).getByRole('button', {name: 'Try again'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -121,8 +121,8 @@ export const draftOffers = (rows: Pick<DraftRowOut, 'send_state'>[]): {discard: 
 export const discardedLine = (n: number) => counted(n, 'Draft discarded', m => `Discarded ${m} drafts`);
 
 /** What the server refused to discard, before the reason. */
-export const discardFailedLine = (n: number) => counted(n, 'Couldn\'t discard the draft', m => `Couldn't discard ${m} drafts`);
+export const discardFailedLine = (n: number) => counted(n, 'Failed to discard', m => `Failed to discard ${m}`);
 
 /** Undo, when not every draft came back: how many did, of how many it was starting again. */
 export const broughtBackLine = (back: number, of: number) => (back > 0 ? `Brought back ${back} of ${of} drafts`
-  : counted(of, 'Couldn\'t bring the draft back', () => 'Couldn\'t bring the drafts back'));
+  : counted(of, 'Failed to bring it back', () => 'Failed to bring them back'));

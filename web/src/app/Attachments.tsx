@@ -19,6 +19,7 @@ import {openContextMenu} from './ContextMenu.tsx';
 import {usePhone} from './Phone.tsx';
 import {PreviewSkeleton} from './states/Skeletons.tsx';
 import {failureLine} from './toast.ts';
+import {failureText} from '../logic/providerWords.ts';
 
 const CSV_ROWS = 500;
 
@@ -83,7 +84,7 @@ function Invitation({messageId, file}: {messageId: number; file: AttachmentOut})
       landIcs(file.filename, read, timeZone());
     }, (error: unknown) => {
       setReading(false);
-      setProblem(error instanceof ApiFailure && error.code === 'invalid_input' ? error.message : failureLine(`Couldn't read ${file.filename}`, error));
+      setProblem(error instanceof ApiFailure && error.code === 'invalid_input' ? error.message : failureLine(`Failed to read ${file.filename}`, error));
     });
   };
   return (
@@ -155,7 +156,7 @@ function Preview({messageId, file, kind, onClose}: {messageId: number; file: Att
       </div>
       <div className="preview-body">
         {loaded.state === 'loading' && <PreviewSkeleton />}
-        {loaded.state === 'failed' && <div className="preview-line">Couldn’t load the preview, {loaded.message}</div>}
+        {loaded.state === 'failed' && <div className="preview-line">{failureText('Failed to load the preview', loaded.message)}</div>}
         {loaded.state === 'ready' && kind === 'pdf' && <iframe className="preview-pdf" title={file.filename} src={loaded.url} />}
         {loaded.state === 'ready' && kind === 'image' && <img className="preview-image" alt={file.filename} src={loaded.url} />}
         {loaded.state === 'ready' && kind === 'csv' && (

@@ -264,7 +264,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   useEffect(() => {
     if (open === null || open === lastOpened) return;
     lastOpened = open;
-    void openMessage(open).catch(toastFailure('Couldn\'t mark it read'));
+    void openMessage(open).catch(toastFailure('Failed to mark read'));
   }, [open]);
 
   // A code's row leaves the Inbox at its expiry: load it again then.
@@ -301,7 +301,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     }
     // On the phone the reader slides in over the list. The desktop's sits beside it.
     slide(phoneSlide(phone, open, id), () => go({open: id}));
-    void openMessage(id).catch(toastFailure('Couldn\'t mark it read'));
+    void openMessage(id).catch(toastFailure('Failed to mark read'));
   }
 
   /**
@@ -427,7 +427,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       }, counted(can.length, 'Marked Done', n => `Marked ${n} Done`), one => {
         search.mark(one, {done: false});
         return () => setDone(one, false);
-      }, n => counted(n, 'Couldn\'t mark it Done', m => `Couldn't mark ${m} Done`), n => counted(n, 'Couldn\'t undo Done', m => `Couldn't undo Done on ${m}`));
+      }, n => counted(n, 'Failed to mark Done', m => `Failed to mark ${m} Done`), n => counted(n, 'Failed to undo Done', m => `Failed to undo Done on ${m}`));
     },
     trash: (ids: number[]) => {
       // Hidden at once, every one, rather than as each is answered.
@@ -438,7 +438,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       }), counted(ids.length, 'Moved to Trash', n => `Moved ${n} to Trash`), one => {
         untrashing(one);
         return () => untrashMessage(one);
-      }, n => counted(n, 'Couldn\'t move it to Trash', m => `Couldn't move ${m} to Trash`), n => counted(n, 'Couldn\'t bring it back from Trash', m => `Couldn't bring ${m} back from Trash`));
+      }, n => counted(n, 'Failed to move to Trash', m => `Failed to move ${m} to Trash`), n => counted(n, 'Failed to bring back', m => `Failed to bring ${m} back`));
     },
     // Pin, or Unpin when every one is pinned already.
     pin: (ids: number[]) => {
@@ -450,7 +450,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       const unseen = pinning && !phone && !shelfInView();
       void changeEach(changing, id => setPinned(id, pinning)).then(outcomes => {
         const refused = refusals(changing, outcomes);
-        if (refused.length) toastFailure(pinning ? counted(refused.length, 'Couldn\'t pin it', n => `Couldn't pin ${n}`) : counted(refused.length, 'Couldn\'t unpin it', n => `Couldn't unpin ${n}`))(refused[0]!.error);
+        if (refused.length) toastFailure(pinning ? counted(refused.length, 'Failed to pin', n => `Failed to pin ${n}`) : counted(refused.length, 'Failed to unpin', n => `Failed to unpin ${n}`))(refused[0]!.error);
         // Only those still pinned once the last P is in: a pin taken back before it was answered says nothing.
         const pinned = changing.filter((_, at) => {
           const outcome = outcomes[at]!;
@@ -458,7 +458,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         });
         if (unseen && pinned.length) {
           showToast(counted(pinned.length, 'Pinned', n => `Pinned ${n}`), {label: 'Undo', run: () => void changeEach(pinned, id => setPinned(id, false)).then(results => {
-            if (results.some(result => result.status === 'rejected')) toastFailure('Couldn\'t unpin it')(results.find(result => result.status === 'rejected')!.reason);
+            if (results.some(result => result.status === 'rejected')) toastFailure('Failed to unpin')(results.find(result => result.status === 'rejected')!.reason);
           })});
         }
       });
@@ -484,7 +484,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (open !== null && unread.includes(open)) close();
       void changeEach(unread, id => markUnread(id)).then(outcomes => {
         const refused = refusals(unread, outcomes);
-        if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it unread', n => `Couldn't mark ${n} unread`))(refused[0]!.error);
+        if (refused.length) toastFailure(counted(refused.length, 'Failed to mark unread', n => `Failed to mark ${n} unread`))(refused[0]!.error);
       });
     },
     // The unread ones of `ids` read, in place: they stay where they are and Attention's count doesn't
@@ -495,7 +495,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (searching) for (const id of unread) search.mark(id, {unread: false});
       void changeEach(unread, id => markRead(id)).then(outcomes => {
         const refused = refusals(unread, outcomes);
-        if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it read', n => `Couldn't mark ${n} read`))(refused[0]!.error);
+        if (refused.length) toastFailure(counted(refused.length, 'Failed to mark read', n => `Failed to mark ${n} read`))(refused[0]!.error);
       });
       return unread;
     },
@@ -513,7 +513,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         if (searching) for (const id of unread) search.mark(id, {unread: true});
         void changeEach(unread, id => markUnread(id)).then(outcomes => {
           const refused = refusals(unread, outcomes);
-          if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it unread', n => `Couldn't mark ${n} unread`))(refused[0]!.error);
+          if (refused.length) toastFailure(counted(refused.length, 'Failed to mark unread', n => `Failed to mark ${n} unread`))(refused[0]!.error);
         });
       };
       undos.push(back);
@@ -575,7 +575,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         return;
       }
       const ids = markAllReadIds(withHeld(groups ?? [], held), allRows);
-      void markAllRead().catch(toastFailure('Couldn\'t mark all as read'));
+      void markAllRead().catch(toastFailure('Failed to mark all read'));
       if (!ids.length) return;
       // Undo, from the toast or ⌘Z as Done's and Trash's are, marks those same emails unread,
       // at once, before the server's list has them.
@@ -585,7 +585,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         if (at < 0) return;
         undos.splice(at, 1);
         dismissToast(toast);
-        ids.forEach(id => void markUnread(id).catch((error: Error) => showToast(error.message, null, 'failed')));
+        ids.forEach(id => void markUnread(id).catch(toastFailure('Failed to mark unread')));
       };
       undos.push(back);
       toast = showToast(`Marked ${ids.length} as read`, {label: 'Undo', run: back, key: '⌘Z'});
@@ -688,7 +688,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // The days' next page on its way, as the list nears its end.
   const allMore = allPages.length > 1 && allPages.at(-1) === undefined;
   const selectedSet = useMemo(() => new Set(selected), [selected]);
-  const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'));
+  const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Failed to unpin'));
 
   /**
    * A right-click on an email's row (Attention, the shelf, a day, search's results or Alfred's
@@ -781,7 +781,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin}
             onCodeCopied={id => on.read([id])} onAnswer={(answer, yes) => {
               setAnswered(new Set([...answered, answer.id]));
-              void answerPrompt(answer.id, yes).catch(toastFailure('Couldn\'t answer it'));
+              void answerPrompt(answer.id, yes).catch(toastFailure('Failed to answer'));
             }} />
         )}
         {open !== null && (

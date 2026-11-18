@@ -146,7 +146,7 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       // The grid takes the width. The day's pane isn't drawn, and its health line sits atop the grid.
       assert.equal((await grid()).width, width - layout.rail, `${width}: the grid`);
       assert.equal(await page.locator('.rpane').count(), 0);
-      assert.match((await page.locator('.cal-health .rp-health').textContent())!, /^Todoist, as of /);
+      assert.match((await page.locator('.cal-health .rp-health').textContent())!, /^Todoist as of /);
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: Calendar's header`);
       // The editor lies over the grid, which keeps its width. Where the pane lies and its shadow are
       // by eye.

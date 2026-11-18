@@ -183,7 +183,7 @@ test('a block moves by drag in 15-minute steps to another day, and its bottom ed
     // is two trips through the dev provider (600 ms each) and the wait between them.
     await until('the server has it undone', () => setpoint.api<{items: {title: string; ends_at: string | null; command: unknown}[]}>('GET', '/items?from=2026-10-08&to=2026-10-09'),
       list => list.items.some(item => item.title === 'Dentist' && item.ends_at === '2026-10-08T23:00:00.000Z' && !item.command), 10_000);
-    assert.equal(await page.locator('.toast', {hasText: 'Couldn\'t'}).count(), 0);
+    assert.equal(await page.locator('.toast', {hasText: 'Failed to'}).count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

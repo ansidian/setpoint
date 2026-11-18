@@ -254,12 +254,12 @@ describe('multi-select', () => {
 describe('the failed card (board 19b)', () => {
   const moved = {...dinner, starts_at: at('2026-10-10', '19:00'), ends_at: at('2026-10-10', '21:00'), command: command({previous: {all_day: false, starts_at: dinner.starts_at, ends_at: dinner.ends_at, start_date: null, end_date: null, due_date: null, due_at: null}})};
   test.each([
-    ['moved to Saturday', moved, 'Couldn\'t move Dinner with Sam', 'From Fri, Oct 9'],
-    ['later the same day', {...moved, starts_at: at('2026-10-09', '20:00'), ends_at: at('2026-10-09', '22:00')}, 'Couldn\'t move Dinner with Sam', 'From 7:00 – 9:00 PM'],
-    ['renamed', {...dinner, command: command({previous: {all_day: false, starts_at: dinner.starts_at, ends_at: dinner.ends_at, start_date: null, end_date: null, due_date: null, due_at: null}})}, 'Couldn\'t change Dinner with Sam', null],
-    ['created', {...dinner, command: command({kind: 'item_create'})}, 'Couldn\'t create Dinner with Sam', null],
-    ['deleted', {...dinner, command: command({kind: 'item_delete'})}, 'Couldn\'t delete Dinner with Sam', null],
-    ['completed', task('Pay rent', '2026-10-07', {command: command({kind: 'item_complete', provider: 'todoist'})}), 'Couldn\'t complete Pay rent', null],
+    ['moved to Saturday', moved, 'Failed to move Dinner with Sam', 'From Fri, Oct 9'],
+    ['later the same day', {...moved, starts_at: at('2026-10-09', '20:00'), ends_at: at('2026-10-09', '22:00')}, 'Failed to move Dinner with Sam', 'From 7:00 – 9:00 PM'],
+    ['renamed', {...dinner, command: command({previous: {all_day: false, starts_at: dinner.starts_at, ends_at: dinner.ends_at, start_date: null, end_date: null, due_date: null, due_at: null}})}, 'Failed to change Dinner with Sam', null],
+    ['created', {...dinner, command: command({kind: 'item_create'})}, 'Failed to create Dinner with Sam', null],
+    ['deleted', {...dinner, command: command({kind: 'item_delete'})}, 'Failed to delete Dinner with Sam', null],
+    ['completed', task('Pay rent', '2026-10-07', {command: command({kind: 'item_complete', provider: 'todoist'})}), 'Failed to complete Pay rent', null],
   ])('%s', (_, one, title, from) => {
     expect(failedTitle(one)).toBe(title);
     expect(failedFrom(one, zone)).toBe(from);

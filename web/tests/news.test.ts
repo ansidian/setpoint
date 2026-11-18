@@ -357,9 +357,9 @@ describe('the first run\'s line (29b), a section\'s line, and a section with not
   });
 
   test.each([
-    ['stale (the board)', 'ai', {state: 'stale', as_of: since('14:02')}, {state: 'stale', text: 'AI, as of 7:02 AM'}],
-    ['failing', 'local', {state: 'failing', as_of: '2026-10-07T04:14:00.000Z'}, {state: 'failing', text: 'Local, as of 9:14 PM'}],
-    ['never worked', 'tech', {state: 'failing', as_of: null}, {state: 'failing', text: 'Tech, not checked yet'}],
+    ['stale (the board)', 'ai', {state: 'stale', as_of: since('14:02')}, {state: 'stale', text: 'AI as of 7:02 AM'}],
+    ['failing', 'local', {state: 'failing', as_of: '2026-10-07T04:14:00.000Z'}, {state: 'failing', text: 'Local as of 9:14 PM'}],
+    ['never worked', 'tech', {state: 'failing', as_of: null}, {state: 'failing', text: 'Tech not checked yet'}],
     ['healthy: no line', 'general', null, null],
   ] as const)('a section\'s line: %s', (_name, section, health, expected) => {
     expect(sectionLine(section, health, now, zone)).toEqual(expected);
@@ -401,11 +401,11 @@ describe('Settings › News (30a)', () => {
     ({state: 'healthy' as const, as_of: since('16:10'), reason: null, last_check_at: since('16:10'), failing_since: null, ...fields});
   test.each([
     ['checked (the board)', health({}), {tone: 'muted', text: 'Checked 9:10 AM', warn: false, title: null, kind: 'healthy'}],
-    ['FOX 11 failing, its code standing for the words (the board)', health({state: 'failing', reason: '404 Not Found', as_of: since('12:47'), failing_since: since('13:02')}),
-      {tone: 'caution', text: 'Failing, 404 since 6:02 AM', warn: true, title: '404 Not Found', kind: 'failing'}],
+    ['FOX 11 failing on a 404, its code in the tip (the board)', health({state: 'failing', reason: '404 Not Found', as_of: since('12:47'), failing_since: since('13:02')}),
+      {tone: 'caution', text: 'Refusing Setpoint since 6:02 AM', warn: true, title: '404 Not Found', kind: 'failing'}],
     ['failing in words', health({state: 'failing', reason: 'The page had no articles.', failing_since: since('13:02')}),
-      {tone: 'caution', text: 'Failing since 6:02 AM, The page had no articles.', warn: true, title: 'The page had no articles.', kind: 'failing'}],
-    ['failing, not known since when', health({state: 'failing', reason: '503 Service Unavailable'}), {tone: 'caution', text: 'Failing, 503', warn: true, title: '503 Service Unavailable', kind: 'failing'}],
+      {tone: 'caution', text: 'The page had no articles', warn: true, title: 'The page had no articles.', kind: 'failing'}],
+    ['failing, not known since when', health({state: 'failing', reason: '503 Service Unavailable'}), {tone: 'caution', text: 'Down', warn: true, title: '503 Service Unavailable', kind: 'failing'}],
     ['checks stopped', health({state: 'stale', as_of: '2026-10-07T04:14:00.000Z'}), {tone: 'muted', text: 'Checks stopped, as of 9:14 PM', warn: false, title: null, kind: 'stale'}],
     ['not read yet (no key, no home)', null, {tone: 'muted', text: 'Not checked yet', warn: false, title: null, kind: null}],
   ] as const)('a source\'s state: %s', (_name, value, expected) => {

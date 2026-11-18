@@ -4,7 +4,7 @@
 //   needs-reconnect  17, 19a: Business's Gmail refused its credentials ("Business needs sign-in")
 //   stale-personal   17: Personal's checks stopped at 9:14 PM yesterday
 //   stale-icloud     19a: iCloud's checks stopped at 8:40 AM
-//   failing-work     the states' checks: Work's last check failed ("Gmail answered 503")
+//   failing-work     the states' checks: Work's last check failed (Gmail down, 503)
 //   stale-todoist    19b: Todoist's checks stopped at 8:40 AM ("Todoist, as of 8:40 AM")
 //   failing-weather  the calendar's checks: Weather's last check failed at 9:00 AM
 //   todoist-off      Settings' checks: Todoist isn't connected, a source with no token
@@ -84,7 +84,7 @@ export function failingWeather({db}: OpenDatabase) {
 
 export function failingWork({db}: OpenDatabase) {
   const source = mailSource(db, 'Work');
-  db.update(t.sources).set({lastCheckAt: zoned('2026-10-07', '09:11'), lastErrorAt: zoned('2026-10-07', '09:11'), lastSuccessAt: zoned('2026-10-07', '09:06'), lastError: 'Gmail answered 503.'})
+  db.update(t.sources).set({lastCheckAt: zoned('2026-10-07', '09:11'), lastErrorAt: zoned('2026-10-07', '09:11'), lastSuccessAt: zoned('2026-10-07', '09:06'), lastError: 'Backend Error (503 Service Unavailable)'})
     .where(eq(t.sources.id, source.id)).run();
 }
 

@@ -36,9 +36,14 @@ describe('health and states', () => {
   test.each([
     ['healthy', health({last_check_at: TODAY_840}), null],
     ['needs reconnect (its bar says so)', health({state: 'needs_reconnect'}), null],
-    ['stale', health({state: 'stale', as_of: YESTERDAY_914}), {state: 'stale', text: 'Personal, as of 9:14 PM'}],
-    ['stale, never checked', health({state: 'stale'}), {state: 'stale', text: 'Personal, not checked yet'}],
-    ['failing', health({state: 'failing', as_of: TODAY_840, reason: 'Gmail answered 503.'}), {state: 'failing', text: 'Personal, as of 8:40 AM, Gmail answered 503.'}],
+    ['stale', health({state: 'stale', as_of: YESTERDAY_914}), {state: 'stale', text: 'Personal as of 9:14 PM', tip: 'Personal as of 9:14 PM'}],
+    ['stale, never checked', health({state: 'stale'}), {state: 'stale', text: 'Personal not checked yet', tip: 'Personal not checked yet'}],
+    ['failing, a status and a label', health({state: 'failing', as_of: TODAY_840, reason: 'Backend Error (503 Service Unavailable)'}),
+      {state: 'failing', text: 'Personal is down (backend error) as of 8:40 AM', tip: 'Personal is down (backend error) as of 8:40 AM · 503 Service Unavailable'}],
+    ['failing, a sentence of its own', health({state: 'failing', as_of: TODAY_840, reason: 'Couldn\'t reach Gmail (ENOTFOUND).'}),
+      {state: 'failing', text: 'Couldn\'t reach Gmail for Personal as of 8:40 AM', tip: 'Couldn\'t reach Gmail for Personal as of 8:40 AM · ENOTFOUND'}],
+    ['failing, a sentence that names it', health({state: 'failing', as_of: TODAY_840, reason: 'Personal\'s mailbox is full.'}),
+      {state: 'failing', text: 'Personal\'s mailbox is full as of 8:40 AM', tip: 'Personal\'s mailbox is full as of 8:40 AM'}],
   ] as const)('the line for %s', (_, value, line) => expect(healthLine('Personal', value, now, zone)).toEqual(line));
 
   test('the Inbox lists each stale or failing account in order, keyed by its name, with the source Check now checks', () => {
@@ -46,7 +51,7 @@ describe('health and states', () => {
       {label: 'Business', source_id: 1, health: health({state: 'needs_reconnect'})},
       {label: 'Personal', source_id: 2, health: health({state: 'stale', as_of: YESTERDAY_914})},
       {label: 'iCloud', source_id: 5, health: health({state: 'failing', as_of: TODAY_840, reason: 'IMAP said no.'})},
-    ], now, zone).map(line => [line.key, line.source, line.text])).toEqual([['Personal', 2, 'Personal, as of 9:14 PM'], ['iCloud', 5, 'iCloud, as of 8:40 AM, IMAP said no.']]);
+    ], now, zone).map(line => [line.key, line.source, line.text])).toEqual([['Personal', 2, 'Personal as of 9:14 PM'], ['iCloud', 5, 'IMAP said no for iCloud as of 8:40 AM']]);
   });
 
   // The calendar's right pane, its sources' lines in order; Google Calendar's accounts as one, the worst.
@@ -56,13 +61,13 @@ describe('health and states', () => {
   test.each([
     ['every source healthy', [source(1, 'google_calendar', {}), source(2, 'todoist', {}), source(3, 'weather', {})], []],
     ['none at all', [], []],
-    ['Todoist stale (board 19b)', [source(1, 'google_calendar', {}), source(2, 'todoist', {state: 'stale', as_of: TODAY_840}), source(3, 'weather', {})], ['stale Todoist, as of 8:40 AM']],
+    ['Todoist stale (board 19b)', [source(1, 'google_calendar', {}), source(2, 'todoist', {state: 'stale', as_of: TODAY_840}), source(3, 'weather', {})], ['stale Todoist as of 8:40 AM']],
     ['one Google account failing, the other healthy', [source(1, 'google_calendar', {}), source(4, 'google_calendar', {state: 'failing', as_of: TODAY_840, reason: 'Backend Error (503 Service Unavailable)'})],
-      ['failing Google Calendar, as of 8:40 AM, Backend Error (503 Service Unavailable)']],
+      ['failing Google Calendar is down (backend error) as of 8:40 AM']],
     ['weather failing, Google Calendar stale, a mail source ignored', [
       source(3, 'weather', {state: 'failing', as_of: TODAY_840, reason: 'Pirate Weather answered 500 Internal Server Error.'}), source(1, 'google_calendar', {state: 'stale', as_of: YESTERDAY_914}),
       source(5, 'gmail', {state: 'stale', as_of: YESTERDAY_914}),
-    ], ['stale Google Calendar, as of 9:14 PM', 'failing Weather, as of 8:40 AM, Pirate Weather answered 500 Internal Server Error.']],
+    ], ['stale Google Calendar as of 9:14 PM', 'failing Pirate Weather answered 500 Internal Server Error as of 8:40 AM']],
     ['Google Calendar needing sign-in has no line here (Settings and the Inbox say so)', [source(1, 'google_calendar', {state: 'needs_reconnect'})], []],
   ] as const)('the calendar\'s lines: %s', (_, sources, lines) => {
     expect(calendarHealthLines([...sources], now, zone).map(line => `${line.state} ${line.text}`)).toEqual(lines);
@@ -84,7 +89,8 @@ describe('health and states', () => {
     [health({state: 'healthy', last_check_at: '2026-10-07T16:11:00.000Z'}), {tone: 'muted', text: 'Checked 9:11 AM', reconnect: false, kind: 'healthy'}],
     [health({state: 'healthy'}), {tone: 'muted', text: 'Not checked yet', reconnect: false, kind: null}],
     [health({state: 'stale', as_of: YESTERDAY_914}), {tone: 'muted', text: 'Checks stopped, as of 9:14 PM', reconnect: false, kind: 'stale'}],
-    [health({state: 'failing', reason: 'Gmail answered 503.'}), {tone: 'caution', text: 'Gmail answered 503.', reconnect: false, kind: 'failing'}],
+    [health({state: 'failing', reason: 'Backend Error (503 Service Unavailable)'}), {tone: 'caution', text: 'Down (backend error)', reconnect: false, kind: 'failing'}],
+    [health({state: 'failing', reason: 'Gmail didn\'t answer in time.'}), {tone: 'caution', text: 'Gmail didn\'t answer in time', reconnect: false, kind: 'failing'}],
     [health({state: 'needs_reconnect', reason: 'invalid_grant'}), {tone: 'caution', text: 'Needs sign-in', reconnect: true, kind: 'needs_reconnect'}],
   ])('Settings › Accounts writes %j as %j', (value, state) => expect(sourceState(value, now, zone)).toEqual(state));
 

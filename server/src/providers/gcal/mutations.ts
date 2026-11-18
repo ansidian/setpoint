@@ -111,7 +111,9 @@ async function setColour(store: Store, api: GoogleCalendarApi, command: CommandR
     // A consent without calendar-list write (an older consent) refuses only this
     // optional write. It fails the colour in place, not the account (no needs reconnect).
     if (error instanceof ProviderError && error.kind === 'auth' && error.status === 403) {
-      throw new ProviderError('permanent', `${error.message}, Reconnect this Google account in Settings › Accounts to allow colour changes`, {status: 403});
+      // Google's words, then what to do, then the status, as the provider's messages end.
+      const words = error.message.replace(/\s*\(\d{3}[^()]*\)$/, '');
+      throw new ProviderError('permanent', `${words} Reconnect this Google account in Settings › Accounts to allow colour changes. (403 Forbidden)`, {status: 403});
     }
     throw error;
   }

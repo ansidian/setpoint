@@ -245,7 +245,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   colour and glyph say what happened: done `good` `check`, marked read `good` `mark_email_read`,
   Trash, deleted and discarded `alert` `delete`, Sending `accent` `send`, a pin `sunGlyph` `keep`,
   a failure `alert` `error`, any other line `ink2` with a glyph that fits (Copied `content_copy`,
-  otherwise `info`). A failure stays 8 seconds and stacks what failed over why (12.5 px `ink2`),
+  otherwise `info`). A failure stays 8 seconds as one line, wrapping at
   380 px at most, with an `alert` edge. A failure with an action (Open, Try again) and a confirm
   (Sign out) wait for an answer, with no ring; a confirm has a quiet Cancel (Esc) and a solid `ink`
   action (↵), and takes those keys outside a field. The phone's toast is as it was: `cardOn`, a bare
@@ -270,3 +270,15 @@ All" (stacked under the mark); the day pane's empty day is two dashed ghost rows
 day whose items are only hidden, "4 hidden · Show all". Each
 leads with its glyph in `ink3`, 20 px and 12 px before the words, or 16 px and 8 px in a row 44 px or
 shorter. The UI says "Done".
+
+A provider's trouble reads as a sentence, never a list of name, time and words. A provider's full
+sentence stands alone ("The calendar is read-only."). Otherwise the status code picks the words
+(5xx "is down", 429 "is limiting requests", another refusal "is refusing Setpoint", no answer
+"can't be reached") and its own words follow in brackets, first letter lowered, unless they only
+repeat the code: "Todoist is down (scheduled maintenance) as of 7:26 PM". A source that is only
+stale reads "Todoist as of 9:14 PM"; a Settings row, which names its source, "Down (scheduled
+maintenance) since 6:02 AM". The status code goes in the tooltip. A refusal shown beside what failed
+says only why. Any other failure line reads "Failed to <verb>, <reason>": "Failed to pin, can't
+reach Setpoint", naming what failed only where it says which or arrives later ("Failed to send
+"Lunch Friday", …", "Failed to mark 3 read, …"); the reason loses its last full stop and its first
+capital, unless it starts with a name.

@@ -325,7 +325,7 @@ describe('the toast\'s tone by its words (its colour and glyph: done, read, take
     ['Marked as read', 'read'], ['Marked 5 as read', 'read'],
     ['Moved to Trash', 'gone'], ['Moved 3 to Trash', 'gone'], ['Deleted Dentist', 'gone'], ['Draft discarded', 'gone'], ['Discarded 2 drafts', 'gone'],
     ['Sending', 'send'],
-    ['Couldn\'t pin it', 'failed'], ['Couldn’t reorder rules', 'failed'],
+    ['Failed to pin', 'failed'], ['Failed to reorder rules', 'failed'],
     // Every other line is plain.
     ['Moved Dentist to Thu, Oct 8', 'plain'], ['Reopened Pay rent', 'plain'], ['Copied 482913', 'plain'], ['Sending soon', 'plain'],
   ])('%s: %s', (text, tone) => expect(toastTone(text)).toBe(tone));
@@ -334,7 +334,7 @@ describe('the toast\'s tone by its words (its colour and glyph: done, read, take
 describe('the toast\'s glyph: its tone\'s, or for a plain line one that fits it', () => {
   test.each([
     ['done', 'Completed Pay rent', 'check'], ['read', 'Marked 5 as read', 'mark_email_read'], ['gone', 'Moved to Trash', 'delete'],
-    ['send', 'Sending', 'send'], ['pinned', 'Pinned', 'keep'], ['failed', 'Couldn\'t pin it', 'error'],
+    ['send', 'Sending', 'send'], ['pinned', 'Pinned', 'keep'], ['failed', 'Failed to pin', 'error'],
     ['plain', 'Copied 482913', 'content_copy'], ['plain', 'Save or cancel your changes first', 'info'],
   ] as const)('%s %s: %s', (tone, text, glyph) => expect(toastGlyph(tone, text)).toBe(glyph));
 });

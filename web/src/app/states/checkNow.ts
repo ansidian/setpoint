@@ -36,7 +36,7 @@ export function useCheckNow(source: {id: number; health: HealthOut} | undefined,
     run: () => {
       if (!source) return;
       setCheck({from: health});
-      void checkSource(source.id).catch((error: unknown) => setCheck({failed: failureLine('Couldn\'t check', error)}));
+      void checkSource(source.id).catch((error: unknown) => setCheck({failed: failureLine('Failed to check', error)}));
     },
   };
 }

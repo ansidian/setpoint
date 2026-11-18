@@ -340,7 +340,7 @@ test('a failed pick: it says so and Open posting opens it; Paste the posting sav
     const pane = page.locator('.jb-pane');
     const card = pane.locator('.jb-nojd');
     await card.waitFor();
-    assert.equal(await card.textContent(), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Aug 12Paste the postingLook it up');
+    assert.equal(await card.textContent(), 'Failed to read the posting · glassdoor.example gave Jobs no text on Aug 12Paste the postingLook it up');
     assert.equal(await pane.locator('.rd-tools a.tool').getAttribute('href'), link);
     // The buttons sit beside the words rather than dropping to a row of their own, and the card holds them.
     const fit = await rested(() => card.evaluate(element => {
@@ -379,7 +379,7 @@ test('a failed pick: it says so and Open posting opens it; Paste the posting sav
     // Undo while the toast offers it, its text gone with it. Pasted again for the rest.
     await undo(page);
     await card.waitFor();
-    assert.equal(await card.textContent(), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Aug 12Paste the postingLook it up');
+    assert.equal(await card.textContent(), 'Failed to read the posting · glassdoor.example gave Jobs no text on Aug 12Paste the postingLook it up');
     assert.equal(await area.count(), 0);
     await pasteButton.click();
     assert.equal(await area.inputValue(), '');
@@ -1019,7 +1019,7 @@ test('an answer refused leaves the item for good: the fold it had coming doesn\'
     // The page's clock is the check's from here, so the fold's timers run when it says.
     await page.clock.install();
     await item.getByRole('button', {name: 'Not about a job'}).click();
-    await until('the refusal', () => toast(page).textContent(), text => Boolean(text?.startsWith('Couldn\'t set it aside')));
+    await until('the refusal', () => toast(page).textContent(), text => Boolean(text?.startsWith('Failed to set aside')));
     // Nothing happened: past the 360 ms and the 180 ms fold it had coming, on the page's clock.
     await page.clock.runFor(600);
     await setpoint.idle();

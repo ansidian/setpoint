@@ -283,7 +283,7 @@ test('a failure says why under the line and leaves the body; typing a new ask cl
   await userEvent.keyboard('rewrite{Enter}');
   await expect.poll(() => fake.asks.length).toBe(1);
   fake.refuse('Anthropic: Overloaded (529)');
-  await expect.element(page.getByRole('alert')).toHaveTextContent('Couldn\'t write it, Anthropic: Overloaded (529)');
+  await expect.element(page.getByRole('alert')).toHaveTextContent('Failed to write, Anthropic: Overloaded (529)');
   expect(lines()).toEqual(['Keep me']);
   await expect.element(step('Undo')).toBeDisabled();
   await userEvent.keyboard('!');

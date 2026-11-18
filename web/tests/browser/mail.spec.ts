@@ -690,7 +690,7 @@ test('a code row: Copy puts the code on the clipboard and reads its email in pla
       navigator.clipboard.writeText = () => Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError'));
     });
     await row.locator('button', {hasText: 'Copy'}).click();
-    await page.locator('.toast', {hasText: 'Couldn\'t copy it'}).waitFor();
+    await page.locator('.toast', {hasText: 'Failed to copy'}).waitFor();
     assert.equal(await row.locator('.copy').textContent(), 'Copy');
     // At its expiry Copy and the countdown go, without a reload, and not up to 15 s later on the
     // app's clock. Its last minute counts down in seconds. The row stays in its day.
@@ -1101,7 +1101,7 @@ test('the facts card and protected line on security mail, and no Add to calendar
     assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Ask about this email']);
     await rowOf(page, 'Your recovery email was changed').click();
     await page.locator('.protected-line', {hasText: 'Protected, always stays in Attention'}).waitFor();
-    assert.equal(await page.locator('.facts .unfamiliar').textContent(), 'not a place you use');
+    assert.equal(await page.locator('.facts .unfamiliar').textContent(), '(not a location you use)');
     // Others propose.
     await rowOf(page, 'Pick a 30-minute slot').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
@@ -1137,7 +1137,7 @@ test('an attachment opens its preview over the reading pane; Esc closes the prev
     // When the provider can't serve it, the preview says so.
     await page.route('**/api/mail/messages/*/attachments/*', route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
     await card.click();
-    await page.locator('.attach-preview', {hasText: 'Couldn’t load the preview, Gmail didn\'t answer in time.'}).waitFor();
+    await page.locator('.attach-preview', {hasText: 'Failed to load the preview, Gmail didn\'t answer in time'}).waitFor();
     await page.locator('.attach-preview button[aria-label="Close preview"]').click();
     assert.equal(await page.locator('.attach-preview').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -1397,9 +1397,9 @@ test('a Pin or Mark all as read the server refuses says so in the toast, in its 
     await page.route(/\/api\/mail\/(messages\/\d+\/pin|mark-all-read)$/, route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
     await point(rowOf(page, 'Pick a 30-minute slot'));
     await page.keyboard.press('p');
-    await page.locator('.toast', {hasText: 'Couldn\'t pin it, Gmail didn\'t answer in time.'}).waitFor();
+    await page.locator('.toast', {hasText: 'Failed to pin, Gmail didn\'t answer in time'}).waitFor();
     await page.keyboard.press('Shift+I');
-    await page.locator('.toast', {hasText: 'Couldn\'t mark all as read, Gmail didn\'t answer in time.'}).waitFor();
+    await page.locator('.toast', {hasText: 'Failed to mark all read, Gmail didn\'t answer in time'}).waitFor();
     await page.unroute(/\/api\/mail\/(messages\/\d+\/pin|mark-all-read)$/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

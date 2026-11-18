@@ -55,14 +55,14 @@ export interface FactRow {
   icon: FactIcon;
   label: string;
   value: string;
-  // "· not a place you use", in `alert`.
+  // "(not a location you use)", in `alert`.
   note: string | null;
 }
 
 /**
  * The facts card (board 03): what happened, when, the device, the location and the app, each when
- * known. A place or device the user doesn't use says "not a place you use" after the location (or the
- * device when there's no location).
+ * known. A place or device the user doesn't use says "(not a location you use)" after the location, or
+ * "(not a device you use)" after the device when there's no location.
  */
 export function factRows(facts: SecurityFacts, receivedAt: string, now: number, timeZone: string): FactRow[] {
   const rows: FactRow[] = [
@@ -74,7 +74,7 @@ export function factRows(facts: SecurityFacts, receivedAt: string, now: number, 
   if (facts.app) rows.push({icon: 'lock', label: 'App', value: facts.app, note: null});
   if (facts.unfamiliar) {
     const place = rows.find(row => row.icon === 'location_on') ?? rows.find(row => row.icon === 'computer');
-    if (place) place.note = 'not a place you use';
+    if (place) place.note = place.icon === 'location_on' ? '(not a location you use)' : '(not a device you use)';
   }
   return rows;
 }

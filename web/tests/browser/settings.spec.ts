@@ -77,7 +77,7 @@ test('each source says its state: checked, stopped as of when, failing in the pr
     await openAt(page, setpoint.base, 'accounts');
     const account = (label: string) => page.locator('.settings [data-account]', {hasText: label});
     await account('Personal').locator('.state').getByText('Checks stopped, as of 9:14 PM').waitFor();
-    await account('Work').locator('.state').getByText('Gmail answered 503.').waitFor();
+    await account('Work').locator('.state').getByText('Down (backend error)').waitFor();
     // A failing row is marked, as a row needing sign-in is.
     assert.deepEqual(await page.locator('.settings .set-row.warn[data-account]').evaluateAll(rows => rows.map(row => row.textContent!.match(/^(Business|Work)/)?.[0])), ['Business', 'Work']);
     // Todoist's row in Sources, its connection's only place, and Settings › News with the seed's FOX 11 failing.
@@ -126,8 +126,8 @@ test('board 30a: Settings › News, after Calendar, its warning glyph while FOX 
     assert.deepEqual(await page.locator('.settings .set-label').allTextContents(),
       sources.sections.map(({section, sources: list}) => `${{local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'}[section]} ${list.length}`));
     // FOX 11 says it's failing, and why. The rest say when they were checked.
-    assert.equal(await fox.locator('.state').textContent(), 'Failing, 404 since 6:02 AM');
-    assert.equal(await fox.locator('.state').getAttribute('data-tip'), 'Failing, 404 since 6:02 AM, 404 Not Found', 'its words, then why');
+    assert.equal(await fox.locator('.state').textContent(), 'Refusing Setpoint since 6:02 AM');
+    assert.equal(await fox.locator('.state').getAttribute('data-tip'), 'Refusing Setpoint since 6:02 AM · 404 Not Found', 'its words, then its code');
     const ktla = page.locator('.settings .news-src', {hasText: 'KTLA'});
     assert.deepEqual(await ktla.evaluate(element => [element.querySelector('.t')?.textContent, element.querySelector('.s')?.textContent, element.querySelector('.prov')?.textContent, element.querySelector('.state')?.textContent]),
       ['KTLA · Local news', 'Feed, summary only', 'Every 15 min', 'Checked 9:10 AM']);
@@ -510,7 +510,7 @@ test('a domain the server won\'t untrust says so in the toast; Check now reads C
     await page.route('**/api/mail/trusted-domains/**', route => route.fulfill(failing));
     await page.locator('.settings .mini-field input').fill('woodgrovebank');
     await page.getByRole('button', {name: 'Remove woodgrovebank.example'}).click();
-    await page.locator('.toast', {hasText: 'Couldn\'t remove woodgrovebank.example, Setpoint\'s database is busy.'}).waitFor();
+    await page.locator('.toast', {hasText: 'Failed to remove, Setpoint\'s database is busy'}).waitFor();
     await page.unroute('**/api/mail/trusted-domains/**');
 
     await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).click();
@@ -534,7 +534,7 @@ test('a domain the server won\'t untrust says so in the toast; Check now reads C
     await page.route('**/api/sources/*/check', route => route.fulfill(failing));
     await weather.getByRole('button', {name: 'Weather options'}).click();
     await page.getByRole('menuitem', {name: 'Check now'}).click();
-    await weather.locator('.state', {hasText: 'Couldn\'t check, Setpoint\'s database is busy.'}).waitFor();
+    await weather.locator('.state', {hasText: 'Failed to check, Setpoint\'s database is busy'}).waitFor();
     await page.unroute('**/api/sources/*/check');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -669,11 +669,11 @@ test('Send test: it shows it\'s sending, a failure says so in words, a test that
     release();
     // A failure is a failure, in words rather than Node's "fetch failed".
     const line = page.locator('.settings .line');
-    await line.filter({hasText: `Not sent, Can’t reach ${unreachable}`}).waitFor();
+    await line.filter({hasText: `Failed to send, can’t reach ${unreachable}`}).waitFor();
     assert.equal(await line.getAttribute('class'), 'line failed');
     // The header agrees, as a source failing does.
     const header = page.locator('.settings .set-label', {hasText: 'ntfy'});
-    await header.getByText(`Failing, Can’t reach ${unreachable}`).waitFor();
+    await header.getByText(`Can’t reach ${unreachable}`).waitFor();
     await page.unroute('**/api/notifications/test');
 
     // A server that answers: the test goes, and its line says so.
@@ -776,7 +776,7 @@ test('a calendar\'s colour, picked from the swatches, waits for Google at .5 wit
     // Google refuses sun (the dev provider's rule): failed in place, in Google's words.
     await personal.getByRole('button', {name: 'Personal colour'}).click();
     await page.locator('.settings .swatches .sw[aria-label="sun"]').click();
-    const refusal = personal.locator('.s.failed', {hasText: 'Couldn\'t change its colour, Google Calendar, The caller does not have permission (403 Forbidden)'});
+    const refusal = personal.locator('.s.failed', {hasText: 'Google Calendar is refusing Setpoint (the caller does not have permission).'});
     await refusal.waitFor();
     assert.equal(await rested(() => personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim())), 'oklch(0.86 0.16 92)', 'the colour picked stays in place');
     // Try again: pending once more, then refused again.
@@ -829,7 +829,7 @@ test('a Todoist project\'s colour, picked from Todoist\'s 20, waits for Todoist 
     // Todoist refuses taupe (the dev provider's rule): failed in place, in Todoist's words.
     await home.getByRole('button', {name: 'Home colour'}).click();
     await page.getByRole('button', {name: 'Taupe', exact: true}).click();
-    const refusal = home.locator('.s.failed', {hasText: 'Couldn\'t change its colour, Todoist, Insufficient permissions (403 Forbidden)'});
+    const refusal = home.locator('.s.failed', {hasText: 'Todoist is refusing Setpoint (insufficient permissions).'});
     await refusal.waitFor();
     assert.equal(await rested(() => colourOf(home)), '#8f7a69', 'the colour picked stays in place');
     provider.hold();

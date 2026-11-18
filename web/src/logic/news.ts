@@ -18,7 +18,7 @@ import {NEWS_SECTIONS} from '@setpoint/shared';
 import {news} from '../tokens.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {age, clockTime, daysBetween, localDate} from './format.ts';
-import {asOf, every} from './health.ts';
+import {asOf, every, failingWords} from './health.ts';
 import type {HealthKind} from './health.ts';
 import type {NewsView} from './route.ts';
 
@@ -395,10 +395,10 @@ export function firstRunLine(status: Pick<NewsStatusOut, 'first_run'>): string |
   return `Sorting the last 48 hours · ${run.sorted.toLocaleString('en-US')} of ${count(run.total, 'article', 'articles')}, showing what’s sorted so far`;
 }
 
-/** A whole section stale or failing (29a): "AI, as of 7:02 AM", under its header. Its stories stay. */
+/** A whole section stale or failing (29a): "AI as of 7:02 AM", under its header. Its stories stay. */
 export function sectionLine(section: NewsSection, health: SectionHealthOut | null, now: number, timeZone: string): {state: 'stale' | 'failing'; text: string} | null {
   if (!health) return null;
-  return {state: health.state, text: `${SECTION_LABELS[section]}, ${health.as_of ? `as of ${asOf(health.as_of, now, timeZone)}` : 'not checked yet'}`};
+  return {state: health.state, text: `${SECTION_LABELS[section]} ${health.as_of ? `as of ${asOf(health.as_of, now, timeZone)}` : 'not checked yet'}`};
 }
 
 /** How long a story stays on the page after its last new fact. */
@@ -459,8 +459,8 @@ export interface NewsSourceState {
  * A source's state as Settings › Accounts words one (30a):
  * - "Checked 9:10 AM"
  * - "Checks stopped, as of 9:14 PM", muted
- * - "Failing, 404 since 6:02 AM" in `caution`, the status code standing for the provider's words
- *   when it leads them, else "Failing since 6:02 AM, <the words>".
+ * - "Refusing Setpoint (not found) since 6:02 AM" in `caution`, the provider's words in brackets and
+ *   its status code in the tip.
  * A source not read yet (no home location, no key) says so.
  */
 export function newsSourceState(health: NewsSourceHealthOut | null, now: number, timeZone: string): NewsSourceState {
@@ -475,10 +475,8 @@ export function newsSourceState(health: NewsSourceHealthOut | null, now: number,
     case 'failing':
     case 'needs_reconnect': {
       const reason = health.reason?.trim() || null;
-      const code = reason ? /^(\d{3})\b/.exec(reason)?.[1] ?? null : null;
       const since = health.failing_since ? `since ${asOf(health.failing_since, now, timeZone)}` : null;
-      const text = code ? ['Failing,', code, since].filter(Boolean).join(' ') : [`Failing${since ? ` ${since}` : ''}`, reason].filter(Boolean).join(', ');
-      return {tone: 'caution', text, warn: true, title: reason, kind: 'failing'};
+      return {tone: 'caution', text: failingWords(reason, since), warn: true, title: reason, kind: 'failing'};
     }
   }
 }

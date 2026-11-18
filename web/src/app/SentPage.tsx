@@ -162,7 +162,7 @@ export function SentPage({route}: {route: SentRoute}) {
   useEffect(() => {
     if (open === null || open === lastOpened) return;
     lastOpened = open;
-    void openMessage(open).catch(toastFailure('Couldn\'t mark it read'));
+    void openMessage(open).catch(toastFailure('Failed to mark read'));
   }, [open]);
 
   const go = (changes: Partial<SentRoute>) => navigate({...route, ...changes});
@@ -183,7 +183,7 @@ export function SentPage({route}: {route: SentRoute}) {
     lastOpened = id;
     if (searching) search.opened(id);
     go({open: id});
-    void openMessage(id).catch(toastFailure('Couldn\'t mark it read'));
+    void openMessage(id).catch(toastFailure('Failed to mark read'));
   }
 
   /**
@@ -250,7 +250,7 @@ export function SentPage({route}: {route: SentRoute}) {
       const refused = refusals(ids, outcomes);
       for (const {id} of refused) beats.delete(id);
       untrashing(refused.map(one => one.id));
-      if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t move it to Trash', n => `Couldn't move ${n} to Trash`))(refused[0]!.error);
+      if (refused.length) toastFailure(counted(refused.length, 'Failed to move to Trash', n => `Failed to move ${n} to Trash`))(refused[0]!.error);
       return ids.filter(id => !refused.some(one => one.id === id));
     });
     let toastId = 0;
@@ -263,7 +263,7 @@ export function SentPage({route}: {route: SentRoute}) {
       untrashing(ids);
       void sent.then(took => changeEach(took, untrashMessage).then(outcomes => {
         const refused = refusals(took, outcomes);
-        if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t bring it back from Trash', n => `Couldn't bring ${n} back from Trash`))(refused[0]!.error);
+        if (refused.length) toastFailure(counted(refused.length, 'Failed to bring back', n => `Failed to bring ${n} back`))(refused[0]!.error);
       }));
       if (wasOpen !== null) {
         lastOpened = wasOpen;

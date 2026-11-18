@@ -114,7 +114,7 @@ export function RecapPanel({ids, at, closing, rows, now, zone, onAt, onSeen, onC
 
   useEffect(() => {
     let live = true;
-    void openStory(storyId, toastFailure('Couldn\'t mark it seen')).then(seen => {
+    void openStory(storyId, toastFailure('Failed to mark seen')).then(seen => {
       if (!live || !seen) return;
       setBefore(seen);
       onSeen(seen);

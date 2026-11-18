@@ -250,7 +250,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
       if (message === null) return void showToast(`No email left for ${titleOf(row)}`);
       go(null);
       setReading({item: item.id, message, history: item.from_history, travel: null, of: titleOf(row)});
-    }, toastFailure(`Couldn't open the email for ${titleOf(row)}`));
+    }, toastFailure('Failed to open the email'));
   };
   // The emails J / K step through: those of the list the open one came from.
   const emails = (reading?.history ? page?.from_history : page?.needs_you)?.filter(item => item.message_id !== null) ?? [];
@@ -283,8 +283,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
 
   /** Pin or Unpin: `P`, the menus, the detail's tool and the shelf's Unpin. */
   const togglePin = (row: ApplicationRowOut) => void act(() => setPinned(row.id, row.pinned_at === null), row.pinned_at === null
-    ? {done: 'Pinned', tone: 'pinned', failed: 'Couldn\'t pin it'}
-    : {done: 'Unpinned', failed: 'Couldn\'t unpin it'});
+    ? {done: 'Pinned', tone: 'pinned', failed: 'Failed to pin'}
+    : {done: 'Unpinned', failed: 'Failed to unpin'});
 
   // Attached again with each render, before any key can come (as News's are).
   useLayoutEffect(() => {
@@ -365,18 +365,18 @@ export function JobsPage({route}: {route: JobsRoute}) {
     editCompany: () => edit(row, 'company'),
     editTitle: () => edit(row, 'title'),
     setStatus: status => void act(() => setStatus(row.id, status), {
-      done: status ? `Set to ${STATUS_LABELS[status]}` : 'Status left to the emails', failed: 'Couldn\'t set the status',
+      done: status ? `Set to ${STATUS_LABELS[status]}` : 'Status left to the emails', failed: 'Failed to set the status',
     }),
-    merge: other => takeAway(other.id, () => act(() => mergeWith(row.id, other.id), {done: 'Merged', failed: 'Couldn\'t merge them'})),
-    notThisPosting: () => void act(() => notThisPosting(row.id), {done: 'JD taken away', failed: 'Couldn\'t take the JD away'}),
-    lookUpAgain: () => void lookUp(row.id).then(() => showToast('Looking for the posting'), toastFailure('Couldn\'t look it up')),
+    merge: other => takeAway(other.id, () => act(() => mergeWith(row.id, other.id), {done: 'Merged', failed: 'Failed to merge'})),
+    notThisPosting: () => void act(() => notThisPosting(row.id), {done: 'JD taken away', failed: 'Failed to take the JD away'}),
+    lookUpAgain: () => void lookUp(row.id).then(() => showToast('Looking for the posting'), toastFailure('Failed to look it up')),
     notAnApplication: () => {
       if (open === row.id) close();
-      takeAway(row.id, () => act(() => notAnApplication(row.id), {done: `Hidden ${row.company}`, tone: 'gone', failed: 'Couldn\'t hide it'}));
+      takeAway(row.id, () => act(() => notAnApplication(row.id), {done: `Hidden ${row.company}`, tone: 'gone', failed: 'Failed to hide'}));
     },
     remove: () => {
       if (open === row.id) close();
-      takeAway(row.id, () => act(() => deleteApplication(row.id), {done: `Deleted ${row.company}`, tone: 'gone', failed: 'Couldn\'t delete it'}));
+      takeAway(row.id, () => act(() => deleteApplication(row.id), {done: `Deleted ${row.company}`, tone: 'gone', failed: 'Failed to delete'}));
     },
   });
   /** The title or company in place: shown at once, then saved. Refused, it's what it was. */
@@ -388,17 +388,17 @@ export function JobsPage({route}: {route: JobsRoute}) {
     updateCached<ApplicationOut>(applicationPath(id), put);
     updateCached<JobsPageOut>(JOBS_PATH, data => ({...data, rows: data.rows.map(put)}));
     void act(() => editApplication(id, {[field]: value}), {
-      done: field === 'title' ? 'Title changed' : 'Company changed', failed: field === 'title' ? 'Couldn\'t change the title' : 'Couldn\'t change the company',
+      done: field === 'title' ? 'Title changed' : 'Company changed', failed: field === 'title' ? 'Failed to change the title' : 'Failed to change the company',
     });
   };
-  const move = (event: JobEventOut, to: ApplicationRowOut) => open !== null && void act(() => moveEvent(event.id, open, to.id), {done: `Moved to ${titleOf(to)}`, failed: 'Couldn\'t move it'});
-  const takeOff = (event: JobEventOut) => void act(() => notAboutThis(event.id), {done: 'Back in Needs you', failed: 'Couldn\'t take it off'});
+  const move = (event: JobEventOut, to: ApplicationRowOut) => open !== null && void act(() => moveEvent(event.id, open, to.id), {done: `Moved to ${titleOf(to)}`, failed: 'Failed to move'});
+  const takeOff = (event: JobEventOut) => void act(() => notAboutThis(event.id), {done: 'Back in Needs you', failed: 'Failed to take it off'});
   const pick = (candidate: JdCandidateOut | null) => {
     if (open === null) return;
     const company = (openRow ?? detail)?.company ?? '';
     void (candidate
       ? act(() => pickCandidate(open, candidate.id), pickWords(candidate, company))
-      : act(() => noneOfThese(open), {done: `None of these for ${company}`, failed: 'Couldn\'t turn them down'}));
+      : act(() => noneOfThese(open), {done: `None of these for ${company}`, failed: 'Failed to turn them down'}));
   };
   // A row's right-click: its actions at the pointer. The cursor moves to it, and it doesn't open.
   const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;

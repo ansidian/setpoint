@@ -173,13 +173,13 @@ export function selectWith(selected: string[], key: string, additive: boolean): 
   return selected.includes(key) ? selected.filter(one => one !== key) : [...selected, key];
 }
 
-/** What the failed card says (board 19b): "Couldn't move Dinner with Sam". */
+/** What the failed card says (board 19b): "Failed to move Dinner with Sam". */
 export function failedTitle(item: ItemOut): string {
   const kind = item.command?.kind;
   const previous = item.command?.previous;
   const moved = previous && (previous.starts_at !== item.starts_at || previous.start_date !== item.start_date || previous.due_date !== item.due_date);
   const verb = kind === 'item_create' ? 'create' : kind === 'item_delete' ? 'delete' : kind === 'item_complete' ? 'complete' : kind === 'item_reopen' ? 'reopen' : moved ? 'move' : 'change';
-  return `Couldn't ${verb} ${item.title}`;
+  return `Failed to ${verb} ${item.title}`;
 }
 
 /** The failed card's "From Fri, Oct 9" (another day) or "From 7:00 – 9:00 PM" (the same day). Null when it didn't move. */

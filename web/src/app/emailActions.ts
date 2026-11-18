@@ -147,7 +147,7 @@ function ruleActions(row: MessageRowOut, rules: RuleOut[] | undefined, where: 'm
 }
 
 function addToRule(rule: RuleOut, sender: RuleSender) {
-  const undo = () => void setRuleMatch(rule.id, rule.match).catch(toastFailure('Couldn\'t undo it'));
+  const undo = () => void setRuleMatch(rule.id, rule.match).catch(toastFailure('Failed to undo'));
   void setRuleMatch(rule.id, withSender(rule.match, sender))
-    .then(() => showToast(`Added ${sender.text} to the rule`, {label: 'Undo', run: undo}), toastFailure(`Couldn't add ${sender.text} to the rule`));
+    .then(() => showToast(`Added ${sender.text} to the rule`, {label: 'Undo', run: undo}), toastFailure('Failed to add to the rule'));
 }

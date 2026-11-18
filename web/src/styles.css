@@ -571,11 +571,10 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .toast .tb.solid .kbd { background: color-mix(in srgb, var(--toast) 14%, transparent); color: color-mix(in srgb, var(--toast) 70%, var(--ink)); }
 /* A failure has an `alert` edge, and stacks what failed over why (12.5 px, `ink2`), 380 px at most. */
 .toast.t-failed { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent), var(--shadow-pill); }
-.toast.stack { align-items: flex-start; width: max-content; max-width: min(380px, calc(100% - 32px)); white-space: normal; border-radius: 20px; padding: 9px 7px 9px 9px; }
-.toast.stack:not(:has(button)) { padding-right: 16px; }
-.toast.stack .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding-top: 2px; }
-.toast.stack .why { font-size: 12.5px; color: var(--ink2); }
-.toast.stack .tb { align-self: center; }
+.toast.wraps { align-items: flex-start; width: max-content; max-width: min(380px, calc(100% - 32px)); white-space: normal; border-radius: 20px; padding: 9px 7px 9px 9px; }
+.toast.wraps:not(:has(button)) { padding-right: 16px; }
+.toast.wraps .txt { min-width: 0; padding-top: 2px; }
+.toast.wraps .tb { align-self: center; }
 /* The comma that joins them, for a reader that hears them as one line. */
 .toast .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* The phone's toast as it was (its layout is frozen): `cardOn`, 14 px apart, its tone's 16 px glyph

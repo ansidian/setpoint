@@ -168,7 +168,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const toggleRead = () => {
     setUnreadFor(markedUnread ? null : id);
     setToggles({id, count: toggled + 1});
-    void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message, null, 'failed'));
+    void (markedUnread ? markRead(id) : markUnread(id)).catch(toastFailure(markedUnread ? 'Failed to mark read' : 'Failed to mark unread'));
   };
   // A copied code reads the email. On the phone it does so after Mark unread too, as Mark read would.
   const codeCopied = () => (markedUnread ? toggleRead() : actions.codeCopied());
@@ -615,7 +615,7 @@ function Body({message, marks, arrived}: {message: MessageOut; marks: string[]; 
           <Icon name="hide_image" size={16} />
           <span>Images hidden</span>
           <button type="button" className="lnk" onClick={() => setShown(true)}>Show</button>
-          <button type="button" className="lnk" onClick={() => void trustDomain(message.remote_content.trust_domain, message.id).catch(toastFailure(`Couldn't trust ${message.remote_content.trust_domain}`))}>
+          <button type="button" className="lnk" onClick={() => void trustDomain(message.remote_content.trust_domain, message.id).catch(toastFailure(`Failed to trust ${message.remote_content.trust_domain}`))}>
             Always show from {message.remote_content.trust_domain}
           </button>
         </div>

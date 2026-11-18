@@ -234,7 +234,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
     if (open === null || open === lastOpened) return;
     lastOpened = open;
     let live = true;
-    void openStory(open, toastFailure('Couldn\'t mark it seen')).then(before => {
+    void openStory(open, toastFailure('Failed to mark seen')).then(before => {
       if (!live || !before) return;
       setOpened({id: open, before});
       setVisit(current => ({...current, dots: openedInVisit(visitDots(current.dots, [before]), open)}));
@@ -695,7 +695,7 @@ function useSeen(list: RefObject<HTMLDivElement | null>, layout: Layout, rows: R
         waits.current = new Map([...waits.current].filter(([id]) => !due.includes(id)));
         void markSeen(due).catch((error: Error) => {
           due.forEach(id => sent.current.delete(id));
-          toastFailure('Couldn\'t mark them seen')(error);
+          toastFailure('Failed to mark seen')(error);
         });
       }
       const next = nextSeen(visible.current, waits.current);

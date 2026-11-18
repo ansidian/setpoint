@@ -91,7 +91,7 @@ export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: 
     case 'not_found':
       if (jd.stopped) return {icon: 'remove', text: 'Stopped', title: 'You stopped the lookup'};
       return jd.link
-        ? {icon: 'remove', text: 'Couldn\'t read', title: 'Couldn\'t read the posting you picked'}
+        ? {icon: 'remove', text: 'Couldn\'t read', title: 'Failed to read the posting'}
         : {icon: 'remove', text: 'No JD found'};
     case 'looking':
       return {icon: 'progress_activity', text: 'Looking it up…', spin: true};
@@ -142,7 +142,7 @@ export function notFoundWords(jd: Pick<JdSummaryOut, 'link' | 'looked_at' | 'sto
   if (jd.stopped) return {lead: 'Lookup stopped', rest: jd.looked_at ? `You stopped it on ${dayWord(localDate(jd.looked_at, timeZone), today)}` : 'You stopped it'};
   if (!jd.link) return {lead: 'No JD found', rest: notFoundLine(platform, jd.looked_at, timeZone, today)};
   const host = new URL(jd.link).hostname.replace(/^www\./, '');
-  return {lead: 'Couldn\'t read the posting you picked', rest: jd.looked_at ? `${host} gave Jobs no text on ${dayWord(localDate(jd.looked_at, timeZone), today)}` : `${host} gave Jobs no text`};
+  return {lead: 'Failed to read the posting', rest: jd.looked_at ? `${host} gave Jobs no text on ${dayWord(localDate(jd.looked_at, timeZone), today)}` : `${host} gave Jobs no text`};
 }
 
 /**
@@ -151,8 +151,8 @@ export function notFoundWords(jd: Pick<JdSummaryOut, 'link' | 'looked_at' | 'sto
  */
 export function pickWords(candidate: {unreadable: boolean}, company: string): {done: string; failed: string} {
   return candidate.unreadable
-    ? {done: `Link kept for ${company}`, failed: 'Couldn\'t keep the link'}
-    : {done: `JD saved for ${company}`, failed: 'Couldn\'t save the JD'};
+    ? {done: `Link kept for ${company}`, failed: 'Failed to keep the link'}
+    : {done: `JD saved for ${company}`, failed: 'Failed to save the JD'};
 }
 
 /** Applications per week's bars: the busiest week 20 px and the rest in proportion. A week with none is a 1 px stub. */

@@ -27,7 +27,7 @@ export function CodeCopy({value, onCopied}: {value: string; onCopied?: () => voi
     writing.then(() => {
       setCopied(true);
       onCopied?.();
-    }, () => showToast('Couldn\'t copy it'));
+    }, () => showToast('Failed to copy'));
   };
   return (
     <button className={copied ? 'btn ghost sm copy copied' : 'btn ghost sm copy'} type="button" onClick={copy}>

@@ -22,6 +22,7 @@ import {retryingLine} from '../../logic/providerWords.ts';
 import {localDate} from '../../logic/format.ts';
 import {useNow} from '../clock.ts';
 import {useLiveOrder} from '../settings/order.ts';
+import {refusalWords} from '../../logic/providerWords.ts';
 
 interface SubtasksProps {
   task: ItemOut;
@@ -93,7 +94,7 @@ export function Subtasks({task, ring, timeZone, onComplete, onSettle, onReorder,
               }}><Icon name="drag_indicator" size={16} /></button>
             ) : <span className="handle" />}
             {failed ? (
-              <span className="fd-mark" role="img" aria-label="Failed" data-tip={subtask.command!.provider_message ?? 'It didn\'t reach Todoist.'}><Icon name="error" size={15} /></span>
+              <span className="fd-mark" role="img" aria-label="Failed" data-tip={refusalWords('todoist', subtask.command!.provider_message, 'It didn’t reach Todoist.')}><Icon name="error" size={15} /></span>
             ) : retrying ? (
               <span className="fd-mark retrying" role="img" aria-label={retrying} data-tip={retrying}><Icon name="warning" size={15} /></span>
             ) : onComplete ? (

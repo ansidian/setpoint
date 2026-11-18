@@ -4,7 +4,7 @@ import {z} from 'zod';
 /**
  * What a security email says happened, extracted at triage. The decisive fact goes on the row
  * ("New sign-in · MacBook Pro · Los Angeles"). `unfamiliar` marks a place or device the user doesn't
- * use ("not a place you use").
+ * use ("(not a location you use)").
  */
 export const securityFactsSchema = z.strictObject({
   what: z.string().min(1),

@@ -6,6 +6,7 @@ import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {clockTime} from './format.ts';
 import {placeName} from './place.ts';
+import {refusalWords} from './providerWords.ts';
 import type {IconName} from '../ui/glyphs.ts';
 
 export interface Run {
@@ -374,11 +375,8 @@ export function projectChoice(text: string, projects: {name: string}[], create: 
   return create ? {project: name, create_project: true} : {problem: `No project named “${name}”, pick one or create it`};
 }
 
-const PROVIDER_NAMES: Record<SourceProvider, string> = {gmail: 'Gmail', icloud: 'iCloud', google_calendar: 'Google Calendar', todoist: 'Todoist', weather: 'Weather'};
-
-/** A failed Create, with the provider's own words: "Google Calendar, The calendar is read-only. (403)". */
-export const failedLine = (provider: SourceProvider | null, message: string | null) =>
-  [provider ? PROVIDER_NAMES[provider] : null, message ?? 'It wasn’t created.'].filter(Boolean).join(', ');
+/** A failed Create, in the provider's own sentence ("The calendar is read-only."), or its trouble ("Todoist is down"). */
+export const failedLine = (provider: SourceProvider | null, message: string | null) => refusalWords(provider, message, 'It wasn’t created.');
 
 // ---------- Calendar search ----------
 

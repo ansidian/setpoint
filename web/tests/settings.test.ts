@@ -217,12 +217,13 @@ describe('usageLine: Settings › AI\'s 30 days, saying what it counts', () => {
   });
 });
 
-describe('a source\'s state names itself in its tip, its reason after', () => {
+describe('a source\'s state names itself in its tip, the provider\'s words in brackets, its code after', () => {
   test.each([
     ['Checked 9:10 AM', null, 'Checked 9:10 AM'],
-    ['Needs sign-in', 'Token has been expired or revoked. (invalid_grant)', 'Needs sign-in, Token has been expired or revoked. (invalid_grant)'],
-    ['Failing, 404 since 6:02 AM', '404 Not Found', 'Failing, 404 since 6:02 AM, 404 Not Found'],
-    ['Gmail answered 503.', 'Gmail answered 503.', 'Gmail answered 503.'],
+    ['Needs sign-in', 'Token has been expired or revoked. (invalid_grant)', 'Needs sign-in (token has been expired or revoked) · invalid_grant'],
+    ['Refusing Setpoint since 6:02 AM', '404 Not Found', 'Refusing Setpoint since 6:02 AM · 404 Not Found'],
+    ['Down (scheduled maintenance)', 'Scheduled maintenance (503 Service Unavailable)', 'Down (scheduled maintenance) · 503 Service Unavailable'],
+    ['Gmail didn\'t answer in time', 'Gmail didn\'t answer in time.', 'Gmail didn\'t answer in time'],
   ])('%s with %s', (words, reason, tip) => expect(stateTip(words, reason)).toBe(tip));
 });
 
