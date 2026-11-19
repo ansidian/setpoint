@@ -226,7 +226,8 @@
 button.subtask, .subtask button.title { border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .subtask button.title { padding: 0; }
 button.subtask { padding: 2px 0; width: 100%; }
-.subtask button.title:hover { color: var(--ink); }
+.subtask button.title:enabled:hover { color: var(--ink); }
+.subtask button.title:disabled { cursor: default; }
 .subtask .due { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; font-size: 12px; white-space: nowrap; vertical-align: 1px; }
 /* The last row, "Add subtask": `ink3` with its add glyph in the ring column, a field in place once clicked. */
 .subtask.add { color: var(--ink3); }

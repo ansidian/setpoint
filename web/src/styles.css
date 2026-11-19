@@ -207,10 +207,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .tk .check:not(.off):hover .ring > .icon { opacity: 1; }
 }
 /* A done check that reopens (the day pane's rows, Calendar's card, the grid's chips) answers the same way in its `good`:
-   1.15 and a 3 px `good` halo at 16%. */
+   1.15 and a 3 px `good` halo at 16%, but not while its completion moment plays (`.just-done`), however the
+   pointer moves: a pointer still on it sees the answer ease in once the moment is over. */
 .ag-task .check .task-glyph.done, .fd-mark.check .task-glyph.done, .tk .check .task-glyph.done { border-radius: 999px; transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 @media (hover: hover) {
-  .ag-task .check:enabled:hover .task-glyph.done, .fd-mark.check:not([aria-disabled]):hover .task-glyph.done, .tk .check:not(.off):hover .task-glyph.done {
+  .ag-task:not(.just-done) .check:enabled:hover .task-glyph.done, .fd-mark.check:not([aria-disabled], .just-done, .just-done *):hover .task-glyph.done,
+  .tk:not(.just-done) .check:not(.off):hover .task-glyph.done {
     transform: scale(1.15); box-shadow: 0 0 0 3px color-mix(in oklch, var(--good) 16%, transparent); }
 }
 

@@ -87,6 +87,7 @@ export function Subtasks({task, ring, timeZone, onComplete, onSettle, onReorder,
         const failed = subtask.command?.state === 'failed';
         const retrying = retryingLine(subtask.command, timeZone);
         const due = subtaskDue(subtask, today, timeZone);
+        const title = <><span className="done-tx">{subtask.title}</span>{due && <Due text={due} bell={subtask.reminders.length > 0} />}</>;
         return (
           <div key={subtask.id} className={`subtask${subtask.done ? ' done' : ''}${played ? ' just-done' : ''}${subtask.command?.state === 'pending' ? ' pending' : ''}${failed ? ' failed' : ''}${dragging ? ' dragging' : ''}`}
             draggable={movable} {...drag} data-subtask={subtask.id}
@@ -110,9 +111,10 @@ export function Subtasks({task, ring, timeZone, onComplete, onSettle, onReorder,
                 data-tip={subtask.command ? 'Waiting for Todoist' : subtask.done ? 'Reopen' : 'Complete'}
                 onClick={() => !subtask.command && onComplete(subtask)}>{glyph}</button>
             ) : <span className="fd-mark">{glyph}</span>}
-            {onOpen && !subtask.command
-              ? <button className="title" type="button" aria-label={`Edit ${subtask.title}`} onClick={() => onOpen(subtask)}><span className="done-tx">{subtask.title}</span>{due && <Due text={due} bell={subtask.reminders.length > 0} />}</button>
-              : <span className="title"><span className="done-tx">{subtask.title}</span>{due && <Due text={due} bell={subtask.reminders.length > 0} />}</span>}
+            {/* One element whatever its change's state, so a change confirmed mid-moment doesn't start it over. */}
+            {onOpen
+              ? <button className="title" type="button" aria-label={`Edit ${subtask.title}`} disabled={!!subtask.command} onClick={() => onOpen(subtask)}>{title}</button>
+              : <span className="title">{title}</span>}
             {failed && onSettle && (
               <span className="acts">
                 {subtask.command!.can_retry && <button className="ibtn sm" type="button" aria-label={`Try again: ${subtask.title}`} data-tip="Try again" onClick={() => onSettle(subtask, 'retry')}><Icon name="refresh" size={15} /></button>}
