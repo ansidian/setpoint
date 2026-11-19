@@ -523,6 +523,8 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
       item: {title: 'Interview with Contoso: Software Engineer', all_day: false, starts_at: '2026-11-10T19:00:00.000Z', ends_at: '2026-11-10T19:30:00.000Z', start_date: null, place: 'https://meet.example.com/j/482-193-775'},
       from_email: ['title', 'date', 'time', 'place'],
     }});
+    // The invite states its fields exactly, so the prefill makes no call.
+    expect(await api.send('POST', '/api/proposals/prefill', {body: {message_id: bySubject(w, 'Interview confirmed').id, kind: 'event'}})).toMatchObject({status: 200, body: {proposal: null, skipped: 'invite'}});
     expect(await propose('Interview confirmed', 'task')).toMatchObject({status: 200, body: {item: {due_date: '2026-11-10', due_at: '2026-11-10T19:00:00.000Z'}}});
     expect(await propose('Two rounds')).toMatchObject(fromText);
     expect(await propose('Not a calendar')).toMatchObject(fromText);

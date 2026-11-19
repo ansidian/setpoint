@@ -5,7 +5,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} fr
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  FOLD_OPENS_UNDER, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, prefillMissLine, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {Run} from '../src/logic/search.ts';
 
@@ -394,6 +394,22 @@ describe('a task proposal\'s project', () => {
     ['Hom', true, ['Home']],
   ])('the menu for %j (New picked: %s)', (text, isNew, labels) => {
     expect(projectMenu(text, projects, isNew).map(choice => (choice.isNew ? `New project “${choice.name}”` : choice.name))).toEqual(labels);
+  });
+});
+
+describe('prefillMissLine: the red line when a proposal\'s prefill didn\'t come, and its hover', () => {
+  test.each<[Parameters<typeof prefillMissLine>[0], string, string | null]>([
+    [{slow: true}, 'Failed to prefill, Claude took too long', 'No answer within 1.5 s, so the fields are filled from the email by Setpoint'],
+    [{unreachable: true}, 'Failed to prefill, can’t reach Setpoint', null],
+    [{reason: 'refused', status: 429}, 'Failed to prefill, Claude didn’t answer (429)', 'Rate limited: Anthropic is limiting requests for now'],
+    [{reason: 'refused', status: 529}, 'Failed to prefill, Claude didn’t answer (529)', 'Anthropic is overloaded right now'],
+    [{reason: 'refused', status: 503}, 'Failed to prefill, Claude didn’t answer (503)', 'Trouble on Anthropic’s side'],
+    [{reason: 'refused', status: 401}, 'Failed to prefill, Claude didn’t answer (401)', 'Anthropic refused the key. Check it in Settings › AI'],
+    [{reason: 'refused', status: 400}, 'Failed to prefill, Claude didn’t answer (400)', 'Anthropic refused the request'],
+    [{reason: 'unreachable', status: null}, 'Failed to prefill, can’t reach Anthropic', 'Anthropic didn’t answer in time, or couldn’t be reached'],
+    [{reason: 'unusable', status: null}, 'Failed to prefill, Claude’s answer was unusable', 'Its answer had no title Setpoint could use'],
+  ])('%j', (miss, line, tip) => {
+    expect(prefillMissLine(miss)).toEqual({line, tip});
   });
 });
 

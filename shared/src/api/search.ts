@@ -9,6 +9,7 @@
 //   GET  /api/alfred/conversations/:id                         ConversationOut (the thread so far)
 //   GET  /api/alfred/asks/:ask_id                              AskStepOut (what Alfred is doing for it)
 //   POST /api/proposals/from-message        ProposalInput      ProposalOut (Add to calendar / Add as task)
+//   POST /api/proposals/prefill             ProposalInput      ProposalPrefillOut (the same, filled by a model)
 //   POST /api/calendar/search               CalendarSearchInput CalendarSearchOut
 //
 // Nothing here creates anything: a proposal's `item` is what POST /api/items takes, and only Create
@@ -319,6 +320,25 @@ export interface ConversationOut {
 
 /** POST /api/proposals/from-message: Add to calendar / Add as task, pre-filled from the email. */
 export const proposalInput = z.strictObject({message_id: id, kind: z.enum(ITEM_KINDS)});
+
+/**
+ * POST /api/proposals/prefill: the proposal with its fields read from the email by a model, or why
+ * there was no call (`invite`: the invite's fields stand; `no_key`: no Anthropic key). A failed call
+ * is a 502 `prefill_failed`, its details a ProposalPrefillFailure.
+ */
+export interface ProposalPrefillOut {
+  proposal: ProposalOut | null;
+  skipped: 'invite' | 'no_key' | null;
+}
+
+/**
+ * Why a prefill failed: Anthropic refused it with an HTTP `status`, or it gave no status
+ * (`unreachable`: no answer in time, or no connection), or its answer had no usable title (`unusable`).
+ */
+export interface ProposalPrefillFailure {
+  reason: 'refused' | 'unreachable' | 'unusable';
+  status: number | null;
+}
 
 // ---- Calendar search ----
 

@@ -5,20 +5,27 @@
 // Nothing is created until the user presses Create, which sends the draft through the command layer.
 // The card waits at .5 until the provider confirms, and a failure stays in the card with the
 // provider's words.
+//
+// Opened from the reader, the model's prefill may be on its way (`fill`): the fields wait locked
+// under skeletons, then fill with its answer, or unlock as the rules filled them with a red line in
+// the head saying the prefill didn't come.
 import type {CalendarOut, CommandOut, ItemCreateInput, ProposalOut} from '@setpoint/shared';
 import {useRef, useState} from 'react';
 import {refresh, useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, createSettled, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {localDate} from '../../logic/format.ts';
-import {failedLine} from '../../logic/search.ts';
+import {failedLine, prefillMissLine} from '../../logic/search.ts';
+import type {PrefillMiss} from '../../logic/search.ts';
 import {Editor} from '../calendar/Editor.tsx';
 import {foldAway} from '../fold.ts';
 
 const NO_ITEMS = () => [];
 const nothing = () => {};
 
-export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false}: {
+export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false, fill = null}: {
   proposal: ProposalOut;
+  // The reader's prefill: on its way, or why it didn't come. Null when it's in or there's none.
+  fill?: 'waiting' | PrefillMiss | null;
   now: number;
   timeZone: string;
   // The reader's card closes through the reader. One in an answer closes itself.
@@ -62,6 +69,6 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
   return (
     <Editor open={{kind: proposal.kind, date: localDate(now, timeZone)}} calendars={calendars} today={localDate(now, timeZone)} timeZone={timeZone}
       dayItems={NO_ITEMS} handed={false} onPreview={nothing} onCreate={inputs => void create(inputs)} onSave={nothing} onDelete={nothing} onClose={close}
-      card={{proposal, pending, failed, quiet: inAnswer, form}} />
+      card={{proposal, pending, failed, quiet: inAnswer, form, filling: fill === 'waiting', missed: fill && fill !== 'waiting' ? prefillMissLine(fill) : null}} />
   );
 }

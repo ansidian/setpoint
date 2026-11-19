@@ -197,6 +197,13 @@ Six 3 px dots in the ring's colour fly from 4 to 14 px out of its centre, 60° a
 over 180 ms and moves 3 px right and back over 300 ms. A Today line folds away once the 640 ms are
 over.
 
+**Prefilling** a proposal from the reader: while the model reads the email (1.5 s at most), the
+fields it fills (the title, when, place, calendar or project) keep their boxes, their values hidden
+under a breathing bar from the card's first frame, not after 200 ms, so the rules' values never
+flash first; nothing in the card can be typed into or created. Its answer lands as the completion
+moment's sweep: each field fades in over 120 ms while the same `good` highlight crosses it over
+640 ms, the fields top to bottom 60 ms apart. Without an answer the rules' values only fade in.
+
 Overlays arrive on these timings: every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
 "+N", and a card anchored to a calendar item opens as the floating detail does; ⌘K rises 6 px over
@@ -312,7 +319,9 @@ sentence stands alone ("The calendar is read-only."). Otherwise the status code 
 "can't be reached") and its own words follow in brackets, first letter lowered, unless they only
 repeat the code: "Todoist is down (scheduled maintenance) as of 7:26 PM". A source that is only
 stale reads "Todoist as of 9:14 PM"; a Settings row, which names its source, "Down (scheduled
-maintenance) since 6:02 AM". The status code goes in the tooltip. A refusal shown beside what failed
+maintenance) since 6:02 AM". The status code goes in the tooltip, except on a proposal whose
+prefill failed: its line in the card's head ends with Anthropic's status ("Failed to prefill, Claude
+didn't answer (529)"), and its tooltip says what the status means. A refusal shown beside what failed
 says only why. Any other failure line reads "Failed to <verb>, <reason>": "Failed to pin, can't
 reach Setpoint", naming what failed only where it says which or arrives later ("Failed to send
 "Lunch Friday", …", "Failed to mark 3 read, …"); the reason loses its last full stop and its first

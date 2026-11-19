@@ -116,7 +116,7 @@ const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
   providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints},
   // A dev run with no key and no fake model drafts with the dev provider's canned answer.
-  drafting: {endpoints: aiEndpoints, canned: config.production || config.devAiUrl ? null : devDraftWriter()}, reading: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, draftFiles, newsSort,
+  drafting: {endpoints: aiEndpoints, canned: config.production || config.devAiUrl ? null : devDraftWriter()}, reading: {endpoints: aiEndpoints}, prefill: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, draftFiles, newsSort,
   routes: [jobsApi(store)],
   tokenRoutes: [jobsTokenApi(store)],
 });

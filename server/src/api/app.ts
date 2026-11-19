@@ -35,6 +35,8 @@ import {alfredStep, askAlfred, conversation} from '../alfred/ask.ts';
 import type {AlfredOptions} from '../alfred/ask.ts';
 import {writeDraft} from '../alfred/write.ts';
 import type {WriteOptions} from '../alfred/write.ts';
+import {prefillFromMessage} from '../alfred/prefill.ts';
+import type {PrefillOptions} from '../alfred/prefill.ts';
 import {inviteOf, proposeFromMessage} from '../alfred/proposals.ts';
 import {haTokenMatches} from '../auth/haToken.ts';
 import {bearerToken, findDevice, issuePairingCode, listDevices, pairDevice, revokeDevice, withdrawPairingCode} from '../auth/devices.ts';
@@ -139,6 +141,8 @@ export interface AppOptions {
   drafting?: WriteOptions;
   // The search reading's, likewise.
   reading?: Omit<SearchReaderOptions, 'store'>;
+  // The proposal prefill's, likewise.
+  prefill?: PrefillOptions;
   // Where News's image copies are (the data directory's news-images/).
   news?: NewsApiOptions;
   // Where drafts' attached files are kept (the data directory's draft-files/). Null refuses uploads.
@@ -176,7 +180,7 @@ const WEB_POLICY = [
   "frame-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
 ].join('; ');
 
-export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, drafting = {}, reading = {}, news = {}, draftFiles = null, newsSort = null, routes = [], tokenRoutes = []}: AppOptions) {
+export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, drafting = {}, reading = {}, prefill = {}, news = {}, draftFiles = null, newsSort = null, routes = [], tokenRoutes = []}: AppOptions) {
   const app = new Hono<Env>();
   const searchReader = new SearchReader({store, ...reading});
   const cookies = cookieNames(publicUrl?.startsWith('https:') ?? false);
@@ -701,6 +705,10 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.post('/api/proposals/from-message', async c => {
     const input = parse(proposalInput, await body(c));
     return c.json(proposeFromMessage(store, input.message_id, input.kind, {}, await inviteOf(store, engine, input.message_id)));
+  });
+  app.post('/api/proposals/prefill', async c => {
+    const input = parse(proposalInput, await body(c));
+    return c.json(await prefillFromMessage(store, engine, input.message_id, input.kind, prefill));
   });
   app.post('/api/alfred/ask', async c => c.json(await askAlfred(store, parse(askInput, await body(c)), {...alfred, engine})));
   app.get('/api/alfred/conversations/:id', c => c.json(conversation(store, id(c.req.param('id')))));

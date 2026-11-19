@@ -1,7 +1,8 @@
 // A fake Anthropic on 127.0.0.1 for the browser checks (server/tests/fakeModels.ts is the full one).
 // It is Anthropic's Messages API, answering Alfred's turns with the tool calls a test scripts, so
 // board 07 can show Alfred answering, and help me write's turns with the calls a `writer` scripts. It also answers a suggestion's reading of a search with
-// invented readings of the seed's mail (`SEED_READINGS`). Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a
+// invented readings of the seed's mail (`SEED_READINGS`), and a proposal's prefill with invented
+// fields for the seed's mail (`SEED_PREFILLS`). Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a
 // dev run accepts. With the key set, triage and the history pass ask it too. The fake tells them
 // it's overloaded, so they change nothing. No check reaches a real model provider.
 import http from 'node:http';
@@ -31,6 +32,37 @@ export interface FakeReading {
   fails?: boolean;
 }
 
+/**
+ * How the fake prefills a proposal: the tool's input (the title the subject unless it says), an
+ * answer `held` until the check lets it go (`release`), or none (`fails`).
+ */
+export interface FakePrefill {
+  event?: Record<string, unknown>;
+  task?: Record<string, unknown>;
+  held?: boolean;
+  fails?: boolean;
+}
+
+/** Prefills of the seed's mail, by subject. Any other email's is its subject as the title, and nothing else. */
+export const SEED_PREFILLS: Record<string, FakePrefill> = {
+  'Final exam schedule · CS 101': {
+    event: {title: 'CS 101 final exam', date: '2026-12-09', start: '19:00', end: '21:00', place: 'Room 214'},
+    task: {title: 'Study for the CS 101 final', due_date: '2026-12-08', due_time: null},
+  },
+  'Lease renewal terms': {
+    event: {title: 'Lease renewal deadline', date: '2026-10-31', start: null, end: null, place: null},
+    task: {title: 'Sign the lease renewal', due_date: '2026-10-31', due_time: null},
+  },
+  'Lab 5 posted': {
+    event: {title: 'Lab 5 due', date: '2026-10-07', start: null, end: null, place: null},
+    task: {title: 'Finish Lab 5', due_date: '2026-10-07', due_time: null},
+  },
+  'Your renters policy renewal is coming up': {
+    event: {title: 'Renters policy renews', date: '2026-09-15', start: null, end: null, place: null},
+    task: {title: 'Check the renters policy renewal', due_date: '2026-09-15', due_time: null},
+  },
+};
+
 /** Readings of the seed's mail, by the plain words of a search. Any other reads as its words, with no filter. */
 export const SEED_READINGS: Record<string, FakeReading> = {
   'northwind rejection march': {organisations: ['Northwind Talent'], types: ['rejection'], keywords: ''},
@@ -50,10 +82,19 @@ export const SEED_READINGS: Record<string, FakeReading> = {
  * works, or the field while a reading comes, for as long as it needs rather than inside a window of
  * time. `release()` lets one go: the one held longest, or, with none held yet, the next to come.
  */
-export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = false, readings = SEED_READINGS, writer}: {held?: boolean; readings?: Record<string, FakeReading>; writer?: (turn: AlfredTurn) => Call} = {}) {
+export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = false, readings = SEED_READINGS, prefills = SEED_PREFILLS, prefillDelayMs = 0, writer}: {
+  held?: boolean;
+  readings?: Record<string, FakeReading>;
+  prefills?: Record<string, FakePrefill>;
+  // A dev run's pause before each prefill answers, as a model's (checks hold instead).
+  prefillDelayMs?: number;
+  writer?: (turn: AlfredTurn) => Call;
+} = {}) {
   let ids = 0;
   // Every search the model was asked to read, in turn.
   const read: string[] = [];
+  // Every email a proposal's prefill was asked about, by subject, in turn.
+  const prefilled: string[] = [];
   // Every help-me-write request's opening turn (what the draft reads), in turn.
   const drafts: string[] = [];
   // The answers held, each going when it's let go, and how many were let go before they came.
@@ -96,6 +137,18 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = fal
         if (fails) return overloaded();
         return called({name: 'submit_reading', input: {organisations: [], types: [], is_date: true, keywords: search, ...reading}}, hold);
       }
+      const prefillTool = body.tools?.find(tool => tool.name === 'prefill_event' || tool.name === 'prefill_task')?.name;
+      if (prefillTool) {
+        const subject = /^Subject: (.*)$/m.exec(blocks(body.messages[0]!.content).map(block => block.text).join(''))?.[1] ?? '';
+        prefilled.push(subject);
+        const event = prefillTool === 'prefill_event';
+        const {held: hold = false, fails = false, ...given} = prefills[subject] ?? {};
+        const input = (event ? given.event : given.task) ?? (event ? {title: subject, date: null, start: null, end: null, place: null} : {title: subject, due_date: null, due_time: null});
+        const answerIt = () => (fails ? overloaded() : called({name: prefillTool, input}, hold));
+        if (prefillDelayMs) setTimeout(answerIt, prefillDelayMs);
+        else answerIt();
+        return;
+      }
       if (writer && body.tools?.some(tool => tool.name === 'write_draft')) {
         // Help me write: the question is the opening turn, which carries the email, its history and the ask.
         const opening = blocks(body.messages[0]!.content).map(block => block.text ?? '').join('');
@@ -116,7 +169,7 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = fal
   // running. The socket alone doesn't hold the process open.
   server.unref();
   const {port} = server.address() as AddressInfo;
-  return {url: `http://127.0.0.1:${port}`, read, drafts, release, close: () => new Promise<void>(resolve => {
+  return {url: `http://127.0.0.1:${port}`, read, drafts, prefilled, release, close: () => new Promise<void>(resolve => {
     server.close(() => resolve());
     server.closeAllConnections();
   })};

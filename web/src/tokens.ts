@@ -367,6 +367,12 @@ export const completion = {
   sweepInPct: 40, sweepTintPct: 24, strike: motion.slow, ink: motion.medium, nudge: 300, nudgePx: 3,
 } as const;
 
+/**
+ * A proposal's prefill landing (DESIGN.md › Motion): each field it filled fades in under the completion
+ * moment's sweep, the fields top to bottom `staggerMs` apart.
+ */
+export const prefill = {staggerMs: 60} as const;
+
 /** Fixed sizes in px. */
 export const layout = {
   sidebar: 248,
@@ -437,6 +443,7 @@ export function cssVariables(): Record<string, string> {
   }
   vars['--done-sweepIn'] = `${completion.moment * completion.sweepInPct / 100}ms`;
   vars['--done-sweepOut'] = `${completion.moment * (100 - completion.sweepInPct) / 100}ms`;
+  vars['--prefill-stagger'] = `${prefill.staggerMs}ms`;
   vars['--skel'] = `var(--${skeleton.fill})`;
   vars['--skel-on-sub'] = `var(--${skeleton.fillOnSub})`;
   vars['--skel-delay'] = `${skeleton.delayMs}ms`;

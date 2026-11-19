@@ -1,7 +1,7 @@
 // Search, Alfred's Answer card, the proposal card's and the calendar search's rules: what the field
 // asks, the results line, each reason's parts, the highlighted runs, what the reader highlights,
 // and how a proposal's time reads.
-import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {clockTime} from './format.ts';
@@ -376,6 +376,30 @@ export function projectChoice(text: string, projects: {name: string}[], create: 
 }
 
 /** A failed Create, in the provider's own sentence ("The calendar is read-only."), or its trouble ("Todoist is down"). */
+/** How long a proposal's fields wait for the model before they unlock with the rules' prefill. */
+export const PREFILL_WAIT_MS = 1500;
+
+/** Why a proposal's prefill didn't come: too slow, Setpoint out of reach, or the server's failure. */
+export type PrefillMiss = {slow: true} | {unreachable: true} | ProposalPrefillFailure;
+
+/**
+ * The red line in a proposal's head when its prefill didn't come, with Anthropic's status when it
+ * refused ("Failed to prefill, Claude didn't answer (529)"), and on hover what that means.
+ */
+export function prefillMissLine(miss: PrefillMiss): {line: string; tip: string | null} {
+  if ('slow' in miss) return {line: 'Failed to prefill, Claude took too long', tip: 'No answer within 1.5 s, so the fields are filled from the email by Setpoint'};
+  if ('unreachable' in miss) return {line: 'Failed to prefill, can’t reach Setpoint', tip: null};
+  if (miss.reason === 'unusable') return {line: 'Failed to prefill, Claude’s answer was unusable', tip: 'Its answer had no title Setpoint could use'};
+  if (miss.reason === 'unreachable' || miss.status === null) return {line: 'Failed to prefill, can’t reach Anthropic', tip: 'Anthropic didn’t answer in time, or couldn’t be reached'};
+  const status = miss.status;
+  const tip = status === 429 ? 'Rate limited: Anthropic is limiting requests for now'
+    : status === 529 ? 'Anthropic is overloaded right now'
+      : status >= 500 ? 'Trouble on Anthropic’s side'
+        : status === 401 || status === 403 ? 'Anthropic refused the key. Check it in Settings › AI'
+          : 'Anthropic refused the request';
+  return {line: `Failed to prefill, Claude didn’t answer (${status})`, tip};
+}
+
 export const failedLine = (provider: SourceProvider | null, message: string | null) => refusalWords(provider, message, 'It wasn’t created.');
 
 // ---------- Calendar search ----------

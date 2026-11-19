@@ -2,7 +2,7 @@
 // because a search, an answer and a proposal belong to the screen that asked for them. Create is
 // the one change here. It is a command: pending until its provider confirms it, failed with the
 // provider's words.
-import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, ItemKind, ProposalOut, SearchChip, SearchOut, SearchRead, SearchSent, SearchSuggestOut} from '@setpoint/shared';
+import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, ItemKind, ProposalOut, ProposalPrefillOut, SearchChip, SearchOut, SearchRead, SearchSent, SearchSuggestOut} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
 
 export const SETTINGS_PATH = '/settings';
@@ -61,4 +61,7 @@ export const alfredStep = (ask: string) => getJson<AskStepOut>(`/alfred/asks/${a
 
 /** Add to calendar / Add as task: the item pre-filled from the email, created by nothing. */
 export const proposeFromMessage = (messageId: number, kind: ItemKind) => sendJson<ProposalOut>('POST', '/proposals/from-message', {message_id: messageId, kind});
+
+/** The same proposal with its fields read from the email by a model, or why there was no call. */
+export const prefillFromMessage = (messageId: number, kind: ItemKind) => sendJson<ProposalPrefillOut>('POST', '/proposals/prefill', {message_id: messageId, kind});
 

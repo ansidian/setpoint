@@ -18,13 +18,13 @@
 //
 // EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
 // body, with no tools, actions, slot or commands of its own.
-import type {AccountOut, DraftsOut, FromOut, ItemKind, MessageOut, MessageRowOut, ProposalOut, RuleOut} from '@setpoint/shared';
+import type {AccountOut, DraftsOut, FromOut, ItemKind, MessageOut, MessageRowOut, ProposalOut, ProposalPrefillFailure, RuleOut} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
-import {useResource} from '../api/client.ts';
+import {ApiFailure, useResource} from '../api/client.ts';
 import {DRAFTS_PATH, FROM_PATH} from '../api/drafts.ts';
 import {markRead, markUnread, messagePath, trustDomain} from '../api/mail.ts';
-import {proposeFromMessage} from '../api/search.ts';
+import {prefillFromMessage, proposeFromMessage} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
 import {hasOthers} from '../logic/composer.ts';
@@ -32,7 +32,8 @@ import {dayOf, fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
 import {factRows, fitTools, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../logic/reader.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
-import {phraseRuns, segments} from '../logic/search.ts';
+import {phraseRuns, PREFILL_WAIT_MS, segments} from '../logic/search.ts';
+import type {PrefillMiss} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
@@ -320,7 +321,16 @@ export function EmailCard({id, row, accounts, now, timeZone}: {
   return <Email listed={row ?? message} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={[]} />;
 }
 
-type Panel = {kind: ItemKind; proposal: ProposalOut | null} | {kind: 'ask'} | null;
+/**
+ * A proposal's prefill: `waiting` while the model reads the email (the fields locked under
+ * skeletons), then once only `filled` (its answer), `missed` (past PREFILL_WAIT_MS or failed: the
+ * rules' fields and a red line) or `none` (no call: an invite, no key). A late answer finds it
+ * moved on and is dropped, so nothing typed is overwritten.
+ */
+export type Fill = 'waiting' | 'filled' | 'missed' | 'none';
+type ProposalPanel = {kind: ItemKind; opened: number; rules: ProposalOut | null; filled: ProposalOut | null; fill: Fill; miss: PrefillMiss | null};
+type Panel = ProposalPanel | {kind: 'ask'} | null;
+let openings = 0;
 type Cards = ReturnType<typeof useCards>;
 
 // A card asked for from outside the reader (an email row's right-click: Add to calendar, Add as task,
@@ -355,12 +365,30 @@ function useCards(id: number) {
         foldCard();
         return show(null);
       }
-      show({kind, proposal: null});
+      openings += 1;
+      const opened = openings;
+      show({kind, opened, rules: null, filled: null, fill: 'waiting', miss: null});
+      // Only this opening's card: closed and opened again, it's another.
+      const mine = (current: Panel): current is ProposalPanel => current !== null && current.kind === kind && 'opened' in current && current.opened === opened;
+      const unlock = (miss: PrefillMiss) => settle(current => (mine(current) && current.fill === 'waiting' ? {...current, fill: 'missed', miss} : current));
+      const cutoff = setTimeout(() => unlock({slow: true}), PREFILL_WAIT_MS);
       proposeFromMessage(id, kind).then(
-        proposal => settle(current => (current?.kind === kind ? {kind, proposal} : current)),
+        rules => settle(current => (mine(current) ? {...current, rules} : current)),
         (error: Error) => {
-          settle(current => (current?.kind === kind ? null : current));
+          clearTimeout(cutoff);
+          settle(current => (mine(current) ? null : current));
           showToast(error.message, null, 'failed');
+        },
+      );
+      prefillFromMessage(id, kind).then(
+        out => {
+          clearTimeout(cutoff);
+          settle(current => (mine(current) && current.fill === 'waiting' ? {...current, ...(out.proposal ? {filled: out.proposal, fill: 'filled'} : {fill: 'none'})} : current));
+        },
+        (error: Error) => {
+          clearTimeout(cutoff);
+          const details = error instanceof ApiFailure && error.code === 'prefill_failed' ? error.details as ProposalPrefillFailure | undefined : undefined;
+          unlock(details ?? (error instanceof ApiFailure && error.status === 0 ? {unreachable: true} : {reason: 'unreachable', status: null}));
         },
       );
     },
@@ -451,8 +479,9 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
   const {panel, alfred} = cards;
   return (
     <>
-      {panel && panel.kind !== 'ask' && panel.proposal && (
-        <ProposalCard key={panel.kind} proposal={panel.proposal} now={now} timeZone={timeZone} onClose={cards.close} />
+      {panel && panel.kind !== 'ask' && (panel.fill === 'filled' ? panel.filled : panel.rules) && (
+        <ProposalCard key={panel.kind} proposal={(panel.fill === 'filled' ? panel.filled : panel.rules)!} now={now} timeZone={timeZone} onClose={cards.close}
+          fill={panel.fill === 'waiting' ? 'waiting' : panel.fill === 'missed' ? panel.miss : null} />
       )}
       {panel?.kind === 'ask' && alfred.open && (
         <AnswerCard alfred={{...alfred, close: cards.close}} scoped openId={id} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />

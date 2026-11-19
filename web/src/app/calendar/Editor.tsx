@@ -586,6 +586,10 @@ export interface EditorCard {
   quiet: boolean;
   // The card's form, which the host folds away as it closes (app/fold.ts).
   form: RefObject<HTMLFormElement | null>;
+  // The reader's prefill on its way: the fields wait locked under skeletons, and a new `proposal`
+  // fills them. Then, if it didn't come, why, in red in the head.
+  filling?: boolean;
+  missed?: {line: string; tip: string | null} | null;
 }
 
 export function Editor({open, calendars, today, timeZone, dayItems, handed, onPreview, onCreate, onSave, onDelete, onClose, onEscape, onDirty, onKeep, place, card}: EditorProps) {
@@ -663,6 +667,22 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     };
   }, [open.message, open.upcoming, open.kind, open.kept, timeZone, card]);
 
+  // The card's prefill landed: its proposal fills the draft. The fields were locked until now, so
+  // nothing typed is lost. What it replaces fades in (`arrived`).
+  const cardProposal = card?.proposal;
+  const [shownProposal, setShownProposal] = useState(cardProposal);
+  const [arrived, setArrived] = useState(false);
+  if (cardProposal && cardProposal !== shownProposal) {
+    setShownProposal(cardProposal);
+    setDrafts(list => list.map((one, index) => (index ? one : fromProposal(one, {proposal: cardProposal, reminders: null, newProject: false}, timeZone))));
+  }
+  const filling = card?.filling ?? false;
+  const [wasFilling, setWasFilling] = useState(filling);
+  if (wasFilling !== filling) {
+    setWasFilling(filling);
+    if (!filling) setArrived(true);
+  }
+
   // The grid shows new drafts as ghosts, and the active one's day as selected.
   useEffect(() => {
     if (editing) {
@@ -736,8 +756,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const projectProblem = projectChosen && 'problem' in projectChosen ? projectChosen.problem : null;
 
   useEffect(() => {
-    if (!editing && !card?.quiet) line.current?.focus();
-  }, [editing, active, card?.quiet]);
+    // While the prefill comes, the card holds focus, for Esc.
+    if (!editing && !card?.quiet) (filling ? form.current : line.current)?.focus();
+  }, [editing, active, card?.quiet, filling, form]);
   // E on an item focuses its line with its title words selected, so typing renames it rather than
   // reaching the calendar's keys, and the phrases typed stay.
   const opening = useRef(titleRun(draft.text, parsed.marks));
@@ -921,7 +942,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const [cardProblem, setCardProblem] = useState<string | null>(null);
   const submit = () => {
     if (card) {
-      if (card.pending) return;
+      if (card.pending || card.filling) return;
       const problem = draft.kind === 'event' && draft.undated ? 'Pick a day first' : projectProblem ?? (draft.title.trim() ? null : 'Give it a title first');
       setCardProblem(problem);
       if (!problem && ready.length === 1) onCreate(ready);
@@ -1041,6 +1062,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     }, dayList.items)
       : asEmailed ? proposal!.conflict : null;
 
+  // The fields the prefill fills: a skeleton while it's on its way, then what it gave.
+  // The model's answer sweeps in (`sks`). Missed, the rules' values only fade in (`ska`).
+  const sk = filling ? ' skf' : arrived ? (card?.missed ? ' ska' : ' sks') : '';
   return (
     <form ref={form} tabIndex={-1} className={card ? `editor card prop${card.pending ? ' pending' : ''}${card.quiet ? ' in-answer' : ''}` : `rpane editor${handed ? ' handed' : ''}`}
       aria-label={card ? (kind === 'event' ? 'Proposal: add to calendar' : 'Proposal: add as task') : editing ? `Edit ${noun}` : `New ${noun}`} onKeyDown={onKeyDown}
@@ -1052,7 +1076,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
         <div className="card-h">
           <span style={{color: colourVar(calendar?.colour ?? undefined)}}><Icon name={kind === 'event' ? 'event' : 'task_alt'} size={16} /></span>
           <span className="card-title">Proposal</span>
-          {card.proposal.from_email.length > 0 && <span className="card-sub">· from this email</span>}
+          {card.proposal.from_email.length > 0 && !filling && <span className="card-sub">· from this email</span>}
+          {card.missed && <span className="card-miss" role="status" data-tip={card.missed.tip ?? undefined}><Icon name="error" size={16} />{card.missed.line}</span>}
         </div>
       ) : <div className="ed-head">
         <span className="grow ed-title">{editing ? `Edit ${noun}` : `New ${noun}`}</span>
@@ -1072,11 +1097,11 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
         <button type="button" className="ibtn" aria-label="Close editor" data-tip="Close · Esc" onClick={onClose}><Icon name="close" /></button>
       </div>}
 
-      <div className="ed-scroll">
+      <div className="ed-scroll" inert={filling}>
         <div className="ed-line">
           {/* An edited item's Title is a line too, reading only what's typed into it. A new item's
               title is its line's title words, with no Title field under it. */}
-          <label className={`field big nl${titleMark ? ' src' : ''}${overMark !== null ? ' over' : ''}`}>
+          <label className={`field big nl${titleMark ? ' src' : ''}${overMark !== null ? ' over' : ''}${sk}`}>
             <span ref={lineMarks} className="nl-marks" aria-hidden="true">
               <span className="nl-text"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} projectColour={projectTodoist ? TODOIST_COLOURS[projectTodoist] : null}
                 live={liveMark} landed={landed?.start ?? null} over={overMark} key={landed?.seq ?? 0} /></span>
@@ -1106,7 +1131,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
         <div className="eg">
           <Icon name="schedule" size={17} className={`g-when ${echo.when ?? ''}`} />
-          <div className={`prow${lastDay !== draft.date ? ' days' : ''}`}>
+          <div className={`prow${lastDay !== draft.date ? ' days' : ''}${sk}`}>
             <DateField className={`date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`} label={kind === 'task' ? 'Due date' : 'Date'}
               value={draft.undated ? null : draft.date} placeholder={kind === 'event' ? 'Pick a day' : 'No date'}
               shown={draft.undated ? '' : lastDay === draft.date ? dayTitle(draft.date) : `${dayTitle(draft.date)} – ${dayTitle(lastDay)}`}
@@ -1187,7 +1212,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           {kind === 'event' && (
             <>
               <Icon name="location_on" size={17} className={`g-place ${echo.place ?? ''}`} />
-              <label className={`field${placeMenuShown ? ' focus' : ''}`}>
+              <label className={`field${placeMenuShown ? ' focus' : ''}${sk}`}>
                 <input className="grow" aria-label="Place" placeholder="Add place" value={draft.place} onFocus={() => setPlaceAsked(true)}
                   onChange={event => change({place: event.target.value, address: null, picked: null}, ['place'])} />
                 {mark('place')}
@@ -1216,7 +1241,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             <>
               <Icon name="calendar_today" size={17} className={`g-cal ${echo.calendar ?? ''}`} style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
               <span className="menu-host">
-                <button type="button" className="field" aria-label="Calendar" aria-expanded={menu === 'calendar'}
+                <button type="button" className={`field${sk}`} aria-label="Calendar" aria-expanded={menu === 'calendar'}
                   onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
                   <span className="dot sm" style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
                   <span className="grow left">{calendar ? calendarName(calendar) : 'Calendar'}</span>
@@ -1253,7 +1278,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               <Icon name="work" size={17} className={`g-proj ${echo.project ?? ''}`} style={projectTodoist ? {'--c': TODOIST_COLOURS[projectTodoist]} as CSSProperties : undefined} />
               {/* A subtask is in its task's project. Moved to another, Todoist would take it out from under its task. */}
               {editing?.parent_id != null ? <span className="ink2 sub-project" data-tip="A subtask is in its task's project">{draft.project}</span> : (
-              <ProjectField value={draft.project ?? ''} isNew={draft.newProject} projects={projects ?? []} noNew={!!editing}
+              <ProjectField className={sk.trim()} value={draft.project ?? ''} isNew={draft.newProject} projects={projects ?? []} noNew={!!editing}
                 placeholder={settings?.todoist.default_project ?? projects?.find(one => one.inbox)?.name ?? 'Inbox'}
                 line={lineOpen ? {cur: lineCur} : null}
                 onText={text => change({project: text || null, newProject: false, pickedProject: null}, ['project'])}
@@ -1357,7 +1382,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
         </div>
       ) : (
         <div className="ed-foot">
-          <button type="submit" className="btn" disabled={card ? card.pending : editing ? !!projectProblem : ready.length !== drafts.length}>
+          <button type="submit" className="btn" disabled={card ? card.pending || filling : editing ? !!projectProblem : ready.length !== drafts.length}>
             {card?.pending && <span className="spin"><Icon name="progress_activity" size={16} /></span>}
             {editing ? 'Save' : drafts.length > 1 ? `Create ${drafts.length} ${noun}s` : `Create ${noun}`}<span className="kbd">⌘Enter</span>
           </button>
