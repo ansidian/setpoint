@@ -6,6 +6,7 @@
 // card's elements, and React renders what it publishes (the phase, the content layers, the side).
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import type {Rect} from '../../../logic/calendar.ts';
+import {cardKey, staysCard} from '../../../logic/detail.ts';
 import {contentSlideFrom, glideDuration, glidePosition, glideSegment, glideVelocity} from '../../../logic/glide.ts';
 import type {GlideSegment} from '../../../logic/glide.ts';
 import {besidePopover, besideRow, clampInto, EDGE_MARGIN, placeBeside} from '../../../logic/placement.ts';
@@ -15,13 +16,15 @@ import {CAL_ITEMS, findItem, heightOf, pointIn, rectIn} from '../geometry.ts';
 
 /**
  * What the card shows: an item, the day it was picked on, and its calendar. `pane` when it was
- * clicked in the right pane, where the card then sits beside that row.
+ * clicked in the right pane, where the card then sits beside that row. `continues` is the key of the
+ * item this one took the place of (a repeating task's done occurrence, its task's): the card stays as it is.
  */
 export interface DetailTarget {
   item: ItemOut;
   date: string;
   calendar: CalendarOut | undefined;
   pane?: boolean;
+  continues?: string;
 }
 
 /** How the card leaves when nothing is selected: Esc or the grid (close), or Edit (to the pane). */
@@ -52,7 +55,7 @@ interface Where {
   popover: Rect | null;
 }
 
-const keyOf = (target: DetailTarget) => `${target.item.key}|${target.date}`;
+const keyOf = cardKey;
 const visible = (phase: Phase) => phase === 'opening' || phase === 'rest' || phase === 'glide' || phase === 'drag';
 
 const overlaps = (a: Rect, b: Rect) => a.top < b.top + b.height && a.top + a.height > b.top && a.left < b.left + b.width && a.left + a.width > b.left;
@@ -185,8 +188,9 @@ export class DetailMotion {
       return;
     }
     const key = keyOf(target);
-    if (key === this.shown && visible(phase)) {
-      // The same item, refreshed: its content changes in place.
+    if (staysCard(this.shown, target) && visible(phase)) {
+      // The same item, refreshed, or the item that took its place: its content changes in place.
+      this.shown = key;
       this.publish({layers: this.snapshot.layers.map(layer => (layer.role === 'in' ? {...layer, target} : layer))});
       return;
     }

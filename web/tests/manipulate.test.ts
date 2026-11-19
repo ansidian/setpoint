@@ -7,7 +7,7 @@ import type {CommandOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {agendaOverlap, conflictLine, overlapsWith, shortDuration, spanOf, timelineLabels, timelineWindow} from '../src/logic/conflict.ts';
-import {asRetried, canMove, copyOf, dropChange, dropLabel, edgeScroll, deletes, failedFrom, failedTitle, inverseOf, pasteOn, pendingItem, selectWith, withCreating} from '../src/logic/manipulate.ts';
+import {asRetried, canMove, copyOf, dropChange, dropLabel, edgeScroll, deletes, failedFrom, failedTitle, inverseOf, pasteOn, pendingItem, selectWith, withCreating, withHeldDone} from '../src/logic/manipulate.ts';
 import type {Creating} from '../src/logic/manipulate.ts';
 import {calendarMoveChoices, moveLine, scopeChoices} from '../src/logic/scope.ts';
 
@@ -264,4 +264,25 @@ describe('the failed card (board 19b)', () => {
     expect(failedTitle(one)).toBe(title);
     expect(failedFrom(one, zone)).toBe(from);
   });
+});
+
+// A repeating task completed on the calendar: the server makes its done occurrence an item of its
+// own and Todoist moves the task on, while the clicked row is held through its completion moment.
+describe('a held completion', () => {
+  const water = task('Water the plants', '2026-10-07', {recurring: true, repeat: 'every day'});
+  const clicked = {...water, done: true};
+  const occurrence = task('Water the plants', '2026-10-07', {recurring: true, done: true});
+  const movedOn = {...water, due_date: '2026-10-08'};
+  const rent = task('Pay rent', '2026-10-07');
+  // What's drawn, as "title day done", in the list's order.
+  const drawn = (list: ItemOut[]) => list.map(one => `${one.key} ${one.due_date}${one.done ? ' done' : ''}`);
+  test.each<[string, ItemOut[], {item: ItemOut; doneId: number | null}[], ItemOut[]]>([
+    ['nothing held: the list as it is', [rent, occurrence, movedOn], [], [rent, occurrence, movedOn]],
+    ['held, the server yet to answer: the task once, done on its day', [rent, water], [{item: clicked, doneId: null}], [rent, clicked]],
+    ['held, the list without the task: the clicked row, not its done occurrence', [rent, occurrence], [{item: clicked, doneId: occurrence.id}], [rent, clicked]],
+    ['held, Todoist has moved the task on: only the clicked row, on the clicked day', [rent, occurrence, movedOn], [{item: clicked, doneId: occurrence.id}], [rent, clicked]],
+    ['held, the answer not yet known here: the task moved on stays out', [rent, movedOn], [{item: clicked, doneId: null}], [rent, clicked]],
+    ['reopening, the list yet to have the task: the task, open, not its done occurrence', [rent, occurrence], [{item: water, doneId: occurrence.id}], [rent, water]],
+    ['reopening, the list has the task: the task once', [rent, water], [{item: water, doneId: occurrence.id}], [rent, water]],
+  ])('%s', (_name, list, held, shown) => expect(drawn(withHeldDone(list, held))).toEqual(drawn(shown)));
 });

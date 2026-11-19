@@ -193,3 +193,26 @@ export function failedFrom(item: ItemOut, timeZone: string): string | null {
   if (item.kind === 'event' && previous.starts_at !== item.starts_at) return `From ${timeRange(before, timeZone)}`;
   return null;
 }
+
+/**
+ * A repeating task completed here, held on its day while its completion moment plays: `item` is the
+ * task as it was clicked, done, and `doneId` its done occurrence's id once the server has answered.
+ * Reopening is the same the other way: `item` is the task, open, held in the place of the done
+ * occurrence `doneId` until the lists have the task itself.
+ */
+export interface HeldDone {
+  item: ItemOut;
+  doneId: number | null;
+}
+
+/**
+ * A list with its held completions drawn as they were clicked. The server makes a repeating task's
+ * done occurrence an item of its own and moves the task on, so without the hold the clicked row
+ * would leave mid-moment. While one is held, its done occurrence and the task wherever it now sits
+ * stay out, so nothing draws twice. A reopening's hold keeps the done occurrence out the same way.
+ */
+export function withHeldDone(items: ItemOut[], held: readonly HeldDone[]): ItemOut[] {
+  if (!held.length) return items;
+  const out = new Set(held.flatMap(hold => [hold.item.key, ...(hold.doneId === null ? [] : [String(hold.doneId)])]));
+  return [...items.filter(item => !out.has(item.key)), ...held.map(hold => hold.item)];
+}

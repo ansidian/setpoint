@@ -97,3 +97,16 @@ export function attendeesLine(attendees: string[]): string | null {
   if (attendees.length <= 3) return attendees.join(', ');
   return `${attendees.slice(0, 2).join(', ')} and ${attendees.length - 2} more`;
 }
+
+/** A card's identity: its item on the day it was picked. */
+export const cardKey = (target: {item: {key: string}; date: string}) => `${target.item.key}|${target.date}`;
+
+/**
+ * Whether the card showing `shown` stays as it is for `target`, its content changing in place: the
+ * same item refreshed, or the item that took its place (`continues`, a repeating task's done
+ * occurrence after its task). Any other item glides in over the old one.
+ */
+export function staysCard(shown: string | null, target: {item: {key: string}; date: string; continues?: string}): boolean {
+  if (shown === null) return false;
+  return cardKey(target) === shown || (target.continues !== undefined && cardKey({item: {key: target.continues}, date: target.date}) === shown);
+}

@@ -9,10 +9,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
+import {DONE_HELD_MS} from '../../src/logic/today.ts';
 import {cleanUp, holdToast, pauseClock, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -735,6 +737,109 @@ test('subtasks added from the card land in Todoist in the order typed; one opens
     await chip(page, '2026-10-09', 'Print the cover page').waitFor({state: 'detached'});
     await toast.getByRole('button', {name: 'Undo'}).click();
     await until('dated again', report, task => quiet(task) && task.subtasks[4]!.due_date === '2026-10-09', AFTER_UNDO);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a repeating task completed from its card keeps its chip, row and card through the completion moment, then its done occurrence takes their place, and Reopen or Undo puts the task back in the same card', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      database.prepare('UPDATE items SET due_recurring = 1, due_string = ? WHERE title IN (?, ?)').run('every month', 'Pay rent', 'Renew car registration');
+    } finally {
+      database.close();
+    }
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    await openCalendar(page, setpoint.base);
+    const named = async (date: string, title: string) => (await items(setpoint, date)).filter(item => item.title === title);
+    const keys = (locator: Locator) => locator.evaluateAll(all => all.map(one => `${(one as HTMLElement).dataset.key}${one.classList.contains('done') ? ' done' : ''}${one.classList.contains('sel') ? ' sel' : ''}`));
+    const rent = (await named('2026-10-07', 'Pay rent'))[0]!;
+    const rentChip = chip(page, '2026-10-07', 'Pay rent');
+    const rentRow = page.locator('.rpane .ag-task', {hasText: 'Pay rent'});
+
+    // Its card open, from the chip's title (the ring would complete it).
+    await rentChip.click();
+    const card = page.locator('.fd');
+    await card.locator('.card-h').getByRole('button', {name: 'Complete'}).waitFor();
+    // Stopped, so the moment lasts as long as the check says.
+    await pauseClock(page);
+    await card.locator('.card-h').getByRole('button', {name: 'Complete'}).click();
+    // The server has its done occurrence, an item of its own, and the page has read the day again.
+    const done = (await until('the done occurrence', () => named('2026-10-07', 'Pay rent'), list => list.length === 1 && list[0]!.done))[0]!;
+    assert.notEqual(done.id, rent.id, 'the done occurrence is another item');
+    await page.locator('.toast', {hasText: 'Completed Pay rent'}).waitFor();
+    await setpoint.idle();
+    // The moment still plays: the clicked chip and row are the ones drawn, once, and the card is theirs.
+    assert.deepEqual(await keys(rentChip), [`${rent.key} done sel`], 'the clicked chip, held');
+    assert.deepEqual(await keys(rentRow), [`${rent.key} done sel`], 'the clicked row, held');
+    assert.equal(new URL(page.url()).pathname, `/calendar/item/${rent.id}`);
+
+    // Past the hold, the done occurrence is in their place, selected, in the same card.
+    await page.clock.runFor(DONE_HELD_MS);
+    await until('the done occurrence\'s chip', () => keys(rentChip), list => list.join() === `${done.key} done sel`);
+    assert.deepEqual(await keys(rentRow), [`${done.key} done sel`]);
+    assert.equal(new URL(page.url()).pathname, `/calendar/item/${done.id}`);
+    assert.equal(await page.locator('.fd-layer').count(), 1, 'the card stays one card: nothing glides in over it');
+    await card.locator('.card-h').getByRole('button', {name: 'Reopen'}).waitFor();
+
+    // Reopened from that card, once Todoist has the completion: the task is back in its place, selected, in the same card.
+    await until('the completion settles', () => named('2026-10-07', 'Pay rent'), list => !list[0]!.command);
+    await card.locator('.card-h').getByRole('button', {name: 'Reopen'}).click();
+    await until('the task is back', () => named('2026-10-07', 'Pay rent'), list => list.length === 1 && !list[0]!.done);
+    await page.locator('.toast', {hasText: 'Reopened Pay rent'}).waitFor();
+    await setpoint.idle();
+    assert.deepEqual(await keys(rentChip), [`${rent.key} sel`], 'the task\'s own chip, selected');
+    assert.equal(new URL(page.url()).pathname, `/calendar/item/${rent.id}`);
+    assert.equal(await page.locator('.fd-layer').count(), 1, 'still the one card');
+    await card.locator('.card-h').getByRole('button', {name: 'Complete'}).waitFor();
+
+    // Undo while another's moment plays, its card open: the done occurrence takes its place at once, as it
+    // would have at the moment's end, and reopens, the reopen held at the server's door.
+    await page.keyboard.press('Escape');
+    // The card's leaving is on the stopped clock.
+    await page.clock.runFor(1000);
+    await card.waitFor({state: 'detached'});
+    const car = (await named('2026-10-08', 'Renew car registration'))[0]!;
+    const carChip = chip(page, '2026-10-08', 'Renew car registration');
+    await carChip.click();
+    await card.locator('.card-h').getByRole('button', {name: 'Complete'}).click();
+    const carDone = (await until('its done occurrence', () => named('2026-10-08', 'Renew car registration'), list => list.length === 1 && list[0]!.done))[0]!;
+    const toast = page.locator('.toast', {hasText: 'Completed Renew car registration'});
+    await toast.waitFor();
+    // Todoist has the completion, so the Undo goes through at its first asking, on the stopped clock.
+    await until('the completion settles', () => named('2026-10-08', 'Renew car registration'), list => !list[0]!.command);
+    await setpoint.idle();
+    assert.deepEqual(await keys(carChip), [`${car.key} done sel`], 'held');
+    let release = () => {};
+    const heldReopen = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    await page.route(/\/api\/items\/\d+\/complete$/, async route => {
+      await heldReopen;
+      await route.continue();
+    });
+    await toast.locator('button', {hasText: 'Undo'}).click();
+    await until('the done occurrence\'s chip, open on its way', () => keys(carChip), list => list.join() === `${carDone.key} sel`);
+    assert.equal(new URL(page.url()).pathname, `/calendar/item/${carDone.id}`);
+    assert.equal(await page.locator('.fd-layer').count(), 1, 'the card stays one card');
+    // The hold's own end, had it not been let go, changes nothing more.
+    await page.clock.runFor(DONE_HELD_MS);
+    assert.equal(new URL(page.url()).pathname, `/calendar/item/${carDone.id}`);
+    release();
+    // The task is back, and the card is its own: Undo keeps it open, as a one-off task's does.
+    await until('the reopen lands', () => named('2026-10-08', 'Renew car registration'), list => list.length === 1 && !list[0]!.done);
+    await setpoint.idle();
+    await until('the task\'s own chip, open, selected', () => keys(carChip), list => list.join() === `${car.key} sel`);
+    assert.equal(new URL(page.url()).pathname, `/calendar/item/${car.id}`);
+    assert.equal(await page.locator('.fd-layer').count(), 1, 'still the one card');
+    await card.locator('.card-h').getByRole('button', {name: 'Complete'}).waitFor();
+    await page.clock.resume();
+    await page.unroute(/\/api\/items\/\d+\/complete$/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -64,6 +64,9 @@ export const TODAY_TASKS = 3;
  * How long a completed task plays the completion moment: the Today block's line folds away after it.
  */
 export const DONE_MOMENT_MS = completion.moment;
+/** How long a repeating task's completion is held on the calendar (manipulate.ts › withHeldDone): a little past
+ * its moment, which starts a frame or two after the click. */
+export const DONE_HELD_MS = DONE_MOMENT_MS + 100;
 
 /** The range to load for it: today and tomorrow, `to` exclusive. */
 export function todayRange(now: number, timeZone: string): {from: string; to: string} {

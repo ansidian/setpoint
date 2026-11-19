@@ -3,7 +3,7 @@
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attendeesLine, detailWhen, leaveLine, leaveState, remindersLine, repeatLine, travelTime} from '../src/logic/detail.ts';
+import {attendeesLine, cardKey, detailWhen, leaveLine, leaveState, remindersLine, repeatLine, staysCard, travelTime} from '../src/logic/detail.ts';
 
 const zone = SEED_TIME_ZONE;
 const at = (date: string, time: string) => new Date(Date.parse(`${date}T${time}:00-07:00`)).toISOString();
@@ -90,4 +90,17 @@ describe('attendees', () => {
     [['Sam Lee', 'Jo Park', 'Ana Ruiz', 'Kai Chen', 'Lu Wang'], 'Sam Lee, Jo Park and 3 more'],
     [[], null],
   ])('%j', (list, line) => expect(attendeesLine(list)).toBe(line));
+});
+
+// The card showing an item stays as it is, or the next item glides in over it.
+describe('the card across a change of item', () => {
+  const payRent = {item: {key: '8'}, date: '2026-10-07'};
+  test.each([
+    ['nothing shown', null, payRent, false],
+    ['the same item, refreshed', cardKey(payRent), payRent, true],
+    ['the same item picked on another day', cardKey(payRent), {...payRent, date: '2026-10-08'}, false],
+    ['another item', cardKey(payRent), {item: {key: '9'}, date: '2026-10-07'}, false],
+    ['a repeating task\'s done occurrence after its task', cardKey(payRent), {item: {key: '22'}, date: '2026-10-07', continues: '8'}, true],
+    ['a done occurrence after some other item', cardKey({item: {key: '9'}, date: '2026-10-07'}), {item: {key: '22'}, date: '2026-10-07', continues: '8'}, false],
+  ])('%s', (_, shown, target, stays) => expect(staysCard(shown, target)).toBe(stays));
 });

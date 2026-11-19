@@ -25,9 +25,10 @@ import {CALENDARS_PATH, completeItem, createItems, createSubtask, deleteItem, it
 import {addMonths, dayTitle, FIRST_WEEK, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, monthTopRow, timeRange, weekIndex} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {addDays, localDate, monthName} from '../../logic/format.ts';
-import {asRetried, copyOf, dayOf, deletes, dropChange, inverseOf, movedItem, pasteOn, pendingItem, selectWith, withCreating} from '../../logic/manipulate.ts';
+import {asRetried, copyOf, dayOf, deletes, dropChange, inverseOf, movedItem, pasteOn, pendingItem, selectWith, withCreating, withHeldDone} from '../../logic/manipulate.ts';
 import type {Creating} from '../../logic/manipulate.ts';
-import type {Deleting} from '../../logic/manipulate.ts';
+import type {Deleting, HeldDone} from '../../logic/manipulate.ts';
+import {DONE_HELD_MS} from '../../logic/today.ts';
 import {openLink} from '../../logic/place.ts';
 import {editedImport, eventDay, ICS_ACCEPT, ICS_MAX_BYTES, ICS_TOO_BIG, icsLanding, isIcsFile} from '../../logic/icsImport.ts';
 import {readIcsFile} from '../../api/icsImport.ts';
@@ -43,7 +44,7 @@ import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useNow} from '../clock.ts';
 import {openContextMenu} from '../ContextMenu.tsx';
 import type {MenuAction} from '../ContextMenu.tsx';
-import {navigate} from '../router.ts';
+import {currentRoute, navigate} from '../router.ts';
 import {useCommands} from '../palette/commands.ts';
 import {useCompact} from '../Phone.tsx';
 import {SearchField} from '../search/Search.tsx';
@@ -68,7 +69,7 @@ import {MonthGrid} from './MonthGrid.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
 import {SearchPane} from './SearchPane.tsx';
 import {rememberMode} from './mode.ts';
-import {knownDay, pulseToday, rememberDay, revealDay, scrollToMonth, setAnchor, setSearchMatches, setSelectedDay, setShownMonth, showWeek, useCalendarView} from './view.ts';
+import {knownDay, moveAnchor, pulseToday, rememberDay, revealDay, scrollToMonth, setAnchor, setSearchMatches, setSelectedDay, setShownMonth, showWeek, useCalendarView} from './view.ts';
 import {WeekGrid} from './WeekGrid.tsx';
 import {failureText, refusalWords} from '../../logic/providerWords.ts';
 
@@ -82,19 +83,20 @@ const addressOf = (route: CalendarRoute) => routePath({...route, view: undefined
  * one item to another, the old one goes back to tinted at once and the new one turns solid 60 ms
  * into the glide.
  */
-function useSolidKey(selectedKey: string | null): string | null {
+function useSolidKey(selectedKey: string | null, continues: string | null = null): string | null {
   const [solid, setSolid] = useState(selectedKey);
   const previous = useRef(selectedKey);
   useLayoutEffect(() => {
     const was = previous.current;
     previous.current = selectedKey;
-    if (was && selectedKey && was !== selectedKey) {
+    // An item that took its item's place (`continues`) is solid at once: nothing glides.
+    if (was && selectedKey && was !== selectedKey && was !== continues) {
       setSolid(null);
       const timer = setTimeout(() => setSolid(selectedKey), glide.selectionSolidAtMs);
       return () => clearTimeout(timer);
     }
     setSolid(selectedKey);
-  }, [selectedKey]);
+  }, [selectedKey, continues]);
   return solid;
 }
 
@@ -226,6 +228,12 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const [pickedInPane, setPickedInPane] = useState<string | null>(null);
   const [ask, setAsk] = useState<Ask | null>(null);
   const [sendingNow, setSending] = useState<Map<string, ItemOut>>(new Map());
+  // Repeating tasks completed here, held on their day while the completion moment plays (withHeldDone).
+  const [held, setHeld] = useState<readonly HeldDone[]>([]);
+  // The done occurrences that took a held task's place, each with its task's key: the card and the selection stay as they are.
+  // The holds still standing, by their task's key: a hold ends once, at its moment's end or at Undo.
+  const holds = useRef(new Map<string, {task: ItemOut; doneId: number | null}>());
+  const [continued, setContinued] = useState<ReadonlyMap<string, string>>(new Map());
   // New items drawn the moment they're asked for, until the server's own are in (withCreating).
   const [creating, setCreating] = useState<Creating[]>([]);
   // Deletes asked for here, off the grid until the provider confirms (or back, failed, if it refuses).
@@ -260,7 +268,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const googleCalendars = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google' && calendar.writable), [calendars]);
 
   // Items as they show: changes on their way where they're going, deletes on their way gone.
-  const present = useCallback((list: ItemOut[]) => list.flatMap(item => {
+  const present = useCallback((list: ItemOut[]) => withHeldDone(list, held).flatMap(item => {
     let shown = asRetried(sendingNow.get(item.key) ?? item, retried);
     // A subtask deleted from its checklist leaves it the same way.
     const kept = shown.subtasks.filter(subtask => ![...heldDeletes.keys()].some(entry => entry.id === subtask.id)
@@ -270,7 +278,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     // Deleted here, it folds away first.
     if ([...heldDeletes.keys()].some(entry => deletes(entry, shown))) return removing.has(shown.key) ? [shown] : [];
     return deleting.some(entry => deletes(entry, shown) && (!entry.sent || waiting)) ? [] : [shown];
-  }), [sendingNow, deleting, retried, removing]);
+  }), [sendingNow, held, deleting, retried, removing]);
 
   // What the grid draws: the items as they show, new items on their way, a drop waiting on its scope
   // at its new day (its origin a faded ghost), and the editor's drafts as ghosts.
@@ -302,7 +310,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // Every calendar off: the header says the view is filtered, whatever the day.
   const allHidden = !!calendars?.length && calendars.every(calendar => !calendar.visible);
 
-  const solidKey = useSolidKey(selectedKey);
+  const continues = useMemo(() => (selectedKey ? continued.get(selectedKey) ?? null : null), [selectedKey, continued]);
+  const solidKey = useSolidKey(selectedKey, continues);
   const selectedItem = useMemo(() => (selectedKey ? drawn.find(item => item.key === selectedKey) ?? paneItems.find(item => item.key === selectedKey) ?? null : null),
     [drawn, paneItems, selectedKey]);
   const selected = useMemo(() => {
@@ -325,8 +334,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // or not. Edit hands it to the pane's editor, and the card goes there.
   const handedKey = editor?.item?.key ?? null;
   const detailTarget = useMemo<DetailTarget | null>(() => (selectedItem && selectedItem.key !== handedKey && !ask && !selection.length && selectedItem.command?.state !== 'failed'
-    ? {item: selectedItem, date: selectedDay, calendar: calendarsById.get(selectedItem.calendar_id), pane: pickedInPane === selectedItem.key}
-    : null), [selectedItem, handedKey, ask, selection.length, selectedDay, calendarsById, pickedInPane]);
+    ? {item: selectedItem, date: selectedDay, calendar: calendarsById.get(selectedItem.calendar_id), pane: pickedInPane === selectedItem.key, continues: continued.get(selectedItem.key)}
+    : null), [selectedItem, handedKey, ask, selection.length, selectedDay, calendarsById, pickedInPane, continued]);
 
   useEffect(() => setSelectedDay(paneDay), [paneDay]);
   const title = mode === 'week' ? weekTitle(week) : monthName(`${shown}-01`);
@@ -967,20 +976,74 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     if (day && !target.closest('.more')) openContextMenu(event, day, dayMenu(day.dataset.date!, day.matches('.wk-acell') ? 'all' : null));
   };
 
+  /** The selection, the card, its anchor and the address go from an item to the one that takes its place. */
+  const follow = (from: ItemOut, toId: number) => {
+    const to = String(toId);
+    setContinued(map => new Map(map).set(to, from.key));
+    setSelection(keys => keys.map(key => (key === from.key ? to : key)));
+    setPickedInPane(key => (key === from.key ? to : key));
+    const day = knownDay(from.key) ?? from.due_date;
+    if (day) rememberDay(to, day);
+    moveAnchor(from.key, to);
+    const now = currentRoute();
+    if (now.page === 'calendar' && now.item === from.id && !now.at) navigate({...now, item: toId}, {replace: true});
+  };
+
+  /**
+   * A held completion's moment is over: its done occurrence takes the row's place, and what was on
+   * the task, which has moved on, follows. Once for each hold.
+   */
+  const handOver = (task: ItemOut, doneId: number) => {
+    if (!holds.current.delete(task.key)) return;
+    setHeld(list => list.filter(hold => hold.item.key !== task.key));
+    follow(task, doneId);
+  };
+
   const complete = (task: ItemOut, undoing = false) => {
-    setSending(map => new Map(map).set(task.key, sending({...task, done: !task.done})));
-    void completeItem(task.id, !task.done, task.recurring ? task.due_date : null)
+    // A held row is on its way, as a pending one is: its check does nothing more.
+    if (holds.current.has(task.key)) return;
+    // Undo of a completion still held: its done occurrence takes its place now, and reopens.
+    for (const hold of [...holds.current.values()]) if (hold.doneId === task.id) handOver(hold.task, task.id);
+    // A repeating task's done occurrence is another item, so the clicked row is held through its moment.
+    const holding = task.recurring && !task.done;
+    // Reopening its done occurrence removes that item and puts the task back: the task is held in its
+    // place until the lists have it, so the card and the selection stay.
+    const handingBack = task.recurring && task.done;
+    const moment = new Promise<void>(resolve => window.setTimeout(resolve, DONE_HELD_MS));
+    if (holding) {
+      holds.current.set(task.key, {task, doneId: null});
+      setHeld(list => [...list, {item: sending({...task, done: true}), doneId: null}]);
+    }
+    else setSending(map => new Map(map).set(task.key, sending({...task, done: !task.done})));
+    void completeItem(task.id, !task.done, task.recurring ? task.due_date : null,
+      command => {
+        if (holding) {
+          if (holds.current.has(task.key)) holds.current.set(task.key, {task, doneId: command.target_id});
+          setHeld(list => list.map(one => (one.item.key === task.key ? {...one, doneId: command.target_id} : one)));
+        } else if (handingBack) {
+          // The task is drawn in the done occurrence's place from the answer on, and what was on the occurrence follows.
+          setHeld(list => [...list, {item: sending({...task, id: command.target_id, key: String(command.target_id), done: false, done_at: null, can_reopen: false}), doneId: task.id}]);
+          follow(task, command.target_id);
+        }
+      })
       // The undo goes to the item the change was on, a repeating task's done
       // occurrence after Complete and the task itself after Reopen.
       .then(command => {
         if (!undoing) said(`${task.done ? 'Reopened' : 'Completed'} ${task.title}`, () => complete({...task, id: command.target_id, key: String(command.target_id), done: !task.done}, true));
+        // The lists have the task itself now.
+        if (handingBack) setHeld(list => list.filter(one => one.doneId !== task.id));
+        return holding ? moment.then(() => handOver(task, command.target_id)) : undefined;
       })
       .catch(toastFailure('Failed to complete'))
-      .finally(() => setSending(map => {
-        const next = new Map(map);
-        next.delete(task.key);
-        return next;
-      }));
+      .finally(() => {
+        setSending(map => {
+          const next = new Map(map);
+          next.delete(task.key);
+          return next;
+        });
+        // Refused, its row is the open task's again at once.
+        if (holding && holds.current.delete(task.key)) setHeld(list => list.filter(one => one.item.key !== task.key));
+      });
   };
 
   // A subtask's check says so with Undo, as its task's does. A repeating one's Undo reopens

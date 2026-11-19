@@ -93,6 +93,11 @@ export const revealDay = (date: string) => set({scroll: {kind: 'day', date, seq:
 
 export const setAnchor = (anchor: CalendarView['anchor']) => set({anchor});
 
+/** The floating detail's anchor follows its item to a new key (a repeating task's done occurrence). */
+export function moveAnchor(from: string, to: string) {
+  if (view.anchor?.key === from) set({anchor: {...view.anchor, key: to}});
+}
+
 /** The month grid's glide has landed, or been stopped by the wheel, a touch or a press. */
 export function stopGliding() {
   if (view.gliding !== null) set({gliding: null});

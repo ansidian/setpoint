@@ -159,8 +159,12 @@ export const deleteItem = (id: number, input: {scope?: RecurringScope; occurrenc
   change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/delete`, input, {keepalive})));
 
 /** Complete or Reopen. Undo right after waits for the Complete before it to reach Todoist. */
-export const completeItem = (id: number, done: boolean, occurrenceDate: string | null = null) =>
-  change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/complete`, {done, occurrence_date: occurrenceDate})));
+export const completeItem = (id: number, done: boolean, occurrenceDate: string | null = null, sent?: (command: CommandOut) => void) =>
+  change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/complete`, {done, occurrence_date: occurrenceDate})).then(command => {
+    // Told of the answer before the lists are read again, so a caller knows the change's item before it's drawn.
+    sent?.(command);
+    return command;
+  }));
 
 /** A task's subtasks in a new order, every one named. */
 export const reorderSubtasks = (id: number, subtaskIds: number[]) =>
