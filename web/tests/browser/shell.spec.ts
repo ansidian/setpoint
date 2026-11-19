@@ -220,7 +220,10 @@ test('the Today block names its tasks, tomorrow\'s under their own label, and a 
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const lines = page.locator('.sb .today-row');
     await until('the Today block', () => lines.allTextContents(), texts => texts.length === 5);
-    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report1/4', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
+    // A task with subtasks ends in their count, done of all, after its subtask glyph, as its chip does.
+    assert.deepEqual(await lines.locator('.count').evaluateAll(counts => counts.map(count => [count.closest('.today-row')!.querySelector('.title')!.textContent, count.querySelector('.icon') !== null, count.textContent])),
+      [['CS 101 lab report', true, '1/4']]);
     // Tomorrow's event and task sit under a label of their own.
     assert.deepEqual(await page.locator('.sb .today .sb-label').allTextContents(), ['Today', 'Tomorrow']);
     assert.equal(await page.locator('.sb .today > *').evaluateAll(children => children.findIndex(child => child.textContent === 'Tomorrow')), 4);
@@ -281,13 +284,13 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
     const tasks = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-09')).items.filter(item => item.kind === 'task');
     await until('the completion lands', tasks, list => list.every(task => !task.command));
     assert.deepEqual((await tasks()).map(task => [task.title, task.done]).sort(), [['CS 101 lab report', false], ['Pay rent', true], ['Renew car registration', false]]);
-    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'CS 101 lecture6:00 PM', 'Renew car registration']);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report1/4', 'CS 101 lecture6:00 PM', 'Renew car registration']);
 
     // Undo brings it back where it was.
     await page.mouse.move(800, 600);
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await lines.filter({hasText: 'Pay rent'}).waitFor();
-    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report1/4', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -371,7 +374,7 @@ test('a timed task shows its time and takes its place by it, among the Today blo
     const lines = page.locator('.sb .today-row');
     await until('the Today block', () => lines.allTextContents(), texts => texts.length === 5);
     assert.deepEqual(await lines.allTextContents(),
-      ['Pay rent8:00 AM', 'Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Renew car registration9:30 AM', 'CS 101 lecture6:00 PM']);
+      ['Pay rent8:00 AM', 'Dentist2:30 PM · in 5h', 'CS 101 lab report1/4', 'Renew car registration9:30 AM', 'CS 101 lecture6:00 PM']);
 
     // The day pane keeps its Events and Tasks apart, its tasks by time and the untimed last.
     await page.goto(`${setpoint.base}/calendar/2026-10-07`);

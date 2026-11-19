@@ -140,6 +140,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row .lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
 .today-row .lines > .title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .today-row .when { color: var(--ink3); font-size: 12px; white-space: nowrap; }
+.today-row .count { display: inline-flex; align-items: center; gap: 2px; flex: none; height: 1.6em; color: var(--ink3); font-size: 12px; }
 .today-row .when .in { margin-left: 0; }
 .today-row .in.soon { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); font-weight: 500; }
 /* A timed task of today's whose time has passed: its time in caution, as "in 12m" nearing. */

@@ -1,6 +1,6 @@
 // The sidebar's Today block on mail pages. It shows "Dentist" over "2:30 PM · in 5h" and the open
-// tasks due today, a timed one over its time ("9:00 AM"), in one list by time with the untimed tasks
-// after. Under a Tomorrow label of its own (none when nothing's on) come tomorrow's events and open
+// tasks due today, a timed one over its time ("9:00 AM") and one with subtasks ending in their
+// count ("1/3"), in one list by time with the untimed tasks after. Under a Tomorrow label of its own (none when nothing's on) come tomorrow's events and open
 // tasks in the same order: the first two and "3 more due tomorrow" when there are more than three.
 // Today's lines never fold.
 // A line opens the floating detail's card beside the sidebar instead of leaving the page. Edit (E)
@@ -31,6 +31,7 @@ import {Icon, TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle} from './accounts.ts';
 import {useRingColour} from './calendar/Chip.tsx';
+import {subtaskCount} from './calendar/Subtasks.tsx';
 import {DetailContent, readOnlyReason} from './calendar/detail/DetailContent.tsx';
 import type {DetailActions} from './calendar/detail/DetailContent.tsx';
 import './calendar/detail/detail.css';
@@ -250,6 +251,8 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
           <span className="ell title" data-tip={title}><span className="done-tx">{title}</span></span>
           {time && <span className="when"><span className={passed ? 't num passed' : 't num'}>{time}</span></span>}
         </span>
+        {/* A task with subtasks ends in their count, done of all, as its chip does. */}
+        {item.subtasks.length > 0 && <span className="count num"><Icon name="subtask" size={12} />{subtaskCount(item)}</span>}
       </a>
     );
   };
