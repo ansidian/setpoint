@@ -25,6 +25,8 @@ import {bareToken, clockLabel, completeToken, describeRule, describeTaskRepeat, 
 import type {Mark, ParsedTitle, ReminderBase, ReminderRead} from '../../logic/compose.ts';
 import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../../logic/plain.ts';
 import type {Span} from '../../logic/plain.ts';
+import {LINE_FIELDS, dropPhrases, keptPicks} from '../../logic/linePhrase.ts';
+import type {LineField} from '../../logic/linePhrase.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
 import {formatOf, isEmpty, readDescription, sameDescription, sourceLine, writeDescription} from '../../logic/description.ts';
 import type {Block} from '../../logic/description.ts';
@@ -130,7 +132,7 @@ interface Draft {
   // Fields an email gave (More options on its proposal card), marked until they're changed. The
   // description's From: line is among them, a mark the server's list doesn't carry.
   fromEmail: Marked[];
-  // Fields set by hand: the line's parse no longer changes them.
+  // Fields set in their rows: the line's parse leaves them until a phrase for one is typed.
   manual: Manual[];
   // The description as the field reads it (logic/description.ts), written in its provider's
   // format on save. `descriptionLossy` when the item's own held formatting that reading drops.
@@ -286,15 +288,17 @@ function readLine(draft: Draft, text: string, today: string, calendars: Calendar
 
 /**
  * The Title typed into an edited item: what the edit typed changes the item's own fields,
- * as on a new item's line, and a phrase taken out again puts back what the item had. Fields set by
- * hand stay. A time typed after the date was set by hand keeps the days picked. A reminder phrase
+ * as on a new item's line, and a phrase taken out again puts back what the item had. Fields set in
+ * their rows stay until a phrase for one is typed. A time typed after the date was set by hand keeps the days picked. A reminder phrase
  * typed adds to the item's reminders.
  */
 function retypeEdit(draft: Draft, text: string, original: Draft, today: string, calendars: CalendarOut[], projects: string[], taskTime: number): Draft {
   const plain = retyped(draft.plain, draft.text, text);
   const parsed = readLine({...draft, plain}, text, today, calendars, projects, original, taskTime);
-  const next = {...draft, text, plain, title: parsed.title};
-  const by = (field: Manual) => !draft.manual.includes(field);
+  // A phrase typed for a field set in its row takes it back.
+  const manual = keptPicks(draft.manual, parsed);
+  const next = {...draft, text, plain, title: parsed.title, manual};
+  const by = (field: Manual) => !manual.includes(field);
   if (by('reminders')) next.lineReminders = parsed.reminders ?? [];
   const base = by('date') && by('time') ? original : draft;
   Object.assign(next, editedWhen({date: by('date') ? original.date : draft.date, start: base.start, end: base.end, days: base.days},
@@ -322,8 +326,10 @@ function retypeEdit(draft: Draft, text: string, original: Draft, today: string, 
 function retype(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], taskTime: number): Draft {
   const plain = retyped(draft.plain, draft.text, text);
   const parsed = readLine({...draft, plain}, text, today, calendars, projects, null, taskTime);
-  const next = {...draft, text, plain, title: parsed.title};
-  const by = (field: Manual) => !draft.manual.includes(field);
+  // A phrase typed for a field set in its row takes it back.
+  const manual = keptPicks(draft.manual, parsed);
+  const next = {...draft, text, plain, title: parsed.title, manual};
+  const by = (field: Manual) => !manual.includes(field);
   // The line's reminders replace Settings' default, beside what's picked.
   if (by('reminders')) next.lineReminders = parsed.reminders ?? [];
   if (by('date')) {
@@ -333,7 +339,7 @@ function retype(draft: Draft, text: string, today: string, calendars: CalendarOu
   }
   if (by('time')) {
     // Days picked by hand stay: the end moves to its last day.
-    const later = draft.manual.includes('date') ? extraDays(draft.start, draft.end, draft.days) * 1440 : 0;
+    const later = !by('date') ? extraDays(draft.start, draft.end, draft.days) * 1440 : 0;
     if (draft.kind === 'event' && parsed.days !== null && by('date')) {
       // A span of days with no time is all day over them.
       Object.assign(next, {start: null, end: null, days: parsed.days});
@@ -348,7 +354,7 @@ function retype(draft: Draft, text: string, today: string, calendars: CalendarOu
       // The week view's slot, or a proposal's time (a task's too).
       next.start = draft.slot.start;
       next.end = draft.kind === 'task' || draft.slot.end === null ? null : draft.slot.end + later;
-      if (!draft.manual.includes('date') && draft.kind === 'event') next.days = draft.slot.days;
+      if (by('date') && draft.kind === 'event') next.days = draft.slot.days;
     } else {
       next.start = draft.kind === 'event' ? DEFAULT_START : null;
       next.end = draft.kind === 'event' ? DEFAULT_START + DEFAULT_LENGTH + later : null;
@@ -728,8 +734,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const bareHash = hashMark ? null : bare('#');
   const lineMark: Mark | undefined = hashMark ?? (bareHash ? {start: bareHash.start, end: draft.text.length, kind: draft.kind === 'task' ? 'project' : 'calendar'} : undefined);
   const lineQuery = !lineMark ? null
-    : draft.kind === 'task' ? (draft.pickedProject === null && !draft.manual.includes('project') ? (hashMark ? parsed.project : '') : null)
-      : draft.pickedCalendar === null && !draft.manual.includes('calendar') ? draft.text.slice(lineMark.start + 1, lineMark.end).replace(/\s*,$/, '') : null;
+    : draft.kind === 'task' ? (draft.pickedProject === null ? (hashMark ? parsed.project : '') : null)
+      : draft.pickedCalendar === null ? draft.text.slice(lineMark.start + 1, lineMark.end).replace(/\s*,$/, '') : null;
   // Editing a task offers only Todoist's projects.
   const projectLine = draft.kind === 'task' && lineQuery !== null ? projectMenu(lineQuery, projects ?? [], draft.newProject || !!editing) : [];
   // Both menus put the names starting with what's typed first, as the line reads them.
@@ -741,7 +747,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // "@" and a letter) ending the line, or once the Place field is focused with less than that in it.
   // Like Places' list, it stays until a pick, Esc or Tab, not on blur.
   const {data: recent} = useResource<RecentPlaceOut[]>(draft.kind === 'event' ? RECENT_PLACES_PATH : null);
-  const atToken = draft.kind === 'event' && !draft.manual.includes('place') && !parsed.marks.some(mark => mark.kind === 'place') ? bare('@') : null;
+  const atToken = draft.kind === 'event' && !parsed.marks.some(mark => mark.kind === 'place') ? bare('@') : null;
   const recentQuery = atToken ? atToken.query : placeAsked && draft.kind === 'event' && draft.address === null && draft.place.trim().length < 2 ? draft.place.trim() : null;
   const recentList: PlaceSuggestionOut[] = recentQuery === null ? [] : rankMatches(recentQuery, recent ?? [], one => one.name).map(one => ({place_id: '', name: one.name, address: one.address ?? ''}));
   const recentCur = Math.min(recentMenu?.query === recentQuery ? recentMenu.cur : 0, recentList.length - 1);
@@ -779,6 +785,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     (host.querySelector<HTMLElement>(`[aria-label="${MENU_OPENERS[closed]}"]`) ?? host).focus();
   }, [menu, form]);
 
+  // Where the line's caret goes once a pick or a row's change has rewritten it.
+  const caret = useRef<number | null>(null);
+  useEffect(() => {
+    if (caret.current === null) return;
+    line.current?.setSelectionRange(caret.current, caret.current);
+    caret.current = null;
+  }, [draft.text]);
   const change = (next: Partial<Draft>, manual: Manual[] = []) => {
     // A field changed by hand loses its "from the email" mark.
     const edited: Marked[] = [];
@@ -787,9 +800,21 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     if (next.date !== undefined || next.start !== undefined || next.end !== undefined) edited.push('date', 'time');
     if (next.place !== undefined) edited.push('place');
     if (next.description !== undefined) edited.push('description');
-    setDrafts(list => list.map(one => (one.id === draft.id
-      ? {...one, ...next, manual: [...new Set([...one.manual, ...manual])], fromEmail: one.fromEmail.filter(field => !edited.includes(field))}
-      : one)));
+    // A row's change deletes its field's phrase from the line. The other fields that phrase set
+    // ("fri 7-9pm" with a day picked) keep their values, as if set in their rows too.
+    const fields = manual.filter((field): field is LineField => (LINE_FIELDS as readonly string[]).includes(field));
+    const read = (text: string) => readLine({...raw, plain: retyped(raw.plain, raw.text, text)}, text, today, calendarChoices, projectNames, original, taskTime);
+    const typing = document.activeElement === line.current ? line.current?.selectionStart ?? null : null;
+    const dropped = fields.length ? dropPhrases(raw.text, read, fields, typing) : null;
+    const cut = dropped && dropped.text !== raw.text ? dropped : null;
+    if (cut && cut.caret !== null) caret.current = cut.caret;
+    const unpicked: Partial<Draft> = {...(fields.includes('place') ? {picked: null} : {}), ...(fields.includes('calendar') ? {pickedCalendar: null} : {})};
+    setDrafts(list => list.map(one => {
+      if (one.id !== draft.id) return one;
+      const set = {...one, ...next, manual: [...new Set([...one.manual, ...manual, ...(cut?.held ?? [])])], fromEmail: one.fromEmail.filter(field => !edited.includes(field))};
+      if (!cut || one.text !== raw.text) return set;
+      return reread({...set, ...unpicked, text: cut.text, plain: retyped(one.plain, one.text, cut.text)}, cut.text);
+    }));
   };
   const mark = (...fields: Marked[]) => (fields.some(field => draft.fromEmail.includes(field))
     ? <span className="srcm" role="img" aria-label="From the email" data-tip="From the email"><Icon name="mail" size={14} /></span> : null);
@@ -843,13 +868,6 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const focusedAtPress = useRef(false);
   const [lineFocused, setLineFocused] = useState(false);
   const overMark = lineFocused && parsed.marks.some(one => one.start === over) ? over : null;
-  // Where the line's caret goes once a pick has rewritten it.
-  const caret = useRef<number | null>(null);
-  useEffect(() => {
-    if (caret.current === null) return;
-    line.current?.setSelectionRange(caret.current, caret.current);
-    caret.current = null;
-  }, [draft.text]);
   // The mark just picked, brightening once as it lands.
   const [landed, setLanded] = useState<{start: number; seq: number} | null>(null);
   useEffect(() => {
@@ -874,8 +892,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     }
   };
   const pick = (place: PlaceSuggestionOut) => {
-    const placeMark = draft.manual.includes('place') ? undefined
-      : parsed.marks.find(mark => mark.kind === 'place') ?? (atToken ? {start: atToken.start, end: draft.text.length, kind: 'place' as const} : undefined);
+    const placeMark = parsed.marks.find(mark => mark.kind === 'place') ?? (atToken ? {start: atToken.start, end: draft.text.length, kind: 'place' as const} : undefined);
     const chosen = {place: place.name, address: place.address || ''};
     if (placeMark) completeLine(placeMark, place.name, {...chosen, picked: place.name});
     else change({...chosen, picked: null});

@@ -907,6 +907,68 @@ test('the date and time pickers: a month under the date, 15-minute lists (End\'s
   }
 });
 
+test('the latest change wins each field: a row\'s pick or × deletes its phrase from the line, and a phrase typed afterwards takes the field back', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    const [date, start] = ['Date', 'Start'].map(label => page.getByLabel(label, {exact: true}));
+    // The time picked in its row, then its ×: a time typed afterwards still sets it.
+    await line.pressSequentially('Lunch');
+    await start!.fill('1p');
+    await start!.press('Enter');
+    assert.equal(await start!.inputValue(), '1:00 PM');
+    await page.getByRole('button', {name: 'All day', exact: true}).click();
+    await page.getByRole('button', {name: 'All day · Add a time'}).waitFor();
+    await line.click();
+    await line.press('End');
+    await line.pressSequentially(' 3pm');
+    assert.equal(await start!.inputValue(), '3:00 PM');
+    // The × deletes the line's time: "Lunch 3pm" is "Lunch", all day.
+    await page.getByRole('button', {name: 'All day', exact: true}).click();
+    await page.getByRole('button', {name: 'All day · Add a time'}).waitFor();
+    assert.equal(await line.inputValue(), 'Lunch');
+    // A pick in the row deletes it too: "Lunch 3pm" with Start 5:00 PM is "Lunch", 5:00 PM.
+    await line.press('End');
+    await line.pressSequentially(' 3pm');
+    assert.equal(await start!.inputValue(), '3:00 PM');
+    await start!.fill('5p');
+    await start!.press('Enter');
+    assert.deepEqual([await line.inputValue(), await start!.inputValue()], ['Lunch', '5:00 PM']);
+    // Words typed after it leave the pick; a day and time typed afterwards take both back.
+    await line.press('End');
+    await line.pressSequentially(' with Ana');
+    assert.equal(await start!.inputValue(), '5:00 PM');
+    await line.pressSequentially(' fri 7pm');
+    assert.deepEqual([await date!.inputValue(), await start!.inputValue()], ['Fri, Oct 9', '7:00 PM']);
+    // The day and time share one phrase: a day picked deletes it whole, and the time stays.
+    await date!.fill('oct 14');
+    await date!.press('Enter');
+    assert.deepEqual([await line.inputValue(), await date!.inputValue(), await start!.inputValue()], ['Lunch with Ana', 'Wed, Oct 14', '7:00 PM']);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await page.locator('.editor').waitFor({state: 'detached'});
+
+    // An edited item the same: Dentist's Start picked, then a time typed into its Title takes it back.
+    await chip(page, '2026-10-07', 'Dentist').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit event"]').waitFor();
+    await start!.fill('5p');
+    await start!.press('Enter');
+    assert.equal(await start!.inputValue(), '5:00 PM');
+    const title = page.locator('.editor input[aria-label="Title"]');
+    await title.press('End');
+    await title.pressSequentially(' 4pm');
+    assert.equal(await start!.inputValue(), '4:00 PM');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('No end in the End list makes an event that ends as it starts; it says its start alone and overlaps nothing', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
