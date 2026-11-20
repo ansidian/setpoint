@@ -754,6 +754,11 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
    takes the glare off its white (#f2f2f2), Light gives it a hairline ring, not a shadow. */
 .mailframe-box { flex: none; border-radius: var(--r-card); padding: 16px clamp(0px, (100% - 600px) / 2, 20px); background: #ffffff; filter: brightness(var(--mailDim)); box-shadow: 0 0 0 1px var(--mailEdge);
   transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+/* What scrolls an HTML email keeps its scrollbar's room whether it scrolls or not. Otherwise an
+   email whose layout follows its width (a max-width media rule) could grow tall enough to bring
+   the scrollbar, lose the width its layout needs, come out short enough to lose the scrollbar, and
+   flip between the two for as long as it shows. */
+.rd-scroll, .sel-card, .composer { scrollbar-gutter: stable; }
 /* Until its page says how tall it is: 240 px held on `sub`, the frame unseen. Then it fades in. */
 .mailframe-box.measuring { background: var(--sub); filter: none; box-shadow: none; }
 .mailframe-box .mailframe { transition: opacity var(--dur-fast) var(--ease); }
