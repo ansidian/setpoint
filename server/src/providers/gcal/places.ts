@@ -2,8 +2,10 @@
 // token so one editing session is billed as one.
 // "a&b auto" becomes "a & b auto" (Google missed the exact business otherwise). Results are
 // restricted to 12 km around Home, US only, and ranked by distance. When that finds fewer than
-// five, the area widens to 24 km (still a restriction, merged, first pass first). The key is
-// Settings' Places key (also Time to Leave's routes).
+// five, the area widens to 24 km (still a restriction, merged, first pass first). A business's
+// second line leaves out the street number, so each suggestion's address comes from Place Details
+// (the address alone, without the session token, which stays open for the pick), kept for a day.
+// The key is Settings' Places key (also Time to Leave's routes).
 import type {Home, PlaceOut, PlaceSuggestionOut} from '@setpoint/shared';
 import {requestJson} from '../http.ts';
 import type {HttpOptions} from '../http.ts';
@@ -16,6 +18,10 @@ export const PLACES_FIELD_MASK = 'suggestions.placePrediction.placeId,suggestion
 const NEAR_METERS = 12_000;
 const WIDER_METERS = 24_000;
 const ENOUGH = 5;
+const ADDRESS_KEPT_MS = 24 * 60 * 60_000;
+const ADDRESSES_KEPT = 500;
+// place id → its full address and when it was read.
+const addresses = new Map<string, {address: string; at: number}>();
 
 export interface PlacesOptions extends HttpOptions {
   baseUrl?: string;
@@ -60,10 +66,32 @@ export async function placeSuggestions(options: PlacesOptions, key: string, quer
     found = [...found, ...suggestions(await ask(WIDER_METERS)).filter(place => !seen.has(place.place_id))];
   }
   // Nearest first, Google's order otherwise (a stable sort), unknown distances last.
-  return found
+  const ranked = found
     .map((place, index) => ({place, index}))
     .sort((a, b) => (a.place.distance ?? Infinity) - (b.place.distance ?? Infinity) || a.index - b.index)
     .map(({place: {distance: _distance, ...place}}) => place);
+  return Promise.all(ranked.map(async place => ({...place, address: await fullAddress(options, key, place.place_id, signal) ?? place.address})));
+}
+
+/** A place's address as Place Details has it, or null when Google gives none or refuses. */
+async function fullAddress(options: PlacesOptions, key: string, placeId: string, signal?: AbortSignal): Promise<string | null> {
+  const kept = addresses.get(placeId);
+  if (kept && Date.now() - kept.at < ADDRESS_KEPT_MS) return kept.address;
+  try {
+    const answer = await requestJson<{formattedAddress?: string}>({timeoutMs: PLACES_TIMEOUT_MS, ...options}, {
+      method: 'GET', url: `${(options.baseUrl ?? PLACES_API).replace(/\/+$/, '')}/v1/places/${encodeURIComponent(placeId)}`, signal,
+      headers: {'x-goog-api-key': key, 'x-goog-fieldmask': 'formattedAddress'},
+    }, readGoogleRefusal, 'Google Places');
+    const address = answer?.formattedAddress;
+    if (!address) return null;
+    addresses.delete(placeId);
+    addresses.set(placeId, {address, at: Date.now()});
+    if (addresses.size > ADDRESSES_KEPT) addresses.delete(addresses.keys().next().value!);
+    return address;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return null;
+  }
 }
 
 /**

@@ -112,11 +112,11 @@ describe('Places', () => {
     const {google, c} = await placesWorld();
     google.setPlaces([
       {placeId: 'far', main: 'A & B Auto', secondary: 'Glendale, CA', distanceMeters: 19_000, radius: 20_000},
-      {placeId: 'near', main: 'A & B Auto Body', secondary: '100 Example Ave, Los Angeles, CA', distanceMeters: 3_100, radius: 5_000},
+      {placeId: 'near', main: 'A & B Auto Body', secondary: 'Example Ave, Los Angeles, CA', address: '100 Example Ave, Los Angeles, CA 90028, USA', distanceMeters: 3_100, radius: 5_000},
     ]);
     const answer = await c.send('GET', `/api/places?query=${encodeURIComponent('a&b auto')}&session_token=editor-session-1`);
     expect(answer.body).toEqual([
-      {place_id: 'near', name: 'A & B Auto Body', address: '100 Example Ave, Los Angeles, CA'},
+      {place_id: 'near', name: 'A & B Auto Body', address: '100 Example Ave, Los Angeles, CA 90028, USA'},
       {place_id: 'far', name: 'A & B Auto', address: 'Glendale, CA'},
     ]);
     const calls = google.requests.filter(request => request.path === '/v1/places:autocomplete');
@@ -124,6 +124,20 @@ describe('Places', () => {
       ['a & b auto', 'editor-session-1', 12_000, undefined], ['a & b auto', 'editor-session-1', 24_000, undefined],
     ]);
     expect(calls[0]!.headers['x-goog-fieldmask']).toBe('suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.distanceMeters');
+    // Each suggestion's address from Place Details: the address alone, leaving the session open.
+    const details = google.requests.filter(request => request.path.startsWith('/v1/places/'));
+    expect(details.map(call => [call.path, call.headers['x-goog-fieldmask'], call.query.get('sessionToken')]).sort()).toEqual([
+      ['/v1/places/far', 'formattedAddress', null], ['/v1/places/near', 'formattedAddress', null],
+    ]);
+    // An address read once is kept: the next search asks Details nothing.
+    await c.send('GET', `/api/places?query=${encodeURIComponent('a&b auto body')}&session_token=editor-session-1`);
+    expect(google.requests.filter(request => request.path.startsWith('/v1/places/'))).toHaveLength(2);
+  });
+
+  test('a suggestion whose details Google refuses keeps its second line', async () => {
+    const {google, c} = await placesWorld();
+    google.setPlaces([{placeId: 'gone', main: 'Gone Diner', secondary: 'Example Blvd, Pasadena, CA', gone: true, distanceMeters: 2_000, radius: 5_000}]);
+    expect((await c.send('GET', '/api/places?query=gone&session_token=editor-session-2')).body).toEqual([{place_id: 'gone', name: 'Gone Diner', address: 'Example Blvd, Pasadena, CA'}]);
   });
 
   test('Google\'s refusal comes back as a 502 in its words; no key is 503 without a call', async () => {

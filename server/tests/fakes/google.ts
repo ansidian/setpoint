@@ -77,7 +77,9 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
   // iCalUIDs events.import refuses, with Google's code and words.
   const importRefusals = new Map<string, {code: number; message: string}>();
   const placesKeys = new Set(['maps-key']);
-  let places: {placeId: string; main: string; secondary: string; distanceMeters: number; radius: number; lat?: number; lng?: number}[] = [];
+  // `address`: what Place Details names, in full (the suggestion's second line otherwise);
+  // `gone`: Place Details no longer finds it.
+  let places: {placeId: string; main: string; secondary: string; address?: string; gone?: boolean; distanceMeters: number; radius: number; lat?: number; lng?: number}[] = [];
   let routes = new Map<string, {duration: string; distanceMeters: number}>();
 
   const nextEtag = () => `"${(seq += 1)}"`;
@@ -331,9 +333,9 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
     }),
     on('GET', /^\/v1\/places\/([^/?]+)$/, (request, match) => {
       if (!placesKeys.has(request.headers['x-goog-api-key'] as string)) return googleError(403, 'API key not valid. Please pass a valid API key.', 'API_KEY_INVALID', 'PERMISSION_DENIED');
-      const place = places.find(one => one.placeId === decodeURIComponent(match[1]!));
+      const place = places.find(one => one.placeId === decodeURIComponent(match[1]!) && !one.gone);
       if (!place) return googleError(404, 'Requested entity was not found.', 'NOT_FOUND', 'NOT_FOUND');
-      return {status: 200, body: {id: place.placeId, displayName: {text: place.main}, formattedAddress: place.secondary, location: {latitude: place.lat ?? 34, longitude: place.lng ?? -118}}};
+      return {status: 200, body: {id: place.placeId, displayName: {text: place.main}, formattedAddress: place.address ?? place.secondary, location: {latitude: place.lat ?? 34, longitude: place.lng ?? -118}}};
     }),
     on('POST', /^\/directions\/v2:computeRoutes$/, request => {
       if (!placesKeys.has(request.headers['x-goog-api-key'] as string)) return googleError(403, 'API key not valid. Please pass a valid API key.', 'API_KEY_INVALID', 'PERMISSION_DENIED');

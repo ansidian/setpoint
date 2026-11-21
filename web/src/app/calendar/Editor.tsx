@@ -900,8 +900,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     setPlaceAsked(false);
     // A recent place comes with its address, and isn't Google's.
     if (!place.place_id) return;
-    // A suggestion's second line can leave out the street number. Place Details has the address in
-    // full. It ends Google's session, so the next place typed starts a new one.
+    // Place Details for the pick ends Google's session (so the next place typed starts a new one),
+    // and has the address in full where the suggestion's didn't.
     const id = draft.id;
     setSessionToken(crypto.randomUUID());
     void findPlace(place.place_id, sessionToken).then(found => {
