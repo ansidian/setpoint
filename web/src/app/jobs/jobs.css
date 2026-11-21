@@ -566,4 +566,9 @@
 .jb-pin-end { height: 6px; flex: none; background: var(--panel) repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink3) 35%, transparent) 0 1px, transparent 1px 4px); border-bottom: 1px solid var(--hair); }
 /* A shelf row's Unpin takes its end under the pointer (the Inbox's, board 10). */
 .jb-tr > .hact { position: absolute; right: 12px; top: 6px; display: none; overflow: visible; }
-@media (hover: hover) { .jb-tr.shelf:hover > .hact { display: flex; } .jb-tr.shelf:hover > .jd { visibility: hidden; } }
+/* It is wider than JD's column and the gap before it, so under the pointer Status ends short of it, its note's ellipsis coming earlier, rather than running under it. */
+@media (hover: hover) {
+  .jb-tr.shelf:hover > .hact { display: flex; }
+  .jb-tr.shelf:hover > .jd { visibility: hidden; }
+  .jb-tr.shelf:hover > .st { padding-right: 40px; }
+}

@@ -1367,6 +1367,33 @@ test('P pins the row under the cursor onto the shelf under the headings, newest 
   }
 });
 
+test('a pinned row\'s Unpin, under the pointer, leaves a status note that fills its column readable: the note ends before it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const northwind = await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I');
+    jobsChange(setpoint, `UPDATE jobs_applications SET pinned_at = '2026-10-07T15:00:00.000Z' WHERE id = ${northwind}`);
+    await page.goto(`${setpoint.base}/jobs`);
+    await until('on the shelf', () => shelf(page), names => names.join() === 'Northwind Talent');
+    const target = row(page, northwind);
+    await target.hover();
+    const unpin = target.getByRole('button', {name: 'Unpin'});
+    await unpin.waitFor();
+    const left = (await rested(() => unpin.boundingBox()))!.x;
+    // The note's text, line by line: each ends left of the button.
+    const ends = await target.locator('.st-t').evaluate(note => {
+      const range = document.createRange();
+      range.selectNodeContents(note);
+      return [...range.getClientRects()].map(line => line.right);
+    });
+    assert.ok(ends.length > 0);
+    assert.ok(ends.every(end => end <= left), `the note ends at ${Math.max(...ends)}, Unpin starts at ${left}`);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('Pin from a right-click, the detail\'s tool, More and P with it open; Set to Rejected takes it off the shelf and Undo brings it back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
