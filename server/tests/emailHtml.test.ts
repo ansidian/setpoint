@@ -52,6 +52,14 @@ describe('what a browser would show', () => {
     const email = safeEmail('<html><head><style>p { margin: 0; }</style></head><body><p>One</p></body></html><html><head><style>h1 { margin: 0; }</style></head><body onload="steal()"><h1>Two</h1><script>steal()</script></body></html>', false);
     expect(email).toEqual({styles: ['p { margin: 0; }', 'h1 { margin: 0; }'], body: '<p>One</p><h1>Two</h1>'});
   });
+
+  // Markup a browser repairs is repaired as a browser does, so the email keeps the shape its sender
+  // saw. A job board's card puts each row inside the last one's cell: a browser starts a new row of
+  // the same table, and everything after stays inside the email's column.
+  test('a row inside a cell leaves the column around it whole', () => {
+    expect(body('<table class="column"><tr><td><table><tr><td><tr><td>Role</td></tr></td></tr></table><p>Button</p></td></tr></table>'))
+      .toBe('<table class="column"><tbody><tr><td><table><tbody><tr><td></td></tr><tr><td>Role</td></tr></tbody></table><p>Button</p></td></tr></tbody></table>');
+  });
 });
 
 describe('what the frame\'s own height can\'t change', () => {
@@ -86,8 +94,8 @@ describe('remote content', () => {
     ['a small one stays square', '<img src="https://cdn.example/social.png" width="32" alt="Social" style="display: inline-block">', /width: 32px; display: inline-block; height: 32px; display: inline-grid;" data-hidden-image>Social<\/span>$/],
     ['no size and no alt: the line\'s width, 56 tall, with its glyph', '<img src="https://cdn.example/a.png">', /width: 100%; height: 56px; display: inline-grid;" data-hidden-image><svg /],
     ['a tracking pixel goes entirely', '<p>Hi</p><img src="https://cdn.example/open.gif?m=1" width="1" height="1" alt="">', /^<p>Hi<\/p>$/],
-    ['remote backgrounds go', '<td background="https://cdn.example/bg.png" style="color: red; background: url(\'https://cdn.example/bg.png\') no-repeat">x</td>',
-      /^<td style="color: red; background: none no-repeat">x<\/td>$/],
+    ['remote backgrounds go', '<table><tr><td background="https://cdn.example/bg.png" style="color: red; background: url(\'https://cdn.example/bg.png\') no-repeat">x</td></tr></table>',
+      /^<table><tbody><tr><td style="color: red; background: none no-repeat">x<\/td><\/tr><\/tbody><\/table>$/],
     ['srcset and media go', '<video src="https://cdn.example/v.mp4"></video><picture><source srcset="https://cdn.example/a.webp"></picture>', /^<picture><\/picture>$/],
   ])('hidden: %s', (_name, html, safe) => {
     expect(body(html)).toMatch(safe);
@@ -98,7 +106,7 @@ describe('remote content', () => {
   });
 
   test('allowed, the images stay as they are', () => {
-    const html = '<img src="https://cdn.example/hero.jpg" alt="Hero image" width="600" height="130"><td style="background: url(https://cdn.example/bg.png)">x</td>';
+    const html = '<img src="https://cdn.example/hero.jpg" alt="Hero image" width="600" height="130"><table><tbody><tr><td style="background: url(https://cdn.example/bg.png)">x</td></tr></tbody></table>';
     expect(body(html, true)).toBe(html);
   });
 

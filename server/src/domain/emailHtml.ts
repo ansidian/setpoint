@@ -15,7 +15,8 @@ import render from 'dom-serializer';
 import {Element, isDirective, Text} from 'domhandler';
 import type {ChildNode, Document} from 'domhandler';
 import {findAll, removeElement, replaceElement} from 'domutils';
-import {parseDocument} from 'htmlparser2';
+import {parse} from 'parse5';
+import {adapter} from 'parse5-htmlparser2-tree-adapter';
 
 /** The page's base style, before the email's own: the board's `.paper` (Helvetica, 13 / 1.35, `#1d1f22` on white). */
 export const FRAME_STYLE = 'html, body { margin: 0; padding: 0; background: #ffffff; } body { font: 13px/1.35 Helvetica, Arial, sans-serif; color: #1d1f22; -webkit-font-smoothing: antialiased; overflow-wrap: break-word; } img { max-width: 100%; }';
@@ -121,7 +122,9 @@ export interface SafeEmail {
 
 /** The email's styles and body, safe for the frame. `loadImages` keeps remote content. */
 export function safeEmail(html: string, loadImages: boolean): SafeEmail {
-  const doc = parseDocument(html, {decodeEntities: true});
+  // Read as a browser reads it (the HTML standard's parser), so markup a browser repairs, such as a
+  // table row left inside a cell, keeps the shape the sender saw.
+  const doc = parse(html, {treeAdapter: adapter}) as unknown as Document;
   for (const element of elements(doc, item => REMOVE.has(item.name))) removeElement(element);
   for (const element of elements(doc, () => true)) {
     for (const [name, value] of Object.entries(element.attribs)) {
