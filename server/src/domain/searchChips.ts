@@ -19,6 +19,7 @@
 // organisations and accounts) and keeps Chrono out of the web bundle. The web shows the chips each
 // answer returns (`SearchOut.chips`).
 import * as chrono from 'chrono-node';
+import {validDay} from '@setpoint/shared';
 import type {CalendarSearchChip, Kind, MessageType, SearchChip} from '@setpoint/shared';
 import {addDays, localDay} from './time.ts';
 
@@ -113,10 +114,6 @@ const isoDate = (year: number, month: number, day: number) => `${year}-${pad(mon
 const partsOf = (date: string) => date.split('-').map(Number) as [number, number, number];
 const monthStart = (year: number, month: number) => isoDate(year, month, 1);
 const nextMonth = (year: number, month: number) => (month === 12 ? monthStart(year + 1, 1) : monthStart(year, month + 1));
-const validDay = (year: number, month: number, day: number) => {
-  const at = new Date(Date.UTC(year, month - 1, day));
-  return at.getUTCFullYear() === year && at.getUTCMonth() === month - 1 && at.getUTCDate() === day;
-};
 
 function addMonths(date: string, months: number): string {
   const [year, month, day] = partsOf(date);
