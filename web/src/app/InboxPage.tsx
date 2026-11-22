@@ -861,7 +861,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           </>
         )}
         <EmptyPaneButton pane={pane} />
-        <SearchField search={search} onAsk={askAlfred} onEnter={first => setCursor(`all:${first.id}`)} />
+        <SearchField search={search} operators onAsk={askAlfred} onEnter={first => setCursor(`all:${first.id}`)} />
       </header>
       <div className="content" style={accountWidth} onContextMenu={onContextMenu}>
         {firstWait && waitedLong ? (

@@ -30,6 +30,30 @@
 .search .qchip { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); animation: qchip-in var(--dur-fast) var(--ease); }
 @keyframes qchip-in { from { opacity: 0; transform: scale(.92); } }
 @media (hover: hover) { .search .qchip:has(.x:hover) { background: var(--sub3); box-shadow: inset 0 0 0 1px var(--edgeHover); } }
+/* Inbox's and Sent's field marks each operator the search reads (`from:pat`, `-has:attachment`),
+   as the editor's line marks a phrase (editor.css): the input's own letters are clear over a mirror
+   that holds the marks, so the caret stays on its letter. The mark is the accent's, 2 px either
+   side of its text without moving it, and doesn't move. A long line scrolls inside the input, the
+   mirror with it (ui/useMirror.ts), and a side cut short fades. */
+.search.ops { position: relative; }
+.search .q-line { position: relative; flex: 1 1 auto; min-width: 0; align-self: stretch; display: flex; align-items: center; }
+.search .q-input { width: 100%; height: 100%; color: transparent; caret-color: var(--ink); }
+.search .q-input::placeholder { color: var(--ink3); }
+.search .q-input::selection { color: transparent; background: color-mix(in oklch, var(--accent) 30%, transparent); }
+.search .q-marks { position: absolute; inset: 0; display: flex; align-items: center; color: var(--ink); white-space: pre; overflow: hidden; pointer-events: none; }
+.search .q-text { display: inline-block; }
+.search .q-marks[data-clip-left] { mask-image: linear-gradient(to right, transparent 0, #000 14px); }
+.search .q-marks[data-clip-right] { mask-image: linear-gradient(to left, transparent 0, #000 14px); }
+.search .q-marks[data-clip-left][data-clip-right] { mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
+.search .tok-q { border-radius: 4px; padding: 0 2px; margin: 0 -2px; background: color-mix(in oklch, var(--accent) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--accent) 60%, transparent); }
+/* What an operator takes hangs under the field as the app's one menu: people with their address
+   under the name (two-line rows, as places'), or has:'s and is:'s values. */
+.search > .places { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; }
+.search .places .menu-i:has(.place-address) { height: 44px; }
+.search .place-text { display: flex; flex-direction: column; min-width: 0; }
+.search .place-name { color: var(--ink); }
+.search .place-name b { font-weight: 600; }
+.search .place-address { font-size: 12px; }
 /* The match highlight: Night's `sun` at 26%, Light's own highlighter yellow (`hl`). */
 mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding: 0 1px; }
 

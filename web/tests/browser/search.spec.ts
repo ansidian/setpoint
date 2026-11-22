@@ -8,6 +8,7 @@
 //   against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key
 // - the proposal card (Calendar's editor) and its Create through the command layer, and the More
 //   menu on Security mail.
+// - Gmail-style operators typed in the field, marked, with people offered after from:
 // Calendar search, from the header's button, `/` or ⌘F, with its results in the right pane. A click,
 // Enter, ↓ and J / K select results on the grid. E goes to the editor and back. Then Esc.
 import assert from 'node:assert/strict';
@@ -1066,6 +1067,38 @@ test('"!" leaves out what a word names, as it\'s typed and on Enter: a Not chip,
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();
+  }
+});
+
+test('Gmail-style operators filter as they\'re typed and stay in the field, marked; from: offers people and a pick puts the address in; Sent\'s to: narrows too', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    const marks = () => page.locator('.search .q-marks .tok-q').allTextContents();
+    await page.keyboard.press('/');
+    await typeWords(page, setpoint, 'has:attachment lease');
+    await until('the email with an attachment', () => titles(page), shown => shown.join() === 'Lease renewal terms');
+    assert.equal(await field(page).inputValue(), 'has:attachment lease');
+    assert.deepEqual(await marks(), ['has:attachment']);
+    // from: offers the people who wrote, from the server; Enter puts the address in, and it filters.
+    await field(page).fill('');
+    await page.keyboard.type('from:the');
+    const people = page.getByRole('listbox', {name: 'People'});
+    await until('Theo offered', () => people.getByRole('option').allTextContents(), shown => shown.length > 0 && shown[0]!.startsWith('Theo Walsh'));
+    await page.keyboard.press('Enter');
+    assert.equal(await field(page).inputValue(), 'from:theo.walsh@example.org ');
+    await until('Theo\'s emails', () => titles(page), shown => shown.length === 4 && shown.every(title => /Cabin weekend in November/.test(title)));
+    assert.deepEqual(await marks(), ['from:theo.walsh@example.org']);
+    // Sent's search reads them too.
+    await page.goto(`${setpoint.base}/sent`);
+    await page.locator('.list .row').first().waitFor();
+    await page.keyboard.press('/');
+    await typeWords(page, setpoint, 'to:sam');
+    await until('mail to Sam, in To and in Cc', () => titles(page), shown => shown.join() === 'Re: Saturday hike,Book club dates');
+    assert.equal(await field(page).inputValue(), 'to:sam');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
   }
 });
 

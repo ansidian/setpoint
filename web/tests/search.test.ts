@@ -5,6 +5,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} fr
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
+  operatorAt, operatorMarks, operatorValues, withOperatorPick,
   FOLD_OPENS_UNDER, answerItemWhen, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, prefillMissLine, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {Run} from '../src/logic/search.ts';
@@ -298,6 +299,7 @@ describe('a chip\'s word back', () => {
     ['a date left says its month, so it stays out', 'rent march', 'rent', [date], 'rent'],
     ['a date gone gives its word back', 'northwind march', '', [organisation], 'march'],
     ['"quotes" and "!words" stay whole', '"lease renewal" !proseware northwind', '"lease renewal" !proseware', [], '"lease renewal" !proseware northwind'],
+    ['an operator stays whole, its quoted value with it', 'from:"Sam Ortiz" rejections', 'from:"Sam Ortiz"', [type], 'from:"Sam Ortiz"'],
   ])('%s', (_name, typed, text, left, back) => {
     expect(wordsBack(typed, text, left)).toBe(back);
   });
@@ -515,4 +517,56 @@ describe('what the end of the list asks for next: the next page, the left-out ro
     ['a fold that starts open, its pages still coming: the next page', out(50, 3), true, 50, false, 'more'],
     ['a fold that starts open, every page in: the left-out rows', out(null, 3), true, 63, false, 'left-out'],
   ] as const)('%s', (_, answer, mentions, shown, moreLeftOut, ask) => expect(nextAsk(answer, mentions, shown, moreLeftOut)).toBe(ask));
+});
+
+describe('the field\'s operators', () => {
+  /** The text with each mark in [brackets]. */
+  const marks = (text: string) => marked(text, operatorMarks(text));
+
+  test.each([
+    ['from:pat lease', '[from:pat] lease'],
+    ['-from:pat lease', '[-from:pat] lease'],
+    ['from:-indeed', '[from:-indeed]'],
+    ['subject:"lease renewal" x', '[subject:"lease renewal"] x'],
+    ['lease from:"Sam', 'lease [from:"Sam]'],
+    ['from: has:pdf is:starred foo:bar before:2026/13/40 -renewal follow-up', 'from: has:pdf is:starred foo:bar before:2026/13/40 -renewal follow-up'],
+  ])('%s marks %s', (text, expected) => {
+    expect(marks(text)).toBe(expected);
+  });
+
+  test('two marks a space apart stay two', () => {
+    expect(operatorMarks('from:pat has:attachment')).toEqual([{start: 0, end: 8}, {start: 9, end: 23}]);
+  });
+
+  test.each<[string, number, ReturnType<typeof operatorAt>]>([
+    ['from:sa', 7, {start: 0, end: 7, not: false, name: 'from', query: 'sa', head: 'from:'}],
+    ['lease from:', 11, {start: 6, end: 11, not: false, name: 'from', query: '', head: 'from:'}],
+    ['from:sam lease', 7, {start: 0, end: 8, not: false, name: 'from', query: 'sa', head: 'from:'}],
+    ['-to:sa', 6, {start: 0, end: 6, not: true, name: 'to', query: 'sa', head: '-to:'}],
+    ['from:-sa', 8, {start: 0, end: 8, not: true, name: 'from', query: 'sa', head: 'from:-'}],
+    ['from:"Sam O', 11, {start: 0, end: 11, not: false, name: 'from', query: 'Sam O', head: 'from:'}],
+    ['HAS:a', 5, {start: 0, end: 5, not: false, name: 'has', query: 'a', head: 'HAS:'}],
+    ['subject:lea', 11, null],
+    ['before:2026', 11, null],
+    ['from:sam ', 9, null],
+    ['fro', 3, null],
+  ])('%s at %i', (text, caret, expected) => {
+    expect(operatorAt(text, caret)).toEqual(expected);
+  });
+
+  test('has: and is: offer their values by what\'s typed', () => {
+    expect(operatorValues('has', '')).toEqual(['attachment', 'file']);
+    expect(operatorValues('has', 'F')).toEqual(['file']);
+    expect(operatorValues('is', 'un')).toEqual(['unread']);
+    expect(operatorValues('is', 'x')).toEqual([]);
+  });
+
+  test.each([
+    ['from:sa', 7, 'sam.ortiz@example.org', 'from:sam.ortiz@example.org ', 27],
+    ['lease from:-sa x', 14, 'sam.ortiz@example.org', 'lease from:-sam.ortiz@example.org x', 34],
+    ['-to:sa', 6, 'sam@x.org', '-to:sam@x.org ', 14],
+    ['has:', 4, 'attachment', 'has:attachment ', 15],
+  ])('a pick in %s', (text, caret, value, next, at) => {
+    expect(withOperatorPick(text, operatorAt(text, caret)!, value)).toEqual({text: next, caret: at});
+  });
 });

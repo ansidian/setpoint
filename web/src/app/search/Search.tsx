@@ -4,17 +4,20 @@
 // what a suggestion's chips left out, the suggestion itself in the results line, and the no-results
 // line with each chip removable. Kept thin: the rules are logic/search.ts's, and the state is
 // mailSearch.ts's and state.ts's.
-import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '@setpoint/shared';
-import {Fragment, useEffect, useId, useMemo, useRef, useState} from 'react';
+import type {AccountOut, CalendarSearchChip, Recipient, SearchChip, SearchResultOut} from '@setpoint/shared';
+import {Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Entry, Fold, FoldRules} from '../../logic/fold.ts';
 import {LEFT_OUT_KEY, MENTIONS_KEY} from '../../logic/inbox.ts';
-import {fieldSegments, firstSection, indexingLine, nextAsk, leftOutLine, mentionsLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons, suggestionLine} from '../../logic/search.ts';
-import type {Segment} from '../../logic/search.ts';
+import {suggestPeople} from '../../api/drafts.ts';
+import {fieldSegments, firstSection, indexingLine, nextAsk, leftOutLine, mentionsLine, operatorAt, operatorMarks, operatorValues, queryParts, reasonParts, resultSender, resultsLine, shownReasons, suggestionLine, withOperatorPick} from '../../logic/search.ts';
+import type {Run, Segment} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {keepTextUnselected} from '../../ui/keys.ts';
+import {PlaceList} from '../../ui/PlaceList.tsx';
+import {useMirror} from '../../ui/useMirror.ts';
 import {dotStyle} from '../accounts.ts';
 import {RepliedMark, SnoozedMark} from '../AllList.tsx';
 import {FOLD_HOLD_MS, foldDelays, foldRef, leaveCopy, useFold} from '../fold.ts';
@@ -51,6 +54,67 @@ interface SearchFieldProps<R> {
   arrowDown?: boolean;
   onEscape?: () => void;
   autoFocus?: boolean;
+  // Mail's Inbox and Sent: Gmail-style operators are marked as the search reads them, and from:,
+  // to:, has: and is: offer what they take.
+  operators?: boolean;
+}
+
+/** What the list under an operator offers: a person (their address goes in) or a value. */
+interface Offer {
+  name: string;
+  address: string | null;
+  value: string;
+}
+
+/** The field's text cut at its operators' marks, for the mirror under its input. */
+function OperatorMarks({text, marks}: {text: string; marks: Run[]}) {
+  const parts: ReactNode[] = [];
+  let at = 0;
+  for (const mark of marks) {
+    parts.push(text.slice(at, mark.start), <span key={mark.start} className="tok-q">{text.slice(mark.start, mark.end)}</span>);
+    at = mark.end;
+  }
+  parts.push(text.slice(at));
+  return <>{parts}</>;
+}
+
+/**
+ * The list under the operator at the caret: people after from: (everyone who wrote) and to: (everyone
+ * written to), fetched after a 120 ms pause with stale answers dropped, and has:'s and is:'s values.
+ * Esc closes it for that operator. `cur` is the row Enter or Tab picks.
+ */
+function useOperatorList(on: boolean, text: string, caret: number | null) {
+  const at = on && caret !== null ? operatorAt(text, caret) : null;
+  const person = at && (at.name === 'from' || at.name === 'to') ? at.name : null;
+  const query = at?.query ?? '';
+  const [people, setPeople] = useState<{mode: 'from' | 'to'; list: Recipient[]} | null>(null);
+  useEffect(() => {
+    if (!person) return;
+    let live = true;
+    // Nothing typed yet shows the top people at once.
+    const timer = window.setTimeout(() => {
+      void suggestPeople(query, person).then(list => live && setPeople({mode: person, list})).catch(() => live && setPeople(null));
+    }, query ? 120 : 0);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [person, query]);
+  const [closed, setClosed] = useState<string | null>(null);
+  const [cursor, setCursor] = useState({key: '', cur: 0});
+  const key = at ? `${at.start}:${at.name}` : '';
+  const offers: Offer[] = !at || closed === key ? []
+    : at.name === 'has' || at.name === 'is' ? operatorValues(at.name, at.query).map(value => ({name: value, address: null, value}))
+      : people?.mode === at.name ? people.list.map(one => ({name: one.name ?? one.address, address: one.name ? one.address : null, value: one.address})) : [];
+  // A value typed out in full needs no list.
+  const shown = offers.length === 1 && offers[0]!.value.toLowerCase() === query.toLowerCase() ? [] : offers;
+  const listKey = `${key}:${query}`;
+  const cur = cursor.key === listKey ? Math.min(cursor.cur, shown.length - 1) : 0;
+  return {
+    at, offers: shown, cur, person: person !== null,
+    move: (step: 1 | -1) => setCursor({key: listKey, cur: (cur + step + shown.length) % shown.length}),
+    close: () => setClosed(key),
+  };
 }
 
 // The field on screen's select-all, for App's `/` and ⌘F.
@@ -71,8 +135,11 @@ export function selectSearch() {
  * on as it does anywhere. ⌘Enter asks Alfred. Esc clears the search. Backspace in an empty field
  * removes the last chip.
  */
-export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus}: SearchFieldProps<R>) {
+export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus, operators = false}: SearchFieldProps<R>) {
   const input = useRef<HTMLInputElement>(null);
+  const mirror = useRef<HTMLSpanElement>(null);
+  useMirror(input, mirror, search.text);
+  const [caret, setCaret] = useState<number | null>(null);
   const field = useRef<HTMLLabelElement>(null);
   // A chip removed (its × or Backspace) collapses away over 120 ms, and the rest close up after it. A
   // new one pops in (search.css).
@@ -91,6 +158,24 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   const phone = usePhone();
   // While the field has focus, / types a slash and Esc is the way out, so the hint says Esc.
   const [focused, setFocused] = useState(false);
+  // The phone's web layout stays as it is: its field has no marks or list.
+  const marked = operators && !phone;
+  const list = useOperatorList(marked && focused, search.text, caret);
+  const listOpen = list.offers.length > 0;
+  // After a pick the caret goes after the space it put in.
+  const placeCaret = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (placeCaret.current === null || !input.current) return;
+    input.current.setSelectionRange(placeCaret.current, placeCaret.current);
+    placeCaret.current = null;
+  });
+  const pick = (offer: Offer) => {
+    if (!list.at) return;
+    const next = withOperatorPick(search.text, list.at, offer.value);
+    placeCaret.current = next.caret;
+    setCaret(next.caret);
+    search.setText(next.text);
+  };
   useEffect(() => {
     const select = () => {
       input.current?.focus();
@@ -107,6 +192,22 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
     // Typing or deleting over the whole query replaces its chips too. The input replaces its words.
     if (whole && search.chips.length && (event.key === 'Backspace' || event.key === 'Delete' || (event.key.length === 1 && !event.metaKey && !event.ctrlKey))) {
       search.clear();
+      return;
+    }
+    // The list under an operator has the keys first: ↓ and ↑ move, Enter and Tab pick, Esc closes it.
+    if (listOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault();
+      list.move(event.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+    if (listOpen && ((event.key === 'Enter' && !event.metaKey && !event.ctrlKey) || (event.key === 'Tab' && !event.shiftKey))) {
+      event.preventDefault();
+      pick(list.offers[list.cur]!);
+      return;
+    }
+    if (listOpen && event.key === 'Escape') {
+      event.preventDefault();
+      list.close();
       return;
     }
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -138,8 +239,21 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
       removeChip(search.chips.length - 1);
     }
   };
+  const words = (
+    <input ref={input} id={inputId} className={marked ? 'q-input' : 'grow'} placeholder={search.chips.length ? '' : label} aria-label={label} value={search.text} autoFocus={autoFocus}
+      role={marked ? 'combobox' : undefined} aria-expanded={marked ? listOpen : undefined} aria-autocomplete={marked ? 'list' : undefined}
+      onChange={event => {
+        setCaret(event.target.selectionStart);
+        search.setText(event.target.value);
+      }}
+      onSelect={event => setCaret(event.currentTarget.selectionStart)} onKeyDown={onKeyDown} onMouseDown={() => setWhole(false)} onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setWhole(false);
+        setFocused(false);
+      }} />
+  );
   return (
-    <label ref={field} className={['search', search.active && 'active', search.pending && 'pending'].filter(Boolean).join(' ')} htmlFor={inputId}>
+    <label ref={field} className={['search', marked && 'ops', search.active && 'active', search.pending && 'pending'].filter(Boolean).join(' ')} htmlFor={inputId}>
       {/* While a search is on its way, once it's taken a moment, its glyph turns. */}
       <span className="glass">
         {search.pending && <span className="spin"><Icon name="progress_activity" size={16} /></span>}
@@ -155,12 +269,17 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
           }}><Icon name="close" size={14} /></button>
         </span>
       ))}
-      <input ref={input} id={inputId} className="grow" placeholder={search.chips.length ? '' : label} aria-label={label} value={search.text} autoFocus={autoFocus}
-        onChange={event => search.setText(event.target.value)} onKeyDown={onKeyDown} onMouseDown={() => setWhole(false)} onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setWhole(false);
-          setFocused(false);
-        }} />
+      {marked ? (
+        // The input's own letters are clear over a mirror that holds the marks, as the editor's line.
+        <span className="q-line">
+          <span ref={mirror} className="q-marks" aria-hidden="true"><span className="q-text"><OperatorMarks text={search.text} marks={operatorMarks(search.text)} /></span></span>
+          {words}
+        </span>
+      ) : words}
+      {listOpen && (
+        <PlaceList places={list.offers} cur={list.cur} query={list.at?.query ?? ''} floating icon={list.person ? 'person' : null} label={list.person ? 'People' : 'Values'}
+          keyOf={offer => offer.value} onPick={pick} />
+      )}
       {phone && search.active ? (
         // Its own tap stays its own: the label would send it on to the words.
         <button className="search-clear" type="button" aria-label="Clear search" onClick={event => {

@@ -1,6 +1,7 @@
 // Search, Alfred's Answer card, the proposal card's and the calendar search's rules: what the field
 // asks, the results line, each reason's parts, the highlighted runs, what the reader highlights,
 // and how a proposal's time reads.
+import {parseOperators, searchTokens} from '@setpoint/shared';
 import type {AnswerItemOut, AnswerOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
@@ -219,7 +220,8 @@ export const suggestionLine = ({offers, total}: Pick<SearchSuggestionOut, 'offer
 
 const foldedWord = (word: string) => word.normalize('NFKD').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 
-const typedTokens = (text: string) => text.match(/"[^"]*"?|[^\s"]+/g) ?? [];
+// As the server reads them: an operator whole (`from:"Sam Ortiz"`), a "quote", or a word.
+const typedTokens = (text: string) => searchTokens(text).map(token => token.raw);
 
 /**
  * The field's words once a chip comes off: the words as typed, but for those a chip still in force
@@ -233,6 +235,45 @@ export function wordsBack(typed: string, text: string, left: readonly SearchChip
     return word !== '' && (own.startsWith(word) || word.startsWith(own));
   });
   return typedTokens(typed).filter(token => kept.has(token) || !left.some(chip => standsForWords(chip) && says(chip, foldedWord(token)))).join(' ');
+}
+
+// ---------- Operators ----------
+
+/** Where the field marks its operators: each one the search filters by, whole, its `-` and quotes in it. */
+export const operatorMarks = (text: string): Run[] => parseOperators(text).operators.map(({start, end}) => ({start, end}));
+
+/** An operator the field offers values for, at the caret. */
+export interface OperatorAt {
+  start: number;
+  end: number;
+  not: boolean;
+  name: 'from' | 'to' | 'has' | 'is';
+  // What's typed of its value, up to the caret.
+  query: string;
+  // The token up to its value, its `-` where it was typed ("-from:", "from:-").
+  head: string;
+}
+
+const OFFERING = /^([-!]?)(from|to|has|is):([-!]?)("?)([^"]*)$/i;
+
+/** The from:, to:, has: or is: token the caret is in or just after, or null. subject:, before: and after: offer nothing. */
+export function operatorAt(text: string, caret: number): OperatorAt | null {
+  const token = searchTokens(text).find(one => one.start < caret && caret <= one.end);
+  const match = token ? OFFERING.exec(text.slice(token.start, caret)) : null;
+  if (!token || !match) return null;
+  const [, before, name, after, , query] = match as unknown as [string, string, string, string, string, string];
+  return {start: token.start, end: token.end, not: before !== '' || after !== '', name: name.toLowerCase() as OperatorAt['name'], query, head: `${before}${name}:${after}`};
+}
+
+const OPERATOR_VALUES = {has: ['attachment', 'file'], is: ['unread', 'read']} as const;
+
+/** The values has: and is: take, those starting with what's typed. */
+export const operatorValues = (name: 'has' | 'is', query: string): string[] => OPERATOR_VALUES[name].filter(value => value.startsWith(query.toLowerCase()));
+
+/** The field with a pick in the operator's place, then a space, and the caret after it. */
+export function withOperatorPick(text: string, at: Pick<OperatorAt, 'start' | 'end' | 'head'>, value: string): {text: string; caret: number} {
+  const pick = `${at.head}${/\s/.test(value) ? `"${value}"` : value} `;
+  return {text: `${text.slice(0, at.start)}${pick}${text.slice(at.end).replace(/^ +/, '')}`, caret: at.start + pick.length};
 }
 
 /** "Indexing · 62% · showing what's indexed so far", during the first backfill. */

@@ -434,7 +434,7 @@ export function SentPage({route}: {route: SentRoute}) {
           <SentAccounts accounts={accountList} withMail={withMail} value={account ?? ALL} onPick={pick} />
         )}
         <span className="grow" />
-        <SearchField search={search} label={shownAccount ? `Search sent from ${shownAccount.label}` : 'Search sent mail'} onEnter={first => setCursor(`all:${first.id}`)} />
+        <SearchField search={search} operators label={shownAccount ? `Search sent from ${shownAccount.label}` : 'Search sent mail'} onEnter={first => setCursor(`all:${first.id}`)} />
       </header>
       <div className="content" style={accountWidth} onContextMenu={onContextMenu}>
         {firstWait && waitedLong ? (
