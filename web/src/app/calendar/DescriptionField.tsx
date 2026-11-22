@@ -140,6 +140,9 @@ export interface DescriptionFieldProps {
   fieldRef?: RefObject<HTMLDivElement | null>;
 }
 
+/** The mail composer's scrolling box; an item's field keeps its parts as its own children. */
+const Scroll = ({mail, children}: {mail: boolean; children: ReactNode}) => (mail ? <div className="desc-scroll">{children}</div> : <>{children}</>);
+
 export function DescriptionField({blocks, kind, note, mark: source = null, onChange, label = 'Description', placeholder = 'Add description', bar = 'focus', barStart = null, barEnd = null, after = null, beforeBar = null, fieldRef}: DescriptionFieldProps) {
   const own = useRef<HTMLDivElement>(null);
   const field = fieldRef ?? own;
@@ -319,11 +322,15 @@ export function DescriptionField({blocks, kind, note, mark: source = null, onCha
       onBlur={event => {
         if (!event.currentTarget.contains(event.relatedTarget)) unfocus();
       }}>
-      <div ref={field} className="desc desc-edit" contentEditable role="textbox" aria-multiline="true" aria-label={label} data-placeholder={placeholder} data-empty={empty || undefined}
-        suppressContentEditableWarning spellCheck onInput={read} onKeyDown={onKeyDown} onPaste={onPaste} onDrop={event => event.preventDefault()}
-        onMouseOver={hoverLink} onClick={openLink} />
-      {source}
-      {after}
+      {/* The mail composer's body and what follows it (files, a quote, a forward) share one box, so
+          a composer window scrolls them alone, under its fields and over its format row. */}
+      <Scroll mail={kind === 'mail'}>
+        <div ref={field} className="desc desc-edit" contentEditable role="textbox" aria-multiline="true" aria-label={label} data-placeholder={placeholder} data-empty={empty || undefined}
+          suppressContentEditableWarning spellCheck onInput={read} onKeyDown={onKeyDown} onPaste={onPaste} onDrop={event => event.preventDefault()}
+          onMouseOver={hoverLink} onClick={openLink} />
+        {source}
+        {after}
+      </Scroll>
       {beforeBar}
       {(focused || linking || bar === 'always') && (linking ? (
         <div className="desc-bar linking">

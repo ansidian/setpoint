@@ -79,6 +79,16 @@
 
 /* The body: the description field's, borderless here, its row of formats at the foot. */
 .composer .desc-field { display: flex; flex-direction: column; flex: 1 0 auto; }
+/* In the pane the composer scrolls as one, so the body's box draws nothing of its own. */
+.composer .desc-scroll { display: contents; }
+/* In a window only the body scrolls, with what follows it (files, a quote, a forward): the title
+   and fields stay above it and the format row below, and its scrollbar runs beside it alone, so it
+   never takes room from the title bar or the fields. It keeps that room while it holds an HTML
+   email (a forward), as the reader does. The window scrolls as a whole only when even 80 px of
+   body doesn't fit. */
+.cmp-window .composer .desc-field { flex: 1 1 auto; min-height: 0; }
+.cmp-window .composer .desc-scroll { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 80px; overflow-y: auto; overscroll-behavior: contain; }
+.cmp-window .composer .desc-scroll:has(.mailframe) { scrollbar-gutter: stable; }
 .composer .desc-edit { flex: 1 0 auto; min-height: 120px; padding: 12px 20px; outline: none; white-space: pre-wrap; cursor: text; line-height: 20px; }
 .composer .desc-edit[data-empty]::before { content: attr(data-placeholder); color: var(--ink3); position: absolute; pointer-events: none; }
 .composer .desc-bar { display: flex; align-items: center; gap: 2px; min-height: 48px; padding: 0 12px 0 12px; border-top: 1px solid var(--hair); flex: none; position: sticky; bottom: 0; z-index: 2; background: var(--page); margin-top: auto; }
