@@ -1,7 +1,9 @@
 // The one message builder both providers send: an RFC 5322 email with a Message-ID Setpoint sets,
 // its Date, From with a display name, To, Cc and Bcc, Subject, In-Reply-To and References, and a
 // multipart/alternative body (a plain-text copy, then HTML), inside multipart/mixed when it carries
-// attachments (a forward's). Non-ASCII names and subjects are encoded words (RFC 2047), a
+// attachments (a forward's). A quoted email's inline images (stored as data: URIs) go as
+// multipart/related parts beside the HTML, named by cid, since Gmail's web client drops data:
+// images. Non-ASCII names and subjects are encoded words (RFC 2047), a
 // non-ASCII file name RFC 2231's form; bodies and attachments are base64.
 //
 // Pure: the caller passes the date, the Message-ID and the boundaries' seed, so the same draft builds
@@ -119,6 +121,36 @@ function attachmentPart(file: OutgoingAttachment): string {
   ].join(CRLF);
 }
 
+export interface InlineImage {
+  cid: string;
+  mimeType: string;
+  content: Buffer;
+}
+
+/**
+ * The HTML with each data: image (png, jpeg, gif or webp) swapped for a cid: reference, and the
+ * images to send beside it. The same URI twice is one image. The HTML is parse5's, so its
+ * attributes are double-quoted.
+ */
+export function inlineImages(html: string, seed: string): {html: string; images: InlineImage[]} {
+  const images: InlineImage[] = [];
+  const byUri = new Map<string, string>();
+  const replaced = html.replace(/(\ssrc=")(data:image\/(png|jpeg|gif|webp);base64,([A-Za-z0-9+/=]+))"/gi, (_match, before: string, uri: string, type: string, data: string) => {
+    let cid = byUri.get(uri);
+    if (!cid) {
+      cid = `img${images.length + 1}.${seed}`;
+      byUri.set(uri, cid);
+      images.push({cid, mimeType: `image/${type.toLowerCase()}`, content: Buffer.from(data, 'base64')});
+    }
+    return `${before}cid:${cid}"`;
+  });
+  return {html: replaced, images};
+}
+
+function imagePart(image: InlineImage): string {
+  return [`Content-Type: ${image.mimeType}`, `Content-ID: <${image.cid}>`, 'Content-Disposition: inline', 'Content-Transfer-Encoding: base64', '', base64Lines(image.content)].join(CRLF);
+}
+
 function multipart(boundary: string, parts: string[]): string {
   return [...parts.map(part => `--${boundary}${CRLF}${part}`), `--${boundary}--`].join(CRLF) + CRLF;
 }
@@ -129,7 +161,11 @@ function multipart(boundary: string, parts: string[]): string {
  */
 export function buildMessage(message: OutgoingMessage, {bcc}: {bcc: boolean}): Buffer {
   const seed = message.boundarySeed.replace(/[^\w.-]/g, '');
-  const alternative = multipart(`=_sp_alt_${seed}`, [textPart('plain', message.text), textPart('html', message.html)]);
+  const {html, images} = inlineImages(message.html, seed);
+  const htmlPart = images.length
+    ? `Content-Type: multipart/related; type="text/html"; boundary="=_sp_rel_${seed}"${CRLF}${CRLF}${multipart(`=_sp_rel_${seed}`, [textPart('html', html), ...images.map(imagePart)])}`
+    : textPart('html', html);
+  const alternative = multipart(`=_sp_alt_${seed}`, [textPart('plain', message.text), htmlPart]);
   const altHeader = `Content-Type: multipart/alternative; boundary="=_sp_alt_${seed}"`;
   const body = message.attachments.length
     ? {type: `Content-Type: multipart/mixed; boundary="=_sp_mix_${seed}"`, content: multipart(`=_sp_mix_${seed}`, [`${altHeader}${CRLF}${CRLF}${alternative}`, ...message.attachments.map(attachmentPart)])}

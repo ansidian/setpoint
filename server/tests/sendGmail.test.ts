@@ -5,6 +5,7 @@
 // at once, the later sync keeping that one row. Aliases come from Gmail's "Send mail as" list.
 import {SEED_NOW, SEND_HOLD_MS} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
+import {simpleParser} from 'mailparser';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -266,6 +267,28 @@ describe('Gmail: sending', () => {
     expect(parsed.text).toContain('---------- Forwarded message ---------\nFrom: Sam Ortiz <sam.ortiz@example.org>');
     expect(parsed.text).toContain('Are we on for Thursday?');
     expect(parsed.attachments.map(file => [file.filename, file.sizeBytes])).toEqual([['Itinerary.pdf', 18]]);
+  });
+
+  test('a forward sends the original\'s inline image as a related part, not a data: URI; the Sent row shows it and lists no attachment', async () => {
+    const {w, google, api, drain, sync} = await setup();
+    const {row: sam} = await samWrites(google, w, sync, {html: '<p>Are we on?</p><img src="cid:inline-0@mail.example.com" alt="Map">',
+      attachments: [{filename: 'map.png', contentType: 'image/png', content: 'map bytes', inline: true}]});
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'forward', message_id: sam.id}})).body;
+    await api.send('PATCH', `/api/mail/drafts/${draft.id}`, {body: {to: [{name: 'Mom', address: 'mom@example.net'}], body: paragraph('FYI')}});
+    await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
+    w.advance(SEND_HOLD_MS);
+    await drain();
+    const raw = google.sent[0]!.raw;
+    expect(raw.toString()).toContain('Content-Type: multipart/related');
+    const sent = await simpleParser(raw, {keepCidLinks: true});
+    expect(sent.html).not.toContain('data:image');
+    const [image] = sent.attachments ?? [];
+    expect(sent.html).toContain(`cid:${image!.cid}`);
+    expect(image!.content?.toString()).toBe('map bytes');
+    const [row] = sentRows(w);
+    expect(w.store.db.select().from(t.attachments).where(eq(t.attachments.messageId, row!.id)).all()).toEqual([]);
+    const body = await api.send('GET', `/api/mail/messages/${row!.id}/body?images=show`);
+    expect(body.body).toContain(`data:image/png;base64,${Buffer.from('map bytes').toString('base64')}`);
   });
 
   test('a forward sends without the attachments the user removed', async () => {

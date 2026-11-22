@@ -6,6 +6,7 @@
 // without the user's say.
 import {SEED_NOW, SEND_HOLD_MS} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
+import {simpleParser} from 'mailparser';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -104,6 +105,26 @@ describe('iCloud: sending', () => {
     await poll();
     expect(sentRows(w)).toHaveLength(1);
     expect(sentRows(w)[0]!.trashedAt).toBeNull();
+  });
+
+  test('a forward delivers the original\'s inline image as a related part, not a data: URI; the Sent row shows it and lists no attachment', async () => {
+    const {w, smtp, imap, api, poll, sendDraft} = await setup();
+    imap.deliver(ADDRESS, rawEmail({from: 'Sam Ortiz <sam.ortiz@example.org>', to: ADDRESS, subject: 'Map', date: ago(30 * MINUTE), text: 'Here.', messageId: '<map-1@example.org>',
+      html: '<p>Here.</p><img src="cid:inline-0@mail.example.com" alt="Map">', attachments: [{filename: 'map.png', contentType: 'image/png', content: 'map bytes', inline: true}]}), ago(30 * MINUTE));
+    await poll();
+    const sam = w.store.db.select().from(t.messages).where(eq(t.messages.subject, 'Map')).get()!;
+    await sendDraft({kind: 'forward', message_id: sam.id}, {to: [{name: 'Mom', address: 'mom@example.net'}], body: paragraph('FYI')});
+    const raw = smtp.accepted[0]!.data;
+    expect(raw.toString()).toContain('Content-Type: multipart/related');
+    const sent = await simpleParser(raw, {keepCidLinks: true});
+    expect(sent.html).not.toContain('data:image');
+    const [image] = sent.attachments ?? [];
+    expect(sent.html).toContain(`cid:${image!.cid}`);
+    expect(image!.content?.toString()).toBe('map bytes');
+    const [row] = sentRows(w);
+    expect(w.store.db.select().from(t.attachments).where(eq(t.attachments.messageId, row!.id)).all()).toEqual([]);
+    const body = await api.send('GET', `/api/mail/messages/${row!.id}/body?images=show`);
+    expect(body.body).toContain(`data:image/png;base64,${Buffer.from('map bytes').toString('base64')}`);
   });
 
   test('the user\'s own files go over SMTP and in the copy filed in Sent', async () => {

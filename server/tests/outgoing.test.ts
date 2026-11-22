@@ -2,10 +2,11 @@
 // the parser the sync uses (src/providers/mime.ts), so what Setpoint sends is what it would read.
 import type {Recipient} from '@setpoint/shared';
 import type {Block} from '@setpoint/shared/richText';
+import {simpleParser} from 'mailparser';
 import {describe, expect, test} from 'vitest';
 import {composeBody, replyLine} from '../src/domain/outgoingBody.ts';
 import type {QuotedEmail} from '../src/domain/outgoingBody.ts';
-import {buildMessage, encodeWords, formatAddress, replyHeaders} from '../src/domain/outgoingMessage.ts';
+import {buildMessage, encodeWords, formatAddress, inlineImages, replyHeaders} from '../src/domain/outgoingMessage.ts';
 import type {OutgoingMessage} from '../src/domain/outgoingMessage.ts';
 import {parseEmail} from '../src/providers/mime.ts';
 
@@ -66,6 +67,42 @@ describe('buildMessage: read back by the sync\'s parser', () => {
 
   test('the same message builds the same bytes', () => {
     expect(buildMessage(message(), {bcc: true}).equals(buildMessage(message(), {bcc: true}))).toBe(true);
+  });
+
+  test('a quoted inline image goes as a related part the HTML names by cid, with the original bytes', async () => {
+    const png = Buffer.from('a png image');
+    const html = `<p>FYI</p><img src="data:image/png;base64,${png.toString('base64')}" alt="Logo">`;
+    const raw = buildMessage(message({html}), {bcc: false});
+    const parsed = await simpleParser(raw, {keepCidLinks: true});
+    expect(parsed.html).toContain('src="cid:img1.sp.1.abc"');
+    expect(parsed.html).not.toContain('data:image');
+    expect((parsed.attachments ?? []).map(file => ({cid: file.cid, type: file.contentType, related: file.related, content: file.content?.toString()})))
+      .toEqual([{cid: 'img1.sp.1.abc', type: 'image/png', related: true, content: 'a png image'}]);
+    expect((await parseEmail(raw)).attachments).toEqual([]);
+  });
+
+  test('without images the bytes are as before: alternative, no related part', () => {
+    const raw = buildMessage(message(), {bcc: false}).toString('utf8');
+    expect(raw).not.toContain('multipart/related');
+    expect(headerBlock(Buffer.from(raw))).toContain('Content-Type: multipart/alternative; boundary="=_sp_alt_sp.1.abc"');
+  });
+});
+
+describe('inlineImages', () => {
+  const uri = (type: string, text: string) => `data:${type};base64,${Buffer.from(text).toString('base64')}`;
+  test.each<[string, string, string, {cid: string; mimeType: string; content: string}[]]>([
+    ['one png is one cid part', `<img src="${uri('image/png', 'one')}">`, '<img src="cid:img1.seed">', [{cid: 'img1.seed', mimeType: 'image/png', content: 'one'}]],
+    ['the same URI twice is one part, named twice', `<img src="${uri('image/jpeg', 'same')}"><img alt="" src="${uri('image/jpeg', 'same')}">`,
+      '<img src="cid:img1.seed"><img alt="" src="cid:img1.seed">', [{cid: 'img1.seed', mimeType: 'image/jpeg', content: 'same'}]],
+    ['two images are two parts', `<img src="${uri('image/gif', 'a')}"><img src="${uri('image/webp', 'b')}">`, '<img src="cid:img1.seed"><img src="cid:img2.seed">',
+      [{cid: 'img1.seed', mimeType: 'image/gif', content: 'a'}, {cid: 'img2.seed', mimeType: 'image/webp', content: 'b'}]],
+    ['data:text/plain and an https image are untouched', `<a href="${uri('text/plain', 'x')}">x</a><img src="${uri('text/plain', 'y')}"><img src="https://example.org/a.png">`,
+      `<a href="${uri('text/plain', 'x')}">x</a><img src="${uri('text/plain', 'y')}"><img src="https://example.org/a.png">`, []],
+    ['no images leaves the HTML as it is', '<p>Hello</p>', '<p>Hello</p>', []],
+  ])('%s', (_name, html, expectedHtml, expectedImages) => {
+    const result = inlineImages(html, 'seed');
+    expect(result.html).toBe(expectedHtml);
+    expect(result.images.map(image => ({cid: image.cid, mimeType: image.mimeType, content: image.content.toString()}))).toEqual(expectedImages);
   });
 });
 
