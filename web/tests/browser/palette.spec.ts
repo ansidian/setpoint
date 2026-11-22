@@ -65,7 +65,7 @@ test('⌘K\'s Snooze opens the reader\'s snooze menu once the palette has gone, 
   }
 });
 
-test('⌘K on an email opened from Snoozed offers Snooze without S, which does nothing there', async () => {
+test('⌘K on an email opened from Snoozed offers Snooze with S, which opens its snooze menu there', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -77,8 +77,7 @@ test('⌘K on an email opened from Snoozed offers Snooze without S, which does n
     await page.keyboard.press('Meta+k');
     await page.locator('.palette').waitFor();
     const offered = await items(page);
-    assert.ok(offered.includes('Snooze'), `Snooze in ${offered.join()}`);
-    assert.ok(!offered.includes('SnoozeS'), 'no S');
+    assert.ok(offered.includes('SnoozeS'), `Snooze S in ${offered.join()}`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

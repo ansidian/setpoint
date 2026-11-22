@@ -9,7 +9,7 @@
 // Pin's place. Keys: J and K move the cursor (with an email open, they open the next and previous
 // one), Enter opens, Esc closes the reader, and H, E, O, R, A, F and ⇧U do what they do in the Inbox,
 // on the open email or else the one under the cursor (A only with the email open, where the reader
-// knows its recipients). The sidebar's row shows only while something is snoozed; the list emptied
+// knows its recipients). S opens the open email's snooze menu. The sidebar's row shows only while something is snoozed; the list emptied
 // here says so.
 import type {ItemKind, MessageRowOut, RuleOut, Settings, SnoozedOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
@@ -32,6 +32,7 @@ import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
 import {startComposer} from './compose/composer.ts';
 import {openContextMenu} from './ContextMenu.tsx';
 import {emailActions, snoozeItems} from './emailActions.ts';
+import {openSnooze} from './SnoozeMenu.tsx';
 import {useNow} from './clock.ts';
 import {Gutter} from './AllList.tsx';
 import {askCard, Reader} from './Reader.tsx';
@@ -237,6 +238,10 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
         const button = document.querySelector<HTMLElement>('.rd-tools [data-hint="a"]');
         if (button?.checkVisibility()) run(() => button.click());
       } else if (plainKey(event, 'u', {shift: true})) on('shift+u', unreadRow);
+      else if (plainKey(event, 's') && open !== null) run(() => {
+        echoKey('s');
+        openSnooze('reader');
+      });
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -292,6 +297,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
               pin: () => {},
               snooze: until => resnooze(open, until),
               unsnooze: () => unsnoozeRow(open),
+              snoozeKey: true,
               openInGmail: () => openInGmail(open),
               step: delta => step(delta),
               close: () => go(null),

@@ -236,9 +236,9 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         {/* A snoozed email's Snoozed, its return in its tip and atop its menu, which changes the time or ends it. */}
         {snoozedMenu && (
           <SnoozeMenu keyed="reader" onPick={actions.snooze!} onUnsnooze={actions.unsnooze} title={snoozedLine(snoozedUntil!, now, timeZone)} button={(open, toggle) => (
-            <button className="tool snoozed" type="button" aria-label={snoozedLine(snoozedUntil, now, timeZone)} aria-haspopup="menu" aria-expanded={open}
-              data-tip={open ? undefined : snoozedLine(snoozedUntil, now, timeZone)} onClick={toggle}>
-              <Icon name="snooze" /><span className="lbl">Snoozed</span>
+            <button className="tool snoozed" type="button" data-hint={actions.snoozeKey ? 's' : undefined} aria-label={snoozedLine(snoozedUntil, now, timeZone)} aria-haspopup="menu" aria-expanded={open}
+              data-tip={open ? undefined : `${snoozedLine(snoozedUntil, now, timeZone)}${actions.snoozeKey ? ' · S' : ''}`} onClick={toggle}>
+              <Icon name="snooze" /><span className="lbl">Snoozed</span>{actions.snoozeKey && <span className="kbd">S</span>}
             </button>
           )} />
         )}
