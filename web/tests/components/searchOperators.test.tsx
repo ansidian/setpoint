@@ -114,6 +114,45 @@ test('Esc closes the list and leaves the search; Tab picks rather than taking th
   expect(onSuggestion).not.toHaveBeenCalled();
 });
 
+test('Esc closes the list only while the caret is in that operator: cleared and typed again, it opens', async () => {
+  people();
+  await render(<Field />);
+  await userEvent.click(field());
+  await userEvent.keyboard('from:');
+  await expect.poll(() => rows('People')).toHaveLength(3);
+  await userEvent.keyboard('{Escape}');
+  await expect.element(page.getByRole('listbox')).not.toBeInTheDocument();
+  await userEvent.keyboard('{Backspace>5/}');
+  await expect.element(field()).toHaveValue('');
+  await userEvent.keyboard('from:');
+  await expect.poll(() => rows('People')).toHaveLength(3);
+});
+
+test('only people found for what\'s typed now are offered, so Enter never picks an older answer', async () => {
+  people();
+  const answer = vi.mocked(window.fetch).getMockImplementation()!;
+  // An answer for "al" is held, so the list still has only the answer for nothing typed.
+  let release = () => {};
+  const held = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  vi.mocked(window.fetch).mockImplementation(async (input, init) => {
+    if (new URL(String(input), location.href).searchParams.get('q') === 'al') await held;
+    return answer(input, init);
+  });
+  await render(<Field />);
+  await userEvent.click(field());
+  await userEvent.keyboard('from:');
+  await expect.poll(() => rows('People')).toHaveLength(3);
+  await userEvent.keyboard('al');
+  await expect.poll(() => vi.mocked(window.fetch).mock.calls.some(([input]) => new URL(String(input), location.href).searchParams.get('q') === 'al')).toBe(true);
+  await expect.element(page.getByRole('listbox')).not.toBeInTheDocument();
+  await userEvent.keyboard('{Enter}');
+  await expect.element(field()).toHaveValue('from:al');
+  release();
+  await expect.poll(() => rows('People')).toEqual(['alert@indeed.example']);
+});
+
 test.each<[string, string[]]>([
   ['-from:pat has:pdf lease', ['-from:pat']],
   ['from:-indeed subject:"lease renewal"', ['from:-indeed', 'subject:"lease renewal"']],

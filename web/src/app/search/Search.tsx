@@ -80,20 +80,21 @@ function OperatorMarks({text, marks}: {text: string; marks: Run[]}) {
 
 /**
  * The list under the operator at the caret: people after from: (everyone who wrote) and to: (everyone
- * written to), fetched after a 120 ms pause with stale answers dropped, and has:'s and is:'s values.
- * Esc closes it for that operator. `cur` is the row Enter or Tab picks.
+ * written to), fetched after a 120 ms pause, and has:'s and is:'s values. Only people found for what's
+ * typed now are offered, so Enter never picks an answer to older letters. Esc closes it until the
+ * caret leaves that operator. `cur` is the row Enter or Tab picks.
  */
 function useOperatorList(on: boolean, text: string, caret: number | null) {
   const at = on && caret !== null ? operatorAt(text, caret) : null;
   const person = at && (at.name === 'from' || at.name === 'to') ? at.name : null;
   const query = at?.query ?? '';
-  const [people, setPeople] = useState<{mode: 'from' | 'to'; list: Recipient[]} | null>(null);
+  const [people, setPeople] = useState<{mode: 'from' | 'to'; query: string; list: Recipient[]} | null>(null);
   useEffect(() => {
     if (!person) return;
     let live = true;
     // Nothing typed yet shows the top people at once.
     const timer = window.setTimeout(() => {
-      void suggestPeople(query, person).then(list => live && setPeople({mode: person, list})).catch(() => live && setPeople(null));
+      void suggestPeople(query, person).then(list => live && setPeople({mode: person, query, list})).catch(() => live && setPeople(null));
     }, query ? 120 : 0);
     return () => {
       live = false;
@@ -103,9 +104,10 @@ function useOperatorList(on: boolean, text: string, caret: number | null) {
   const [closed, setClosed] = useState<string | null>(null);
   const [cursor, setCursor] = useState({key: '', cur: 0});
   const key = at ? `${at.start}:${at.name}` : '';
+  if (closed !== null && closed !== key) setClosed(null);
   const offers: Offer[] = !at || closed === key ? []
     : at.name === 'has' || at.name === 'is' ? operatorValues(at.name, at.query).map(value => ({name: value, address: null, value}))
-      : people?.mode === at.name ? people.list.map(one => ({name: one.name ?? one.address, address: one.name ? one.address : null, value: one.address})) : [];
+      : people?.mode === at.name && people.query === query ? people.list.map(one => ({name: one.name ?? one.address, address: one.name ? one.address : null, value: one.address})) : [];
   // A value typed out in full needs no list.
   const shown = offers.length === 1 && offers[0]!.value.toLowerCase() === query.toLowerCase() ? [] : offers;
   const listKey = `${key}:${query}`;
