@@ -1,10 +1,10 @@
 // Search, Alfred's Answer card, the proposal card's and the calendar search's rules: what the field
 // asks, the results line, each reason's parts, the highlighted runs, what the reader highlights,
 // and how a proposal's time reads.
-import type {AnswerOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerItemOut, AnswerOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
-import {clockTime} from './format.ts';
+import {clockTime, localDate} from './format.ts';
 import {placeName} from './place.ts';
 import {refusalWords} from './providerWords.ts';
 import type {IconName} from '../ui/glyphs.ts';
@@ -415,6 +415,16 @@ export function calendarResultGroups<R extends Pick<CalendarSearchResultOut, 'up
 }
 
 /** A result's day in the row's time column: "Oct 9", with the year under it outside this one. */
+/**
+ * An Answer card item row's when: "Fri, Oct 9 · 7:00 PM", the day alone for one all day or
+ * untimed, and its year when it isn't this year's.
+ */
+export function answerItemWhen(item: Pick<AnswerItemOut, 'date' | 'start'>, now: number, timeZone: string): string {
+  const year = item.date.slice(0, 4) === localDate(now, timeZone).slice(0, 4) ? {} : {year: 'numeric'} as const;
+  const day = new Date(`${item.date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', ...year, timeZone: 'UTC'});
+  return item.start ? `${day} · ${clockTime(item.start, timeZone)}` : day;
+}
+
 export function resultDay(date: string, today: string): {day: string; year: string | null} {
   const day = new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'});
   return {day, year: date.slice(0, 4) === today.slice(0, 4) ? null : date.slice(0, 4)};

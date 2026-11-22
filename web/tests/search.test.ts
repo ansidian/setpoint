@@ -5,7 +5,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} fr
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  FOLD_OPENS_UNDER, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, prefillMissLine, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, answerItemWhen, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, prefillMissLine, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {Run} from '../src/logic/search.ts';
 
@@ -314,6 +314,16 @@ describe('typedAfter: the field\'s words as typed, while it holds chips', () => 
     ['nothing typed yet is nothing to add', 'northwind', '', '', 'northwind'],
   ])('%s', (_name, typed, before, after, now) => {
     expect(typedAfter(typed, before, after)).toBe(now);
+  });
+});
+
+describe('answerItemWhen: an Answer card item row\'s day and time', () => {
+  test.each([
+    ['a timed event, this year', {date: '2026-10-09', start: '2026-10-10T02:00:00.000Z'}, 'Fri, Oct 9 · 7:00 PM'],
+    ['all day or untimed, the day alone', {date: '2026-11-01', start: null}, 'Sun, Nov 1'],
+    ['another year names it', {date: '2027-01-04', start: null}, 'Mon, Jan 4, 2027'],
+  ])('%s', (_name, item, when) => {
+    expect(answerItemWhen(item, Date.parse(SEED_NOW), SEED_TIME_ZONE)).toBe(when);
   });
 });
 

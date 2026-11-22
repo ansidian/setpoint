@@ -121,6 +121,10 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .src .age { color: var(--ink3); font-size: 12px; min-width: 44px; text-align: right; white-space: nowrap; }
 .src .ac { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 180px; color: var(--ink3); font-size: 12px; white-space: nowrap; }
 .src .ac .label { overflow: hidden; text-overflow: ellipsis; }
+/* An event or task it rests on: its glyph and title, then its day and time across the account and age columns. */
+.src.item .line > .icon { color: var(--ink3); flex: none; }
+.src.item .line .grow { color: var(--ink); }
+.src.item .when { grid-column: 2 / -1; color: var(--ink3); font-size: 12px; text-align: right; white-space: nowrap; }
 .srcs .more { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 6px; border-radius: var(--r-row); color: var(--ink3); font-size: 12.5px; }
 .srcs .more:hover { background: var(--sub); color: var(--ink2); }
 .turn-sep { height: 1px; background: var(--hair); margin: 4px 0 2px; flex: none; }
