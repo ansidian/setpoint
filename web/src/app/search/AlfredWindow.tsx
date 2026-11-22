@@ -1,13 +1,15 @@
 // Alfred's window: the open conversation when no place on screen shows it inline (search/alfred.ts),
-// at the right end of the composer windows' row over any desktop page, never folded. It's the same
+// at the right end of the composer windows' row over any desktop page, never folded. Beside a
+// composer window on a narrow desktop, it narrows so the composer keeps its toolbar whole. It's the same
 // Answer card: a follow-up continues the thread, an email's row opens it in the Inbox's reader, and
 // an item's row opens its detail card beside the window. × and Esc in the window close it; Esc
 // elsewhere leaves it alone, as with composer windows.
-import {useEffect} from 'react';
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {KeyboardEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {openMessage} from '../../api/mail.ts';
-import {ALFRED_WINDOW_WIDTH} from '../../logic/composer.ts';
+import {alfredWindowWidth} from '../../logic/composer.ts';
+import {useComposers} from '../compose/composer.ts';
 import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {navigate, useRoute} from '../router.ts';
@@ -21,6 +23,20 @@ export function AlfredWindow() {
   const route = useRoute();
   const now = useNow(null);
   const {byId: accounts} = useAccounts();
+  // Beside composer windows on a narrow row, it narrows for them (logic/composer.ts › alfredWindowWidth).
+  const beside = useComposers().some(one => one.floating);
+  const row = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(0);
+  const shown = thread !== null && windowed;
+  useLayoutEffect(() => {
+    const element = row.current;
+    if (!element) return;
+    const measure = () => setRoom(element.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [shown]);
   if (!thread || !windowed) return null;
   const alfred = alfredOf(thread);
   const close = (event: KeyboardEvent) => {
@@ -29,8 +45,8 @@ export function AlfredWindow() {
     alfred.close();
   };
   return (
-    <div className="cmp-windows alf-windows">
-      <section className="alf-window" aria-label="Alfred's window" style={{width: `min(${ALFRED_WINDOW_WIDTH}px, 100%)`}} onKeyDown={close}>
+    <div ref={row} className="cmp-windows alf-windows">
+      <section className="alf-window" aria-label="Alfred's window" style={room ? {width: alfredWindowWidth(room, beside)} : {visibility: 'hidden'}} onKeyDown={close}>
         <AnswerCard alfred={alfred} scoped={thread.origin.kind === 'email'} openId={route.page === 'inbox' ? route.open : null} accounts={accounts} now={now} timeZone={timeZone()}
           windowed onOpen={id => {
             navigate({page: 'inbox', open: id});

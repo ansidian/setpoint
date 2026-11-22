@@ -147,6 +147,20 @@ export const WINDOW_MORE_WIDTH = 64;
 /** Alfred's window, at the row's right end when it's up: the composer windows line up to its left. */
 export const ALFRED_WINDOW_WIDTH = 440;
 
+/** The narrowest Alfred's window goes beside a composer window, and the narrowest that leaves the composer's toolbar whole. */
+export const ALFRED_WINDOW_MIN = 320;
+export const COMPOSER_WINDOW_MIN = 400;
+
+/**
+ * Alfred's window's width in a row `room` px wide. Alone, it's ALFRED_WINDOW_WIDTH, or the row.
+ * Beside composer windows, a narrow row leaves the composer COMPOSER_WINDOW_MIN first, so its
+ * toolbar stays whole, and Alfred's window narrows to ALFRED_WINDOW_MIN for it.
+ */
+export function alfredWindowWidth(room: number, beside: boolean): number {
+  if (!beside) return Math.max(0, Math.min(ALFRED_WINDOW_WIDTH, room));
+  return Math.min(ALFRED_WINDOW_WIDTH, room, Math.max(ALFRED_WINDOW_MIN, room - WINDOW_GAP - COMPOSER_WINDOW_MIN));
+}
+
 export interface WindowSlot {
   key: number;
   minimized: boolean;
