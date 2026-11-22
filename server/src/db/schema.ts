@@ -114,6 +114,9 @@ export const messages = sqliteTable('messages', {
   replyTo: text('reply_to', {mode: 'json'}).$type<Recipient[]>(),
   referenceIds: text('reference_ids', {mode: 'json'}).$type<string[]>(),
   inReplyTo: text('in_reply_to'),
+  // The sender's unsubscribe page, an https address from List-Unsubscribe. Null when it had none,
+  // or it came before Setpoint kept it.
+  listUnsubscribe: text('list_unsubscribe'),
   // It left the provider's inbox without Setpoint (archived in Gmail, moved out of iCloud's INBOX).
   // Until it's back, it is out of the Inbox but still in All and search.
   archivedAt: text('archived_at'),

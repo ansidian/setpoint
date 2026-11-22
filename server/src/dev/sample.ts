@@ -65,6 +65,8 @@ interface SampleEmail {
   // Who it was sent to, as its headers say. Left out, it went to the account's own address alone.
   to?: [name: string, address: string][];
   cc?: [name: string, address: string][];
+  // Its List-Unsubscribe page.
+  listUnsubscribe?: string;
 }
 
 const NORTHWIND_INTERVIEW = `Hi there,
@@ -242,7 +244,7 @@ export const SAMPLE_EMAILS: SampleEmail[] = [
     unread: true, lane: 'fyi', kind: 'security', type: 'alert', facts: {what: 'Access granted', app: 'Claude'}},
   {account: 'Personal', at: ['2026-10-07', '06:05'], from: ['Contoso Coffee', 'journal@contosocoffee.example'], organisation: 'Contoso Coffee',
     subject: 'The Contoso Coffee Journal · October', summary: 'A new harvest from Huila, brewing notes', body: COFFEE_TEXT, html: COFFEE_HTML,
-    unread: true, lane: 'noise', type: 'newsletter'},
+    unread: true, lane: 'noise', type: 'newsletter', listUnsubscribe: 'https://contosocoffee.example/unsubscribe'},
   {account: 'Personal', at: ['2026-10-07', '04:05'], from: ['Woodgrove Bank', 'no-reply@woodgrovebank.example'], organisation: 'Woodgrove Bank',
     subject: 'Statement ready', summary: 'Checking ending in 1234', body: 'Your statement for checking ending in 1234 is ready to view.',
     unread: true, lane: 'fyi', kind: 'money', type: 'statement'},
@@ -494,6 +496,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         codeExpiresAt: email.code ? new Date(Date.parse(receivedAt) + CODE_EXPIRY_MINUTES * MINUTE).toISOString() : null,
         toRecipients: (email.to ?? [['User', ACCOUNTS.find(account => account.label === email.account)!.address]]).map(([name, address]) => ({name, address})),
         ccRecipients: (email.cc ?? []).map(([name, address]) => ({name, address})),
+        listUnsubscribe: email.listUnsubscribe ?? null,
         replyTo: [], referenceIds: [], inReplyTo: null,
       });
       email.attachments?.forEach((attachment, index) => {

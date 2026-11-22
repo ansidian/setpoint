@@ -6,6 +6,7 @@ import type {HtmlToTextOptions} from 'html-to-text';
 import {simpleParser} from 'mailparser';
 import type {ParsedMail, ParsedMailAddress, ParsedMailAddressEntry, ParsedMailAttachment} from 'mailparser';
 import type {Recipient} from '@setpoint/shared';
+import {unsubscribeUrl} from '../domain/listUnsubscribe.ts';
 import {evaluateGmailSenderAuthentication, evaluateICloudSenderAuthentication} from '../domain/senderAuthentication.ts';
 import type {AuthenticationHeader, MailProvider} from '../domain/senderAuthentication.ts';
 import {artworkCount, bareCid, KEPT_TYPES, pieceSources, statedPieces} from '../domain/mailpieces.ts';
@@ -34,6 +35,8 @@ export interface ParsedEmail extends MessageHeaders {
   // Every header line in order, duplicates kept, for the sender-authentication verdict.
   headers: AuthenticationHeader[];
   attachments: FetchedAttachment[];
+  // The sender's unsubscribe page, from List-Unsubscribe (src/domain/listUnsubscribe.ts).
+  listUnsubscribe: string | null;
 }
 
 /** An inline part (a cid: image in the HTML) isn't an attachment the user would open. */
@@ -184,6 +187,7 @@ export async function parseEmail(source: Buffer): Promise<ParsedEmail> {
     received: topReceived(headers),
     headers,
     attachments,
+    listUnsubscribe: unsubscribeUrl(headers.find(header => header.name.toLowerCase() === 'list-unsubscribe')?.value),
     ...headerFields,
   };
 }
@@ -220,6 +224,7 @@ export async function fetchedMessage(provider: MailProvider, source: Buffer, met
     receivedAt: (provider === 'gmail' ? email.received : null) ?? meta.receivedAt ?? email.date ?? now.toISOString(),
     senderAuth,
     attachments: email.attachments,
+    ...(email.listUnsubscribe ? {listUnsubscribe: email.listUnsubscribe} : {}),
     recipients: {to: email.to, cc: email.cc, replyTo: email.replyTo, references: email.references, inReplyTo: email.inReplyTo},
     unread: meta.unread,
     trashed: meta.trashed,

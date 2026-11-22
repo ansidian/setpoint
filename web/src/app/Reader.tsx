@@ -144,6 +144,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // Done only on Attention mail not yet Done.
   const listed = message ?? (row?.id === id ? row : undefined);
   const moreItems = listed && readerActions(listed).proposals === 'more';
+  const unsubscribeUrl = message?.unsubscribe_url;
   // Sent mail, mail to yourself opened from Sent included, has no Done.
   const sentMail = sent || listed?.sent_only === true;
   const doneable = listed && !sentMail ? readerActions(listed).done : false;
@@ -193,7 +194,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
     reply: () => startComposer({kind: 'reply', message_id: id}),
     ...(replyAll ? {replyAll: () => startComposer({kind: 'reply_all', message_id: id})} : {}),
     forward: () => startComposer({kind: 'forward', message_id: id}),
-  })};
+  }), ...(unsubscribeUrl ? {unsubscribe: () => openUnsubscribe(unsubscribeUrl)} : {})};
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
   const offered = listed ? emailActions(listed, gmail, handlers, 'palette', rules, sentMail) : [];
   useCommands(() => (listed ? {
@@ -640,15 +641,21 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
       {cards && (
         <>
           <ReaderSlot row={listed} />
-          <Actions listed={listed} cards={cards} />
+          <Actions listed={listed} cards={cards} unsubscribe={message?.unsubscribe_url} />
         </>
       )}
     </div>
   );
 }
 
-/** The actions under the head: the proposals where they're offered, then Ask about this email. */
-function Actions({listed, cards}: {listed: MessageRowOut; cards: Cards}) {
+/** The sender's unsubscribe page, in a new tab that can't reach back to Setpoint. */
+const openUnsubscribe = (url: string) => void window.open(url, '_blank', 'noopener,noreferrer');
+
+/**
+ * The actions under the head: the proposals where they're buttons, Ask about this email, and
+ * Unsubscribe when the email has its sender's unsubscribe page.
+ */
+function Actions({listed, cards, unsubscribe}: {listed: MessageRowOut; cards: Cards; unsubscribe: string | undefined}) {
   const {panel} = cards;
   const held = (kind: Exclude<Panel, null>['kind']) => (panel?.kind === kind ? 'btn ghost' : 'btn out');
   return (
@@ -660,6 +667,7 @@ function Actions({listed, cards}: {listed: MessageRowOut; cards: Cards}) {
         </>
       )}
       <button className={held('ask')} type="button" onClick={cards.ask}><Icon name="auto_awesome" size={17} alfred />Ask about this email</button>
+      {unsubscribe && <button className="btn out" type="button" onClick={() => openUnsubscribe(unsubscribe)}><Icon name="unsubscribe" size={17} />Unsubscribe</button>}
     </div>
   );
 }

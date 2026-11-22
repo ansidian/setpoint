@@ -17,6 +17,8 @@ export interface RawEmailInput {
   inReplyTo?: string;
   // Header lines the receiver added above the sender's (Authentication-Results, Received…).
   received?: [string, string][];
+  // The sender's own extra header lines (List-Unsubscribe…), after its Message-ID.
+  headers?: [string, string][];
   attachments?: {filename: string; contentType: string; content: string; inline?: boolean}[];
 }
 
@@ -33,6 +35,7 @@ export function rawEmail(input: RawEmailInput): Buffer {
     `Subject: ${input.subject}`,
     `Date: ${new Date(input.date).toUTCString().replace('GMT', '+0000')}`,
     `Message-ID: ${messageId}`,
+    ...(input.headers ?? []).map(([name, value]) => `${name}: ${value}`),
     ...(input.references ? [`References: ${input.references}`, `In-Reply-To: ${input.references.split(/\s+/).at(-1)}`] : []),
     ...(!input.references && input.inReplyTo ? [`In-Reply-To: ${input.inReplyTo}`] : []),
     'MIME-Version: 1.0',

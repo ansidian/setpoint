@@ -1221,6 +1221,54 @@ test('the facts card and protected line on security mail, and no Add to calendar
   }
 });
 
+test('a newsletter with its unsubscribe page offers Unsubscribe beside Ask and in ⌘K, opening the page in a new tab; other mail offers none', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    // The sender's page, answered by nothing: the request is read, then aborted.
+    const requested: string[] = [];
+    await page.context().route('https://contosocoffee.example/**', route => {
+      requested.push(route.request().url());
+      return route.abort();
+    });
+    await openNoise(page);
+    await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
+    await page.locator('.rd-acts .btn', {hasText: 'Unsubscribe'}).waitFor();
+    assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Ask about this email', 'Unsubscribe']);
+    // More keeps the proposals only.
+    await page.getByRole('button', {name: 'More', exact: true}).click();
+    assert.deepEqual(await page.locator('.more-menu .menu-i').allTextContents(), ['Add to calendar', 'Add as task']);
+    await page.keyboard.press('Escape');
+    await page.locator('.more-menu').waitFor({state: 'detached'});
+    const popup = page.waitForEvent('popup');
+    await page.locator('.rd-acts .btn', {hasText: 'Unsubscribe'}).click();
+    await popup;
+    await until('the unsubscribe page is asked for', () => Promise.resolve(requested.length), count => count === 1);
+    assert.deepEqual(requested, ['https://contosocoffee.example/unsubscribe']);
+    // ⌘K's This email has it too.
+    await page.keyboard.press('Meta+k');
+    await page.locator('.palette').waitFor();
+    await page.keyboard.type('unsubscribe');
+    await until('Unsubscribe first', () => page.locator('.palette .item.cur').textContent(), text => text === 'Unsubscribe');
+    const again = page.waitForEvent('popup');
+    await page.keyboard.press('Enter');
+    await again;
+    await until('the page is asked for again', () => Promise.resolve(requested.length), count => count === 2);
+    // An email without the header: no chip, and nothing in ⌘K.
+    await page.locator('.palette').waitFor({state: 'detached'});
+    await rowOf(page, 'Pick a 30-minute slot').click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    await page.locator('.rd-body:not(:has(.sk-body))').waitFor();
+    assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Add to calendar', 'Add as task', 'Ask about this email']);
+    await page.keyboard.press('Meta+k');
+    await page.locator('.palette').waitFor();
+    assert.equal(await page.locator('.palette .item', {hasText: 'Unsubscribe'}).count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('an attachment opens its preview over the reading pane; Esc closes the preview first', async () => {
   const setpoint = await startSetpoint();
   try {

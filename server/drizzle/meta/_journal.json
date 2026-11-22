@@ -393,6 +393,13 @@
       "when": 1795326065883,
       "tag": "0055_mailpieces_with_campaign_scans",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "6",
+      "when": 1795371374728,
+      "tag": "0056_list_unsubscribe",
+      "breakpoints": true
     }
   ]
 }

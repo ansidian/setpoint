@@ -260,6 +260,8 @@ export function messageDetail(store: Store, messageId: number): MessageOut {
       to: row.toRecipients, cc: row.ccRecipients ?? [], reply_to: row.replyTo ?? [], references: row.referenceIds ?? [], in_reply_to: row.inReplyTo,
     }),
     ...(reply ? {reply_id: reply.id} : {}),
+    // Mail the user sent to others is never theirs to unsubscribe from.
+    ...(row.listUnsubscribe && row.received ? {unsubscribe_url: row.listUnsubscribe} : {}),
     conversation: conversationOf(store, row),
   };
 }

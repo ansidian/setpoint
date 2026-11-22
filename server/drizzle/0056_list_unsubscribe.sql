@@ -1,0 +1,1 @@
+ALTER TABLE `messages` ADD `list_unsubscribe` text;

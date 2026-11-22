@@ -77,6 +77,8 @@ export interface FetchedMessage extends ProviderState {
   attachments: FetchedAttachment[];
   // Absent where a caller builds one by hand without its headers: the row keeps what it has.
   recipients?: MessageHeaders;
+  // The sender's unsubscribe page, when its List-Unsubscribe header has one.
+  listUnsubscribe?: string;
   // The user sent it (Gmail's SENT label, iCloud's sent mailbox). False when absent.
   sent?: boolean;
   // It came to the user (in the inbox, or not sent by them). True when absent.
@@ -161,6 +163,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
         fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, searchBody: searchBody(message.bodyText),
         receivedAt: message.receivedAt, senderAuth: message.senderAuth, senderAuthenticated: senderAuthenticated(message.senderAuth),
         ...(message.recipients ? headerColumns(message.recipients) : {}),
+        ...(message.listUnsubscribe ? {listUnsubscribe: message.listUnsubscribe} : {}),
       };
       // USPS's daily digest goes to the agenda rail, not the Inbox. It's sorted as it arrives
       // (never triaged, so never notified), and a job reads its scans from its source.

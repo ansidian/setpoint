@@ -143,3 +143,4 @@ pip
 redo
 attach_file
 snooze
+unsubscribe

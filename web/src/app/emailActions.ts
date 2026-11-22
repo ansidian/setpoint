@@ -3,7 +3,8 @@
 // Done H (Attention mail not yet Done), Trash E, Pin or Unpin P (none on a snoozed email), Snooze S (which opens the
 // reader's snooze menu; the right-click menu's has Tomorrow, Next weekday and Pick, and Unsnooze on a snoozed email), Open in Gmail O (Gmail's mail), Reply R,
 // Reply all A and Forward F (on the desktop; Reply all only in ⌘K, when the email has others to reply to),
-// Add to calendar, Add as task, Ask about this email, Add to rule, Mark unread ⇧U. The menu leads
+// Add to calendar, Add as task, Ask about this email, Unsubscribe (where the open email has its
+// sender's unsubscribe page), Add to rule, Mark unread ⇧U. The menu leads
 // with Open ↵ and offers Mark read on an unread row in Mark unread's place. It ends with its Copy
 // items: the sender's address and a code row's code, whose copy reads the email. Sent mail has Open,
 // Trash, Open in Gmail, Reply, Forward and the make actions only: no Done, Pin, rules or read state.
@@ -41,6 +42,8 @@ export interface EmailHandlers {
   // ⌘K's Snooze, where the reader has a snooze menu: it opens that menu. Its key named only where S works.
   snoozeMenu?: boolean;
   snoozeKey?: boolean;
+  // The reader's, when the open email has its sender's unsubscribe page: it opens that page.
+  unsubscribe?: () => void;
 }
 
 /**
@@ -102,6 +105,7 @@ export function emailActions(row: MessageRowOut, gmail: boolean | null, on: Emai
     {id: 'event', group: 'make', label: 'Add to calendar', icon: 'event', run: () => on.propose('event')},
     {id: 'task', group: 'make', label: 'Add as task', icon: 'task_alt', run: () => on.propose('task')},
     {id: 'ask', group: 'make', label: 'Ask about this email', icon: 'auto_awesome', keywords: 'alfred', run: on.ask},
+    ...(on.unsubscribe ? [{id: 'unsubscribe', group: 'make', label: 'Unsubscribe', icon: 'unsubscribe', run: on.unsubscribe} satisfies MenuAction] : []),
     ...ruleActions(row, rules, where),
     unread
       ? {id: 'read', group: menu ? 'read' : 'make', label: 'Mark read', icon: 'mark_email_read', run: on.markRead!}

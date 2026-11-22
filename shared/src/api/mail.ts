@@ -226,6 +226,9 @@ export interface MessageOut extends MessageRowOut {
   in_reply_to?: string | null;
   // The email the user sent in reply to it (with `replied_at`), left out while they haven't.
   reply_id?: number;
+  // The sender's unsubscribe page (an https address from List-Unsubscribe), left out when it had
+  // none. Not in the iPhone app's contract yet.
+  unsubscribe_url?: string;
   // The other emails of its thread in its account, received and sent, oldest first, trashed mail left
   // out. Empty when it is alone. Not in the iPhone app's contract yet.
   conversation?: ConversationEmailOut[];
