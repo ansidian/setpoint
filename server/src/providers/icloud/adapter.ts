@@ -1,5 +1,8 @@
 // The iCloud adapter: IMAP with an app-specific password over one pooled connection per account,
-// polled every 2 minutes. It covers the \Seen flag both ways, Trash with Undo, and the 365-day
+// polled every 2 minutes. With `onChange`, a second session per account sits in IDLE on INBOX after
+// a poll, and new mail or a message gone from INBOX (EXISTS, EXPUNGE) wakes a sync at once; read
+// state is left to the poll, so Setpoint's own STOREs don't echo back. A watcher that closes or
+// fails is dropped, and the next poll starts another. It covers the \Seen flag both ways, Trash with Undo, and the 365-day
 // backfill.
 //
 // Each poll (sync) selects INBOX and
@@ -72,6 +75,8 @@ export interface ICloudAdapterOptions {
   smtp?: SmtpEndpoint;
   // APPEND each sent email to the sent mailbox (true), or leave the copy to iCloud (false).
   appendSent?: boolean;
+  // Watch INBOX by IDLE and call this when mail arrives or leaves. Without it, polls only.
+  onChange?: (sourceId: number) => void;
 }
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -129,12 +134,22 @@ interface Pooled {
   lastUsed: number;
 }
 
+interface Watcher {
+  key: string;
+  client: ImapFlow;
+  // The source's last successful poll: a watcher whose source stopped polling closes.
+  lastPolled: number;
+}
+
+const credentialKey = (username: string, password: string) => createHash('sha256').update(`${username}\0${password}`).digest('hex');
+
 /**
  * One persistent connection per source. Concurrent callers share the connect in flight. A dead or
  * failed connection is evicted so the next call connects afresh. Idle ones close.
  */
 class ImapPool {
   private readonly entries = new Map<number, Pooled>();
+  private readonly watchers = new Map<number, Watcher>();
   private readonly options: Required<Pick<ICloudAdapterOptions, 'endpoint' | 'idleMs' | 'connectTimeoutMs'>>;
   private readonly sweeper: NodeJS.Timeout;
 
@@ -155,7 +170,7 @@ class ImapPool {
 
   async get(sourceId: number, username: string, password: string): Promise<ImapFlow> {
     // Keyed by the credentials too, so a reconnect with a new app password never reuses the old session.
-    const key = createHash('sha256').update(`${username}\0${password}`).digest('hex');
+    const key = credentialKey(username, password);
     const existing = this.entries.get(sourceId);
     if (existing && existing.key === key) {
       try {
@@ -213,8 +228,48 @@ class ImapPool {
     entry.client.then(client => client.close(), () => {});
   }
 
+  /**
+   * Keeps a session in IDLE on INBOX for the source, calling `onChange` on EXISTS or EXPUNGE. Called
+   * after each successful poll: it starts one if none runs for these credentials.
+   */
+  watch(sourceId: number, username: string, password: string, onChange: (sourceId: number) => void) {
+    const key = credentialKey(username, password);
+    const existing = this.watchers.get(sourceId);
+    if (existing?.key === key) {
+      existing.lastPolled = Date.now();
+      return;
+    }
+    if (existing) this.unwatch(sourceId, existing);
+    const watcher: Watcher = {key, client: this.newClient(username, password), lastPolled: Date.now()};
+    this.watchers.set(sourceId, watcher);
+    const {client} = watcher;
+    client.on('exists', () => onChange(sourceId));
+    client.on('expunge', () => onChange(sourceId));
+    client.on('error', () => this.unwatch(sourceId, watcher));
+    client.on('close', () => this.unwatch(sourceId, watcher));
+    void (async () => {
+      try {
+        await client.connect();
+        await client.mailboxOpen(INBOX);
+        // imapflow ends an IDLE with a NOOP at each socket timeout (5 minutes): IDLE again. A refused
+        // IDLE answers false rather than throwing, and ends the watcher.
+        while (client.usable && this.watchers.get(sourceId) === watcher) if ((await client.idle()) === false) break;
+      } catch {
+        // Dropped; the next poll starts another.
+      }
+      this.unwatch(sourceId, watcher);
+    })();
+  }
+
+  private unwatch(sourceId: number, watcher: Watcher) {
+    if (this.watchers.get(sourceId) !== watcher) return;
+    this.watchers.delete(sourceId);
+    watcher.client.close();
+  }
+
   private closeIdle() {
     const now = Date.now();
+    for (const [sourceId, watcher] of this.watchers) if (now - watcher.lastPolled > this.options.idleMs) this.unwatch(sourceId, watcher);
     for (const [sourceId, entry] of this.entries) {
       if (now - entry.lastUsed > this.options.idleMs) {
         this.entries.delete(sourceId);
@@ -225,6 +280,7 @@ class ImapPool {
 
   async closeAll() {
     clearInterval(this.sweeper);
+    for (const [sourceId, watcher] of this.watchers) this.unwatch(sourceId, watcher);
     const entries = [...this.entries.values()];
     this.entries.clear();
     await Promise.all(entries.map(entry => entry.client.then(client => client.logout().catch(() => client.close()), () => {})));
@@ -239,6 +295,7 @@ export class ICloudAdapter implements SourceAdapter {
   private readonly appendSent: boolean;
   private readonly connectTimeoutMs: number;
   private readonly locks = new Map<number, Promise<unknown>>();
+  private readonly onChange: ((sourceId: number) => void) | undefined;
 
   constructor(options: ICloudAdapterOptions = {}) {
     this.connectTimeoutMs = options.connectTimeoutMs ?? 15_000;
@@ -247,6 +304,7 @@ export class ICloudAdapter implements SourceAdapter {
     this.headerChunk = options.headerChunk ?? 200;
     this.smtp = options.smtp ?? ICLOUD_SMTP;
     this.appendSent = options.appendSent ?? true;
+    this.onChange = options.onChange;
   }
 
   /** Connect iCloud: logs in once with the app password, outside the pool. Throws the refusal. */
@@ -328,6 +386,8 @@ export class ICloudAdapter implements SourceAdapter {
   private async poll(context: AdapterContext, raw: string | null): Promise<SyncResult> {
     const {result, sent} = await this.pollInbox(context, raw);
     if (sent) await this.withMailbox(context, sent, client => this.pollSent(context, client, sent));
+    const credentials = context.credentials();
+    if (this.onChange && credentials?.kind === 'app_password') this.pool.watch(context.source.id, credentials.username, credentials.password, this.onChange);
     return result;
   }
 

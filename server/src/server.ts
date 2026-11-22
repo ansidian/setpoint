@@ -58,7 +58,8 @@ const pubsub = config.gmailPubSub
   ? {topic: config.gmailPubSub.topic, subscription: config.gmailPubSub.subscription, serviceAccount: readServiceAccount(config.gmailPubSub.serviceAccountFile)}
   : null;
 const gmail = google ? new GmailAdapter({client: google, topic: pubsub?.topic ?? null}) : null;
-const icloud = new ICloudAdapter();
+// IDLE wakes the source's sync; `engine` is read only when it fires, after it's built below.
+const icloud = new ICloudAdapter({onChange: sourceId => engine.pushed(sourceId)});
 const holdFile = config.devProviderHold;
 const adapters = new Adapters({
   ...(gmail ? {gmail} : {}), icloud,

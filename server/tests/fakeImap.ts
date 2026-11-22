@@ -3,7 +3,7 @@
 // (special-use \Trash) and "Sent Messages" (\Sent), and the commands Setpoint's IMAP client
 // sends: CAPABILITY, LOGIN, NAMESPACE, LIST/LSUB, SELECT/EXAMINE, UID SEARCH (ALL, SINCE, UID,
 // HEADER), UID FETCH (UID, FLAGS, INTERNALDATE, BODY[]), UID STORE ±FLAGS, UID MOVE with COPYUID,
-// APPEND with APPENDUID, NOOP and LOGOUT. It answers
+// APPEND with APPENDUID, IDLE (EXISTS and EXPUNGE pushed to an idling session), NOOP and LOGOUT. It answers
 // as an IMAP server does, including NO [AUTHENTICATIONFAILED] for a revoked app password, and lets
 // tests inject a NO, a dropped connection or a hang. Hand-written rather than a library: the
 // maintained IMAP test servers are gone, and this keeps exactly the surface Setpoint relies on.
@@ -28,7 +28,7 @@ interface Folder {
 
 type Token = string | Buffer | Token[];
 
-const CAPABILITIES = 'IMAP4rev1 LITERAL+ UIDPLUS MOVE NAMESPACE';
+const CAPABILITIES = 'IMAP4rev1 LITERAL+ UIDPLUS MOVE NAMESPACE IDLE';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function imapDate(date: Date): string {
@@ -117,6 +117,11 @@ export async function fakeImap() {
   // Every APPEND, in order.
   const appends: {folder: string; uid: number; raw: Buffer}[] = [];
   const injected: {pattern: RegExp; response: 'drop' | 'hang' | string; times: number}[] = [];
+  // Sessions in IDLE: told of new mail and expunges in their folder until DONE.
+  const idlers = new Set<{socket: net.Socket; folder: Folder; tag: string}>();
+  const tell = (folder: Folder, line: string) => {
+    for (const idler of idlers) if (idler.folder === folder) idler.socket.write(line);
+  };
   let logins = 0;
 
   const user = (name: string) => {
@@ -127,7 +132,10 @@ export async function fakeImap() {
 
   function serve(socket: net.Socket) {
     sockets.add(socket);
-    socket.on('close', () => sockets.delete(socket));
+    socket.on('close', () => {
+      sockets.delete(socket);
+      for (const idler of idlers) if (idler.socket === socket) idlers.delete(idler);
+    });
     socket.on('error', () => {});
     let account: FakeImapUser | null = null;
     let selected: Folder | null = null;
@@ -228,6 +236,10 @@ export async function fakeImap() {
         case 'UNSELECT':
           selected = null;
           return ok();
+        case 'IDLE':
+          if (!selected) return send(`${tag} BAD No mailbox selected\r\n`);
+          idlers.add({socket, folder: selected, tag});
+          return send('+ idling\r\n');
         case 'NOOP':
           if (selected) send(`* ${selected.messages.length} EXISTS\r\n`);
           return ok();
@@ -317,6 +329,12 @@ export async function fakeImap() {
         if (end < 0) return;
         const text = buffer.subarray(0, end);
         buffer = buffer.subarray(end + 2);
+        const idling = [...idlers].find(idler => idler.socket === socket);
+        if (idling && text.toString('utf8').toUpperCase() === 'DONE') {
+          idlers.delete(idling);
+          send(`${idling.tag} OK IDLE terminated\r\n`);
+          continue;
+        }
         const literal = /\{(\d+)(\+)?\}$/.exec(text.toString('utf8'));
         parts.push(text);
         if (literal) {
@@ -349,6 +367,10 @@ export async function fakeImap() {
     get connections() {
       return sockets.size;
     },
+    /** Sessions in IDLE now. */
+    get idling() {
+      return idlers.size;
+    },
     addUser(name: string, password: string) {
       users.set(name, {password, folders: new Map([
         ['INBOX', {name: 'INBOX', specialUse: null, uidValidity: 1700000001, uidNext: 1, messages: []}],
@@ -363,6 +385,7 @@ export async function fakeImap() {
       const inbox = fake.folder(name, folder);
       const uid = inbox.uidNext++;
       inbox.messages.push({uid, flags: new Set(flags), internalDate: new Date(date), raw});
+      tell(inbox, `* ${inbox.messages.length} EXISTS\r\n`);
       return uid;
     },
     flags: (name: string, uid: number, folder = 'INBOX') => [...fake.folder(name, folder).messages.find(message => message.uid === uid)!.flags],
@@ -371,12 +394,15 @@ export async function fakeImap() {
       const message = fake.folder(name).messages.find(item => item.uid === uid)!;
       if (seen) message.flags.add('\\Seen');
       else message.flags.delete('\\Seen');
+      tell(fake.folder(name), `* ${fake.folder(name).messages.indexOf(message) + 1} FETCH (UID ${uid} FLAGS (${[...message.flags].join(' ')}))\r\n`);
     },
     /** Moved elsewhere in Apple Mail (Archive, or Deleted Messages), from INBOX or another mailbox. */
     move(name: string, uid: number, to: string, folder = 'INBOX') {
       const from = fake.folder(name, folder);
       const message = from.messages.find(item => item.uid === uid)!;
-      from.messages.splice(from.messages.indexOf(message), 1);
+      const seq = from.messages.indexOf(message) + 1;
+      from.messages.splice(seq - 1, 1);
+      tell(from, `* ${seq} EXPUNGE\r\n`);
       const destination = fake.folder(name, to);
       destination.messages.push({...message, uid: destination.uidNext++});
     },
