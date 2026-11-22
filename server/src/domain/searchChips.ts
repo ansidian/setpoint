@@ -21,7 +21,7 @@
 // organisations and accounts) and keeps Chrono out of the web bundle. The web shows the chips each
 // answer returns (`SearchOut.chips`).
 import * as chrono from 'chrono-node';
-import {validDay} from '@setpoint/shared';
+import {searchTokens, validDay} from '@setpoint/shared';
 import type {CalendarSearchChip, Kind, MessageType, SearchChip} from '@setpoint/shared';
 import {addDays, localDay} from './time.ts';
 
@@ -335,25 +335,27 @@ export function sameChip(a: SearchChip | CalendarSearchChip, b: SearchChip | Cal
   return a.kind === b.kind && fold(String(a.value)) === fold(String(b.value));
 }
 
-interface Token {
+export interface Token {
   raw: string;
   quoted: boolean;
   // Folded, punctuation trimmed. Empty for punctuation alone.
   word: string;
   // Typed after "!" or "-" ("!confirmation", "-confirmation").
   negated: boolean;
+  // A mail search operator (`from:pat`, `-from:"Sam Ortiz"`), which is never a chip's or negated.
+  operator: boolean;
 }
 
 /** A word typed after "!" or "-": "!confirmation", "-30", not "!" or "-" alone, "wow!" or "follow-up". */
 export const NEGATED = /^[-!][\p{L}\p{N}]/u;
 
 /** The tokens of `text` that `keep` keeps, spaced as one: words, "quotes" and "!words" or "-words" whole. */
-export const keptTokens = (text: string, keep: (token: {raw: string; quoted: boolean; negated: boolean; word: string}) => boolean) => tokens(text).filter(keep).map(token => token.raw).join(' ');
+export const keptTokens = (text: string, keep: (token: Token) => boolean) => tokens(text).filter(keep).map(token => token.raw).join(' ');
 
 function tokens(text: string): Token[] {
-  return [...text.matchAll(/"([^"]*)"?|[^\s"]+/g)].map(match => {
-    const quoted = match[0].startsWith('"');
-    return {raw: match[0], quoted, word: quoted ? '' : fold(trimPunctuation(match[0])), negated: !quoted && NEGATED.test(match[0])};
+  return searchTokens(text).map(({raw, quoted, operator}) => {
+    const plain = !quoted && !operator;
+    return {raw, quoted, operator, word: plain ? fold(trimPunctuation(raw)) : '', negated: plain && NEGATED.test(raw)};
   });
 }
 
@@ -381,7 +383,8 @@ export function parseChips<C extends SearchChip | CalendarSearchChip>(text: stri
   let at = 0;
   while (at < all.length) {
     const token = all[at]!;
-    if (token.quoted || !token.word) {
+    // An operator stays text as a quote does, never a chip or part of a phrase.
+    if (token.quoted || token.operator || !token.word) {
       left.push(token.raw);
       at += 1;
       continue;
@@ -390,7 +393,7 @@ export function parseChips<C extends SearchChip | CalendarSearchChip>(text: stri
     for (let length = MAX_WINDOW; length >= 1 && !found; length -= 1) {
       const window = all.slice(at, at + length);
       // Punctuation alone may sit inside a phrase ("mar 1 - mar 5"), never at its ends.
-      if (window.length < length || window.some(item => item.quoted) || !window.at(-1)!.word) continue;
+      if (window.length < length || window.some(item => item.quoted || item.operator) || !window.at(-1)!.word) continue;
       if (negate && window.slice(1).some(item => item.negated)) continue;
       const raw = window.map(item => item.raw).join(' ');
       const negated = negate !== undefined && token.negated;

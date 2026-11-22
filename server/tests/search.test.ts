@@ -240,6 +240,128 @@ describe('search over the seed: the sample\'s and the boards\' examples', () => 
   });
 });
 
+/** An invented email at an instant, with one word to find it by. */
+function emailAt(w: World, receivedAt: string, word: string) {
+  sent += 1;
+  const accountId = w.store.db.select().from(t.accounts).get()!.id;
+  return upsertMessages(w.store, accountId, [{
+    providerId: `search-${sent}`, threadId: `search-thread-${sent}`, rfc822Id: null, fromName: 'Billing Desk', fromAddress: 'billing@notices.example',
+    subject: `Notice ${receivedAt}`, snippet: '', bodyText: `About the ${word}.`, bodyHtml: null, receivedAt, senderAuth: null, attachments: [],
+    unread: false, trashed: false, archived: false,
+  }]).inserted[0]!;
+}
+
+describe('Gmail-style operators filter exactly and stay in the text', () => {
+  test('from: is a sender\'s name or address, never their organisation, with its reason', () => {
+    const w = world({seed: true});
+    const northwind = search(w, 'from:northwind');
+    expect(northwind).toMatchObject({text: 'from:northwind', chips: [], order: 'newest'});
+    // Priya Raman writes from Northwind Talent, from no-reply@northwind.example: neither starts with it.
+    expect(subjects(northwind)).toEqual(['Thanks for applying', 'Update on your application', 'Your application for Data Engineer Intern']);
+    expect(reasons(northwind.results[0]!)).toBe('From Northwind Recruiting');
+    expect(northwind.results[0]!.reasons[0]!.matched).toEqual([]);
+    expect(subjects(search(w, 'from:theo.walsh@example.org'))).toEqual(subjects(search(w, 'from:walsh')));
+    expect(search(w, 'from:THEO.WALSH@example.org').total).toBe(4);
+    expect(search(w, 'from:"Priya Raman"').results.map(result => result.from_name)).toEqual(['Priya Raman']);
+    // The start of the address, or of a word of the name.
+    expect(search(w, 'from:no-reply@northwind.example').total).toBe(4);
+    expect(search(w, 'from:raman').total).toBe(1);
+    expect(search(w, 'from:aman').total).toBe(0);
+    // A LIKE wildcard is a letter.
+    expect(search(w, 'from:%').total).toBe(0);
+  });
+
+  test('operators alone go newest first, combine with words, chips, an account and each other', () => {
+    const w = world({seed: true});
+    expect(subjects(search(w, 'from:theo'))).toEqual(['Re: Cabin weekend in November', 'Re: Cabin weekend in November', 'Re: Cabin weekend in November', 'Cabin weekend in November']);
+    // The words left rank as they did, and the operator only narrows.
+    const words = search(w, 'application');
+    const narrowed = search(w, 'from:northwind application');
+    expect(narrowed).toMatchObject({order: 'match', text: 'from:northwind application'});
+    expect(subjects(narrowed)).toEqual(subjects(words).filter(subject => subjects(northwind(w)).includes(subject)));
+    // With a "!word"'s Not chip, and with the sidebar's account.
+    expect(subjects(search(w, 'from:northwind !rejection'))).toEqual(['Thanks for applying']);
+    const jobs = w.store.db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get()!.id;
+    const personal = w.store.db.select().from(t.accounts).where(eq(t.accounts.label, 'Personal')).get()!.id;
+    expect(search(w, 'from:northwind', {account_id: jobs}).total).toBe(3);
+    expect(search(w, 'from:northwind', {account_id: personal}).total).toBe(0);
+    // Two of a kind both hold.
+    expect(search(w, 'from:northwind from:recruiting').total).toBe(3);
+    expect(search(w, 'from:northwind from:theo').total).toBe(0);
+  });
+
+  test('to: is To and Cc; mail whose headers aren\'t read is to no one', () => {
+    const w = world({seed: true});
+    // Sent's search: Sam Ortiz in To, and in Cc.
+    expect(subjects(search(w, 'to:sam', {sent: 'only'}))).toEqual(['Re: Saturday hike', 'Book club dates']);
+    expect(subjects(search(w, 'to:sam.ortiz@example.org', {sent: 'only'}))).toEqual(['Re: Saturday hike', 'Book club dates']);
+    expect(search(w, 'to:theo', {sent: 'only'}).total).toBe(4);
+    // The USPS digests have no recipients yet.
+    const toNobody = search(w, '-to:user', {limit: 200});
+    expect(new Set(toNobody.results.map(result => result.from_name))).toEqual(new Set(['USPS Informed Delivery']));
+    expect(search(w, 'to:user', {limit: 200}).results.some(result => result.from_name === 'USPS Informed Delivery')).toBe(false);
+  });
+
+  test('has:attachment, is:unread and is:read', () => {
+    const w = world({seed: true});
+    expect(subjects(search(w, 'has:attachment'))).toEqual(['Lease renewal terms', 'Interview confirmed: Data Engineer I']);
+    expect(subjects(search(w, 'has:file lease'))).toEqual(['Lease renewal terms']);
+    const all = search(w, '-has:attachment', {limit: 200}).total + 2;
+    const unread = search(w, 'is:unread', {limit: 200});
+    expect(unread.results.every(result => result.unread)).toBe(true);
+    const read = search(w, 'is:read', {limit: 200});
+    expect(read.results.some(result => result.unread)).toBe(false);
+    expect(unread.total + read.total).toBe(all);
+    expect(search(w, '-is:unread', {limit: 200}).total).toBe(read.total);
+  });
+
+  test('after: takes in its day and before: stops short of it, at the owner\'s midnight', () => {
+    const w = world({seed: true});
+    // 11:30 PM on Oct 8 and 12:30 AM on Oct 9 in Los Angeles.
+    emailAt(w, '2026-10-09T06:30:00.000Z', 'quokka');
+    emailAt(w, '2026-10-09T07:30:00.000Z', 'quokka');
+    expect(subjects(search(w, 'quokka after:2026/10/09'))).toEqual(['Notice 2026-10-09T07:30:00.000Z']);
+    expect(subjects(search(w, 'quokka before:2026-10-9'))).toEqual(['Notice 2026-10-09T06:30:00.000Z']);
+    expect(search(w, 'quokka after:2026-10-08 before:2026-10-10').total).toBe(2);
+    expect(reasons(search(w, 'quokka after:2026/10/09').results[0]!)).toContain('Date');
+    // A day that isn't one searches as words.
+    const notADay = search(w, 'quokka before:2026/13/40');
+    expect(notADay.text).toBe('quokka before:2026/13/40');
+    expect(subjects(notADay)).toEqual(subjects(search(w, 'quokka before 2026 13 40')));
+  });
+
+  test('subject: matches the subject alone, and marks it there', () => {
+    const w = world({seed: true});
+    // "October rent received" says renewal only in its body.
+    const renewal = search(w, 'subject:renewal');
+    expect(subjects(renewal)).toEqual(['Lease renewal terms', 'Car registration renewal notice', 'Your renters policy renewal is coming up']);
+    expect(reasons(renewal.results[0]!)).toBe('Subject renewal');
+    expect(highlighted(renewal.results[0]!, 'subject')).toEqual(['renewal']);
+    expect(highlighted(renewal.results[0]!, 'excerpt')).toEqual([]);
+    expect(subjects(search(w, 'subject:"lease renewal"'))).toEqual(['Lease renewal terms']);
+  });
+
+  test('a "-" before the operator or its value leaves its matches out, and so does a "-word"', () => {
+    const w = world({seed: true});
+    const application = subjects(search(w, 'application'));
+    for (const text of ['application -from:northwind', 'application from:-northwind', 'application !from:northwind', 'application -from:-northwind']) {
+      expect(subjects(search(w, text))).toEqual(application.filter(subject => !subjects(northwind(w)).includes(subject)));
+    }
+    expect(subjects(search(w, 'renewal -lease'))).toEqual(subjects(search(w, 'renewal !lease')));
+    expect(search(w, 'renewal -lease').text).toBe('renewal -lease');
+  });
+
+  test('Alfred\'s broad search filters by them too, and takes no Org chip from from:', () => {
+    const w = world({seed: true});
+    const out = broad(w, 'from:northwind');
+    expect(out.chips).toEqual([]);
+    expect(subjects(out)).toEqual(subjects(northwind(w)));
+    expect(subjects(broad(w, 'from:theo cabin'))).toHaveLength(4);
+  });
+});
+
+const northwind = (w: World) => search(w, 'from:northwind');
+
 describe('dates alone from the words, for a suggestion', () => {
   const words = (w: World, text: string) => matchSearch(w.store, {text, chips: [], account_id: undefined}, {chipsFromWords: 'dates'});
 

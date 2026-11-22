@@ -335,6 +335,24 @@ describe('exclusions and quotes', () => {
     expect(ids(await read('gadget !alert'))).toEqual([kept]);
   });
 
+  test('operators and "-words" never reach the model, operators alone ask nothing, and an accepted reading keeps both', async () => {
+    const {fake, w, read} = await setup();
+    const id = mail(w, 'Gadget notice', {organisation: 'Proseware'});
+    mail(w, 'Gadget rebate', {organisation: 'Proseware', body: 'zebrafish here'});
+    mail(w, 'Gadget notice 2', {organisation: 'Proseware', fromName: 'Other Desk', fromAddress: 'other@notices.example'});
+    mail(w, 'Gadget notice 3', {organisation: 'Fourth Coffee'});
+    fake.answer(() => answer({organisations: ['Proseware'], keywords: 'gadget'}));
+    const out = await read('gadget from:billing -zebrafish');
+    expect(fake.requests[0]!.input).toMatch(/Search: gadget$/);
+    expect(out.text).toBe('gadget from:billing -zebrafish');
+    expect(ids(out)).toEqual([id]);
+    fake.requests.length = 0;
+    for (const text of ['from:billing', 'from:billing has:attachment', '-zebrafish is:unread']) {
+      expect((await read(text)).fallback).toBe('nothing_to_read');
+    }
+    expect(fake.requests).toEqual([]);
+  });
+
   test('quoted words stay required whatever the model\'s keywords, and make no chip', async () => {
     const {fake, w, read} = await setup();
     const id = mail(w, 'Gadget first aid', {organisation: 'Proseware'});

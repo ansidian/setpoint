@@ -6,8 +6,9 @@
 //   keyword matches (src/search/readingPrompt.ts). It says which organisations and types the search
 //   asks for and which words are left. Dates stay the grammar's, the same every time. The model only
 //   says when what the grammar took for a date is a name, and then its words go back to being words.
-// - "!" or "-" words and "quotes" never reach the model, because they're what the user said exactly. They
-//   run through the grammar as always, and stay in force whatever the model says.
+// - "!" or "-" words, "quotes" and operators (`from:pat`) never reach the model, because they're
+//   what the user said exactly. They run through the grammar as always, and stay in force whatever
+//   the model says. A search of operators alone has nothing to read.
 // - Its chips are checked against the mail: only organisations that exist, and only words that were
 //   typed left as keywords. An organisation chip covers names that start with it. A type chip
 //   matches the classified type, or the type's word in the subject, summary or terms.
@@ -20,7 +21,7 @@
 //   lands, in the ledger and the cache.
 // - Readings are held briefly per search, because a repeat would otherwise pay again and may change
 //   its chips (see READING_HELD_MS). Each call is in the ledger, purpose `search_reading`.
-import {MAX_SEARCH_CHIPS} from '@setpoint/shared';
+import {MAX_SEARCH_CHIPS, parseOperators} from '@setpoint/shared';
 import type {MessageType, SearchChip, SearchOut, SearchReadingFallback, SearchSuggestOut, SearchSuggestionOut, searchSuggestionInput} from '@setpoint/shared';
 import type {z} from 'zod';
 import type {SearchReadingLog} from '../db/schema.ts';
@@ -58,8 +59,8 @@ const isSuggested = (chip: SearchChip) => !isNot(chip) && (chip.kind === 'organi
 
 const withoutRepeats = (chips: SearchChip[]) => chips.filter((chip, at) => !chips.slice(0, at).some(earlier => sameChip(earlier, chip)));
 
-/** The words a model may read: what's typed, without "quotes" and "!words" or "-words". */
-const plainWords = (text: string) => keptTokens(text, token => !token.quoted && !token.negated);
+/** The words a model may read: what's typed, without "quotes", "!words" or "-words" and operators. */
+const plainWords = (text: string) => keptTokens(text, token => !token.quoted && !token.negated && !token.operator);
 
 type SearchedField = Pick<SearchRequest, 'text' | 'chips' | 'account_id'>;
 type SearchSuggestionRequest = z.output<typeof searchSuggestionInput>;
@@ -107,7 +108,7 @@ function undatedWords(store: Store, typed: string, chips: SearchChip[]): string 
 export function keptSearch(store: Store, input: SearchedField, typed: string): KeptSearch {
   const matches = matchSearch(store, input, {chipsFromWords: 'none', readingTypes: true, rankText: undatedWords(store, typed, input.chips)});
   // With no words left, nothing can be said to match them.
-  if (!input.chips.some(isSuggested) || !textTerms(typed).length) return {matches, left: {...matches, ids: [], first: 0}, words: matches.ids.length};
+  if (!input.chips.some(isSuggested) || !textTerms(parseOperators(typed).text).length) return {matches, left: {...matches, ids: [], first: 0}, words: matches.ids.length};
   const words = matchSearch(store, {...input, text: typed, chips: input.chips.filter(chip => !isSuggested(chip))}, {chipsFromWords: 'none'});
   const kept = new Set(matches.ids);
   const inLeft = (id: number) => !kept.has(id);
@@ -148,7 +149,7 @@ export function applyReading(store: Store, input: SearchedField, plan: ReadingPl
   if (reading && filters.length) {
     // Only words that were typed. The model can drop a word a chip now says, but never add one.
     const keywords = new Set(wordsOf(reading.keywords));
-    const text = keptTokens(undated, token => token.quoted || token.negated || (token.word !== '' && wordsOf(token.word).every(word => keywords.has(word))));
+    const text = keptTokens(undated, token => token.quoted || token.negated || token.operator || (token.word !== '' && wordsOf(token.word).every(word => keywords.has(word))));
     const kept = settled(text, [...given, ...filters]);
     if (kept.matches.ids.length) return {kept, typed, undated, fallback: null};
     return {kept: settled(undated, given), typed, undated, fallback: 'left_nothing'};

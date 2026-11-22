@@ -8,6 +8,9 @@
 // back. They narrow the list and keep its order. A "!word" or "-word" alone still forms a chip here, a Not
 // chip, because it says exactly what it leaves out. Or it stays text and leaves out the mail with
 // it.
+// Gmail-style operators typed in the field (`from:pat`, `-has:attachment`, shared/src/searchOperators.ts)
+// stay in its text and filter exactly. `from:` and `to:` match a person's name or address as the
+// composer's suggestions do, never an organisation. They rank as no word, and narrow as a chip does.
 // Search covers All's mail: archived mail is in, trashed mail is out. Mail the user sent to others
 // is in only when the caller asks (`sent`).
 //
@@ -15,7 +18,8 @@
 // records its position (src/search/log.ts), so ranking can be measured against real searches.
 // Alfred runs the broad search through its tool, unlogged. Its words each widen the search on their
 // own, so its answers stay what they were (matching: 'broad').
-import type {MatchReasonOut, HighlightOut, MessageType, SearchChip, SearchOut, SearchReadingOut, SearchResultOut, SearchSent, searchInput} from '@setpoint/shared';
+import {parseOperators} from '@setpoint/shared';
+import type {MatchReasonOut, HighlightOut, MessageType, Operator, SearchChip, SearchOut, SearchReadingOut, SearchResultOut, SearchSent, searchInput} from '@setpoint/shared';
 import {asc} from 'drizzle-orm';
 import type {z} from 'zod';
 import * as t from '../db/schema.ts';
@@ -56,8 +60,56 @@ interface Filter {
   empty: boolean;
 }
 
-/** The chips' filter, with the mail that has an excluded word ("!proseware") left out. */
-function chipFilter(store: Store, chips: SearchChip[], accountId: number | undefined, organisations: string[], excluded: string[], readingTypes: boolean, sent: SearchSent | undefined): Filter {
+const escapeLike = (value: string) => value.replace(/[\\%_]/g, char => `\\${char}`);
+
+/**
+ * A person by what an operator says, as the composer's suggestions match one: an address whole, or
+ * the start of the address or the name, or with one word, of a word of the name.
+ */
+function personClause(address: string, name: string, value: string): {sql: string; args: string[]} {
+  const wanted = value.trim().toLowerCase();
+  if (wanted.includes('@')) return {sql: `lower(${address}) = ?`, args: [wanted]};
+  const start = `${escapeLike(wanted)}%`;
+  const parts = [`lower(${address}) LIKE ? ESCAPE '\\'`, `lower(${name}) LIKE ? ESCAPE '\\'`];
+  const args = [start, start];
+  if (!/\s/.test(wanted)) {
+    parts.push(`(' ' || lower(${name})) LIKE ? ESCAPE '\\'`);
+    args.push(`% ${start}`);
+  }
+  return {sql: `(${parts.join(' OR ')})`, args};
+}
+
+/** An operator's filter, unnegated. Null for one that says nothing to match (`subject:"…"`). */
+function operatorClause(store: Store, operator: Operator): {sql: string; args: (string | number)[]} | null {
+  switch (operator.kind) {
+    case 'from':
+      return personClause('m.from_address', 'm.from_name', operator.value);
+    case 'to': {
+      // Mail whose headers aren't read yet has no recipients, so it isn't to anyone.
+      const person = personClause(`json_extract(value, '$.address')`, `coalesce(json_extract(value, '$.name'), '')`, operator.value);
+      return {
+        sql: `EXISTS (SELECT 1 FROM json_each(m.to_recipients) WHERE ${person.sql} UNION ALL SELECT 1 FROM json_each(m.cc_recipients) WHERE ${person.sql})`,
+        args: [...person.args, ...person.args],
+      };
+    }
+    case 'subject': {
+      const terms = textTerms(operator.value);
+      return terms.length ? {sql: 'm.id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)', args: [ftsExpression(terms, 'and', ['subject'])]} : null;
+    }
+    case 'attachment':
+      return {sql: 'EXISTS (SELECT 1 FROM attachments a WHERE a.message_id = m.id)', args: []};
+    case 'unread':
+      return {sql: 'm.unread = ?', args: [operator.value ? 1 : 0]};
+    // As in Gmail, after: takes in its day and before: stops short of it.
+    case 'after':
+      return {sql: 'm.received_at >= ?', args: [zonedInstant(operator.date, '00:00', store.timeZone)]};
+    case 'before':
+      return {sql: 'm.received_at < ?', args: [zonedInstant(operator.date, '00:00', store.timeZone)]};
+  }
+}
+
+/** The chips' and operators' filter, with the mail that has an excluded word ("!proseware") left out. */
+function chipFilter(store: Store, chips: SearchChip[], operators: Operator[], accountId: number | undefined, organisations: string[], excluded: string[], readingTypes: boolean, sent: SearchSent | undefined): Filter {
   // Mail the user sent to others is indexed, and found only when the caller asks.
   const sentSql = sent === 'only' ? 'm.sent = 1' : sent === 'include' ? null : 'm.received = 1';
   const filter: Filter = {sql: ['m.trashed_at IS NULL', ...(sentSql ? [sentSql] : [])], args: [], empty: false};
@@ -93,6 +145,12 @@ function chipFilter(store: Store, chips: SearchChip[], accountId: number | undef
       for (const chip of dates) filter.args.push(zonedInstant(chip.from, '00:00', store.timeZone), zonedInstant(chip.to, '00:00', store.timeZone));
     }
   }
+  for (const operator of operators) {
+    const clause = operatorClause(store, operator);
+    if (!clause) continue;
+    filter.sql.push(`${operator.not ? 'NOT ' : ''}(${clause.sql})`);
+    filter.args.push(...clause.args);
+  }
   if (excluded.length) {
     filter.sql.push('m.id NOT IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)');
     filter.args.push(ftsExpression(excluded, 'or'));
@@ -115,7 +173,9 @@ function textCandidates(store: Store, filter: Filter, expression: string): Candi
 
 export interface SearchMatches {
   chips: SearchChip[];
-  // Free text left after the chips, and the words the matches were found by.
+  // The operators in `text`, which filter as chips do.
+  operators: Operator[];
+  // Free text left after the chips, operators included, and the words the matches were found by.
   text: string;
   terms: string[];
   order: 'newest' | 'match';
@@ -210,7 +270,7 @@ function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: 
   const {store, filter, none} = parsed;
   const lastWord = (value: string) => fold(value).match(/[\p{L}\p{N}]+$/u)?.[0];
   const typing = lastWord(input.text) !== undefined && lastWord(input.text) === lastWord(text);
-  const dropAllFiller = none.chips.some(chip => !isNot(chip));
+  const dropAllFiller = none.chips.some(chip => !isNot(chip)) || none.operators.some(operator => !operator.not);
   const words = searchWords(text, {typing, dropAllFiller});
   const ranking = rankText === undefined ? words : searchWords(withoutExcluded(rankText).text, {typing, dropAllFiller});
   const everyRow = () => (store.sqlite.prepare(`SELECT m.id, m.received_at FROM messages m WHERE ${filter.sql.join(' AND ')}`).all(...filter.args) as Candidate[]);
@@ -247,23 +307,26 @@ function broadSearch({store, filter, none}: Parsed, text: string): SearchMatches
 
 /** Every email a search matches, in its order. */
 export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'> & {sent?: SearchSent}, options: MatchOptions = {}): SearchMatches {
-  const {matching = 'ranked', chipsFromWords = 'none', readingTypes = false, rankText} = options;
+  const {matching = 'ranked', chipsFromWords = 'none', readingTypes = false} = options;
+  // Operators filter, and never rank as words.
+  const rankText = options.rankText === undefined ? undefined : parseOperators(options.rankText).text;
   const broad = matching === 'broad';
   const vocabulary = chipVocabulary(store);
   const parsed = parseQuery(input.text, {...vocabulary, now: isoNow(store), timeZone: store.timeZone, fromWords: broad ? 'all' : chipsFromWords});
   const chips: SearchChip[] = [];
   for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);
-  const {text, excluded} = withoutExcluded(parsed.text);
-  const filter = chipFilter(store, chips, input.account_id, vocabulary.organisations, excluded, readingTypes, input.sent);
+  const {operators, text: words} = parseOperators(parsed.text);
+  const {text, excluded} = withoutExcluded(words);
+  const filter = chipFilter(store, chips, operators, input.account_id, vocabulary.organisations, excluded, readingTypes, input.sent);
   const hasWords = textTerms(rankText ?? text).length > 0;
   // Chips leave the order to the words, a reading's as much as a date. Only Alfred's take it over,
   // and leaving out alone doesn't. Words with only Not chips still order by the best field.
-  const ordering = broad && chips.some(chip => !isNot(chip));
+  const ordering = broad && (chips.some(chip => !isNot(chip)) || operators.some(operator => !operator.not));
   const order = ordering || !hasWords ? 'newest' : 'match';
-  const none: SearchMatches = {chips, text: parsed.text, terms: [], order, partial: false, ids: [], first: 0, readingTypes};
-  if (filter.empty || (!chips.length && !hasWords && !excluded.length)) return none;
+  const none: SearchMatches = {chips, operators, text: parsed.text, terms: [], order, partial: false, ids: [], first: 0, readingTypes};
+  if (filter.empty || (!chips.length && !operators.length && !hasWords && !excluded.length)) return none;
   const search = {store, filter, none};
-  return broad ? broadSearch(search, text) : rankedSearch(search, input, text, options);
+  return broad ? broadSearch(search, text) : rankedSearch(search, input, text, {...options, rankText});
 }
 
 const TEXT_LABELS = {sender: 'Sender', organisation: 'Org', subject: 'Subject', body: 'Body'} as const;
@@ -295,7 +358,11 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
   }
   const typeChips = chips.filter(chip => chip.kind === 'type');
   for (const chip of typeChips) if (chip.value === row.type) reasons.push({field: 'type', label: `Type ${chip.label}`, matched: []});
-  if (chips.some(chip => chip.kind === 'date')) reasons.push({field: 'date', label: `Date ${dayLabel(localDay(row.receivedAt, store.timeZone), today)}`, matched: []});
+  const operators = matches.operators.filter(operator => !operator.not);
+  if (operators.some(operator => operator.kind === 'from')) reasons.push({field: 'sender', label: `From ${row.fromName || row.fromAddress}`, matched: []});
+  const subjectWords = operators.flatMap(operator => (operator.kind === 'subject' ? operator.value.match(/[\p{L}\p{N}]+/gu) ?? [] : []));
+  if (subjectWords.length) reasons.push({field: 'subject', label: `Subject ${subjectWords.join(' ')}`, matched: subjectWords});
+  if (chips.some(chip => chip.kind === 'date') || operators.some(operator => operator.kind === 'after' || operator.kind === 'before')) reasons.push({field: 'date', label: `Date ${dayLabel(localDay(row.receivedAt, store.timeZone), today)}`, matched: []});
   for (const chip of chips) if (chip.kind === 'account' && chip.value === row.accountId) reasons.push({field: 'account', label: `Account ${chip.label}`, matched: []});
   for (const chip of chips) if (chip.kind === 'kind' && chip.value === row.kind) reasons.push({field: 'kind', label: `Kind ${chip.label}`, matched: []});
   // Each word under the best field it matched: "Subject lease renewal · Body signed".
@@ -336,7 +403,9 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
   });
   const highlights: HighlightOut[] = [];
   for (const [field, value] of [['from_name', row.fromName], ['organisation', row.organisation], ['subject', row.subject], ['excerpt', excerpt]] as const) {
-    for (const run of runsIn(value)) highlights.push({field, ...run});
+    // A subject: operator's words are marked in the subject alone.
+    const runs = field === 'subject' ? mergeRuns([...runsIn(value), ...termRuns(value, textTerms(subjectWords.join(' ')))]) : runsIn(value);
+    for (const run of runs) highlights.push({field, ...run});
   }
   const recipients = out.sent_only || (sent === 'only' && row.sent) ? {to: row.toRecipients, cc: row.ccRecipients} : {};
   return {...out, ...recipients, reasons, excerpt, highlights};

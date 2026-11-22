@@ -140,11 +140,24 @@ describe('parseQuery: what words form when a reading owns the rest', () => {
   });
 });
 
+describe('parseQuery: operators stay text, whole, and are never chips or negated words', () => {
+  test.each<[string, string[], string]>([
+    ['from:northwind', [], 'from:northwind'],
+    ['from:"Northwind Talent" rejection', ['Type Rejection'], 'from:"Northwind Talent"'],
+    ['-from:"Sam Ortiz" march', ['Date Mar 2026 [2026-03-01, 2026-04-01)'], '-from:"Sam Ortiz"'],
+    ['after:2026/03/01', [], 'after:2026/03/01'],
+  ])('%s', (query, chips, text) => {
+    expect(parse(query)).toEqual({chips, text});
+  });
+});
+
 describe('keptTokens: a search\'s words, whole', () => {
   test('keeps quotes and "!words" as they were typed', () => {
     expect(keptTokens('lease "renewal terms" !parkside  signed', token => !token.quoted && !token.negated)).toBe('lease signed');
     expect(keptTokens('lease "renewal terms" !parkside', token => token.quoted || token.negated)).toBe('"renewal terms" !parkside');
     expect(keptTokens('IT liaison', token => token.word === 'it')).toBe('IT');
+    expect(keptTokens('lease from:"Sam Ortiz" -from:pat has:pdf -renewal', token => token.operator)).toBe('from:"Sam Ortiz" -from:pat');
+    expect(keptTokens('lease from:"Sam Ortiz" -from:pat -renewal', token => token.negated)).toBe('-renewal');
   });
 });
 
