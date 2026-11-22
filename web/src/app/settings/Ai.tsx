@@ -22,7 +22,7 @@ type ModelSetting = keyof Settings['ai'];
 const MODELS: {setting: ModelSetting; title: string; sub: string; current: (ai: AiOut) => AiModelChoiceOut | null}[] = [
   {setting: 'triage_model', title: 'Triage', sub: 'Reads each new email', current: ai => ai.triage.cheap},
   {setting: 'triage_strong_model', title: 'Triage, when unsure', sub: 'Checks every Attention answer', current: ai => ai.triage.strong},
-  {setting: 'history_model', title: 'History', sub: 'Reads backfilled mail once', current: ai => ai.triage.history},
+  {setting: 'history_model', title: 'History', sub: 'Reads backfilled mail once, and mail a rule sorted', current: ai => ai.triage.history},
   {setting: 'alfred_model', title: 'Alfred', sub: 'Answers questions about your mail', current: ai => ai.alfred},
 ];
 
