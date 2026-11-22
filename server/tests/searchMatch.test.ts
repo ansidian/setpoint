@@ -130,6 +130,9 @@ describe('withoutExcluded: "!word"s leave out the mail that has them', () => {
     ['mar 1 - mar 5', 'mar 1 - mar 5', []],
     ['follow-up', 'follow-up', []],
     ['-follow-up', '', ['follow', 'up']],
+    ['lease -is:u', 'lease', []],
+    ['lease !has:pdf has:-pdf', 'lease', []],
+    ['lease has:pdf', 'lease has:pdf', []],
     ['', '', []],
   ])('%s', (text, kept, excluded) => {
     expect(withoutExcluded(text)).toEqual({text: kept, excluded});

@@ -348,6 +348,8 @@ describe('Gmail-style operators filter exactly and stay in the text', () => {
       expect(subjects(search(w, text))).toEqual(application.filter(subject => !subjects(northwind(w)).includes(subject)));
     }
     expect(subjects(search(w, 'renewal -lease'))).toEqual(subjects(search(w, 'renewal !lease')));
+    // One whose value isn't read yet, typed on the way to `-is:unread`, leaves nothing out.
+    for (const text of ['lease -is:u', 'lease -has:pdf', 'lease has:-pdf']) expect(subjects(search(w, text))).toEqual(subjects(search(w, 'lease')));
     expect(search(w, 'renewal -lease').text).toBe('renewal -lease');
   });
 

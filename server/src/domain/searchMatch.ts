@@ -14,6 +14,7 @@
 // Alfred's card rather than narrow it. Lane, urgency and deadlines never rank above the match. Broad
 // free text alone ranks by the best field any word matched: sender (and organisation) before
 // subject before body, then newest first.
+import {OPERATOR_TOKEN} from '@setpoint/shared';
 import type {MatchField, MessageType} from '@setpoint/shared';
 import {fold, NEGATED, TYPE_CHIP_WORDS, TYPE_WORDS, wordsOf} from './searchChips.ts';
 
@@ -35,12 +36,15 @@ export function textTerms(text: string): string[] {
 /**
  * Free text's "!word"s and "-word"s, whose words leave out the mail that has any of them, and the
  * text left to match. `invoice !proseware` and `invoice -proseware` match invoice and leave out
- * Proseware's.
+ * Proseware's. A negated operator whose value isn't one it reads (`-is:u` on the way to
+ * `-is:unread`, `has:-pdf`) leaves nothing out and asks for nothing.
  */
 export function withoutExcluded(text: string): {text: string; excluded: string[]} {
   const kept: string[] = [];
   const excluded: string[] = [];
   for (const word of text.split(/\s+/).filter(Boolean)) {
+    const operator = OPERATOR_TOKEN.exec(word);
+    if (operator && (operator[1] || operator[3])) continue;
     if (NEGATED.test(word)) excluded.push(...textTerms(word));
     else kept.push(word);
   }
