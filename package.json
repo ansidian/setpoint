@@ -24,6 +24,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present && tsc -p extension/tsconfig.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/extension.tsbuildinfo",
     "extension:build": "node extension/build.ts",
     "test": "node web/tests/unit.ts",
+    "test:watch": "vitest --project server --project web",
     "test:browser": "node web/tests/browser/run.ts",
     "contract:record": "SETPOINT_UPDATE_CONTRACT=1 vitest run --project server contract.test",
     "compose:record": "SETPOINT_UPDATE_COMPOSE=1 vitest run --project web composeBundle",

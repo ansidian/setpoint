@@ -10,6 +10,9 @@ efficiency core can miss a time limit. Component tests find by role, wait with `
 `expect.poll`, use Vitest's clock for timed widgets, and reset module state (the toast); nothing in
 `web/src/` is mocked.
 
+`npm run test:watch` reruns the server and web tests on save, without lint, typecheck or the
+browser-backed component and extension tests; `q` quits.
+
 ## Browser runs
 
 - `npm run test:browser -- mail search` runs those spec files; `--only "board 17"` runs checks whose
