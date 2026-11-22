@@ -87,7 +87,7 @@ describe('Alfred answers the sample lease questions through its tools', () => {
     expect(fake.requests).toHaveLength(3);
     const [opening, afterSearch, afterRead] = fake.requests;
     expect(opening!.model).toBe('claude-opus-5-5');
-    expect(opening!.body.tools.map((tool: {name: string}) => tool.name)).toEqual(['search_mail', 'get_email', 'list_items', 'propose_item', 'answer']);
+    expect(opening!.body.tools.map((tool: {name: string}) => tool.name)).toEqual(['search_mail', 'get_email', 'read_attachment', 'list_items', 'propose_item', 'answer']);
     expect(opening!.body.tool_choice).toEqual({type: 'auto'});
     expect(opening!.body.thinking).toBeUndefined();
     expect(opening!.body.system[0].text).toContain('Today is 2026-10-07 (America/Los_Angeles)');
@@ -98,7 +98,7 @@ describe('Alfred answers the sample lease questions through its tools', () => {
     // The assistant's turn went back exactly as it came, thinking block and all.
     expect(afterSearch!.body.messages[1]).toEqual({role: 'assistant', content: [{type: 'thinking', thinking: '', signature: 'sig_1'}, {type: 'tool_use', id: 'toolu_1_0', name: 'search_mail', input: {query: 'lease renewal'}}]});
     const opened = JSON.parse(read(afterRead!).results[0]!.output);
-    expect(opened).toMatchObject({message_id: lease, account: 'Personal', date: '2026-09-30', time: '14:15', key_date: '2026-10-31', attachments: ['Renewal agreement.pdf']});
+    expect(opened).toMatchObject({message_id: lease, account: 'Personal', date: '2026-09-30', time: '14:15', key_date: '2026-10-31', attachments: [{attachment_id: expect.any(Number), filename: 'Renewal agreement.pdf', mime_type: 'application/pdf', size_bytes: expect.any(Number)}]});
     expect(opened.email).toContain('Sign by: Oct 31, 2026');
 
     const followUp = await c.send('POST', '/api/alfred/ask', {body: {question: RENT_QUESTION, conversation_id: first.body.conversation_id}});

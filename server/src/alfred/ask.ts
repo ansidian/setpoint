@@ -27,15 +27,17 @@ import {ProviderError} from '../sync/errors.ts';
 import {aiKeys, anthropicKey} from '../triage/models.ts';
 import {chooseAlfredModel} from './models.ts';
 import {ALFRED_TOOLS, alfredSystem, ANSWER_NUDGE, fenced, MAX_OUTPUT_TOKENS} from './prompt.ts';
+import {attachmentFile} from '../queries/mailBody.ts';
 import {inviteOf} from './proposals.ts';
-import {runTool} from './tools.ts';
+import {attachmentAsked, runTool} from './tools.ts';
 import type {ToolContext} from './tools.ts';
 
 export interface AlfredOptions {
   // The provider's base URL. Tests point it at a fake on 127.0.0.1.
   endpoints?: AiEndpoints;
   timeoutMs?: number;
-  // Reads an email's invite for a proposal. Without it, a proposal is the text's.
+  // Reads an email's invite for a proposal, and a PDF for read_attachment. Without it, a proposal is
+  // the text's and no PDF can be read.
   engine?: SyncEngine | null;
 }
 
@@ -182,7 +184,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   items.push(...client.userTurn(firstText, thread?.transcript.pending ?? []));
 
   const context: ToolContext = {
-    store, read: [], searched: [], proposals: [], invites: new Map(),
+    store, read: [], searched: [], proposals: [], invites: new Map(), files: new Map(), documents: new Set(),
     seen: new Set([...(thread?.transcript.seen ?? []), ...(scope !== null ? [scope] : [])]),
     questions: [...earlier.map(turn => turn.question), input.question],
   };
@@ -213,8 +215,13 @@ export async function askAlfred(store: Store, input: {question: string; conversa
             // A proposal takes what the email's invite says. It's read here because the tools don't wait.
             const proposed = call.name === 'propose_item' ? Number(call.input?.message_id) : null;
             if (proposed && context.seen.has(proposed) && !context.invites!.has(proposed)) context.invites!.set(proposed, await inviteOf(store, options.engine ?? null, proposed));
+            // A PDF's bytes, the same way, through the email's account. Errors leave none.
+            const pdf = call.name === 'read_attachment' ? attachmentAsked(context, call.input) : null;
+            if (pdf && 'id' in pdf && !context.files!.has(pdf.id)) {
+              context.files!.set(pdf.id, await attachmentFile(store, options.engine ?? null, pdf.messageId, pdf.id).then(file => new Uint8Array(file.content), () => null));
+            }
             const outcome = runTool(context, call.name, call.input);
-            results.push({id: call.id, output: outcome.output, ...(outcome.error ? {error: true} : {})});
+            results.push({id: call.id, output: outcome.output, ...(outcome.error ? {error: true} : {}), ...(outcome.document ? {document: outcome.document} : {})});
           }
         }
         if (final) pending = results;

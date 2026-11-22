@@ -591,6 +591,56 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
   });
 });
 
+describe('Alfred reads a PDF attached to a Gmail email', () => {
+  test('read_attachment sends the PDF as a document in the tool result; a non-PDF, an unseen email, one over 10 MB and a second read are refused, and he\'s asked again', async () => {
+    const env = await setup({pageSize: 50});
+    const {w, google} = env;
+    const PDF = '%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\nRenewal: $2,140 a month\n%%EOF\n';
+    const email = (subject: string, attachments: {filename: string; contentType: string; content: string}[]) => google.deliver(ADDRESS, {raw: rawEmail({
+      from: 'Parkside Leasing <leasing@parkside.example>', subject, date: ago(DAY), text: 'Attached.', received: gmailVerdict('parkside.example'), attachments,
+    }), date: ago(DAY), labels: ['INBOX']});
+    email('Your lease', [{filename: 'Lease.pdf', contentType: 'application/pdf', content: PDF}, {filename: 'notes.txt', contentType: 'text/plain', content: 'Notes.'}, {filename: 'Scan.pdf', contentType: 'application/pdf', content: PDF}]);
+    email('Another lease', [{filename: 'Other.pdf', contentType: 'application/pdf', content: PDF}]);
+    await connect(env);
+    await env.drain();
+    const lease = bySubject(w, 'Your lease').id;
+    const other = bySubject(w, 'Another lease').id;
+    const files = (id: number) => w.store.db.select().from(t.attachments).where(eq(t.attachments.messageId, id)).orderBy(t.attachments.id).all();
+    const [pdf, notes, scan] = files(lease);
+    w.store.db.update(t.attachments).set({sizeBytes: 10 * 1024 * 1024 + 1}).where(eq(t.attachments.id, scan!.id)).run();
+    const fake = await fakeModels();
+    setSecret(w.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    const read = (id: number, attachment: number) => ({name: 'read_attachment', input: {message_id: id, attachment_id: attachment}});
+    let turn = 0;
+    fake.answer(() => {
+      turn += 1;
+      if (turn === 1) return {calls: [read(lease, pdf!.id)]};
+      if (turn === 2) return {calls: [read(lease, notes!.id), read(other, files(other)[0]!.id), read(lease, scan!.id), read(lease, pdf!.id)]};
+      return {calls: [{name: 'answer', input: {found: true, text: '$2,140 a month.', source_ids: [lease]}}]};
+    });
+    const asked = await askAlfred(w.store, {question: 'What does the lease PDF say?', message_id: lease}, {endpoints: fake.endpoints, timeoutMs: 2000, engine: env.engine});
+    expect(asked.answer).toBe('$2,140 a month.');
+    expect(fake.requests).toHaveLength(3);
+    const results = (index: number) => fake.requests[index]!.body.messages.at(-1).content;
+    expect(results(1)).toEqual([{type: 'tool_result', tool_use_id: 'toolu_1_0', content: [
+      {type: 'text', text: JSON.stringify({message_id: lease, filename: 'Lease.pdf'})},
+      {type: 'document', source: {type: 'base64', media_type: 'application/pdf', data: Buffer.from(PDF).toString('base64')}, title: 'Lease.pdf'},
+    ]}]);
+    expect(results(2).map((result: {is_error?: boolean; content: string}) => [result.is_error, JSON.parse(result.content).error])).toEqual([
+      [true, 'notes.txt isn\'t a PDF; only PDFs can be read.'],
+      [true, 'message_id must be an email from this conversation\'s searches or reads.'],
+      [true, 'Scan.pdf is over 10 MB, too big to read.'],
+      [true, 'Lease.pdf was already read for this question; it\'s above.'],
+    ]);
+    // Gmail no longer has it: the tool says so.
+    google.deleteForever(ADDRESS, bySubject(w, 'Your lease').providerId);
+    turn = 0;
+    fake.answer(() => (turn++ === 0 ? {calls: [read(lease, pdf!.id)]} : {calls: [{name: 'answer', input: {found: false, text: '', source_ids: []}}]}));
+    await askAlfred(w.store, {question: 'And again?', message_id: lease}, {endpoints: fake.endpoints, timeoutMs: 2000, engine: env.engine});
+    expect(fake.requests.at(-1)!.body.messages.at(-1).content).toEqual([{type: 'tool_result', tool_use_id: expect.any(String), content: JSON.stringify({error: 'The provider no longer has Lease.pdf.'}), is_error: true}]);
+  });
+});
+
 describe('Gmail push: Pub/Sub pull', () => {
   test('acks only after the sync is queued; drops what can\'t be processed; one sync per account per pull', async () => {
     const env = await setup();

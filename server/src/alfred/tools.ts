@@ -2,7 +2,8 @@
 // search_mail is the search field's own query (unlogged), sent mail included. get_email is the reader's record,
 // with the other emails of its thread (the reader's conversation), which it may then read and cite.
 // list_items is the calendar's range read (an event's place and address as one location, the line
-// Google keeps). propose_item builds the same proposal as Add to calendar / Add as task. None of
+// Google keeps). propose_item builds the same proposal as Add to calendar / Add as task.
+// read_attachment hands the model a PDF attached to an email it has seen, as a document. None of
 // them changes anything.
 //
 // Each tool has one result shape as JSON. A failure is a short reason the model can act on (without
@@ -11,7 +12,7 @@
 // one per question.
 import type {ItemKind, ProposalOut} from '@setpoint/shared';
 import {searchInput} from '@setpoint/shared';
-import {eq} from 'drizzle-orm';
+import {and, asc, eq} from 'drizzle-orm';
 import {bodyOf} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {chipWords} from '../domain/searchChips.ts';
@@ -29,6 +30,8 @@ const SEARCH_PAGE = 10;
 const BODY_LIMIT = 20_000;
 const MAX_RANGE_DAYS = 92;
 const MAX_QUERY_RANGE_DAYS = 366;
+/** The biggest PDF read_attachment reads (10 MB). */
+export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -47,11 +50,18 @@ export interface ToolContext {
   // The invite of an email a proposal is asked for, read before the tool runs (the tools
   // themselves don't wait on a provider). An email with none has null or no entry.
   invites?: Map<number, Invite | null>;
+  // A PDF's bytes by attachment id, read before read_attachment runs, as the invites are. Null when
+  // the provider couldn't give them.
+  files?: Map<number, Uint8Array | null>;
+  // The attachments read this question, each read once.
+  documents?: Set<number>;
 }
 
 export interface ToolOutcome {
   output: string;
   error: boolean;
+  // A PDF for the model, sent with the result (read_attachment's).
+  document?: {data: string; title: string};
 }
 
 const ok = (value: unknown): ToolOutcome => ({output: JSON.stringify(value), error: false});
@@ -99,7 +109,8 @@ function emailTool(context: ToolContext, input: Record<string, unknown>): ToolOu
   if (!row || row.trashedAt) return fail(`No email with message_id ${messageId}; search again.`);
   context.seen.add(row.id);
   if (!context.read.includes(row.id)) context.read.push(row.id);
-  const attachments = context.store.db.select({filename: t.attachments.filename}).from(t.attachments).where(eq(t.attachments.messageId, row.id)).all();
+  const attachments = context.store.db.select({attachment_id: t.attachments.id, filename: t.attachments.filename, mime_type: t.attachments.mimeType, size_bytes: t.attachments.sizeBytes})
+    .from(t.attachments).where(eq(t.attachments.messageId, row.id)).orderBy(asc(t.attachments.id)).all();
   const zone = context.store.timeZone;
   const thread = conversationOf(context.store, row);
   for (const other of thread) context.seen.add(other.id);
@@ -111,7 +122,7 @@ function emailTool(context: ToolContext, input: Record<string, unknown>): ToolOu
     date: localDay(row.receivedAt, zone),
     time: localTime(row.receivedAt, zone),
     key_date: row.keyDate,
-    attachments: attachments.map(file => file.filename),
+    attachments,
     email: fenced(row.id, [
       `From: ${row.fromName} <${row.fromAddress}>${row.organisation ? ` (${row.organisation})` : ''}`,
       `Subject: ${row.subject}`,
@@ -178,12 +189,43 @@ function proposeTool(context: ToolContext, input: Record<string, unknown>): Tool
   return ok({ready: true, title: proposal.item.title, conflict: proposal.conflict?.label ?? null});
 }
 
+const isPdf = (file: {filename: string; mimeType: string}) => file.mimeType.toLowerCase() === 'application/pdf' || /\.pdf$/i.test(file.filename);
+
+/**
+ * The attachment a read_attachment call asks for, when it's a PDF within the cap on an email this
+ * conversation has seen: the one ask.ts reads the bytes of before the tool runs. Otherwise a reason.
+ */
+export function attachmentAsked(context: ToolContext, input: Record<string, unknown> | null): {messageId: number; id: number; filename: string} | {reason: string} {
+  const messageId = integer(input?.message_id);
+  const attachmentId = integer(input?.attachment_id);
+  if (!messageId || !attachmentId) return {reason: 'message_id and attachment_id are required: use them from get_email\'s attachments.'};
+  if (!context.seen.has(messageId)) return {reason: 'message_id must be an email from this conversation\'s searches or reads.'};
+  const file = context.store.db.select({id: t.attachments.id, filename: t.attachments.filename, mimeType: t.attachments.mimeType, sizeBytes: t.attachments.sizeBytes})
+    .from(t.attachments).where(and(eq(t.attachments.id, attachmentId), eq(t.attachments.messageId, messageId))).get();
+  if (!file) return {reason: `That email has no attachment ${attachmentId}; use one from get_email's attachments.`};
+  if (!isPdf(file)) return {reason: `${file.filename} isn't a PDF; only PDFs can be read.`};
+  if (file.sizeBytes > MAX_PDF_BYTES) return {reason: `${file.filename} is over 10 MB, too big to read.`};
+  return {messageId, id: file.id, filename: file.filename};
+}
+
+function readAttachmentTool(context: ToolContext, input: Record<string, unknown>): ToolOutcome {
+  const asked = attachmentAsked(context, input);
+  if ('reason' in asked) return fail(asked.reason);
+  if (context.documents?.has(asked.id)) return fail(`${asked.filename} was already read for this question; it's above.`);
+  const bytes = context.files?.get(asked.id) ?? null;
+  if (!bytes) return fail(`The provider no longer has ${asked.filename}.`);
+  if (bytes.byteLength > MAX_PDF_BYTES) return fail(`${asked.filename} is over 10 MB, too big to read.`);
+  context.documents?.add(asked.id);
+  return {...ok({message_id: asked.messageId, filename: asked.filename}), document: {data: Buffer.from(bytes).toString('base64'), title: asked.filename}};
+}
+
 /** Runs one of Alfred's tools (not `answer`, which ends the question). */
 export function runTool(context: ToolContext, name: string, input: Record<string, unknown> | null): ToolOutcome {
   if (!input) return fail('The arguments weren\'t a JSON object.');
   switch (name) {
     case 'search_mail': return searchTool(context, input);
     case 'get_email': return emailTool(context, input);
+    case 'read_attachment': return readAttachmentTool(context, input);
     case 'list_items': return itemsTool(context, input);
     case 'propose_item': return proposeTool(context, input);
     default: return fail(`There's no tool called ${name}.`);

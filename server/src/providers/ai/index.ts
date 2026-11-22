@@ -224,6 +224,8 @@ export interface ToolResult {
   id: string;
   output: string;
   error?: boolean;
+  // A PDF sent with the result, as a document block after its text.
+  document?: {data: string; title: string};
 }
 
 export interface ConverseRequest {
@@ -255,7 +257,13 @@ export interface ConversationClient {
   toolResults(results: ToolResult[]): unknown[];
 }
 
-const anthropicResults = (results: ToolResult[]) => results.map(result => ({type: 'tool_result', tool_use_id: result.id, content: result.output, ...(result.error ? {is_error: true} : {})}));
+const anthropicResults = (results: ToolResult[]) => results.map(result => ({
+  type: 'tool_result', tool_use_id: result.id,
+  content: result.document
+    ? [{type: 'text', text: result.output}, {type: 'document', source: {type: 'base64', media_type: 'application/pdf', data: result.document.data}, title: result.document.title}]
+    : result.output,
+  ...(result.error ? {is_error: true} : {}),
+}));
 
 export function anthropicConversation({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeoutMs = DEFAULT_TIMEOUT_MS}: ClientOptions): ConversationClient {
   return {

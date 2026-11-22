@@ -1007,7 +1007,7 @@ export const alfredConversations = sqliteTable('alfred_conversations', {
   // `items` is the provider's message list. `pending` holds the results of the last turn's tool
   // calls (its `answer`), sent with the next question. `seen` holds the emails the thread has
   // searched or read, which its answers may cite.
-  transcript: text('transcript', {mode: 'json'}).$type<{items: unknown[]; pending: {id: string; output: string; error?: boolean}[]; seen: number[]}>().notNull(),
+  transcript: text('transcript', {mode: 'json'}).$type<{items: unknown[]; pending: {id: string; output: string; error?: boolean; document?: {data: string; title: string}}[]; seen: number[]}>().notNull(),
   createdAt: text('created_at').notNull(),
   touchedAt: text('touched_at').notNull(),
 }, table => [
