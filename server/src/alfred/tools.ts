@@ -1,5 +1,6 @@
 // Alfred's tools, run for the model (the same queries and commands the UI uses).
-// search_mail is the search field's own query (unlogged), sent mail included. get_email is the reader's record.
+// search_mail is the search field's own query (unlogged), sent mail included. get_email is the reader's record,
+// with the other emails of its thread (the reader's conversation), which it may then read and cite.
 // list_items is the calendar's range read (an event's place and address as one location, the line
 // Google keeps). propose_item builds the same proposal as Add to calendar / Add as task. None of
 // them changes anything.
@@ -17,6 +18,7 @@ import {chipWords} from '../domain/searchChips.ts';
 import {addDays, daysBetween, localDay, localTime} from '../domain/time.ts';
 import {joinLocation} from '../providers/gcal/normalize.ts';
 import {itemsInRange} from '../queries/items.ts';
+import {conversationOf} from '../queries/thread.ts';
 import {searchMail} from '../search/search.ts';
 import type {Store} from '../store.ts';
 import {fenced} from './prompt.ts';
@@ -99,6 +101,8 @@ function emailTool(context: ToolContext, input: Record<string, unknown>): ToolOu
   if (!context.read.includes(row.id)) context.read.push(row.id);
   const attachments = context.store.db.select({filename: t.attachments.filename}).from(t.attachments).where(eq(t.attachments.messageId, row.id)).all();
   const zone = context.store.timeZone;
+  const thread = conversationOf(context.store, row);
+  for (const other of thread) context.seen.add(other.id);
   const {bodyText} = bodyOf(context.store.db, row.id);
   const body = bodyText.length > BODY_LIMIT ? `${bodyText.slice(0, BODY_LIMIT)}\n[…the rest of this email was cut]` : bodyText;
   return ok({
@@ -114,6 +118,12 @@ function emailTool(context: ToolContext, input: Record<string, unknown>): ToolOu
       '',
       body,
     ].join('\n')),
+    // The thread's other emails, oldest first, the user's own replies marked sent. Their sender and
+    // subject are fenced like a search result's.
+    thread: thread.map(other => ({
+      message_id: other.id, sent: other.sent, date: localDay(other.received_at, zone),
+      email: fenced(other.id, [`From: ${other.from_name} <${other.from_address}>`, `Subject: ${other.subject}`].join('\n')),
+    })),
   });
 }
 

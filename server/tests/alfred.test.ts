@@ -186,6 +186,35 @@ describe('Alfred\'s other paths', () => {
     expect(fake.requests[1]!.body.messages.at(-1)).toEqual({role: 'user', content: 'Please finish by calling the answer tool, with found false if the mail doesn\'t say.'});
   });
 
+  test('get_email lists the thread\'s other emails, which can then be read and cited; an id it never listed falls back', async () => {
+    const {w, c, fake} = await alfredWorld();
+    const cabin = w.store.db.select().from(t.messages).where(eq(t.messages.threadId, 'seed-thread-cabin')).orderBy(t.messages.receivedAt).all();
+    const [first, ...rest] = cabin;
+    const lease = idOf(w, 'Lease renewal terms');
+    let listed: {message_id: number; sent: boolean; date: string; email: string}[] = [];
+    fake.answer(request => {
+      const {text, results} = read(request);
+      if (text.includes('cabin') && !results.length) return {calls: [{name: 'get_email', input: {message_id: first!.id}}]};
+      const opened = results.map(result => JSON.parse(result.output));
+      if (opened[0]?.message_id === first!.id) {
+        listed = opened[0].thread;
+        return {calls: [{name: 'get_email', input: {message_id: rest[0]!.id}}]};
+      }
+      if (opened[0]?.message_id === rest[0]!.id) {
+        expect(opened[0].email).toContain('I\'m in.');
+        return {calls: [{name: 'answer', input: {found: true, text: 'You said you were in.', source_ids: [rest[0]!.id]}}]};
+      }
+      // The follow-up cites an email nobody listed: the emails read stand in.
+      return {calls: [{name: 'get_email', input: {message_id: rest[2]!.id}}, {name: 'answer', input: {found: true, text: 'Yes.', source_ids: [lease]}}]};
+    });
+    const out = await c.send('POST', '/api/alfred/ask', {body: {question: 'What did I say about the cabin?'}});
+    expect(listed.map(other => [other.message_id, other.sent])).toEqual(rest.map(row => [row.id, row.sent]));
+    expect(listed[0]!.email).toMatch(new RegExp(`^<email_content message_id="${rest[0]!.id}">From: .+\nSubject: Re: Cabin weekend in November</email_content>$`));
+    expect(out.body.sources.map((source: {message_id: number}) => source.message_id)).toEqual([rest[0]!.id]);
+    const followUp = await c.send('POST', '/api/alfred/ask', {body: {question: 'And the lease?', conversation_id: out.body.conversation_id}});
+    expect(followUp.body.sources.map((source: {message_id: number}) => source.message_id)).toEqual([rest[2]!.id]);
+  });
+
   test('sources are only emails the thread has seen', async () => {
     const {w, c, fake} = await alfredWorld();
     fake.answer(() => ({calls: [{name: 'answer', input: {found: true, text: 'Yes.', source_ids: [idOf(w, 'Lease renewal terms')]}}]}));
