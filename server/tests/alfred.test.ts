@@ -262,9 +262,14 @@ describe('Alfred\'s other paths', () => {
     expect(fake.requests[0]!.body.thinking).toEqual({type: 'between_tools'});
 
     fake.answer(() => ({calls: [{name: 'answer', input: {found: true, text: 'Hello.', source_ids: []}}]}));
-    const thread = (await c.send('POST', '/api/alfred/ask', {body: {question: 'Hi?'}})).body.conversation_id;
+    const asked = isoNow(w.store);
+    const answered = (await c.send('POST', '/api/alfred/ask', {body: {question: 'Hi?'}})).body;
+    const thread = answered.conversation_id;
+    // The thread ends four idle hours after its last question, and both its answer and its read say when.
+    const endsAt = new Date(Date.parse(asked) + 4 * 60 * 60_000).toISOString();
+    expect(answered.ends_at).toBe(endsAt);
     w.advance(4 * 60 * 60_000);
-    expect((await c.send('GET', `/api/alfred/conversations/${thread}`)).body.ended).toBe(false);
+    expect((await c.send('GET', `/api/alfred/conversations/${thread}`)).body).toMatchObject({ended: false, turns: [{ends_at: endsAt}]});
     w.advance(1);
     expect((await c.send('GET', `/api/alfred/conversations/${thread}`)).body.ended).toBe(true);
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'And?', conversation_id: thread}})).status).toBe(410);

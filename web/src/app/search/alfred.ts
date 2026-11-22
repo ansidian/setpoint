@@ -13,11 +13,16 @@
 // replaced is dropped.
 //
 // A reload: the tab keeps the open conversation's id and origin (sessionStorage), and boot reads
-// the thread back from the server, with no model call. One the server has ended (idle past four
-// hours), or no longer has, closes quietly. A follow-up the server refuses as ended closes the
-// thread with a toast; a fresh card takes its place, the question in its field to ask again.
+// the thread back from the server, with no model call. One the server has ended, or no longer has,
+// closes quietly.
+//
+// Ended: the server ends a thread four idle hours after its last question, and each answer says
+// when (`ends_at`). The thread closes itself then, quietly, even with the tab left open, so it's
+// never on screen once it has ended. A follow-up the server refuses as ended all the same (the Mac
+// asleep past the moment) closes it with a toast, the question dropped.
 import type {AnswerOut, AskStep} from '@setpoint/shared';
 import {useLayoutEffect, useSyncExternalStore} from 'react';
+import {serverNow} from '../../api/auth.ts';
 import {ApiFailure} from '../../api/client.ts';
 import {alfredConversation, alfredStep, askAlfred as sendQuestion} from '../../api/search.ts';
 import {withStep} from '../../logic/search.ts';
@@ -52,6 +57,8 @@ let counter = 0;
 // The places on screen that show the thread inline, by origin.
 const claims = new Map<string, number>();
 let poller: number | null = null;
+// Closes the thread when the server ends it.
+let ender: number | null = null;
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach(listener => listener());
@@ -61,7 +68,17 @@ const subscribe = (listener: () => void) => {
 };
 function set(next: AlfredThread | null) {
   thread = next;
+  endOnTime();
   notify();
+}
+
+/** Closes the thread at its last answer's `ends_at`; not while a question waits, whose answer moves it on. */
+function endOnTime() {
+  if (ender !== null) window.clearTimeout(ender);
+  ender = null;
+  const last = thread?.turns.at(-1);
+  if (!thread || thread.waiting !== null || !last) return;
+  ender = window.setTimeout(closeAlfred, Math.max(0, Date.parse(last.ends_at) - serverNow()));
 }
 
 const originKey = (origin: AlfredOrigin) => (origin.kind === 'search' ? 'search' : `email:${origin.id}`);
@@ -174,11 +191,9 @@ function send(question: string, anew: boolean) {
     if (id !== counter || !thread) return;
     stopPolling();
     if (failure instanceof ApiFailure && failure.code === 'conversation_ended') {
-      // The server ended the thread: it closes, and a fresh card on the same place keeps the question.
-      counter += 1;
-      forget();
+      closeAlfred();
       showToast(ENDED_LINE);
-      return set({...fresh(origin), failed: asked});
+      return;
     }
     set({...thread, error: failure.message, failed: asked, waiting: null, asking: null, step: null});
   });

@@ -330,7 +330,7 @@ describe('answerItemWhen: an Answer card item row\'s day and time', () => {
 });
 
 const turn = (fields: Partial<AnswerOut>): AnswerOut => ({
-  conversation_id: 1, turn_id: 1, question: 'q', answer: null, emphasis: [], sources: [], items: [], searched: [], proposals: [], ...fields,
+  conversation_id: 1, turn_id: 1, ends_at: SEED_NOW, question: 'q', answer: null, emphasis: [], sources: [], items: [], searched: [], proposals: [], ...fields,
 });
 const source = (id: number) => ({message_id: id, account_id: 1, subject: 's', organisation: null, from_name: 'f', received_at: SEED_NOW, pinned: false});
 

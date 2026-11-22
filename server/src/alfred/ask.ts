@@ -110,9 +110,12 @@ function sourcesOf(store: Store, ids: number[]): AnswerSourceOut[] {
   });
 }
 
-function present(store: Store, conversationId: number, turn: Turn): AnswerOut {
+/** When a thread touched at `touchedAt` ends, if nothing more is asked. */
+const endsAt = (touchedAt: string) => new Date(Date.parse(touchedAt) + THREAD_IDLE_MS).toISOString();
+
+function present(store: Store, conversationId: number, turn: Turn, touchedAt: string): AnswerOut {
   return {
-    conversation_id: conversationId, turn_id: turn.id, question: turn.question, answer: turn.answer, emphasis: turn.emphasis,
+    conversation_id: conversationId, turn_id: turn.id, ends_at: endsAt(touchedAt), question: turn.question, answer: turn.answer, emphasis: turn.emphasis,
     sources: sourcesOf(store, turn.sourceIds), items: turn.itemSources, searched: turn.searched, proposals: turn.proposals,
   };
 }
@@ -128,7 +131,7 @@ export function conversation(store: Store, conversationId: number): Conversation
   const row = store.db.select().from(t.alfredConversations).where(eq(t.alfredConversations.id, conversationId)).get();
   if (!row) throw notFound('No such conversation.');
   const turns = store.db.select().from(t.alfredTurns).where(eq(t.alfredTurns.conversationId, row.id)).orderBy(asc(t.alfredTurns.id)).all();
-  return {conversation_id: row.id, message_id: row.messageId, ended: ended(row, isoNow(store)), turns: turns.map(turn => present(store, row.id, turn))};
+  return {conversation_id: row.id, message_id: row.messageId, ended: ended(row, isoNow(store)), turns: turns.map(turn => present(store, row.id, turn, row.touchedAt))};
 }
 
 function recordUsage(store: Store, turn: ConverseTurn, messageId: number | null) {
@@ -275,6 +278,6 @@ export async function askAlfred(store: Store, input: {question: string; conversa
       conversationId, at: now, question: input.question, answer: found ? final.text : null, emphasis: found ? emphasisOf(final.text, final.emphasis) : [],
       sourceIds, itemSources, searched, proposals,
     }).returning().get();
-    return present(store, conversationId, turn);
+    return present(store, conversationId, turn, now);
   });
 }

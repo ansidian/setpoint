@@ -314,6 +314,8 @@ export interface EmphasisOut {
 export interface AnswerOut {
   conversation_id: number;
   turn_id: number;
+  // When the thread ends if nothing more is asked: four idle hours after its last question.
+  ends_at: string;
   // The question this turn answers, for the thread.
   question: string;
   // One or two lines. Null when Alfred couldn't find it ("Couldn't find that in your mail or calendar").

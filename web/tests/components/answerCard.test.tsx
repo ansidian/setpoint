@@ -20,7 +20,7 @@ const DINNER = {key: '41', id: 41, kind: 'event', calendar_id: 2, title: 'Dinner
 const GYM = {key: '7@2026-10-08T14:00:00.000Z', id: 7, kind: 'event', calendar_id: 2, title: 'Gym', date: '2026-10-08', start: '2026-10-08T14:00:00.000Z', all_day: false, occurrence_start: '2026-10-08T14:00:00.000Z'} as const;
 
 const turn = (fields: Partial<AnswerOut>): AnswerOut => ({
-  conversation_id: 1, turn_id: 1, question: 'When is dinner with Sam?', answer: 'Friday at 7:00 PM at Blue Door.', emphasis: [{start: 0, end: 6}],
+  conversation_id: 1, turn_id: 1, ends_at: SEED_NOW, question: 'When is dinner with Sam?', answer: 'Friday at 7:00 PM at Blue Door.', emphasis: [{start: 0, end: 6}],
   sources: [{message_id: 27, account_id: 1, subject: 'Dinner Friday?', organisation: null, from_name: 'Sam Lee', received_at: '2026-10-05T19:40:00Z', pinned: false}],
   items: [DINNER], searched: [], proposals: [], ...fields,
 });
