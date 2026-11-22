@@ -422,12 +422,18 @@ export function InboxPage({route}: {route: InboxRoute}) {
     done: (ids: number[]) => {
       const can = ids.filter(doneable);
       if (!can.length) return;
+      // Done ends a snooze (a snoozed email found by search), and its Undo snoozes it again.
+      const snoozed = new Map(can.flatMap(id => {
+        const until = rowOf(id)?.snoozed_until;
+        return until ? [[id, until] as const] : [];
+      }));
       leave(can, 'done', one => {
-        search.mark(one, {done: true});
+        search.mark(one, {done: true, snoozed_until: undefined});
         return setDone(one);
       }, counted(can.length, 'Marked Done', n => `Marked ${n} Done`), one => {
-        search.mark(one, {done: false});
-        return () => setDone(one, false);
+        const until = snoozed.get(one);
+        search.mark(one, {done: false, ...(until ? {snoozed_until: until} : {})});
+        return () => setDone(one, false).then(done => (until ? snooze(one, Date.parse(until)) : done));
       }, n => counted(n, 'Failed to mark Done', m => `Failed to mark ${m} Done`), n => counted(n, 'Failed to undo Done', m => `Failed to undo Done on ${m}`));
     },
     trash: (ids: number[]) => {
@@ -459,8 +465,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
     },
     // Pin, or Unpin when every one is pinned already.
     pin: (ids: number[]) => {
-      // Sent mail has no Pin.
-      const rows = ids.flatMap(id => rowOf(id) ?? []).filter(row => !row.sent_only);
+      // Sent mail and snoozed mail have no Pin.
+      const rows = ids.flatMap(id => rowOf(id) ?? []).filter(row => !row.sent_only && !row.snoozed_until);
       const pinning = rows.some(row => !row.pinned);
       const changing = rows.filter(row => row.pinned !== pinning).map(row => row.id);
       // Out of the shelf's sight, a pin says where it went, with Undo.
@@ -567,7 +573,31 @@ export function InboxPage({route}: {route: InboxRoute}) {
     done: () => (onSelection ? forSelection.done() : target !== null && on.done([target])),
     trash: () => (onSelection ? forSelection.trash() : target !== null && on.trash([target])),
     pin: () => (onSelection ? forSelection.pin() : target !== null && on.pin([target])),
-    snooze: (until: number) => open !== null && on.snooze([open], until),
+    // On a snoozed email (found by search), a new time: it stays where it is, with Undo going back.
+    snooze: (until: number) => {
+      if (open === null) return;
+      const was = rowOf(open)?.snoozed_until;
+      if (!was) return on.snooze([open], until);
+      const id = open;
+      const at = new Date(until).toISOString();
+      search.mark(id, {snoozed_until: at});
+      void snooze(id, until).then(() => {
+        let toast = 0;
+        const back = () => {
+          const index = undos.indexOf(back);
+          if (index < 0) return;
+          undos.splice(index, 1);
+          dismissToast(toast);
+          search.mark(id, {snoozed_until: was});
+          void snooze(id, Date.parse(was)).catch(toastFailure('Failed to undo the snooze'));
+        };
+        undos.push(back);
+        toast = showToast(snoozedLine(at, serverNow(), zone), {label: 'Undo', run: back, key: '⌘Z'});
+      }, error => {
+        search.mark(id, {snoozed_until: was});
+        toastFailure('Failed to snooze')(error);
+      });
+    },
     unsnooze: () => open !== null && void unsnooze(open).catch(toastFailure('Failed to unsnooze')),
     openInGmail: () => open !== null && on.openInGmail(open),
     step: (delta: 1 | -1) => {

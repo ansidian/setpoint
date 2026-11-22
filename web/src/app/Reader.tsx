@@ -98,7 +98,8 @@ export interface ReaderActions {
   done: () => void;
   trash: () => void;
   pin: () => void;
-  // Snooze until a moment (ms), and Unsnooze on a snoozed email: the Inbox's and Snoozed's, not Sent's.
+  // Snooze until a moment (ms), and Unsnooze on a snoozed email: the Inbox's and Snoozed's, not Sent's. On a
+  // snoozed email, Snooze changes its time. A snoozed email has no Pin.
   snooze?: (until: number) => void;
   unsnooze?: () => void;
   openInGmail: () => void;
@@ -202,9 +203,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         <div className="ph-top">
           <button className="btn quiet ph-back" type="button" onClick={actions.close}><Icon name="chevron_left" size={20} />{back}</button>
           <span className="grow" />
-          <button className="ibtn ph-icon" type="button" aria-label={pinned ? 'Unpin' : 'Pin'} aria-pressed={pinned} onClick={actions.pin}>
-            <Icon name={pinned ? 'keep-fill' : 'keep'} size={20} />
-          </button>
+          {!snoozedUntil && (
+            <button className="ibtn ph-icon" type="button" aria-label={pinned ? 'Unpin' : 'Pin'} aria-pressed={pinned} onClick={actions.pin}>
+              <Icon name={pinned ? 'keep-fill' : 'keep'} size={20} />
+            </button>
+          )}
         </div>
       )}
       <div ref={toolsBar} className="rd-tools" data-size={size}>
@@ -213,7 +216,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         {doneable && <button className="tool done" type="button" data-hint="h" aria-label="Done" data-tip={tip('Done · H')} onClick={actions.done}><Icon name="check" /><span className="lbl">Done</span><span className="kbd">H</span></button>}
         {isDone && <span className="rd-done"><Icon name="check" />Done</span>}
         <button className="tool trash" type="button" data-hint="e" aria-label="Trash" data-tip={tip('Trash · E')} onClick={actions.trash}><Icon name="delete" /><span className="lbl">Trash</span><span className="kbd">E</span></button>
-        {!sentMail && (
+        {!sentMail && !snoozedUntil && (
           <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} aria-label={pinned ? 'Unpin' : 'Pin'} data-tip={tip(pinned ? 'Unpin · P' : 'Pin · P')} onClick={actions.pin}>
             <Icon name={pinned ? 'keep-fill' : 'keep'} /><span className="lbl">{pinned ? 'Unpin' : 'Pin'}</span><span className="kbd">P</span>
           </button>
@@ -225,10 +228,14 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
             </button>
           )} />
         )}
-        {!phone && snoozedUntil && actions.unsnooze && (
-          <button className="tool active" type="button" aria-pressed="true" aria-label="Unsnooze" data-tip={snoozedLine(snoozedUntil, now, timeZone)} onClick={actions.unsnooze}>
-            <Icon name="snooze" /><span className="lbl">Unsnooze</span>
-          </button>
+        {/* A snoozed email's Snoozed, its return in its tip and atop its menu, which changes the time or ends it. */}
+        {!phone && snoozedUntil && actions.unsnooze && actions.snooze && (
+          <SnoozeMenu onPick={actions.snooze} onUnsnooze={actions.unsnooze} title={snoozedLine(snoozedUntil, now, timeZone)} button={(open, toggle) => (
+            <button className="tool snoozed" type="button" aria-label={snoozedLine(snoozedUntil, now, timeZone)} aria-haspopup="menu" aria-expanded={open}
+              data-tip={open ? undefined : snoozedLine(snoozedUntil, now, timeZone)} onClick={toggle}>
+              <Icon name="snooze" /><span className="lbl">Snoozed</span>
+            </button>
+          )} />
         )}
         {gmail !== false && (
           <button className="tool" type="button" data-hint="o" aria-label="Open in Gmail" data-tip={tip('Open in Gmail · O')} onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}>

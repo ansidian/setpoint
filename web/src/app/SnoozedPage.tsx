@@ -2,34 +2,50 @@
 // row names its sender, its subject, its account and when it returns ("Mon 9:00 AM") after a small
 // `snooze`. Under the pointer Unsnooze takes that time's place: the email goes back to the Inbox as it
 // was, with Undo snoozing it again. A row opens its email in the reader (/snoozed/12), whose tools
-// have Unsnooze in Snooze's place. J and K move the cursor (with an email open, they open the next and
-// previous one), Enter opens, Esc closes the reader. The sidebar's row shows only while something is
-// snoozed; the list emptied here says so.
-import type {MessageRowOut, SnoozedOut} from '@setpoint/shared';
+// have a snooze menu naming the return in Snooze's place: Tomorrow, Next weekday and Pick change the
+// time, Unsnooze ends it. A snoozed email has no Pin, and Done ends its snooze for good. Done, Trash,
+// Unsnooze and a new time each say so in a toast with Undo and ⌘Z, and Undo opens the email again
+// where it was open. A row's right-click menu is the Inbox's, with Snooze's new times and Unsnooze in
+// Pin's place. Keys: J and K move the cursor (with an email open, they open the next and previous
+// one), Enter opens, Esc closes the reader, and H, E, O, R, A, F and ⇧U do what they do in the Inbox,
+// on the open email or else the one under the cursor (A only with the email open, where the reader
+// knows its recipients). The sidebar's row shows only while something is snoozed; the list emptied
+// here says so.
+import type {ItemKind, MessageRowOut, RuleOut, Settings, SnoozedOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
-import {timeZone} from '../api/auth.ts';
-import {getCached, useResource} from '../api/client.ts';
-import {markUnread, messagePath, openMessage, setDone, setPinned, snooze, SNOOZED_PATH, trashMessage, unsnooze, untrashMessage} from '../api/mail.ts';
+import {serverNow, timeZone} from '../api/auth.ts';
+import {getCached, getJson, prefetch, useResource} from '../api/client.ts';
+import {SETTINGS_PATH} from '../api/items.ts';
+import {markRead, markUnread, messagePath, openMessage, setDone, snooze, SNOOZED_PATH, trashMessage, unsnooze, untrashMessage} from '../api/mail.ts';
+import {RULES_PATH} from '../api/settings.ts';
 import type {MessageOut} from '@setpoint/shared';
 import {fullTimestamp} from '../logic/format.ts';
 import {rowLine} from '../logic/inbox.ts';
 import type {Route} from '../logic/route.ts';
-import {snoozedLine, snoozeWhen} from '../logic/snooze.ts';
+import {readerActions} from '../logic/reader.ts';
+import {snoozedLine, snoozeOptions, snoozeWhen} from '../logic/snooze.ts';
 import {tabTitle} from '../logic/title.ts';
 import {Icon} from '../ui/Icon.tsx';
-import {isTyping, keepTextUnselected, plainKey} from '../ui/keys.ts';
+import {echoKey, isTyping, keepTextUnselected, plainKey} from '../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
+import {startComposer} from './compose/composer.ts';
+import {openContextMenu} from './ContextMenu.tsx';
+import type {MenuAction} from './ContextMenu.tsx';
+import {emailActions} from './emailActions.ts';
 import {useNow} from './clock.ts';
 import {Gutter} from './AllList.tsx';
-import {Reader} from './Reader.tsx';
+import {askCard, Reader} from './Reader.tsx';
 import {navigate} from './router.ts';
 import {LoadFailed, useLoadFailed} from './states/Loading.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
-import {showToast, toastFailure} from './toast.ts';
+import {dismissToast, showToast, toastFailure} from './toast.ts';
 import {toInbox} from './toInbox.ts';
 
 type SnoozedRoute = Extract<Route, {page: 'snoozed'}>;
+
+// The page's Undos, newest last, for ⌘Z: each takes its own toast with it.
+const undos: (() => void)[] = [];
 
 export function SnoozedPage({route}: {route: SnoozedRoute}) {
   const now = useNow();
@@ -38,9 +54,9 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   const accountWidth = useAccountColumn(accountList);
   const load = {path: SNOOZED_PATH, ...useResource<SnoozedOut>(SNOOZED_PATH)};
   const failed = useLoadFailed([load]);
-  // Emails Trash took out here, hidden at once until Undo or the list no longer has them.
-  const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
-  const rows = useMemo(() => (load.data?.rows ?? []).filter(row => !trashing.has(row.id)), [load.data, trashing]);
+  // Emails Done, Trash or Unsnooze took out here, hidden at once until Undo or the list no longer has them.
+  const [leaving, setLeaving] = useState<ReadonlySet<number>>(new Set());
+  const rows = useMemo(() => (load.data?.rows ?? []).filter(row => !leaving.has(row.id)), [load.data, leaving]);
   const [cursor, setCursor] = useState<number | null>(null);
   const open = route.open;
   const at = cursor !== null && rows.some(row => row.id === cursor) ? cursor : null;
@@ -50,6 +66,8 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
     return index < 0 ? null : rows[index + delta]?.id ?? null;
   };
   const listed = (id: number): MessageRowOut | undefined => rows.find(row => row.id === id) ?? getCached<MessageOut>(messagePath(id));
+  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
+  const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
 
   useEffect(() => {
     if (open !== null) void openMessage(open).catch(toastFailure('Failed to mark read'));
@@ -59,26 +77,135 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
     document.title = tabTitle({page: 'snoozed', subject});
   }, [subject]);
 
-  /** Unsnooze: back to the Inbox as it was, with Undo snoozing it again until the same time. Off the open email, the next one opens. */
+  /** A change that may take the email out of the list, said in a toast with Undo and ⌘Z. Undo puts it back, and opens it again if it was open. */
+  function act(id: number, {leaves, change, toast, undo, failed, undoFailed}: {
+    leaves: boolean;
+    change: () => Promise<unknown>;
+    toast: string;
+    undo: () => Promise<unknown>;
+    failed: string;
+    undoFailed: string;
+  }) {
+    const wasOpen = open === id;
+    const show = () => setLeaving(ids => new Set([...ids].filter(one => one !== id)));
+    if (leaves) {
+      if (wasOpen) go(neighbour(id, 1) ?? neighbour(id, -1));
+      setLeaving(ids => new Set(ids).add(id));
+    }
+    const sent = change().then(() => true, error => {
+      show();
+      toastFailure(failed)(error);
+      return false;
+    });
+    let toastId = 0;
+    const back = () => {
+      const index = undos.indexOf(back);
+      if (index < 0) return;
+      undos.splice(index, 1);
+      dismissToast(toastId);
+      void sent.then(took => {
+        if (!took) return;
+        void undo().then(() => {
+          show();
+          if (wasOpen) go(id);
+        }, toastFailure(undoFailed));
+      });
+    };
+    undos.push(back);
+    toastId = showToast(toast, {label: 'Undo', run: back, key: '⌘Z'});
+  }
+
+  /** Unsnooze: back to the Inbox as it was, with Undo snoozing it again until the same time. */
   function unsnoozeRow(id: number) {
     const until = listed(id)?.snoozed_until;
-    if (open === id) go(neighbour(id, 1) ?? neighbour(id, -1));
-    void unsnooze(id).then(() => {
-      if (until) showToast('Back in the Inbox', {label: 'Undo', run: () => void snooze(id, Date.parse(until)).catch(toastFailure('Failed to snooze'))});
-    }, toastFailure('Failed to unsnooze'));
+    if (!until) return;
+    act(id, {leaves: true, change: () => unsnooze(id), toast: 'Back in the Inbox', undo: () => snooze(id, Date.parse(until)), failed: 'Failed to unsnooze', undoFailed: 'Failed to snooze'});
+  }
+
+  /** A new time: it stays here, in its new place, with Undo going back to the old one. */
+  function resnooze(id: number, next: number) {
+    const until = listed(id)?.snoozed_until;
+    if (!until) return;
+    act(id, {leaves: false, change: () => snooze(id, next), toast: snoozedLine(new Date(next).toISOString(), serverNow(), zone), undo: () => snooze(id, Date.parse(until)), failed: 'Failed to snooze', undoFailed: 'Failed to undo the snooze'});
+  }
+
+  /** Done ends the snooze for good, on Attention mail only. Undo takes Done back and snoozes it again. */
+  function doneRow(id: number) {
+    const row = listed(id);
+    const until = row?.snoozed_until;
+    if (!row || !until || !readerActions(row).done) return;
+    act(id, {leaves: true, change: () => setDone(id), toast: 'Marked Done', undo: () => setDone(id, false).then(() => snooze(id, Date.parse(until))), failed: 'Failed to mark Done', undoFailed: 'Failed to undo Done'});
   }
 
   function trashRow(id: number) {
-    if (open === id) go(neighbour(id, 1) ?? neighbour(id, -1));
-    setTrashing(ids => new Set(ids).add(id));
-    const back = () => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
-    void trashMessage(id).then(() => showToast('Moved to Trash', {label: 'Undo', run: () => {
-      back();
-      void untrashMessage(id).catch(toastFailure('Failed to bring back'));
-    }}), error => {
-      back();
-      toastFailure('Failed to move to Trash')(error);
-    });
+    act(id, {leaves: true, change: () => trashMessage(id), toast: 'Moved to Trash', undo: () => untrashMessage(id), failed: 'Failed to move to Trash', undoFailed: 'Failed to bring back'});
+  }
+
+  // ⇧U: unread again, and the reader closes so it stays so, as in the Inbox.
+  function unreadRow(id: number) {
+    if (open === id) go(null);
+    void markUnread(id).catch(toastFailure('Failed to mark unread'));
+  }
+
+  // Open in Gmail: the email's own link, asked for now when it isn't in yet.
+  function openInGmail(id: number) {
+    const url = getCached<MessageOut>(messagePath(id))?.open_url;
+    if (url) {
+      window.open(url, '_blank', 'noopener');
+      return;
+    }
+    const tab = window.open('about:blank', '_blank');
+    void getJson<MessageOut>(messagePath(id)).then(message => {
+      if (!tab || !message.open_url) return tab?.close();
+      tab.opener = null;
+      tab.location.href = message.open_url;
+    }, () => tab?.close());
+  }
+
+  // Reply and Forward open the email with its composer under it.
+  function answer(id: number, kind: 'reply' | 'reply_all' | 'forward') {
+    if (open !== id) go(id);
+    startComposer({kind, message_id: id});
+  }
+
+  /** Snooze's new times and Unsnooze, for a row's menu. Pick needs its panel, so it's the reader's. */
+  function snoozedItems(id: number): MenuAction[] {
+    const now = serverNow();
+    return [
+      ...snoozeOptions(now, settings?.reminders.task_time ?? null, zone).flatMap((option): MenuAction[] => (option.until === null ? [] : [{
+        id: `snooze-${option.choice}`, label: option.when ? `${option.label} · ${option.when}` : option.label, icon: 'snooze', run: () => resnooze(id, option.until!),
+      }])),
+      {id: 'unsnooze', group: 'end', label: 'Unsnooze', icon: 'snooze', run: () => unsnoozeRow(id)},
+    ];
+  }
+
+  function onContextMenu(event: ReactMouseEvent) {
+    const element = (event.target as Element).closest<HTMLElement>('.snoozed-list [data-id]');
+    const id = element ? Number(element.dataset.id) : NaN;
+    const row = rows.find(one => one.id === id);
+    if (!element || !row) return;
+    const provider = accounts.get(row.account_id)?.provider;
+    const withCard = (card: ItemKind | 'ask') => {
+      askCard(id, card);
+      if (open !== id) go(id);
+    };
+    const offered = emailActions(row, provider === undefined ? null : provider === 'gmail', {
+      open: () => go(id),
+      done: () => doneRow(id),
+      trash: () => trashRow(id),
+      pin: () => {},
+      openInGmail: () => openInGmail(id),
+      propose: withCard,
+      ask: () => withCard('ask'),
+      markRead: () => void markRead(id).catch(toastFailure('Failed to mark read')),
+      markUnread: () => unreadRow(id),
+      reply: () => answer(id, 'reply'),
+      forward: () => answer(id, 'forward'),
+      snoozed: snoozedItems(id),
+    }, 'menu', rules);
+    if (!openContextMenu(event, element, offered)) return;
+    setCursor(id);
+    if (provider === 'gmail' && id !== open) prefetch(messagePath(id));
   }
 
   const step = (delta: 1 | -1) => {
@@ -99,13 +226,29 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
         event.preventDefault();
         action();
       };
+      // The open email's, or else the one under the cursor's.
+      const target = open ?? at;
+      const on = (hint: string, action: (id: number) => void) => target !== null && run(() => {
+        echoKey(hint);
+        action(target);
+      });
       if (plainKey(event, 'j')) run(() => step(1));
       else if (plainKey(event, 'k')) run(() => step(-1));
       else if (plainKey(event, 'Enter') && at !== null) run(() => go(at));
       else if (plainKey(event, 'Escape')) {
         if (open !== null) run(() => go(null));
         else if (at !== null) run(() => setCursor(null));
-      }
+      } else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
+      else if (plainKey(event, 'h')) on('h', doneRow);
+      else if (plainKey(event, 'e')) on('e', trashRow);
+      else if (plainKey(event, 'o')) on('o', openInGmail);
+      else if (plainKey(event, 'r')) on('r', id => answer(id, 'reply'));
+      else if (plainKey(event, 'f')) on('f', id => answer(id, 'forward'));
+      // Reply all needs the email's recipients: the reader's button, shown only when there are others.
+      else if (plainKey(event, 'a') && open !== null) {
+        const button = document.querySelector<HTMLElement>('.rd-tools [data-hint="a"]');
+        if (button?.checkVisibility()) run(() => button.click());
+      } else if (plainKey(event, 'u', {shift: true})) on('shift+u', unreadRow);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -119,7 +262,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
         <span className="grow" />
       </header>
       <div className="content" style={accountWidth}>
-        <section className="list snoozed-list" aria-label="Snoozed">
+        <section className="list snoozed-list" aria-label="Snoozed" onContextMenu={onContextMenu}>
           {!load.data ? (failed ? <LoadFailed what="Snoozed" loads={[load]} /> : <AllSkeleton />) : rows.length === 0 ? (
             <div className="view-empty">
               <div className="ve-block">
@@ -155,20 +298,16 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
           <Reader id={open} row={openRow} accounts={accounts} now={now} timeZone={zone}
             canStep={{previous: neighbour(open, -1) !== null, next: neighbour(open, 1) !== null}} onOpen={id => go(id)}
             actions={{
-              done: () => void setDone(open).catch(toastFailure('Failed to mark Done')),
+              done: () => doneRow(open),
               trash: () => trashRow(open),
-              pin: () => void setPinned(open, !openRow?.pinned).catch(toastFailure(openRow?.pinned ? 'Failed to unpin' : 'Failed to pin')),
+              // A snoozed email shows no Pin.
+              pin: () => {},
+              snooze: until => resnooze(open, until),
               unsnooze: () => unsnoozeRow(open),
-              openInGmail: () => {
-                const url = getCached<MessageOut>(messagePath(open))?.open_url;
-                if (url) window.open(url, '_blank', 'noopener');
-              },
+              openInGmail: () => openInGmail(open),
               step: delta => step(delta),
               close: () => go(null),
-              markUnread: () => {
-                go(null);
-                void markUnread(open).catch(toastFailure('Failed to mark unread'));
-              },
+              markUnread: () => unreadRow(open),
               codeCopied: () => {},
             }} />
         )}

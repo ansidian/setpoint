@@ -1,6 +1,6 @@
 // An email's actions, one list for ⌘K's This email (board 20), the reader's More (its proposals on
 // Security and Noise mail) and the right-click menu on its row, so they can't drift. ⌘K's order:
-// Done H (Attention mail not yet Done), Trash E, Pin or Unpin P, Open in Gmail O (Gmail's mail), Reply R,
+// Done H (Attention mail not yet Done), Trash E, Pin or Unpin P (none on a snoozed email, which has Snooze instead), Open in Gmail O (Gmail's mail), Reply R,
 // Reply all A and Forward F (on the desktop; Reply all only in ⌘K, when the email has others to reply to),
 // Add to calendar, Add as task, Ask about this email, Add to rule, Mark unread ⇧U. The menu leads
 // with Open ↵ and offers Mark read on an unread row in Mark unread's place. It ends with its Copy
@@ -33,6 +33,8 @@ export interface EmailHandlers {
   reply?: () => void;
   replyAll?: () => void;
   forward?: () => void;
+  // A snoozed email's: its new times and Unsnooze, as the reader's snooze menu offers them.
+  snoozed?: MenuAction[];
 }
 
 /** Reply R and Reply all A, where the composer is. */
@@ -66,7 +68,9 @@ export function emailActions(row: MessageRowOut, gmail: boolean | null, on: Emai
     ...(menu && on.open ? [{id: 'open', group: 'open', label: 'Open', icon: 'mail', hint: '↵', run: on.open} satisfies MenuAction] : []),
     ...(readerActions(row).done ? [{id: 'done', group: 'act', label: 'Done', icon: 'check', hint: 'H', run: on.done} satisfies MenuAction] : []),
     {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: menu, run: on.trash},
-    {id: 'pin', group: 'act', label: row.pinned ? 'Unpin' : 'Pin', icon: row.pinned ? 'keep_off' : 'keep', hint: 'P', run: on.pin},
+    // A snoozed email has no Pin. Its snooze is the menu's own (`snoozed`): its time changed, or ended.
+    ...(row.snoozed_until ? [] : [{id: 'pin', group: 'act', label: row.pinned ? 'Unpin' : 'Pin', icon: row.pinned ? 'keep_off' : 'keep', hint: 'P', run: on.pin} satisfies MenuAction]),
+    ...(row.snoozed_until && on.snoozed ? [{id: 'snoozed', group: 'act', label: 'Snooze', icon: 'snooze', run: () => {}, items: on.snoozed} satisfies MenuAction] : []),
     ...(gmail ? [{id: 'gmail', group: 'act', label: 'Open in Gmail', icon: 'open_in_new', hint: 'O', run: on.openInGmail} satisfies MenuAction] : []),
     ...replies(on),
     {id: 'event', group: 'make', label: 'Add to calendar', icon: 'event', run: () => on.propose('event')},

@@ -5,7 +5,9 @@
 // typed: the field ends in how it reads ("2:00 PM") or why it can't ("Add AM or PM", in `alert`),
 // and the panel's last line says the whole moment by Snooze, which waits until there is one. Enter
 // in the field snoozes, Esc goes back to the choices. A pick hands the moment (ms) to `onPick`.
-// The button is a row's (an icon under the pointer, in the age's place) or the reader's tool. The
+// The button is a row's (an icon under the pointer, in the age's place) or the reader's tool. On a
+// snoozed email the menu opens with its return in `ink3` (`title`), the choices change its time, and
+// Unsnooze ends the list (`onUnsnooze`). The
 // menu takes its own clicks and keys: ↑ ↓ move, Esc closes it, and a press outside closes it too.
 import type {Settings} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
@@ -26,10 +28,12 @@ const HEADS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
  * Snooze's button and menu. `button` draws the button from whether the menu is open and what opens it.
  * `onOpen` hears the menu open and close, for a row to hold its pointer look meanwhile.
  */
-export function SnoozeMenu({button, onPick, onOpen}: {
+export function SnoozeMenu({button, onPick, onOpen, onUnsnooze, title}: {
   button: (open: boolean, toggle: () => void) => ReactNode;
   onPick: (until: number) => void;
   onOpen?: (open: boolean) => void;
+  onUnsnooze?: () => void;
+  title?: string;
 }) {
   const [open, setOpen] = useState(false);
   const set = (next: boolean) => {
@@ -42,12 +46,15 @@ export function SnoozeMenu({button, onPick, onOpen}: {
       {open && <Menu onClose={() => set(false)} onPick={until => {
         set(false);
         onPick(until);
-      }} />}
+      }} title={title} onUnsnooze={onUnsnooze && (() => {
+        set(false);
+        onUnsnooze();
+      })} />}
     </span>
   );
 }
 
-function Menu({onClose, onPick}: {onClose: () => void; onPick: (until: number) => void}) {
+function Menu({onClose, onPick, onUnsnooze, title}: {onClose: () => void; onPick: (until: number) => void; onUnsnooze?: () => void; title?: string}) {
   const {data: settings} = useResource<Settings>(SETTINGS_PATH);
   const taskTime = settings?.reminders.task_time ?? null;
   const zone = timeZone();
@@ -95,6 +102,7 @@ function Menu({onClose, onPick}: {onClose: () => void; onPick: (until: number) =
   }
   return (
     <div ref={ref} className="pop menu snooze-list" role="menu" aria-label="Snooze" onKeyDown={onKeyDown}>
+      {title && <div className="snz-now">{title}</div>}
       {options.map(option => (
         <button key={option.choice} type="button" role="menuitem" className="menu-i"
           onClick={() => (option.until === null ? setPicking(true) : onPick(option.until))}>
@@ -102,6 +110,11 @@ function Menu({onClose, onPick}: {onClose: () => void; onPick: (until: number) =
           {option.when && <span className="ink3 num">{option.when}</span>}
         </button>
       ))}
+      {onUnsnooze && (
+        <button type="button" role="menuitem" className="menu-i" onClick={onUnsnooze}>
+          <span className="grow">Unsnooze</span>
+        </button>
+      )}
     </div>
   );
 }

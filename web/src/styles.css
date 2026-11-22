@@ -533,6 +533,9 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 /* The snooze menu: its choices with their moments, or Pick's panel, hung under its button by its
    right edge (or over it, `data-up`), above the rows. */
 .snooze-menu { position: relative; display: inline-flex; }
+/* A snoozed email's Snoozed tool: a plain tool, its glyph in snooze's violet. Its menu opens with the return, `ink3`. */
+.rd-tools .tool.snoozed .icon { color: var(--violet); }
+.snooze-list .snz-now { padding: 6px 10px 4px; font-size: 12px; color: var(--ink3); white-space: nowrap; }
 .snooze-menu > .pop { position: absolute; top: calc(100% + 4px); right: 0; z-index: 20; transform-origin: top right; }
 .snooze-menu > .pop[data-up] { top: auto; bottom: calc(100% + 4px); transform-origin: bottom right; }
 /* Pick: a back button and its name, the month, the time field ending in how the time reads, then the
