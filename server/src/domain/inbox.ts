@@ -5,7 +5,7 @@
 // Archive, moved out of iCloud's INBOX) also leaves the Inbox, because it was handled there and
 // providers are the truth (All and search still show it). Snoozed mail is out of the Inbox, the
 // Pinned shelf and the counts until it returns, when it sorts by its return time.
-import {INBOX_GROUPS} from '@setpoint/shared';
+import {INBOX_GROUPS, markAllReadReads} from '@setpoint/shared';
 import type {InboxGroup, Kind, Lane} from '@setpoint/shared';
 
 export interface InboxCandidate {
@@ -121,8 +121,8 @@ export function nextInboxChange(messages: InboxCandidate[], now: string): string
  * Inbox doesn't show, isn't touched.
  */
 export function markAllReadTargets<T extends Pick<InboxCandidate, 'unread' | 'trashedAt' | 'archivedAt' | 'lane' | 'doneAt' | 'kind' | 'snoozedUntil'>>(messages: T[]): T[] {
-  return messages.filter(message => message.unread && !message.trashedAt && !message.archivedAt && !message.snoozedUntil
-    && !(message.lane === 'attention' && !message.doneAt) && !(message.lane === 'fyi' && message.kind === 'security'));
+  return messages.filter(message => !message.trashedAt && !message.archivedAt && !message.snoozedUntil
+    && markAllReadReads({unread: message.unread, lane: message.lane, kind: message.kind, done: message.doneAt !== null}));
 }
 
 /** What the Inbox's empty pane counts from one email. */

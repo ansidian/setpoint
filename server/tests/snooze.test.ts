@@ -1,6 +1,7 @@
 // An email's snooze: the Inbox's rules for snoozed and returned mail as tables, then Snooze,
 // Unsnooze and the minute pass's return over the seed with the clock held, and the routes. A new
 // email in a snoozed one's thread is woken at Gmail's fake boundary in gmail.test.ts.
+import {markAllReadReads} from '@setpoint/shared';
 import {and, eq, isNull} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {confirmCommand} from '../src/commands/index.ts';
@@ -60,6 +61,20 @@ describe('the Inbox\'s rules for snoozed mail', () => {
 
   test('Mark all as read leaves snoozed mail as it is', () => {
     expect(markAllReadTargets([candidate({id: 1}), candidate({id: 2, snoozedUntil: LATER})]).map(row => row.id)).toEqual([1]);
+  });
+
+  // The server's pick and the web's prediction (markAllReadReads, over a row's `done`) agree on what the Inbox shows.
+  test.each<[string, Partial<InboxCandidate>, boolean]>([
+    ['an unread FYI email', {}, true],
+    ['already read', {unread: false}, false],
+    ['unread Attention waits on Done', {lane: 'attention'}, false],
+    ['Attention mail Done is read', {lane: 'attention', doneAt: NOW}, true],
+    ['a Security alert stays unread', {kind: 'security'}, false],
+    ['Noise is read', {lane: 'noise', kind: null}, true],
+  ])('server and web agree: %s', (_name, fields, reads) => {
+    const row = candidate(fields);
+    expect(markAllReadTargets([row]).length === 1).toBe(reads);
+    expect(markAllReadReads({unread: row.unread, lane: row.lane, kind: row.kind, done: row.doneAt !== null})).toBe(reads);
   });
 });
 

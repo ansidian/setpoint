@@ -2,7 +2,7 @@
 // (src/domain/inbox.ts there). The list (logic/all.ts) draws Attention and the shelf from them. This
 // file holds what's common: each row's line, Undo's held rows, how the keyboard cursor moves, and
 // the counts' at-once changes.
-import {INBOX_GROUPS} from '@setpoint/shared';
+import {INBOX_GROUPS, markAllReadReads} from '@setpoint/shared';
 import type {InboxGroup, InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut, MessageType} from '@setpoint/shared';
 import type {IconName} from '../ui/glyphs.ts';
 import {countdownChange} from './format.ts';
@@ -285,12 +285,8 @@ export function inboxAfterMarkAllRead(inbox: InboxOut): InboxOut {
   return {...inbox, groups, counts: [...read.values()].reduce((counts, row) => countsAfterOpen(counts, row), inbox.counts)};
 }
 
-/**
- * Whether Mark all as read reads the email, as the server picks them: unread, outside Attention
- * unless Done, and outside Security.
- */
-export const markAllReads = (row: MessageRowOut): boolean =>
-  row.unread && !(row.lane === 'attention' && !row.done) && !isSecurity(row);
+/** Whether Mark all as read reads the email, by the rule the server picks them by. */
+export const markAllReads = (row: MessageRowOut): boolean => markAllReadReads(row);
 
 /**
  * The emails Mark all as read reads, each once, though the Pinned shelf shows it twice: the Inbox's
