@@ -317,7 +317,8 @@ export function OverdueBanner({overdue, now, timeZone: zone, onGone, onSnooze}: 
     return () => window.clearTimeout(timer);
   }, [phase, exit]);
 
-  useEffect(() => {
+  // In the commit that takes it off screen, so the time it left is written before anything can see it gone.
+  useLayoutEffect(() => {
     if (phase === 'gone') onGone?.();
   }, [phase, onGone]);
 
