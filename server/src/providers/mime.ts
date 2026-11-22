@@ -8,7 +8,7 @@ import type {ParsedMail, ParsedMailAddress, ParsedMailAddressEntry, ParsedMailAt
 import type {Recipient} from '@setpoint/shared';
 import {evaluateGmailSenderAuthentication, evaluateICloudSenderAuthentication} from '../domain/senderAuthentication.ts';
 import type {AuthenticationHeader, MailProvider} from '../domain/senderAuthentication.ts';
-import {bareCid, campaignCount, KEPT_TYPES, pieceSources, statedPieces} from '../domain/mailpieces.ts';
+import {artworkCount, bareCid, KEPT_TYPES, pieceSources, statedPieces} from '../domain/mailpieces.ts';
 import type {ReadDigest, Scan} from '../domain/mailpieces.ts';
 import type {AttachmentBytes} from '../sync/adapter.ts';
 import type {FetchedAttachment, FetchedMessage, MessageHeaders, ProviderState} from '../sync/mailMirror.ts';
@@ -231,7 +231,7 @@ export async function fetchedMessage(provider: MailProvider, source: Buffer, met
 
 /**
  * The mailpieces in a USPS digest's source (src/domain/mailpieces.ts): how many it says are
- * coming, and the scans its HTML shows for them, in order, mailers' campaigns and ads left out.
+ * coming, and the scans its HTML shows for them, in order, mailers' artwork and ads left out.
  */
 export async function readDigest(source: Buffer): Promise<ReadDigest> {
   // Its HTML as sent: mailparser would otherwise turn each `cid:` link into the image's data URI.
@@ -250,7 +250,7 @@ export async function readDigest(source: Buffer): Promise<ReadDigest> {
     if (!part?.content?.length || !KEPT_TYPES.has(mimeType)) continue;
     scans.push({mimeType: mimeType === 'image/jpg' ? 'image/jpeg' : mimeType, content: part.content});
   }
-  // The stated count includes the mailers' campaigns, which aren't pieces in the mail.
+  // The stated count includes the mailers' artwork, which isn't a piece in the mail.
   const stated = statedPieces(`${parsed.text ?? ''}\n${html.replace(/<[^>]+>/g, ' ')}`);
-  return {pieces: stated === null ? null : Math.max(0, stated - campaignCount(html)), scans};
+  return {pieces: stated === null ? null : Math.max(0, stated - artworkCount(html)), scans};
 }

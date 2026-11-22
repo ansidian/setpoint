@@ -10,8 +10,8 @@ import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {markAllRead} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
-import {DEV_DIGEST_AUTH, DEV_DIGESTS, devDigestSource, devDigestSubject} from '../src/dev/digest.ts';
-import {campaignCount, DIGEST_SENDER, digestDay, isDigest, pieceSources, statedPieces} from '../src/domain/mailpieces.ts';
+import {DEV_DIGEST_AUTH, DEV_DIGESTS, devDigestScans, devDigestSource, devDigestSubject} from '../src/dev/digest.ts';
+import {artworkCount, DIGEST_SENDER, digestDay, isDigest, pieceSources, statedPieces} from '../src/domain/mailpieces.ts';
 import {evaluateGmailSenderAuthentication} from '../src/domain/senderAuthentication.ts';
 import type {SenderAuthentication} from '../src/domain/senderAuthentication.ts';
 import {firstKeptDay, MailpiecesWorker, pruneMailpieces, queueMailpieces} from '../src/mailpieces/worker.ts';
@@ -63,11 +63,13 @@ describe('the digest\'s rules', () => {
     expect(statedPieces(text)).toBe(expected);
   });
 
-  test('the mailpieces\' scans in order, each once: never a mailer\'s campaign, ride-along ads, logos or pixels', () => {
+  test('the mailpieces\' scans in order, each once: a campaign\'s scan too, never a mailer\'s artwork, ride-along ads, logos or pixels', () => {
     const html = [
       '<img id="email-tracking-href-id" height="0" width="0" src="https://informeddelivery.example/pixel">',
       '<img src="https://www.usps.example/logo.png" alt="USPS Logo">',
       '<img id="campaign-representative-image-src-id" alt="campaign" src="cid:mailer-1.jpg">',
+      '<img id="campaign-ridealong-image-src-id" src="cid:content-1.jpg" alt="RideAlong image">',
+      '<img id="campaign-representative-image-src-id" alt="campaign" src="cid:099-038.jpg">',
       '<img id="campaign-ridealong-image-src-id" src="cid:content-1.jpg" alt="RideAlong image">',
       '<img id="campaign-ridealong-image-src-id-secondary" src="cid:content-1.jpg" alt="RideAlong">',
       '<img id="mailpiece-image-src-id" style="padding-top:15px;" src="cid:100-038.jpg" alt="Mailpiece Image">',
@@ -75,19 +77,28 @@ describe('the digest\'s rules', () => {
       '<img id="mailpiece-image-src-id" src="cid:100-038.jpg">',
       '<img id="mailpiece-image-src-id" src="https://informeddelivery.example/remote.jpg">',
     ].join('\n');
-    expect(pieceSources(html)).toEqual(['100-038.jpg', '101-038.jpg']);
-    expect(campaignCount(html)).toBe(1);
+    expect(pieceSources(html)).toEqual(['099-038.jpg', '100-038.jpg', '101-038.jpg']);
+    expect(artworkCount(html)).toBe(1);
   });
 });
 
 describe('reading a digest\'s source', () => {
-  test('the scans alone, in order: a mailer\'s campaign is neither kept nor counted, nor its ride-along ad', async () => {
+  test('the scans alone, in order: a mailer\'s artwork is neither kept nor counted, nor its ride-along ad', async () => {
     const digest = await readDigest(devDigestSource({day: '2026-10-03', scans: 3, campaigns: 1, seed: 5}));
     expect(digest.pieces).toBe(3);
     expect(digest.scans).toHaveLength(3);
     expect(digest.scans.every(scan => scan.mimeType === 'image/png' && scan.content.subarray(1, 4).toString() === 'PNG')).toBe(true);
     // A digest of campaigns alone says 1 mailpiece and is no mail.
     expect(await readDigest(devDigestSource({day: '2026-10-03', scans: 0, campaigns: 1, seed: 5}))).toEqual({pieces: 0, scans: []});
+  });
+
+  test('a campaign USPS shows by its scan is a piece, kept and counted; its ride-along ad isn\'t', async () => {
+    // As a real digest: USPS's own ad and a magazine as mailers' artwork, a letter as its scan,
+    // "3 mailpiece(s)" for the three.
+    const source = devDigestSource({day: '2026-11-21', scans: 0, campaigns: 2, scannedCampaigns: 1, seed: 9});
+    const digest = await readDigest(source);
+    expect(digest.pieces).toBe(1);
+    expect(digest.scans.map(scan => scan.content)).toEqual(devDigestScans({day: '2026-11-21', scans: 0, scannedCampaigns: 1, seed: 9}));
   });
 
   test('a piece USPS has no picture of counts, without a scan; "0 mailpiece(s)" is no mail', async () => {
@@ -278,13 +289,13 @@ describe('migration 0041', () => {
   });
 });
 
-// 0042 drops the days kept while campaigns counted as pieces, so the worker reads them again
-// without them.
-describe('migration 0042', () => {
+// 0042 dropped the days kept while campaigns counted as pieces, and 0055 the days kept while a
+// campaign's scan was left out, so the worker reads them again under the rule of the day.
+describe.each(['0042_mailpieces_without_campaigns', '0055_mailpieces_with_campaign_scans'])('migration %s', migration => {
   test('the kept days go, with their scans, and every digest is queued to be read again', async () => {
     const w = world({seed: true});
     expect(w.store.db.select().from(t.mailDigests).all().length).toBeGreaterThan(0);
-    const sql = readFileSync(new URL('../drizzle/0042_mailpieces_without_campaigns.sql', import.meta.url), 'utf8');
+    const sql = readFileSync(new URL(`../drizzle/${migration}.sql`, import.meta.url), 'utf8');
     for (const statement of sql.split('--> statement-breakpoint')) w.store.sqlite.exec(statement);
     expect([w.store.db.select().from(t.mailDigests).all(), w.store.db.select().from(t.mailScans).all()]).toEqual([[], []]);
     const digests = w.store.db.select({id: t.messages.id, receivedAt: t.messages.receivedAt}).from(t.messages).where(eq(t.messages.uspsDigest, true)).all();

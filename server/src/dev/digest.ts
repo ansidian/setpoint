@@ -71,9 +71,11 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export interface DevDigestOptions {
   // `YYYY-MM-DD`, the day it's for.
   day: string;
-  // Plain scans, then campaigns (the mailer's picture with a ride-along ad).
+  // Plain scans; campaigns, each the mailer's own artwork with a ride-along ad; and campaigns USPS
+  // shows by their scan, each with a ride-along ad.
   scans: number;
   campaigns?: number;
+  scannedCampaigns?: number;
   // Pieces the digest says are coming without a picture.
   withoutImage?: number;
   // The first scan's seed, so days differ.
@@ -90,8 +92,8 @@ export function devDigestSubject(day: string): string {
 const base64Lines = (content: Buffer) => content.toString('base64').replace(/.{1,76}/g, '$&\r\n');
 
 /** An invented digest's RFC 822 source. */
-export function devDigestSource({day, scans, campaigns = 0, withoutImage = 0, seed = 1, messageId = `<digest-${day}@informeddelivery.example>`}: DevDigestOptions): Buffer {
-  const pieces = scans + campaigns + withoutImage;
+export function devDigestSource({day, scans, campaigns = 0, scannedCampaigns = 0, withoutImage = 0, seed = 1, messageId = `<digest-${day}@informeddelivery.example>`}: DevDigestOptions): Buffer {
+  const pieces = scans + campaigns + scannedCampaigns + withoutImage;
   const parts: {cid: string; type: string; content: Buffer}[] = [];
   const blocks: string[] = [];
   for (let n = 0; n < campaigns; n += 1) {
@@ -101,6 +103,13 @@ export function devDigestSource({day, scans, campaigns = 0, withoutImage = 0, se
     blocks.push(`<img id="campaign-representative-image-src-id" alt="campaign" src="cid:${art}">`,
       `<img id="campaign-ridealong-image-src-id" style="width: 300px;" src="cid:${ad}" alt="RideAlong image">`,
       `<img id="campaign-ridealong-image-src-id-secondary" style="mso-hide:all;max-width: 300px" src="cid:${ad}" alt="RideAlong">`);
+  }
+  for (let n = 0; n < scannedCampaigns; n += 1) {
+    const scan = `${1000000000 + seed * 100 + scans + n}-038.jpg`;
+    const ad = `content-${seed * 100 + campaigns + n}.jpg`;
+    parts.push({cid: scan, type: 'image/png', content: devScan(seed + scans + n)}, {cid: ad, type: 'image/png', content: devAd()});
+    blocks.push(`<img id="campaign-representative-image-src-id" alt="campaign" src="cid:${scan}">`,
+      `<img id="campaign-ridealong-image-src-id" style="width: 300px;" src="cid:${ad}" alt="RideAlong image">`);
   }
   for (let n = 0; n < scans; n += 1) {
     const scan = `${1000000000 + seed * 100 + n}-038.jpg`;
@@ -163,8 +172,17 @@ export const DEV_DIGESTS: readonly (DevDigestOptions & {providerId: string})[] =
   {day: '2026-09-30', scans: 4, seed: 1},
 ].map(digest => ({...digest, providerId: `seed-digest-${digest.day}`}));
 
-/** The scans kept from a seed digest's source, in its order. Its campaigns' pictures aren't kept. */
-export const devDigestScans = (digest: DevDigestOptions) => Array.from({length: digest.scans}, (_, n) => devScan((digest.seed ?? 1) + n));
+/**
+ * The scans kept from a seed digest's source, in its order: its campaigns' scans, then its plain
+ * scans. Its mailers' artwork isn't kept.
+ */
+export function devDigestScans(digest: DevDigestOptions): Buffer[] {
+  const seed = digest.seed ?? 1;
+  return [
+    ...Array.from({length: digest.scannedCampaigns ?? 0}, (_, n) => devScan(seed + digest.scans + n)),
+    ...Array.from({length: digest.scans}, (_, n) => devScan(seed + n)),
+  ];
+}
 
 /** A real digest's From and Gmail's Authentication-Results for it, DMARC on the parent domain. */
 export const DEV_DIGEST_AUTH = [
@@ -181,9 +199,9 @@ export function insertDevDigests(db: Pick<OpenDatabase['db'], 'insert' | 'select
   for (const digest of DEV_DIGESTS) {
     if (db.select({id: t.messages.id}).from(t.messages).where(eq(t.messages.providerId, digest.providerId)).get()) continue;
     const receivedAt = zonedInstant(digest.day, '07:30', SEED_TIME_ZONE);
-    // What the digest says, campaigns counted. What's kept leaves them out.
-    const pieces = digest.scans + (digest.campaigns ?? 0) + (digest.withoutImage ?? 0);
-    const kept = digest.scans + (digest.withoutImage ?? 0);
+    // What the digest says, campaigns counted. What's kept leaves the mailers' artwork out.
+    const pieces = digest.scans + (digest.campaigns ?? 0) + (digest.scannedCampaigns ?? 0) + (digest.withoutImage ?? 0);
+    const kept = digest.scans + (digest.scannedCampaigns ?? 0) + (digest.withoutImage ?? 0);
     const body = `You have ${pieces} mailpiece(s) and 1 inbound package(s) arriving soon.`;
     // Gmail's verdict in a real digest's shape, DMARC on the parent domain, through the evaluator the
     // mirror uses, so the seed can't call a digest authenticated that the real path wouldn't.
