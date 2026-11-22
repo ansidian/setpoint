@@ -13,6 +13,7 @@
 // components/composer.test.tsx's, how windows fold when they don't fit composer.test.ts's, a send
 // that reaches the dev provider the server's (sendDev.test.ts).
 import type {AiOut, AllOut, DraftOut, DraftsOut} from '@setpoint/shared';
+import {SEED_NOW} from '@setpoint/shared';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -462,6 +463,33 @@ test('a reply popped out stays up while other mail and Calendar show, clear of t
     assert.equal(await page.locator('.cmp-window').count(), 0);
     // One draft, listed once its words are saved (an untouched one isn't).
     await until('the reply is saved', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'Count me in.');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Alfred\'s window and a composer window sit side by side at the bottom right without covering each other', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    // A conversation the tab had open, with one turn, as the server keeps it.
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    const {id} = database.prepare(`INSERT INTO alfred_conversations (message_id, provider, model, transcript, created_at, touched_at)
+      VALUES (NULL, 'anthropic', 'claude-opus-5-5', '{"items":[],"pending":[],"seen":[]}', ?, ?) RETURNING id`).get(SEED_NOW, SEED_NOW) as {id: number};
+    database.prepare(`INSERT INTO alfred_turns (conversation_id, at, question, answer, emphasis, source_ids, searched, proposals, item_sources)
+      VALUES (?, ?, 'When is dinner with Sam?', 'Friday at 7:00 PM at Blue Door.', '[]', '[]', '[]', '[]', '[]')`).run(id, SEED_NOW);
+    database.close();
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.evaluate(conversation => sessionStorage.setItem('alfred.thread', JSON.stringify({conversation, origin: {kind: 'search'}})), id);
+    await page.reload();
+    const alfred = page.getByRole('region', {name: 'Alfred\'s window'});
+    await alfred.getByText('Friday at 7:00 PM at Blue Door.').waitFor();
+    await page.keyboard.press('c');
+    await page.locator('.cmp-window .composer').waitFor();
+    const [cmp, alf] = await rested(() => Promise.all([page.locator('.cmp-window').boundingBox(), alfred.boundingBox()]));
+    assert.ok(cmp!.x + cmp!.width <= alf!.x, `the composer window ends left of Alfred's: ${cmp!.x + cmp!.width} ≤ ${alf!.x}`);
+    assert.ok(alf!.x + alf!.width <= page.viewportSize()!.width, 'Alfred\'s window fits the page');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -5,13 +5,16 @@
 //   with its position, a chip removed, what the chips left out, a reading slow, failed or
 //   overtaken, no results, and Esc back to the Inbox
 // - Alfred's Answer card from ⌘Enter with a follow-up, and from the reader (Ask about this email),
-//   against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key
+//   against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key; its
+//   window once the user leaves the place it was asked, across pages and a reload, until ×
 // - the proposal card (Calendar's editor) and its Create through the command layer, and the More
 //   menu on Security mail.
 // - Gmail-style operators typed in the field, marked, with people offered after from:
 // Calendar search, from the header's button, `/` or ⌘F, with its results in the right pane. A click,
 // Enter, ↓ and J / K select results on the grid. E goes to the editor and back. Then Esc.
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {AccountOut, AllOut, CalendarOut, ItemsOut, SearchOut, SnoozedOut, TodoistProjectOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
@@ -1387,6 +1390,120 @@ test('Alfred: Ask about this email opens the card in the reader, scoped to it; w
     // "Settings › AI" opens Settings there.
     await noKey.getByRole('button', {name: 'Settings › AI'}).click();
     await until('Settings › AI', () => page.locator('.settings .set-nav .nav.on').textContent(), text => text === 'AI');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+/** Every question the page asks Alfred, with the conversation it continues. */
+function asksOf(page: Page): {question: string; conversation_id?: number}[] {
+  const asks: {question: string; conversation_id?: number}[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/alfred/ask') asks.push(JSON.parse(request.postData()!) as {question: string; conversation_id?: number});
+  });
+  return asks;
+}
+
+const alfredWindow = (page: Page) => page.getByRole('region', {name: 'Alfred\'s window'});
+const LEASE_QUESTION = 'When does my lease renewal need to be signed?';
+
+/** Asks Alfred from Inbox search, and waits for the answer above the results. */
+async function askFromSearch(page: Page) {
+  await page.keyboard.press('/');
+  await page.keyboard.type(LEASE_QUESTION);
+  await page.locator('.arow.result').first().waitFor();
+  await page.keyboard.press('Meta+Enter');
+  await page.locator('.search-list .answer .ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+}
+
+test('Alfred\'s window: cleared, the search\'s answer stays in the window; on Calendar a follow-up there continues the conversation; a reload brings it back with no question asked; × closes it for good', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await load(setpoint);
+    const asks = asksOf(page);
+    await askFromSearch(page);
+    assert.equal(await alfredWindow(page).count(), 0, 'inline while the search is on screen');
+
+    // Clearing the search (its words deleted) doesn't close it: it's in the window, the question shown there.
+    await field(page).fill('');
+    await alfredWindow(page).locator('.ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+    assert.equal(await alfredWindow(page).locator('.q').textContent(), LEASE_QUESTION);
+
+    // Calendar: still there; a follow-up continues the same conversation.
+    await page.locator('aside.sb .nav', {hasText: 'Calendar'}).click();
+    await until('Calendar opens', async () => new URL(page.url()).pathname, path => path.startsWith('/calendar'));
+    await alfredWindow(page).getByLabel('Ask a follow-up').fill('what\'s the new rent?');
+    await alfredWindow(page).getByLabel('Ask a follow-up').press('Enter');
+    await alfredWindow(page).locator('.ans', {hasText: '$2,140 a month'}).waitFor();
+    assert.equal(asks.length, 2);
+    assert.ok(asks[1]!.conversation_id, 'the follow-up names its conversation');
+
+    // A reload: the window comes back with both turns, read from the server, nothing asked.
+    await page.reload();
+    await alfredWindow(page).locator('.ans', {hasText: '$2,140 a month'}).waitFor();
+    assert.equal(await alfredWindow(page).locator('.ans').count(), 2);
+    await setpoint.idle();
+    assert.equal(asks.length, 2, 'no question went to Alfred');
+
+    // × closes it, and a reload doesn't bring it back.
+    await alfredWindow(page).getByRole('button', {name: 'Close answer'}).click();
+    await until('the window closes', () => alfredWindow(page).count(), count => count === 0);
+    await page.reload();
+    await setpoint.idle();
+    assert.equal(await alfredWindow(page).count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('Alfred\'s window: Ask about this email moves to the window when another email opens, back on its own, and Ask about this email on the other replaces it', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await load(setpoint);
+    const lease = await idOf(setpoint, 'Lease renewal terms');
+    const dinner = await idOf(setpoint, 'Dinner Friday?');
+    await page.goto(`${setpoint.base}/inbox/${lease}`);
+    await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    await page.locator('.rd-acts button', {hasText: 'Ask about this email'}).click();
+    await page.keyboard.type(LEASE_QUESTION);
+    await page.keyboard.press('Enter');
+    await page.locator('.pane .answer .ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+
+    // Another email: the card leaves the reader for the window.
+    await page.goto(`${setpoint.base}/inbox/${dinner}`);
+    await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
+    await alfredWindow(page).locator('.ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+    assert.equal(await page.locator('.pane .answer').count(), 0);
+    assert.equal(await page.locator('.rd-acts .btn.ghost').count(), 0, 'Ask about this email isn\'t held on the other email');
+
+    // Ask about this email here replaces it: one card, in the reader, empty.
+    await page.locator('.rd-acts button', {hasText: 'Ask about this email'}).click();
+    await page.locator('.pane .answer input[placeholder="Ask about this email…"]').waitFor();
+    assert.equal(await alfredWindow(page).count(), 0);
+    assert.equal(await page.locator('.answer .ans').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('Alfred\'s window: a thread the server has ended (idle past four hours) doesn\'t come back after a reload', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await load(setpoint);
+    await askFromSearch(page);
+    await field(page).fill('');
+    await alfredWindow(page).locator('.ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+    // The thread was last touched five hours ago, as the server's clock now reads it.
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    database.prepare('UPDATE alfred_conversations SET touched_at = ?').run(new Date(Date.parse(String((database.prepare('SELECT touched_at FROM alfred_conversations').get() as {touched_at: string}).touched_at)) - 5 * 60 * 60_000).toISOString());
+    database.close();
+    await page.reload();
+    await setpoint.idle();
+    assert.equal(await alfredWindow(page).count(), 0);
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('alfred.thread')), null, 'the tab forgets it');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();
