@@ -1,19 +1,10 @@
 // What Jobs's menus hold (boards 34a, 35a, 35b), built
 // from the page's rows and the actions the page passes in, so More, a row's right-click and the
 // status chip draw from one list. Pure: the page and the pane decide what each action does.
+import {sameCompany} from '@setpoint/shared';
 import type {ApplicationRowOut, JdCandidateOut, JobEventOut, JobStatus, NeedsYouItemOut} from '@setpoint/shared';
 import type {MenuEntry, MenuItem, MenuSpec} from './Menu.tsx';
 import {appliedWord, markLabel, markOf, STATUS_LABELS, titleOf} from './words.ts';
-
-// Words a company's name may carry or drop without being another company (as the server matches them).
-const SUFFIXES = new Set(['the', 'inc', 'incorporated', 'llc', 'ltd', 'limited', 'corp', 'corporation', 'co', 'company', 'plc', 'gmbh']);
-const companyWords = (company: string) => company.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(word => word && !SUFFIXES.has(word));
-
-/** Companies match loosely: case, punctuation and "Inc." ignored, one name the start of the other ("Fabrikam Labs" is "Fabrikam"). */
-export function sameCompany(a: string, b: string): boolean {
-  const [short, long] = [companyWords(a), companyWords(b)].sort((x, y) => x.length - y.length) as [string[], string[]];
-  return short.length > 0 && short.every((word, index) => long[index] === word);
-}
 
 const newestFirst = (a: ApplicationRowOut, b: ApplicationRowOut) => b.applied_at.localeCompare(a.applied_at) || b.id - a.id;
 

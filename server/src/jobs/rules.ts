@@ -4,7 +4,7 @@
 // match on, a confident match, duplicates and re-applications, Indeed's pairs, statuses and blocked
 // emails. They cover mail's Applied before too. No database, no clock: the caller passes now and the
 // zone.
-import {GHOSTED_AFTER_DAYS, isQuietJobEvent, JOB_STATUSES, JOB_WEEKS, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
+import {companyKey, companyWords, GHOSTED_AFTER_DAYS, isQuietJobEvent, JOB_STATUSES, JOB_WEEKS, sameCompany, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
 import type {JobCountsOut, JobEventKind, JobReadMode, JobStatus, JobWeekOut, Kind, NeedsYouReason} from '@setpoint/shared';
 import {addDays, daysBetween, localDay, weekday} from '../domain/time.ts';
 import type {JobEmailEvent} from './prompt.ts';
@@ -88,25 +88,8 @@ export function titleKey(title: string): string {
     .trim();
 }
 
-/** A company with case and punctuation ignored. */
-export function companyKey(company: string): string {
-  return company.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-}
-
-// Words a company's name may carry or drop without being another company.
-const COMPANY_SUFFIXES = new Set(['the', 'inc', 'incorporated', 'llc', 'ltd', 'limited', 'corp', 'corporation', 'co', 'company', 'plc', 'gmbh']);
-
-const companyWords = (company: string) => companyKey(company).split(' ').filter(word => word && !COMPANY_SUFFIXES.has(word));
-
-/**
- * Companies match loosely: case, punctuation and "Inc." ignored, and one name may
- * be the start of the other, word by word. "Fabrikam Labs" is "Fabrikam", and "wide world" is "Wide
- * World Importers". "Northwind Talent" isn't "Northwind Traders", and "Fabrikam" isn't "Fabrikamco".
- */
-export function sameCompany(a: string, b: string): boolean {
-  const [short, long] = [companyWords(a), companyWords(b)].sort((x, y) => x.length - y.length) as [string[], string[]];
-  return short.length > 0 && short.every((word, index) => long[index] === word);
-}
+// Company matching is shared with the page (shared/src/jobs/company.ts); exported here for this module's callers.
+export {companyKey, sameCompany};
 
 /** A requisition ID as it's compared: case, spaces and dashes ignored ("R-2026-118" is "r2026118"). */
 export function requisitionKey(id: string): string {

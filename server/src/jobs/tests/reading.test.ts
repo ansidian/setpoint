@@ -3,12 +3,13 @@
 // (Indeed's pairs, a re-application after a rejection, a confirmation twice, the same title under
 // two IDs, a rejection with no confirmation, a Business email that isn't Career). They also cover a
 // status set by hand, blocked emails, and the model's answer read leniently.
+import {sameCompany} from '@setpoint/shared';
 import type {JobReadMode, JobStatus, Kind} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {emailBody} from '../mail.ts';
 import {emailReadingOf} from '../prompt.ts';
 import type {JobEmailEvent} from '../prompt.ts';
-import {appliedBefore, checkPosting, isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
+import {appliedBefore, checkPosting, isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
 import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail, StatusEvent} from '../rules.ts';
 
 describe('companies match loosely', () => {

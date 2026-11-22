@@ -1,10 +1,10 @@
 // Jobs's pure rules as tables: Ghosted, the per-week buckets, the counts, Applied before, and
 // the keys applications match on.
-import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
+import {companyKey, SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import type {JobStatus} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {zonedInstant} from '../../domain/time.ts';
-import {companyKey, countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, titleKey, weeklyCounts} from '../rules.ts';
+import {countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, titleKey, weeklyCounts} from '../rules.ts';
 
 const at = (date: string, time = '12:00') => zonedInstant(date, time, SEED_TIME_ZONE);
 
