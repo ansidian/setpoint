@@ -25,8 +25,9 @@ import {chipLabel} from '../../logic/composer.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Stop} from '../../logic/inbox.ts';
 import type {Route} from '../../logic/route.ts';
-import {broughtForward, counted, discardable, dropped, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, stacked, toggled} from '../../logic/selection.ts';
+import {broughtForward, counted, discardable, scheduledAt, dropped, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, stacked, toggled} from '../../logic/selection.ts';
 import type {Selection} from '../../logic/selection.ts';
+import {snoozeWhen} from '../../logic/snooze.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {commandKey, echoKey, isTyping, keepTextUnselected, plainKey} from '../../ui/keys.ts';
@@ -247,6 +248,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
             <DraftsEmptyView onNew={() => newMessage()} />
           ) : rows.map(row => {
             const account = accounts.get(row.account_id);
+            const scheduled = scheduledAt(row, now);
             const classes = ['row', at === row.id && 'cur', shown === row.id && 'open', selectedSet.has(row.id) && 'sel'].filter(Boolean).join(' ');
             return (
               <div key={row.id} className={classes} data-id={row.id} onMouseMove={() => at !== row.id && setCursor(row.id)} onMouseDown={keepTextUnselected} onClick={event => clickRow(row.id, event)}>
@@ -257,7 +259,8 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
                   {row.snippet && <>{' '}<span className="sum">· {row.snippet}</span></>}
                 </span>
                 {row.send_state === 'failed' && <span className="drafted">Couldn't send</span>}
-                {(row.send_state === 'held' || row.send_state === 'sending') && <span className="ink3">Sending</span>}
+                {scheduled ? <span className="ink3 num scheduled">Scheduled · {snoozeWhen(scheduled, now, zone)}</span>
+                  : (row.send_state === 'held' || row.send_state === 'sending') && <span className="ink3">Sending</span>}
                 <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
                 <span className="age" data-tip={fullTimestamp(row.updated_at, zone)}>{age(row.updated_at, now, zone)}</span>
               </div>

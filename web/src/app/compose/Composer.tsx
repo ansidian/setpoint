@@ -53,6 +53,7 @@ import type {OpenComposer} from './composer.ts';
 import type {SendWarning} from '../../logic/composer.ts';
 import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
 import {Bar, Dot, Sk} from '../states/Loading.tsx';
+import {SnoozeMenu} from '../SnoozeMenu.tsx';
 import {useHelpMeWrite, WriteButton, WriteLine} from './WriteLine.tsx';
 import './compose.css';
 
@@ -221,6 +222,8 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     go(fresh);
   };
   const sendNow = () => whenReady(fresh => draft && send({...draft, ...fresh}));
+  // Send later's pick: the same checks first, then the server holds it until `at`.
+  const sendLater = (at: number) => whenReady(fresh => draft && send({...draft, ...fresh}, at));
 
   // The caret: in the body, at its start, when there's someone to send to already; else in To.
   // Once it's in its place, which may come after it's drawn.
@@ -389,9 +392,18 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         )}
         beforeBar={<WriteLine help={help} body={fields.body} />}
         barStart={(
-          <button className={warning ? 'btn cmp-send asks' : 'btn cmp-send'} type="button" data-tip={warning?.line} aria-description={warning?.line} onMouseDown={event => event.preventDefault()} onClick={sendNow}>
-            {warning ? 'Send anyway' : 'Send'}<span className="kbd">⌘↵</span>
-          </button>
+          <span className="cmp-send-group">
+            <button className={warning ? 'btn cmp-send asks' : 'btn cmp-send'} type="button" data-tip={warning?.line} aria-description={warning?.line} onMouseDown={event => event.preventDefault()} onClick={sendNow}>
+              {warning ? 'Send anyway' : 'Send'}<span className="kbd">⌘↵</span>
+            </button>
+            {/* Send later: Snooze's choices, joined to Send, with no key. */}
+            <SnoozeMenu verb="Schedule" onPick={sendLater} button={(open, toggle) => (
+              <button className={warning ? 'btn cmp-later asks' : 'btn cmp-later'} type="button" aria-label="Send later" aria-haspopup="menu" aria-expanded={open}
+                data-tip={open ? undefined : 'Send later'} onMouseDown={event => event.preventDefault()} onClick={toggle}>
+                <Icon name="expand_more" size={16} />
+              </button>
+            )} />
+          </span>
         )}
         barEnd={(
           <>

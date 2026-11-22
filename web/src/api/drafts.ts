@@ -36,8 +36,9 @@ export async function discardDraft(id: number, messageId: number | null, {keepal
 }
 
 /** Send, and Try again after a failure: the server holds it SEND_HOLD_MS. */
-export async function sendDraft(id: number): Promise<DraftOut> {
-  const draft = await sendJson<DraftOut>('POST', `${draftPath(id)}/send`);
+/** Send, or with `at` (ms) Send later: the server holds it until then. */
+export async function sendDraft(id: number, at?: number): Promise<DraftOut> {
+  const draft = await sendJson<DraftOut>('POST', `${draftPath(id)}/send`, at === undefined ? undefined : {send_at: new Date(at).toISOString()});
   setCached(draftPath(id), draft);
   refreshIfShown(DRAFTS_PATH);
   return draft;

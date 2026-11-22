@@ -4,6 +4,7 @@
 // pane stacks them as reader cards, one in front (`stacked`). This file also
 // has what the selection's tools and menu offer, from its rows (Reply, Reply all and Forward on a few
 // emails only), and how Drafts' Discard counts in its toasts.
+import {SEND_HOLD_MS} from '@setpoint/shared';
 import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import type {Stop} from './inbox.ts';
 import {readerActions} from './reader.ts';
@@ -116,6 +117,14 @@ export const counted = (n: number, one: string, many: (n: number) => string) => 
 
 /** Whether a draft can be discarded: not while its send is held or under way. One that failed can. */
 export const discardable = (row: Pick<DraftRowOut, 'send_state'>) => row.send_state !== 'held' && row.send_state !== 'sending';
+
+/**
+ * When a draft is scheduled to send (Send later): the `send_at` of a held send further ahead than
+ * Send's own hold, else null.
+ */
+export function scheduledAt(row: Pick<DraftRowOut, 'send_state' | 'send_at'>, now: number): string | null {
+  return row.send_state === 'held' && row.send_at !== null && Date.parse(row.send_at) > now + SEND_HOLD_MS ? row.send_at : null;
+}
 
 /** What a selection of drafts offers: Discard for those that can go, and how many ("Discard 2"). */
 export const draftOffers = (rows: Pick<DraftRowOut, 'send_state'>[]): {discard: number} => ({discard: rows.filter(discardable).length});

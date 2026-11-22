@@ -97,15 +97,24 @@
 .composer .desc-bar.linking input { min-width: 0; height: 26px; outline: none; color: var(--ink); }
 .composer .desc-bar.linking input::placeholder { color: var(--ink3); opacity: 1; }
 .composer .cmp-bar-slot:empty { display: none; }
-/* Send leads the format row, the one accent fill in the app: the blue of the pane's resize edge. */
-.composer .cmp-send { margin-right: 8px; background: var(--accent); color: var(--onInk); }
-/* Under the pointer it turns a clearly different blue (brighter, much more chroma, the hue turned
-   25° toward indigo, in both themes) and grows a little; pressed, a step darker and smaller. */
-.composer .cmp-send { transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
-@media (hover: hover) { .composer .btn.cmp-send:enabled:hover { transform: scale(1.05); } }
-.composer .btn.cmp-send:enabled:is(:active, [data-echo]) { transform: scale(.97); transition-duration: 80ms; }
-@media (hover: hover) { .composer .btn.cmp-send:enabled:hover { background: oklch(from var(--accent) calc(l + .05) calc(c + .1) calc(h + 25)); } }
-.composer .btn.cmp-send:enabled:is(:active, [data-echo]) { background: oklch(from var(--accent) calc(l - .04) calc(c + .1) calc(h + 25)); }
+/* Send leads the format row, the one accent fill in the app: the blue of the pane's resize edge.
+   Send later's chevron, joined to it, is the same fill. */
+.composer :is(.cmp-send, .cmp-later) { background: var(--accent); color: var(--onInk); }
+/* Send later's chevron is joined to Send: one shape, split by a hairline of the bar's own colour. */
+.composer .cmp-send-group { display: inline-flex; margin-right: 8px; }
+.composer .cmp-send-group > .cmp-send { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.composer .cmp-send-group > .snooze-menu > .cmp-later { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0 4px; margin-left: 1px; }
+/* Its menu hangs from the chevron's left edge, into the composer, not out past its side. */
+.composer .cmp-send-group .snooze-menu > .pop { left: 0; right: auto; transform-origin: top left; }
+.composer .cmp-send-group .snooze-menu > .pop[data-up] { transform-origin: bottom left; }
+/* Under the pointer a half turns a clearly different blue (brighter, much more chroma, the hue turned
+   25° toward indigo, in both themes) and the pair grows a little; pressed, a step darker and smaller. */
+.composer :is(.cmp-send, .cmp-later) { transition: background var(--dur-fast) var(--ease); }
+.composer .cmp-send-group { transition: transform var(--dur-fast) var(--ease); }
+@media (hover: hover) { .composer .cmp-send-group:has(.btn:enabled:hover) { transform: scale(1.05); } }
+.composer .cmp-send-group:has(.btn:enabled:is(:active, [data-echo])) { transform: scale(.97); transition-duration: 80ms; }
+@media (hover: hover) { .composer .btn:is(.cmp-send, .cmp-later):enabled:hover { background: oklch(from var(--accent) calc(l + .05) calc(c + .1) calc(h + 25)); } }
+.composer .btn:is(.cmp-send, .cmp-later):enabled:is(:active, [data-echo]) { background: oklch(from var(--accent) calc(l - .04) calc(c + .1) calc(h + 25)); }
 
 /* The reply-type menu, before From: the kind's glyph and a caret. */
 .composer .cmp-type { margin-left: -10px; margin-right: 2px; }
@@ -116,9 +125,9 @@
 /* Send asking first (an empty subject, or "attach…" with nothing attached): Send anyway in
    caution, the empty subject's placeholder and the Attach button in caution with a ring, and the
    words that mention an attachment painted in the body. */
-.composer .btn.cmp-send.asks { background: var(--caution); }
-@media (hover: hover) { .composer .btn.cmp-send.asks:enabled:hover { background: oklch(from var(--caution) calc(l + .05) c h); } }
-.composer .btn.cmp-send.asks:enabled:is(:active, [data-echo]) { background: oklch(from var(--caution) calc(l - .04) c h); }
+.composer .btn:is(.cmp-send, .cmp-later).asks { background: var(--caution); }
+@media (hover: hover) { .composer .btn:is(.cmp-send, .cmp-later).asks:enabled:hover { background: oklch(from var(--caution) calc(l + .05) c h); } }
+.composer .btn:is(.cmp-send, .cmp-later).asks:enabled:is(:active, [data-echo]) { background: oklch(from var(--caution) calc(l - .04) c h); }
 .composer .cmp-subject.asks::placeholder { color: var(--caution); }
 .composer .cmp-row:has(> .cmp-subject.asks) { box-shadow: inset 2px 0 0 var(--caution); }
 .composer .ibtn.asks { color: var(--caution); box-shadow: inset 0 0 0 1.5px var(--caution); }
@@ -168,3 +177,6 @@
 .composer .cmp-write-error { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0 12px; color: var(--alert); }
 .composer .cmp-write-error > span { color: var(--ink); }
 ::highlight(cmp-write) { background: var(--sub3); }
+
+/* Drafts' row of a draft scheduled to send: its moment on one line, sharing the room with the subject. */
+.drafts-list .row .scheduled { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

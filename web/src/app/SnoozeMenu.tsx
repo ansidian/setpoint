@@ -11,7 +11,8 @@
 // menu takes its own clicks and keys: ↑ ↓ move, Esc closes it, and a press outside closes it too,
 // in the email's body as well (the window loses focus to its frame). A keyed menu (the reader's, the
 // selection pane's, the cursor row's) also opens from S and ⌘K's Snooze, through `openSnooze`, as a
-// click opens it, and S closes it again.
+// click opens it, and S closes it again. Send later uses the same menu, its words by `verb`
+// ("Schedule"), with no key.
 import type {Settings} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode, SyntheticEvent} from 'react';
@@ -43,9 +44,10 @@ export function openSnooze(target: SnoozeTarget): boolean {
  * Snooze's button and menu. `button` draws the button from whether the menu is open and what opens it.
  * `onOpen` hears the menu open and close, for a row to hold its pointer look meanwhile.
  */
-export function SnoozeMenu({button, keyed, onPick, onOpen, onUnsnooze, title}: {
+export function SnoozeMenu({button, keyed, onPick, onOpen, onUnsnooze, title, verb = 'Snooze'}: {
   button: (open: boolean, toggle: () => void) => ReactNode;
   keyed?: SnoozeTarget;
+  verb?: string;
   onPick: (until: number) => void;
   onOpen?: (open: boolean) => void;
   onUnsnooze?: () => void;
@@ -73,7 +75,7 @@ export function SnoozeMenu({button, keyed, onPick, onOpen, onUnsnooze, title}: {
   return (
     <span className="menu-anchor snooze-menu" onClick={keep} onMouseDown={keep} onDoubleClick={keep} onContextMenu={keep}>
       {button(open, () => set(!open))}
-      {open && <Menu onClose={() => set(false)} onPick={until => {
+      {open && <Menu verb={verb} keyed={keyed !== undefined} onClose={() => set(false)} onPick={until => {
         set(false);
         onPick(until);
       }} title={title} onUnsnooze={onUnsnooze && (() => {
@@ -84,7 +86,7 @@ export function SnoozeMenu({button, keyed, onPick, onOpen, onUnsnooze, title}: {
   );
 }
 
-function Menu({onClose, onPick, onUnsnooze, title}: {onClose: () => void; onPick: (until: number) => void; onUnsnooze?: () => void; title?: string}) {
+function Menu({keyed, onClose, onPick, onUnsnooze, title, verb}: {keyed: boolean; onClose: () => void; onPick: (until: number) => void; onUnsnooze?: () => void; title?: string; verb: string}) {
   const {data: settings} = useResource<Settings>(SETTINGS_PATH);
   const taskTime = settings?.reminders.task_time ?? null;
   const zone = timeZone();
@@ -121,7 +123,7 @@ function Menu({onClose, onPick, onUnsnooze, title}: {onClose: () => void; onPick
       return;
     }
     // S, which opened it, closes it again. In Pick's panel it's typed into the time.
-    if (!picking && event.key.toLowerCase() === 's' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    if (keyed && !picking && event.key.toLowerCase() === 's' && !event.metaKey && !event.ctrlKey && !event.altKey) {
       event.preventDefault();
       onClose();
       return;
@@ -138,13 +140,13 @@ function Menu({onClose, onPick, onUnsnooze, title}: {onClose: () => void; onPick
   };
   if (picking) {
     return (
-      <div ref={ref} className="pop snooze-pick" role="dialog" aria-label="Snooze until" onKeyDown={onKeyDown}>
-        <Pick start={pickStart(now, taskTime, zone)} now={now} timeZone={zone} onBack={() => setPicking(false)} onPick={onPick} />
+      <div ref={ref} className="pop snooze-pick" role="dialog" aria-label={`${verb} until`} onKeyDown={onKeyDown}>
+        <Pick verb={verb} start={pickStart(now, taskTime, zone)} now={now} timeZone={zone} onBack={() => setPicking(false)} onPick={onPick} />
       </div>
     );
   }
   return (
-    <div ref={ref} className="pop menu snooze-list" role="menu" aria-label="Snooze" onKeyDown={onKeyDown}>
+    <div ref={ref} className="pop menu snooze-list" role="menu" aria-label={verb} onKeyDown={onKeyDown}>
       {title && <div className="snz-now">{title}</div>}
       {options.map(option => (
         <button key={option.choice} type="button" role="menuitem" className="menu-i"
@@ -181,13 +183,14 @@ function MenuPick({onBack, onPick}: {onBack: () => void; onPick: (until: number)
   const [now] = useState(serverNow);
   return (
     <div className="snooze-pick" role="dialog" aria-label="Snooze until">
-      <Pick start={pickStart(now, taskTime, zone)} now={now} timeZone={zone} onBack={onBack} onPick={onPick} />
+      <Pick verb="Snooze" start={pickStart(now, taskTime, zone)} now={now} timeZone={zone} onBack={onBack} onPick={onPick} />
     </div>
   );
 }
 
 /** Pick's panel: the month, the time as typed and how it reads, and the moment by Snooze. */
-function Pick({start, now, timeZone, onBack, onPick}: {
+function Pick({start, now, timeZone, onBack, onPick, verb}: {
+  verb: string;
   start: {date: string; text: string};
   now: number;
   timeZone: string;
@@ -243,7 +246,7 @@ function Pick({start, now, timeZone, onBack, onPick}: {
       </div>
       <label className={'problem' in read ? 'snz-time problem' : 'snz-time'}>
         <Icon name="schedule" size={16} />
-        <input ref={time} className="grow" aria-label="Snooze time" value={text} autoComplete="off" spellCheck={false}
+        <input ref={time} className="grow" aria-label={`${verb} time`} value={text} autoComplete="off" spellCheck={false}
           aria-invalid={'problem' in read} aria-describedby="snz-read"
           onChange={event => setText(event.target.value)}
           onKeyDown={event => {
@@ -259,7 +262,7 @@ function Pick({start, now, timeZone, onBack, onPick}: {
         <span className={'problem' in outcome ? 'snz-when alert' : 'snz-when num'}>
           {'problem' in outcome ? ('problem' in read ? 'No time yet' : outcome.problem) : outcome.line}
         </span>
-        <button type="button" className="btn sm" disabled={!('until' in outcome)} onClick={snooze}>Snooze<span className="kbd">↵</span></button>
+        <button type="button" className="btn sm" disabled={!('until' in outcome)} onClick={snooze}>{verb}<span className="kbd">↵</span></button>
       </div>
     </>
   );

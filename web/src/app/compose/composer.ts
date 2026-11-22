@@ -60,11 +60,13 @@ import {ATTACHMENTS_MAX_BYTES, attachmentsTotal, megabytes} from '@setpoint/shar
 import type {DraftCreateInput, DraftKind, DraftOut, DraftRowOut, DraftUpdateInput, FromOut, MessageOut} from '@setpoint/shared';
 import {isEmpty} from '@setpoint/shared/richText';
 import {useSyncExternalStore} from 'react';
+import {serverNow, timeZone} from '../../api/auth.ts';
 import {ApiFailure, getCached, getJson, setCached} from '../../api/client.ts';
 import {discardDraft, draftPath, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
 import {emptyDraft, fillAround, hasOthers, NO_VERSIONS, recordVersion} from '../../logic/composer.ts';
-import {broughtBackLine, counted, discardedLine, discardFailedLine} from '../../logic/selection.ts';
+import {broughtBackLine, counted, discardedLine, discardFailedLine, scheduledAt} from '../../logic/selection.ts';
+import {snoozeWhen} from '../../logic/snooze.ts';
 import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
@@ -504,7 +506,10 @@ export function newMessage(accountId?: number) {
   startComposer({kind: 'new', ...(accountId ? {account_id: accountId} : {})});
 }
 
-/** Drafts' row: its draft opens in Drafts' pane, the caret in it. One up in a window docks there. */
+/**
+ * Drafts' row: its draft opens in Drafts' pane, the caret in it. One up in a window docks there.
+ * One scheduled to send later is taken off the schedule first, without a word, so it can be edited.
+ */
 export function openDraft(draftId: number) {
   const target = byDraft(draftId);
   if (target) {
@@ -514,7 +519,9 @@ export function openDraft(draftId: number) {
     setComposers(composers.filter(one => one !== pane).map(one => (one === target ? {...one, floating: false, minimized: false, touched: ++touches} : one)));
     return;
   }
-  void loadDraft(draftId).then(draft => show(draft), toastFailure('Failed to open the draft'));
+  void loadDraft(draftId)
+    .then(draft => (draft.send && scheduledAt({send_state: draft.send.state, send_at: draft.send.send_at}, serverNow()) ? undoSend(draft.id) : draft))
+    .then(draft => show(draft), toastFailure('Failed to open the draft'));
 }
 
 /**
@@ -584,13 +591,17 @@ const sending = new Map<number, {subject: string}>();
 // Discarded drafts on their way out, kept from opening again meanwhile.
 const discarded = new Set<number>();
 
-/** ⌘Enter or Send (and Try again): the composer closes and the toast offers Undo while the server holds it. */
-export function send(draft: DraftOut) {
+/**
+ * ⌘Enter or Send (and Try again): the composer closes and the toast offers Undo while the server holds it.
+ * With `at` (ms), Send later: the server holds it until then, and Drafts shows it scheduled. This tab
+ * doesn't follow it meanwhile: a refusal hours later shows in its Drafts row, as one from another tab.
+ */
+export function send(draft: DraftOut, at?: number) {
   // Undo, or a refusal, brings it back where it was sent from.
   const floating = byDraft(draft.id)?.floating ?? false;
   if (byDraft(draft.id)) setComposers(without(draft.id));
-  sending.set(draft.id, {subject: draft.subject});
-  const held = settledUploads(draft.id, {strict: true}).then(() => flushSave(draft.id)).then(() => sendDraft(draft.id));
+  if (at === undefined) sending.set(draft.id, {subject: draft.subject});
+  const held = settledUploads(draft.id, {strict: true}).then(() => flushSave(draft.id)).then(() => sendDraft(draft.id, at));
   let toastId = 0;
   const undo = () => {
     dismissToast(toastId);
@@ -602,7 +613,8 @@ export function send(draft: DraftOut) {
       else if (!(error instanceof ApiFailure && error.code === 'draft_sending')) toastFailure('Failed to undo')(error);
     });
   };
-  toastId = showToast('Sending', {label: 'Undo', run: undo});
+  toastId = at === undefined ? showToast('Sending', {label: 'Undo', run: undo})
+    : showToast(`Scheduled for ${snoozeWhen(at, serverNow(), timeZone()).replace(/^Tomorrow/, 'tomorrow')}`, {label: 'Undo', run: undo}, {glyph: 'send'});
   held.catch((error: unknown) => {
     // Refused before the hold began (a save that failed, no one to send to, offline): the composer
     // comes back with what the user had, the server still owed what didn't land.

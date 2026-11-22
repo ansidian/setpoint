@@ -1,10 +1,11 @@
 // Selecting several emails as tables: ⌘-click in and out, the first taking the open email,
 // ⇧-click's range from the anchor, ⌘A's every row, the selection in list order, the pane's stack
 // (which card is in front, and what a strip's click and an × do to it), and what its tools offer. Then drafts: which can be discarded, and how Discard's toasts count them.
+import {SEED_NOW, SEND_HOLD_MS} from '@setpoint/shared';
 import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Stop} from '../src/logic/inbox.ts';
-import {broughtBackLine, broughtForward, discardable, discardedLine, discardFailedLine, draftOffers, dropped, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, stacked, toggled} from '../src/logic/selection.ts';
+import {broughtBackLine, broughtForward, discardable, scheduledAt, discardedLine, discardFailedLine, draftOffers, dropped, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, stacked, toggled} from '../src/logic/selection.ts';
 import type {Selection} from '../src/logic/selection.ts';
 
 // New's 1 and 2, the shelf's 3, then a day's 4, 3 again (pinned, in its day too), 5, and a Noise fold.
@@ -177,5 +178,20 @@ describe('drafts: Discard', () => {
     ['Undo, some back', broughtBackLine(2, 3), 'Brought back 2 of 3 drafts'],
   ])('the toast: %s', (_, line, reads) => {
     expect(line).toBe(reads);
+  });
+});
+
+describe('A draft scheduled to send', () => {
+  const now = Date.parse(SEED_NOW);
+  const at = (ms: number) => new Date(now + ms).toISOString();
+  const tomorrow = at(24 * 60 * 60_000);
+  test.each<[string, DraftRowOut['send_state'], string | null, string | null]>([
+    ['held for Send\'s own six seconds', 'held', at(SEND_HOLD_MS), null],
+    ['held until tomorrow', 'held', tomorrow, tomorrow],
+    ['failed', 'failed', null, null],
+    ['sending', 'sending', null, null],
+    ['never sent', null, null, null],
+  ])('%s', (_, sendState, sendAt, scheduled) => {
+    expect(scheduledAt({send_state: sendState, send_at: sendAt}, now)).toBe(scheduled);
   });
 });
