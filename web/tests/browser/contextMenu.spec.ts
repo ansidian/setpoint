@@ -42,7 +42,7 @@ test('an email\'s right-click: its actions at the pointer, the cursor there, not
     const box = (await rested(() => row.boundingBox()))!;
     await rightClick(row, {x: 420, y: 12});
     assert.deepEqual(await items(page), [
-      'Open↵', 'DoneH', 'TrashE', 'PinP', 'Open in GmailO', 'ReplyR', 'ForwardF', 'Add to calendar', 'Add as task', 'Ask about this email', 'Add to rule', 'Mark read', 'Copy sender address',
+      'Open↵', 'DoneH', 'TrashE', 'PinP', 'Snooze', 'Open in GmailO', 'ReplyR', 'ForwardF', 'Add to calendar', 'Add as task', 'Ask about this email', 'Add to rule', 'Mark read', 'Copy sender address',
     ]);
     assert.equal(await menu(page).locator('.menu-i.cur').textContent(), 'Open↵', 'the cursor starts on the first item');
     // Its corner is at the pointer.

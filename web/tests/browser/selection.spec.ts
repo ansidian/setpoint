@@ -4,12 +4,13 @@
 // it and opens. A selected row's right-click offers the selection's actions, and another row's
 // offers its own. E trashes every one with one toast, and ⌘Z brings every one back. Mark read, Pin
 // and Done act on all of it. ⌘A selects every email the list holds, and in the search field its text.
-// R, A and F on two to five selected open a composer window for each, in the list's order.
+// R, A and F on two to five selected open a composer window for each, in the list's order. S opens
+// the pane's snooze menu, and a time snoozes every one.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AllOut, MessageOut, MessageRowOut} from '@setpoint/shared';
+import type {AllOut, MessageOut, MessageRowOut, SnoozedOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -277,7 +278,7 @@ test('Mark read, Pin and Done act on the whole selection: Pin keeps it, Done cou
     for (const id of ids) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await until('three selected', () => listed(page), listedIds => listedIds.length === 3);
     const tools = () => pane(page).locator('.rd-tools .tool').allTextContents();
-    assert.deepEqual(await tools(), ['Done 2H', 'TrashE', 'PinP', 'ReplyR', 'Reply allA', 'ForwardF', 'Mark read', 'ClearEsc']);
+    assert.deepEqual(await tools(), ['Done 2H', 'TrashE', 'PinP', 'SnoozeS', 'ReplyR', 'Reply allA', 'ForwardF', 'Mark read', 'ClearEsc']);
 
     // Mark read: the unread ones, one toast. The selection stays.
     await pane(page).locator('.tool', {hasText: 'Mark read'}).click();
@@ -297,6 +298,30 @@ test('Mark read, Pin and Done act on the whole selection: Pin keeps it, Done cou
     for (const one of attention) await until(`${one.id} Done`, () => message(setpoint, one.id), found => found.done);
     await setpoint.idle();
     assert.equal((await message(setpoint, plain.id)).done, false);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('S on a selection of two opens the pane\'s snooze menu, and Tomorrow snoozes both with one toast, ending the selection', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openInbox(page, setpoint.base);
+    const shown = new Set(await onScreen(page));
+    const ids = (await allRows(setpoint)).filter(one => shown.has(one.id) && !one.pinned && one.lane !== 'attention').slice(0, 2).map(one => one.id);
+    for (const id of ids) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
+    await until('two selected', () => listed(page), listedIds => listedIds.length === 2);
+    await page.keyboard.press('s');
+    const snooze = pane(page).locator('.snooze-list');
+    await snooze.waitFor();
+    await until('Tomorrow focused', () => page.evaluate(() => document.activeElement?.textContent ?? ''), text => text.startsWith('Tomorrow'));
+    await snooze.getByRole('menuitem', {name: /^Tomorrow/}).click();
+    await page.locator('.toast', {hasText: /^Snoozed/}).waitFor();
+    await pane(page).waitFor({state: 'detached'});
+    const snoozed = () => setpoint.api<SnoozedOut>('GET', '/mail/snoozed').then(list => list.rows.map(one => one.id));
+    await until('both snoozed at the server', snoozed, found => ids.every(id => found.includes(id)));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

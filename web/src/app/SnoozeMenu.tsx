@@ -8,9 +8,12 @@
 // The button is a row's (an icon under the pointer, in the age's place) or the reader's tool. On a
 // snoozed email the menu opens with its return in `ink3` (`title`), the choices change its time, and
 // Unsnooze ends the list (`onUnsnooze`). The
-// menu takes its own clicks and keys: ↑ ↓ move, Esc closes it, and a press outside closes it too.
+// menu takes its own clicks and keys: ↑ ↓ move, Esc closes it, and a press outside closes it too,
+// in the email's body as well (the window loses focus to its frame). A keyed menu (the reader's, the
+// selection pane's, the cursor row's) also opens from S and ⌘K's Snooze, through `openSnooze`, as a
+// click opens it, and S closes it again.
 import type {Settings} from '@setpoint/shared';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode, SyntheticEvent} from 'react';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
@@ -24,22 +27,48 @@ import {placeMenu} from '../ui/popover.ts';
 const keep = (event: SyntheticEvent) => event.stopPropagation();
 const HEADS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+/** Which keyed menu S opens: the open email's, the selection's or the cursor row's. */
+export type SnoozeTarget = 'reader' | 'selection' | 'row';
+const openers = new Map<SnoozeTarget, () => void>();
+
+/** Opens that keyed menu, its first choice focused, or closes it when it's open. False when no such menu is on screen. */
+export function openSnooze(target: SnoozeTarget): boolean {
+  const open = openers.get(target);
+  open?.();
+  return open !== undefined;
+}
+
 /**
  * Snooze's button and menu. `button` draws the button from whether the menu is open and what opens it.
  * `onOpen` hears the menu open and close, for a row to hold its pointer look meanwhile.
  */
-export function SnoozeMenu({button, onPick, onOpen, onUnsnooze, title}: {
+export function SnoozeMenu({button, keyed, onPick, onOpen, onUnsnooze, title}: {
   button: (open: boolean, toggle: () => void) => ReactNode;
+  keyed?: SnoozeTarget;
   onPick: (until: number) => void;
   onOpen?: (open: boolean) => void;
   onUnsnooze?: () => void;
   title?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // The row hears it in the same change, so its button shows as the menu takes the focus.
   const set = (next: boolean) => {
     setOpen(next);
     onOpen?.(next);
   };
+  // A key's toggle, current from the moment each render is drawn.
+  const latest = useRef(() => {});
+  useLayoutEffect(() => {
+    latest.current = () => set(!open);
+  });
+  useLayoutEffect(() => {
+    if (!keyed) return;
+    const opener = () => latest.current();
+    openers.set(keyed, opener);
+    return () => {
+      if (openers.get(keyed) === opener) openers.delete(keyed);
+    };
+  }, [keyed]);
   return (
     <span className="menu-anchor snooze-menu" onClick={keep} onMouseDown={keep} onDoubleClick={keep} onContextMenu={keep}>
       {button(open, () => set(!open))}
@@ -63,13 +92,20 @@ function Menu({onClose, onPick, onUnsnooze, title}: {onClose: () => void; onPick
   const [picking, setPicking] = useState(false);
   const menu = useRef<HTMLDivElement | null>(null);
   const latest = useRef(onClose);
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current = onClose;
   });
-  useEffect(() => {
+  // Listening from the moment it's on screen, so nothing that closes it can come first.
+  useLayoutEffect(() => {
     const away = (event: PointerEvent) => !menu.current?.parentElement?.contains(event.target as Node) && latest.current();
+    // A click in the email's body goes to its frame: the window loses focus instead.
+    const blur = () => latest.current();
     document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
+    window.addEventListener('blur', blur);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      window.removeEventListener('blur', blur);
+    };
   }, []);
   // Opened, and back from Pick, the first choice takes the focus.
   useEffect(() => {
@@ -81,6 +117,12 @@ function Menu({onClose, onPick, onUnsnooze, title}: {onClose: () => void; onPick
       event.preventDefault();
       if (picking) setPicking(false);
       else onClose();
+      return;
+    }
+    // S, which opened it, closes it again. In Pick's panel it's typed into the time.
+    if (!picking && event.key.toLowerCase() === 's' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      onClose();
       return;
     }
     if (picking || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;

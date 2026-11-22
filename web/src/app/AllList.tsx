@@ -103,7 +103,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   onToggleNoise: (date: string) => void;
   onNearEnd: () => void;
   onUnpin: (id: number) => void;
-  // A row's Snooze, under the pointer: until that moment (ms). None where mail can't be snoozed.
+  // A row's Snooze, under the pointer (and S on the cursor row): until that moment (ms). None where mail can't be snoozed.
   onSnooze?: (id: number, until: number) => void;
   onAnswer?: (prompt: PatternPrompt, yes: boolean) => void;
   // A code row's Copy, once the clipboard has it: it reads the email.
@@ -266,7 +266,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
             {!leaving && ((onSnooze && snoozeable(row)) || item.shelf) && (
               <span className="hact">
                 {onSnooze && snoozeable(row) && (
-                  <SnoozeMenu onOpen={open => setSnoozing(open ? key : null)} onPick={until => onSnooze(row.id, until)}
+                  <SnoozeMenu keyed={cursor === key ? 'row' : undefined} onOpen={open => setSnoozing(open ? key : null)} onPick={until => onSnooze(row.id, until)}
                     button={(open, toggle) => <button className="ibtn sm row-snooze" type="button" aria-label="Snooze" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : 'Snooze'} onClick={toggle}><Icon name="snooze" size={16} /></button>} />
                 )}
                 {item.shelf && <button className="unpin" type="button" onClick={unpin}><Icon name="keep_off" size={15} />Unpin</button>}

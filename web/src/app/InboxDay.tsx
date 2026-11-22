@@ -26,6 +26,7 @@ const KEYS: PaneKey[] = [
   {keys: ['H'], does: 'Done'},
   {keys: ['E'], does: 'Trash'},
   {keys: ['P'], does: 'Pin'},
+  {keys: ['S'], does: 'Snooze'},
   {keys: ['R'], does: 'Reply'},
   {keys: ['C'], does: 'New message'},
 ];

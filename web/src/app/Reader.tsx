@@ -157,6 +157,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const gmail = message ? message.open_url !== null : provider === undefined ? null : provider === 'gmail';
   const phone = usePhone();
   const canSnooze = !phone && !sentMail && !!actions.snooze && !!listed && snoozeable(listed);
+  // A snoozed email's Snoozed tool, on the desktop: its menu changes the time or ends it.
+  const snoozedMenu = !phone && !!snoozedUntil && !!actions.unsnooze && !!actions.snooze;
   // The composer, and the drafts that open it again: the desktop's only.
   const composer = useOpenComposer();
   const {data: drafts} = useResource<DraftsOut>(phone ? null : DRAFTS_PATH);
@@ -185,7 +187,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
   // the email stays unread. It draws from the email's row too, as the tools do, so it's there at
   // once. It is the same list as the row's right-click menu and More (emailActions.ts).
-  const handlers = {...actions, propose: cards.propose, ask: cards.ask, ...(phone ? {} : {
+  const handlers = {...actions, propose: cards.propose, ask: cards.ask, snoozeMenu: canSnooze || snoozedMenu, ...(phone ? {} : {
     reply: () => startComposer({kind: 'reply', message_id: id}),
     ...(replyAll ? {replyAll: () => startComposer({kind: 'reply_all', message_id: id})} : {}),
     forward: () => startComposer({kind: 'forward', message_id: id}),
@@ -222,15 +224,15 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
           </button>
         )}
         {canSnooze && (
-          <SnoozeMenu onPick={actions.snooze!} button={(open, toggle) => (
-            <button className="tool" type="button" aria-label="Snooze" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : tip('Snooze')} onClick={toggle}>
-              <Icon name="snooze" /><span className="lbl">Snooze</span>
+          <SnoozeMenu keyed="reader" onPick={actions.snooze!} button={(open, toggle) => (
+            <button className="tool" type="button" data-hint="s" aria-label="Snooze" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : tip('Snooze · S')} onClick={toggle}>
+              <Icon name="snooze" /><span className="lbl">Snooze</span><span className="kbd">S</span>
             </button>
           )} />
         )}
         {/* A snoozed email's Snoozed, its return in its tip and atop its menu, which changes the time or ends it. */}
-        {!phone && snoozedUntil && actions.unsnooze && actions.snooze && (
-          <SnoozeMenu onPick={actions.snooze} onUnsnooze={actions.unsnooze} title={snoozedLine(snoozedUntil, now, timeZone)} button={(open, toggle) => (
+        {snoozedMenu && (
+          <SnoozeMenu keyed="reader" onPick={actions.snooze!} onUnsnooze={actions.unsnooze} title={snoozedLine(snoozedUntil!, now, timeZone)} button={(open, toggle) => (
             <button className="tool snoozed" type="button" aria-label={snoozedLine(snoozedUntil, now, timeZone)} aria-haspopup="menu" aria-expanded={open}
               data-tip={open ? undefined : snoozedLine(snoozedUntil, now, timeZone)} onClick={toggle}>
               <Icon name="snooze" /><span className="lbl">Snoozed</span>

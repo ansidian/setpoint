@@ -7,6 +7,7 @@
 import type {DraftRowOut, MessageRowOut} from '@setpoint/shared';
 import type {Stop} from './inbox.ts';
 import {readerActions} from './reader.ts';
+import {snoozeable} from './snooze.ts';
 
 export interface Selection {
   ids: number[];
@@ -98,13 +99,15 @@ const ANSWER_MOST = 5;
  * What the selection's tools and menu offer: Done for the emails that can be, and how many. Pin
  * unless every one is pinned already. Mark read while any is unread, else Mark unread. Reply, Reply
  * all and Forward on 2 to 5 emails, in the Inbox and Sent (Drafts' selection has its own offers).
+ * Snooze when every one can be snoozed.
  */
-export function selectionOffers(rows: MessageRowOut[]): {done: number; pin: boolean; read: boolean; answer: boolean} {
+export function selectionOffers(rows: MessageRowOut[]): {done: number; pin: boolean; read: boolean; answer: boolean; snooze: boolean} {
   return {
     done: rows.filter(row => readerActions(row).done).length,
     pin: rows.some(row => !row.pinned),
     read: rows.some(row => row.unread),
     answer: rows.length >= 2 && rows.length <= ANSWER_MOST,
+    snooze: rows.every(snoozeable),
   };
 }
 

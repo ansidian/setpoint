@@ -24,15 +24,14 @@ import {fullTimestamp} from '../logic/format.ts';
 import {rowLine} from '../logic/inbox.ts';
 import type {Route} from '../logic/route.ts';
 import {readerActions} from '../logic/reader.ts';
-import {snoozedLine, snoozeOptions, snoozeWhen} from '../logic/snooze.ts';
+import {snoozedLine, snoozeWhen} from '../logic/snooze.ts';
 import {tabTitle} from '../logic/title.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {echoKey, isTyping, keepTextUnselected, plainKey} from '../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
 import {startComposer} from './compose/composer.ts';
 import {openContextMenu} from './ContextMenu.tsx';
-import type {MenuAction} from './ContextMenu.tsx';
-import {emailActions} from './emailActions.ts';
+import {emailActions, snoozeItems} from './emailActions.ts';
 import {useNow} from './clock.ts';
 import {Gutter} from './AllList.tsx';
 import {askCard, Reader} from './Reader.tsx';
@@ -168,17 +167,6 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
     startComposer({kind, message_id: id});
   }
 
-  /** Snooze's new times and Unsnooze, for a row's menu. Pick needs its panel, so it's the reader's. */
-  function snoozedItems(id: number): MenuAction[] {
-    const now = serverNow();
-    return [
-      ...snoozeOptions(now, settings?.reminders.task_time ?? null, zone).flatMap((option): MenuAction[] => (option.until === null ? [] : [{
-        id: `snooze-${option.choice}`, label: option.when ? `${option.label} · ${option.when}` : option.label, icon: 'snooze', run: () => resnooze(id, option.until!),
-      }])),
-      {id: 'unsnooze', group: 'end', label: 'Unsnooze', icon: 'snooze', run: () => unsnoozeRow(id)},
-    ];
-  }
-
   function onContextMenu(event: ReactMouseEvent) {
     const element = (event.target as Element).closest<HTMLElement>('.snoozed-list [data-id]');
     const id = element ? Number(element.dataset.id) : NaN;
@@ -201,7 +189,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
       markUnread: () => unreadRow(id),
       reply: () => answer(id, 'reply'),
       forward: () => answer(id, 'forward'),
-      snoozed: snoozedItems(id),
+      snoozeTimes: snoozeItems(serverNow(), settings?.reminders.task_time ?? null, zone, until => resnooze(id, until), () => unsnoozeRow(id)),
     }, 'menu', rules);
     if (!openContextMenu(event, element, offered)) return;
     setCursor(id);

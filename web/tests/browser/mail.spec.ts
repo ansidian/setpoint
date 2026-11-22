@@ -1,6 +1,6 @@
 // Mail's details in the browser, at the design target on a fresh seed each:
 // Done or Trash on the open email opens the next, each with Undo in the toast. Then pin and unpin,
-// Mark all as read, copying a code, a code leaving at its expiry, images hidden and Show / Always
+// Snooze from S, the reader and the right-click menu, Mark all as read, copying a code, a code leaving at its expiry, images hidden and Show / Always
 // show, an attachment's preview, the pattern prompt's answer, and the one list's parts and days.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -9,7 +9,7 @@ import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import {deepLinkPath} from '@setpoint/shared';
-import type {AllOut, InboxOut, ItemsOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AllOut, InboxOut, ItemsOut, MailCountsOut, MessageOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
@@ -566,6 +566,84 @@ test('a key pressed as soon as the hover has moved the cursor acts on the row un
     await northwind.hover();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
     await until('Northwind Done, in its day', () => northwind.getAttribute('class'), classes => Boolean(classes?.split(' ').includes('done')));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+const snoozedIds = async (setpoint: Setpoint) => (await setpoint.api<SnoozedOut>('GET', '/mail/snoozed')).rows.map(row => row.id);
+/** What has the focus: its text. */
+const focused = (page: Page) => page.evaluate(() => document.activeElement?.textContent ?? '');
+
+test('S on the cursor row opens that row\'s snooze menu, its button showing; Tomorrow takes the email out with Undo, which brings it back', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await load(setpoint);
+    const id = await idOf(setpoint, 'Interview availability for Software Engineer I');
+    const interview = rowOf(page, 'Interview availability for Software Engineer I');
+    await interview.hover();
+    await until('the cursor on it', () => interview.getAttribute('class'), classes => /\bcur\b/.test(classes ?? ''));
+    // The pointer away again: the row's Snooze shows for the menu, not the hover.
+    await page.mouse.move(0, 0);
+    await page.keyboard.press('s');
+    await interview.locator('.snooze-list').waitFor();
+    assert.ok(await interview.locator('.row-snooze').isVisible(), 'the row\'s Snooze shows while its menu is open');
+    await until('Tomorrow focused', () => focused(page), text => text.startsWith('Tomorrow'));
+    await page.getByRole('menuitem', {name: /^Tomorrow/}).click();
+    const toast = await holdToast(page);
+    assert.match(await toast.textContent() ?? '', /^Snoozed until Tomorrow \d{1,2}:\d\d [AP]M/);
+    await until('out of the list', () => page.locator(`.list .row[data-key][data-id="${id}"]`).count(), n => n === 0);
+    await until('snoozed at the server', () => snoozedIds(setpoint), ids => ids.includes(id));
+    await toast.getByRole('button', {name: 'Undo'}).click();
+    await until('unsnoozed at the server', () => snoozedIds(setpoint), ids => !ids.includes(id));
+    await interview.first().waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('S with an email open opens the reader\'s snooze menu, Tomorrow focused, and S again closes it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await load(setpoint);
+    const before = await snoozedIds(setpoint);
+    await rowOf(page, 'Interview availability for Software Engineer I').click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
+    const tool = page.locator('.rd-tools .tool[data-hint="s"]');
+    assert.equal(await tool.textContent(), 'SnoozeS');
+    await page.keyboard.press('s');
+    await page.locator('.rd-tools .snooze-list').waitFor();
+    await until('Tomorrow focused', () => focused(page), text => text.startsWith('Tomorrow'));
+    assert.equal(await tool.getAttribute('aria-expanded'), 'true');
+    await page.keyboard.press('s');
+    await page.locator('.snooze-list').waitFor({state: 'detached'});
+    // Nothing went anywhere.
+    await setpoint.idle();
+    assert.deepEqual(await snoozedIds(setpoint), before);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a received email\'s right-click Snooze offers Tomorrow and Next weekday, and Tomorrow snoozes the row', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await load(setpoint);
+    const id = await idOf(setpoint, 'Final exam schedule');
+    await rowOf(page, 'Final exam schedule').first().click({button: 'right'});
+    const menu = page.locator('.ctx-menu');
+    await menu.waitFor();
+    await menu.locator('.menu-i', {hasText: /^Snooze$/}).click();
+    const times = await menu.locator('.menu-i').allTextContents();
+    assert.ok(times[0]!.startsWith('Tomorrow · '), `Tomorrow first in ${times.join()}`);
+    assert.ok(!times.some(time => time.startsWith('Pick')), 'no Pick');
+    await menu.locator('.menu-i', {hasText: /^Tomorrow/}).click();
+    await page.locator('.toast', {hasText: /^Snoozed until Tomorrow/}).waitFor();
+    await until('snoozed at the server', () => snoozedIds(setpoint), ids => ids.includes(id));
+    await until('out of the list', () => page.locator(`.list .row[data-key][data-id="${id}"]`).count(), n => n === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

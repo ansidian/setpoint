@@ -118,9 +118,13 @@ function row(fields: Partial<MessageRowOut>): MessageRowOut {
 describe('selectionOffers', () => {
   test.each([
     ['Done counts Attention mail not yet Done; Pin while any is unpinned; Mark read while any is unread',
-      [row({lane: 'attention'}), row({lane: 'attention', done: true}), row({unread: true, pinned: true})], {done: 1, pin: true, read: true, answer: true}],
+      [row({lane: 'attention'}), row({lane: 'attention', done: true}), row({unread: true, pinned: true})], {done: 1, pin: true, read: true, answer: true, snooze: true}],
     ['every one pinned and read, none Attention: Unpin, Mark unread, no Done',
-      [row({pinned: true}), row({pinned: true, lane: 'noise'})], {done: 0, pin: false, read: false, answer: true}],
+      [row({pinned: true}), row({pinned: true, lane: 'noise'})], {done: 0, pin: false, read: false, answer: true, snooze: true}],
+    ['one already snoozed (found by search): no Snooze',
+      [row({}), row({snoozed_until: '2026-10-08T16:00:00.000Z'})], {done: 0, pin: true, read: false, answer: true, snooze: false}],
+    ['one sent: no Snooze',
+      [row({}), row({sent_only: true})], {done: 0, pin: true, read: false, answer: true, snooze: false}],
   ])('%s', (_, rows, offers) => {
     expect(selectionOffers(rows)).toEqual(offers);
   });

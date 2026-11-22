@@ -12,7 +12,8 @@
 // From 640 to 1099 px, where a pane covers the list, it stays out of the way. The rows show the
 // selection, and the keys and right-click act on it.
 //
-// The Inbox's tools: Done H (for the ones that can be), Trash E, Pin or Unpin P, Reply R, Reply all A
+// The Inbox's tools: Done H (for the ones that can be), Trash E, Pin or Unpin P, Snooze S (its menu, when
+// every one can be snoozed), Reply R, Reply all A
 // and Forward F (on 2 to 5 emails, a window each), Mark read or Mark unread ⇧U. Sent's: Trash E, then
 // Reply, Reply all and Forward as the Inbox's. Drafts': Open ↵, and Discard for the ones that can go.
 import type {MessageRowOut} from '@setpoint/shared';
@@ -23,6 +24,7 @@ import type {ToolsSize} from '../logic/reader.ts';
 import {selectionOffers} from '../logic/selection.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
+import {SnoozeMenu} from './SnoozeMenu.tsx';
 import type {AnswerHandlers, SelectionHandlers} from './emailActions.ts';
 import {zoomOf} from './calendar/geometry.ts';
 import {useReadingPaneWidth} from './readingPane.ts';
@@ -156,6 +158,7 @@ export function EmailTools({rows, on}: {rows: MessageRowOut[]; on: SelectionHand
       {offer.done > 0 && <PaneTool kind="done" words={offer.done === rows.length ? 'Done' : `Done ${offer.done}`} icon="check" hint="h" kbd="H" run={on.done} />}
       <PaneTool kind="trash" words="Trash" icon="delete" hint="e" kbd="E" run={on.trash} />
       <PaneTool words={offer.pin ? 'Pin' : 'Unpin'} icon={offer.pin ? 'keep' : 'keep_off'} hint="p" kbd="P" run={on.pin} />
+      {offer.snooze && <SnoozeMenu keyed="selection" onPick={on.snooze} button={(open, toggle) => <PaneTool words="Snooze" icon="snooze" hint="s" kbd="S" menu={open} run={toggle} />} />}
       <AnswerTools rows={rows} on={on} />
       {offer.read
         ? <PaneTool words="Mark read" icon="mark_email_read" run={on.markRead} />
@@ -180,18 +183,22 @@ export function AnswerTools({rows, on}: {rows: MessageRowOut[]; on: AnswerHandle
  * One of the pane's tools: its glyph, words and key. Its words give way to the glyph when they
  * don't fit (Reply, Reply all and Forward first, `answering`), and its tip names it then.
  */
-export function PaneTool({words, icon, hint, kbd, run, kind}: {
+export function PaneTool({words, icon, hint, kbd, run, kind, menu}: {
   words: string;
   icon: IconName;
   hint?: string;
   kbd?: string;
   run: () => void;
   kind?: 'done' | 'trash' | 'answering';
+  // A tool that opens a menu: whether it's open (its tip waits meanwhile).
+  menu?: boolean;
 }) {
   const room = useContext(ToolsRoom);
   const hidden = room === 'tight' || (room === 'narrow' && kind === 'answering');
   return (
-    <button className={kind ? `tool ${kind}` : 'tool'} type="button" data-hint={hint} aria-label={words} data-tip={hidden ? (kbd ? `${words} · ${kbd}` : words) : undefined} onClick={run}>
+    <button className={kind ? `tool ${kind}` : 'tool'} type="button" data-hint={hint} aria-label={words}
+      aria-haspopup={menu === undefined ? undefined : 'menu'} aria-expanded={menu}
+      data-tip={hidden && !menu ? (kbd ? `${words} · ${kbd}` : words) : undefined} onClick={run}>
       <Icon name={icon} /><span className="lbl">{words}</span>{kbd && <span className="kbd">{kbd}</span>}
     </button>
   );

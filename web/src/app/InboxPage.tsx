@@ -28,12 +28,13 @@
 //
 // On the phone (board 21) the header is the mark, Inbox and its counts and Mark all as read (no
 // account filter). A plain search field sits under it (no chips, no Alfred).
-import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut} from '@setpoint/shared';
+import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut, Settings} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {flushSync} from 'react-dom';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
+import {SETTINGS_PATH} from '../api/items.ts';
 import {
   allPath, answerPrompt, changeEach, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, refusals, setDone, setPinned, snooze, trashMessage, unsnooze, untrashMessage,
 } from '../api/mail.ts';
@@ -68,7 +69,8 @@ import {askCard, EmailCard, Reader} from './Reader.tsx';
 import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
 import {openContextMenu} from './ContextMenu.tsx';
-import {emailActions, selectionActions} from './emailActions.ts';
+import {emailActions, selectionActions, snoozeItems} from './emailActions.ts';
+import {openSnooze} from './SnoozeMenu.tsx';
 import type {SelectionHandlers} from './emailActions.ts';
 import {EmailTools, emailLines, SelectionPane} from './SelectionPane.tsx';
 import {EmptyPaneButton, useEmptyPane} from './EmptyPane.tsx';
@@ -189,6 +191,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const {data: prompts} = useResource<PatternPrompt[]>(PROMPTS_PATH);
   // Add to rule's rules to join, in the row's menu.
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
+  // The task time, for the right-click menu's Snooze times.
+  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
   const [answered, setAnswered] = useState<ReadonlySet<number>>(new Set());
   const prompt = visiblePrompt(prompts, answered);
 
@@ -559,6 +563,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
       clearSelection();
     },
     pin: () => on.pin(selected),
+    snooze: until => {
+      on.snooze(selected, until);
+      clearSelection();
+    },
     markRead: () => on.markRead(selected),
     markUnread: () => on.markUnread(selected),
     reply: () => answerEach(selected, 'reply'),
@@ -712,6 +720,13 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'p')) run(actions.pin, 'p');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
+      // S opens a snooze menu, on the desktop: the selection's, else the open email's, else the cursor row's.
+      else if (plainKey(event, 's') && !phone) {
+        if (onSelection) {
+          if (selectionOffers(selectedRows).snooze) run(() => openSnooze('selection'), 's');
+        } else if (open !== null) run(() => openSnooze('reader'), 's');
+        else if (cursorStop?.kind === 'row') run(() => openSnooze('row'));
+      }
       // R, A and F answer the open email, or the one under the cursor, which opens with its composer.
       // On a selection they answer each one, in a window of its own, while it has 2 to 5 (else nothing).
       else if ((plainKey(event, 'r') || plainKey(event, 'a') || plainKey(event, 'f')) && !phone && (onSelection ? selectionOffers(selectedRows).answer : target !== null)) {
@@ -797,6 +812,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       codeCopied: () => on.read([id]),
       // Reply: Reply all needs the email's recipients, so it's the reader's, ⌘K's and A's.
       ...(phone ? {} : {reply: () => answerOn(id, key, 'reply'), forward: () => answerOn(id, key, 'forward')}),
+      // Snooze's times, on the desktop. A snoozed email (found by search) keeps the reader's menu for its new time.
+      ...(phone || !snoozeable(row) ? {} : {snoozeTimes: snoozeItems(serverNow(), settings?.reminders.task_time ?? null, zone, until => on.snooze([id], until))}),
     }, 'menu', rules);
     if (!openContextMenu(event, element, offered)) return;
     if (key && stops.some(stop => stop.key === key)) setCursor(key);

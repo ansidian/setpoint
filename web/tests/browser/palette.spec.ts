@@ -33,13 +33,32 @@ test('board 20: ⌘K on the open Northwind email', async () => {
     await page.locator('.palette').waitFor();
     assert.deepEqual(await page.locator('.palette .cmdk-label').allTextContents(), ['This email', 'Go to', 'Appearance']);
     assert.deepEqual(await items(page), [
-      'DoneH', 'TrashE', 'PinP', 'Open in GmailO', 'ReplyR', 'ForwardF', 'Add to calendar', 'Add as task', 'Ask about this email', 'New rule from northwind.example…', 'Mark unread⇧U',
+      'DoneH', 'TrashE', 'PinP', 'SnoozeS', 'Open in GmailO', 'ReplyR', 'ForwardF', 'Add to calendar', 'Add as task', 'Ask about this email', 'New rule from northwind.example…', 'Mark unread⇧U',
       'Inbox1', 'Sent', 'Drafts', 'Snoozed', 'Calendar2', 'News3', 'Jobs4', 'Settings⌘,', 'System', 'Light', 'Night', 'Fold the sidebar`',
     ]);
     assert.equal(await current(page), 'DoneH');
     assert.equal(await page.locator('.palette .ctx').textContent(), 'Interview availability for Software Engineer I');
     assert.equal(await page.locator('.palette .item .tick').count(), 1);
     assert.equal(await page.locator('.palette .item', {hasText: 'Night'}).locator('.tick').count(), 1, 'the current theme is ticked');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('⌘K\'s Snooze opens the reader\'s snooze menu once the palette has gone, Tomorrow focused', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openNorthwind(page, setpoint.base);
+    await page.keyboard.press('Meta+k');
+    await page.locator('.palette').waitFor();
+    await page.keyboard.type('snooze');
+    await until('Snooze first', () => current(page), text => text === 'SnoozeS');
+    await page.keyboard.press('Enter');
+    await page.locator('.palette').waitFor({state: 'detached'});
+    await page.locator('.rd-tools .snooze-list').waitFor();
+    await until('Tomorrow focused', () => page.evaluate(() => document.activeElement?.textContent ?? ''), text => text.startsWith('Tomorrow'));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

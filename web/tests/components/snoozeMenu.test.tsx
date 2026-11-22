@@ -2,6 +2,8 @@
 // their moments, as a table, and a pick handing its moment on; Pick's panel: a day picked moves the
 // focus to the time, the time is read as it's typed, Snooze waits for a moment it can read, Enter
 // snoozes, days gone by can't be picked, and Esc goes back to the choices, then closes the menu.
+// A keyed menu opens from `openSnooze` with its first choice focused, and S or the window losing focus
+// (a click in the email's frame) closes it.
 // When each choice ends is logic/snooze.ts's, as tables (snooze.test.ts). Its look is by eye.
 import type {Settings} from '@setpoint/shared';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
@@ -9,7 +11,8 @@ import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {clearCache, setCached} from '../../src/api/client.ts';
 import {SETTINGS_PATH} from '../../src/api/items.ts';
-import {SnoozeMenu} from '../../src/app/SnoozeMenu.tsx';
+import {openSnooze, SnoozeMenu} from '../../src/app/SnoozeMenu.tsx';
+import type {SnoozeTarget} from '../../src/app/SnoozeMenu.tsx';
 
 const menu = page.getByRole('menu', {name: 'Snooze'});
 const panel = page.getByRole('dialog', {name: 'Snooze until'});
@@ -96,5 +99,61 @@ test('Pick: days gone by can\'t be picked, a time passed says so, and Esc goes b
   await userEvent.keyboard('{Escape}');
   await expect.element(menu).toBeVisible();
   await userEvent.keyboard('{Escape}');
+  await expect.element(menu).not.toBeInTheDocument();
+});
+
+/** Two keyed menus side by side, the reader's and a row's, each its button named for it. */
+async function keyed(...targets: SnoozeTarget[]) {
+  vi.useFakeTimers({toFake: ['Date'], now: Date.parse('2026-10-07T16:12:00.000Z')});
+  settings(null);
+  await render(<div style={{paddingLeft: 320}}>{targets.map(target => (
+    <SnoozeMenu key={target} keyed={target} onPick={() => {}}
+      button={(shown, toggle) => <button type="button" aria-label={`Snooze ${target}`} aria-expanded={shown} onClick={toggle}>{target}</button>} />
+  ))}</div>);
+}
+
+test('openSnooze opens the menu keyed so, its first choice focused, and leaves the others shut', async () => {
+  await keyed('reader', 'row');
+  expect(openSnooze('reader')).toBe(true);
+  await expect.element(menu).toBeVisible();
+  await expect.element(page.getByRole('button', {name: 'Snooze reader'})).toHaveAttribute('aria-expanded', 'true');
+  await expect.element(page.getByRole('button', {name: 'Snooze row'})).toHaveAttribute('aria-expanded', 'false');
+  await expect.element(page.getByRole('menuitem', {name: /Tomorrow/})).toHaveFocus();
+});
+
+test('openSnooze says false when no menu is keyed so', async () => {
+  await keyed('row');
+  expect(openSnooze('selection')).toBe(false);
+  expect(openSnooze('reader')).toBe(false);
+  await expect.element(menu).not.toBeInTheDocument();
+});
+
+test('S closes the open menu, and opening it again by key closes it too', async () => {
+  await keyed('reader');
+  openSnooze('reader');
+  await expect.element(page.getByRole('menuitem', {name: /Tomorrow/})).toHaveFocus();
+  await userEvent.keyboard('s');
+  await expect.element(menu).not.toBeInTheDocument();
+  openSnooze('reader');
+  await expect.element(menu).toBeVisible();
+  openSnooze('reader');
+  await expect.element(menu).not.toBeInTheDocument();
+});
+
+test('S in Pick\'s time is typed, not a close', async () => {
+  await keyed('reader');
+  openSnooze('reader');
+  await page.getByRole('menuitem', {name: /Pick a date and time/}).click();
+  await page.getByRole('button', {name: '2026-10-12'}).click();
+  await userEvent.keyboard('s');
+  await expect.element(time).toHaveValue('s');
+  await expect.element(panel).toBeVisible();
+});
+
+test('the window losing focus, as to a click in the email\'s frame, closes the menu', async () => {
+  await keyed('reader');
+  openSnooze('reader');
+  await expect.element(menu).toBeVisible();
+  window.dispatchEvent(new Event('blur'));
   await expect.element(menu).not.toBeInTheDocument();
 });

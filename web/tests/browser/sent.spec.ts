@@ -297,7 +297,7 @@ test('a conversation from Sent: a sent reply lists its thread, Theo\'s email ope
     await page.locator('.mailtext', {hasText: 'Perfect, Ana and Kofi'}).waitFor();
     assert.match(new URL(page.url()).pathname, /^\/inbox\/\d+$/);
     await page.locator('.rd-replied', {hasText: 'You replied Oct 4'}).waitFor();
-    assert.deepEqual(await tools(page), ['TrashE', 'PinP', 'Snooze', 'Open in GmailO', 'ReplyR', 'ForwardF']);
+    assert.deepEqual(await tools(page), ['TrashE', 'PinP', 'SnoozeS', 'Open in GmailO', 'ReplyR', 'ForwardF']);
 
     // A reply opened from the Inbox's reader has Sent's tools.
     await page.locator('.rd-conv-line.you', {hasText: 'Games and a cooler'}).click();
