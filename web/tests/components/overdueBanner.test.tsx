@@ -1,7 +1,8 @@
 // The overdue banner (OverdueBanner.tsx) on its own: one task and several draw their parts, a click
 // or Esc dismisses it, and no other key acts on it or the page under it. While it enters, a click
 // reaches the page under it and Esc waits. Its arrivals: with the user there, a task going overdue
-// draws nothing; the next arrival does, and every arrival after a dismissal draws it again. The old
+// draws nothing; the next arrival does, and an arrival after a dismissal draws it again once the
+// 5-minute cooldown since it left is over. The old
 // record of tasks shown is removed. The snooze: each title's button and its menu, their clicks and
 // keys, a snoozed title leaving and the next taking its place, and a snooze kept by the browser
 // holding its task off later arrivals until it ends. When an arrival comes is logic/arrival.ts's, as a table, and
@@ -276,7 +277,9 @@ test.each(['rail', 'calendar'] as const)('with no Today lines on screen (%s), th
   }
 });
 
-function arrivals(arrival: Arrival | null, items: ItemOut[], present = true, taskTime: string | null = null) {
+/** The arrivals' banner, each arrival coming at the browser's clock now. */
+function arrivals(came: Omit<Arrival, 'clock'> | null, items: ItemOut[], present = true, taskTime: string | null = null) {
+  const arrival = came && {...came, clock: Date.now()};
   return <OverdueArrivals arrival={arrival} present={present} items={items} taskTime={taskTime} timeZone={SEED_TIME_ZONE} />;
 }
 
@@ -297,7 +300,9 @@ test('with the user there, a task going overdue draws nothing; the next arrival 
   expect(document.querySelector('.overdue-title')?.textContent).toBe('Call the landlord');
 });
 
-test('an arrival while the banner is up leaves it as it is; a dismissal lasts until the next arrival, which draws it again', async () => {
+test('an arrival while the banner is up leaves it as it is; a dismissal lasts through the 5 minutes after it left, then the next arrival draws it again', async () => {
+  vi.useFakeTimers({toFake: ['Date']});
+  vi.setSystemTime(now);
   const one = landlord();
   const {rerender} = await render(arrivals({count: 1, at: now}, [one.item]));
   await expect.element(banner).toHaveAttribute('data-state', 'in');
@@ -308,7 +313,13 @@ test('an arrival while the banner is up leaves it as it is; a dismissal lasts un
   // The same visit: the items coming in again raise nothing.
   await rerender(arrivals({count: 2, at: now + 60_000}, [{...one.item}]));
   expect(document.querySelector('.overdue')).toBeNull();
-  await rerender(arrivals({count: 3, at: now + 120_000}, [one.item]));
+  // An arrival under 5 minutes after it left, by the browser's clock, reload or return: nothing.
+  const left = Date.now();
+  vi.setSystemTime(left + 4 * 60_000);
+  await rerender(arrivals({count: 3, at: now + 4 * 60_000}, [one.item]));
+  expect(document.querySelector('.overdue')).toBeNull();
+  vi.setSystemTime(left + 5 * 60_000);
+  await rerender(arrivals({count: 4, at: now + 5 * 60_000}, [one.item]));
   await expect.element(banner).toHaveAttribute('data-state', 'in');
   expect(document.querySelector('.overdue-title')?.textContent).toBe('Call the landlord');
 });
@@ -472,6 +483,7 @@ test('a snooze is kept by the browser: later arrivals leave its task off until i
   await expect.poll(() => document.querySelector('.overdue')).toBeNull();
 
   // Within the hour: the other alone.
+  vi.setSystemTime(now + 30 * 60_000);
   await rerender(arrivals({count: 2, at: now + 30 * 60_000}, [one.item, other.item]));
   await expect.element(banner).toHaveAttribute('data-state', 'in');
   expect(document.querySelector('.overdue-title')?.textContent).toBe('Return the drill');
@@ -479,6 +491,7 @@ test('a snooze is kept by the browser: later arrivals leave its task off until i
   await expect.poll(() => document.querySelector('.overdue')).toBeNull();
 
   // Past it: both, and the ended snooze is no longer kept.
+  vi.setSystemTime(now + 61 * 60_000);
   await rerender(arrivals({count: 3, at: now + 61 * 60_000}, [one.item, other.item]));
   await expect.element(banner).toHaveAttribute('data-state', 'in');
   expect(document.querySelector('.overdue-title')?.textContent).toBe('2 tasks');

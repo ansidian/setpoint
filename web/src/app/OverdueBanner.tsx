@@ -2,7 +2,8 @@
 // and the task sits on it large, with no card or chrome. An arrival is a page load or the user
 // coming back to the tab or the window (app/arrival.ts), never a page change inside the app, so a
 // task going overdue mid-use raises nothing until the next one, and a banner due while they're away
-// waits for their return. Every arrival shows every overdue task not snoozed, until it's done. One
+// waits for their return. An arrival shows every overdue task not snoozed, until it's done, unless
+// the banner was on screen in this browser less than 5 minutes before (its cooldown). One
 // task is its title over its ring, project and due ("Errands · Due today, 8:00 AM"). Several are
 // "3 tasks" over a list, the most recently due first, four and "and 3 more".
 // It enters by Reveal: the veil and label fade in, the title slides up from behind its own
@@ -30,14 +31,14 @@ import {useResource} from '../api/client.ts';
 import {itemsPath, SETTINGS_PATH} from '../api/items.ts';
 import {overdueTasks} from '../logic/overdue.ts';
 import type {Overdue} from '../logic/overdue.ts';
-import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, isSnoozed, keptSnoozes, listed, shortDue, snoozeFor, SNOOZES, snoozeUntil} from '../logic/overdueBanner.ts';
+import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, inCooldown, isSnoozed, keptSnoozes, listed, shortDue, snoozeFor, SNOOZES, snoozeUntil} from '../logic/overdueBanner.ts';
 import type {SnoozeChoice} from '../logic/overdueBanner.ts';
 import {motion, overdue as timing} from '../tokens.ts';
 import {Icon, OverdueGlyph} from '../ui/Icon.tsx';
 import {useRingColour} from './calendar/Chip.tsx';
 import {useArrival} from './arrival.ts';
 import {planExit} from './overdueExit.ts';
-import {readSnoozes, writeSnoozes} from './overdueSnoozed.ts';
+import {readSeen, readSnoozes, writeSeen, writeSnoozes} from './overdueSnoozed.ts';
 import type {ExitPlan} from './overdueExit.ts';
 import type {Arrival} from './arrival.ts';
 import {usePaletteOpen} from './palette/Palette.tsx';
@@ -74,8 +75,10 @@ export function OverdueArrival() {
  * The banner for each arrival over `items`: judged once the user is there and the items are in, and
  * shown unless one is up already, without the tasks a snooze holds off. An arrival with nothing to
  * show is done with, so a task that goes overdue later waits for the next one, as do one dismissed
- * and one whose snooze ends mid-use. Each arrival drops the snoozes no longer needed. It waits
- * while Settings or ⌘K is open. A snooze picked on it is kept from then, Tomorrow at `taskTime`.
+ * and one whose snooze ends mid-use. An arrival within the cooldown after the banner was last on
+ * screen, by this browser's clock, shows nothing. Each arrival drops the snoozes no longer needed.
+ * It waits while Settings or ⌘K is open. A snooze picked on it is kept from then, Tomorrow at
+ * `taskTime`.
  */
 export function OverdueArrivals({arrival, present, items, taskTime, timeZone: zone}: {arrival: Arrival | null; present: boolean; items: readonly ItemOut[] | undefined; taskTime: string | null; timeZone: string}) {
   const [judged, setJudged] = useState(0);
@@ -88,7 +91,7 @@ export function OverdueArrivals({arrival, present, items, taskTime, timeZone: zo
   if (arrival && arrival.count > judged && items && present) {
     setJudged(arrival.count);
     setPruning({items, at: arrival.at});
-    if (!shown) {
+    if (!shown && !inCooldown(readSeen(), arrival.clock)) {
       const snoozes = readSnoozes();
       const tasks = arrivalTasks(overdueTasks(items, arrival.at, zone), zone).filter(task => !isSnoozed(task.item, snoozes, arrival.at));
       if (tasks.length) setShown({tasks, at: arrival.at, key: arrival.count});
@@ -97,7 +100,14 @@ export function OverdueArrivals({arrival, present, items, taskTime, timeZone: zo
   useEffect(() => {
     if (pruning) writeSnoozes(keptSnoozes(readSnoozes(), pruning.items, pruning.at));
   }, [pruning]);
-  const gone = useCallback(() => setShown(null), []);
+  // On screen from its arrival until it has left: the cooldown runs from the last of it.
+  useEffect(() => {
+    if (shown) writeSeen(Date.now());
+  }, [shown]);
+  const gone = useCallback(() => {
+    writeSeen(Date.now());
+    setShown(null);
+  }, []);
   const snooze = useCallback((item: ItemOut, choice: SnoozeChoice) => {
     const until = snoozeUntil(choice, serverNow(), taskTime, zone);
     writeSnoozes([...readSnoozes().filter(kept => kept.id !== item.id), snoozeFor(item, until)]);

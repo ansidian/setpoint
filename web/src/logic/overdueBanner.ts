@@ -1,8 +1,9 @@
 // The overdue banner's rules (app/OverdueBanner.tsx): which tasks an arrival lists, in what order,
 // how many before "and 3 more", the words for when each was due, which titles return to Today on
 // the way out and how long that takes, and the snooze: when each preset ends, which tasks a snooze
-// holds off, and which snoozes the browser keeps (app/overdueSnoozed.ts). Which tasks are overdue
-// is logic/overdue.ts's; this looks 30 days back.
+// holds off, and which snoozes the browser keeps (app/overdueSnoozed.ts), and the cooldown that
+// keeps arrivals quiet for a while after it was last on screen. Which tasks are overdue is
+// logic/overdue.ts's; this looks 30 days back.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, daysBetween, instantAt, localDate} from './format.ts';
 import type {Overdue} from './overdue.ts';
@@ -56,6 +57,17 @@ export function isSnoozed(item: ItemOut, snoozes: readonly Snooze[], now: number
  */
 export function keptSnoozes(snoozes: readonly Snooze[], items: readonly ItemOut[], now: number): Snooze[] {
   return snoozes.filter(snooze => snooze.until > now && items.some(item => item.kind === 'task' && !item.done && holds(snooze, item)));
+}
+
+/** How long arrivals stay quiet after the banner was last on screen. */
+export const COOLDOWN_MS = 5 * 60_000;
+
+/**
+ * Whether an arrival at `now` (this browser's clock) falls in the cooldown after the banner was
+ * last on screen at `seen`. A `seen` ahead of `now`, the clock having gone back, holds nothing.
+ */
+export function inCooldown(seen: number | null, now: number): boolean {
+  return seen !== null && seen <= now && now - seen < COOLDOWN_MS;
 }
 
 /** How many days back an arrival looks for overdue tasks. */

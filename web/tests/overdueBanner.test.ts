@@ -6,7 +6,7 @@ import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Overdue} from '../src/logic/overdue.ts';
-import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, isSnoozed, keptSnoozes, listed, shortDue, snoozeFor, snoozeUntil} from '../src/logic/overdueBanner.ts';
+import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, inCooldown, isSnoozed, keptSnoozes, listed, shortDue, snoozeFor, snoozeUntil} from '../src/logic/overdueBanner.ts';
 import type {Snooze, SnoozeChoice} from '../src/logic/overdueBanner.ts';
 
 let nextId = 1;
@@ -158,5 +158,17 @@ describe('a browser keeps a snooze while its task is still overdue with that due
     ['its completion still on its way: kept, as the change may yet fail', [{...task, command: {state: 'pending'} as ItemOut['command']}], now, true],
   ])('%s', (_name, items, at, kept) => {
     expect(keptSnoozes([snooze], items, at)).toEqual(kept ? [snooze] : []);
+  });
+});
+
+describe('arrivals stay quiet for 5 minutes after the banner was last on screen', () => {
+  test.each([
+    ['never on screen: shows', null, now, false],
+    ['just left: quiet', now, now, true],
+    ['4 minutes 59 after: quiet', now, now + 299_000, true],
+    ['5 minutes after: shows', now, now + 300_000, false],
+    ['the clock gone back before it: shows', now, now - 60_000, false],
+  ])('%s', (_name, seen, at, quiet) => {
+    expect(inCooldown(seen, at)).toBe(quiet);
   });
 });

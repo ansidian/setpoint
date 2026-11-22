@@ -6,10 +6,11 @@ import {serverNow} from '../api/auth.ts';
 import {isAway, step} from '../logic/arrival.ts';
 import type {Presence, PresenceEvent} from '../logic/arrival.ts';
 
-/** The latest arrival: how many there have been, and when it was. */
+/** The latest arrival: how many there have been, and when it was, on the server's clock and this browser's own. */
 export interface Arrival {
   count: number;
   at: number;
+  clock: number;
 }
 
 const hidden = () => document.visibilityState === 'hidden';
@@ -29,7 +30,7 @@ export function useArrival(): {arrival: Arrival | null; present: boolean} {
     const next = step(presence.current, event);
     presence.current = next.presence;
     if (here.current === isAway(next.presence)) setPresent(here.current = !here.current);
-    if (next.arrival) setArrival(last => ({count: (last?.count ?? 0) + 1, at: event.at}));
+    if (next.arrival) setArrival(last => ({count: (last?.count ?? 0) + 1, at: event.at, clock: Date.now()}));
   });
 
   useEffect(() => {
