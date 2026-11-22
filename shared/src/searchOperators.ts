@@ -47,13 +47,14 @@ const pad = (value: number) => String(value).padStart(2, '0');
 
 /**
  * A before: or after: day as YYYY-MM-DD: year/month/day (`2026/3/1`) or month/day/year
- * (`3/1/2026`), by "/" or "-" used alike, one or two digits for the month and day. A four-digit year
- * says which end it's at. Null for anything else, or a day that isn't one.
+ * (`3/1/2026`, `3/1/26`), by "/" or "-" used alike, one or two digits for the month and day. Year
+ * first takes four digits, so the order is never in doubt. Year last may take two, in the 2000s.
+ * Null for anything else, or a day that isn't one.
  */
 export function operatorDate(value: string): string | null {
   const yearFirst = /^(\d{4})([/-])(\d{1,2})\2(\d{1,2})$/.exec(value);
-  const yearLast = /^(\d{1,2})([/-])(\d{1,2})\2(\d{4})$/.exec(value);
-  const [year, month, day] = yearFirst ? [yearFirst[1], yearFirst[3], yearFirst[4]] : yearLast ? [yearLast[4], yearLast[1], yearLast[3]] : [];
+  const yearLast = /^(\d{1,2})([/-])(\d{1,2})\2(\d{2}|\d{4})$/.exec(value);
+  const [year, month, day] = yearFirst ? [yearFirst[1], yearFirst[3], yearFirst[4]] : yearLast ? [yearLast[4]!.length === 2 ? `20${yearLast[4]}` : yearLast[4], yearLast[1], yearLast[3]] : [];
   if (!year || !validDay(+year, +month!, +day!)) return null;
   return `${year}-${pad(+month!)}-${pad(+day!)}`;
 }

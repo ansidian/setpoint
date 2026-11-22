@@ -30,6 +30,7 @@ describe('parseOperators', () => {
     ['before:2026/13/40', [], 'before:2026/13/40'],
     ['after:3/1/2026', [{kind: 'after', date: '2026-03-01', not: false}], ''],
     ['before:12-31-2026', [{kind: 'before', date: '2026-12-31', not: false}], ''],
+    ['before:3/1/26', [{kind: 'before', date: '2026-03-01', not: false}], ''],
     ['before:2026/2/30', [], 'before:2026/2/30'],
     ['subject:"lease renewal"', [{kind: 'subject', value: 'lease renewal', not: false}], ''],
     ['foo:bar', [], 'foo:bar'],
@@ -54,7 +55,7 @@ describe('parseOperators', () => {
   });
 });
 
-describe('operatorDate: year first or last, by "/" or "-"', () => {
+describe('operatorDate: year first, or last with four digits or two, by "/" or "-"', () => {
   test.each([
     ['2026/03/01', '2026-03-01'],
     ['2026-3-1', '2026-03-01'],
@@ -66,7 +67,11 @@ describe('operatorDate: year first or last, by "/" or "-"', () => {
     ['3/1-2026', null],
     ['2/30/2026', null],
     ['31/12/2026', null],
-    ['3/1/26', null],
+    ['3/1/26', '2026-03-01'],
+    ['12-31-25', '2025-12-31'],
+    ['2/29/27', null],
+    ['3/1/026', null],
+    ['26/3/1', null],
     ['2026.3.1', null],
     ['march', null],
   ])('%s → %s', (value, date) => {
