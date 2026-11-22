@@ -1,7 +1,7 @@
 // An email's actions, one list for ⌘K's This email (board 20), the reader's More (its proposals on
 // Security and Noise mail) and the right-click menu on its row, so they can't drift. ⌘K's order:
 // Done H (Attention mail not yet Done), Trash E, Pin or Unpin P (none on a snoozed email), Snooze S (which opens the
-// reader's snooze menu; the right-click menu's has Tomorrow and Next weekday, and Unsnooze on a snoozed email), Open in Gmail O (Gmail's mail), Reply R,
+// reader's snooze menu; the right-click menu's has Tomorrow, Next weekday and Pick, and Unsnooze on a snoozed email), Open in Gmail O (Gmail's mail), Reply R,
 // Reply all A and Forward F (on the desktop; Reply all only in ⌘K, when the email has others to reply to),
 // Add to calendar, Add as task, Ask about this email, Add to rule, Mark unread ⇧U. The menu leads
 // with Open ↵ and offers Mark read on an unread row in Mark unread's place. It ends with its Copy
@@ -17,7 +17,7 @@ import type {RuleSender} from '../logic/settings.ts';
 import {copyText} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
 import {openRuleDraft} from './settings/store.ts';
-import {openSnooze} from './SnoozeMenu.tsx';
+import {openSnooze, pickAction} from './SnoozeMenu.tsx';
 import {showToast, toastFailure} from './toast.ts';
 
 export interface EmailHandlers {
@@ -38,25 +38,29 @@ export interface EmailHandlers {
   forward?: () => void;
   // The menu's Snooze: its times (snoozeItems), and on a snoozed email its new times and Unsnooze.
   snoozeTimes?: MenuAction[];
-  // ⌘K's Snooze, where the reader has a snooze menu: it opens that menu.
+  // ⌘K's Snooze, where the reader has a snooze menu: it opens that menu. Its key named only where S works.
   snoozeMenu?: boolean;
+  snoozeKey?: boolean;
 }
 
 /**
- * Snooze's times for a right-click menu: Tomorrow and Next weekday, each with its moment, and
- * Unsnooze last on a snoozed email. Pick needs its panel, so it's the snooze menu's only.
+ * Snooze's times for a right-click menu: Tomorrow and Next weekday, each with its moment, Pick a date
+ * and time (its panel in the menu's place), and Unsnooze last on a snoozed email.
  */
 export function snoozeItems(now: number, taskTime: string | null, zone: string, pick: (until: number) => void, unsnooze?: () => void): MenuAction[] {
   return [
     ...snoozeOptions(now, taskTime, zone).flatMap((option): MenuAction[] => (option.until === null ? [] : [{
       id: `snooze-${option.choice}`, label: option.when ? `${option.label} · ${option.when}` : option.label, icon: 'snooze', run: () => pick(option.until!),
     }])),
+    pickAction(pick),
     ...(unsnooze ? [{id: 'unsnooze', group: 'end', label: 'Unsnooze', icon: 'snooze', run: unsnooze} satisfies MenuAction] : []),
   ];
 }
 
-/** ⌘K's Snooze S: it opens that snooze menu, once the palette has gone. */
-const snoozeCommand = (target: 'reader' | 'selection'): MenuAction => ({id: 'snooze', group: 'act', label: 'Snooze', icon: 'snooze', hint: 'S', run: () => void openSnooze(target)});
+/** ⌘K's Snooze: it opens that snooze menu, once the palette has gone. S where the key works. */
+const snoozeCommand = (target: 'reader' | 'selection', key: boolean): MenuAction => ({
+  id: 'snooze', group: 'act', label: 'Snooze', icon: 'snooze', ...(key ? {hint: 'S'} : {}), run: () => void openSnooze(target),
+});
 
 /** Reply R and Reply all A, where the composer is. */
 const replies = (on: EmailHandlers): MenuAction[] => [
@@ -92,7 +96,7 @@ export function emailActions(row: MessageRowOut, gmail: boolean | null, on: Emai
     // A snoozed email has no Pin. Its Snooze changes its time, or ends it.
     ...(row.snoozed_until ? [] : [{id: 'pin', group: 'act', label: row.pinned ? 'Unpin' : 'Pin', icon: row.pinned ? 'keep_off' : 'keep', hint: 'P', run: on.pin} satisfies MenuAction]),
     ...(menu && on.snoozeTimes ? [{id: 'snooze', group: 'act', label: 'Snooze', icon: 'snooze', run: () => {}, items: on.snoozeTimes} satisfies MenuAction] : []),
-    ...(!menu && on.snoozeMenu ? [snoozeCommand('reader')] : []),
+    ...(!menu && on.snoozeMenu ? [snoozeCommand('reader', on.snoozeKey === true)] : []),
     ...(gmail ? [{id: 'gmail', group: 'act', label: 'Open in Gmail', icon: 'open_in_new', hint: 'O', run: on.openInGmail} satisfies MenuAction] : []),
     ...replies(on),
     {id: 'event', group: 'make', label: 'Add to calendar', icon: 'event', run: () => on.propose('event')},
@@ -121,6 +125,8 @@ export interface SelectionHandlers extends AnswerHandlers {
   trash: () => void;
   pin: () => void;
   snooze: (until: number) => void;
+  // The menu's Snooze: its times (snoozeItems), for every selected email.
+  snoozeTimes?: MenuAction[];
   markRead: () => void;
   markUnread: () => void;
   clear: () => void;
@@ -135,8 +141,8 @@ export const selectionAnswers = (rows: MessageRowOut[], on: AnswerHandlers): Men
 
 /**
  * A selection's actions, for its right-click menu and ⌘K, as its pane's tools: Done H
- * for the emails that can be ("Done 2" when not all of them), Trash E, Pin or Unpin P, Snooze S
- * (⌘K's, which opens the pane's snooze menu, when every one can be snoozed), Reply R,
+ * for the emails that can be ("Done 2" when not all of them), Trash E, Pin or Unpin P, Snooze when every
+ * one can be snoozed (⌘K's S opens its snooze menu, the right-click menu's holds its times), Reply R,
  * Reply all A and Forward F on 2 to 5 emails, Mark read or Mark unread ⇧U, Clear selection. Nothing
  * that's one email's only.
  */
@@ -146,7 +152,8 @@ export function selectionActions(rows: MessageRowOut[], on: SelectionHandlers, w
     ...(offer.done ? [{id: 'done', group: 'act', label: offer.done === rows.length ? 'Done' : `Done ${offer.done}`, icon: 'check', hint: 'H', run: on.done} satisfies MenuAction] : []),
     {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: where === 'menu', run: on.trash},
     {id: 'pin', group: 'act', label: offer.pin ? 'Pin' : 'Unpin', icon: offer.pin ? 'keep' : 'keep_off', hint: 'P', run: on.pin},
-    ...(where === 'palette' && offer.snooze ? [snoozeCommand('selection')] : []),
+    ...(!offer.snooze ? [] : where === 'palette' ? [snoozeCommand('selection', true)]
+      : on.snoozeTimes ? [{id: 'snooze', group: 'act', label: 'Snooze', icon: 'snooze', run: () => {}, items: on.snoozeTimes} satisfies MenuAction] : []),
     ...selectionAnswers(rows, on),
     offer.read
       ? {id: 'read', group: 'read', label: 'Mark read', icon: 'mark_email_read', run: on.markRead}

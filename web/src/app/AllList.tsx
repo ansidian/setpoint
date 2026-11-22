@@ -64,7 +64,7 @@ const NO_ROWS: MessageRowOut[] = [];
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
 export function AllList({attention, days, shelf, lanes = true, fill = false, empty = null, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
-  label = 'Inbox', from, slot = true, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, onAnswer, onCodeCopied}: {
+  label = 'Inbox', from, slot = true, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, selectionSnooze, onAnswer, onCodeCopied}: {
   // Attention's rows, every Attention email not yet Done.
   attention: MessageRowOut[];
   days: DayView[];
@@ -105,6 +105,8 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   onUnpin: (id: number) => void;
   // A row's Snooze, under the pointer (and S on the cursor row): until that moment (ms). None where mail can't be snoozed.
   onSnooze?: (id: number, until: number) => void;
+  // Where the selection's pane isn't on screen, the row (its key) whose Snooze is the selection's, and what it picks.
+  selectionSnooze?: {key: string; pick: (until: number) => void} | null;
   onAnswer?: (prompt: PatternPrompt, yes: boolean) => void;
   // A code row's Copy, once the clipboard has it: it reads the email.
   onCodeCopied?: (id: number) => void;
@@ -266,7 +268,8 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
             {!leaving && ((onSnooze && snoozeable(row)) || item.shelf) && (
               <span className="hact">
                 {onSnooze && snoozeable(row) && (
-                  <SnoozeMenu keyed={cursor === key ? 'row' : undefined} onOpen={open => setSnoozing(open ? key : null)} onPick={until => onSnooze(row.id, until)}
+                  <SnoozeMenu keyed={selectionSnooze?.key === key ? 'selection' : cursor === key ? 'row' : undefined} onOpen={open => setSnoozing(open ? key : null)}
+                    onPick={until => (selectionSnooze?.key === key ? selectionSnooze.pick(until) : onSnooze(row.id, until))}
                     button={(open, toggle) => <button className="ibtn sm row-snooze" type="button" aria-label="Snooze" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : 'Snooze'} onClick={toggle}><Icon name="snooze" size={16} /></button>} />
                 )}
                 {item.shelf && <button className="unpin" type="button" onClick={unpin}><Icon name="keep_off" size={15} />Unpin</button>}

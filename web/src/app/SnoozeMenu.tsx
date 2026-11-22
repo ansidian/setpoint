@@ -23,6 +23,7 @@ import {localDate, monthName} from '../logic/format.ts';
 import {pickOutcome, pickStart, readPickTime, snoozeOptions} from '../logic/snooze.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {placeMenu} from '../ui/popover.ts';
+import type {MenuAction} from './ContextMenu.tsx';
 
 const keep = (event: SyntheticEvent) => event.stopPropagation();
 const HEADS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -157,6 +158,30 @@ function Menu({onClose, onPick, onUnsnooze, title}: {onClose: () => void; onPick
           <span className="grow">Unsnooze</span>
         </button>
       )}
+    </div>
+  );
+}
+
+/**
+ * A right-click menu's Pick a date and time: Pick's panel in the menu's place. Its Back, and Esc,
+ * close the menu; a pick closes it and hands on the moment.
+ */
+export const pickAction = (pick: (until: number) => void): MenuAction => ({
+  id: 'snooze-pick', label: 'Pick a date and time…', icon: 'snooze', run: () => {},
+  panel: close => <MenuPick onBack={close} onPick={until => {
+    close();
+    pick(until);
+  }} />,
+});
+
+function MenuPick({onBack, onPick}: {onBack: () => void; onPick: (until: number) => void}) {
+  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
+  const taskTime = settings?.reminders.task_time ?? null;
+  const zone = timeZone();
+  const [now] = useState(serverNow);
+  return (
+    <div className="snooze-pick" role="dialog" aria-label="Snooze until">
+      <Pick start={pickStart(now, taskTime, zone)} now={now} timeZone={zone} onBack={onBack} onPick={onPick} />
     </div>
   );
 }

@@ -4,7 +4,7 @@
 // and Esc giving focus back.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {MailCountsOut, MessageOut} from '@setpoint/shared';
+import type {AllOut, MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, startSetpoint, test, until} from './harness.ts';
 
@@ -59,6 +59,26 @@ test('⌘K\'s Snooze opens the reader\'s snooze menu once the palette has gone, 
     await page.locator('.palette').waitFor({state: 'detached'});
     await page.locator('.rd-tools .snooze-list').waitFor();
     await until('Tomorrow focused', () => page.evaluate(() => document.activeElement?.textContent ?? ''), text => text.startsWith('Tomorrow'));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('⌘K on an email opened from Snoozed offers Snooze without S, which does nothing there', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const email = all.days.flatMap(day => day.rows).find(one => one.subject.startsWith('Final exam schedule'))!;
+    await setpoint.api('POST', `/mail/messages/${email.id}/snooze`, {until: '2026-10-12T16:00:00.000Z'});
+    await page.goto(`${setpoint.base}/snoozed/${email.id}`);
+    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+    await page.keyboard.press('Meta+k');
+    await page.locator('.palette').waitFor();
+    const offered = await items(page);
+    assert.ok(offered.includes('Snooze'), `Snooze in ${offered.join()}`);
+    assert.ok(!offered.includes('SnoozeS'), 'no S');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

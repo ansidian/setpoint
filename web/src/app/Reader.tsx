@@ -102,6 +102,8 @@ export interface ReaderActions {
   // snoozed email, Snooze changes its time. A snoozed email has no Pin.
   snooze?: (until: number) => void;
   unsnooze?: () => void;
+  // Whether S opens the snooze menu here (the Inbox's), so its key is named only where it works.
+  snoozeKey?: boolean;
   openInGmail: () => void;
   step: (delta: 1 | -1) => void;
   close: () => void;
@@ -225,8 +227,9 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         )}
         {canSnooze && (
           <SnoozeMenu keyed="reader" onPick={actions.snooze!} button={(open, toggle) => (
-            <button className="tool" type="button" data-hint="s" aria-label="Snooze" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : tip('Snooze · S')} onClick={toggle}>
-              <Icon name="snooze" /><span className="lbl">Snooze</span><span className="kbd">S</span>
+            <button className="tool" type="button" data-hint={actions.snoozeKey ? 's' : undefined} aria-label="Snooze" aria-haspopup="menu" aria-expanded={open}
+              data-tip={open ? undefined : tip(actions.snoozeKey ? 'Snooze · S' : 'Snooze')} onClick={toggle}>
+              <Icon name="snooze" /><span className="lbl">Snooze</span>{actions.snoozeKey && <span className="kbd">S</span>}
             </button>
           )} />
         )}

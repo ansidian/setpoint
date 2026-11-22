@@ -5,7 +5,8 @@
 // offers its own. E trashes every one with one toast, and ⌘Z brings every one back. Mark read, Pin
 // and Done act on all of it. ⌘A selects every email the list holds, and in the search field its text.
 // R, A and F on two to five selected open a composer window for each, in the list's order. S opens
-// the pane's snooze menu, and a time snoozes every one.
+// the pane's snooze menu (where a pane covers the list, the first selected row's), the right-click
+// menu's Snooze has the times, and a time snoozes every one.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -233,8 +234,8 @@ test('a selected row\'s right-click offers the selection\'s actions; E trashes e
     await rightClick(row(page, ids[1]!));
     const offered = await items(page);
     assert.deepEqual(offered.filter(label => !/^Mark (un)?read/.test(label)),
-      ['TrashE', picked.every(one => one.pinned) ? 'UnpinP' : 'PinP', 'ReplyR', 'Reply allA', 'ForwardF', 'Clear selectionEsc']);
-    assert.equal(offered.length, 7, 'and Mark read or Mark unread');
+      ['TrashE', picked.every(one => one.pinned) ? 'UnpinP' : 'PinP', 'Snooze', 'ReplyR', 'Reply allA', 'ForwardF', 'Clear selectionEsc']);
+    assert.equal(offered.length, 8, 'and Mark read or Mark unread');
     await page.keyboard.press('Escape');
     await menu(page).waitFor({state: 'detached'});
 
@@ -320,6 +321,57 @@ test('S on a selection of two opens the pane\'s snooze menu, and Tomorrow snooze
     await snooze.getByRole('menuitem', {name: /^Tomorrow/}).click();
     await page.locator('.toast', {hasText: /^Snoozed/}).waitFor();
     await pane(page).waitFor({state: 'detached'});
+    const snoozed = () => setpoint.api<SnoozedOut>('GET', '/mail/snoozed').then(list => list.rows.map(one => one.id));
+    await until('both snoozed at the server', snoozed, found => ids.every(id => found.includes(id)));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('where a pane covers the list, S on a selection opens the first selected row\'s snooze menu, and Tomorrow snoozes both', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page({width: 900, height: 800});
+    await openInbox(page, setpoint.base);
+    const shown = await onScreen(page);
+    const rows = await allRows(setpoint);
+    // Two in the list's order, not pinned (the shelf repeats them) nor Attention.
+    const ids = shown.filter(id => rows.some(one => one.id === id && !one.pinned && one.lane !== 'attention')).slice(0, 2);
+    for (const id of ids) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
+    await until('two selected', () => selectedRows(page), selectedIds => selectedIds.length === 2);
+    assert.equal(await pane(page).count(), 0, 'no selection pane at this width');
+    await page.keyboard.press('s');
+    const snooze = row(page, ids[0]!).locator('.snooze-list');
+    await snooze.waitFor();
+    await until('Tomorrow focused', () => page.evaluate(() => document.activeElement?.textContent ?? ''), text => text.startsWith('Tomorrow'));
+    await snooze.getByRole('menuitem', {name: /^Tomorrow/}).click();
+    await page.locator('.toast', {hasText: /^Snoozed/}).waitFor();
+    const snoozed = () => setpoint.api<SnoozedOut>('GET', '/mail/snoozed').then(list => list.rows.map(one => one.id));
+    await until('both snoozed at the server', snoozed, found => ids.every(id => found.includes(id)));
+    await until('the selection ended', () => selectedRows(page), selectedIds => selectedIds.length === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a selection\'s right-click Snooze › Tomorrow snoozes every one', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openInbox(page, setpoint.base);
+    const shown = new Set(await onScreen(page));
+    const ids = (await allRows(setpoint)).filter(one => shown.has(one.id) && !one.pinned && one.lane !== 'attention').slice(0, 2).map(one => one.id);
+    for (const id of ids) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
+    await until('two selected', () => listed(page), listedIds => listedIds.length === 2);
+    await rightClick(row(page, ids[1]!));
+    await menu(page).locator('.menu-i', {hasText: /^Snooze$/}).click();
+    const times = await items(page);
+    assert.ok(times[0]!.startsWith('Tomorrow · '), `Tomorrow first in ${times.join()}`);
+    assert.equal(times.at(-1), 'Pick a date and time…');
+    await menu(page).locator('.menu-i', {hasText: /^Tomorrow/}).click();
+    await page.locator('.toast', {hasText: /^Snoozed/}).waitFor();
     const snoozed = () => setpoint.api<SnoozedOut>('GET', '/mail/snoozed').then(list => list.rows.map(one => one.id));
     await until('both snoozed at the server', snoozed, found => ids.every(id => found.includes(id)));
     assert.deepEqual(setpoint.pageErrors, []);

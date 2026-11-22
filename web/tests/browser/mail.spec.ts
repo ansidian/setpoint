@@ -628,7 +628,7 @@ test('S with an email open opens the reader\'s snooze menu, Tomorrow focused, an
   }
 });
 
-test('a received email\'s right-click Snooze offers Tomorrow and Next weekday, and Tomorrow snoozes the row', async () => {
+test('a received email\'s right-click Snooze offers Tomorrow, Next weekday and Pick, and Tomorrow snoozes the row', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await load(setpoint);
@@ -639,11 +639,39 @@ test('a received email\'s right-click Snooze offers Tomorrow and Next weekday, a
     await menu.locator('.menu-i', {hasText: /^Snooze$/}).click();
     const times = await menu.locator('.menu-i').allTextContents();
     assert.ok(times[0]!.startsWith('Tomorrow · '), `Tomorrow first in ${times.join()}`);
-    assert.ok(!times.some(time => time.startsWith('Pick')), 'no Pick');
+    assert.equal(times.at(-1), 'Pick a date and time…');
     await menu.locator('.menu-i', {hasText: /^Tomorrow/}).click();
     await page.locator('.toast', {hasText: /^Snoozed until Tomorrow/}).waitFor();
     await until('snoozed at the server', () => snoozedIds(setpoint), ids => ids.includes(id));
     await until('out of the list', () => page.locator(`.list .row[data-key][data-id="${id}"]`).count(), n => n === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('right-click Snooze › Pick shows the month and time in the menu\'s place; a day, a time typed and Enter snooze the row until then', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await load(setpoint);
+    const id = await idOf(setpoint, 'Final exam schedule');
+    await rowOf(page, 'Final exam schedule').first().click({button: 'right'});
+    const menu = page.locator('.ctx-menu');
+    await menu.waitFor();
+    await menu.locator('.menu-i', {hasText: /^Snooze$/}).click();
+    await menu.locator('.menu-i', {hasText: /^Pick a date and time/}).click();
+    const panel = menu.getByRole('dialog', {name: 'Snooze until'});
+    await panel.waitFor();
+    await panel.getByRole('button', {name: '2026-10-12'}).click();
+    const time = panel.getByRole('textbox', {name: 'Snooze time'});
+    await until('the time focused', () => time.evaluate(field => field === document.activeElement), has => has);
+    await page.keyboard.type('2pm');
+    await panel.getByText('Mon, Oct 12, 2:00 PM').waitFor();
+    await page.keyboard.press('Enter');
+    await menu.waitFor({state: 'detached'});
+    await page.locator('.toast', {hasText: /^Snoozed until Mon 2:00 PM/}).waitFor();
+    const until12 = () => setpoint.api<SnoozedOut>('GET', '/mail/snoozed').then(list => list.rows.find(row => row.id === id)?.snoozed_until ?? null);
+    await until('snoozed until then at the server', until12, at => at !== null && new Date(at).toISOString().startsWith('2026-10-12T'));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

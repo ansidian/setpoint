@@ -607,6 +607,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       });
     },
     // On a snoozed email (found by search): back in the Inbox, with Undo snoozing it again until the same time.
+    // S opens the reader's snooze menu here, on the desktop.
+    snoozeKey: !phone,
     unsnooze: () => {
       if (open === null) return;
       const was = rowOf(open)?.snoozed_until;
@@ -679,6 +681,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const writing = !phone && open === null && composer?.messageId === null && !composer.floating ? composer : null;
   const showsSelection = open === null && selected.length > 0 && !compact && !writing;
   const pane = useEmptyPane(open !== null || showsSelection || writing !== null, PANE_PATHS);
+  // Without the selection's pane (where a pane covers the list, or a new message has it), its Snooze is
+  // the first selected row's in the list, and snoozes them all.
+  const selectionAnchor = !phone && onSelection && !showsSelection && selectionOffers(selectedRows).snooze
+    ? stops.find(stop => stop.kind === 'row' && selected.includes(stop.id))?.key ?? null : null;
+  const openSnoozeSelection = () => {
+    if (selectionAnchor) document.querySelector(`[data-key="${selectionAnchor}"]`)?.scrollIntoView({block: 'nearest'});
+    openSnooze('selection');
+  };
 
   // Attached again with each render as it's drawn, before any key can come: a passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
@@ -723,7 +733,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       // S opens a snooze menu, on the desktop: the selection's, else the open email's, else the cursor row's.
       else if (plainKey(event, 's') && !phone) {
         if (onSelection) {
-          if (selectionOffers(selectedRows).snooze) run(() => openSnooze('selection'), 's');
+          if (selectionOffers(selectedRows).snooze) run(() => openSnoozeSelection(), 's');
         } else if (open !== null) run(() => openSnooze('reader'), 's');
         else if (cursorStop?.kind === 'row') run(() => openSnooze('row'));
       }
@@ -791,7 +801,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
     const key = element.dataset.key ?? stopOf(stops, id)?.key ?? null;
     // On a selected row, the selection's. On any other, its own, and the selection stays.
     if (selected.includes(id)) {
-      if (openContextMenu(event, element, selectionActions(selectedRows, forSelection, 'menu')) && key && stops.some(stop => stop.key === key)) setCursor(key);
+      const times = phone ? {} : {snoozeTimes: snoozeItems(serverNow(), settings?.reminders.task_time ?? null, zone, forSelection.snooze)};
+      if (openContextMenu(event, element, selectionActions(selectedRows, {...forSelection, ...times}, 'menu')) && key && stops.some(stop => stop.key === key)) setCursor(key);
       return;
     }
     const provider = accounts.get(row.account_id)?.provider;
@@ -868,6 +879,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={view === 'all' || view === 'attention' ? prompt : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin} onSnooze={phone ? undefined : (id, until) => on.snooze([id], until)}
+            selectionSnooze={selectionAnchor ? {key: selectionAnchor, pick: forSelection.snooze} : null}
             onCodeCopied={id => on.read([id])} onAnswer={(answer, yes) => {
               setAnswered(new Set([...answered, answer.id]));
               void answerPrompt(answer.id, yes).catch(toastFailure('Failed to answer'));
