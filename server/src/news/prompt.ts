@@ -19,9 +19,6 @@ import type {ArticleKind, ArticleNotes, ArticleSubject, KeynoteNote} from '../do
 import {zonedInstant} from '../domain/time.ts';
 import type {ToolSpec} from '../providers/ai/index.ts';
 
-/** Bumped when a prompt or tool changes. */
-export const NEWS_PROMPT_VERSION = 'n3-v3';
-
 /** An article's text is cut here: its opening says what happened. */
 export const ARTICLE_TEXT_LIMIT = 6_000;
 

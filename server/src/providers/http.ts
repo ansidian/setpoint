@@ -93,9 +93,3 @@ export async function requestJson<T>(options: HttpOptions, request: Request, rea
     throw new ProviderError('transient', `${name} answered with something that isn't JSON.`, {status: response.status});
   }
 }
-
-/** A refusal read as `{error: …}` JSON or plain text, with the status as the fallback words. */
-export function plainRefusal(status: number, text: string): Refusal {
-  const trimmed = text.trim();
-  return {message: trimmed && trimmed.length <= 300 && !trimmed.startsWith('<') ? `${trimmed} (${status} ${reasonPhrase(status)})` : `${status} ${reasonPhrase(status)}`};
-}

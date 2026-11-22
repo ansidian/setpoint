@@ -3,7 +3,7 @@
 // stored only as a hash. The first claim needs a setup token from the CLI (`npm run cli --
 // setup-token`).
 import {z} from 'zod';
-import {AUTH_MODES, SESSION_METHODS} from '../enums.ts';
+import {AUTH_MODES} from '../enums.ts';
 import type {AuthMode, SessionMethod} from '../enums.ts';
 
 /** New passwords: at least 12 characters. Any password checked is at most 1,024. */
@@ -36,7 +36,6 @@ export interface SignInOut {
 }
 
 /** POST /api/auth/passkey/options returns WebAuthn's request options as JSON, and verify takes the response. */
-export type WebAuthnOptionsOut = Record<string, unknown>;
 export const passkeyResponseInput = z.strictObject({response: z.record(z.string(), z.unknown())});
 
 /** POST /api/auth/recover: a recovery code and a new password. Passkeys are cleared. */
@@ -79,7 +78,6 @@ export const changePasswordInput = z.strictObject({new_password: newPassword});
 export const authModeInput = z.strictObject({auth_mode: z.enum(AUTH_MODES)});
 export const passkeyLabelInput = z.strictObject({label: z.string().trim().min(1).max(80)});
 export const registerPasskeyInput = z.strictObject({label: z.string().trim().min(1).max(80), response: z.record(z.string(), z.unknown())});
-export const sessionMethodSchema = z.enum(SESSION_METHODS);
 
 /**
  * POST /api/security/pairing (Add iPhone, with the password confirmed in the last 10 minutes): a

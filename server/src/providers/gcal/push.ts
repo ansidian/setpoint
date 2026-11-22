@@ -124,12 +124,6 @@ async function retire(store: Store, api: GoogleCalendarApi, channel: Channel) {
   }
 }
 
-/** Stops every channel of a source (disconnecting, or push turned off). */
-export async function stopWatches(store: Store, api: GoogleCalendarApi, source: SourceRow) {
-  const live = store.db.select().from(t.calendarChannels).where(and(eq(t.calendarChannels.sourceId, source.id), inArray(t.calendarChannels.state, ['active', 'pending']))).all();
-  for (const channel of live) await retire(store, api, channel);
-}
-
 // ---- Notifications ----
 
 const HEADER_LIMITS = {

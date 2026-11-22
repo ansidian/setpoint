@@ -5,8 +5,6 @@
 export type SizedColumn = 'company' | 'applied' | 'status';
 export type ColumnWidths = Record<SizedColumn, number>;
 
-export const SIZED: readonly SizedColumn[] = ['company', 'applied', 'status'];
-
 /**
  * Where each starts, and the narrowest it may go: its heading sorted, arrow and all, measured in the
  * browser (11.5 px caps at .08em, a 14 px arrow after a 3 px gap, 6 px of the button's padding).

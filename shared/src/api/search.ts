@@ -15,7 +15,7 @@
 // Nothing here creates anything: a proposal's `item` is what POST /api/items takes, and only Create
 // sends it.
 import {z} from 'zod';
-import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_CHIP_KINDS, SEARCH_READS} from '../enums.ts';
+import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_READS} from '../enums.ts';
 import type {CalendarMatchField, ItemKind, MatchField, SearchChipKind} from '../enums.ts';
 import {id, localDate} from './common.ts';
 import type {ItemOut} from './items.ts';
@@ -46,7 +46,6 @@ export const searchChipSchema = z.discriminatedUnion('kind', [
 ]);
 export type SearchChip = z.infer<typeof searchChipSchema>;
 export type SearchChipKindCheck = SearchChip['kind'] extends SearchChipKind ? true : never;
-export const searchChipKindSchema = z.enum(SEARCH_CHIP_KINDS);
 
 export const MAX_SEARCH_CHIPS = 10;
 
@@ -288,7 +287,6 @@ export interface ProposalOut {
   conflict: {free: boolean; label: string} | null;
   source?: ProposalSourceOut;
 }
-export const proposalKindSchema = z.enum(ITEM_KINDS);
 
 /** Bold runs in an answer ("By **Oct 31, 2026**, …"): UTF-16 offsets into `answer`, end exclusive. */
 export interface EmphasisOut {

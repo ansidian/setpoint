@@ -20,7 +20,7 @@
 //   GET    /api/ea/accounts/todoist/callback?code=&state=     Todoist's redirect back (no session; the state is)
 //   POST   /api/calendar/push                                 Google Calendar's watch notifications (no session)
 import {z} from 'zod';
-import {CALENDAR_PROVIDERS, COLOURS, EVENT_COLOURS, ITEM_KINDS, RECURRING_SCOPES} from '../enums.ts';
+import {COLOURS, EVENT_COLOURS, ITEM_KINDS, RECURRING_SCOPES} from '../enums.ts';
 import type {CalendarProvider, Colour, ItemKind, Transparency, WeatherCondition} from '../enums.ts';
 import {id, instant, localDate} from './common.ts';
 import type {CommandOut, ItemWhen} from './common.ts';
@@ -245,7 +245,6 @@ export interface CalendarOut {
   // The colour change waiting for Google, or failed in place with its words. Null otherwise.
   command: CommandOut | null;
 }
-export const calendarProviderSchema = z.enum(CALENDAR_PROVIDERS);
 /** Show or hide a calendar, list it in Calendar or not (Setpoint's own settings), and pick a Google calendar's colour, written to Google. */
 export const calendarUpdateInput = z.strictObject({visible: z.boolean().optional(), listed: z.boolean().optional(), colour: z.enum(COLOURS).optional()})
   .refine(input => input.visible !== undefined || input.listed !== undefined || input.colour !== undefined, 'Nothing to change.');
