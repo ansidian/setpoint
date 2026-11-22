@@ -162,8 +162,8 @@ export function mailApi(store: Store, {engine, drafting, draftFiles}: MailApiOpt
   api.get('/mail/from', c => c.json(fromOptions(store)));
   api.get('/mail/drafts', c => c.json(listDrafts(store)));
   api.get('/mail/people', c => {
-    const {q, limit} = parse(peopleInput, c.req.query());
-    return c.json(suggestPeople(store, q, limit));
+    const {q, limit, mode} = parse(peopleInput, c.req.query());
+    return c.json(suggestPeople(store, q, limit, mode));
   });
   api.post('/mail/drafts', async c => c.json(createDraft(store, parse(draftCreateInput, await body(c))), 201));
   api.get('/mail/drafts/:id', c => c.json(presentDraft(store, getDraftRow(store, id(c.req.param('id'))))));

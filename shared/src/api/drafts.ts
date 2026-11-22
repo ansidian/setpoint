@@ -253,10 +253,15 @@ export interface FromOut {
   default_account_id: number | null;
 }
 
-/** Recipient suggestions: what the user typed so far, and how many to offer. */
+/**
+ * Recipient suggestions: what the user typed so far, and how many to offer. `mode` says for what:
+ * the composer's recipients, or mail search's `from:` (everyone who sent the user mail) or `to:`
+ * (everyone the user sent to).
+ */
 export const peopleInput = z.strictObject({
   q: z.string().max(200).optional().default(''),
   limit: z.coerce.number().int().min(1).max(20).optional().default(8),
+  mode: z.enum(['compose', 'from', 'to']).optional().default('compose'),
 });
 
 /** People to suggest as recipients, best first (src/domain/people.ts on the server). */

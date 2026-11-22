@@ -2,7 +2,7 @@
 // The people the user has written to come first, by how often and how recently in one score: each
 // email to them counts, halving every RECENCY_DAYS. Then the people who wrote to the user and were
 // never answered, newest first. Automated senders stay out of that second group because only mail
-// triaged as People is offered there (src/queries/people.ts). The user's own addresses never show.
+// triaged as People is offered there (src/sending/people.ts). The user's own addresses never show.
 //
 // The query matches the start of the address or of a word of the name ("sam" finds Sam Ortiz and
 // sam.ortiz@…, not Pat Osam), and several words match the name's start ("june p").

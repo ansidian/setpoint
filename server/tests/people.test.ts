@@ -66,4 +66,26 @@ describe('GET /api/mail/people', () => {
     const theo = (await api.send('GET', '/api/mail/people?q=the')).body.people;
     expect(theo).toEqual([{name: 'Theo Walsh', address: 'theo.walsh@example.org'}]);
   });
+
+  test('from: offers everyone who sent the user mail, automated too, the frequent and recent first', async () => {
+    const w = world({seed: true});
+    const api = await signedIn(w);
+    const from = (q = '') => api.send('GET', `/api/mail/people?mode=from&q=${q}`).then(answer => (answer.body.people as {address: string}[]).map(person => person.address));
+    const all = await from();
+    expect(all[0]).toBe('uspsinformeddelivery@email.informeddelivery.usps.com');
+    expect(await from('ind')).toEqual(['alert@indeed.example']);
+    expect(await from('no-reply@n')).toEqual(['no-reply@northwind.example']);
+    expect(all.some(address => address.startsWith('user@'))).toBe(false);
+  });
+
+  test('to: offers only people the user sent to; the composer\'s answer is unchanged', async () => {
+    const w = world({seed: true});
+    const api = await signedIn(w);
+    const to = (await api.send('GET', '/api/mail/people?mode=to&limit=20')).body.people as {address: string}[];
+    expect(to[0]!.address).toBe('theo.walsh@example.org');
+    expect(to.map(person => person.address)).toContain('sam.ortiz@example.org');
+    expect(to.map(person => person.address)).not.toContain('alert@indeed.example');
+    expect((await api.send('GET', '/api/mail/people?mode=to&q=sam')).body.people).toEqual([{name: 'Sam Ortiz', address: 'sam.ortiz@example.org'}]);
+    expect((await api.send('GET', '/api/mail/people?mode=compose')).body).toEqual((await api.send('GET', '/api/mail/people')).body);
+  });
 });

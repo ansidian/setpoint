@@ -58,9 +58,9 @@ export const writeDraft = (id: number, input: DraftWriteInput) => sendJson<Draft
 /** The draft as the server has it now. */
 export const loadDraft = (id: number) => getJson<DraftOut>(draftPath(id));
 
-/** People to suggest for what's typed in a recipient field. */
-export async function suggestPeople(query: string): Promise<Recipient[]> {
-  return (await getJson<PeopleOut>(`/mail/people?q=${encodeURIComponent(query)}&limit=6`)).people;
+/** People to suggest for what's typed in a recipient field, or after mail search's `from:` or `to:`. */
+export async function suggestPeople(query: string, mode: 'compose' | 'from' | 'to' = 'compose'): Promise<Recipient[]> {
+  return (await getJson<PeopleOut>(`/mail/people?q=${encodeURIComponent(query)}&limit=6${mode === 'compose' ? '' : `&mode=${mode}`}`)).people;
 }
 
 /**
