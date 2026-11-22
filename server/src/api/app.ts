@@ -588,7 +588,8 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     c.header('X-Content-Type-Options', 'nosniff');
     return c.body(new Uint8Array(scan.bytes));
   });
-  // An attachment's bytes, through its account's adapter, for the reader's preview.
+  // An attachment's bytes, through its account's adapter, for the reader's preview. An id's bytes
+  // never change (a changed set gets new ids), so the browser keeps them.
   const fetchAttachment = async (messageId: string, attachmentId: string) => {
     try {
       return await attachmentFile(store, engine, id(messageId), id(attachmentId));
@@ -601,6 +602,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     const file = await fetchAttachment(c.req.param('id'), c.req.param('attachment'));
     c.header('Content-Type', file.contentType);
     c.header('Content-Disposition', file.disposition);
+    c.header('Cache-Control', 'private, max-age=86400, immutable');
     c.header('Content-Security-Policy', "default-src 'none'; sandbox");
     c.header('X-Content-Type-Options', 'nosniff');
     return c.body(new Uint8Array(file.content));

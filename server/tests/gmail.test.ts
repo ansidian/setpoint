@@ -497,6 +497,8 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     expect(csv.headers.get('content-type')).toBe('text/csv');
     expect(csv.headers.get('content-disposition')).toBe(`inline; filename="Statement Oct.csv"; filename*=UTF-8''Statement%20Oct.csv`);
     expect(csv.headers.get('x-content-type-options')).toBe('nosniff');
+    // The bytes behind an attachment id never change: the browser keeps them for a second preview.
+    expect(csv.headers.get('cache-control')).toBe('private, max-age=86400, immutable');
     // A type a browser would run is served as bytes to save, never as itself.
     const html = await api.send('GET', `/api/mail/messages/${message.id}/attachments/${row[1]!.id}`);
     expect(html.headers.get('content-type')).toBe('application/octet-stream');
@@ -509,6 +511,7 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     google.deleteForever(ADDRESS, message.providerId);
     const gone = await api.send('GET', `/api/mail/messages/${message.id}/attachments/${row[0]!.id}`);
     expect(gone.status).toBe(404);
+    expect(gone.headers.get('cache-control')).not.toMatch(/immutable|max-age/);
   });
 
   test('an invite\'s .ics is read for review from Gmail\'s bytes, nothing uploaded; one that isn\'t a calendar is refused in the parser\'s words', async () => {

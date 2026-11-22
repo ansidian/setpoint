@@ -96,12 +96,16 @@ describe('iCloud: an attachment for the reader\'s preview', () => {
     expect(csv.headers.get('content-type')).toBe('text/csv');
     expect(csv.headers.get('content-disposition')).toBe(`inline; filename="Statement Oct.csv"; filename*=UTF-8''Statement%20Oct.csv`);
     expect(csv.headers.get('x-content-type-options')).toBe('nosniff');
+    // The bytes behind an attachment id never change: the browser keeps them for a second preview.
+    expect(csv.headers.get('cache-control')).toBe('private, max-age=86400, immutable');
     // A type a browser would run is served as bytes to save, never as itself.
     const html = await api.send('GET', `/api/mail/messages/${message.id}/attachments/${row[1]!.id}`);
     expect(html.headers.get('content-type')).toBe('application/octet-stream');
     expect(html.headers.get('content-disposition')).toMatch(/^attachment; filename="notes.html"/);
     // Another email's attachment id, or none, is not found. Signed out is refused.
-    expect((await api.send('GET', `/api/mail/messages/${message.id}/attachments/999`)).status).toBe(404);
+    const missing = await api.send('GET', `/api/mail/messages/${message.id}/attachments/999`);
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get('cache-control')).not.toMatch(/immutable|max-age/);
     expect((await client(w).send('GET', `/api/mail/messages/${message.id}/attachments/${row[0]!.id}`)).status).toBe(401);
   });
 });
