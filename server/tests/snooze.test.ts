@@ -146,6 +146,20 @@ describe('Snooze and Unsnooze', () => {
     expect(w.store.db.select().from(t.commands).where(eq(t.commands.targetId, read.id)).all()).toEqual([]);
     expect(ntfy.published).toEqual([]);
   });
+
+  test('Done ends a snooze: the email leaves Snoozed and never returns', async () => {
+    const {w, ntfy, pass} = await setUp();
+    const read = seedEmail(w, 'attention', false);
+    snoozeMessage(w.store, read.id, later(w, HOUR));
+    setDone(w.store, read.id, true);
+    expect(rowOf(w, read.id).snoozedUntil).toBeNull();
+    expect(snoozedMail(w.store).rows.map(row => row.id)).not.toContain(read.id);
+    w.advance(2 * HOUR);
+    await pass.tick();
+    expect(rowOf(w, read.id)).toMatchObject({returnedAt: null, unread: false});
+    expect(rowOf(w, read.id).doneAt).not.toBeNull();
+    expect(ntfy.published).toEqual([]);
+  });
 });
 
 describe('the return', () => {

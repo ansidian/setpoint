@@ -150,8 +150,9 @@ export function markAllRead(store: Store, accountId?: number): CommandRow[] {
 export function setDone(store: Store, messageId: number, done: boolean): MessageRow {
   return transaction(store, () => {
     const row = message(store, messageId);
+    // Done ends a snooze: the email is handled, so it never returns.
     const updated = store.db.update(t.messages).set(done
-      ? {doneAt: row.doneAt ?? isoNow(store), openedBeforeDone: row.doneAt ? row.openedBeforeDone : row.openedAt !== null}
+      ? {doneAt: row.doneAt ?? isoNow(store), openedBeforeDone: row.doneAt ? row.openedBeforeDone : row.openedAt !== null, snoozedUntil: null}
       : {doneAt: null, openedBeforeDone: null}).where(eq(t.messages.id, row.id)).returning().get()!;
     noteLive(store, {type: 'mail', messages: [row.id], accounts: [row.accountId], commands: []});
     return updated;
