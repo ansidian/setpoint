@@ -332,6 +332,8 @@ export interface ConversationOut {
   conversation_id: number;
   // The email it's scoped to (Ask about this email), or null.
   message_id: number | null;
+  // Idle past four hours (or begun on a provider no longer offered): a follow-up is refused.
+  ended: boolean;
   turns: AnswerOut[];
 }
 

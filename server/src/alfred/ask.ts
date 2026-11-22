@@ -117,12 +117,18 @@ function present(store: Store, conversationId: number, turn: Turn): AnswerOut {
   };
 }
 
-/** GET /api/alfred/conversations/:id: the thread so far. */
+/**
+ * Whether a thread can no longer be continued: idle past THREAD_IDLE_MS, or begun on OpenAI, when it
+ * was a provider, with a transcript Claude can't continue.
+ */
+const ended = (thread: Conversation, now: string) => Date.parse(now) - Date.parse(thread.touchedAt) > THREAD_IDLE_MS || thread.provider !== 'anthropic';
+
+/** GET /api/alfred/conversations/:id: the thread so far, and whether it has ended. */
 export function conversation(store: Store, conversationId: number): ConversationOut {
   const row = store.db.select().from(t.alfredConversations).where(eq(t.alfredConversations.id, conversationId)).get();
   if (!row) throw notFound('No such conversation.');
   const turns = store.db.select().from(t.alfredTurns).where(eq(t.alfredTurns.conversationId, row.id)).orderBy(asc(t.alfredTurns.id)).all();
-  return {conversation_id: row.id, message_id: row.messageId, turns: turns.map(turn => present(store, row.id, turn))};
+  return {conversation_id: row.id, message_id: row.messageId, ended: ended(row, isoNow(store)), turns: turns.map(turn => present(store, row.id, turn))};
 }
 
 function recordUsage(store: Store, turn: ConverseTurn, messageId: number | null) {
@@ -161,8 +167,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   if (input.conversation_id) {
     thread = store.db.select().from(t.alfredConversations).where(eq(t.alfredConversations.id, input.conversation_id)).get() ?? null;
     if (!thread) throw notFound('No such conversation.');
-    // A thread begun on OpenAI, when it was a provider, has a transcript Claude can't continue.
-    if (Date.parse(now) - Date.parse(thread.touchedAt) > THREAD_IDLE_MS || thread.provider !== 'anthropic') throw new SetpointError('conversation_ended', 'This conversation has ended; ask again to start a new one.', 410);
+    if (ended(thread, now)) throw new SetpointError('conversation_ended', 'This conversation has ended; ask again to start a new one.', 410);
   }
   const scope = thread ? thread.messageId : input.message_id ?? null;
   if (!thread && scope !== null) {

@@ -263,7 +263,10 @@ describe('Alfred\'s other paths', () => {
 
     fake.answer(() => ({calls: [{name: 'answer', input: {found: true, text: 'Hello.', source_ids: []}}]}));
     const thread = (await c.send('POST', '/api/alfred/ask', {body: {question: 'Hi?'}})).body.conversation_id;
-    w.advance(4 * 60 * 60_000 + 1);
+    w.advance(4 * 60 * 60_000);
+    expect((await c.send('GET', `/api/alfred/conversations/${thread}`)).body.ended).toBe(false);
+    w.advance(1);
+    expect((await c.send('GET', `/api/alfred/conversations/${thread}`)).body.ended).toBe(true);
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'And?', conversation_id: thread}})).status).toBe(410);
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'And?', conversation_id: 9999}})).status).toBe(404);
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'And?', message_id: 9999}})).status).toBe(404);
@@ -283,7 +286,7 @@ describe('Alfred\'s other paths', () => {
       messageId: null, provider: 'openai', model: 'gpt-5.5', transcript: {items: [{role: 'user', content: 'Before?'}], pending: [], seen: []}, createdAt: now, touchedAt: now,
     }).returning({id: t.alfredConversations.id}).get();
     w.store.db.insert(t.alfredTurns).values({conversationId: id, at: now, question: 'Before?', answer: 'Yes.', emphasis: [], sourceIds: [], searched: [], proposals: []}).run();
-    expect((await c.send('GET', `/api/alfred/conversations/${id}`)).body).toMatchObject({turns: [{question: 'Before?', answer: 'Yes.'}]});
+    expect((await c.send('GET', `/api/alfred/conversations/${id}`)).body).toMatchObject({ended: true, turns: [{question: 'Before?', answer: 'Yes.'}]});
     const followUp = await c.send('POST', '/api/alfred/ask', {body: {question: 'And?', conversation_id: id}});
     expect([followUp.status, followUp.body.error.code]).toEqual([410, 'conversation_ended']);
     expect(fake.requests).toHaveLength(1);
