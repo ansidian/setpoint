@@ -148,11 +148,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row .in.now { color: color-mix(in oklch, var(--alert) var(--textTint), var(--ink)); font-weight: 500; }
 .today-more { width: 100%; text-align: left; color: var(--ink3); background: none; }
 .today-more .ring-space { width: 17px; flex: none; }
-/* The floating detail's card beside the sidebar (detail.css draws it). */
-.fd.today-card { position: absolute; z-index: 20; will-change: auto; animation: today-card-in var(--detail-open) var(--ease); transform-origin: left top; }
-.fd.today-card .card-h { padding-top: 12px; }
-.fd.today-card.settled { transition: top var(--dur-medium) var(--ease); }
-@keyframes today-card-in { from { opacity: 0; transform: scale(.96); } }
+/* The floating detail's card off Calendar, beside a Today line or Alfred's answer (detail.css draws it). */
+.fd.item-card { position: absolute; z-index: 20; will-change: auto; animation: item-card-in var(--detail-open) var(--ease); transform-origin: left top; }
+.fd.item-card .card-h { padding-top: 12px; }
+.fd.item-card.settled { transition: top var(--dur-medium) var(--ease), left var(--dur-medium) var(--ease); }
+@keyframes item-card-in { from { opacity: 0; transform: scale(.96); } }
 /* Todoist's open ring: 13 px, a 1.5 px stroke in its project's colour (`--ring`), else `ink3`
    (DESIGN.md › Glyphs), its lightness clamped to the theme's band and Todoist's hue and chroma kept,
    with the same colour at 14% inside, as a chip's tint. A ring that completes shows its check,

@@ -14,27 +14,25 @@
 // event or task alike. Its tooltip names that item with what else is left, and it opens the same
 // card. The slot shows nothing once no timed item is left today.
 import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
-import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {CSSProperties, MouseEvent, ReactNode} from 'react';
-import {createPortal} from 'react-dom';
+import {useMemo, useState} from 'react';
+import type {MouseEvent, ReactNode} from 'react';
 import {timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
 import {CALENDARS_PATH, completeItem, createSubtask, deleteItem, itemsPath, moveBack, reorderSubtasks, retryChange} from '../api/items.ts';
 import type {Entry, FoldRules} from '../logic/fold.ts';
-import {localDate} from '../logic/format.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {byTime, DONE_MOMENT_MS, nextUp, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
 import type {TodayEvent, TodayTask, TomorrowEvent} from '../logic/today.ts';
 import {Burst} from '../ui/Burst.tsx';
 import {Icon, TaskGlyph} from '../ui/Icon.tsx';
-import {isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle} from './accounts.ts';
 import {useRingColour} from './calendar/Chip.tsx';
 import {subtaskCount} from './calendar/Subtasks.tsx';
-import {DetailContent, readOnlyReason} from './calendar/detail/DetailContent.tsx';
+import {readOnlyReason} from './calendar/detail/DetailContent.tsx';
+import {ItemCard} from './calendar/detail/ItemCard.tsx';
+import type {ItemCardProps} from './calendar/detail/ItemCard.tsx';
 import type {DetailActions} from './calendar/detail/DetailContent.tsx';
-import './calendar/detail/detail.css';
 import {rectIn} from './calendar/geometry.ts';
 import {useNow} from './clock.ts';
 import {openContextMenu} from './ContextMenu.tsx';
@@ -299,93 +297,11 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   );
 }
 
-interface TodayCardProps {
-  item: ItemOut;
-  calendar: CalendarOut | undefined;
-  timeZone: string;
-  actions: DetailActions;
-  onClose: () => void;
-  onEdit: () => void;
-}
-
-/**
- * The floating detail's card for a Today line, 8 px right of the sidebar with its title level with
- * the line, kept on screen. It's drawn over the page, in the shell, as the sidebar clips.
- */
-function TodayCard({item, calendar, timeZone, actions, onClose, onEdit}: TodayCardProps) {
-  const card = useRef<HTMLDivElement>(null);
-  const [place, setPlace] = useState<{left: number; top: number} | null>(null);
-  // Once it's been drawn in place, it moves to another line's rather than jumping.
-  const [settled, setSettled] = useState(false);
-  const host = document.querySelector<HTMLElement>('.app');
-
-  const measure = () => {
-    const line = document.querySelector(`.sb .today-row[data-key="${CSS.escape(item.key)}"]`);
-    const sidebar = document.querySelector('.sb');
-    if (!host || !line || !sidebar || !card.current) return;
-    const at = rectIn(line, host);
-    const top = Math.max(12, Math.min(at.top - 12, host.offsetHeight - 12 - card.current.offsetHeight));
-    const left = rectIn(sidebar, host).width + 8;
-    setPlace(current => (current && current.left === left && current.top === top ? current : {left, top}));
-  };
-  // Every render, and as the window changes size.
-  const placed = useRef(measure);
-  useLayoutEffect(() => {
-    placed.current = measure;
-    measure();
-  });
-  useEffect(() => {
-    if (!place || settled) return;
-    const frame = requestAnimationFrame(() => setSettled(true));
-    return () => cancelAnimationFrame(frame);
-  }, [place, settled]);
-  useEffect(() => {
-    const onResize = () => placed.current();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  // Esc closes it. E edits and Delete deletes, before the Inbox's own E (Trash) and Esc see them.
-  const latest = useRef({item, actions, onClose, onEdit});
-  useEffect(() => {
-    latest.current = {item, actions, onClose, onEdit};
-  });
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (isTyping(event)) return;
-      const {item: shownItem, actions: offered, onClose: close, onEdit: edit} = latest.current;
-      const take = (run: () => void) => {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        run();
-      };
-      if (plainKey(event, 'Escape')) take(close);
-      else if (plainKey(event, 'e') && !shownItem.read_only) take(edit);
-      else if ((plainKey(event, 'Delete') || plainKey(event, 'Backspace')) && offered.remove && !shownItem.read_only) take(() => offered.remove!(shownItem));
-    };
-    const onDown = (event: PointerEvent) => {
-      const target = event.target as Element | null;
-      if (card.current?.contains(target) || target?.closest('.sb .today-row')) return;
-      latest.current.onClose();
-    };
-    window.addEventListener('keydown', onKey, true);
-    document.addEventListener('pointerdown', onDown);
-    return () => {
-      window.removeEventListener('keydown', onKey, true);
-      document.removeEventListener('pointerdown', onDown);
-    };
-  }, []);
-
-  if (!host) return null;
-  return createPortal(
-    <div ref={card} className={settled ? 'fd today-card settled' : 'fd today-card'} role="dialog" aria-label={item.title}
-      style={(place ? {left: place.left, top: place.top} : {left: 0, top: 0, visibility: 'hidden'}) as CSSProperties}>
-      <div className="card float">
-        <DetailContent target={{item, date: dayOf(item, timeZone), calendar}} timeZone={timeZone} actions={actions} onClose={onClose} onEdit={onEdit} />
-      </div>
-    </div>,
-    host,
+/** The card for a Today line: 8 px right of the sidebar, its title level with the line. */
+function TodayCard(props: Omit<ItemCardProps, 'line' | 'lines' | 'at' | 'className'>) {
+  return (
+    <ItemCard {...props} className="today-card" line={`.sb .today-row[data-key="${CSS.escape(props.item.key)}"]`} lines=".sb .today-row"
+      at={(line, host) => ({left: rectIn(host.querySelector('.sb')!, host).width + 8, top: line.top - 12})} />
   );
 }
 
-const dayOf = (item: ItemOut, timeZone: string) => item.due_date ?? item.start_date ?? (item.starts_at ? localDate(item.starts_at, timeZone) : '');
