@@ -18,7 +18,7 @@ import type {Store} from '../../store.ts';
 import type {SourceRow} from '../../sync/adapter.ts';
 import {isSyncTokenGone} from './api.ts';
 import type {GoogleCalendarApi, GoogleCalendarEntry, GoogleEvent} from './api.ts';
-import {cancelledOccurrence, eventColumns, originalStartOf, withOwnAfter} from './normalize.ts';
+import {cancelledOccurrence, declinedAsCancelled, eventColumns, originalStartOf, withOwnAfter} from './normalize.ts';
 
 const DAY = 86_400_000;
 // How far back a full read goes. Series reach further on their own.
@@ -132,15 +132,16 @@ export async function syncCalendar(store: Store, api: GoogleCalendarApi, source:
     page = await read(true);
   }
   const zone = page.timeZone ?? store.timeZone;
+  page = {...page, items: page.items.map(declinedAsCancelled)};
   // Series Google expands: read their instances now, outside the transaction.
   const instances = new Map<string, GoogleEvent[]>();
   for (const event of page.items.filter(isMaster)) {
     if (event.status === 'cancelled' || !event.recurrence?.length) continue;
     const columns = eventColumns(event, zone, page.defaultReminders);
     if (!columns.expanded) continue;
-    instances.set(event.id, await api.instances(calendar.providerId, event.id, {
+    instances.set(event.id, (await api.instances(calendar.providerId, event.id, {
       timeMin: new Date(now.getTime() - INSTANCES_BACK_MS).toISOString(), timeMax: new Date(now.getTime() + INSTANCES_AHEAD_MS).toISOString(),
-    }));
+    })).map(declinedAsCancelled));
   }
   applyEvents(store, calendar, {
     full: fullRead, items: page.items, zone, defaults: page.defaultReminders, instances,

@@ -81,6 +81,21 @@ describe('the mirror', () => {
     void w;
   });
 
+  test('an event the user declined is left out, and one declined after it arrived leaves the calendar', async () => {
+    const {google, engine, run, titles, source} = await calendarWorld();
+    google.put(PERSONAL, {
+      id: 'review', summary: 'Design review', start: {dateTime: zoned('2026-10-09', '10:00')}, end: {dateTime: zoned('2026-10-09', '11:00')},
+      attendees: [{email: 'sam@example.org', displayName: 'Sam Lee'}, {email: PERSONAL, self: true, responseStatus: 'declined'}],
+    });
+    await run();
+    expect(titles('2026-10-09')).toEqual(['Gym 7:00 AM', 'Dinner with Sam 7:00 PM']);
+    const dinner = google.event(PERSONAL, 'dinner')!;
+    google.put(PERSONAL, {...dinner, attendees: dinner.attendees!.map(person => person.self ? {...person, responseStatus: 'declined'} : person)});
+    engine.pushed(source.id);
+    await run();
+    expect(titles('2026-10-09')).toEqual(['Gym 7:00 AM']);
+  });
+
   test('a series with an EXDATE, which the expander can\'t draw alone, takes Google\'s instances', async () => {
     const {google, run, titles} = await calendarWorld();
     google.put(PERSONAL, {

@@ -1,8 +1,9 @@
 // Google events as items, and items as Google event bodies, keeping what Google says. All-day is a
 // `date` start (Google's end date is already exclusive, as Setpoint's). A master is an event with
 // `recurrence`. An exception names its `recurringEventId` and `originalStartTime`. A cancelled one
-// is deleted. Rooms and equipment aren't attendees. An untitled event is "(No title)". Only
-// `default` events can be changed here (birthdays, focus time and out-of-office are Google's own).
+// is deleted, as is one the user declined. Rooms and equipment aren't attendees. An untitled event
+// is "(No title)". Only `default` events can be changed here (birthdays, focus time and
+// out-of-office are Google's own).
 import {eventColourOf, EVENT_COLOUR_IDS} from '../../domain/colours.ts';
 import {parseRule} from '../../domain/recurrence.ts';
 import {addDays, localDay} from '../../domain/time.ts';
@@ -64,6 +65,11 @@ export function remindersOf(event: GoogleEvent, calendarDefaults: number[]): num
 /** Google's before-reminders with the row's own after-ones, which Google never holds. */
 export function withOwnAfter(fromGoogle: number[], row: Pick<ItemRow, 'reminders'> | undefined): number[] {
   return [...fromGoogle.filter(minutes => minutes >= 0), ...(row?.reminders ?? []).filter(minutes => minutes < 0)];
+}
+
+/** An event the user declined is mirrored as cancelled, as Google hides declined events by default. */
+export function declinedAsCancelled(event: GoogleEvent): GoogleEvent {
+  return event.attendees?.some(person => person.self && person.responseStatus === 'declined') ? {...event, status: 'cancelled'} : event;
 }
 
 export function attendeesOf(event: GoogleEvent): string[] {
