@@ -144,7 +144,7 @@ const OVERDUE_MS = 24 * 60 * 60 * 1000;
 /**
  * How the mail day is going since `dayStart` (the user's midnight). It counts Done today. It counts
  * what needs the user (Attention not Done, the attention pill's number), and how much of that has
- * waited over 24 hours since arriving. It counts what triage sorted today out of Attention, to FYI
+ * waited over 24 hours since arriving, or since returning from a snooze. It counts what triage sorted today out of Attention, to FYI
  * and to Noise. The pass over backfilled history isn't today's sorting, and trashed mail counts
  * nowhere.
  */
@@ -156,7 +156,7 @@ export function mailDay(messages: DayCandidate[], now: string, dayStart: string)
     if (message.doneAt && message.doneAt >= dayStart) day.done += 1;
     if (laneGroup(message, now) === 'attention') {
       day.needYou += 1;
-      if (message.receivedAt < overdueBefore) day.overdue += 1;
+      if ((message.returnedAt ?? message.receivedAt) < overdueBefore) day.overdue += 1;
     }
     if (message.triagedAt && message.triagedAt >= dayStart && message.triageSource !== 'history') {
       if (message.lane === 'fyi') day.sortedFyi += 1;

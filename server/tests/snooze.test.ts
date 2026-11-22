@@ -11,7 +11,10 @@ import type {InboxCandidate} from '../src/domain/inbox.ts';
 import {Notifier} from '../src/notify/index.ts';
 import {allMail, inbox, mailCounts, messageDetail, snoozedMail} from '../src/queries/mail.ts';
 import {updateSettings} from '../src/settings.ts';
+import {RuleTrashScheduler} from '../src/triage/ruleTrash.ts';
 import {SnoozeScheduler} from '../src/triage/snooze.ts';
+import {upsertMessages} from '../src/sync/mailMirror.ts';
+import type {FetchedMessage} from '../src/sync/mailMirror.ts';
 import {fakeNtfy} from './fakeNtfy.ts';
 import {signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -236,6 +239,21 @@ describe('the return', () => {
     expect(ntfy.published).toEqual([]);
   });
 
+  test('a waiting trash, a rule\'s or a code\'s, never takes a snoozed email: snoozing cancels it, and it returns', async () => {
+    const {w, pass} = await setUp();
+    const bill = idOf(w, 'Bill is ready');
+    w.store.db.update(t.messages).set({trashDueAt: later(w, HOUR)}).where(eq(t.messages.id, bill)).run();
+    snoozeMessage(w.store, bill, later(w, 2 * HOUR));
+    const trash = new RuleTrashScheduler({store: w.store});
+    w.advance(HOUR);
+    await trash.tick();
+    w.advance(HOUR);
+    await trash.tick();
+    await pass.tick();
+    expect(rowOf(w, bill)).toMatchObject({trashedAt: null, trashDueAt: null, snoozedUntil: null});
+    expect(groupOf(w, bill)?.group).toBe('money');
+  });
+
   test.each([
     ['Attention, with Attention mail on', 'attention', {}, 1],
     ['Attention, with Attention mail off', 'attention', {attention_mail: false}, 0],
@@ -282,6 +300,46 @@ describe('the return', () => {
     w.advance(HOUR);
     await pass.tick();
     expect(ntfy.published).toHaveLength(2);
+  });
+});
+
+describe('a new email in its thread, in the record', () => {
+  const fetched = (providerId: string, threadId: string, changes: Partial<FetchedMessage> = {}): FetchedMessage => ({
+    providerId, threadId, rfc822Id: `<${providerId}@example.org>`, fromName: 'Sam Ortiz', fromAddress: 'sam@fabrikam.example.com', subject: providerId, snippet: providerId,
+    bodyText: providerId, bodyHtml: null, receivedAt: '2026-10-07T15:00:00.000Z', senderAuth: null, attachments: [], unread: true, trashed: false, archived: false, ...changes,
+  });
+  const snoozedInThread = () => {
+    const w = world({seed: true});
+    const bill = rowOf(w, idOf(w, 'Bill is ready'));
+    snoozeMessage(w.store, bill.id, later(w, 3 * 86_400_000));
+    return {w, bill};
+  };
+
+  test('one with a change of its own waiting is made due now, and the next pass returns it', async () => {
+    const {w, bill} = snoozedInThread();
+    const read = setRead(w.store, bill.id, false);
+    upsertMessages(w.store, bill.accountId, [fetched('reply-1', bill.threadId)]);
+    expect(rowOf(w, bill.id).snoozedUntil).toBe(w.store.now().toISOString());
+    confirmCommand(w.store, read.id);
+    w.advance(60_000);
+    await new SnoozeScheduler({store: w.store}).tick();
+    expect(rowOf(w, bill.id)).toMatchObject({snoozedUntil: null, unread: true, returnedAt: w.store.now().toISOString()});
+  });
+
+  test.each([
+    ['backfilled history in its thread', {backfill: true}, {}],
+    ['mail the user sent in its thread', {}, {sent: true, received: false, fromName: 'User', fromAddress: 'user@example.com'}],
+  ] as const)('%s leaves it snoozed', (_, options, changes) => {
+    const {w, bill} = snoozedInThread();
+    upsertMessages(w.store, bill.accountId, [fetched('other-1', bill.threadId, changes)], options);
+    expect(rowOf(w, bill.id).snoozedUntil).not.toBeNull();
+  });
+
+  test('the same thread id in another account leaves it snoozed', () => {
+    const {w, bill} = snoozedInThread();
+    const other = w.store.db.select().from(t.accounts).all().find(account => account.id !== bill.accountId)!;
+    upsertMessages(w.store, other.id, [fetched('other-2', bill.threadId)]);
+    expect(rowOf(w, bill.id).snoozedUntil).not.toBeNull();
   });
 });
 

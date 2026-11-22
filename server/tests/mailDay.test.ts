@@ -26,6 +26,10 @@ describe('the mail day', () => {
     ['Attention not Done needs the user, read or not', [email({lane: 'attention'}), email({lane: 'attention', unread: false})], {needYou: 2, overdue: 0}],
     ['over 24 hours since arriving is overdue; exactly 24 isn\'t', [email({lane: 'attention', receivedAt: '2026-10-06T16:11:00.000Z'}), email({lane: 'attention', receivedAt: '2026-10-06T16:12:00.000Z'})],
       {needYou: 2, overdue: 1}],
+    ['back from a snooze, its wait counts from its return, not its arrival', [
+      email({lane: 'attention', receivedAt: '2026-10-03T16:00:00.000Z', returnedAt: '2026-10-07T16:00:00.000Z'}),
+      email({lane: 'attention', receivedAt: '2026-10-01T16:00:00.000Z', returnedAt: '2026-10-06T16:11:00.000Z'}),
+    ], {needYou: 2, overdue: 1}],
     ['sorted today to FYI and to Noise; Attention and Unsorted aren\'t counted', [
       email({triagedAt: '2026-10-07T09:00:00.000Z'}), email({lane: 'noise', triagedAt: '2026-10-07T09:00:00.000Z'}),
       email({lane: 'attention', triagedAt: '2026-10-07T09:00:00.000Z'}), email({lane: null}),

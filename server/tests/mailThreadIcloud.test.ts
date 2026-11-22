@@ -5,6 +5,7 @@
 import {SEED_NOW} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, onTestFinished, test, vi} from 'vitest';
+import {snoozeMessage} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {messageDetail} from '../src/queries/mail.ts';
 import {ICloudAdapter, icloudConnector} from '../src/providers/icloud/index.ts';
@@ -95,5 +96,24 @@ describe('iCloud: threads', () => {
 
     const root = threadOf(w, 'Keys');
     expect([threadOf(w, 'Re: Keys'), threadOf(w, 'Re: Keys (2)')]).toEqual([root, root]);
+  });
+});
+
+describe('iCloud: a snoozed email\'s thread', () => {
+  test('a reply naming it by its headers wakes it, unread in iCloud too; one in another thread doesn\'t', async () => {
+    const {w, imap, poll} = await setup();
+    const uid = imap.deliver(ADDRESS, rawEmail({from: SAM, to: ADDRESS, subject: 'Rent split', date: ago(2 * DAY), text: 'Rent split.', messageId: '<rent1@fabrikam.example.com>'}), ago(2 * DAY), ['\\Seen']);
+    imap.deliver(ADDRESS, rawEmail({from: SAM, to: ADDRESS, subject: 'Book club', date: ago(2 * DAY), text: 'Book club.', messageId: '<book1@fabrikam.example.com>'}), ago(2 * DAY), ['\\Seen']);
+    await poll();
+    const row = (subject: string) => w.store.db.select().from(t.messages).where(eq(t.messages.subject, subject)).get()!;
+    const until = new Date(Date.parse(SEED_NOW) + 3 * DAY).toISOString();
+    snoozeMessage(w.store, row('Rent split').id, until);
+    snoozeMessage(w.store, row('Book club').id, until);
+    receive(imap, 'Re: Rent split', ago(MINUTE), {messageId: '<rent2@fabrikam.example.com>', inReplyTo: '<rent1@fabrikam.example.com>'});
+    await poll();
+    await poll();
+    expect(row('Rent split')).toMatchObject({snoozedUntil: null, returnedAt: expect.any(String), unread: true});
+    expect(imap.flags(ADDRESS, uid)).not.toContain('\\Seen');
+    expect(row('Book club')).toMatchObject({snoozedUntil: until, unread: false});
   });
 });

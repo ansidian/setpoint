@@ -198,7 +198,8 @@ export function ruleTrashDue(store: Store, messageId: number): CommandRow {
 /**
  * Snooze takes an email out of the Inbox until `until`, when it returns (returnFromSnooze). It keeps
  * its lane, pin and read state meanwhile, and stays in All and search. Snoozing it again moves the
- * time and clears the mark of an earlier return.
+ * time and clears the mark of an earlier return. As pinning does, it cancels a waiting trash (a
+ * rule's or a code's), so the email the user set aside is never trashed before it returns.
  */
 export function snoozeMessage(store: Store, messageId: number, until: string): MessageRow {
   return transaction(store, () => {
@@ -206,7 +207,7 @@ export function snoozeMessage(store: Store, messageId: number, until: string): M
     if (Date.parse(until) <= store.now().getTime()) throw invalid('A snooze ends in the future.');
     if (row.trashedAt) throw conflict('unchanged', 'That email is in the trash.');
     if (!row.received) throw conflict('unchanged', 'Only mail that came to you can be snoozed.');
-    const updated = store.db.update(t.messages).set({snoozedUntil: new Date(until).toISOString(), returnedAt: null})
+    const updated = store.db.update(t.messages).set({snoozedUntil: new Date(until).toISOString(), returnedAt: null, trashDueAt: null})
       .where(eq(t.messages.id, row.id)).returning().get()!;
     noteLive(store, {type: 'mail', messages: [row.id], accounts: [row.accountId], commands: []});
     return updated;
