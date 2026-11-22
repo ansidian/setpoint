@@ -1,10 +1,11 @@
 // The message builder and the body it carries, as tables. Every built email is read back through
 // the parser the sync uses (src/providers/mime.ts), so what Setpoint sends is what it would read.
+import {replyLine} from '@setpoint/shared';
 import type {Recipient} from '@setpoint/shared';
 import type {Block} from '@setpoint/shared/richText';
 import {simpleParser} from 'mailparser';
 import {describe, expect, test} from 'vitest';
-import {composeBody, replyLine} from '../src/domain/outgoingBody.ts';
+import {composeBody} from '../src/domain/outgoingBody.ts';
 import type {QuotedEmail} from '../src/domain/outgoingBody.ts';
 import {buildMessage, encodeWords, formatAddress, inlineImages, replyHeaders} from '../src/domain/outgoingMessage.ts';
 import type {OutgoingMessage} from '../src/domain/outgoingMessage.ts';

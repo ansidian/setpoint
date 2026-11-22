@@ -1,7 +1,7 @@
 // The composer's pure rules: whether an email has anyone for Reply all and whether a draft is still
 // as it was filled (the server's own rules, shared/src/draftFill.ts), what a typed recipient is, a chip's words, the reply's quote as the
 // composer shows it under its fold, and help me write's versions.
-import {DRAFT_VERSIONS_MAX} from '@setpoint/shared';
+import {DRAFT_VERSIONS_MAX, forwardLines as quotedForwardLines, replyLine as quotedReplyLine} from '@setpoint/shared';
 import type {DraftOut, DraftUpdateInput, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {draftEmpty, fillAnswer, NEW_MESSAGE_FILL} from '@setpoint/shared/draftFill';
 import type {DraftFill} from '@setpoint/shared/draftFill';
@@ -79,10 +79,8 @@ export function withRecipients(field: Recipient[], added: Recipient[]): Recipien
 }
 
 /** The line above a reply's quote, as the server writes it: "On Oct 3, 2026, Theo Walsh wrote:". */
-export function replyLine(message: Pick<MessageOut, 'from_name' | 'from_address' | 'received_at'>, timeZone: string): string {
-  const day = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone}).format(new Date(message.received_at));
-  return `On ${day}, ${message.from_name.trim() || message.from_address} wrote:`;
-}
+export const replyLine = (message: Pick<MessageOut, 'from_name' | 'from_address' | 'received_at'>, timeZone: string): string =>
+  quotedReplyLine({fromName: message.from_name, fromAddress: message.from_address, receivedAt: message.received_at}, timeZone);
 
 /** The original as the quote's blocks, for trimming: its HTML read as rich text, or its lines. */
 export function quoteOf(message: Pick<MessageOut, 'body_html' | 'body_text'>): Block[] {
@@ -140,25 +138,9 @@ export function startsWithCopies(kind: DraftOut['kind'], message: Answered | und
 /** "12.4 MB": a total against the attachments' limit, to one decimal. */
 export const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')} MB`;
 
-const names = (recipients: Recipient[] | undefined) => (recipients ?? []).map(one => (one.name ? `${one.name} <${one.address}>` : one.address)).join(', ');
-
-/**
- * A forward's header lines as the server writes them above the email: the dashes, From, Date,
- * Subject, then To and Cc when it had them.
- */
-export function forwardLines(message: Pick<MessageOut, 'from_name' | 'from_address' | 'subject' | 'received_at'> & Partial<Pick<MessageOut, 'to' | 'cc'>>, timeZone: string): string[] {
-  const date = new Date(message.received_at);
-  const day = new Intl.DateTimeFormat('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone}).format(date);
-  const time = new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone}).format(date);
-  return [
-    '---------- Forwarded message ---------',
-    `From: ${message.from_name.trim() ? `${message.from_name.trim()} <${message.from_address}>` : message.from_address}`,
-    `Date: ${day} at ${time}`,
-    `Subject: ${message.subject}`,
-    ...(message.to?.length ? [`To: ${names(message.to)}`] : []),
-    ...(message.cc?.length ? [`Cc: ${names(message.cc)}`] : []),
-  ];
-}
+/** A forward's header lines as the server writes them above the email. */
+export const forwardLines = (message: Pick<MessageOut, 'from_name' | 'from_address' | 'subject' | 'received_at'> & Partial<Pick<MessageOut, 'to' | 'cc'>>, timeZone: string): string[] =>
+  quotedForwardLines({fromName: message.from_name, fromAddress: message.from_address, subject: message.subject, receivedAt: message.received_at, to: message.to ?? null, cc: message.cc ?? null}, timeZone);
 
 /** The composer's windows: a window, a window folded to its title bar, the gap between, the "+N" chip. */
 export const WINDOW_WIDTH = 560;

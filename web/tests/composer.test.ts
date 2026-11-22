@@ -130,6 +130,10 @@ describe('a forward\'s header lines, as the server writes them', () => {
       '---------- Forwarded message ---------', 'From: Dana Whitfield <dana@example.org>', 'Date: Wed, Sep 30, 2026 at 2:15 PM', 'Subject: Lease renewal terms',
       'To: User <user@example.com>', 'Cc: June Park <june@example.org>, office@example.org',
     ]],
+    ['a name with spaces round it is trimmed, as the server trims it', {...email, to: [{name: '  June Park ', address: 'june@example.org'}], cc: [{name: ' ', address: 'office@example.org'}]}, [
+      '---------- Forwarded message ---------', 'From: Dana Whitfield <dana@example.org>', 'Date: Wed, Sep 30, 2026 at 2:15 PM', 'Subject: Lease renewal terms',
+      'To: June Park <june@example.org>', 'Cc: office@example.org',
+    ]],
     ['no name, recipients not known', {...email, from_name: ' '}, [
       '---------- Forwarded message ---------', 'From: dana@example.org', 'Date: Wed, Sep 30, 2026 at 2:15 PM', 'Subject: Lease renewal terms',
     ]],

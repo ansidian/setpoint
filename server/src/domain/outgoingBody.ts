@@ -3,6 +3,7 @@
 // as the user trimmed it when they did, or, for a forward, the forwarded email in full under its own
 // header lines. The original's HTML
 // goes through the reader's own cleaning (src/domain/emailHtml.ts) first, so nothing in it runs.
+import {forwardLines, replyLine} from '@setpoint/shared';
 import type {Recipient} from '@setpoint/shared';
 import {plainText, tidy, writeHtml} from '@setpoint/shared/richText';
 import type {Block, List, Run} from '@setpoint/shared/richText';
@@ -50,24 +51,6 @@ function userText(blocks: Block[]): string {
   return lines.join('\n');
 }
 
-/** "Nov 12, 2026" in the owner's zone. */
-function quotedDay(instant: string, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone}).format(new Date(instant));
-}
-
-/** "Thu, Nov 12, 2026 at 3:04 PM" in the owner's zone, for a forward's Date line. */
-function quotedMoment(instant: string, timeZone: string): string {
-  const date = new Date(instant);
-  const day = new Intl.DateTimeFormat('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone}).format(date);
-  const time = new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone}).format(date);
-  return `${day} at ${time}`;
-}
-
-/** The reply's line above the quote: "On Nov 12, 2026, Sam Ortiz wrote:". */
-export function replyLine(email: Pick<QuotedEmail, 'fromName' | 'fromAddress' | 'receivedAt'>, timeZone: string): string {
-  return `On ${quotedDay(email.receivedAt, timeZone)}, ${email.fromName.trim() || email.fromAddress} wrote:`;
-}
-
 /** The original's HTML, cleaned as the reader cleans it, or its text as lines. */
 function originalHtml(email: QuotedEmail): string {
   if (email.bodyHtml) return safeEmail(email.bodyHtml, true).body;
@@ -75,22 +58,6 @@ function originalHtml(email: QuotedEmail): string {
 }
 
 const quoteText = (text: string) => text.replace(/\r\n/g, '\n').split('\n').map(line => (line ? `> ${line}` : '>')).join('\n');
-/** A person as the body names them, as written: "Name <address>", or the address alone. */
-const named = ({name, address}: Recipient) => (name?.trim() ? `${name.trim()} <${address}>` : address);
-const list = (recipients: Recipient[] | null) => (recipients ?? []).map(named).join(', ');
-
-/** The forward's header lines: From, Date, Subject, To and Cc (when it had one). */
-function forwardLines(email: QuotedEmail, timeZone: string): string[] {
-  return [
-    '---------- Forwarded message ---------',
-    `From: ${named({name: email.fromName, address: email.fromAddress})}`,
-    `Date: ${quotedMoment(email.receivedAt, timeZone)}`,
-    `Subject: ${email.subject}`,
-    ...(email.to?.length ? [`To: ${list(email.to)}`] : []),
-    ...(email.cc?.length ? [`Cc: ${list(email.cc)}`] : []),
-  ];
-}
-
 /**
  * The email's body: the user's text, and the original quoted (a reply) or carried in full (a
  * forward). A reply's `quote`, when the user trimmed it, takes the original's place, and an emptied
