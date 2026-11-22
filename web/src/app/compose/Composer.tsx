@@ -46,7 +46,8 @@ import {DescriptionField, mountBlocks} from '../calendar/DescriptionField.tsx';
 import {PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
-import {arrangeWindows, placeWindows} from '../../logic/composer.ts';
+import {ALFRED_WINDOW_WIDTH, arrangeWindows, placeWindows, WINDOW_GAP} from '../../logic/composer.ts';
+import {useAlfredWindowed} from '../search/alfred.ts';
 import {attachFiles, canReplyAll, closeComposer, closeComposerAt, discard, dismissFileError, dock, foldWindows, popOut, queueSave, queueTyped, removeFile, shownEmail, switchKind, toggleMinimized, send, unsaved, useComposers, useFills, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
 import {useRoute} from '../router.ts';
 import type {OpenComposer} from './composer.ts';
@@ -840,7 +841,7 @@ export function ComposerSlot({open, messageId}: {open: OpenComposer | null; mess
 
 /**
  * The windows, in the main area's bottom right corner over any page, lined up leftward in the
- * order they popped out. Their tops stay under the reading pane's tools, and the toast shows over
+ * order they popped out, left of Alfred's window when it's up. Their tops stay under the reading pane's tools, and the toast shows over
  * them. When they don't all fit, the one touched longest ago folds to its title bar first, and
  * once even the bars don't fit, the oldest go into a "+N" chip at the row's left end.
  */
@@ -858,11 +859,14 @@ export function ComposerWindows() {
     observer.observe(element);
     return () => observer.disconnect();
   }, [any]);
-  const {fold, hidden} = room ? arrangeWindows(windows, room) : {fold: [], hidden: []};
+  // Alfred's window, when it's up, keeps the row's right end.
+  const reserve = useAlfredWindowed() ? ALFRED_WINDOW_WIDTH + WINDOW_GAP : 0;
+  const left = Math.max(0, room - reserve);
+  const {fold, hidden} = left ? arrangeWindows(windows, left) : {fold: [], hidden: []};
   // Folded in the store, so a window stays folded until the user brings it back.
   useLayoutEffect(() => foldWindows(fold));
   if (!any) return null;
-  const {at, end} = placeWindows(windows, hidden, room);
+  const {at, end} = placeWindows(windows, hidden, left, reserve);
   return (
     <div ref={row} className="cmp-windows">
       {windows.map(open => (

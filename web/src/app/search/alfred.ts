@@ -1,0 +1,226 @@
+// Alfred's open conversation, one for the whole app, so it outlives the page it was asked on: a
+// question from Inbox search, or Ask about this email. One is open at a time, and a new question
+// replaces it. A follow-up continues it. Only × (or the card's Esc) closes it; clearing the search
+// doesn't.
+//
+// Where it shows: inline, where it was asked, while that place is on screen and claims it (Inbox
+// search while it's active, the reader on that email). Anywhere else on the desktop it's in
+// Alfred's window (AlfredWindow.tsx), at the right of the composer windows' row. On the phone a
+// thread no place claims closes, as the phone has no windows.
+//
+// A question in flight lands here wherever the user has gone. Answers aren't streamed: what Alfred
+// is doing for it is asked again every STEP_POLL_MS. An answer to a thread since closed or
+// replaced is dropped.
+//
+// A reload: the tab keeps the open conversation's id and origin (sessionStorage), and boot reads
+// the thread back from the server, with no model call. One the server has ended (idle past four
+// hours), or no longer has, closes quietly. A follow-up the server refuses as ended closes the
+// thread with a toast; a fresh card takes its place, the question in its field to ask again.
+import type {AnswerOut, AskStep} from '@setpoint/shared';
+import {useLayoutEffect, useSyncExternalStore} from 'react';
+import {ApiFailure} from '../../api/client.ts';
+import {alfredConversation, alfredStep, askAlfred as sendQuestion} from '../../api/search.ts';
+import {withStep} from '../../logic/search.ts';
+import {showToast} from '../toast.ts';
+import type {Alfred} from './state.ts';
+
+const STEP_POLL_MS = 400;
+const STORAGE_KEY = 'alfred.thread';
+export const ENDED_LINE = 'This conversation ended after 4 hours idle';
+
+/** Where a thread was asked: Inbox search, or Ask about this email. */
+export type AlfredOrigin = {kind: 'search'} | {kind: 'email'; id: number};
+
+export interface AlfredThread {
+  origin: AlfredOrigin;
+  turns: AnswerOut[];
+  // The question on its way, the id the page gave it, and what Alfred is doing for it.
+  waiting: string | null;
+  asking: string | null;
+  step: AskStep | null;
+  // Every step Alfred has taken for the last question, kept after its answer so the card can fold them away.
+  trail: AskStep[];
+  // The server's words for the last question that failed, and that question, for the field again.
+  error: string | null;
+  failed: string | null;
+  conversation: number | null;
+}
+
+let thread: AlfredThread | null = null;
+// Bumped when the thread closes or is replaced, so an answer to an earlier one is dropped.
+let counter = 0;
+// The places on screen that show the thread inline, by origin.
+const claims = new Map<string, number>();
+let poller: number | null = null;
+
+const listeners = new Set<() => void>();
+const notify = () => listeners.forEach(listener => listener());
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+function set(next: AlfredThread | null) {
+  thread = next;
+  notify();
+}
+
+const originKey = (origin: AlfredOrigin) => (origin.kind === 'search' ? 'search' : `email:${origin.id}`);
+const claimed = () => thread !== null && (claims.get(originKey(thread.origin)) ?? 0) > 0;
+const fresh = (origin: AlfredOrigin): AlfredThread => ({origin, turns: [], waiting: null, asking: null, step: null, trail: [], error: null, failed: null, conversation: null});
+
+/** The open thread, or null. */
+export const useAlfredThread = () => useSyncExternalStore(subscribe, () => thread);
+/** Whether a place on screen shows the open thread inline. */
+export const useAlfredClaimed = () => useSyncExternalStore(subscribe, claimed);
+/** Whether the open thread is in Alfred's window: open, and no place shows it. */
+export const useAlfredWindowed = () => useSyncExternalStore(subscribe, () => thread !== null && !claimed());
+export const alfredThread = () => thread;
+/** Whether the open thread is in Alfred's window now, as the store has it. */
+export const alfredWindowed = () => thread !== null && !claimed();
+
+/** While mounted with an origin, this place shows the thread inline when it's that origin's. */
+export function useClaim(origin: AlfredOrigin | null) {
+  const key = origin ? originKey(origin) : null;
+  useLayoutEffect(() => {
+    if (key === null) return;
+    claims.set(key, (claims.get(key) ?? 0) + 1);
+    notify();
+    return () => {
+      const left = (claims.get(key) ?? 1) - 1;
+      if (left) claims.set(key, left);
+      else claims.delete(key);
+      notify();
+    };
+  }, [key]);
+}
+
+// ---- The tab's copy (sessionStorage) ----
+
+function remember(conversation: number, origin: AlfredOrigin) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({conversation, origin}));
+  } catch {
+    // Without storage the thread just doesn't survive a reload.
+  }
+}
+
+function forget() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // As above.
+  }
+}
+
+function remembered(): {conversation: number; origin: AlfredOrigin} | null {
+  try {
+    const saved: unknown = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null');
+    if (!saved || typeof saved !== 'object') return null;
+    const {conversation, origin} = saved as {conversation?: unknown; origin?: {kind?: unknown; id?: unknown}};
+    if (!Number.isSafeInteger(conversation) || !origin) return null;
+    if (origin.kind === 'search') return {conversation: conversation as number, origin: {kind: 'search'}};
+    if (origin.kind === 'email' && Number.isSafeInteger(origin.id)) return {conversation: conversation as number, origin: {kind: 'email', id: origin.id as number}};
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** At boot: the thread the tab had open, read back from the server. Ended or gone, it closes quietly. */
+export function restoreAlfred() {
+  const saved = remembered();
+  if (!saved) return;
+  const id = counter;
+  alfredConversation(saved.conversation).then(out => {
+    if (id !== counter || thread) return;
+    if (out.ended || !out.turns.length) return forget();
+    set({...fresh(saved.origin), turns: out.turns, conversation: out.conversation_id});
+  }, (failure: Error) => {
+    if (failure instanceof ApiFailure && failure.status === 404) forget();
+  });
+}
+
+// ---- Asking ----
+
+function stopPolling() {
+  if (poller !== null) window.clearInterval(poller);
+  poller = null;
+}
+
+function poll(askId: string) {
+  stopPolling();
+  poller = window.setInterval(() => {
+    alfredStep(askId).then(out => {
+      if (thread?.asking !== askId) return;
+      set({...thread, step: out.step, trail: withStep(thread.trail, out.step)});
+    }, () => {});
+  }, STEP_POLL_MS);
+}
+
+function send(question: string, anew: boolean) {
+  const asked = question.trim();
+  if (!thread || !asked || (thread.waiting !== null && !anew)) return;
+  const id = counter;
+  const askId = `ask-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const {origin, conversation} = thread;
+  set({...thread, waiting: asked, asking: askId, step: null, trail: [], error: null, failed: null});
+  poll(askId);
+  sendQuestion(asked, {conversation: anew ? null : conversation, message: origin.kind === 'email' ? origin.id : null, ask: askId}).then(answer => {
+    if (id !== counter || !thread) return;
+    stopPolling();
+    remember(answer.conversation_id, origin);
+    set({...thread, conversation: answer.conversation_id, turns: [...thread.turns, answer], waiting: null, asking: null, step: null});
+  }, (failure: Error) => {
+    if (id !== counter || !thread) return;
+    stopPolling();
+    if (failure instanceof ApiFailure && failure.code === 'conversation_ended') {
+      // The server ended the thread: it closes, and a fresh card on the same place keeps the question.
+      counter += 1;
+      forget();
+      showToast(ENDED_LINE);
+      return set({...fresh(origin), failed: asked});
+    }
+    set({...thread, error: failure.message, failed: asked, waiting: null, asking: null, step: null});
+  });
+}
+
+/** Opens a thread at `origin`, replacing any open one: empty (Ask about this email), or with a first question. */
+export function startAlfred(origin: AlfredOrigin, question?: string) {
+  counter += 1;
+  stopPolling();
+  forget();
+  set(fresh(origin));
+  if (question) send(question, true);
+}
+
+/** A follow-up in the open thread. */
+export const askAlfred = (question: string) => send(question, false);
+
+/** Closes the open thread: × or Esc. */
+export function closeAlfred() {
+  if (!thread) return;
+  counter += 1;
+  stopPolling();
+  forget();
+  set(null);
+}
+
+/** The thread as the Answer card takes it. Null, it's closed. */
+export function alfredOf(open: AlfredThread | null): Alfred {
+  return {
+    open: open !== null, turns: open?.turns ?? [], waiting: open?.waiting ?? null, step: open?.step ?? null, trail: open?.trail ?? [],
+    error: open?.error ?? null, failed: open?.failed ?? null,
+    start: question => startAlfred(open?.origin ?? {kind: 'search'}, question),
+    ask: askAlfred,
+    close: closeAlfred,
+  };
+}
+
+/** For component tests: no thread, no claims, nothing remembered. */
+export function resetAlfred() {
+  counter += 1;
+  stopPolling();
+  claims.clear();
+  forget();
+  set(null);
+}

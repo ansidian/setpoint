@@ -33,7 +33,7 @@ import {ProposalCard} from './ProposalCard.tsx';
 import {Account} from './Search.tsx';
 import type {Alfred} from './state.ts';
 
-export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onOpen}: {
+export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, windowed = false, onOpen}: {
   alfred: Alfred;
   // Ask about this email: the card is about one email, and shows every question.
   scoped: boolean;
@@ -41,6 +41,9 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
   accounts: Map<number, AccountOut>;
   now: number;
   timeZone: string;
+  // In Alfred's window, over another page: every question shows (the search field isn't there), and
+  // the field takes the keys only while they're already in the card.
+  windowed?: boolean;
   onOpen: (id: number) => void;
 }) {
   const [draft, setDraft] = useState('');
@@ -59,8 +62,9 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
   const {data: ai} = useResource<AiOut>(AI_PATH);
   // The field takes the keys when the card opens and after each answer.
   useEffect(() => {
-    if (waiting === null) field.current?.focus();
-  }, [turns.length, waiting]);
+    if (waiting !== null || (windowed && !card.current?.contains(document.activeElement))) return;
+    field.current?.focus();
+  }, [turns.length, waiting, windowed]);
   // A question that failed comes back to the field, to ask again once fixed.
   const [restored, setRestored] = useState<string | null>(null);
   if (failed !== restored) {
@@ -95,7 +99,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
         {turns.map((turn, index) => (
           <Fragment key={turn.turn_id}>
             {index > 0 && <div className="turn-sep" />}
-            {showsQuestion(index, scoped) && <div className="q">{turn.question}</div>}
+            {showsQuestion(index, scoped || windowed) && <div className="q">{turn.question}</div>}
             {folding && index === turns.length - 1 && <Trail steps={folding} folding />}
             {turn.answer ? <p className="ans"><Bold text={turn} /></p> : (
               <div className="ans-none">
@@ -141,7 +145,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
         {waiting !== null && (
           <>
             {turns.length > 0 && <div className="turn-sep" />}
-            {showsQuestion(turns.length, scoped) && <div className="q">{waiting}</div>}
+            {showsQuestion(turns.length, scoped || windowed) && <div className="q">{waiting}</div>}
             <Trail steps={finished(alfred.trail, alfred.step)}>
               <div className="waiting"><span className="spin"><Icon name="progress_activity" size={16} /></span><span className="now">{alfredStepLine(alfred.step, scoped)}</span></div>
             </Trail>
@@ -194,10 +198,12 @@ function AnswerItemCard({turn, cited, timeZone, onClose}: {turn: number; cited: 
     <ItemCard item={item} calendar={calendars?.find(calendar => calendar.id === item.calendar_id)} timeZone={timeZone}
       line={`.answer .src.item[data-turn="${turn}"][data-key="${CSS.escape(cited.key)}"]`} lines=".answer .src.item"
       at={(line, host, size) => {
-        // Beside the answer, its title level with the row; where there's no room, under the row.
+        // Beside the answer, its title level with the row: to its right, else (Alfred's window, at
+        // the right end) to its left; where there's no room either side, under the row.
         const answer = rectIn(host.querySelector('.card.answer')!, host);
         const beside = answer.left + answer.width + 8;
         if (beside + size.width <= host.offsetWidth - 12) return {left: beside, top: line.top - 12};
+        if (answer.left - 8 - size.width >= 12) return {left: answer.left - 8 - size.width, top: line.top - 12};
         return {left: line.left + line.width - size.width, top: line.top + line.height + 6};
       }}
       actions={{

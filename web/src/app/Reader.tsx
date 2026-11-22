@@ -3,8 +3,9 @@
 // More), the head (the protected line, subject, sender, organisation and platform, account, time),
 // security mail's facts card, the actions, then the body: plain text, or HTML in a sandboxed frame
 // with the images-hidden bar, and the attachments. Add to calendar and Add as task open the proposal
-// card at the top (board 08). Ask about this email opens Alfred's card scoped to it. The button stays
-// held while its card is open. A plain-text body highlights `marks`: the words a search matched in
+// card at the top (board 08). Ask about this email opens Alfred's card scoped to it, in its place
+// whenever this email is shown with no proposal open, and in Alfred's window otherwise. The button
+// stays held while its card is open. A plain-text body highlights `marks`: the words a search matched in
 // it, or the phrases Alfred's answer rests on. Reading it here doesn't mark it read. Opening it
 // (InboxPage) does. Its head has mail's slot under the sender's line and above the actions
 // (slots.tsx), which another module may fill.
@@ -58,7 +59,7 @@ import {Marked} from './search/Search.tsx';
 import {LoadFailed, useArrival, useLoadFailed} from './states/Loading.tsx';
 import type {Load} from './states/Loading.tsx';
 import {BodySkeleton, HeadSkeleton} from './states/Skeletons.tsx';
-import {useAlfred} from './search/state.ts';
+import {alfredOf, closeAlfred, startAlfred, useAlfredThread, useClaim} from './search/alfred.ts';
 import {SnoozeMenu} from './SnoozeMenu.tsx';
 import {showToast, toastFailure} from './toast.ts';
 
@@ -386,13 +387,21 @@ function useCards(id: number) {
   // arriving late lands only if this email and its card are still the ones shown.
   const show = (next: Panel) => setState({id, panel: next});
   const settle = (change: (panel: Panel) => Panel) => setState(current => (current.id === id ? {id, panel: change(current.panel)} : current));
-  const alfred = useAlfred(id);
+  // Alfred's thread about this email shows here unless a proposal has the card's place. The place
+  // is claimed whether or not there's a thread yet, so one asked here never shows in the window first.
+  // The panel itself never holds the ask: the thread does.
+  const free = panel === null;
+  useClaim(free ? {kind: 'email', id} : null);
+  const thread = useAlfredThread();
+  const mine = thread?.origin.kind === 'email' && thread.origin.id === id;
+  const asking = mine && free;
+  const alfred = alfredOf(asking ? thread : null);
   // Its button again closes the card: it folds away as its own × does (app/fold.ts).
   const foldCard = () => foldAway(document.querySelector('.pane .rd-swap > .card'));
   // A card asked for from the list opens, rather than toggling one already open shut.
   const latest = useRef({panel, propose: (_kind: ItemKind) => {}, ask: () => {}});
   const cards = {
-    panel, alfred,
+    panel: asking ? {kind: 'ask'} as const : panel, alfred,
     propose(kind: ItemKind) {
       if (panel?.kind === kind) {
         foldCard();
@@ -426,21 +435,22 @@ function useCards(id: number) {
       );
     },
     ask() {
-      if (panel?.kind === 'ask') {
+      if (asking) {
         foldCard();
-        alfred.close();
+        closeAlfred();
         return show(null);
       }
-      alfred.start();
-      show({kind: 'ask'});
+      // This email's thread, in the window while a proposal had the place, comes back here.
+      if (!mine) startAlfred({kind: 'email', id});
+      show(null);
     },
     close() {
-      alfred.close();
+      if (asking) closeAlfred();
       show(null);
     },
   };
   useEffect(() => {
-    latest.current = {panel, propose: cards.propose, ask: cards.ask};
+    latest.current = {panel: cards.panel, propose: cards.propose, ask: cards.ask};
   });
   useEffect(() => {
     const take = () => {

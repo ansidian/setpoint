@@ -144,6 +144,8 @@ export const WINDOW_WIDTH = 560;
 export const WINDOW_BAR_WIDTH = 320;
 export const WINDOW_GAP = 12;
 export const WINDOW_MORE_WIDTH = 64;
+/** Alfred's window, at the row's right end when it's up: the composer windows line up to its left. */
+export const ALFRED_WINDOW_WIDTH = 440;
 
 export interface WindowSlot {
   key: number;
@@ -183,15 +185,16 @@ export function arrangeWindows(windows: WindowSlot[], room: number): {fold: numb
 
 /**
  * Where each window sits, right to left in the order they popped out: its distance from the row's
- * right end and its width. Hidden ones take no room. `end` is where the "+N" chip goes.
+ * right end and its width. Hidden ones take no room. `end` is where the "+N" chip goes. `reserve`
+ * px at the right end are Alfred's window's, and `room` is what's left of the row after them.
  */
-export function placeWindows(windows: Omit<WindowSlot, 'touched'>[], hidden: number[], room: number): {at: Map<number, {right: number; width: number}>; end: number} {
+export function placeWindows(windows: Omit<WindowSlot, 'touched'>[], hidden: number[], room: number, reserve = 0): {at: Map<number, {right: number; width: number}>; end: number} {
   const at = new Map<number, {right: number; width: number}>();
   const end = windows.reduce((right, one) => {
     const width = one.minimized ? WINDOW_BAR_WIDTH : Math.min(WINDOW_WIDTH, room || WINDOW_WIDTH);
     at.set(one.key, {right, width});
     return hidden.includes(one.key) ? right : right + width + WINDOW_GAP;
-  }, 0);
+  }, reserve);
   return {at, end};
 }
 

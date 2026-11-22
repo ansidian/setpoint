@@ -1,5 +1,5 @@
-// The calendar's and News's search fields and Alfred's thread; mail's field is
-// mailSearch.ts, whose chips come from Enter.
+// The calendar's and News's search fields, and the Answer card's view of Alfred's thread (alfred.ts
+// keeps the thread); mail's field is mailSearch.ts, whose chips come from Enter.
 //
 // The calendar's search runs as the user types (a short pause), with the chips already in the field
 // and the words after them. The server answers with every chip in force; the field takes them once a
@@ -8,13 +8,11 @@
 // their spaces. Results show at once either way.
 import type {AnswerOut, AskStep, CalendarSearchChip, CalendarSearchOut, CalendarSearchResultOut, StoryRowOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
-import {ApiFailure} from '../../api/client.ts';
 import {searchNews} from '../../api/news.ts';
-import {alfredStep, askAlfred, searchCalendar} from '../../api/search.ts';
-import {finishedWords, isSearching, withStep} from '../../logic/search.ts';
+import {searchCalendar} from '../../api/search.ts';
+import {finishedWords, isSearching} from '../../logic/search.ts';
 
 export const TYPING_MS = 120;
-const STEP_POLL_MS = 400;
 
 /** A page of answers: the chips in force, the words left, this page's results and the next page's offset. */
 interface Page<C, R> {
@@ -196,90 +194,4 @@ export interface Alfred {
   start: (question?: string) => void;
   ask: (question: string) => void;
   close: () => void;
-}
-
-/** Alfred's short thread: a question, then follow-ups in the same conversation. `scope` is the email it's about. */
-export function useAlfred(scope: number | null = null): Alfred {
-  const [open, setOpen] = useState(false);
-  const [turns, setTurns] = useState<AnswerOut[]>([]);
-  const [waiting, setWaiting] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
-  const [asking, setAsking] = useState<string | null>(null);
-  const [stepOf, setStepOf] = useState<{ask: string; step: AskStep | null} | null>(null);
-  const step = asking && stepOf?.ask === asking ? stepOf.step : null;
-  // The last question's steps, kept after its answer so the card can fold them away.
-  const [trailOf, setTrailOf] = useState<{ask: string; steps: AskStep[]}>({ask: '', steps: []});
-  const conversation = useRef<number | null>(null);
-  // Bumped when the card closes or starts over, so an answer to an earlier thread is dropped.
-  const thread = useRef(0);
-
-  // While a question is on its way, what Alfred is doing for it, asked again every STEP_POLL_MS.
-  useEffect(() => {
-    if (!asking) return;
-    let live = true;
-    const timer = window.setInterval(() => {
-      alfredStep(asking).then(out => {
-        if (!live) return;
-        setStepOf({ask: asking, step: out.step});
-        setTrailOf(current => ({ask: asking, steps: withStep(current.ask === asking ? current.steps : [], out.step)}));
-      }, () => {});
-    }, STEP_POLL_MS);
-    return () => {
-      live = false;
-      window.clearInterval(timer);
-    };
-  }, [asking]);
-
-  function ask(question: string, fresh = false) {
-    const asked = question.trim();
-    if (!asked || (waiting !== null && !fresh)) return;
-    const id = fresh ? ++thread.current : thread.current;
-    const askId = `ask-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    setWaiting(asked);
-    setAsking(askId);
-    setError(null);
-    setFailed(null);
-    askAlfred(asked, {conversation: fresh ? null : conversation.current, message: scope, ask: askId}).then(answer => {
-      if (id !== thread.current) return;
-      conversation.current = answer.conversation_id;
-      setTurns(current => [...current, answer]);
-      setWaiting(null);
-      setAsking(null);
-    }, (failure: Error) => {
-      if (id !== thread.current) return;
-      // After four idle hours the thread has ended: the next question starts a new one.
-      if (failure instanceof ApiFailure && failure.code === 'conversation_ended') conversation.current = null;
-      setError(failure.message);
-      setFailed(asked);
-      setWaiting(null);
-      setAsking(null);
-    });
-  }
-
-  return {
-    open, turns, waiting, step, error, failed, trail: !asking || trailOf.ask === asking ? trailOf.steps : [],
-    start(question) {
-      thread.current += 1;
-      conversation.current = null;
-      setOpen(true);
-      setTurns([]);
-      setError(null);
-      setFailed(null);
-      setWaiting(null);
-      setAsking(null);
-      if (question) ask(question, true);
-    },
-    ask: question => ask(question),
-    close() {
-      thread.current += 1;
-      conversation.current = null;
-      setOpen(false);
-      setTurns([]);
-      setWaiting(null);
-      setAsking(null);
-      setError(null);
-      setFailed(null);
-    },
-  };
 }

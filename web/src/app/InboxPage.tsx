@@ -18,7 +18,8 @@
 // Search: while the header's field holds a search, its results replace the list and the header
 // reads "Search". On the desktop it finds sent mail too, whose row reads "To Sam Ortiz" and whose
 // email has Sent's tools (no Pin or Mark unread). The reading pane, J, K and Enter work the same, and each open is logged with its
-// position. ⌘Enter asks Alfred, whose Answer card sits above the results. Esc closes the reader,
+// position. ⌘Enter asks Alfred, whose Answer card sits above the results while the search is
+// active; cleared or left, the conversation goes on in Alfred's window. Esc closes the reader,
 // then the card, then the search.
 //
 // Views: All | Unread | Attention | FYI | Noise in the header's segmented control. Tab and Shift-Tab
@@ -85,7 +86,7 @@ import {LoadFailed, useAfter, useArrival, useLoadFailed} from './states/Loading.
 import {AllSkeleton, SearchSkeleton} from './states/Skeletons.tsx';
 import {skeleton} from '../tokens.ts';
 import {useSearch} from './search/mailSearch.ts';
-import {useAlfred} from './search/state.ts';
+import {alfredOf, closeAlfred, startAlfred, useAlfredThread, useClaim} from './search/alfred.ts';
 import {toInbox} from './toInbox.ts';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
 import {EmptyView} from './EmptyView.tsx';
@@ -146,6 +147,8 @@ interface Kept {
   held: HeldRow[];
 }
 
+const SEARCH_ORIGIN = {kind: 'search'} as const;
+
 export function InboxPage({route}: {route: InboxRoute}) {
   // The next moment a code row changes by itself, so its countdown and its leaving are on time.
   const [codeMoment, setCodeMoment] = useState<number | null>(null);
@@ -166,7 +169,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
   const untrashing = (id: number) => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
   const search = useSearch(phone, phone ? NO_SCOPE : WITH_SENT);
-  const alfred = useAlfred();
+  // Alfred's thread from search shows above the results while the search is active (on the phone,
+  // while it's open); elsewhere it's in Alfred's window (search/alfred.ts).
+  // The place is claimed before any question, so a thread asked here never shows in the window first.
+  const place = search.active || phone;
+  useClaim(place ? SEARCH_ORIGIN : null);
+  const thread = useAlfredThread();
+  const inline = place && thread?.origin.kind === 'search' ? thread : null;
+  const alfred = alfredOf(inline);
   const searching = search.active || alfred.open;
   // A search's first answer on its way: the list stays, dimmed, then gives way to the results'
   // skeleton once it's taken a moment.
@@ -341,7 +351,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   /** ⌘Enter, or Ask Alfred: the Answer card above the results, asked what the field holds. */
   function askAlfred() {
-    if (search.active) alfred.start(search.question());
+    if (search.active) startAlfred(SEARCH_ORIGIN, search.question());
   }
 
   /** Back to an email Undo brought back, as it was. */
@@ -759,7 +769,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         else if (alfred.open) run(() => {
           // The Answer card folds away, as its own Esc does (app/fold.ts).
           foldAway(document.querySelector('.search-list > .answer'));
-          alfred.close();
+          closeAlfred();
         });
         else if (searching) run(() => search.clear());
         else if (cursor !== null) run(() => setCursor(null));

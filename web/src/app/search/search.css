@@ -125,6 +125,11 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .answer { margin: 14px 16px 12px 24px; }
 .pane .answer { margin: 16px 20px 0; }
 .answer .card-h > .icon { color: var(--ink); }
+/* Alfred's window (AlfredWindow.tsx): the card at the right end of the composer windows' row, over
+   any page, scrolling within its height when the thread is long. */
+.alf-window { position: absolute; right: 0; bottom: 0; max-height: 100%; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; pointer-events: auto;
+  border-radius: var(--r-popover); box-shadow: var(--shadow-pop); transform-origin: bottom right; animation: cmp-pop var(--dur-medium) var(--ease); }
+.alf-window .answer { margin: 0; }
 .ans { margin: 0; max-width: 620px; font-size: 15px; line-height: 1.45; color: var(--ink); user-select: text; -webkit-user-select: text; }
 .ans b { font-weight: 500; }
 /* The answer's key fact points at its evidence: underlined in the yellow the email marks it

@@ -165,6 +165,12 @@ describe('the composer\'s windows, when they don\'t all fit', () => {
     expect([...at]).toEqual([[1, {right: 0, width: 320}], [2, {right: 0, width: 320}], [3, {right: 332, width: 560}]]);
     expect(end).toBe(904);
   });
+
+  test('Alfred\'s window keeps the row\'s right end: the windows start left of what it reserves', () => {
+    const {at, end} = placeWindows([{key: 1, minimized: false}, {key: 2, minimized: true}], [], 848, 452);
+    expect([...at]).toEqual([[1, {right: 452, width: 560}], [2, {right: 1024, width: 320}]]);
+    expect(end).toBe(1356);
+  });
 });
 
 describe('help me write\'s versions', () => {

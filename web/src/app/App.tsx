@@ -36,6 +36,8 @@ import {fillMailSlots} from './slots.tsx';
 import {showToast} from './toast.ts';
 import {ToastPill} from './ToastPill.tsx';
 import {ComposerRoot, ComposerWindows, SendWatch} from './compose/Composer.tsx';
+import {AlfredLetGo, AlfredWindow} from './search/AlfredWindow.tsx';
+import {restoreAlfred} from './search/alfred.ts';
 import {DraftsPage} from './compose/DraftsPage.tsx';
 import {SnoozedPage} from './SnoozedPage.tsx';
 import {ScheduledPage} from './compose/ScheduledPage.tsx';
@@ -51,6 +53,11 @@ export function App({arrive = false}: {arrive?: boolean}) {
   const down = useDown();
   const phone = usePhone();
   const rail = useRail();
+
+  // Alfred's conversation from before a reload comes back on the desktop (search/alfred.ts).
+  useEffect(() => {
+    if (!isPhone()) restoreAlfred();
+  }, []);
 
   // An address for a Settings page opens the modal over the Inbox, and the address becomes the Inbox's.
   const settingsLink = route.page === 'settings' && !phone ? route.section : null;
@@ -126,6 +133,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)
               : phone ? <PhoneSettings /> : null}
         {!phone && <ComposerWindows />}
+        {phone ? <AlfredLetGo /> : <AlfredWindow />}
         <OfflinePill />
         <ToastPill />
       </main>
