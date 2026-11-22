@@ -5,14 +5,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {serveStatic} from '@hono/node-server/serve-static';
 import {
-  accountOrderInput, accountUpdateInput, allInput, sentInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
-  confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, mailpiecesInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
-  itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, snoozeInput, recoverInput, registerPasskeyInput,
-  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput, ATTACHMENTS_MAX_BYTES,
+  accountOrderInput, accountUpdateInput, gmailAuthorizeInput, icloudConnectInput, claimInput, commandListInput, credentialsInput, pairInput, passkeyResponseInput, recoverInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, ATTACHMENTS_MAX_BYTES,
 } from '@setpoint/shared';
 import type {
-  ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
-  TodoistConnectOut,
+  ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MeOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SignInOut,
 } from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {Hono} from 'hono';
@@ -24,60 +20,35 @@ import type {SSEMessage} from 'hono/streaming';
 import type {ContentfulStatusCode} from 'hono/utils/http-status';
 import {z} from 'zod';
 import {
-  BCRYPT_COST, changePassword, claimOwner, getOwner, passkeyCount, passwordMatches, passwordSignInOutcome, recover, recoveryStatus,
-  regenerateRecoveryCodes, requireOwner, reservePasswordAttempt, setAuthMode, sweepExpiredAuth,
+  BCRYPT_COST, claimOwner, getOwner, passkeyCount, passwordMatches, passwordSignInOutcome, recover, reservePasswordAttempt, sweepExpiredAuth,
 } from '../auth/owner.ts';
-import {
-  cancelPendingSignIn, deletePasskey, listPasskeys, passkeyRegistrationOptions, passkeySignInOptions, registerPasskey, relyingParty,
-  startPendingSignIn, verifyPasskeySignIn,
-} from '../auth/passkeys.ts';
-import {alfredStep, askAlfred, conversation} from '../alfred/ask.ts';
+import {cancelPendingSignIn, passkeySignInOptions, relyingParty, startPendingSignIn, verifyPasskeySignIn} from '../auth/passkeys.ts';
 import type {AlfredOptions} from '../alfred/ask.ts';
-import {writeDraft} from '../alfred/write.ts';
 import type {WriteOptions} from '../alfred/write.ts';
-import {prefillFromMessage} from '../alfred/prefill.ts';
 import type {PrefillOptions} from '../alfred/prefill.ts';
-import {inviteOf, proposeFromMessage} from '../alfred/proposals.ts';
 import {haTokenMatches} from '../auth/haToken.ts';
-import {bearerToken, findDevice, issuePairingCode, listDevices, pairDevice, revokeDevice, withdrawPairingCode} from '../auth/devices.ts';
+import {bearerToken, findDevice, pairDevice, revokeDevice} from '../auth/devices.ts';
 import type {Device} from '../auth/devices.ts';
-import {createSession, endSession, findSession, hasRecentPassword, markPasswordGiven} from '../auth/sessions.ts';
+import {createSession, endSession, findSession, hasRecentPassword} from '../auth/sessions.ts';
 import type {Session} from '../auth/sessions.ts';
 import {commandPresenter, activeCommands, getCommand, moveBackCommand, retryCommand} from '../commands/index.ts';
 import type {CommandRow} from '../commands/index.ts';
-import {completeItem, createItem, deleteItem, reorderSubtasks, setCalendarColour, setProjectColour, updateItem} from '../commands/items.ts';
-import {importEvent, readImport} from '../calendar/icsImport.ts';
 import {ICS_MAX_BYTES} from '../domain/icsImport.ts';
-import {markAllRead, openMessage, setDone, setPinned, setRead, snoozeMessage, trashMessage, unsnoozeMessage} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
 import {conflict, forbidden, invalid, parse, SetpointError, unauthorized} from '../errors.ts';
-import {suggestPeople} from '../sending/people.ts';
-import {createDraft, discardDraft, fromOptions, getDraftRow, listDrafts, presentDraft, updateDraft} from '../sending/drafts.ts';
-import {addDraftFile, removeDraftFile, sweepDraftFiles, takeDraftFiles} from '../sending/files.ts';
-import {holdSend, undoSend} from '../sending/send.ts';
 import type {FeedEvent} from '../live/feed.ts';
 import type {Notifier} from '../notify/index.ts';
-import {devPlace, devPlaces} from '../providers/dev/index.ts';
 import {CALENDAR_API} from '../providers/gcal/api.ts';
-import {placeDetails, placeSuggestions} from '../providers/gcal/places.ts';
 import type {PlacesOptions} from '../providers/gcal/places.ts';
 import {admitPush} from '../providers/gcal/push.ts';
-import {BIND_COOKIE, beginTodoistOAuth, completeTodoistOAuth, TODOIST_CALLBACK_PATH, TodoistOAuthError} from '../providers/todoist/oauth.ts';
+import {BIND_COOKIE, completeTodoistOAuth, TODOIST_CALLBACK_PATH, TodoistOAuthError} from '../providers/todoist/oauth.ts';
 import type {TodoistOAuthOptions} from '../providers/todoist/oauth.ts';
 import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts';
-import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarShown, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
-import {allMail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, sentMail, snoozedMail, trustedDomains} from '../queries/mail.ts';
-import {attachmentFile, messageBody} from '../queries/mailBody.ts';
-import {mailpieces, mailScan} from '../queries/mailpieces.ts';
-import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
-import {searchCalendar} from '../search/calendar.ts';
-import {SearchReader} from '../search/reading.ts';
 import type {SearchReaderOptions} from '../search/reading.ts';
 import {enqueueJob, wakeSync} from '../sync/jobs.ts';
-import {ProviderError} from '../sync/errors.ts';
 import {accountList, reorderAccounts, sourceList, updateAccount} from '../queries/sources.ts';
 import {haStatus} from '../queries/status.ts';
-import {deleteSecret, listSecrets, readSecret, setSecret, writeSourceCredentials} from '../secrets/store.ts';
+import {deleteSecret, listSecrets, setSecret, writeSourceCredentials} from '../secrets/store.ts';
 import {getSettings, updateSettings} from '../settings.ts';
 import {isoNow, noteLive} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -87,14 +58,18 @@ import {isAiKeySecret} from '../triage/models.ts';
 import type {NewsSortWorker} from '../news/sortWorker.ts';
 import type {TriageWorker} from '../triage/worker.ts';
 import {clearCookie, cookieNames, fromOwnPage, readCookie, setPendingCookie, setSessionCookie} from './auth.ts';
-import {deleteCookie, setCookie} from 'hono/cookie';
+import {deleteCookie} from 'hono/cookie';
 import {newsApi} from './news.ts';
 import type {NewsApiOptions} from './news.ts';
 import {triageApi} from './triage.ts';
+import {calendarApi, ICS_READ_PATH} from './calendar.ts';
+import {mailApi} from './mail.ts';
+import {searchApi} from './search.ts';
+import {securityApi} from './security.ts';
 
 // A request is signed in by the browser's session cookie or a paired iPhone's bearer token, never
 // both. `alive` says whether it still is, for the live stream's checks.
-type Env = {Variables: {session: Session | null; device: Device | null; alive: () => boolean}};
+export type Env = {Variables: {session: Session | null; device: Device | null; alive: () => boolean}};
 
 /**
  * Connecting mail accounts (Settings › Accounts), from the providers: Gmail's OAuth consent and
@@ -158,9 +133,6 @@ export interface AppOptions {
 }
 
 const MAX_STREAMS = 20;
-// How long the browser keeps an email's body page: a sitting's worth, so a release's changes to it reach the reader soon.
-const BODY_KEPT_S = 3600;
-const ICS_READ_PATH = '/api/calendar/import/read';
 const DRAFT_FILE_PATH = /^\/api\/mail\/drafts\/\d+\/files$/;
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
 
@@ -182,7 +154,6 @@ const WEB_POLICY = [
 
 export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, drafting = {}, reading = {}, prefill = {}, news = {}, draftFiles = null, newsSort = null, routes = [], tokenRoutes = []}: AppOptions) {
   const app = new Hono<Env>();
-  const searchReader = new SearchReader({store, ...reading});
   const cookies = cookieNames(publicUrl?.startsWith('https:') ?? false);
   const origin = (c: Context) => publicUrl ?? new URL(c.req.url).origin;
   const ownPage = (c: Context) => {
@@ -460,366 +431,23 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.body(null, 204);
   });
 
-  // ---- Settings › Security ----
+  // ---- Settings › Security (src/api/security.ts) ----
 
-  /** Settings › Security is the browser's: a paired iPhone's token can't read or change it. */
-  const browserSession = (c: Context<Env>) => {
-    const session = c.get('session');
-    if (!session) throw forbidden('Security settings are changed from a browser.', 'browser_only');
-    return session;
-  };
-  // Before any route's own work, so a device spends no password attempt either.
-  const browserOnly = async (c: Context<Env>, next: Next) => {
-    browserSession(c);
-    await next();
-  };
-  app.use('/api/security', browserOnly);
-  app.use('/api/security/*', browserOnly);
-  /** Security changes need the password in the last 10 minutes, and a new session afterwards. */
-  const recentPassword = (c: Context<Env>) => {
-    const session = browserSession(c);
-    if (!hasRecentPassword(store, session)) throw forbidden('Confirm your password first.', 'password_required');
-    return session;
-  };
-  const afterChange = (c: Context<Env>, generation: number | null, passwordAt: string | null) => {
-    if (generation === null) throw conflict('security_changed', 'Security settings changed; sign in again.');
-    const secret = createSession(store, {generation, method: browserSession(c).method, passwordAt});
-    if (!secret) throw conflict('security_changed', 'Security settings changed; sign in again.');
-    setSessionCookie(c, cookies, secret);
-  };
-  const security = (c: Context<Env>): SecurityOut => ({
-    auth_mode: requireOwner(store).authMode, passkeys: listPasskeys(store), devices: listDevices(store), recovery: recoveryStatus(store),
-    recent_password: hasRecentPassword(store, browserSession(c)),
-  });
+  app.route('/api', securityApi(store, {cookies, origin, rp, bcryptCost}));
 
-  app.get('/api/security', c => c.json(security(c)));
-  app.post('/api/security/confirm-password', async c => {
-    const input = parse(confirmPasswordInput, await body(c));
-    reservePasswordAttempt(store);
-    if (!await passwordMatches(requireOwner(store), input.password)) throw unauthorized('Wrong password.', 'wrong_password');
-    markPasswordGiven(store, browserSession(c).id);
-    return c.json({...security(c), recent_password: true});
-  });
-  app.put('/api/security/password', async c => {
-    const input = parse(changePasswordInput, await body(c));
-    const session = recentPassword(c);
-    afterChange(c, await changePassword(store, session.securityGeneration, input.new_password, bcryptCost), isoNow(store));
-    return c.body(null, 204);
-  });
-  app.put('/api/security/auth-mode', async c => {
-    const input = parse(authModeInput, await body(c));
-    const session = recentPassword(c);
-    afterChange(c, setAuthMode(store, session.securityGeneration, input.auth_mode), session.passwordAt);
-    return c.body(null, 204);
-  });
-  app.post('/api/security/recovery-codes', c => {
-    const session = recentPassword(c);
-    const {generation, codes} = regenerateRecoveryCodes(store, session.securityGeneration);
-    afterChange(c, generation, session.passwordAt);
-    return c.json({recovery_codes: codes} satisfies RecoveryCodesOut);
-  });
-  app.post('/api/security/passkeys/options', async c => {
-    parse(passkeyLabelInput, await body(c));
-    return c.json(await passkeyRegistrationOptions(store, rp(c), recentPassword(c)));
-  });
-  app.post('/api/security/passkeys', async c => {
-    const input = parse(registerPasskeyInput, await body(c));
-    const session = recentPassword(c);
-    afterChange(c, await registerPasskey(store, rp(c), session, input.label, input.response), session.passwordAt);
-    return c.json(listPasskeys(store), 201);
-  });
-  app.delete('/api/security/passkeys/:id', c => {
-    const session = recentPassword(c);
-    afterChange(c, deletePasskey(store, session.securityGeneration, id(c.req.param('id'))), session.passwordAt);
-    return c.body(null, 204);
-  });
-  // Add iPhone mints a token that never idles out, so it needs the recent password. Withdrawing the
-  // code and Revoke only take access away, so they don't. None of them is a security
-  // transition: sessions carry on.
-  app.post('/api/security/pairing', c => {
-    recentPassword(c);
-    return c.json(issuePairingCode(store, origin(c)) satisfies PairingOut, 201);
-  });
-  app.delete('/api/security/pairing', c => {
-    browserSession(c);
-    withdrawPairingCode(store);
-    return c.body(null, 204);
-  });
-  app.delete('/api/security/devices/:id', c => {
-    browserSession(c);
-    revokeDevice(store, id(c.req.param('id')));
-    return c.body(null, 204);
-  });
+  // ---- Mail, drafts and sending, and trusted domains (src/api/mail.ts) ----
 
-  // ---- Mail ----
-
-  app.get('/api/mail/inbox', c => c.json(inbox(store, parse(inboxInput, c.req.query()).account_id)));
-  app.get('/api/mail/counts', c => c.json(mailCounts(store)));
-  app.get('/api/mail/day', c => c.json(mailDayOf(store)));
-  app.get('/api/mail/all', c => c.json(allMail(store, parse(allInput, c.req.query()))));
-  app.get('/api/mail/sent', c => c.json(sentMail(store, parse(sentInput, c.req.query()))));
-  app.get('/api/mail/messages/:id', c => c.json(messageDetail(store, id(c.req.param('id')))));
-  app.get('/api/mail/gmail-link', c => {
-    const input = parse(gmailLinkInput, c.req.query());
-    return c.json(gmailLink(store, input.account, input.id));
-  });
-  // The HTML body as its own page, for the reader's sandboxed frame. It has its own policy, not the
-  // app's (?frame=app is the iPhone app's, with no script). Plain-text email has none. ?images=show
-  // loads its images (the rule's or the images bar's Show), ?images=hide doesn't, and without it the
-  // rule decides. The web's page, named either way, is always the same page. So the browser keeps
-  // it a while, and an email opened again shows without asking (sign-out clears it).
-  app.get('/api/mail/messages/:id/body', c => {
-    const images = c.req.query('images');
-    const frame = c.req.query('frame') === 'app' ? 'app' : 'web';
-    const page = messageBody(store, id(c.req.param('id')), images === 'show' ? true : images === 'hide' ? false : null, frame);
-    if (frame === 'web' && (images === 'show' || images === 'hide')) c.header('Cache-Control', `private, max-age=${BODY_KEPT_S}`);
-    c.header('Content-Security-Policy', page.policy);
-    c.header('X-Content-Type-Options', 'nosniff');
-    c.header('Referrer-Policy', 'no-referrer');
-    return c.html(page.html);
-  });
-  // A day's USPS mail for the agenda rail, and a scan's picture (a scan never changes).
-  app.get('/api/mail/mailpieces', c => c.json(mailpieces(store, parse(mailpiecesInput, c.req.query()).day)));
-  app.get('/api/mail/mailpieces/scans/:id', c => {
-    const scan = mailScan(store, id(c.req.param('id')));
-    c.header('Content-Type', scan.mimeType);
-    c.header('Cache-Control', 'private, max-age=86400, immutable');
-    c.header('Content-Security-Policy', "default-src 'none'; sandbox");
-    c.header('X-Content-Type-Options', 'nosniff');
-    return c.body(new Uint8Array(scan.bytes));
-  });
-  // An attachment's bytes, through its account's adapter, for the reader's preview. An id's bytes
-  // never change (a changed set gets new ids), so the browser keeps them.
-  const fetchAttachment = async (messageId: string, attachmentId: string) => {
-    try {
-      return await attachmentFile(store, engine, id(messageId), id(attachmentId));
-    } catch (error) {
-      if (error instanceof ProviderError) throw new SetpointError('provider_failed', error.message, 502);
-      throw error;
-    }
-  };
-  app.get('/api/mail/messages/:id/attachments/:attachment', async c => {
-    const file = await fetchAttachment(c.req.param('id'), c.req.param('attachment'));
-    c.header('Content-Type', file.contentType);
-    c.header('Content-Disposition', file.disposition);
-    c.header('Cache-Control', 'private, max-age=86400, immutable');
-    c.header('Content-Security-Policy', "default-src 'none'; sandbox");
-    c.header('X-Content-Type-Options', 'nosniff');
-    return c.body(new Uint8Array(file.content));
-  });
-  // An email's .ics read for the same review as a file from Calendar, from the
-  // attachment's bytes on the server, nothing uploaded from the browser.
-  app.post('/api/mail/messages/:id/attachments/:attachment/ics', async c => {
-    const file = await fetchAttachment(c.req.param('id'), c.req.param('attachment'));
-    return c.json(readImport(store, new Uint8Array(file.content)));
-  });
-  app.post('/api/mail/messages/:id/open', c => {
-    const messageId = id(c.req.param('id'));
-    openMessage(store, messageId);
-    return c.json(messageDetail(store, messageId));
-  });
-  app.post('/api/mail/messages/:id/read', async c => c.json(presentCommand(setRead(store, id(c.req.param('id')), parse(readInput, await body(c)).unread))));
-  app.post('/api/mail/messages/:id/trash', c => c.json(presentCommand(trashMessage(store, id(c.req.param('id')), true))));
-  app.post('/api/mail/messages/:id/untrash', c => c.json(presentCommand(trashMessage(store, id(c.req.param('id')), false))));
-  app.post('/api/mail/messages/:id/done', async c => {
-    const messageId = id(c.req.param('id'));
-    setDone(store, messageId, parse(doneInput, await body(c)).done);
-    return c.json(messageDetail(store, messageId));
-  });
-  app.post('/api/mail/messages/:id/pin', async c => {
-    const messageId = id(c.req.param('id'));
-    setPinned(store, messageId, parse(pinInput, await body(c)).pinned);
-    return c.json(messageDetail(store, messageId));
-  });
-  app.post('/api/mail/messages/:id/snooze', async c => {
-    const messageId = id(c.req.param('id'));
-    snoozeMessage(store, messageId, parse(snoozeInput, await body(c)).until);
-    return c.json(messageDetail(store, messageId));
-  });
-  app.post('/api/mail/messages/:id/unsnooze', c => {
-    const messageId = id(c.req.param('id'));
-    unsnoozeMessage(store, messageId);
-    return c.json(messageDetail(store, messageId));
-  });
-  app.get('/api/mail/snoozed', c => c.json(snoozedMail(store)));
-  app.post('/api/mail/mark-all-read', async c => {
-    const input = parse(markAllReadInput, await body(c));
-    return c.json({commands: markAllRead(store, input.account_id).map(presentCommand)} satisfies MarkAllReadOut);
-  });
-  app.get('/api/mail/indexing', c => c.json(indexing(store)));
-
-  // ---- Drafts and sending (src/sending/) ----
-
-  app.get('/api/mail/from', c => c.json(fromOptions(store)));
-  app.get('/api/mail/drafts', c => c.json(listDrafts(store)));
-  app.get('/api/mail/people', c => {
-    const {q, limit} = parse(peopleInput, c.req.query());
-    return c.json(suggestPeople(store, q, limit));
-  });
-  app.post('/api/mail/drafts', async c => c.json(createDraft(store, parse(draftCreateInput, await body(c))), 201));
-  app.get('/api/mail/drafts/:id', c => c.json(presentDraft(store, getDraftRow(store, id(c.req.param('id'))))));
-  app.patch('/api/mail/drafts/:id', async c => c.json(updateDraft(store, id(c.req.param('id')), parse(draftUpdateInput, await body(c)))));
-  app.delete('/api/mail/drafts/:id', c => {
-    discardDraft(store, id(c.req.param('id')));
-    if (draftFiles) sweepDraftFiles(store, draftFiles);
-    return c.body(null, 204);
-  });
-  // A draft's own files (src/sending/files.ts): the bytes are the body, the name in `name`.
-  const filesDir = () => {
-    if (!draftFiles) throw conflict('no_files_dir', 'This Setpoint keeps no attached files.');
-    return draftFiles;
-  };
-  app.post('/api/mail/drafts/:id/files', async c => {
-    const dir = filesDir();
-    sweepDraftFiles(store, dir);
-    const content = Buffer.from(await c.req.arrayBuffer());
-    if (!content.length) throw invalid('That file is empty.');
-    const filename = parse(z.string().max(1000), c.req.query('name') ?? '');
-    return c.json(addDraftFile(store, dir, id(c.req.param('id')), {filename, mimeType: c.req.header('content-type') ?? '', content}), 201);
-  });
-  app.delete('/api/mail/drafts/:id/files/:file', c => {
-    removeDraftFile(store, filesDir(), id(c.req.param('id')), id(c.req.param('file')));
-    return c.body(null, 204);
-  });
-  app.post('/api/mail/drafts/:id/files/take', async c => c.json({files: takeDraftFiles(store, id(c.req.param('id')), parse(draftFilesTakeInput, await body(c)).ids)}));
-  app.post('/api/mail/drafts/:id/send', c => c.json(holdSend(store, id(c.req.param('id')))));
-  app.post('/api/mail/drafts/:id/undo', c => c.json(undoSend(store, id(c.req.param('id')))));
-  app.post('/api/mail/drafts/:id/write', async c => c.json(await writeDraft(store, id(c.req.param('id')), parse(draftWriteInput, await body(c)), drafting)));
+  app.route('/api', mailApi(store, {engine, drafting, draftFiles}));
   // Triage's health, pattern prompts, rules and Settings › AI (src/api/triage.ts).
   app.route('/api', triageApi(store));
-  app.get('/api/mail/trusted-domains', c => c.json(trustedDomains(store)));
-  app.post('/api/mail/trusted-domains', async c => {
-    const {domain} = parse(trustedDomainInput, await body(c));
-    store.db.insert(t.trustedDomains).values({domain, createdAt: isoNow(store)}).onConflictDoNothing().run();
-    noteLive(store, {type: 'mail', messages: [], accounts: [], commands: []});
-    return c.json(trustedDomains(store), 201);
-  });
-  app.delete('/api/mail/trusted-domains/:domain', c => {
-    store.db.delete(t.trustedDomains).where(eq(t.trustedDomains.domain, c.req.param('domain').toLowerCase())).run();
-    return c.json(trustedDomains(store));
-  });
 
-  // ---- Search, Alfred and proposals, and Places ----
+  // ---- Search, Alfred and proposals, and Places (src/api/search.ts) ----
 
-  app.post('/api/search', async c => c.json(await searchReader.search(parse(searchInput, await body(c)))));
-  app.post('/api/search/suggestion', async c => c.json(await searchReader.suggest(parse(searchSuggestionInput, await body(c)))));
-  app.post('/api/search/suggestion-log', async c => {
-    recordSuggestion(store, parse(searchSuggestionLogInput, await body(c)));
-    return c.body(null, 204);
-  });
-  app.post('/api/search/opened', async c => {
-    recordOpened(store, parse(searchOpenedInput, await body(c)));
-    return c.body(null, 204);
-  });
-  app.post('/api/search/chip-removed', async c => {
-    recordChipRemoved(store, parse(searchChipRemovedInput, await body(c)));
-    return c.body(null, 204);
-  });
-  app.post('/api/proposals/from-message', async c => {
-    const input = parse(proposalInput, await body(c));
-    return c.json(proposeFromMessage(store, input.message_id, input.kind, {}, await inviteOf(store, engine, input.message_id)));
-  });
-  app.post('/api/proposals/prefill', async c => {
-    const input = parse(proposalInput, await body(c));
-    return c.json(await prefillFromMessage(store, engine, input.message_id, input.kind, prefill));
-  });
-  app.post('/api/alfred/ask', async c => c.json(await askAlfred(store, parse(askInput, await body(c)), {...alfred, engine})));
-  app.get('/api/alfred/conversations/:id', c => c.json(conversation(store, id(c.req.param('id')))));
-  app.get('/api/alfred/asks/:askId', c => c.json({step: alfredStep(store, c.req.param('askId'))}));
-  // The places events have used, before anything is typed. Before /api/places/:place_id.
-  app.get('/api/places/recent', c => c.json(recentPlaceList(store)));
-  app.get('/api/places', async c => {
-    const input = parse(placesInput, c.req.query());
-    const key = readSecret(store, 'places_api_key');
-    // The seed's dev runs suggest invented places instead (never Google's).
-    if (!key && !production && store.db.select({id: t.sources.id}).from(t.sources).where(eq(t.sources.dev, true)).get()) return c.json(devPlaces(input.query));
-    if (!key) throw new SetpointError('places_not_configured', 'Add a Google Maps key in Settings › Calendar for place suggestions.', 503);
-    try {
-      return c.json(await placeSuggestions(providers.places ?? {}, key, input.query, input.session_token, getSettings(store).calendar.home));
-    } catch (error) {
-      if (error instanceof ProviderError) throw new SetpointError('places_failed', error.message, 502);
-      throw error;
-    }
-  });
+  app.route('/api', searchApi(store, {engine, alfred, prefill, reading, providers, production}));
 
-  // One place with its coordinates, for Home in Settings › Calendar, and the dev runs'
-  // invented places likewise.
-  app.get('/api/places/:place_id', async c => {
-    const input = parse(placeInput, c.req.query());
-    const placeId = parse(z.string().min(1).max(300), c.req.param('place_id'));
-    const key = readSecret(store, 'places_api_key');
-    if (!key && !production && store.db.select({id: t.sources.id}).from(t.sources).where(eq(t.sources.dev, true)).get()) {
-      const place = devPlace(placeId);
-      if (!place) throw new SetpointError('not_found', 'No such place.', 404);
-      return c.json(place);
-    }
-    if (!key) throw new SetpointError('places_not_configured', 'Add a Google Maps key in Settings › Calendar for place suggestions.', 503);
-    try {
-      return c.json(await placeDetails(providers.places ?? {}, key, placeId, input.session_token ?? null));
-    } catch (error) {
-      if (error instanceof ProviderError) throw new SetpointError('places_failed', error.message, 502);
-      throw error;
-    }
-  });
+  // ---- Todoist and Calendar (src/api/calendar.ts) ----
 
-  // ---- Todoist ----
-
-  app.post('/api/todoist/connect', c => {
-    let begun;
-    try {
-      begun = beginTodoistOAuth(store, providers.todoistOAuth ?? {client: null});
-    } catch (error) {
-      if (error instanceof TodoistOAuthError) throw new SetpointError('todoist_not_configured', error.message, 503);
-      throw error;
-    }
-    setCookie(c, BIND_COOKIE, begun.bind, {httpOnly: true, secure: cookies.secure, sameSite: 'Lax', path: TODOIST_CALLBACK_PATH, maxAge: 10 * 60});
-    return c.json({url: begun.url} satisfies TodoistConnectOut);
-  });
-  app.get('/api/todoist/projects', c => c.json(todoistProjects(store)));
-  // A project's colour is a command to Todoist. The project answers with it pending.
-  app.patch('/api/todoist/projects/:id', async c => {
-    const providerId = c.req.param('id');
-    setProjectColour(store, providerId, parse(todoistProjectUpdateInput, await body(c)).colour);
-    return c.json(todoistProjects(store).find(project => project.id === providerId)!);
-  });
-  app.get('/api/todoist/labels', c => c.json(todoistLabels(store)));
-
-  // ---- Calendar ----
-
-  app.get('/api/items', c => {
-    const range = parse(itemsRangeInput, c.req.query());
-    return c.json(itemsInRange(store, range.from, range.to));
-  });
-  // Calendar search.
-  app.post('/api/calendar/search', async c => c.json(searchCalendar(store, parse(calendarSearchInput, await body(c)))));
-  app.get('/api/items/:id', c => c.json(itemDetail(store, id(c.req.param('id')))));
-  app.post('/api/items', async c => c.json(presentCommand(createItem(store, parse(itemCreateInput, await body(c)))), 201));
-  app.patch('/api/items/:id', async c => c.json(presentCommand(updateItem(store, id(c.req.param('id')), parse(itemUpdateInput, await body(c))))));
-  app.post('/api/items/:id/delete', async c => c.json(presentCommand(deleteItem(store, id(c.req.param('id')), parse(itemScopeInput, await body(c))))));
-  app.post('/api/items/:id/complete', async c => {
-    const input = parse(itemCompleteInput, await body(c));
-    return c.json(presentCommand(completeItem(store, id(c.req.param('id')), input.done, input.occurrence_date)));
-  });
-  app.put('/api/items/:id/subtasks/order', async c => c.json(presentCommand(reorderSubtasks(store, id(c.req.param('id')), parse(subtaskOrderInput, await body(c)).subtask_ids))));
-  // An .ics file's events, read for review (its bytes as the body), then imported one at a time.
-  app.post(ICS_READ_PATH, async c => c.json(readImport(store, new Uint8Array(await c.req.arrayBuffer()))));
-  app.post('/api/calendar/import', async c => c.json(presentCommand(importEvent(store, parse(icsImportInput, await body(c)))), 201));
-  app.get('/api/calendars', c => c.json(calendarList(store)));
-  app.patch('/api/calendars/:id', async c => {
-    const calendarId = id(c.req.param('id'));
-    const input = parse(calendarUpdateInput, await body(c));
-    if (input.visible !== undefined || input.listed !== undefined) {
-      setCalendarShown(store, calendarId, {visible: input.visible, listed: input.listed});
-      noteLive(store, {type: 'items', items: [], calendars: [calendarId], commands: []});
-    }
-    // A colour is a command to Google. The calendar answers with it pending.
-    if (input.colour !== undefined) setCalendarColour(store, calendarId, input.colour);
-    return c.json(calendarList(store).find(calendar => calendar.id === calendarId)!);
-  });
-  app.get('/api/weather', c => {
-    const range = parse(weatherRangeInput, c.req.query());
-    return c.json(weatherDays(store, range.from, range.to, getSettings(store).calendar.weather));
-  });
+  app.route('/api', calendarApi(store, {cookies, providers}));
 
   // ---- News: its pages, Settings › News and stories seen (src/api/news.ts) ----
 
