@@ -55,6 +55,11 @@ export function claimDueJobs(store: Store, skip: ReadonlySet<number>, limit = 20
   });
 }
 
+/** Setpoint is one process, so a job still running when it starts was cut off by a restart: queue it again now. */
+export function requeueRunningJobs(store: Store) {
+  store.db.update(t.jobs).set({state: 'queued', leaseUntil: null}).where(eq(t.jobs.state, 'running')).run();
+}
+
 export function finishJob(store: Store, jobId: number) {
   const job = store.db.update(t.jobs).set({state: 'done', finishedAt: isoNow(store), leaseUntil: null}).where(eq(t.jobs.id, jobId)).returning().get();
   if (job?.again) enqueueJob(store, {kind: job.kind, key: job.key, sourceId: job.sourceId, commandId: job.commandId, messageId: job.messageId, newsSourceId: job.newsSourceId, draftId: job.draftId});

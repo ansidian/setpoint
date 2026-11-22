@@ -185,6 +185,24 @@ describe('a fake adapter through the four health states', () => {
     await engine.settled();
     expect(fake.calls.map(call => call.kind)).toEqual(['sweep', 'sync', 'sync']);
   });
+
+  test('a sync a restart caught mid-run runs again as the server starts, not once its lease runs out', async () => {
+    const w = world();
+    const fake = fakeAdapter();
+    const sourceId = icloud(w);
+    const before = new SyncEngine({store: w.store, adapters: new Adapters({icloud: fake.adapter})});
+    fake.hang();
+    await before.tick();
+    expect(fake.calls.map(call => call.kind)).toEqual(['sync']);
+    // The restart: a new engine on the same database, the old run never finished.
+    fake.succeed();
+    const after = new SyncEngine({store: w.store, adapters: new Adapters({icloud: fake.adapter})});
+    after.start(60 * SECOND);
+    onTestFinished(() => after.stop());
+    await after.settled();
+    expect(fake.calls.map(call => call.kind)).toEqual(['sync', 'sync']);
+    expect(w.store.db.select().from(t.jobs).where(eq(t.jobs.key, `sync:${sourceId}`)).all().map(job => job.state)).toEqual(['done']);
+  });
 });
 
 describe('one Google consent, one reconnect alert', () => {

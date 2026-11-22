@@ -17,7 +17,7 @@ import type {Store} from '../store.ts';
 import type {AdapterContext, AdapterRegistry, AttachmentBytes, OutgoingMail, SentMail, SentQuery, SourceAdapter, SourceRow} from './adapter.ts';
 import {asProviderError, ProviderError} from './errors.ts';
 import {recordFailure, recordSuccess, sourceHealth} from './health.ts';
-import {claimDueJobs, enqueueJob, failJob, finishJob, hasActiveJob, pruneJobs, wakeSync} from './jobs.ts';
+import {claimDueJobs, enqueueJob, failJob, finishJob, hasActiveJob, pruneJobs, requeueRunningJobs, wakeSync} from './jobs.ts';
 import type {Job} from './jobs.ts';
 
 /** Runs one kind of job that isn't a source's (triage), and may queue more of it each tick. */
@@ -61,6 +61,7 @@ export class SyncEngine {
   }
 
   start(everyMs = 1000) {
+    requeueRunningJobs(this.store);
     void this.tick();
     this.timer = setInterval(() => void this.tick(), everyMs);
     this.timer.unref();
