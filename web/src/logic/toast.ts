@@ -1,13 +1,14 @@
 // The toast's tone: what happened, said by a colour and a glyph in a disc before a word is read.
 // Done things are `good` with `check`, an email marked read `good` with `mark_email_read`, things taken
-// away `alert` with `delete`, Sending `accent` with `send`, a pin `sunGlyph` with `keep`, a failure
+// away `alert` with `delete`, Sending `accent` with `send`, a pin `sunGlyph` with `keep`, a snooze
+// `violet` with `snooze`, a failure
 // `alert` with `error`. Any other line is plain, `ink2`, with a glyph that fits it (`content_copy` for
 // Copied, `info` otherwise). The tone follows the line's own first words, so every page's lines take
 // it without passing it along. The caller marks a failure in a provider's own words.
 
 import type {IconName} from '../ui/glyphs.ts';
 
-export type ToastTone = 'done' | 'read' | 'gone' | 'send' | 'pinned' | 'failed' | 'plain';
+export type ToastTone = 'done' | 'read' | 'gone' | 'send' | 'pinned' | 'snoozed' | 'failed' | 'plain';
 
 /** How long a toast, and its Undo, stays: six seconds, a failure eight, so the provider's words can be read. */
 export const TOAST_MS = {line: 6000, failed: 8000} as const;
@@ -21,11 +22,12 @@ export function toastTone(text: string): ToastTone {
   if (text === 'Sending') return 'send';
   // A pin made where the shelf can't be seen.
   if (/^Pinned( \d+)?$/.test(text)) return 'pinned';
+  if (/^Snoozed (\d+ )?until /.test(text)) return 'snoozed';
   return 'plain';
 }
 
 const TONE_GLYPHS: Record<ToastTone, IconName> = {
-  done: 'check', read: 'mark_email_read', gone: 'delete', send: 'send', pinned: 'keep', failed: 'error', plain: 'info',
+  done: 'check', read: 'mark_email_read', gone: 'delete', send: 'send', pinned: 'keep', snoozed: 'snooze', failed: 'error', plain: 'info',
 };
 
 /** The glyph in its disc: its tone's, or for a plain line one that fits its words. */

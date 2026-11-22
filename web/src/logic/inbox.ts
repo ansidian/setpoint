@@ -222,6 +222,18 @@ export function inboxAfterDone(inbox: InboxOut, id: number): InboxOut {
 }
 
 /**
+ * Snooze takes an email out of the Inbox until it returns: out of every group, the Pinned shelf
+ * too, and out of the counts, unread and Attention's, as the server leaves it out of them.
+ */
+export function inboxAfterSnooze(inbox: InboxOut, id: number): InboxOut {
+  const found = rowsOf(inbox, id);
+  if (!found.length) return inbox;
+  const {row} = found[0]!;
+  const wasAttention = found.some(({group}) => group.group === 'attention') && !row.done;
+  return {...inbox, groups: withoutEmails(inbox.groups, new Set([id])), counts: countsAfter(inbox.counts, row, {read: true, leavesAttention: wasAttention})};
+}
+
+/**
  * Pin puts an email on the Pinned shelf, newest pin first, and leaves it in its group too (the
  * server's rule). Unpin takes it off the shelf. Shown at once, before the server answers. An email
  * the Inbox doesn't hold (pinned from All) comes from `from`, onto the shelf.

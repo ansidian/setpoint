@@ -5,7 +5,8 @@
 // where an FYI run starts, and folds its Noise to one line. An email in Attention or on the Pinned
 // shelf leaves its day meanwhile. The views show part of it. Unread shows the unread mail in the
 // same shape, Attention its rows alone, and FYI and Noise their mail by day. Only All has the shelf,
-// so elsewhere a pinned email sits where it belongs.
+// so elsewhere a pinned email sits where it belongs. A snoozed email is out of every view until it
+// returns, and a returned one sits in the day it returned, by the time it did, as if it were new.
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroupOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {daysBetween, localDate} from './format.ts';
@@ -20,7 +21,9 @@ export interface Day {
   rows: MessageRowOut[];
 }
 
-const newest = (a: MessageRowOut, b: MessageRowOut) => b.received_at.localeCompare(a.received_at) || b.id - a.id;
+/** When an email sits in the list: when it returned from a snooze, else when it arrived. */
+export const listedAt = (row: Pick<MessageRowOut, 'received_at' | 'returned_at'>) => row.returned_at ?? row.received_at;
+const newest = (a: MessageRowOut, b: MessageRowOut) => listedAt(b).localeCompare(listedAt(a)) || b.id - a.id;
 
 /** An email the list draws unread: unread and not Done, as the counts have it. */
 export const unreadNotDone = (row: Pick<MessageRowOut, 'unread' | 'done'>) => row.unread && !row.done;
@@ -29,15 +32,16 @@ export const unreadNotDone = (row: Pick<MessageRowOut, 'unread' | 'done'>) => ro
  * Rows by local day in `timeZone`, newest day first and newest first within it. Pages of All are
  * joined here, so a day split between two pages shows once. A pinned email leaves its day for the
  * Pinned shelf until it's unpinned, unless there's no shelf (`shelf` false). One that Attention
- * shows (`above`) leaves its day too.
+ * shows (`above`) leaves its day too, and a snoozed one is in none. A returned one sits in the day it
+ * returned, by the time it did.
  */
 export function groupByDay(rows: MessageRowOut[], timeZone: string, above: ReadonlySet<number> = new Set(), shelf = true): Day[] {
   const days: Day[] = [];
   const seen = new Set<number>();
   for (const row of [...rows].sort(newest)) {
-    if (seen.has(row.id) || (shelf && row.pinned) || above.has(row.id)) continue;
+    if (seen.has(row.id) || (shelf && row.pinned) || above.has(row.id) || row.snoozed_until) continue;
     seen.add(row.id);
-    const date = localDate(row.received_at, timeZone);
+    const date = localDate(listedAt(row), timeZone);
     if (days.at(-1)?.date !== date) days.push({date, rows: []});
     days.at(-1)!.rows.push(row);
   }
@@ -51,7 +55,7 @@ export function groupByDay(rows: MessageRowOut[], timeZone: string, above: Reado
  */
 export function attentionRows(groups: InboxGroupOut[], shelf = true): MessageRowOut[] {
   const rows = new Map(groups.filter(group => group.group !== 'pinned').flatMap(group => group.rows).filter(row => !shelf || !row.pinned).map(row => [row.id, row]));
-  return [...rows.values()].filter(row => row.lane === 'attention' && !row.done).sort(newest);
+  return [...rows.values()].filter(row => row.lane === 'attention' && !row.done && !row.snoozed_until).sort(newest);
 }
 
 export type AllLane = 'attention' | 'unsorted' | 'fyi' | 'noise';
@@ -120,7 +124,10 @@ export function viewList(view: InboxView, from: {groups: InboxGroupOut[]; rows: 
   switch (view) {
     case 'all': {
       const attention = attentionRows(from.groups);
-      return {attention, shelf: from.groups.find(group => group.group === 'pinned')?.rows ?? [], days: folded(byDay(from.rows, attention, true)), lanes: true};
+      // A returned email comes to the top of its day from wherever All's pages have got to.
+      const returned = from.groups.flatMap(group => group.rows).filter(row => row.returned_at);
+      const shelf = (from.groups.find(group => group.group === 'pinned')?.rows ?? []).filter(row => !row.snoozed_until);
+      return {attention, shelf, days: folded(byDay([...from.rows, ...returned], attention, true)), lanes: true};
     }
     case 'unread': {
       const attention = from.unread.filter(row => row.lane === 'attention').sort(newest);
@@ -146,12 +153,12 @@ export function viewList(view: InboxView, from: {groups: InboxGroupOut[]; rows: 
  */
 export function heldUnread(held: ReadonlyMap<number, MessageRowOut>, inbox: MessageRowOut[], latest: ReadonlyMap<number, MessageRowOut>, gone: ReadonlySet<number>): Map<number, MessageRowOut> {
   const next = new Map<number, MessageRowOut>();
-  for (const row of inbox) if (unreadNotDone(row) && !gone.has(row.id)) next.set(row.id, latest.get(row.id) ?? row);
+  for (const row of inbox) if (unreadNotDone(row) && !gone.has(row.id) && !(latest.get(row.id) ?? row).snoozed_until) next.set(row.id, latest.get(row.id) ?? row);
   for (const [id, was] of held) {
     if (next.has(id) || gone.has(id)) continue;
     const now = latest.get(id);
     if (now) {
-      if (!now.done) next.set(id, now);
+      if (!now.done && !now.snoozed_until) next.set(id, now);
     // Out of every list: an Attention email went Done; any other was read.
     } else if (was.lane !== 'attention') next.set(id, was.unread ? {...was, unread: false} : was);
   }

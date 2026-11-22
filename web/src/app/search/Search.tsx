@@ -16,7 +16,7 @@ import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {keepTextUnselected} from '../../ui/keys.ts';
 import {dotStyle} from '../accounts.ts';
-import {RepliedMark} from '../AllList.tsx';
+import {RepliedMark, SnoozedMark} from '../AllList.tsx';
 import {FOLD_HOLD_MS, foldDelays, foldRef, leaveCopy, useFold} from '../fold.ts';
 import {usePhone} from '../Phone.tsx';
 import type {Search} from './mailSearch.ts';
@@ -372,6 +372,7 @@ function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, o
         {result.pinned && <span className="pin"><Icon name="keep" size={16} /></span>}
         {result.protected && <span className="tag alert"><Icon name="shield" size={14} />Protected</span>}
         {result.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
+        {result.snoozed_until && <SnoozedMark until={result.snoozed_until} now={now} timeZone={timeZone} />}
       </div>
       <div className="r1">
         <Account account={accounts.get(result.account_id)} />

@@ -5,6 +5,7 @@
 // (?view=unread). The account filter's old ?account=2 is the plain Inbox.
 // Sent: /sent, /sent/12 with an email open, and its account in the query (/sent?account=2).
 // Drafts: /drafts, and /drafts/4 with draft 4 open in the pane.
+// Snoozed: /snoozed, and /snoozed/12 with that snoozed email open.
 // /calendar/new?kind=event opens the editor on a new item. &message=12 pre-fills it from that email's
 // proposal (the proposal card's More options). /calendar/item/3/edit opens the editor on item 3 (the
 // Today block's card's Edit). The week view rides in the query on every calendar address
@@ -38,6 +39,7 @@ export type Route =
   | {page: 'inbox'; open: number | null; view?: InboxView}
   | {page: 'sent'; open: number | null; account?: number}
   | {page: 'drafts'; open: number | null}
+  | {page: 'snoozed'; open: number | null}
   | {page: 'calendar'; date: string | null; item: number | null; at: string | null; compose?: Compose; edit?: true; view?: CalendarMode}
   | {page: 'settings'; section: SettingsPage}
   | {page: 'news'; view: NewsView; story: number | null; article: number | null}
@@ -79,6 +81,7 @@ export function parseRoute(pathname: string, search = ''): Route {
     return {page: 'sent', open: positive(second), ...(account ? {account} : {})};
   }
   if (first === 'drafts') return {page: 'drafts', open: positive(second)};
+  if (first === 'snoozed') return {page: 'snoozed', open: positive(second)};
   if (first === 'settings') {
     return {page: 'settings', section: (SETTINGS_PAGES as readonly string[]).includes(second ?? '') ? second as SettingsPage : 'accounts'};
   }
@@ -98,6 +101,8 @@ export function routePath(route: Route): string {
       return `/sent${route.open ? `/${route.open}` : ''}${route.account ? `?account=${route.account}` : ''}`;
     case 'drafts':
       return `/drafts${route.open ? `/${route.open}` : ''}`;
+    case 'snoozed':
+      return `/snoozed${route.open ? `/${route.open}` : ''}`;
     case 'calendar': {
       const week = route.view === 'week' ? 'view=week' : null;
       const query = (...parts: (string | null)[]) => (parts.some(Boolean) ? `?${parts.filter(Boolean).join('&')}` : '');

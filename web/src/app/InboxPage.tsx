@@ -35,7 +35,7 @@ import {flushSync} from 'react-dom';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
 import {
-  allPath, answerPrompt, changeEach, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, refusals, setDone, setPinned, trashMessage, untrashMessage,
+  allPath, answerPrompt, changeEach, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, refusals, setDone, setPinned, snooze, trashMessage, unsnooze, untrashMessage,
 } from '../api/mail.ts';
 import type {SearchScope} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
@@ -46,6 +46,7 @@ import {
 } from '../logic/inbox.ts';
 import {phoneSlide} from '../logic/phone.ts';
 import {readerActions} from '../logic/reader.ts';
+import {snoozeable, snoozedLine} from '../logic/snooze.ts';
 import {broughtForward, counted, dropped, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, stacked, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
 import type {HeldRow, PatternPrompt, Stop} from '../logic/inbox.ts';
@@ -440,6 +441,22 @@ export function InboxPage({route}: {route: InboxRoute}) {
         return () => untrashMessage(one);
       }, n => counted(n, 'Failed to move to Trash', m => `Failed to move ${m} to Trash`), n => counted(n, 'Failed to bring back', m => `Failed to bring ${m} back`));
     },
+    // Snooze until `until` (ms): out of the list until it returns, with Undo as Done's. Sent mail has none.
+    snooze: (ids: number[], until: number) => {
+      const can = ids.filter(id => {
+        const row = rowOf(id);
+        return row !== undefined && snoozeable(row);
+      });
+      if (!can.length) return;
+      const at = new Date(until).toISOString();
+      leave(can, 'snooze', one => {
+        search.mark(one, {snoozed_until: at});
+        return snooze(one, until);
+      }, snoozedLine(at, serverNow(), zone), one => {
+        search.mark(one, {snoozed_until: undefined});
+        return () => unsnooze(one);
+      }, n => counted(n, 'Failed to snooze', m => `Failed to snooze ${m}`), n => counted(n, 'Failed to unsnooze', m => `Failed to unsnooze ${m}`));
+    },
     // Pin, or Unpin when every one is pinned already.
     pin: (ids: number[]) => {
       // Sent mail has no Pin.
@@ -550,6 +567,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
     done: () => (onSelection ? forSelection.done() : target !== null && on.done([target])),
     trash: () => (onSelection ? forSelection.trash() : target !== null && on.trash([target])),
     pin: () => (onSelection ? forSelection.pin() : target !== null && on.pin([target])),
+    snooze: (until: number) => open !== null && on.snooze([open], until),
+    unsnooze: () => open !== null && void unsnooze(open).catch(toastFailure('Failed to unsnooze')),
     openInGmail: () => open !== null && on.openInGmail(open),
     step: (delta: 1 | -1) => {
       const next = open ? neighbour(stops, open, delta) : null;
@@ -778,7 +797,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
               ? <EmptyView view={view} newest={(view === 'attention' ? allRows.find(row => row.lane === 'attention') : allRows[0])?.received_at ?? null} onAll={() => switchView('all')} /> : null}
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={view === 'all' || view === 'attention' ? prompt : null}
-            onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin}
+            onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin} onSnooze={phone ? undefined : (id, until) => on.snooze([id], until)}
             onCodeCopied={id => on.read([id])} onAnswer={(answer, yes) => {
               setAnswered(new Set([...answered, answer.id]));
               void answerPrompt(answer.id, yes).catch(toastFailure('Failed to answer'));

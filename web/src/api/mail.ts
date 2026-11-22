@@ -1,9 +1,9 @@
 // Mail's resources and changes (shared/src/api/mail.ts has the routes). Every change shows at once
 // on screen, counts included, then the server's answer takes over. The changes here are opening,
-// Done, Pin, Mark read or unread and Mark all as read. Trash is in the Inbox page. Read state, Trash
+// Done, Pin, Snooze and Unsnooze, Mark read or unread and Mark all as read. Trash is in the Inbox page. Read state, Trash
 // and Mark all as read are commands the provider confirms, by the live stream.
-import type {AllOut, CommandOut, InboxOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
-import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, markAllReads} from '../logic/inbox.ts';
+import type {AllOut, CommandOut, InboxOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
+import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterSnooze, inboxAfterUnread, markAllReads} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
 import {afterPending, ApiFailure, cachedPaths, getCached, holdLoads, loadingOf, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
 
@@ -15,6 +15,8 @@ export const messagePath = (id: number) => `/mail/messages/${id}`;
 /** Which email, if any, a description's Gmail link names. */
 export const gmailLinkPath = (account: string, id: string) => `/mail/gmail-link?account=${encodeURIComponent(account)}&id=${encodeURIComponent(id)}`;
 export const ACCOUNTS_PATH = '/accounts';
+/** The snoozed emails, soonest return first: the sidebar's Snoozed row and its page. */
+export const SNOOZED_PATH = '/mail/snoozed';
 
 /** A page of All: `before` is the previous page's `next_before`. */
 export const ALL_PAGE = 100;
@@ -107,7 +109,7 @@ function updateMessage(id: number, change: Partial<MessageOut>): number {
 
 // Where a change to an email shows at once. A load asked while the change is on its way can be
 // answered from before the server has the change, so these hold their answers until it's in.
-const MAIL_LOADS = ['/mail/inbox', '/mail/all', '/mail/sent', COUNTS_PATH, DAY_PATH];
+const MAIL_LOADS = ['/mail/inbox', '/mail/all', '/mail/sent', SNOOZED_PATH, COUNTS_PATH, DAY_PATH];
 
 /** Sends a change with the lists and counts held; the release loads them again. */
 async function change<T>(send: () => Promise<T>): Promise<T> {
@@ -213,6 +215,44 @@ export function setPinned(id: number, pinned: boolean): Promise<MessageOut> {
   });
   pinning.set(id, state);
   return state.done;
+}
+
+/** A row without its snooze, or its returned mark. */
+const unsnoozed = ({snoozed_until: _until, ...row}: MessageRowOut): MessageRowOut => row;
+const unreturned = ({returned_at: _returned, ...row}: MessageRowOut): MessageRowOut => row;
+
+/**
+ * Snooze until `until` (ms): out of the Inbox, its counts and the shelf at once, marked snoozed in
+ * All and search, and first in Snoozed by its time. Its returned mark, if any, goes.
+ */
+export function snooze(id: number, until: number): Promise<MessageOut> {
+  const at = new Date(until).toISOString();
+  const row = cachedRow(id)?.row ?? cachedAllRow(id) ?? getCached<MessageOut>(messagePath(id)) ?? null;
+  for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterSnooze(inbox, id));
+  followInboxCounts();
+  updateAllRows(one => (one.id === id ? {...unreturned(one), snoozed_until: at} : one));
+  if (row) {
+    updateCached<SnoozedOut>(SNOOZED_PATH, list => ({rows: [...list.rows.filter(one => one.id !== id), {...unreturned(row), snoozed_until: at}]
+      .sort((a, b) => a.snoozed_until!.localeCompare(b.snoozed_until!) || a.id - b.id)}));
+  }
+  const mark = updateMessage(id, {snoozed_until: at, returned_at: undefined});
+  return change(async () => {
+    const message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/snooze`, {until: at});
+    answered(id, mark, message);
+    return message;
+  });
+}
+
+/** Unsnooze (Snoozed's, the reader's, and Snooze's Undo): back in the Inbox as it was, once the server has it. */
+export function unsnooze(id: number): Promise<MessageOut> {
+  updateAllRows(one => (one.id === id ? unsnoozed(one) : one));
+  updateCached<SnoozedOut>(SNOOZED_PATH, list => ({rows: list.rows.filter(one => one.id !== id)}));
+  const mark = updateMessage(id, {snoozed_until: undefined});
+  return change(async () => {
+    const message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/unsnooze`);
+    answered(id, mark, message);
+    return message;
+  });
 }
 
 /** Mark unread (⌘K on an open email): a command the provider confirms. */

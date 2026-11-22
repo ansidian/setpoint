@@ -1,22 +1,23 @@
 // The sidebar holds the mark and Setpoint, then Inbox with the red unread badge (its only count) and
 // Sent under it, a smaller, indented row with no count and no account rows: Sent's accounts are in
-// its own header. Drafts sits under Sent, as small, only while a draft waits, with its count. Then come Calendar, News with no count ever, and Jobs while it's on
+// its own header. Drafts sits under Sent, as small, only while a draft waits, with its count, and
+// Snoozed under it only while an email is snoozed, with its count. Then come Calendar, News with no count ever, and Jobs while it's on
 // (jobs/, a wiring point). Then the page's section: Today on mail pages and News, the mini-month and
 // Calendars on Calendar. Settings is pinned to the bottom.
 //
 // Folded it's a 56 px rail: the mark, then Inbox, Calendar, News, Jobs and Settings as icons, each
 // named in its tooltip, with the unread badge on Inbox. Inbox is mail's one icon there, lit on Sent
-// too, and Sent shows again when the sidebar opens or peeks. The page's section gives way to the next-up
+// too (and on Drafts and Snoozed), and Sent shows again when the sidebar opens or peeks. The page's section gives way to the next-up
 // slot (TodayBlock's). ⌘K still toggles calendars. It is always the rail from 640 to 1099 px (the
 // compact tier). From 1100 it starts as the rail below 1600 px, and `` ` `` or a click on its edge
 // opens and folds it, kept by this browser (sidebarRail.ts). The pointer resting on the rail brings
 // the whole sidebar out over the page until it leaves.
-import type {DraftsOut, MailCountsOut} from '@setpoint/shared';
+import type {DraftsOut, MailCountsOut, SnoozedOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent, PointerEvent as ReactPointerEvent, ReactNode} from 'react';
 import {useResource} from '../api/client.ts';
 import {DRAFTS_PATH} from '../api/drafts.ts';
-import {COUNTS_PATH, markAllRead} from '../api/mail.ts';
+import {COUNTS_PATH, markAllRead, SNOOZED_PATH} from '../api/mail.ts';
 import {Count} from './Count.tsx';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
@@ -127,6 +128,7 @@ function usePeek(enabled: boolean) {
 export function Sidebar({route}: {route: Route}) {
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
   const {data: drafts} = useResource<DraftsOut>(DRAFTS_PATH);
+  const {data: snoozed} = useResource<SnoozedOut>(SNOOZED_PATH);
   const folded = useRail();
   const foldable = useSidebarFoldable();
   const {peek, onPointerOver, onPointerLeave} = usePeek(folded && foldable);
@@ -141,7 +143,7 @@ export function Sidebar({route}: {route: Route}) {
           <Mark />
           {!rail && <span className="sb-name">Setpoint</span>}
         </div>
-        <Link className={route.page === 'inbox' || (rail && (route.page === 'sent' || route.page === 'drafts')) ? 'nav on' : 'nav'} tip={named('Inbox')} to={toInbox()}
+        <Link className={route.page === 'inbox' || (rail && (route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed')) ? 'nav on' : 'nav'} tip={named('Inbox')} to={toInbox()}
           onContextMenu={event => counts && counts.unread > 0 && openContextMenu(event, event.currentTarget, [
             {id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: markAllReadNow()},
           ])}>
@@ -160,6 +162,13 @@ export function Sidebar({route}: {route: Route}) {
             <Icon name="draft" size={16} />
             <span className="grow">Drafts</span>
             <span className="cnt num"><Count value={drafts.count} /></span>
+          </Link>
+        )}
+        {!rail && snoozed !== undefined && snoozed.rows.length > 0 && (
+          <Link className={route.page === 'snoozed' ? 'nav sub on' : 'nav sub'} to={{page: 'snoozed', open: null}}>
+            <Icon name="snooze" size={16} />
+            <span className="grow">Snoozed</span>
+            <span className="cnt num"><Count value={snoozed.rows.length} /></span>
           </Link>
         )}
         <Link className={route.page === 'calendar' ? 'nav on' : 'nav'} tip={named('Calendar')} to={{page: 'calendar', date: null, item: null, at: null}}>

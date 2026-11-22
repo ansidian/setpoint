@@ -324,11 +324,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 :is(.row, .arow).beat-done { background: color-mix(in oklch, var(--good) 14%, transparent); }
 :root[data-theme="light"] :is(.row, .arow).beat-done { background: color-mix(in oklch, var(--good) 12%, transparent); }
 :is(.row, .arow).beat-trash { background: color-mix(in oklch, var(--alert) 8%, transparent); }
-:is(.beat-done, .beat-trash) .ud { position: relative; }
-.list :is(.row, .arow):is(.beat-done, .beat-trash) .ud::before { background: transparent; box-shadow: none; position: absolute; inset: 0; margin: auto; }
+:is(.row, .arow).beat-snooze { background: color-mix(in oklch, var(--violet) 10%, transparent); }
+:is(.beat-done, .beat-trash, .beat-snooze) .ud { position: relative; }
+.list :is(.row, .arow):is(.beat-done, .beat-trash, .beat-snooze) .ud::before { background: transparent; box-shadow: none; position: absolute; inset: 0; margin: auto; }
 .ud > .icon { animation: beat-in var(--dur-fast) var(--ease); }
 .beat-done .ud > .icon { color: var(--good); }
 .beat-trash .ud > .icon { color: var(--alert); }
+.beat-snooze .ud > .icon { color: var(--violet); }
 @keyframes beat-in { from { opacity: 0; transform: scale(.6); } }
 /* Done in All, where its row stays: it ticks in place, as Done's beat (the check landing, the
    `good` tint), and the tint and check let go over 260 ms. Meanwhile its text settles in `ink3` beside a
@@ -517,10 +519,58 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .mailtext p { margin: 0 0 12px; }
 
 /* ---------- Mail details ---------- */
-/* The Pinned shelf: Unpin takes the age's place under the pointer (board 10). */
-.row.shelf .hact { display: none; width: 64px; flex: none; justify-content: flex-end; }
-@media (hover: hover) { .row.shelf:hover .hact { display: flex; } }
-@media (hover: hover) { .row.shelf:hover .age { display: none; } }
+/* Under the pointer Snooze takes the age's place, and on the Pinned shelf Unpin does with it (board
+   10). Its menu open, the row keeps the look. */
+.row .hact { display: none; min-width: 64px; flex: none; justify-content: flex-end; align-items: center; gap: 4px; }
+@media (hover: hover) { .row:hover .hact { display: flex; } }
+@media (hover: hover) { .row:hover .hact ~ .age, .row:hover .age:has(+ .hact) { display: none; } }
+.row.menu-open .hact { display: flex; }
+.row.menu-open .age:has(+ .hact) { display: none; }
+.row .row-snooze { width: 24px; height: 22px; }
+/* A snoozed email in search says when it returns; one back from a snooze has a small `snooze`, both `ink3`. */
+:is(.row, .arow) .snoozed { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink3); white-space: nowrap; }
+.row .returned { flex: none; display: inline-flex; color: var(--ink3); }
+/* The snooze menu: its choices with their moments, or Pick's panel, hung under its button by its
+   right edge (or over it, `data-up`), above the rows. */
+.snooze-menu { position: relative; display: inline-flex; }
+.snooze-menu > .pop { position: absolute; top: calc(100% + 4px); right: 0; z-index: 20; transform-origin: top right; }
+.snooze-menu > .pop[data-up] { top: auto; bottom: calc(100% + 4px); transform-origin: bottom right; }
+/* Pick: a back button and its name, the month, the time field ending in how the time reads, then the
+   moment by Snooze. The chosen day is the `accent` 50% disc, today a 1.5 px `alert` ring, as the date
+   picker's; days gone by fade and take no click. A time that can't be read rings the field and reads
+   in `alert`. */
+.snooze-pick { width: 272px; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.snz-head { display: flex; align-items: center; gap: 4px; margin-left: -4px; }
+.snz-title { font-size: 13px; font-weight: 500; color: var(--ink); }
+.snz-month-head { display: flex; align-items: center; height: 28px; padding-left: 4px; }
+.snz-month-head .name { font-size: 13px; color: var(--ink2); }
+.snz-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; }
+.snz-days > * { height: 30px; display: grid; place-items: center; font-size: 12px; color: var(--ink2); }
+.snz-days > .h { height: 22px; font-size: 11px; color: var(--ink3); }
+.snz-days > button { width: 30px; justify-self: center; border-radius: 999px; }
+.snz-days > button:enabled:hover { background: var(--sub2); color: var(--ink); }
+.snz-days > button:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--edgeFocus); }
+.snz-days > .o { color: var(--ink3); }
+.snz-days > button:disabled { opacity: .35; cursor: default; }
+.snz-days > .t { box-shadow: inset 0 0 0 1.5px var(--alert); color: var(--ink); }
+.snz-days > .val, .snz-days > .val:enabled:hover { background: color-mix(in oklch, var(--accent) 50%, transparent); color: var(--ink); font-weight: 600; }
+.snz-time { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 10px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink3); }
+.snz-time:focus-within { box-shadow: inset 0 0 0 1px var(--edgeFocus); background: var(--cardOn); }
+.snz-time input { min-width: 0; height: 100%; outline: none; color: var(--ink); font-size: 13px; }
+.snz-read { flex: none; font-size: 12px; color: var(--ink2); white-space: nowrap; }
+.snz-time.problem, .snz-time.problem:focus-within { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 60%, transparent); }
+.snz-time.problem .snz-read { color: color-mix(in oklch, var(--alert) var(--textTint), var(--ink)); }
+.snz-foot { display: flex; align-items: center; gap: 8px; padding-top: 2px; }
+.snz-when { flex: 1; min-width: 0; font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.snz-when.alert { color: color-mix(in oklch, var(--alert) var(--textTint), var(--ink)); }
+.snooze-list { min-width: 240px; }
+.snooze-list .menu-i .ink3 { font-size: 12px; }
+.snooze-pick { width: 280px; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.snooze-pick-fields { display: grid; grid-template-columns: 1fr 112px; gap: 8px; }
+.snooze-pick-foot { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+/* Snoozed's rows say when each returns in the age's place, and Unsnooze takes it under the pointer. */
+.snoozed-list .row .age.back { width: 128px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; white-space: nowrap; }
+.snoozed-list .row .hact { min-width: 128px; }
 /* A pinned email's row in its group: a 14 px keep-fill in `ink3` just before its account.
    Pinned here, it grows in from .6 over 120 ms. (A row folding onto the shelf holds `sub3` after its
    fold, app/fold.ts › foldInLanding.) */
@@ -549,7 +599,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .nfold.cur { background: var(--sub2); }
 .list.all .row .from { width: clamp(112px, 24%, 200px); }
 .list.all .row .age { width: 72px; }
-.list.all .row.shelf .hact { width: 72px; }
+.list.all .row .hact { min-width: 72px; }
 .list.all .row .subj .alertsubj { color: var(--alert); font-weight: 500; }
 .list.all .row .subj .code { font-size: 13px; }
 /* The kind is a subheading over its run, as the row has no room for its column. */
@@ -585,6 +635,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .toast.t-gone, .toast.t-failed { --tone: var(--alert); }
 .toast.t-send { --tone: var(--accent); }
 .toast.t-pinned { --tone: var(--sunGlyph); }
+.toast.t-snoozed { --tone: var(--violet); }
 /* A 22 px disc of 14% of its colour holds its 14 px glyph, its time a 1.5 px ring around it: a track
    of 26% and an arc draining over the toast's time. A toast that waits has the disc alone. */
 .toast .disc { position: relative; width: 22px; height: 22px; display: grid; place-items: center; flex: none; border-radius: 999px; color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }

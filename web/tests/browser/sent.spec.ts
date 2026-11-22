@@ -292,12 +292,12 @@ test('a conversation from Sent: a sent reply lists its thread, Theo\'s email ope
     await page.locator('.rd-conv-line[aria-current]', {hasText: 'Oct 48:30 AMYouThis email'}).waitFor();
     assert.deepEqual(await tools(page), ['TrashE', 'Open in GmailO', 'ReplyR', 'ForwardF']);
 
-    // Theo's email is received mail: it opens in the Inbox, with Pin, and says the user replied.
+    // Theo's email is received mail: it opens in the Inbox, with Pin and Snooze, and says the user replied.
     await page.locator('.rd-conv-line', {hasText: 'Perfect, Ana and Kofi'}).click();
     await page.locator('.mailtext', {hasText: 'Perfect, Ana and Kofi'}).waitFor();
     assert.match(new URL(page.url()).pathname, /^\/inbox\/\d+$/);
     await page.locator('.rd-replied', {hasText: 'You replied Oct 4'}).waitFor();
-    assert.deepEqual(await tools(page), ['TrashE', 'PinP', 'Open in GmailO', 'ReplyR', 'ForwardF']);
+    assert.deepEqual(await tools(page), ['TrashE', 'PinP', 'Snooze', 'Open in GmailO', 'ReplyR', 'ForwardF']);
 
     // A reply opened from the Inbox's reader has Sent's tools.
     await page.locator('.rd-conv-line.you', {hasText: 'Games and a cooler'}).click();

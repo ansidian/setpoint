@@ -31,6 +31,7 @@ import {hasOthers} from '../logic/composer.ts';
 import {dayOf, fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
 import {factRows, fitTools, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../logic/reader.ts';
+import {snoozeable, snoozedLine} from '../logic/snooze.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
 import {phraseRuns, PREFILL_WAIT_MS, segments} from '../logic/search.ts';
 import type {PrefillMiss} from '../logic/search.ts';
@@ -58,6 +59,7 @@ import {LoadFailed, useArrival, useLoadFailed} from './states/Loading.tsx';
 import type {Load} from './states/Loading.tsx';
 import {BodySkeleton, HeadSkeleton} from './states/Skeletons.tsx';
 import {useAlfred} from './search/state.ts';
+import {SnoozeMenu} from './SnoozeMenu.tsx';
 import {showToast, toastFailure} from './toast.ts';
 
 /**
@@ -96,6 +98,9 @@ export interface ReaderActions {
   done: () => void;
   trash: () => void;
   pin: () => void;
+  // Snooze until a moment (ms), and Unsnooze on a snoozed email: the Inbox's and Snoozed's, not Sent's.
+  snooze?: (until: number) => void;
+  unsnooze?: () => void;
   openInGmail: () => void;
   step: (delta: 1 | -1) => void;
   close: () => void;
@@ -145,9 +150,12 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // Unpin on pinned mail, and Open in Gmail on Gmail's mail only (an email has its Gmail link exactly
   // when its account is Gmail's). Its place is held while that's unknown.
   const pinned = listed?.pinned ?? false;
+  // Snooze on received mail, or on a snoozed email when it returns and Unsnooze.
+  const snoozedUntil = listed?.snoozed_until ?? null;
   const provider = listed ? accounts.get(listed.account_id)?.provider : undefined;
   const gmail = message ? message.open_url !== null : provider === undefined ? null : provider === 'gmail';
   const phone = usePhone();
+  const canSnooze = !phone && !sentMail && !!actions.snooze && !!listed && snoozeable(listed);
   // The composer, and the drafts that open it again: the desktop's only.
   const composer = useOpenComposer();
   const {data: drafts} = useResource<DraftsOut>(phone ? null : DRAFTS_PATH);
@@ -157,7 +165,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   }, [id, drafts, phone]);
   const replyAll = message ? hasOthers(message, from) : false;
   // Whether the tools' words fit (useToolsFit), for this set of tools.
-  const {bar: toolsBar, size} = useToolsFit([doneable, isDone, sentMail, pinned, gmail, phone, replyAll].join(), width);
+  const {bar: toolsBar, size} = useToolsFit([doneable, isDone, sentMail, pinned, canSnooze, snoozedUntil, gmail, phone, replyAll].join(), width);
   // A tool's tip, while its words are hidden.
   const tip = (words: string, answer = false) => (size === 'tight' || (answer && size === 'narrow') ? words : undefined);
   // Mark unread on the phone keeps the email open and offers Mark read. The subject shows the unread
@@ -208,6 +216,18 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         {!sentMail && (
           <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} aria-label={pinned ? 'Unpin' : 'Pin'} data-tip={tip(pinned ? 'Unpin · P' : 'Pin · P')} onClick={actions.pin}>
             <Icon name={pinned ? 'keep-fill' : 'keep'} /><span className="lbl">{pinned ? 'Unpin' : 'Pin'}</span><span className="kbd">P</span>
+          </button>
+        )}
+        {canSnooze && (
+          <SnoozeMenu onPick={actions.snooze!} button={(open, toggle) => (
+            <button className="tool" type="button" aria-label="Snooze" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : tip('Snooze')} onClick={toggle}>
+              <Icon name="snooze" /><span className="lbl">Snooze</span>
+            </button>
+          )} />
+        )}
+        {!phone && snoozedUntil && actions.unsnooze && (
+          <button className="tool active" type="button" aria-pressed="true" aria-label="Unsnooze" data-tip={snoozedLine(snoozedUntil, now, timeZone)} onClick={actions.unsnooze}>
+            <Icon name="snooze" /><span className="lbl">Unsnooze</span>
           </button>
         )}
         {gmail !== false && (

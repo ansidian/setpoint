@@ -13,8 +13,8 @@ import type {Entry, Fold, Folded, FoldRules} from '../logic/fold.ts';
 // Emails that left lately, so Undo's return folds back in.
 const RETURNING = 50;
 
-/** A row's beat before it folds: Done ticks it off in `good`, Trash throws it away in `alert`. */
-export type Beat = 'done' | 'trash';
+/** A row's beat before it folds: Done ticks it off in `good`, Trash throws it away in `alert`, Snooze sends it off in `violet`. */
+export type Beat = 'done' | 'trash' | 'snooze';
 
 /**
  * Why each email's row is leaving, set by the page as Done or Trash takes it (and cleared by Undo),

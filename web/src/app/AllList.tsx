@@ -19,6 +19,7 @@ import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
 import {age, clockTime, codeGroups, dayOf, fullTimestamp, localDate, trashLeft} from '../logic/format.ts';
 import {codeExpired, GROUP_GLYPHS, GROUP_LABELS, groupKey, promptText, rowKey, showsPending} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
+import {snoozeable, snoozedLine, snoozeWhen} from '../logic/snooze.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {keepTextUnselected} from '../ui/keys.ts';
 import type {IconName} from '../ui/glyphs.ts';
@@ -26,6 +27,7 @@ import {dotStyle} from './accounts.ts';
 import {CodeCopy, useCountdown} from './Code.tsx';
 import {beats, FOLD_HOLD_MS, foldDelays, foldRef, useFold} from './fold.ts';
 import {useRowSlot} from './slots.tsx';
+import {SnoozeMenu} from './SnoozeMenu.tsx';
 import type {Beat} from './fold.ts';
 import {Count} from './Count.tsx';
 import {usePhone} from './Phone.tsx';
@@ -62,7 +64,7 @@ const NO_ROWS: MessageRowOut[] = [];
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
 export function AllList({attention, days, shelf, lanes = true, fill = false, empty = null, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
-  label = 'Inbox', from, slot = true, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onCodeCopied}: {
+  label = 'Inbox', from, slot = true, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, onAnswer, onCodeCopied}: {
   // Attention's rows, every Attention email not yet Done.
   attention: MessageRowOut[];
   days: DayView[];
@@ -101,6 +103,8 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   onToggleNoise: (date: string) => void;
   onNearEnd: () => void;
   onUnpin: (id: number) => void;
+  // A row's Snooze, under the pointer: until that moment (ms). None where mail can't be snoozed.
+  onSnooze?: (id: number, until: number) => void;
   onAnswer?: (prompt: PatternPrompt, yes: boolean) => void;
   // A code row's Copy, once the clipboard has it: it reads the email.
   onCodeCopied?: (id: number) => void;
@@ -162,6 +166,8 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   // Under a health bar the first band keeps its top line (boards 17, 19a).
   const bars = useHealthBars();
   const phone = usePhone();
+  // The row whose Snooze menu is open: it keeps its pointer look until the menu closes.
+  const [snoozing, setSnoozing] = useState<string | null>(null);
   return (
     <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label={label} onScroll={onScroll}>
       {bars}
@@ -220,7 +226,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         const account = accounts.get(row.account_id);
         const tick = ticked.has(row.id);
         // Attention's dot and ring are `caution`, and Noise recedes, wherever they are.
-        const classes = ['row', item.shelf && 'shelf', row.lane === 'attention' && 'att', row.lane === 'noise' && 'noise', row.unread && 'unread', row.done && 'done', tick && 'ticked', !leaving && cursor === key && 'cur', !leaving && openId === row.id && 'open', !leaving && selected.has(row.id) && 'sel', showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`]
+        const classes = ['row', item.shelf && 'shelf', row.lane === 'attention' && 'att', row.lane === 'noise' && 'noise', row.unread && 'unread', row.done && 'done', tick && 'ticked', !leaving && cursor === key && 'cur', !leaving && openId === row.id && 'open', !leaving && selected.has(row.id) && 'sel', showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`, snoozing === key && 'menu-open']
           .filter(Boolean).join(' ');
         const unpin = (event: MouseEvent) => {
           event.stopPropagation();
@@ -249,13 +255,23 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
             )}
             {/* The reply mark on an email the user answered. The phone's list has none. */}
             {row.replied_at && !phone && <RepliedMark at={row.replied_at} now={now} timeZone={timeZone} />}
+            {row.snoozed_until && <SnoozedMark until={row.snoozed_until} now={now} timeZone={timeZone} />}
+            {row.returned_at && !row.snoozed_until && <ReturnedMark row={row} timeZone={timeZone} />}
             {row.draft && !phone && <span className="drafted">Draft</span>}
             {slot && afterSubject(row)}
             {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
             <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
-            <span className="age" data-tip={fullTimestamp(row.received_at, timeZone)}>{item.aged ? age(row.received_at, now, timeZone) : clockTime(row.received_at, timeZone)}</span>
-            {/* On the Pinned shelf, Unpin takes the age's place under the pointer (board 10). */}
-            {item.shelf && <span className="hact"><button className="unpin" type="button" onClick={unpin}><Icon name="keep_off" size={15} />Unpin</button></span>}
+            <span className="age" data-tip={fullTimestamp(row.received_at, timeZone)}>{rowWhen(row, item.aged, now, timeZone)}</span>
+            {/* Under the pointer Snooze takes the age's place, and on the Pinned shelf Unpin with it (board 10). */}
+            {!leaving && ((onSnooze && snoozeable(row)) || item.shelf) && (
+              <span className="hact">
+                {onSnooze && snoozeable(row) && (
+                  <SnoozeMenu onOpen={open => setSnoozing(open ? key : null)} onPick={until => onSnooze(row.id, until)}
+                    button={(open, toggle) => <button className="ibtn sm row-snooze" type="button" aria-label="Snooze" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : 'Snooze'} onClick={toggle}><Icon name="snooze" size={16} /></button>} />
+                )}
+                {item.shelf && <button className="unpin" type="button" onClick={unpin}><Icon name="keep_off" size={15} />Unpin</button>}
+              </span>
+            )}
           </div>
         );
       })}
@@ -271,9 +287,30 @@ export function RepliedMark({at, now, timeZone}: {at: string; now: number; timeZ
   return <span className="replied" role="img" aria-label={words} data-tip={words}><Icon name="reply" size={16} /></span>;
 }
 
+/**
+ * When a row's email came: its age or clock time, or for one back from a snooze on a later day, the
+ * day it first came ("Nov 21"), since its place in the list is when it returned.
+ */
+function rowWhen(row: MessageRowOut, aged: boolean, now: number, timeZone: string): string {
+  if (row.returned_at && localDate(row.returned_at, timeZone) !== localDate(row.received_at, timeZone)) return dayOf(row.received_at, now, timeZone);
+  return aged ? age(row.received_at, now, timeZone) : clockTime(row.received_at, timeZone);
+}
+
+/** A snoozed row's mark, in All's search results: `snooze` and when it returns ("Mon 9:00 AM"). */
+export function SnoozedMark({until, now, timeZone}: {until: string; now: number; timeZone: string}) {
+  const words = snoozedLine(until, now, timeZone);
+  return <span className="snoozed num" role="img" aria-label={words} data-tip={words}><Icon name="snooze" size={14} />{snoozeWhen(until, now, timeZone)}</span>;
+}
+
+/** A row back from a snooze: a small `snooze`, with when it returned in its tip. */
+export function ReturnedMark({row, timeZone}: {row: MessageRowOut; timeZone: string}) {
+  const words = `Back from snooze at ${fullTimestamp(row.returned_at!, timeZone)}`;
+  return <span className="returned" role="img" aria-label={words} data-tip={words}><Icon name="snooze" size={14} /></span>;
+}
+
 /** The unread gutter: its dot, or while a row beats, Done's check or Trash's bin in its place. */
 export function Gutter({beat}: {beat: Beat | null}) {
-  return <span className="ud">{beat && <Icon name={beat === 'done' ? 'check' : 'delete'} size={14} />}</span>;
+  return <span className="ud">{beat && <Icon name={beat === 'done' ? 'check' : beat === 'snooze' ? 'snooze' : 'delete'} size={14} />}</span>;
 }
 
 /** A code row: the code in two groups of three, Copy (the code without its space), and its countdown. */

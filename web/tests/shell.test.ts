@@ -236,6 +236,10 @@ describe('routes', () => {
     ['/drafts', '', {page: 'drafts', open: null}],
     ['/drafts/4', '', {page: 'drafts', open: 4}],
     ['/drafts/nope', '', {page: 'drafts', open: null}],
+    // Snoozed: the open snoozed email in the address.
+    ['/snoozed', '', {page: 'snoozed', open: null}],
+    ['/snoozed/12', '', {page: 'snoozed', open: 12}],
+    ['/snoozed/nope', '', {page: 'snoozed', open: null}],
     ['/somewhere', '', {page: 'inbox', open: null}],
   ] as const)('%s%s', (path, search, expected) => {
     const route = parseRoute(path, search);
@@ -333,7 +337,7 @@ describe('the keys offline refuses', () => {
   ])('%s: refused %s', (_name, event, refused) => expect(offlineRefuses(event)).toBe(refused));
 });
 
-describe('the toast\'s tone by its words (its colour and glyph: done, read, taken away, sending, pinned, failed, plain)', () => {
+describe('the toast\'s tone by its words (its colour and glyph: done, read, taken away, sending, pinned, snoozed, failed, plain)', () => {
   test.each([
     // A pin made out of the shelf's sight says so with its glyph.
     ['Pinned', 'pinned'], ['Pinned 3', 'pinned'],
@@ -341,9 +345,10 @@ describe('the toast\'s tone by its words (its colour and glyph: done, read, take
     ['Marked as read', 'read'], ['Marked 5 as read', 'read'],
     ['Moved to Trash', 'gone'], ['Moved 3 to Trash', 'gone'], ['Deleted Dentist', 'gone'], ['Draft discarded', 'gone'], ['Discarded 2 drafts', 'gone'],
     ['Sending', 'send'],
+    ['Snoozed until Mon 9:00 AM', 'snoozed'], ['Snoozed until Tomorrow 8:30 AM', 'snoozed'],
     ['Failed to pin', 'failed'], ['Failed to reorder rules', 'failed'],
     // Every other line is plain.
-    ['Moved Dentist to Thu, Oct 8', 'plain'], ['Reopened Pay rent', 'plain'], ['Copied 482913', 'plain'], ['Sending soon', 'plain'],
+    ['Moved Dentist to Thu, Oct 8', 'plain'], ['Reopened Pay rent', 'plain'], ['Copied 482913', 'plain'], ['Sending soon', 'plain'], ['Snoozed', 'plain'],
   ])('%s: %s', (text, tone) => expect(toastTone(text)).toBe(tone));
 });
 

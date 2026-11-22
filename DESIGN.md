@@ -230,7 +230,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, Reply and an email the user answered (its row's mark, "You replied") `reply`,
   Reply all `reply_all`, Forward `forward`, popping the composer out `pip` (its window's × is `close`), help me write's undo and redo `undo` and `redo`, attaching a file `attach_file`, Drafts `draft` (an email's row says "Draft" in `alert`
-  instead), an attachment of an unknown type `unknown_document`, snoozing an overdue task `snooze`,
+  instead), an attachment of an unknown type `unknown_document`, snoozing (an overdue task, an email, the
+  Snoozed row, a snoozed email's return time and a returned email's mark) `snooze`,
   a Settings page its nav's glyph wherever it's named.
 - **Tones**: `caution` and `alert` are close in hue, so a state's shape says how serious it is
   before its words do. **Caution**, something Setpoint depends on struggling (a source failing or
@@ -286,7 +287,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   button with its key's hint where the page takes one (⌘Z on the Inbox's and Sent's Undo). Its
   colour and glyph say what happened: done `good` `check`, marked read `good` `mark_email_read`,
   Trash, deleted and discarded `alert` `delete`, Sending `accent` `send`, a pin `sunGlyph` `keep`,
-  a failure `alert` `error`, any other line `ink2` with a glyph that fits (Copied `content_copy`,
+  a snooze `violet` `snooze` ("Snoozed until Mon 9:00 AM"), a failure `alert` `error`, any other line `ink2` with a glyph that fits (Copied `content_copy`,
   otherwise `info`). A failure stays 8 seconds as one line, wrapping at
   380 px at most, with an `alert` edge. A failure with an action (Open, Try again) and a confirm
   (Sign out) wait for an answer, with no ring; a confirm has a quiet Cancel (Esc) and a solid `ink`
@@ -298,7 +299,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   browser's menu.
 - **Mail in the sidebar:** Inbox is mail's row, with the unread count. Sent and Drafts sit under it as
   smaller, indented rows at 400. Sent has no count, and Drafts shows only while a draft waits, with
-  its count. In the rail Inbox is mail's one icon. Sent's header filters by account (All, then each
+  its count. Snoozed comes after Drafts, as small, only while an email is snoozed, with its count: its
+  page lists them soonest return first, each with its return time and Unsnooze under the pointer. In the rail Inbox is mail's one icon. Sent's header filters by account (All, then each
   account with its colour), though the Inbox has none: the Inbox is mail that came in, whichever
   address it came to, and in Sent the account is the address the user chose to write from.
 
