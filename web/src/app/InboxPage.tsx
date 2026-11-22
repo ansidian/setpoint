@@ -598,7 +598,30 @@ export function InboxPage({route}: {route: InboxRoute}) {
         toastFailure('Failed to snooze')(error);
       });
     },
-    unsnooze: () => open !== null && void unsnooze(open).catch(toastFailure('Failed to unsnooze')),
+    // On a snoozed email (found by search): back in the Inbox, with Undo snoozing it again until the same time.
+    unsnooze: () => {
+      if (open === null) return;
+      const was = rowOf(open)?.snoozed_until;
+      if (!was) return;
+      const id = open;
+      search.mark(id, {snoozed_until: undefined});
+      void unsnooze(id).then(() => {
+        let toast = 0;
+        const back = () => {
+          const index = undos.indexOf(back);
+          if (index < 0) return;
+          undos.splice(index, 1);
+          dismissToast(toast);
+          search.mark(id, {snoozed_until: was});
+          void snooze(id, Date.parse(was)).catch(toastFailure('Failed to snooze'));
+        };
+        undos.push(back);
+        toast = showToast('Back in the Inbox', {label: 'Undo', run: back, key: '⌘Z'});
+      }, error => {
+        search.mark(id, {snoozed_until: was});
+        toastFailure('Failed to unsnooze')(error);
+      });
+    },
     openInGmail: () => open !== null && on.openInGmail(open),
     step: (delta: 1 | -1) => {
       const next = open ? neighbour(stops, open, delta) : null;

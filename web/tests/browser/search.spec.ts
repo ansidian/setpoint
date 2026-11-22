@@ -12,13 +12,13 @@
 // Enter, ↓ and J / K select results on the grid. E goes to the editor and back. Then Esc.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from '@setpoint/shared';
+import type {AccountOut, AllOut, CalendarOut, ItemsOut, SearchOut, SnoozedOut, TodoistProjectOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {SUGGESTION_PAUSE_MS} from '../../src/app/search/mailSearch.ts';
 import {TYPING_MS} from '../../src/app/search/state.ts';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
-import {cleanUp, drawn, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -1102,6 +1102,36 @@ test('search results show what was done to them: an opened one loses its dot, Do
     await until('out of the results', () => page.locator(`.arow.result[data-id="${id}"]`).count(), count => count === 0);
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await page.locator(`.arow.result[data-id="${id}"]`).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a snoozed email found by search, unsnoozed from the reader: its mark goes, it says "Back in the Inbox", and Undo snoozes it again with its mark', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const found = await setpoint.api<SearchOut>('POST', '/search', {text: 'google', chips: []});
+    const id = found.results.find(result => result.subject === 'Your recovery email was changed')!.id;
+    const returns = new Date(Date.parse(found.results[0]!.received_at) + 30 * 86_400_000).toISOString();
+    await setpoint.api('POST', `/mail/messages/${id}/snooze`, {until: returns});
+    const page = await load(setpoint);
+    await page.keyboard.press('/');
+    await page.keyboard.type('google');
+    await page.keyboard.press('Enter');
+    const mark = page.locator(`.arow.result[data-id="${id}"] .snoozed`);
+    await mark.waitFor();
+    await page.locator(`.arow.result[data-id="${id}"]`).click();
+    await page.locator('.rd-tools .tool.snoozed').click();
+    await page.locator('.snooze-list .menu-i', {hasText: 'Unsnooze'}).click();
+    const toast = await holdToast(page);
+    assert.match(await toast.innerText(), /Back in the Inbox/);
+    await until('the mark goes', () => mark.count(), count => count === 0);
+    await until('unsnoozed at the server', () => setpoint.api<SnoozedOut>('GET', '/mail/snoozed'), list => !list.rows.some(row => row.id === id));
+    // ⌘Z, as the toast's Undo: snoozed again until the same time, the mark back.
+    await page.keyboard.press('Meta+z');
+    await mark.waitFor();
+    await until('snoozed again at the server', () => setpoint.api<SnoozedOut>('GET', '/mail/snoozed'), list => list.rows.find(row => row.id === id)?.snoozed_until === returns);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
