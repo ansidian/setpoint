@@ -28,7 +28,7 @@
 .editor .nl .nl-input::placeholder { color: var(--ink3); }
 .editor .nl .nl-input::selection { color: transparent; background: color-mix(in oklch, var(--accent) 30%, transparent); }
 /* A line longer than the field scrolls inside the input, and the marks move with it
-   (Editor.tsx's useMirror). A side cut short fades over 14 px, so the cut reads as more. */
+   (ui/useMirror.ts). A side cut short fades over 14 px, so the cut reads as more. */
 .editor .nl-text { display: inline-block; }
 .editor .nl-marks[data-clip-left] { mask-image: linear-gradient(to right, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-right] { mask-image: linear-gradient(to left, transparent 0, #000 14px); }

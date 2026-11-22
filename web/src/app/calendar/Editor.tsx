@@ -37,6 +37,8 @@ import {lineOffsets, rowReminders, taskTimeMinutes} from '../../logic/reminders.
 import {projectChoice, projectMenu, rankMatches} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {PlaceList} from '../../ui/PlaceList.tsx';
+import {useMirror} from '../../ui/useMirror.ts';
 import {Segmented} from '../../ui/Segmented.tsx';
 import {placeMenu, useMenuRef} from '../../ui/popover.ts';
 import {colourVar, useAccounts} from '../accounts.ts';
@@ -136,38 +138,6 @@ function useFlash(value: string, cause: string): boolean {
 }
 
 const FLASH_MS = 600;
-
-const MIRROR_EVENTS = ['scroll', 'input', 'select', 'keyup', 'focus', 'blur'] as const;
-
-/**
- * Keeps the line's marks under its letters: a line longer than the field scrolls inside the
- * input, so the mirror moves with it, and says which sides are cut short, which fade.
- */
-function useMirror(input: RefObject<HTMLInputElement | null>, mirror: RefObject<HTMLSpanElement | null>, text: string) {
-  useEffect(() => {
-    const field = input.current;
-    const marks = mirror.current;
-    const inner = marks?.firstElementChild;
-    if (!field || !marks || !(inner instanceof HTMLElement)) return;
-    let frame = 0;
-    const follow = () => {
-      cancelAnimationFrame(frame);
-      // Chromium moves the input's scroll after its caret, so it's read a frame later.
-      frame = requestAnimationFrame(() => {
-        const left = field.scrollLeft;
-        inner.style.transform = left ? `translateX(${-left}px)` : '';
-        marks.toggleAttribute('data-clip-left', left > 0);
-        marks.toggleAttribute('data-clip-right', field.scrollWidth - field.clientWidth - left > 1);
-      });
-    };
-    for (const name of MIRROR_EVENTS) field.addEventListener(name, follow);
-    follow();
-    return () => {
-      cancelAnimationFrame(frame);
-      for (const name of MIRROR_EVENTS) field.removeEventListener(name, follow);
-    };
-  }, [input, mirror, text]);
-}
 
 // ---------- The editor ----------
 
@@ -866,7 +836,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               {placeMenuShown && (
                 <>
                   <span />
-                  <PlaceList places={placeMenuShown.list} cur={placeMenuShown.cur} query={placeMenuShown.query} onPick={pick} />
+                  <PlaceList places={placeMenuShown.list} cur={placeMenuShown.cur} query={placeMenuShown.query} keyOf={place => place.place_id || place.name} onPick={pick} />
                 </>
               )}
             </>
@@ -1050,29 +1020,6 @@ function RepeatRow({draft, open, menuRef, onToggle, onPick}: {draft: Draft; open
         )}
       </span>
     </>
-  );
-}
-
-/**
- * Places under the place (board 13): the name with what was typed in bold, the address, ↵ on the one
- * Enter picks. The proposal card's floats under its field as a menu.
- */
-export function PlaceList({places, cur, query, floating = false, onPick}: {places: PlaceSuggestionOut[]; cur: number; query: string; floating?: boolean; onPick: (place: PlaceSuggestionOut) => void}) {
-  return (
-    <div className={`pop places${floating ? ' menu' : ''}`} role="listbox" aria-label="Places">
-      {places.map((place, index) => {
-        const at = place.name.toLowerCase().indexOf(query.toLowerCase());
-        const name = at < 0 ? place.name : <>{place.name.slice(0, at)}<b>{place.name.slice(at, at + query.length)}</b>{place.name.slice(at + query.length)}</>;
-        return (
-          <div key={place.place_id || place.name} className={`menu-i place${index === cur ? ' cur' : ''}`} role="option" aria-selected={index === cur}
-            onMouseDown={event => event.preventDefault()} onClick={() => onPick(place)}>
-            <Icon name="location_on" />
-            <span className="grow place-text"><span className="ell place-name">{name}</span>{place.address && <span className="ell ink3 place-address">{place.address}</span>}</span>
-            {index === cur && <span className="kbd">↵</span>}
-          </div>
-        );
-      })}
-    </div>
   );
 }
 
