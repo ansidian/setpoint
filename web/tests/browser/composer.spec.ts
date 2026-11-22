@@ -8,7 +8,8 @@
 // account; a composer left with nothing written, which leaves no draft; a forward, its attachment
 // taken off; a file attached by the attach button, kept on the server through a pop-out and
 // Discard's Undo and held with the reply; and a reply popped out, kept up while other mail and Calendar show, and docked back on
-// its email; and help me write, from ⌘J through a lookup to the draft sent as written. The fields, chips, the fold, the saving and what carries across a pop-out are
+// its email; help me write, from ⌘J through a lookup to the draft sent as written; and Send asking
+// first about an empty subject or an attachment the text mentions. The fields, chips, the fold, the saving and what carries across a pop-out are
 // components/composer.test.tsx's, how windows fold when they don't fit composer.test.ts's, a send
 // that reaches the dev provider the server's (sendDev.test.ts).
 import type {AiOut, AllOut, DraftOut, DraftsOut} from '@setpoint/shared';
@@ -516,5 +517,96 @@ test('help me write: ⌘J opens the line, the draft reads the email and Sam\'s m
   } finally {
     await setpoint.stop();
     await fake.close();
+  }
+});
+
+// Send while it asks first: Send anyway, and the words in the body painted as mentioning an attachment.
+const send = (page: Page) => composer(page).locator('.cmp-send');
+const paintedWords = (page: Page) => page.evaluate(() => [...CSS.highlights.get('cmp-attach') ?? []].map(range => range.toString()));
+
+test('a new message with no subject asks first: ⌘Enter turns Send to Send anyway and sends nothing, an edit puts Send back, Esc keeps it in Drafts, and ⌘Enter twice sends it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    await page.keyboard.press('c');
+    await answered(page);
+    await page.keyboard.type('sam.ortiz@example.org,');
+    await body(page).click();
+    await page.keyboard.type('Still on for 9?');
+    await until('saved', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'Still on for 9?');
+
+    await page.keyboard.press('Meta+Enter');
+    await send(page).filter({hasText: 'Send anyway'}).waitFor();
+    assert.equal(await composer(page).getByRole('textbox', {name: 'Subject'}).getAttribute('placeholder'), 'Add a subject');
+    // The caret stays in the body, and nothing went.
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Message');
+    await setpoint.idle();
+    assert.equal((await drafts(setpoint))[0]!.send_state, null);
+    assert.equal(await page.locator('.toast').count(), 0);
+
+    // Going back to it: the next edit puts Send back.
+    await page.keyboard.type(' Or 10?');
+    await send(page).filter({hasText: /^Send⌘↵$/}).waitFor();
+    // Asked again, then closed: kept, and opened again it doesn't ask until Send does.
+    await page.keyboard.press('Meta+Enter');
+    await send(page).filter({hasText: 'Send anyway'}).waitFor();
+    await page.keyboard.press('Escape');
+    await until('Esc closes it', () => composer(page).count(), count => count === 0);
+    await setpoint.idle();
+    assert.equal((await drafts(setpoint))[0]!.send_state, null);
+    await page.goto(`${setpoint.base}/drafts`);
+    await page.locator('.drafts-list .row').first().click();
+    await body(page).filter({hasText: 'Still on for 9? Or 10?'}).waitFor();
+    assert.equal(await send(page).textContent(), 'Send⌘↵');
+
+    await body(page).click();
+    await page.keyboard.press('Meta+Enter');
+    await send(page).filter({hasText: 'Send anyway'}).waitFor();
+    await page.keyboard.press('Meta+Enter');
+    const toast = await holdToast(page);
+    assert.equal(await toast.textContent(), 'SendingUndo');
+    await until('held', () => drafts(setpoint), found => found[0]?.send_state === 'held');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a reply saying "attached" with nothing attached asks first, the word painted and Attach marked; with the file attached, ⌘Enter sends at once', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const id = await idOf(setpoint, 'Dinner Friday?');
+    const page = await openEmail(setpoint, id);
+    await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().waitFor();
+    await page.keyboard.press('r');
+    await answered(page);
+    await page.keyboard.type('The menu is attached.');
+    await until('saved', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'The menu is attached.');
+
+    await page.keyboard.press('Meta+Enter');
+    await send(page).filter({hasText: 'Send anyway'}).waitFor();
+    assert.deepEqual(await paintedWords(page), ['attached']);
+    const attach = composer(page).getByRole('button', {name: 'Attach files'});
+    assert.equal(await attach.getAttribute('data-tip'), 'Nothing attached');
+    await setpoint.idle();
+    assert.equal((await drafts(setpoint))[0]!.send_state, null);
+
+    // Attaching is the edit that puts Send back and the paint away.
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), attach.click()]);
+    await chooser.setFiles({name: 'Menu.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 menu')});
+    await composer(page).locator('.cmp-file:not(.uploading)', {hasText: 'Menu.pdf'}).waitFor();
+    assert.equal(await send(page).textContent(), 'Send⌘↵');
+    assert.deepEqual(await paintedWords(page), []);
+
+    await body(page).click();
+    await page.keyboard.press('Meta+Enter');
+    const toast = await holdToast(page);
+    assert.equal(await toast.textContent(), 'SendingUndo');
+    await until('held', () => drafts(setpoint), found => found[0]?.send_state === 'held');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
   }
 });

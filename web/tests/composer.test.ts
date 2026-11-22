@@ -1,10 +1,11 @@
 // The composer's pure rules as tables: when an email has anyone for Reply all (the server's own fill
 // rule), what a typed or pasted recipient is, a chip's words, the reply's quote and its line, and
-// how the composer's windows fold and hide when they don't all fit, and what attachments weigh.
+// how the composer's windows fold and hide when they don't all fit, what attachments weigh, and when
+// Send asks first.
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {attachmentsTotal, megabytes, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {arrangeWindows, canRedo, canUndo, chipLabel, emptyDraft, fillAround, forwardLines, hasOthers, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
+import {arrangeWindows, canRedo, canUndo, chipLabel, emptyDraft, fillAround, forwardLines, hasOthers, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, sendWarning, undoVersion, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
 import type {Versions} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
@@ -232,5 +233,28 @@ describe('what was typed before the server answered, put into the draft it answe
     ['words typed and taken back on a draft with words change nothing', {...draft, body: left}, {body: [{type: 'paragraph' as const, runs: []}]}, {}],
   ])('%s', (_, answered, typed, saved) => {
     expect(fillAround(answered, typed)).toEqual(saved);
+  });
+});
+
+describe('Send asks first about an empty subject or an attachment the text mentions', () => {
+  const SUBJECT = 'Send without a subject?';
+  const FILE = 'Send without an attachment?';
+  const BOTH = 'Send without a subject or an attachment?';
+  test.each([
+    ['an empty subject', '', 'Hi', false, SUBJECT],
+    ['a subject of spaces', '   ', 'Hi', false, SUBJECT],
+    ['a reply\'s subject with nothing written', 'Re: Lease', '', false, null],
+    ['"see attached" with nothing attached', 'Lease', 'see attached', false, FILE],
+    ['"Attachment below" with nothing attached', 'Lease', 'Attachment below', false, FILE],
+    ['"attaching it" with nothing attached', 'Lease', 'I\'m attaching it now', false, FILE],
+    ['"see attached" with a file, an upload or a forward\'s kept original', 'Lease', 'see attached', true, null],
+    ['"reattach", not at a word\'s start', 'Lease', 'I\'ll reattach it', false, null],
+    ['both', '', 'see attached', false, BOTH],
+  ])('%s', (_name, subject, text, attached, line) => {
+    expect(sendWarning({subject, text, attached})?.line ?? null).toBe(line);
+  });
+  test('it says which parts are missing', () => {
+    expect(sendWarning({subject: '', text: 'see attached', attached: false})).toEqual({line: BOTH, subject: true, attachment: true});
+    expect(sendWarning({subject: 'Lease', text: 'see attached', attached: false})).toMatchObject({subject: false, attachment: true});
   });
 });

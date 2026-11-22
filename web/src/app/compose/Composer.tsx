@@ -8,7 +8,8 @@
 // The body is the description field's rich text, with its format row always there; a reply's quote
 // is folded behind "…" and opens to be trimmed (the recipient gets the quote as it is left).
 //
-// Keys: ⌘Enter sends, ⌘⇧B shows Cc and Bcc, ⌘J opens help me write's line (WriteLine.tsx), Esc
+// Keys: ⌘Enter sends (an empty subject, or "attach…" with nothing attached, asks first: Send reads
+// Send anyway and what's missing is marked, "attach…" painted in the body; ⌘Enter again sends), ⌘⇧B shows Cc and Bcc, ⌘J opens help me write's line (WriteLine.tsx), Esc
 // closes it (the draft kept). The format row leads with Send, has Attach and help me write after the
 // formats, and ends with Discard (no key). Files come by Attach, a drop anywhere on the composer or
 // a pasted image; each is a chip under the user's text with its name and size, a forward's kept
@@ -25,7 +26,7 @@
 // It is mounted once, by ComposerRoot, into the host element its places take in turn (place.ts):
 // the reader under its email, a new message's pane, Drafts' pane and the floating window.
 import type {AccountOut, DraftOut, DraftsOut, DraftUpdateInput, FromOut, MessageOut, Recipient} from '@setpoint/shared';
-import {isEmpty, sameDescription} from '@setpoint/shared/richText';
+import {isEmpty, plainText, sameDescription} from '@setpoint/shared/richText';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {ClipboardEvent, CSSProperties, DragEvent, KeyboardEvent, ReactNode, RefObject} from 'react';
@@ -34,7 +35,7 @@ import {timeZone as userTimeZone} from '../../api/auth.ts';
 import {draftPath, DRAFTS_PATH, FROM_PATH, suggestPeople} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
 import {paragraphs} from '../../logic/body.ts';
-import {chipLabel, forwardLines, quoteOf, readRecipient, readRecipients, replyLine, startsWithCopies, withRecipients} from '../../logic/composer.ts';
+import {chipLabel, forwardLines, quoteOf, readRecipient, readRecipients, replyLine, sendWarning, startsWithCopies, withRecipients} from '../../logic/composer.ts';
 import {attachmentType, fileSize, hasRemoteContent, remoteImages} from '../../logic/reader.ts';
 import {TYPE_GLYPHS} from '../Attachments.tsx';
 import {MailFrame} from '../MailFrame.tsx';
@@ -49,6 +50,7 @@ import {arrangeWindows, placeWindows} from '../../logic/composer.ts';
 import {attachFiles, canReplyAll, closeComposer, closeComposerAt, discard, dismissFileError, dock, foldWindows, popOut, queueSave, queueTyped, removeFile, shownEmail, switchKind, toggleMinimized, send, unsaved, useComposers, useFills, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
 import {useRoute} from '../router.ts';
 import type {OpenComposer} from './composer.ts';
+import type {SendWarning} from '../../logic/composer.ts';
 import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
 import {Bar, Dot, Sk} from '../states/Loading.tsx';
 import {useHelpMeWrite, WriteButton, WriteLine} from './WriteLine.tsx';
@@ -114,7 +116,18 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   const waitedFor = useRef(draft === null);
   // A change is saved into the draft, or, while it's on its way, kept for it.
   const save = (changes: DraftUpdateInput) => (draft ? queueSave(draft.id, changes) : queueTyped(open.key, changes));
+  // Send asking first (an empty subject, or "attach…" with nothing attached): Send reads Send
+  // anyway, and what's missing is marked. The next edit to the subject, body or files takes it away.
+  const [warning, setWarning] = useState<SendWarning | null>(null);
+  const clearWarning = () => setWarning(null);
+  // Asking about an attachment, the words that mention one are marked in the body: painted over the
+  // text (CSS highlights), the text itself untouched. Until the next edit takes the warning away.
+  useEffect(() => {
+    if (!warning?.attachment || !body.current) return;
+    return markWords(body.current, ATTACH_WORDS, 'cmp-attach');
+  }, [warning]);
   const change = <K extends keyof typeof fields>(key: K, value: (typeof fields)[K]) => {
+    if (key === 'subject' || key === 'body') clearWarning();
     latest.current = {...latest.current, [key]: value};
     setFields(latest.current);
     save({[key]: value});
@@ -128,12 +141,18 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   const [removed, setRemoved] = useState(() => (draft ? unsaved(draft.id).removed_attachments ?? draft.removed_attachments : []));
   const originals = kind === 'forward' && message ? message.attachments : [];
   const removeOriginal = (id: number) => {
+    clearWarning();
     const next = [...removed, id];
     setRemoved(next);
     save({removed_attachments: next});
   };
   // Files wait for the draft: there's nowhere to upload them before it.
-  const attach = (files: File[]) => draft && attachFiles(draft.id, files, originals, removed);
+  const attach = (files: File[]) => {
+    if (!draft || !files.length) return;
+    clearWarning();
+    attachFiles(draft.id, files, originals, removed);
+  };
+  const uploads = useUploads(draft?.id ?? null);
 
   // The draft arrived, or words typed before Esc came in with it while this composer had it open:
   // what came in goes around what was typed (already saved into it), before the frame is drawn. The
@@ -179,9 +198,11 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   const [dropping, setDropping] = useState(false);
   const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files');
   const failed = draft?.send?.state === 'failed' ? draft.send.error : null;
-  // Send: an address still being typed becomes a chip first (the field's leaving does it). With
-  // no one to send to, the caret goes to To.
-  const sendNow = () => {
+  // Before a send goes: an address still being typed becomes a chip first (the field's leaving does
+  // it). With no one to send to, the caret goes to To. An empty subject, or "attach…" in the user's
+  // text with nothing attached, asks once: Send turns to Send anyway (a second ⌘Enter or a click
+  // sends), the composer open and the caret where it was. Then `go` runs with the fields as they are.
+  const whenReady = (go: (fresh: typeof fields) => void) => {
     if (!draft) return;
     const typing = document.activeElement;
     if (typing instanceof HTMLInputElement && typing.closest('.cmp-recipients')) typing.blur();
@@ -190,8 +211,16 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
       to.current?.focus();
       return;
     }
-    send({...draft, ...fresh});
+    const attached = draft.files.length > 0 || uploads.length > 0 || originals.some(file => !removed.includes(file.id));
+    const asks = sendWarning({subject: fresh.subject, text: plainText(fresh.body), attached});
+    if (asks && !warning) {
+      setWarning(asks);
+      return;
+    }
+    clearWarning();
+    go(fresh);
   };
+  const sendNow = () => whenReady(fresh => draft && send({...draft, ...fresh}));
 
   // The caret: in the body, at its start, when there's someone to send to already; else in To.
   // Once it's in its place, which may come after it's drawn.
@@ -338,7 +367,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
       )}
       {subjectShown && (
         <div className="cmp-row">
-          <input ref={subjectField} className="cmp-subject grow" aria-label="Subject" placeholder="Subject" value={fields.subject} onChange={event => change('subject', event.target.value)} />
+          <input ref={subjectField} className={warning?.subject ? 'cmp-subject grow asks' : 'cmp-subject grow'} aria-label="Subject" placeholder={warning?.subject ? 'Add a subject' : 'Subject'} value={fields.subject} onChange={event => change('subject', event.target.value)} />
         </div>
       )}
       {failed && (
@@ -352,7 +381,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         onChange={blocks => change('body', blocks)}
         after={(
           <>
-            <Files draft={draft} originals={originals.filter(file => !removed.includes(file.id))} onRemoveOriginal={removeOriginal} />
+            <Files draft={draft} originals={originals.filter(file => !removed.includes(file.id))} onRemoveOriginal={removeOriginal} onRemoveFile={clearWarning} />
             {kind === 'reply' || kind === 'reply_all' ? (draft ? <Quote draft={draft} message={message} timeZone={timeZone} arrived={arrived} /> : (
               <div className="cmp-quote"><Sk kind="composer-quote" className="cmp-fold-sk"><Bar w={30} h={18} /></Sk></div>
             )) : kind === 'forward' ? <Forwarded message={message} timeZone={timeZone} /> : null}
@@ -360,13 +389,13 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         )}
         beforeBar={<WriteLine help={help} body={fields.body} />}
         barStart={(
-          <button className="btn cmp-send" type="button" onMouseDown={event => event.preventDefault()} onClick={sendNow}>
-            Send<span className="kbd">⌘↵</span>
+          <button className={warning ? 'btn cmp-send asks' : 'btn cmp-send'} type="button" data-tip={warning?.line} aria-description={warning?.line} onMouseDown={event => event.preventDefault()} onClick={sendNow}>
+            {warning ? 'Send anyway' : 'Send'}<span className="kbd">⌘↵</span>
           </button>
         )}
         barEnd={(
           <>
-            <button className="ibtn sm" type="button" aria-label="Attach files" data-tip="Attach files" onMouseDown={event => event.preventDefault()} onClick={() => picker.current?.click()}>
+            <button className={warning?.attachment ? 'ibtn sm asks' : 'ibtn sm'} type="button" aria-label="Attach files" data-tip={warning?.attachment ? 'Nothing attached' : 'Attach files'} onMouseDown={event => event.preventDefault()} onClick={() => picker.current?.click()}>
               <Icon name="attach_file" size={17} />
             </button>
             <input ref={picker} type="file" multiple hidden aria-hidden="true" tabIndex={-1} onChange={event => {
@@ -382,6 +411,32 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
         )} />
     </section>
   );
+}
+
+/** A word that mentions an attachment, as Send's warning reads it (logic/composer.ts's sendWarning). */
+const ATTACH_WORDS = /\battach\w*/gi;
+
+/**
+ * Paints the words `pattern` matches in `root`'s text with the CSS highlight `name`, leaving the
+ * text as it is. It answers the undo. Where the browser has no CSS highlights, nothing is painted.
+ */
+function markWords(root: HTMLElement, pattern: RegExp, name: string): () => void {
+  if (typeof Highlight === 'undefined' || !('highlights' in CSS)) return () => {};
+  const ranges: Range[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    for (const match of (node.textContent ?? '').matchAll(pattern)) {
+      const range = document.createRange();
+      range.setStart(node, match.index);
+      range.setEnd(node, match.index + match[0].length);
+      ranges.push(range);
+    }
+  }
+  // One highlight for every composer: each adds its own ranges and takes them back.
+  const highlight = CSS.highlights.get(name) ?? new Highlight();
+  CSS.highlights.set(name, highlight);
+  ranges.forEach(range => highlight.add(range));
+  return () => ranges.forEach(range => highlight.delete(range));
 }
 
 /** A reply's quote, folded behind "…". Opened, it can be trimmed: the recipient gets it as it's left. */
@@ -419,7 +474,7 @@ function Quote({draft, message, timeZone, arrived}: {draft: DraftOut; message: M
  * in the order attached, then those still uploading. Each is a chip with its name and size, and its
  * x takes it off. The reason a file was refused shows over them until the next attach.
  */
-function Files({draft, originals, onRemoveOriginal}: {draft: DraftOut | null; originals: MessageOut['attachments']; onRemoveOriginal: (id: number) => void}) {
+function Files({draft, originals, onRemoveOriginal, onRemoveFile}: {draft: DraftOut | null; originals: MessageOut['attachments']; onRemoveOriginal: (id: number) => void; onRemoveFile: () => void}) {
   const uploads = useUploads(draft?.id ?? null);
   const error = useFileError(draft?.id ?? null);
   const own = draft?.files ?? [];
@@ -446,7 +501,10 @@ function Files({draft, originals, onRemoveOriginal}: {draft: DraftOut | null; or
       {(originals.length > 0 || own.length > 0 || uploads.length > 0) && (
         <div className="cmp-files" aria-label="Attachments">
           {originals.map(file => chip(`o${file.id}`, file, () => onRemoveOriginal(file.id)))}
-          {draft && own.map(file => chip(`f${file.id}`, file, () => removeFile(draft.id, file.id)))}
+          {draft && own.map(file => chip(`f${file.id}`, file, () => {
+            onRemoveFile();
+            removeFile(draft.id, file.id);
+          }))}
           {uploads.map(upload => chip(`u${upload.key}`, {filename: upload.name, mime_type: '', size_bytes: upload.size}, null))}
         </div>
       )}

@@ -251,3 +251,22 @@ export function redoVersion(state: Versions, current: Block[]): {state: Versions
  * write wrote (a version past the first shows, typed in since or not), a follow-up.
  */
 export const writePlaceholder = (body: Block[], state: Versions) => (isEmpty(body) ? 'Describe your message' : state.at > 0 ? 'Describe your follow-up changes' : 'Describe your change');
+
+/** What Send asks about first, and its question in words. */
+export interface SendWarning {
+  line: string;
+  subject: boolean;
+  attachment: boolean;
+}
+
+/**
+ * Whether Send asks first: the subject is empty, or the user's own text says "attach…" (at a word's
+ * start) and nothing is attached. Null sends at once.
+ */
+export function sendWarning({subject, text, attached}: {subject: string; text: string; attached: boolean}): SendWarning | null {
+  const noSubject = subject.trim() === '';
+  const noFile = !attached && /\battach/i.test(text);
+  if (!noSubject && !noFile) return null;
+  const line = noSubject && noFile ? 'Send without a subject or an attachment?' : noSubject ? 'Send without a subject?' : 'Send without an attachment?';
+  return {line, subject: noSubject, attachment: noFile};
+}

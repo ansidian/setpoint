@@ -113,6 +113,17 @@
 .composer .cmp-type-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 6; min-width: 200px; transform-origin: top left; }
 .composer .cmp-type-menu .menu-i.plain { padding-left: 36px; }
 .composer .cmp-send .kbd { margin-left: 2px; background: color-mix(in srgb, var(--onInk) 16%, transparent); color: color-mix(in srgb, var(--onInk) 70%, transparent); }
+/* Send asking first (an empty subject, or "attach…" with nothing attached): Send anyway in
+   caution, the empty subject's placeholder and the Attach button in caution with a ring, and the
+   words that mention an attachment painted in the body. */
+.composer .btn.cmp-send.asks { background: var(--caution); }
+@media (hover: hover) { .composer .btn.cmp-send.asks:enabled:hover { background: oklch(from var(--caution) calc(l + .05) c h); } }
+.composer .btn.cmp-send.asks:enabled:is(:active, [data-echo]) { background: oklch(from var(--caution) calc(l - .04) c h); }
+.composer .cmp-subject.asks::placeholder { color: var(--caution); }
+.composer .cmp-row:has(> .cmp-subject.asks) { box-shadow: inset 2px 0 0 var(--caution); }
+.composer .ibtn.asks { color: var(--caution); box-shadow: inset 0 0 0 1.5px var(--caution); }
+/* The words that mention an attachment, painted over the body's text while Send asks. */
+::highlight(cmp-attach) { background-color: color-mix(in srgb, var(--caution) 30%, transparent); }
 
 /* The reply's quote, folded behind "…"; opened, it can be trimmed. */
 .composer .cmp-quote { padding: 0 20px 12px; flex: none; }
