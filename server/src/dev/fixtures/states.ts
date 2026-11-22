@@ -16,8 +16,8 @@
 //   ntfy             18b: ntfy set up at an `.example` server (never reached), last sent 8:02 AM,
 //                    and Home set for Time to Leave (17's Weather row names it too)
 //
-// A stale source is one whose check hangs: a running job with a lease far ahead keeps the engine
-// from starting another, as a hung check would.
+// A stale source is one whose checks stopped: its next check, held far ahead, keeps the engine
+// from starting another, so no check finishes.
 import {SEED_NOW} from '@setpoint/shared';
 import type {RuleMatch, Settings} from '@setpoint/shared';
 import {and, eq, inArray} from 'drizzle-orm';
@@ -54,7 +54,7 @@ function stale(db: Db, label: string, at: string) {
 function staleSource(db: Db, source: typeof t.sources.$inferSelect, at: string) {
   db.update(t.sources).set({lastCheckAt: at, lastSuccessAt: at}).where(eq(t.sources.id, source.id)).run();
   db.insert(t.jobs).values({
-    kind: 'sync', key: `sync:${source.id}`, sourceId: source.id, state: 'running', attempts: 1, runAt: at, leaseUntil: '2099-01-01T00:00:00.000Z', createdAt: at,
+    kind: 'sync', key: `sync:${source.id}`, sourceId: source.id, state: 'queued', attempts: 1, runAt: '2099-01-01T00:00:00.000Z', createdAt: at,
   }).run();
 }
 
