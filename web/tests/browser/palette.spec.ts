@@ -34,7 +34,7 @@ test('board 20: ⌘K on the open Northwind email', async () => {
     assert.deepEqual(await page.locator('.palette .cmdk-label').allTextContents(), ['This email', 'Go to', 'Appearance']);
     assert.deepEqual(await items(page), [
       'DoneH', 'TrashE', 'PinP', 'Open in GmailO', 'ReplyR', 'ForwardF', 'Add to calendar', 'Add as task', 'Ask about this email', 'New rule from northwind.example…', 'Mark unread⇧U',
-      'Inbox1', 'Calendar2', 'News3', 'Jobs4', 'Settings⌘,', 'System', 'Light', 'Night', 'Fold the sidebar`',
+      'Inbox1', 'Sent', 'Drafts', 'Snoozed', 'Calendar2', 'News3', 'Jobs4', 'Settings⌘,', 'System', 'Light', 'Night', 'Fold the sidebar`',
     ]);
     assert.equal(await current(page), 'DoneH');
     assert.equal(await page.locator('.palette .ctx').textContent(), 'Interview availability for Software Engineer I');
@@ -105,7 +105,8 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
     await page.keyboard.type('new');
     // Settings › News is found by its name too.
     // The Inbox's Go to next unread too, by its keyword, its key U.
-    assert.deepEqual(await items(page), ['News3', 'Go to next unreadU', 'New eventC', 'New taskD', 'Settings › News']);
+    assert.deepEqual(await items(page), ['News3', 'Go to next unreadU', 'New messageC', 'New eventC', 'New taskD', 'Settings › News']);
+    await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
@@ -148,6 +149,34 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
     await page.keyboard.press('Enter');
     await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).click();
     await page.locator('.sign-in').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('⌘K goes to Drafts, and New message on Calendar opens a new message with the caret in To', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    await page.keyboard.press('Meta+k');
+    await page.keyboard.type('drafts');
+    assert.deepEqual(await items(page), ['Drafts']);
+    await page.keyboard.press('Enter');
+    await page.waitForURL(/\/drafts$/);
+
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.cal-month .cell').first().waitFor();
+    await page.keyboard.press('Meta+k');
+    await page.keyboard.type('new message');
+    assert.deepEqual(await items(page), ['New messageC']);
+    await page.keyboard.press('Enter');
+    await page.locator('.cmp-window .composer').waitFor();
+    assert.equal(await page.locator('.cmp-window .cmp-title-text').textContent(), 'New message');
+    await until('the caret is in To', () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')), label => label === 'To');
+    assert.match(page.url(), /\/calendar$/, 'it opens over Calendar');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

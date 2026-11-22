@@ -14,6 +14,7 @@ import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
 import {useFocusReturn} from '../../ui/focusReturn.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
+import {newMessage} from '../compose/composer.ts';
 import {jobsCommands} from '../jobs/index.ts';
 import type {SettingsPage} from '../../logic/route.ts';
 import {navigate} from '../router.ts';
@@ -52,6 +53,10 @@ const sidebarCommand = (rail: boolean): Command => ({
 function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
   return [
     {id: 'inbox', section: 'goto', label: 'Inbox', icon: 'inbox', hint: '1', run: () => navigate(toInbox())},
+    // The sidebar's mail pages; none has a key.
+    {id: 'sent', section: 'goto', label: 'Sent', icon: 'send', run: () => navigate({page: 'sent', open: null})},
+    {id: 'drafts', section: 'goto', label: 'Drafts', icon: 'draft', run: () => navigate({page: 'drafts', open: null})},
+    {id: 'snoozed', section: 'goto', label: 'Snoozed', icon: 'snooze', run: () => navigate({page: 'snoozed', open: null})},
     {id: 'calendar', section: 'goto', label: 'Calendar', icon: 'calendar_month', hint: '2', run: () => navigate({page: 'calendar', date: null, item: null, at: null})},
     {id: 'news', section: 'goto', label: 'News', icon: 'newspaper', hint: '3', run: () => navigate({page: 'news', view: 'all', story: null, article: null})},
     ...jobsCommands(),
@@ -62,6 +67,8 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
     })),
     // Under Appearance, with `` ` ``, from 1100 px up, where the sidebar opens and folds.
     ...(sidebarFoldable(window.innerWidth) ? [sidebarCommand(isRail())] : []),
+    // C is mail's key for it, as it is Calendar's for New event.
+    {id: 'new-message', section: 'more', label: 'New message', icon: 'edit', hint: 'C', run: () => newMessage()},
     {id: 'new-event', section: 'more', label: 'New event', icon: 'event', hint: 'C', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null}})},
     {id: 'new-task', section: 'more', label: 'New task', icon: 'task_alt', hint: 'D', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'task', message: null}})},
     {id: 'mark-all-read', section: 'more', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I',
