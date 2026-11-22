@@ -217,6 +217,7 @@ export function listDrafts(store: Store): DraftsOut {
   const drafts: DraftRowOut[] = rows.map(row => ({
     id: row.id, kind: row.kind, message_id: row.messageId, account_id: row.accountId, to: row.toRecipients, subject: row.subject,
     snippet: plainText(row.body).replace(/\s+/g, ' ').trim().slice(0, 140), updated_at: row.updatedAt, send_state: row.sendState,
+    send_at: row.sendState === 'held' ? row.sendAt : null,
   }));
   return {drafts, count: drafts.length};
 }

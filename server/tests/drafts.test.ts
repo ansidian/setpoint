@@ -1,10 +1,14 @@
 // Drafts through the API, on the seed: started filled on the server, one per email and kind, saved
 // as the user types, listed, discarded, marked on their email's row, and held by Send for Undo.
 import {SEED_NOW, SEND_HOLD_MS} from '@setpoint/shared';
-import {eq} from 'drizzle-orm';
+import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import * as t from '../src/db/schema.ts';
+import {devProvider} from '../src/providers/dev/index.ts';
 import {sweepEmptyDrafts} from '../src/sending/drafts.ts';
+import {SendWorker} from '../src/sending/worker.ts';
+import {SyncEngine} from '../src/sync/engine.ts';
+import {Adapters} from '../src/sync/registry.ts';
 import {removeMessages} from '../src/sync/mailMirror.ts';
 import {liveEvents, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -279,5 +283,75 @@ describe('Send holds the email for Undo', () => {
     await api.send('POST', `/api/mail/drafts/${draft.id}/send`);
     expect((await api.send('DELETE', `/api/mail/drafts/${draft.id}`)).status).toBe(204);
     expect(w.store.db.select().from(t.jobs).where(eq(t.jobs.kind, 'send')).all()).toEqual([]);
+  });
+});
+
+describe('Send later holds it until its moment', () => {
+  // The seed with a send worker on the dev provider, as `npm run try` sends: no network.
+  async function sending() {
+    const w = world({seed: true});
+    const engine: SyncEngine = new SyncEngine({store: w.store, adapters: new Adapters({}, devProvider()), workers: [new SendWorker({
+      store: w.store, send: (sourceId, mail) => engine.sendMail(sourceId, mail), findSent: (sourceId, query) => engine.findSent(sourceId, query),
+      attachment: (sourceId, message, id) => engine.attachment(sourceId, message, id),
+    })]});
+    const api = await signedIn(w, {engine});
+    const run = async () => {
+      for (let round = 0; round < 5; round += 1) {
+        await engine.tick();
+        await engine.settled();
+        if (!w.store.db.select().from(t.jobs).where(and(eq(t.jobs.kind, 'send'), lte(t.jobs.runAt, w.store.now().toISOString()), eq(t.jobs.state, 'queued'))).all().length) break;
+      }
+    };
+    const draft = (await api.send('POST', '/api/mail/drafts', {body: {kind: 'reply', message_id: THEO}})).body;
+    await api.send('PATCH', `/api/mail/drafts/${draft.id}`, {body: {body: body('Count me in.')}});
+    return {w, api, run, id: draft.id as number};
+  }
+  const tomorrow = new Date(Date.parse(SEED_NOW) + DAY).toISOString();
+
+  test('held until tomorrow, listed with its moment, and sent through the provider once it comes', async () => {
+    const {w, api, run, id} = await sending();
+    const held = await api.send('POST', `/api/mail/drafts/${id}/send`, {body: {send_at: tomorrow}});
+    expect(held.body.send).toEqual({state: 'held', send_at: tomorrow, error: null});
+    expect(w.store.db.select().from(t.jobs).where(eq(t.jobs.kind, 'send')).all()).toMatchObject([{draftId: id, state: 'queued', runAt: tomorrow}]);
+    expect((await api.send('GET', '/api/mail/drafts')).body.drafts.find((row: {id: number}) => row.id === id)).toMatchObject({send_state: 'held', send_at: tomorrow});
+
+    // Past Send's own hold, nothing goes.
+    w.advance(SEND_HOLD_MS);
+    await run();
+    expect((await api.send('GET', `/api/mail/drafts/${id}`)).body.send).toMatchObject({state: 'held'});
+
+    w.advance(DAY);
+    await run();
+    expect((await api.send('GET', `/api/mail/drafts/${id}`)).status).toBe(404);
+    const rows = (await api.send('GET', '/api/mail/sent')).body.days.flatMap((day: {rows: {subject: string}[]}) => day.rows);
+    expect(rows[0]).toMatchObject({subject: 'Re: Cabin weekend in November', sent_only: true});
+  });
+
+  test('Undo before then returns it editable, with no send left', async () => {
+    const {w, api, id} = await sending();
+    await api.send('POST', `/api/mail/drafts/${id}/send`, {body: {send_at: tomorrow}});
+    w.advance(DAY / 2);
+    expect((await api.send('POST', `/api/mail/drafts/${id}/undo`)).body).toMatchObject({id, send: null, body: body('Count me in.')});
+    expect(w.store.db.select().from(t.jobs).where(eq(t.jobs.kind, 'send')).all()).toEqual([]);
+    expect((await api.send('PATCH', `/api/mail/drafts/${id}`, {body: {subject: 'Changed'}})).status).toBe(200);
+    expect((await api.send('GET', '/api/mail/drafts')).body.drafts.find((row: {id: number}) => row.id === id)).toMatchObject({send_state: null, send_at: null});
+  });
+
+  test.each<[string, string]>([
+    ['in the past', new Date(Date.parse(SEED_NOW) - 60_000).toISOString()],
+    ['under a minute ahead', new Date(Date.parse(SEED_NOW) + 59_000).toISOString()],
+  ])('a moment %s is refused, and the draft stays editable', async (_, at) => {
+    const {w, api, id} = await sending();
+    expect(await api.send('POST', `/api/mail/drafts/${id}/send`, {body: {send_at: at}})).toMatchObject({status: 400, body: {error: {message: 'Pick a time ahead.'}}});
+    expect((await api.send('GET', `/api/mail/drafts/${id}`)).body.send).toBeNull();
+    expect(w.store.db.select().from(t.jobs).where(eq(t.jobs.kind, 'send')).all()).toEqual([]);
+  });
+
+  test('a minute ahead is taken, and Send with no body still holds six seconds', async () => {
+    const {api, id} = await sending();
+    const soon = new Date(Date.parse(SEED_NOW) + 60_000).toISOString();
+    expect((await api.send('POST', `/api/mail/drafts/${id}/send`, {body: {send_at: soon}})).body.send).toMatchObject({state: 'held', send_at: soon});
+    await api.send('POST', `/api/mail/drafts/${id}/undo`);
+    expect((await api.send('POST', `/api/mail/drafts/${id}/send`)).body.send.send_at).toBe(new Date(Date.parse(SEED_NOW) + SEND_HOLD_MS).toISOString());
   });
 });

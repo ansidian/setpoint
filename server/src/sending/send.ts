@@ -17,6 +17,9 @@ import type {Store} from '../store.ts';
 import {assertEditable, getDraftRow, noteDraft, presentDraft} from './drafts.ts';
 import {assertWithinLimit} from './files.ts';
 
+/** How far ahead Send later must be. */
+const SCHEDULE_AHEAD_MS = 60_000;
+
 export const sendKey = (draftId: number) => `send:${draftId}`;
 
 /** A Message-ID Setpoint sets: unique, on the sending address's domain. */
@@ -28,15 +31,17 @@ export function newMessageId(draftId: number, fromAddress: string, now: Date): s
 /**
  * Send, or Try again after a failure: the draft is held for SEND_HOLD_MS, then sent. Its
  * Message-ID is set once and kept, so a provider that already took it is never sent it again.
+ * With `at`, Send later: the same hold, until that moment, which must be a minute ahead or more.
  */
-export function holdSend(store: Store, draftId: number): DraftOut {
+export function holdSend(store: Store, draftId: number, at?: string): DraftOut {
   return transaction(store, () => {
     const row = getDraftRow(store, draftId);
     assertEditable(row);
     if (!row.toRecipients.length && !row.ccRecipients.length && !row.bccRecipients.length) throw invalid('Add someone to send it to.');
     assertWithinLimit(store, row);
     const now = store.now();
-    const sendAt = new Date(now.getTime() + SEND_HOLD_MS).toISOString();
+    if (at !== undefined && !(Date.parse(at) >= now.getTime() + SCHEDULE_AHEAD_MS)) throw invalid('Pick a time ahead.');
+    const sendAt = new Date(at === undefined ? now.getTime() + SEND_HOLD_MS : Date.parse(at)).toISOString();
     const updated = store.db.update(t.drafts).set({
       sendState: 'held', sendAt, sendError: null, rfc822Id: row.rfc822Id ?? newMessageId(row.id, row.fromAddress, now),
     }).where(eq(t.drafts.id, draftId)).returning().get()!;

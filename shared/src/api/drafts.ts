@@ -22,6 +22,10 @@ export type SendState = (typeof SEND_STATES)[number];
 /** How long Send holds an email for Undo before it goes to the provider (DESIGN.md's undo toast). */
 export const SEND_HOLD_MS = 6000;
 
+/** Send's body: none sends after the hold; `send_at` schedules it for a later moment instead. */
+export const sendInput = z.strictObject({send_at: z.iso.datetime({offset: true}).optional()});
+export type SendInput = z.infer<typeof sendInput>;
+
 const address = z.string().trim().toLowerCase().max(320).regex(/^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/, 'Not an email address.');
 
 export const recipientInput = z.strictObject({
@@ -219,6 +223,8 @@ export interface DraftRowOut {
   snippet: string;
   updated_at: string;
   send_state: SendState | null;
+  // When a held send goes to the provider: later than the hold when it was scheduled.
+  send_at: string | null;
 }
 
 export interface DraftsOut {

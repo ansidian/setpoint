@@ -2,7 +2,7 @@
 // scans, read, Done, pin, snooze and trash, drafts and sending with their files, and trusted
 // domains. Mounted under /api behind the session (app.ts), with triage's (triage.ts) right after.
 import {
-  allInput, sentInput, doneInput, inboxInput, mailpiecesInput, markAllReadInput, pinInput, readInput, snoozeInput, trustedDomainInput, gmailLinkInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput,
+  allInput, sentInput, doneInput, inboxInput, mailpiecesInput, markAllReadInput, pinInput, readInput, snoozeInput, trustedDomainInput, gmailLinkInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput, sendInput,
 } from '@setpoint/shared';
 import type {MarkAllReadOut} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -30,6 +30,14 @@ import type {Store} from '../store.ts';
 import type {SyncEngine} from '../sync/engine.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
+
+function json(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw invalid('The body must be JSON.');
+  }
+}
 
 async function body(c: Context): Promise<unknown> {
   try {
@@ -183,7 +191,12 @@ export function mailApi(store: Store, {engine, drafting, draftFiles}: MailApiOpt
     return c.body(null, 204);
   });
   api.post('/mail/drafts/:id/files/take', async c => c.json({files: takeDraftFiles(store, id(c.req.param('id')), parse(draftFilesTakeInput, await body(c)).ids)}));
-  api.post('/mail/drafts/:id/send', c => c.json(holdSend(store, id(c.req.param('id')))));
+  api.post('/mail/drafts/:id/send', async c => {
+    // No body is Send; `send_at` is Send later.
+    const text = await c.req.text();
+    const input = text.trim() ? parse(sendInput, json(text)) : {};
+    return c.json(holdSend(store, id(c.req.param('id')), input.send_at));
+  });
   api.post('/mail/drafts/:id/undo', c => c.json(undoSend(store, id(c.req.param('id')))));
   api.post('/mail/drafts/:id/write', async c => c.json(await writeDraft(store, id(c.req.param('id')), parse(draftWriteInput, await body(c)), drafting)));
   api.get('/mail/trusted-domains', c => c.json(trustedDomains(store)));
