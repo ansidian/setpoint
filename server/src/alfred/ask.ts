@@ -1,8 +1,8 @@
 // Alfred: a question, answered by a model that uses Setpoint's own queries as tools. The emails
 // the answer rests on are its sources. Follow-up turns go in a short thread held here by id. "Ask
 // about this email" scopes a thread to one email. When the mail doesn't say, the answer is null and
-// `searched` says what Alfred searched ("Couldn't find that in your mail"). Anything Alfred would
-// create is a proposal.
+// `searched` says what Alfred searched ("Couldn't find that in your mail or calendar"). The events
+// and tasks an answer rests on are sources too. Anything Alfred would create is a proposal.
 //
 // Every model call goes in the AI usage ledger (purpose `alfred`). A failed call saves nothing: the
 // thread stays as it was before the question, so asking again works.
@@ -10,7 +10,7 @@
 // The tool loop has a step limit and one reminder when a turn ends without the expected tool call.
 // The provider and model are bound when the thread starts. A failure restores the transcript.
 // Threads end after four idle hours.
-import type {AnswerOut, AnswerSourceOut, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
+import type {AnswerItemOut, AnswerOut, AnswerSourceOut, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
 import {asc, eq, inArray, lt} from 'drizzle-orm';
 import {withBody} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
@@ -113,7 +113,7 @@ function sourcesOf(store: Store, ids: number[]): AnswerSourceOut[] {
 function present(store: Store, conversationId: number, turn: Turn): AnswerOut {
   return {
     conversation_id: conversationId, turn_id: turn.id, question: turn.question, answer: turn.answer, emphasis: turn.emphasis,
-    sources: sourcesOf(store, turn.sourceIds), searched: turn.searched, proposals: turn.proposals,
+    sources: sourcesOf(store, turn.sourceIds), items: turn.itemSources, searched: turn.searched, proposals: turn.proposals,
   };
 }
 
@@ -137,16 +137,19 @@ interface Final {
   found: boolean;
   text: string;
   sourceIds: number[];
+  itemKeys: string[];
   emphasis: string[];
 }
 
 function finalOf(input: Record<string, unknown> | null): Final {
   const ids = Array.isArray(input?.source_ids) ? input.source_ids : [];
   const phrases = Array.isArray(input?.emphasis) ? input.emphasis : [];
+  const keys = Array.isArray(input?.item_keys) ? input.item_keys : [];
   return {
     found: input?.found !== false,
     text: typeof input?.text === 'string' ? input.text.trim() : '',
     sourceIds: ids.map(Number).filter(id => Number.isSafeInteger(id) && id > 0),
+    itemKeys: keys.filter((key): key is string => typeof key === 'string'),
     emphasis: phrases.filter((phrase): phrase is string => typeof phrase === 'string'),
   };
 }
@@ -184,7 +187,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   items.push(...client.userTurn(firstText, thread?.transcript.pending ?? []));
 
   const context: ToolContext = {
-    store, read: [], searched: [], proposals: [], invites: new Map(), files: new Map(), documents: new Set(),
+    store, read: [], searched: [], proposals: [], invites: new Map(), files: new Map(), documents: new Set(), items: new Map(),
     seen: new Set([...(thread?.transcript.seen ?? []), ...(scope !== null ? [scope] : [])]),
     questions: [...earlier.map(turn => turn.question), input.question],
   };
@@ -231,7 +234,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
         nudged = true;
         items.push(...client.userTurn(ANSWER_NUDGE));
       } else {
-        final = {found: Boolean(turn.text.trim()), text: turn.text.trim(), sourceIds: [], emphasis: []};
+        final = {found: Boolean(turn.text.trim()), text: turn.text.trim(), sourceIds: [], itemKeys: [], emphasis: []};
       }
     }
   } catch (error) {
@@ -242,11 +245,13 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   }
   if (!final) throw new SetpointError('alfred_step_limit', 'Alfred ran out of steps before answering. Try a narrower question.', 422);
 
-  // Sources are the emails the answer names that this thread has seen. Otherwise they are the email
-  // it's about, or the ones it read for this answer.
+  // Sources are the emails the answer names that this thread has seen, and the events and tasks it
+  // names that list_items gave this question. With neither, they are the email it's about, or the
+  // ones it read for this answer.
   const found = final.found && Boolean(final.text);
   let sourceIds = found ? [...new Set(final.sourceIds.filter(id => context.seen.has(id)))] : [];
-  if (found && !sourceIds.length) sourceIds = scope !== null ? [scope] : context.read;
+  const itemSources: AnswerItemOut[] = found ? [...new Set(final.itemKeys)].flatMap(key => context.items!.get(key) ?? []) : [];
+  if (found && !sourceIds.length && !itemSources.length) sourceIds = scope !== null ? [scope] : context.read;
   // What it searched. For a question about one email that it couldn't answer without searching, that email.
   const searched = found || context.searched.length || scope === null ? context.searched : sourcesOf(store, [scope]).map(source => source.subject);
   const proposals: ProposalOut[] = context.proposals;
@@ -263,7 +268,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
     }
     const turn = store.db.insert(t.alfredTurns).values({
       conversationId, at: now, question: input.question, answer: found ? final.text : null, emphasis: found ? emphasisOf(final.text, final.emphasis) : [],
-      sourceIds, searched, proposals,
+      sourceIds, itemSources, searched, proposals,
     }).returning().get();
     return present(store, conversationId, turn);
   });

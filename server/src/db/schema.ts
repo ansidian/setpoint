@@ -14,7 +14,7 @@ import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
   NEWS_ADAPTERS, NEWS_SECTIONS, RULE_TRASH, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
-  DRAFT_KINDS, SEND_STATES, type DraftWriteState, type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
+  DRAFT_KINDS, SEND_STATES, type AnswerItemOut, type DraftWriteState, type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
 import type {Block} from '@setpoint/shared/richText';
 import type {ArticleNotes, NoiseReason} from '../domain/newsSorting.ts';
@@ -1021,10 +1021,12 @@ export const alfredTurns = sqliteTable('alfred_turns', {
   conversationId: integer('conversation_id').notNull().references(() => alfredConversations.id, {onDelete: 'cascade'}),
   at: text('at').notNull(),
   question: text('question').notNull(),
-  // Null: "Couldn't find that in your mail".
+  // Null: "Couldn't find that in your mail or calendar".
   answer: text('answer'),
   emphasis: text('emphasis', {mode: 'json'}).$type<EmphasisOut[]>().notNull(),
   sourceIds: text('source_ids', {mode: 'json'}).$type<number[]>().notNull(),
+  // The events and tasks it rests on, as list_items gave them then.
+  itemSources: text('item_sources', {mode: 'json'}).$type<AnswerItemOut[]>().notNull().default(sql`'[]'`),
   searched: text('searched', {mode: 'json'}).$type<string[]>().notNull(),
   proposals: text('proposals', {mode: 'json'}).$type<ProposalOut[]>().notNull(),
 }, table => [index('alfred_turns_conversation').on(table.conversationId)]);

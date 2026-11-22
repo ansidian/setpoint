@@ -1,0 +1,1 @@
+ALTER TABLE `alfred_turns` ADD `item_sources` text DEFAULT '[]' NOT NULL;

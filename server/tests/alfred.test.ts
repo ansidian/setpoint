@@ -215,6 +215,23 @@ describe('Alfred\'s other paths', () => {
     expect(followUp.body.sources.map((source: {message_id: number}) => source.message_id)).toEqual([rest[2]!.id]);
   });
 
+  test('an answer cites the events and tasks list_items gave by key; a key never listed is dropped, and the turn keeps them', async () => {
+    const {w, c, fake} = await alfredWorld();
+    fake.answer(request => {
+      const {results} = read(request);
+      if (!results.length) return {calls: [{name: 'list_items', input: {from: '2026-10-09', to: '2026-10-09'}}]};
+      const listed = JSON.parse(results[0]!.output).items as {key: string; title: string}[];
+      const dinner = listed.find(item => item.title === 'Dinner with Sam')!;
+      return {calls: [{name: 'answer', input: {found: true, text: 'Dinner with Sam on Friday.', source_ids: [], item_keys: [dinner.key, '9999']}}]};
+    });
+    const dinner = w.store.db.select().from(t.items).where(eq(t.items.title, 'Dinner with Sam')).get()!;
+    const out = await c.send('POST', '/api/alfred/ask', {body: {question: 'What am I doing Friday?'}});
+    const cited = {key: String(dinner.id), id: dinner.id, kind: 'event', calendar_id: dinner.calendarId, title: 'Dinner with Sam', date: '2026-10-09', start: dinner.startsAt, all_day: false, occurrence_start: null};
+    // An item cited is a source: nothing falls back to the emails read.
+    expect(out.body).toMatchObject({answer: 'Dinner with Sam on Friday.', sources: [], items: [cited]});
+    expect((await c.send('GET', `/api/alfred/conversations/${out.body.conversation_id}`)).body.turns[0].items).toEqual([cited]);
+  });
+
   test('sources are only emails the thread has seen', async () => {
     const {w, c, fake} = await alfredWorld();
     fake.answer(() => ({calls: [{name: 'answer', input: {found: true, text: 'Yes.', source_ids: [idOf(w, 'Lease renewal terms')]}}]}));
@@ -336,6 +353,8 @@ describe('the tools on their own', () => {
     w.store.db.update(t.items).set({place: null, address: '500 Oak Ave, Springfield'}).where(eq(t.items.title, 'Study group')).run();
     const context = {store: w.store, seen: new Set<number>(), read: [], searched: [], questions: ['Hi'], proposals: []};
     const items = JSON.parse(runTool(context, 'list_items', {from: '2026-10-09', to: '2026-10-09'}).output);
+    // Each has its key, a recurring one's naming its occurrence.
+    expect(items.items.map((item: {key: string}) => item.key.replace(/^\d+/, 'id'))).toEqual(['id@2026-10-09T14:00:00.000Z', 'id', 'id']);
     expect(items.items.map((item: {title: string; location: string | null}) => [item.title, item.location])).toEqual([
       ['Gym', null],
       ['Study group', '500 Oak Ave, Springfield'],

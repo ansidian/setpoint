@@ -238,6 +238,23 @@ export interface AnswerSourceOut {
   pinned: boolean;
 }
 
+/**
+ * A calendar event or task an answer rests on, as list_items gave it: its row opens the item on the
+ * calendar. `date` is its local day, `start` the instant it starts (or a task is due), null when
+ * all-day or untimed. `occurrence_start` names a recurring item's occurrence.
+ */
+export interface AnswerItemOut {
+  key: string;
+  id: number;
+  kind: ItemKind;
+  calendar_id: number;
+  title: string;
+  date: string;
+  start: string | null;
+  all_day: boolean;
+  occurrence_start: string | null;
+}
+
 /** Where a proposal's fields came from: each one listed here gets the "from the email" mark. */
 export const PROPOSAL_FIELDS = ['title', 'date', 'time', 'place'] as const;
 export type ProposalField = (typeof PROPOSAL_FIELDS)[number];
@@ -299,10 +316,12 @@ export interface AnswerOut {
   turn_id: number;
   // The question this turn answers, for the thread.
   question: string;
-  // One or two lines. Null when Alfred couldn't find it ("Couldn't find that in your mail").
+  // One or two lines. Null when Alfred couldn't find it ("Couldn't find that in your mail or calendar").
   answer: string | null;
   emphasis: EmphasisOut[];
   sources: AnswerSourceOut[];
+  // The events and tasks it rests on, after the emails.
+  items: AnswerItemOut[];
   // What it searched ("Northwind · Rejection · Mar 2026", "lease renewal"), said when it couldn't answer.
   searched: string[];
   proposals: ProposalOut[];

@@ -10,7 +10,7 @@
 // provider bodies). Date ranges are checked and capped (92 days, 366 with a query). Email text is
 // fenced as untrusted. A proposal comes only when the tool quotes one of the user's own messages,
 // one per question.
-import type {ItemKind, ProposalOut} from '@setpoint/shared';
+import type {AnswerItemOut, ItemKind, ProposalOut} from '@setpoint/shared';
 import {searchInput} from '@setpoint/shared';
 import {and, asc, eq} from 'drizzle-orm';
 import {bodyOf} from '../db/bodies.ts';
@@ -55,6 +55,8 @@ export interface ToolContext {
   files?: Map<number, Uint8Array | null>;
   // The attachments read this question, each read once.
   documents?: Set<number>;
+  // The events and tasks list_items gave this question, by key: what an answer may cite.
+  items?: Map<string, AnswerItemOut>;
 }
 
 export interface ToolOutcome {
@@ -149,10 +151,17 @@ function itemsTool(context: ToolContext, input: Record<string, unknown>): ToolOu
   const calendars = new Map(context.store.db.select({id: t.calendars.id, name: t.calendars.name}).from(t.calendars).all().map(row => [row.id, row.name]));
   const zone = context.store.timeZone;
   const items = itemsInRange(context.store, from, addDays(to, 1)).items.filter(item => !query || item.title.toLowerCase().includes(query));
+  for (const item of items) {
+    context.items?.set(item.key, {
+      key: item.key, id: item.id, kind: item.kind, calendar_id: item.calendar_id, title: item.title,
+      date: (item.starts_at ? localDay(item.starts_at, zone) : item.start_date ?? item.due_date)!,
+      start: item.all_day ? null : item.starts_at ?? item.due_at, all_day: item.all_day, occurrence_start: item.occurrence_start,
+    });
+  }
   return ok({
     total: items.length,
     items: items.map(item => ({
-      id: item.id, kind: item.kind, title: item.title, calendar: calendars.get(item.calendar_id) ?? null,
+      key: item.key, id: item.id, kind: item.kind, title: item.title, calendar: calendars.get(item.calendar_id) ?? null,
       date: item.starts_at ? localDay(item.starts_at, zone) : item.start_date ?? item.due_date,
       start: item.starts_at ? localTime(item.starts_at, zone) : item.due_at ? localTime(item.due_at, zone) : null,
       end: item.ends_at ? localTime(item.ends_at, zone) : null,
