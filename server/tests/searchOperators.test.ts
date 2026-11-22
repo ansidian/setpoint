@@ -1,7 +1,7 @@
 // Mail search's Gmail-style operators, as a table: what's typed, the operators read (with where
 // each sits) and the words left.
 import {describe, expect, test} from 'vitest';
-import {parseOperators, searchTokens, validDay} from '@setpoint/shared';
+import {operatorDate, parseOperators, searchTokens, validDay} from '@setpoint/shared';
 import type {OperatorFilter} from '@setpoint/shared';
 
 const at = (text: string, token: string) => ({start: text.indexOf(token), end: text.indexOf(token) + token.length});
@@ -28,6 +28,8 @@ describe('parseOperators', () => {
     ['after:2026/03/01', [{kind: 'after', date: '2026-03-01', not: false}], ''],
     ['before:2026-3-1', [{kind: 'before', date: '2026-03-01', not: false}], ''],
     ['before:2026/13/40', [], 'before:2026/13/40'],
+    ['after:3/1/2026', [{kind: 'after', date: '2026-03-01', not: false}], ''],
+    ['before:12-31-2026', [{kind: 'before', date: '2026-12-31', not: false}], ''],
     ['before:2026/2/30', [], 'before:2026/2/30'],
     ['subject:"lease renewal"', [{kind: 'subject', value: 'lease renewal', not: false}], ''],
     ['foo:bar', [], 'foo:bar'],
@@ -49,6 +51,26 @@ describe('parseOperators', () => {
   ])('%s spans %s', (text, token) => {
     const [operator] = parseOperators(text).operators;
     expect({start: operator!.start, end: operator!.end}).toEqual(at(text, token));
+  });
+});
+
+describe('operatorDate: year first or last, by "/" or "-"', () => {
+  test.each([
+    ['2026/03/01', '2026-03-01'],
+    ['2026-3-1', '2026-03-01'],
+    ['3/1/2026', '2026-03-01'],
+    ['03-01-2026', '2026-03-01'],
+    ['12/31/2026', '2026-12-31'],
+    ['2028-2-29', '2028-02-29'],
+    ['2026/3-1', null],
+    ['3/1-2026', null],
+    ['2/30/2026', null],
+    ['31/12/2026', null],
+    ['3/1/26', null],
+    ['2026.3.1', null],
+    ['march', null],
+  ])('%s → %s', (value, date) => {
+    expect(operatorDate(value)).toBe(date);
   });
 });
 

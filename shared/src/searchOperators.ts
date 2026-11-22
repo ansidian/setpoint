@@ -1,6 +1,6 @@
 // Mail search's Gmail-style operators, typed in the field and kept there as text: `from:pat`,
 // `to:sam@example.org`, `subject:"lease renewal"`, `has:attachment`, `is:unread`,
-// `after:2026/03/01`, `before:2026-04-01`. A `-` or `!` before the name or before the value leaves
+// `after:2026/03/01`, `before:3/1/2026`. A date is year first or year last, by "/" or "-". A `-` or `!` before the name or before the value leaves
 // out what it matches (`-from:indeed`, `from:-indeed`), once even with both. A `-` anywhere else in
 // the value is literal (`from:usps-informed`).
 //
@@ -45,6 +45,19 @@ export const validDay = (year: number, month: number, day: number) => {
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
+/**
+ * A before: or after: day as YYYY-MM-DD: year/month/day (`2026/3/1`) or month/day/year
+ * (`3/1/2026`), by "/" or "-" used alike, one or two digits for the month and day. A four-digit year
+ * says which end it's at. Null for anything else, or a day that isn't one.
+ */
+export function operatorDate(value: string): string | null {
+  const yearFirst = /^(\d{4})([/-])(\d{1,2})\2(\d{1,2})$/.exec(value);
+  const yearLast = /^(\d{1,2})([/-])(\d{1,2})\2(\d{4})$/.exec(value);
+  const [year, month, day] = yearFirst ? [yearFirst[1], yearFirst[3], yearFirst[4]] : yearLast ? [yearLast[4], yearLast[1], yearLast[3]] : [];
+  if (!year || !validDay(+year, +month!, +day!)) return null;
+  return `${year}-${pad(+month!)}-${pad(+day!)}`;
+}
+
 /** An operator token's filter, 'empty' while it has no value yet, or null when it's no operator. */
 export function readOperator(raw: string): OperatorFilter | 'empty' | null {
   const match = OPERATOR_TOKEN.exec(raw);
@@ -65,9 +78,8 @@ export function readOperator(raw: string): OperatorFilter | 'empty' | null {
       return lower === 'unread' || lower === 'read' ? {kind: 'unread', value: lower === 'unread', not} : null;
     case 'before':
     case 'after': {
-      const day = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/.exec(value);
-      if (!day || !validDay(+day[1]!, +day[2]!, +day[3]!)) return null;
-      return {kind: name.toLowerCase() as 'before' | 'after', date: `${day[1]}-${pad(+day[2]!)}-${pad(+day[3]!)}`, not};
+      const date = operatorDate(value);
+      return date ? {kind: name.toLowerCase() as 'before' | 'after', date, not} : null;
     }
   }
 }
