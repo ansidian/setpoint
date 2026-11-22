@@ -1,8 +1,10 @@
 // The chip grammar: words that name an organisation, a type, a date or range, an account or a kind
 // become chips that filter exactly. `northwind rejection march` becomes Org Northwind · Type
 // Rejection · Date Mar 2026. Words that form no chip stay free text, and so does anything in
-// "quotes". A "!" before a word negates it. `!confirmation` is a Not Type Confirmation chip. A
-// "!word" that forms no chip stays in the text, where search leaves out the mail that has it.
+// "quotes". A "!" or "-" before a word negates it. `!confirmation` and `-confirmation` are a Not
+// Type Confirmation chip. A "!word" or "-word" that forms no chip stays in the text, where search
+// leaves out the mail that has it. A "-" inside a word ("follow-up") or alone ("mar 1 - mar 5") is
+// punctuation.
 //
 // Mail's field no longer runs all of it, and a word typed there stays a word. What's left is a
 // "!word", any time, dates for a suggestion (src/search/reading.ts), and Alfred's searches, whole.
@@ -33,7 +35,7 @@ export interface ChipContext extends ChipVocabulary {
   now: string;
   timeZone: string;
   // What plain words form: every chip (Alfred's), only dates with the rest staying text for search
-  // to rank (a suggestion), or nothing (the field). A word after "!" is the whole grammar's in each,
+  // to rank (a suggestion), or nothing (the field). A word after "!" or "-" is the whole grammar's in each,
   // because it says what it leaves out as exactly as it did.
   fromWords?: 'all' | 'dates' | 'none';
 }
@@ -320,7 +322,7 @@ function chipFor(words: string[], raw: string, context: ChipContext, today: stri
 
 const MAX_WINDOW = 5;
 
-/** Whether a chip leaves out what it matches (typed after "!"). */
+/** Whether a chip leaves out what it matches (typed after "!" or "-"). */
 export const isNot = (chip: SearchChip | CalendarSearchChip) => 'not' in chip && chip.not === true;
 
 /** A chip as words the grammar reads back as the same chip. Its label, after "!" for a Not chip. */
@@ -338,14 +340,14 @@ interface Token {
   quoted: boolean;
   // Folded, punctuation trimmed. Empty for punctuation alone.
   word: string;
-  // Typed after "!" ("!confirmation").
+  // Typed after "!" or "-" ("!confirmation", "-confirmation").
   negated: boolean;
 }
 
-/** A word typed after "!": "!confirmation", not "!" alone or "wow!". */
-export const NEGATED = /^![\p{L}\p{N}]/u;
+/** A word typed after "!" or "-": "!confirmation", "-30", not "!" or "-" alone, "wow!" or "follow-up". */
+export const NEGATED = /^[-!][\p{L}\p{N}]/u;
 
-/** The tokens of `text` that `keep` keeps, spaced as one: words, "quotes" and "!words" whole. */
+/** The tokens of `text` that `keep` keeps, spaced as one: words, "quotes" and "!words" or "-words" whole. */
 export const keptTokens = (text: string, keep: (token: {raw: string; quoted: boolean; negated: boolean; word: string}) => boolean) => tokens(text).filter(keep).map(token => token.raw).join(' ');
 
 function tokens(text: string): Token[] {
@@ -369,8 +371,8 @@ export function parseQuery(text: string, context: ChipContext): ParsedQuery {
 
 /**
  * The tokens' chips by a grammar, longest phrase first at each word, and the words left over. With
- * `negate`, a phrase starting with "!" gives its chips negated, and never takes in a later "!" word.
- * Without it, "!" is punctuation.
+ * `negate`, a phrase starting with "!" or "-" gives its chips negated, and never takes in a later
+ * negated word. Without it, "!" and "-" are punctuation.
  */
 export function parseChips<C extends SearchChip | CalendarSearchChip>(text: string, chipFor: (words: string[], raw: string, negated: boolean) => C | C[] | null, negate?: (chip: C) => C): {chips: C[]; text: string} {
   const all = tokens(text);

@@ -5,7 +5,7 @@
 // What's about the search comes first, and `first` counts it. Then comes what only mentions it.
 // Words never become chips by themselves. Chips come from a suggestion the user accepted, a model's
 // reading of the whole search and the date grammar (src/search/reading.ts), and a client sends them
-// back. They narrow the list and keep its order. A "!word" alone still forms a chip here, a Not
+// back. They narrow the list and keep its order. A "!word" or "-word" alone still forms a chip here, a Not
 // chip, because it says exactly what it leaves out. Or it stays text and leaves out the mail with
 // it.
 // Search covers All's mail: archived mail is in, trashed mail is out. Mail the user sent to others

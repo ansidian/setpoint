@@ -98,6 +98,28 @@ describe('parseQuery: "!" leaves out what a word names', () => {
   });
 });
 
+describe('parseQuery: "-" leaves out what a word names, as "!" does', () => {
+  const field = (text: string) => {
+    const parsed = parseQuery(text, {...VOCABULARY, now: SEED_NOW, timeZone: TIME_ZONE, fromWords: 'none'});
+    return {chips: parsed.chips.map(show), text: parsed.text};
+  };
+  test.each<[string, string, string[], string]>([
+    // name, query, chips, free text left (the field's: plain words form nothing)
+    ['a type', '-confirmation', ['Not Type Confirmation'], ''],
+    ['a date', 'rent -mar 14', ['Not Date Mar 14 [2026-03-14, 2026-03-15)'], 'rent'],
+    ['a word that forms no chip stays text', 'lease -renewal', [], 'lease -renewal'],
+    ['a number', 'refund -30', [], 'refund -30'],
+    ['a lone "-" between days is a plain word', 'mar 1 - mar 5', [], 'mar 1 - mar 5'],
+    ['a "-" inside a word is literal', 'follow-up', [], 'follow-up'],
+  ])('%s', (_, query, chips, text) => {
+    expect(field(query)).toEqual({chips, text});
+  });
+
+  test('a lone "-" still sits inside a range for the whole grammar', () => {
+    expect(parse('mar 1 - mar 5').chips).toEqual(['Date Mar 1 – Mar 5 [2026-03-01, 2026-03-06)']);
+  });
+});
+
 describe('parseQuery: what words form when a reading owns the rest', () => {
   const read = (text: string, fromWords: 'dates' | 'none') => {
     const parsed = parseQuery(text, {...VOCABULARY, now: SEED_NOW, timeZone: TIME_ZONE, fromWords});

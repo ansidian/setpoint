@@ -25,7 +25,7 @@ import {SentFrom} from '../SentFrom.tsx';
 import './search.css';
 
 const CHIP_KEYS: Record<SearchChip['kind'] | CalendarSearchChip['kind'], string> = {organisation: 'Org', type: 'Type', date: 'Date', account: 'Account', kind: 'Kind', calendar: 'Calendar'};
-// A mail chip typed after "!" leaves its matches out: "Not Type Confirmation".
+// A mail chip typed after "!" or "-" leaves its matches out: "Not Type Confirmation".
 const negated = (chip: SearchChip | CalendarSearchChip) => 'not' in chip && chip.not === true;
 const chipKey = (chip: SearchChip | CalendarSearchChip) => `${negated(chip) ? 'not:' : ''}${chip.kind}:${chip.label}`;
 

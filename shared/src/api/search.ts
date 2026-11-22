@@ -25,7 +25,7 @@ import type {MessageRowOut} from './mail.ts';
 // A day or range in the owner's zone, end exclusive: "Mar 2026" is 2026-03-01 to 2026-04-01.
 const dateChipSchema = z.strictObject({kind: z.literal('date'), from: localDate, to: localDate, label: z.string().min(1)});
 
-// A mail chip typed after "!" ("!confirmation") leaves out what it matches: "Not Type Confirmation ×".
+// A mail chip typed after "!" or "-" ("!confirmation") leaves out what it matches: "Not Type Confirmation ×".
 const not = {not: z.literal(true).optional()};
 
 /**
@@ -52,7 +52,7 @@ export const MAX_SEARCH_CHIPS = 10;
 /**
  * The field: the chips it already shows, and the text typed after them. Words stay words, a date's
  * too, so a phone sending only `text` gets keyword results and no filter it can't see. A word
- * after "!" leaves out what it names: a Not chip, or, staying text, the mail that has it. Words in
+ * after "!" or "-" leaves out what it names: a Not chip, or, staying text, the mail that has it. Words in
  * "quotes" always stay text.
  * A later page of the same search passes `search_id` and `offset` (`next_offset` from the last page).
  *

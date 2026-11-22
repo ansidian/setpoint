@@ -33,8 +33,9 @@ export function textTerms(text: string): string[] {
 }
 
 /**
- * Free text's "!word"s, whose words leave out the mail that has any of them, and the text left to
- * match. `invoice !proseware` matches invoice and leaves out Proseware's.
+ * Free text's "!word"s and "-word"s, whose words leave out the mail that has any of them, and the
+ * text left to match. `invoice !proseware` and `invoice -proseware` match invoice and leave out
+ * Proseware's.
  */
 export function withoutExcluded(text: string): {text: string; excluded: string[]} {
   const kept: string[] = [];

@@ -186,7 +186,7 @@ export function useSearch(plain = false, scope: SearchScope = {}): Search {
     pause.current = window.setTimeout(() => suggest({chips: nextChips, text: nextText}), SUGGESTION_PAUSE_MS);
   }
 
-  /** A "!word" that formed a Not chip moves into the field as one, as the list already has it. */
+  /** A "!word" or "-word" that formed a Not chip moves into the field as one, as the list already has it. */
   function takeNotChips(found: SearchOut) {
     if (found.chips.length === chips.length) return;
     landed.current = {chips: found.chips, text: found.text};

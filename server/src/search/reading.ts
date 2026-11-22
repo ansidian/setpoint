@@ -6,7 +6,7 @@
 //   keyword matches (src/search/readingPrompt.ts). It says which organisations and types the search
 //   asks for and which words are left. Dates stay the grammar's, the same every time. The model only
 //   says when what the grammar took for a date is a name, and then its words go back to being words.
-// - "!" words and "quotes" never reach the model, because they're what the user said exactly. They
+// - "!" or "-" words and "quotes" never reach the model, because they're what the user said exactly. They
 //   run through the grammar as always, and stay in force whatever the model says.
 // - Its chips are checked against the mail: only organisations that exist, and only words that were
 //   typed left as keywords. An organisation chip covers names that start with it. A type chip
@@ -58,7 +58,7 @@ const isSuggested = (chip: SearchChip) => !isNot(chip) && (chip.kind === 'organi
 
 const withoutRepeats = (chips: SearchChip[]) => chips.filter((chip, at) => !chips.slice(0, at).some(earlier => sameChip(earlier, chip)));
 
-/** The words a model may read: what's typed, without "quotes" and "!words". */
+/** The words a model may read: what's typed, without "quotes" and "!words" or "-words". */
 const plainWords = (text: string) => keptTokens(text, token => !token.quoted && !token.negated);
 
 type SearchedField = Pick<SearchRequest, 'text' | 'chips' | 'account_id'>;
