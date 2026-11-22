@@ -135,9 +135,6 @@ export function startsWithCopies(kind: DraftOut['kind'], message: Answered | und
   return read !== null && fillAnswer('reply_all', read.email, read.account, read.own).cc.length > 0;
 }
 
-/** "12.4 MB": a total against the attachments' limit, to one decimal. */
-export const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')} MB`;
-
 /** A forward's header lines as the server writes them above the email. */
 export const forwardLines = (message: Pick<MessageOut, 'from_name' | 'from_address' | 'subject' | 'received_at'> & Partial<Pick<MessageOut, 'to' | 'cc'>>, timeZone: string): string[] =>
   quotedForwardLines({fromName: message.from_name, fromAddress: message.from_address, subject: message.subject, receivedAt: message.received_at, to: message.to ?? null, cc: message.cc ?? null}, timeZone);

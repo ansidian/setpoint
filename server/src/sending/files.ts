@@ -10,7 +10,7 @@
 //   sweep deletes them. A sent draft's files go at once.
 // - Bytes are unlinked only after the transaction that let go of their rows has committed.
 import type {DraftFileOut} from '@setpoint/shared';
-import {ATTACHMENTS_MAX_BYTES, attachmentsTotal} from '@setpoint/shared';
+import {ATTACHMENTS_MAX_BYTES, attachmentsTotal, megabytes} from '@setpoint/shared';
 import {and, eq, inArray, isNull, lt, or} from 'drizzle-orm';
 import {randomBytes} from 'node:crypto';
 import fs from 'node:fs';
@@ -50,8 +50,6 @@ function forwardedOriginals(store: Store, draft: Pick<DraftRow, 'kind' | 'messag
   if (draft.kind !== 'forward' || draft.messageId === null) return [];
   return store.db.select({id: t.attachments.id, size_bytes: t.attachments.sizeBytes}).from(t.attachments).where(eq(t.attachments.messageId, draft.messageId)).all();
 }
-
-const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')} MB`;
 
 /** The refusal for a message over the limit, with what it would weigh. */
 export function tooLarge(total: number): SetpointError {

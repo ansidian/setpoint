@@ -56,14 +56,14 @@
 // back, if one failed. A draft with a file or an upload is never empty. Discard's Undo and the
 // reply-type menu take the files onto the new draft by id (the server keeps a gone draft's files a
 // few minutes for that).
-import {ATTACHMENTS_MAX_BYTES, attachmentsTotal} from '@setpoint/shared';
+import {ATTACHMENTS_MAX_BYTES, attachmentsTotal, megabytes} from '@setpoint/shared';
 import type {DraftCreateInput, DraftKind, DraftOut, DraftRowOut, DraftUpdateInput, FromOut, MessageOut} from '@setpoint/shared';
 import {isEmpty} from '@setpoint/shared/richText';
 import {useSyncExternalStore} from 'react';
 import {ApiFailure, getCached, getJson, setCached} from '../../api/client.ts';
 import {discardDraft, draftPath, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
-import {emptyDraft, fillAround, hasOthers, megabytes, NO_VERSIONS, recordVersion} from '../../logic/composer.ts';
+import {emptyDraft, fillAround, hasOthers, NO_VERSIONS, recordVersion} from '../../logic/composer.ts';
 import {broughtBackLine, counted, discardedLine, discardFailedLine} from '../../logic/selection.ts';
 import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';

@@ -173,6 +173,9 @@ export interface DraftWrittenOut {
  */
 export const ATTACHMENTS_MAX_BYTES = 25 * 1024 * 1024;
 
+/** "12.4 MB": a total against the attachments' limit, to one decimal. */
+export const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, '')} MB`;
+
 /** A file the user attached to a draft, kept on the server until it's sent or discarded. */
 export interface DraftFileOut {
   id: number;

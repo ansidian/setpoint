@@ -2,9 +2,9 @@
 // rule), what a typed or pasted recipient is, a chip's words, the reply's quote and its line, and
 // how the composer's windows fold and hide when they don't all fit, and what attachments weigh.
 import type {FromOut, MessageOut, Recipient} from '@setpoint/shared';
-import {attachmentsTotal, SEED_TIME_ZONE} from '@setpoint/shared';
+import {attachmentsTotal, megabytes, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {arrangeWindows, canRedo, canUndo, chipLabel, emptyDraft, fillAround, forwardLines, hasOthers, megabytes, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
+import {arrangeWindows, canRedo, canUndo, chipLabel, emptyDraft, fillAround, forwardLines, hasOthers, NO_VERSIONS, placeWindows, quoteOf, readRecipient, readRecipients, recordVersion, redoVersion, replyLine, undoVersion, withRecipients, writePlaceholder} from '../src/logic/composer.ts';
 import type {Versions} from '../src/logic/composer.ts';
 
 const FROM: FromOut = {
