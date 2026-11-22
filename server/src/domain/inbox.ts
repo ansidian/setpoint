@@ -3,7 +3,8 @@
 // until unpinned, whatever its lane or read state. Trashed mail is out of every view, Done mail is
 // out of the Inbox, and a code's row leaves at its expiry. Mail archived at its provider (Gmail's
 // Archive, moved out of iCloud's INBOX) also leaves the Inbox, because it was handled there and
-// providers are the truth (All and search still show it).
+// providers are the truth (All and search still show it). Snoozed mail is out of the Inbox, the
+// Pinned shelf and the counts until it returns, when it sorts by its return time.
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroup, Kind, Lane} from '@setpoint/shared';
 
@@ -25,7 +26,13 @@ export interface InboxCandidate {
   // A change to it failed. It stays where it was, failed in place, until Try again or Move back
   // (a failed Trash or Mark read must not look like it worked).
   held?: boolean;
+  // Snoozed until then: out of the Inbox until it returns, whatever the time says.
+  snoozedUntil?: string | null;
+  // When it last returned from a snooze. Its group sorts it by then rather than by its arrival.
+  returnedAt?: string | null;
 }
+
+const snoozed = (message: Pick<InboxCandidate, 'snoozedUntil' | 'held'>) => !!message.snoozedUntil && !message.held;
 
 const FYI_GROUPS: Record<Kind, InboxGroup> = {
   security: 'security', deliveries: 'deliveries', money: 'money', career: 'career', people: 'people', updates: 'updates', other: 'other',
@@ -33,7 +40,7 @@ const FYI_GROUPS: Record<Kind, InboxGroup> = {
 
 /** The lane group an email belongs to, if it's in the Inbox at all (the Pinned shelf aside). */
 export function laneGroup(message: InboxCandidate, now: string): InboxGroup | null {
-  if (message.doneAt || ((message.trashedAt || message.archivedAt) && !message.held)) return null;
+  if (message.doneAt || ((message.trashedAt || message.archivedAt) && !message.held) || snoozed(message)) return null;
   if (message.codeExpiresAt !== null && message.codeExpiresAt <= now) return null;
   if (message.lane === null) return 'unsorted';
   if (message.lane === 'attention') return 'attention';
@@ -56,12 +63,14 @@ export interface Group<T> {
 export function inboxGroups<T extends InboxCandidate>(messages: T[], now: string): Group<T>[] {
   const byGroup = new Map<InboxGroup, T[]>();
   const add = (group: InboxGroup, message: T) => byGroup.set(group, [...(byGroup.get(group) ?? []), message]);
-  const newest = (a: T, b: T) => b.receivedAt.localeCompare(a.receivedAt) || b.id - a.id;
+  // A returned email sorts by its return, so it comes back at the top of its group.
+  const sortAt = (message: T) => message.returnedAt ?? message.receivedAt;
+  const newest = (a: T, b: T) => sortAt(b).localeCompare(sortAt(a)) || b.id - a.id;
   for (const message of [...messages].sort(newest)) {
     const group = laneGroup(message, now);
     if (group) add(group, message);
   }
-  const pinned = messages.filter(message => message.pinnedAt && (!message.trashedAt || message.held))
+  const pinned = messages.filter(message => message.pinnedAt && (!message.trashedAt || message.held) && !snoozed(message))
     .sort((a, b) => b.pinnedAt!.localeCompare(a.pinnedAt!) || b.id - a.id);
   if (pinned.length) byGroup.set('pinned', pinned);
   return INBOX_GROUPS.flatMap(group => {
@@ -108,11 +117,11 @@ export function nextInboxChange(messages: InboxCandidate[], now: string): string
 /**
  * Mark all as read's emails: every unread email outside Attention and Security, Noise included.
  * Attention mail not yet Done keeps its read state, and so does Security, so a live code or a
- * sign-in alert isn't swept away with the newsletters. Trashed and archived mail, which the Inbox
- * doesn't show, isn't touched.
+ * sign-in alert isn't swept away with the newsletters. Trashed, archived and snoozed mail, which the
+ * Inbox doesn't show, isn't touched.
  */
-export function markAllReadTargets<T extends Pick<InboxCandidate, 'unread' | 'trashedAt' | 'archivedAt' | 'lane' | 'doneAt' | 'kind'>>(messages: T[]): T[] {
-  return messages.filter(message => message.unread && !message.trashedAt && !message.archivedAt
+export function markAllReadTargets<T extends Pick<InboxCandidate, 'unread' | 'trashedAt' | 'archivedAt' | 'lane' | 'doneAt' | 'kind' | 'snoozedUntil'>>(messages: T[]): T[] {
+  return messages.filter(message => message.unread && !message.trashedAt && !message.archivedAt && !message.snoozedUntil
     && !(message.lane === 'attention' && !message.doneAt) && !(message.lane === 'fyi' && message.kind === 'security'));
 }
 

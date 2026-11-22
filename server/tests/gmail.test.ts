@@ -9,7 +9,7 @@ import {SEED_NOW} from '@setpoint/shared';
 import type {IcsReadOut} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
-import {ruleActions} from '../src/commands/mail.ts';
+import {ruleActions, snoozeMessage} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {ICS_ERRORS} from '../src/domain/icsImport.ts';
 import {Notifier} from '../src/notify/index.ts';
@@ -393,6 +393,48 @@ describe('Gmail: recovery and Google\'s errors', () => {
     const api = await signedIn(w);
     expect((await api.send('POST', '/api/accounts/gmail/authorize', {body: {}})).body.error.code).toBe('google_not_configured');
     expect((await client(w).send('GET', '/api/ea/accounts/gmail/callback?code=x&state=y')).headers.get('location')).toBe('/settings/accounts?error=google_not_configured');
+  });
+});
+
+describe('Gmail: a new email wakes a snoozed one in its thread', () => {
+  async function snoozedRead() {
+    const env = await setup({pageSize: 50});
+    const thread = deliver(env.google, 'Quarterly plan', ago(2 * DAY), {labels: ['INBOX'], from: 'Theo Park <theo@northwind.example.com>'});
+    await connect(env);
+    await env.drain();
+    const plan = bySubject(env.w, 'Quarterly plan');
+    snoozeMessage(env.w.store, plan.id, new Date(Date.parse(SEED_NOW) + 3 * DAY).toISOString());
+    return {...env, thread, plan};
+  }
+  const arrive = async (env: Awaited<ReturnType<typeof snoozedRead>>, subject: string, threadId?: string) => {
+    env.google.deliver(ADDRESS, {raw: rawEmail({from: 'Theo Park <theo@northwind.example.com>', subject, date: ago(MINUTE), text: `${subject}.`, received: gmailVerdict('northwind.example.com')}), date: ago(MINUTE), threadId});
+    env.google.publish(ADDRESS);
+    await env.puller.pullOnce();
+    await env.drain();
+  };
+
+  test('a reply in its thread returns it with the reply, unread at Gmail too, and a later sync keeps it so', async () => {
+    const env = await snoozedRead();
+    const {w, google, api, plan, thread} = env;
+    await arrive(env, 'Re: Quarterly plan', thread);
+    const reply = bySubject(w, 'Re: Quarterly plan');
+    expect(bySubject(w, 'Quarterly plan')).toMatchObject({snoozedUntil: null, returnedAt: expect.any(String), unread: true, receivedAt: plan.receivedAt});
+    // The user's own Mark unread reached Gmail; the snooze itself never did.
+    expect(google.labels(ADDRESS, plan.providerId)).toEqual(['INBOX', 'UNREAD']);
+    expect(google.requests.filter(request => request.method === 'POST' && request.path.includes(plan.providerId)).length).toBe(1);
+    const mail = (await api.send('GET', '/api/mail/inbox')).body.groups.flatMap((group: {rows: {id: number}[]}) => group.rows.map(row => row.id));
+    expect(mail).toEqual(expect.arrayContaining([plan.id, reply.id]));
+    expect(liveEvents(w).some(event => event.type === 'mail' && event.messages.includes(plan.id) && event.messages.includes(reply.id))).toBe(true);
+    w.advance(5 * MINUTE);
+    await env.drain();
+    expect(bySubject(w, 'Quarterly plan').unread).toBe(true);
+  });
+
+  test('new mail in another thread leaves it snoozed', async () => {
+    const env = await snoozedRead();
+    await arrive(env, 'Lunch on Friday?');
+    expect(bySubject(env.w, 'Quarterly plan')).toMatchObject({snoozedUntil: expect.any(String), returnedAt: null, unread: false});
+    expect(env.google.labels(ADDRESS, env.plan.providerId)).toEqual(['INBOX']);
   });
 });
 

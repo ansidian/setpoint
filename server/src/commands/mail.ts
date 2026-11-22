@@ -1,14 +1,15 @@
 // Mail changes (DESIGN.md › Interaction rules). Read state and trash are the provider's, so these
 // are commands: opening an unread email marks it read in Gmail or iCloud (counts drop at once), Mark
 // read / unread, Trash and its Undo, Mark all as read (one provider call per account), and a
-// written rule's Mark read and Trash on new mail. Done and Pin are Setpoint's own (no provider has
-// them), so they change at once with no command.
+// written rule's Mark read and Trash on new mail. Done, Pin and Snooze are Setpoint's own (no
+// provider has them), so they change at once with no command. A snoozed email's return marks it
+// unread with the user's own Mark unread, as the provider owns its read state.
 import type {RuleTrash} from '@setpoint/shared';
-import {and, eq, inArray} from 'drizzle-orm';
+import {and, eq, inArray, isNotNull, notInArray} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {markAllReadTargets} from '../domain/inbox.ts';
 import {trashDueAt} from '../domain/triageRules.ts';
-import {conflict, notFound} from '../errors.ts';
+import {conflict, invalid, notFound} from '../errors.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {activeCommand, createCommand} from './index.ts';
@@ -120,6 +121,7 @@ export function markAllRead(store: Store, accountId?: number): CommandRow[] {
     const candidates = store.db.select({
       id: t.messages.id, accountId: t.messages.accountId, unread: t.messages.unread, lane: t.messages.lane, kind: t.messages.kind,
       doneAt: t.messages.doneAt, trashedAt: t.messages.trashedAt, archivedAt: t.messages.archivedAt, openedAt: t.messages.openedAt,
+      snoozedUntil: t.messages.snoozedUntil,
     }).from(t.messages).where(accountId ? and(shown, eq(t.messages.accountId, accountId)) : shown).orderBy(t.messages.id).all();
     const busy = new Set(store.db.select({id: t.commands.targetId}).from(t.commands)
       .where(and(eq(t.commands.target, 'message'), inArray(t.commands.state, ['pending', 'failed']))).all().map(row => row.id));
@@ -190,5 +192,83 @@ export function ruleTrashDue(store: Store, messageId: number): CommandRow {
       store.db.update(t.messages).set({trashedAt: isoNow(store), trashDueAt: null}).where(eq(t.messages.id, row.id)).run();
       return {targetId: row.id, previous: before(row), touched: {messages: [row.id], accounts: [row.accountId]}};
     },
+  });
+}
+
+/**
+ * Snooze takes an email out of the Inbox until `until`, when it returns (returnFromSnooze). It keeps
+ * its lane, pin and read state meanwhile, and stays in All and search. Snoozing it again moves the
+ * time and clears the mark of an earlier return.
+ */
+export function snoozeMessage(store: Store, messageId: number, until: string): MessageRow {
+  return transaction(store, () => {
+    const row = message(store, messageId);
+    if (Date.parse(until) <= store.now().getTime()) throw invalid('A snooze ends in the future.');
+    if (row.trashedAt) throw conflict('unchanged', 'That email is in the trash.');
+    if (!row.received) throw conflict('unchanged', 'Only mail that came to you can be snoozed.');
+    const updated = store.db.update(t.messages).set({snoozedUntil: new Date(until).toISOString(), returnedAt: null})
+      .where(eq(t.messages.id, row.id)).returning().get()!;
+    noteLive(store, {type: 'mail', messages: [row.id], accounts: [row.accountId], commands: []});
+    return updated;
+  });
+}
+
+/** Unsnooze ends the snooze now: the email is back as it was, with no return mark and no notification. */
+export function unsnoozeMessage(store: Store, messageId: number): MessageRow {
+  return transaction(store, () => {
+    const row = message(store, messageId);
+    if (!row.snoozedUntil) throw conflict('unchanged', 'That email isn\'t snoozed.');
+    const updated = store.db.update(t.messages).set({snoozedUntil: null}).where(eq(t.messages.id, row.id)).returning().get()!;
+    noteLive(store, {type: 'mail', messages: [row.id], accounts: [row.accountId], commands: []});
+    return updated;
+  });
+}
+
+/**
+ * A snoozed email returns as new: unread, out of Done, at the top of its group by its return time,
+ * its arrival kept. A read one is marked unread by the user's own Mark unread command. One with a
+ * change of its own waiting isn't returned yet: it's left due, for the minute pass (false). One
+ * trashed meanwhile just loses its snooze. True once it's returned.
+ */
+export function returnFromSnooze(store: Store, messageId: number): boolean {
+  return transaction(store, () => {
+    const row = message(store, messageId);
+    if (!row.snoozedUntil) return true;
+    if (row.trashedAt) {
+      store.db.update(t.messages).set({snoozedUntil: null}).where(eq(t.messages.id, row.id)).run();
+      noteLive(store, {type: 'mail', messages: [row.id], accounts: [row.accountId], commands: []});
+      return true;
+    }
+    if (activeCommand(store, 'message', row.id)) return false;
+    const now = isoNow(store);
+    store.db.update(t.messages).set({snoozedUntil: null, returnedAt: now, doneAt: null, openedBeforeDone: null}).where(eq(t.messages.id, row.id)).run();
+    if (row.unread) noteLive(store, {type: 'mail', messages: [row.id], accounts: [row.accountId], commands: []});
+    else {
+      createCommand(store, {
+        target: 'message', kind: 'mark_unread', sourceId: mailSourceId(store, row.accountId), payload: {message_id: row.id, unread: true, snooze: true},
+        prepare: () => {
+          store.db.update(t.messages).set({unread: true}).where(eq(t.messages.id, row.id)).run();
+          return {targetId: row.id, previous: before(row), touched: {messages: [row.id], accounts: [row.accountId]}};
+        },
+      });
+    }
+    return true;
+  });
+}
+
+/**
+ * New mail wakes the snoozed emails in its threads, as a reply does in Gmail: each returns with it.
+ * One that can't return yet is made due now, for the minute pass. Returns the ids it woke.
+ */
+export function wakeThreads(store: Store, accountId: number, arrived: number[]): number[] {
+  if (!arrived.length) return [];
+  return transaction(store, () => {
+    const threads = [...new Set(store.db.select({threadId: t.messages.threadId}).from(t.messages).where(inArray(t.messages.id, arrived)).all().map(row => row.threadId))];
+    const snoozedMates = store.db.select({id: t.messages.id}).from(t.messages)
+      .where(and(eq(t.messages.accountId, accountId), inArray(t.messages.threadId, threads), isNotNull(t.messages.snoozedUntil), notInArray(t.messages.id, arrived))).all();
+    for (const {id} of snoozedMates) {
+      if (!returnFromSnooze(store, id)) store.db.update(t.messages).set({snoozedUntil: isoNow(store)}).where(eq(t.messages.id, id)).run();
+    }
+    return snoozedMates.map(row => row.id);
   });
 }

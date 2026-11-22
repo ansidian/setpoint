@@ -1,7 +1,8 @@
 // The mail mirror: what the Gmail and iCloud adapters write to the message record. Providers own
 // the email and its read, trash and inbox state. Setpoint owns what triage derives (lane, kind,
 // organisation, …), Done, pins and when the user opened it, and the mirror never touches those. New
-// mail arrives Unsorted (lane null) with a triage job. Backfilled history is sorted at once.
+// mail arrives Unsorted (lane null) with a triage job. Backfilled history is sorted at once. New
+// mail also wakes a snoozed email in its thread (src/commands/mail.ts wakeThreads).
 //
 // Sent mail is mirrored too, as a fact on the row (`sent`). Mail the user sent to others only
 // (`received` false) is never triaged and never in the Inbox's state: it isn't unread or archived.
@@ -12,6 +13,7 @@
 // landed mustn't put it back (DESIGN.md › Interaction rules: nothing quietly reverts).
 import {and, asc, desc, eq, gte, inArray} from 'drizzle-orm';
 import {activeCommands} from '../commands/index.ts';
+import {wakeThreads} from '../commands/mail.ts';
 import {writeBody} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
 import {isDigest} from '../domain/mailpieces.ts';
@@ -201,8 +203,10 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
     }
     // New mail is queued for triage. Backfilled history is sorted now by the rules-only pass.
     triageIntake(store, inserted, options.backfill ?? false);
+    // New mail wakes what's snoozed in its thread. History arriving by backfill isn't new.
+    const woken = options.backfill ? [] : wakeThreads(store, accountId, inserted);
     // Sent mail changes the emails it answers ("You replied"), so its thread's other emails are named too.
-    const changed = [...inserted, ...untriaged, ...updated];
+    const changed = [...inserted, ...untriaged, ...updated, ...woken];
     noteLive(store, {type: 'mail', messages: [...new Set([...changed, ...threadMates(store, accountId, fetched.some(message => message.sent) ? changed : [])])], accounts: [accountId], commands: []});
     return {inserted: [...inserted, ...untriaged], updated};
   });

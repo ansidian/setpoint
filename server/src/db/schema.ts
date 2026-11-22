@@ -162,6 +162,14 @@ export const messages = sqliteTable('messages', {
   // agenda rail (`mail_digests`), so the email itself is out of the Inbox and its counts. It is
   // never triaged and never notified. All and search still find it.
   uspsDigest: integer('usps_digest', {mode: 'boolean'}).notNull().default(false),
+
+  // ---- Snooze: Setpoint's own, as no provider has one ----
+  // Snoozed until then: out of the Inbox, in the Snoozed list, still in All and search. It returns
+  // at that time (the minute pass, src/triage/snooze.ts) or when a new email arrives in its thread.
+  snoozedUntil: text('snoozed_until'),
+  // When it last returned from a snooze: unread, at the top of its group, with the returned mark.
+  // Snoozing it again clears it.
+  returnedAt: text('returned_at'),
 }, table => [
   uniqueIndex('messages_account_provider').on(table.accountId, table.providerId),
   index('messages_rfc822').on(table.accountId, table.rfc822Id),
@@ -178,11 +186,14 @@ export const messages = sqliteTable('messages', {
   index('messages_triage_rule').on(table.triageRuleId),
   // The minute pass reads the due ones.
   index('messages_trash_due').on(table.trashDueAt),
+  // The Snoozed list, soonest first, and the minute pass's due ones.
+  index('messages_snoozed').on(table.snoozedUntil),
   // What reads many emails' few columns reads these instead of the table, which hold every column it
   // needs. The Inbox, All, the counts and the day: src/queries/mail.ts `listColumns`.
   index('messages_list').on(
     table.received, table.uspsDigest, table.accountId, table.lane, table.kind, table.unread, table.receivedAt, table.organisation, table.fromName,
     table.pinnedAt, table.doneAt, table.trashedAt, table.codeExpiresAt, table.archivedAt, table.triagedAt, table.triageSource,
+    table.snoozedUntil, table.returnedAt,
   ),
   // The pattern prompts' verdicts: Done Attention mail (src/triage/learning.ts).
   index('messages_verdicts').on(table.lane, table.backfill, table.doneAt, table.organisation, table.type, table.kind, table.protected, table.openedBeforeDone),

@@ -1,8 +1,8 @@
 // Mail's read queries over the message record: the Inbox's groups and counts,
 // All by day, and one email. Every view is a query. Nothing is copied per view. The rules for what
 // the Inbox shows and counts are src/domain/inbox.ts.
-import type {AllOut, CommandOut, GmailLinkOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, SentOut, SentRowOut, TrustedDomainOut} from '@setpoint/shared';
-import {and, count, desc, eq, getTableColumns, inArray, isNull, lt, or, sql} from 'drizzle-orm';
+import type {AllOut, CommandOut, GmailLinkOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, SentOut, SentRowOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
+import {and, asc, count, desc, eq, getTableColumns, inArray, isNotNull, isNull, lt, or, sql} from 'drizzle-orm';
 import type {SQL} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
@@ -26,7 +26,7 @@ const listColumns = {
   id: t.messages.id, accountId: t.messages.accountId, lane: t.messages.lane, kind: t.messages.kind, unread: t.messages.unread,
   receivedAt: t.messages.receivedAt, organisation: t.messages.organisation, fromName: t.messages.fromName, pinnedAt: t.messages.pinnedAt,
   doneAt: t.messages.doneAt, trashedAt: t.messages.trashedAt, codeExpiresAt: t.messages.codeExpiresAt, archivedAt: t.messages.archivedAt,
-  triagedAt: t.messages.triagedAt, triageSource: t.messages.triageSource,
+  triagedAt: t.messages.triagedAt, triageSource: t.messages.triageSource, snoozedUntil: t.messages.snoozedUntil, returnedAt: t.messages.returnedAt,
 };
 
 // What a row shows, read only for the rows a list shows: everything but search's text.
@@ -92,6 +92,8 @@ function presentRow(row: Presented, replies?: Replies, drafted?: Set<number>): M
     ...(row.sent && !row.received ? {sent_only: true} as const : {}),
     ...(reply ? {replied_at: reply.at} : {}),
     ...(drafted?.has(row.id) ? {draft: true} as const : {}),
+    ...(row.snoozedUntil ? {snoozed_until: row.snoozedUntil} : {}),
+    ...(row.returnedAt ? {returned_at: row.returnedAt} : {}),
   };
 }
 
@@ -200,6 +202,15 @@ export function sentMail(store: Store, input: PageInput): SentOut {
   const page = pageByDay(store, eq(t.messages.sent, true), input, (row, out): SentRowOut => ({...out, to: row.toRecipients, cc: row.ccRecipients}));
   const withSent = new Set(store.db.selectDistinct({id: t.messages.accountId}).from(t.messages).where(and(eq(t.messages.sent, true), isNull(t.messages.trashedAt))).all().map(row => row.id));
   return {...page, accounts: accountIdsOf(store).filter(id => withSent.has(id))};
+}
+
+/** The Snoozed list: every snoozed email that came to the user, soonest return first. Trashed mail is left out. */
+export function snoozedMail(store: Store): SnoozedOut {
+  const ids = store.db.select({id: t.messages.id}).from(t.messages)
+    .where(and(isNotNull(t.messages.snoozedUntil), isNull(t.messages.trashedAt), eq(t.messages.received, true)))
+    .orderBy(asc(t.messages.snoozedUntil), asc(t.messages.id)).all().map(row => row.id);
+  const rows = messageRows(store, ids);
+  return {rows: ids.map(id => rows.get(id)!.out)};
 }
 
 /** Rows for the given emails (search's page), as every list shows them. Missing ids are left out. */

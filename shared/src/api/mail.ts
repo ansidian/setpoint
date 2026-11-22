@@ -10,6 +10,9 @@
 //   POST /api/mail/messages/:id/read           {unread}            CommandOut (Mark read / unread)
 //   POST /api/mail/messages/:id/done           {done}              MessageOut (local, no provider)
 //   POST /api/mail/messages/:id/pin            {pinned}            MessageOut (local, no provider)
+//   POST /api/mail/messages/:id/snooze         {until}             MessageOut (local, no provider)
+//   POST /api/mail/messages/:id/unsnooze       MessageOut (local, no provider)
+//   GET  /api/mail/snoozed                     SnoozedOut, soonest return first (not in the iPhone app's contract)
 //   POST /api/mail/messages/:id/trash          CommandOut; /untrash is Undo
 //   POST /api/mail/mark-all-read               {account_id?}       {commands: CommandOut[]}
 //   GET/POST /api/mail/trusted-domains, DELETE /api/mail/trusted-domains/:domain
@@ -58,6 +61,12 @@ export interface MessageRowOut {
   replied_at?: string;
   // A draft answers it (a reply, reply all or forward the user started). Left out otherwise.
   draft?: true;
+  // Snoozed until then: out of the Inbox, still in All and search. Left out while it isn't. Not in
+  // the iPhone app's contract, which never sees snoozed mail in its Inbox.
+  snoozed_until?: string;
+  // When it last returned from a snooze (the row's returned mark; `received_at` stays its arrival).
+  // Left out while it never has. Not in the iPhone app's contract.
+  returned_at?: string;
 }
 
 /** One Inbox group, in INBOX_GROUPS' order. Empty groups are left out. */
@@ -225,6 +234,12 @@ export interface MessageOut extends MessageRowOut {
 export const readInput = z.strictObject({unread: z.boolean()});
 export const doneInput = z.strictObject({done: z.boolean()});
 export const pinInput = z.strictObject({pinned: z.boolean()});
+/** Snooze until an instant in the future. */
+export const snoozeInput = z.strictObject({until: z.iso.datetime({offset: true})});
+/** Snoozed mail, soonest return first, with nothing trashed. */
+export interface SnoozedOut {
+  rows: MessageRowOut[];
+}
 export const markAllReadInput = z.strictObject({account_id: z.int().positive().optional()});
 export interface MarkAllReadOut {
   commands: CommandOut[];

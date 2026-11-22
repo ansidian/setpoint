@@ -7,7 +7,7 @@ import {serveStatic} from '@hono/node-server/serve-static';
 import {
   accountOrderInput, accountUpdateInput, allInput, sentInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, mailpiecesInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput, subtaskOrderInput,
-  itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
+  itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, snoozeInput, recoverInput, registerPasskeyInput,
   askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, gmailLinkInput, weatherRangeInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput, ATTACHMENTS_MAX_BYTES,
 } from '@setpoint/shared';
 import type {
@@ -48,7 +48,7 @@ import type {CommandRow} from '../commands/index.ts';
 import {completeItem, createItem, deleteItem, reorderSubtasks, setCalendarColour, setProjectColour, updateItem} from '../commands/items.ts';
 import {importEvent, readImport} from '../calendar/icsImport.ts';
 import {ICS_MAX_BYTES} from '../domain/icsImport.ts';
-import {markAllRead, openMessage, setDone, setPinned, setRead, trashMessage} from '../commands/mail.ts';
+import {markAllRead, openMessage, setDone, setPinned, setRead, snoozeMessage, trashMessage, unsnoozeMessage} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
 import {conflict, forbidden, invalid, parse, SetpointError, unauthorized} from '../errors.ts';
 import {suggestPeople} from '../sending/people.ts';
@@ -66,7 +66,7 @@ import {BIND_COOKIE, beginTodoistOAuth, completeTodoistOAuth, TODOIST_CALLBACK_P
 import type {TodoistOAuthOptions} from '../providers/todoist/oauth.ts';
 import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts';
 import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarShown, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
-import {allMail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, sentMail, trustedDomains} from '../queries/mail.ts';
+import {allMail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, sentMail, snoozedMail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
 import {mailpieces, mailScan} from '../queries/mailpieces.ts';
 import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
@@ -629,6 +629,17 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     setPinned(store, messageId, parse(pinInput, await body(c)).pinned);
     return c.json(messageDetail(store, messageId));
   });
+  app.post('/api/mail/messages/:id/snooze', async c => {
+    const messageId = id(c.req.param('id'));
+    snoozeMessage(store, messageId, parse(snoozeInput, await body(c)).until);
+    return c.json(messageDetail(store, messageId));
+  });
+  app.post('/api/mail/messages/:id/unsnooze', c => {
+    const messageId = id(c.req.param('id'));
+    unsnoozeMessage(store, messageId);
+    return c.json(messageDetail(store, messageId));
+  });
+  app.get('/api/mail/snoozed', c => c.json(snoozedMail(store)));
   app.post('/api/mail/mark-all-read', async c => {
     const input = parse(markAllReadInput, await body(c));
     return c.json({commands: markAllRead(store, input.account_id).map(presentCommand)} satisfies MarkAllReadOut);

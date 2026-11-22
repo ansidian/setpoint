@@ -27,6 +27,7 @@ import {todoistAdapter} from './providers/todoist/index.ts';
 import {weatherAdapter} from './providers/weather/index.ts';
 import {ReminderScheduler} from './reminders/scheduler.ts';
 import {RuleTrashScheduler} from './triage/ruleTrash.ts';
+import {SnoozeScheduler} from './triage/snooze.ts';
 import {loadKeyring} from './secrets/crypto.ts';
 import {storeClock} from './store.ts';
 import type {Store} from './store.ts';
@@ -112,6 +113,8 @@ const connectors = {gmail: google ? gmailConnector(store, google, pubsub !== nul
 const reminders = new ReminderScheduler({store, notifier});
 // A written rule's delayed trash: a pass every minute.
 const ruleTrash = new RuleTrashScheduler({store});
+// Snoozed mail's return and its notification: a pass every minute.
+const snooze = new SnoozeScheduler({store, notifier});
 const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
   providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints},
@@ -130,6 +133,7 @@ engine.start();
 puller?.start();
 reminders.start();
 ruleTrash.start();
+snooze.start();
 // The weather source (Connect Gmail makes each Google account's Calendar source).
 ensureCalendarSources(store);
 // News's built-in sources and the data directory's local list.
@@ -142,6 +146,7 @@ function shutdown(signal: NodeJS.Signals) {
   void icloud.close();
   reminders.stop();
   ruleTrash.stop();
+  snooze.stop();
   clearInterval(emptyDrafts);
   server.close(() => {
     sqlite.close();
