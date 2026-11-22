@@ -6,6 +6,7 @@
 // Sent: /sent, /sent/12 with an email open, and its account in the query (/sent?account=2).
 // Drafts: /drafts, and /drafts/4 with draft 4 open in the pane.
 // Snoozed: /snoozed, and /snoozed/12 with that snoozed email open.
+// Scheduled: /scheduled, and /scheduled/4 with draft 4, scheduled to send, open to read.
 // /calendar/new?kind=event opens the editor on a new item. &message=12 pre-fills it from that email's
 // proposal (the proposal card's More options). /calendar/item/3/edit opens the editor on item 3 (the
 // Today block's card's Edit). The week view rides in the query on every calendar address
@@ -40,6 +41,7 @@ export type Route =
   | {page: 'sent'; open: number | null; account?: number}
   | {page: 'drafts'; open: number | null}
   | {page: 'snoozed'; open: number | null}
+  | {page: 'scheduled'; open: number | null}
   | {page: 'calendar'; date: string | null; item: number | null; at: string | null; compose?: Compose; edit?: true; view?: CalendarMode}
   | {page: 'settings'; section: SettingsPage}
   | {page: 'news'; view: NewsView; story: number | null; article: number | null}
@@ -82,6 +84,7 @@ export function parseRoute(pathname: string, search = ''): Route {
   }
   if (first === 'drafts') return {page: 'drafts', open: positive(second)};
   if (first === 'snoozed') return {page: 'snoozed', open: positive(second)};
+  if (first === 'scheduled') return {page: 'scheduled', open: positive(second)};
   if (first === 'settings') {
     return {page: 'settings', section: (SETTINGS_PAGES as readonly string[]).includes(second ?? '') ? second as SettingsPage : 'accounts'};
   }
@@ -103,6 +106,8 @@ export function routePath(route: Route): string {
       return `/drafts${route.open ? `/${route.open}` : ''}`;
     case 'snoozed':
       return `/snoozed${route.open ? `/${route.open}` : ''}`;
+    case 'scheduled':
+      return `/scheduled${route.open ? `/${route.open}` : ''}`;
     case 'calendar': {
       const week = route.view === 'week' ? 'view=week' : null;
       const query = (...parts: (string | null)[]) => (parts.some(Boolean) ? `?${parts.filter(Boolean).join('&')}` : '');

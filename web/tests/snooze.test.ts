@@ -7,7 +7,7 @@ import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {attentionRows, groupByDay, heldUnread, viewList} from '../src/logic/all.ts';
 import {inboxAfterSnooze} from '../src/logic/inbox.ts';
-import {nextWeekday, pickOutcome, pickStart, readPickTime, snoozeable, snoozedLine, snoozeOptions, snoozeWhen} from '../src/logic/snooze.ts';
+import {nextWeekday, pickOutcome, pickStart, readPickTime, scheduledWhen, snoozeable, snoozedLine, snoozeOptions, snoozeWhen} from '../src/logic/snooze.ts';
 
 const zone = SEED_TIME_ZONE;
 // The seed's clock: 9:12 AM Pacific on Wed, Oct 7 (UTC−7).
@@ -69,6 +69,13 @@ describe('a snoozed email\'s words', () => {
   ])('%s', (_name, until, expected) => expect(snoozeWhen(until, now, zone)).toBe(expected));
 
   test('the toast and the tip', () => expect(snoozedLine('2026-10-12T16:00:00.000Z', now, zone)).toBe('Snoozed until Mon 9:00 AM'));
+});
+
+describe('a scheduled send\'s moment inside a sentence: tomorrow lower-cased, the rest as a snooze\'s', () => {
+  test.each([
+    ['today', '2026-10-07T23:00:00.000Z', '4:00 PM'], ['tomorrow', '2026-10-08T16:00:00.000Z', 'tomorrow 9:00 AM'],
+    ['this week', '2026-10-12T16:00:00.000Z', 'Mon 9:00 AM'], ['further', '2026-10-20T16:00:00.000Z', 'Oct 20, 9:00 AM'],
+  ])('%s', (_name, at, expected) => expect(scheduledWhen(at, now, zone)).toBe(expected));
 });
 
 let nextId = 500;

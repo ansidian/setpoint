@@ -61,12 +61,12 @@ import type {DraftCreateInput, DraftKind, DraftOut, DraftRowOut, DraftUpdateInpu
 import {isEmpty} from '@setpoint/shared/richText';
 import {useSyncExternalStore} from 'react';
 import {serverNow, timeZone} from '../../api/auth.ts';
-import {ApiFailure, getCached, getJson, setCached} from '../../api/client.ts';
-import {discardDraft, draftPath, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
+import {ApiFailure, getCached, getJson, refresh, setCached} from '../../api/client.ts';
+import {discardDraft, draftPath, DRAFTS_PATH, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
 import {messagePath} from '../../api/mail.ts';
 import {emptyDraft, fillAround, hasOthers, NO_VERSIONS, recordVersion} from '../../logic/composer.ts';
 import {broughtBackLine, counted, discardedLine, discardFailedLine, scheduledAt} from '../../logic/selection.ts';
-import {snoozeWhen} from '../../logic/snooze.ts';
+import {scheduledWhen} from '../../logic/snooze.ts';
 import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
@@ -508,7 +508,7 @@ export function newMessage(accountId?: number) {
 
 /**
  * Drafts' row: its draft opens in Drafts' pane, the caret in it. One up in a window docks there.
- * One scheduled to send later is taken off the schedule first, without a word, so it can be edited.
+ * One scheduled to send later opens on Scheduled instead, to read; Cancel send there edits it.
  */
 export function openDraft(draftId: number) {
   const target = byDraft(draftId);
@@ -519,9 +519,22 @@ export function openDraft(draftId: number) {
     setComposers(composers.filter(one => one !== pane).map(one => (one === target ? {...one, floating: false, minimized: false, touched: ++touches} : one)));
     return;
   }
-  void loadDraft(draftId)
-    .then(draft => (draft.send && scheduledAt({send_state: draft.send.state, send_at: draft.send.send_at}, serverNow()) ? undoSend(draft.id) : draft))
-    .then(draft => show(draft), toastFailure('Failed to open the draft'));
+  void loadDraft(draftId).then(draft => {
+    if (draft.send && scheduledAt({send_state: draft.send.state, send_at: draft.send.send_at}, serverNow())) navigate({page: 'scheduled', open: draft.id}, {replace: true});
+    else show(draft);
+  }, toastFailure('Failed to open the draft'));
+}
+
+/**
+ * Scheduled's Cancel send: the draft comes off the schedule and opens in Drafts' pane to edit, as
+ * Undo would. Too late once the provider has it.
+ */
+export function cancelScheduled(draftId: number, onRefused: () => void = () => {}) {
+  void undoSend(draftId).then(() => navigate({page: 'drafts', open: draftId}), (error: unknown) => {
+    onRefused();
+    if (error instanceof ApiFailure && error.code === 'draft_not_held') showToast('Too late to cancel, it\'s already sending', null, 'failed');
+    else toastFailure('Failed to cancel the send')(error);
+  });
 }
 
 /**
@@ -593,7 +606,7 @@ const discarded = new Set<number>();
 
 /**
  * ⌘Enter or Send (and Try again): the composer closes and the toast offers Undo while the server holds it.
- * With `at` (ms), Send later: the server holds it until then, and Drafts shows it scheduled. This tab
+ * With `at` (ms), Send later: the server holds it until then, and Scheduled opens on it. This tab
  * doesn't follow it meanwhile: a refusal hours later shows in its Drafts row, as one from another tab.
  */
 export function send(draft: DraftOut, at?: number) {
@@ -614,7 +627,9 @@ export function send(draft: DraftOut, at?: number) {
     });
   };
   toastId = at === undefined ? showToast('Sending', {label: 'Undo', run: undo})
-    : showToast(`Scheduled for ${snoozeWhen(at, serverNow(), timeZone()).replace(/^Tomorrow/, 'tomorrow')}`, {label: 'Undo', run: undo}, {glyph: 'send'});
+    : showToast(`Scheduled for ${scheduledWhen(at, serverNow(), timeZone())}`, {label: 'Undo', run: undo}, {glyph: 'send'});
+  // Scheduled opens on it once the list has it, so the page doesn't take it for gone.
+  if (at !== undefined) void held.then(() => refresh(DRAFTS_PATH)).then(() => navigate({page: 'scheduled', open: draft.id}), () => {});
   held.catch((error: unknown) => {
     // Refused before the hold began (a save that failed, no one to send to, offline): the composer
     // comes back with what the user had, the server still owed what didn't land.

@@ -1,9 +1,9 @@
 // The tab's title: "(13) Inbox" while mail is unread, the subject when an email is open,
 // "October 2026 · Calendar" on Calendar ("Oct 4 – 10, 2026 · Calendar" in the week view), and
 // "News" or the open story's headline, "Sent" or the open sent email's subject, "Drafts" or the
-// open draft's, and "Snoozed" or the open snoozed email's subject. Settings, a modal over the page, leaves the page's title as
+// open draft's, "Snoozed" or the open snoozed email's subject, and "Scheduled" or the open scheduled email's. Settings, a modal over the page, leaves the page's title as
 // it is.
-export type TitlePage = {page: 'inbox'; unread: number; subject: string | null} | {page: 'sent'; subject: string | null} | {page: 'drafts'; subject: string | null} | {page: 'snoozed'; subject: string | null} | {page: 'calendar'; title: string} | {page: 'news'; headline: string | null} | {page: 'sign-in'};
+export type TitlePage = {page: 'inbox'; unread: number; subject: string | null} | {page: 'sent'; subject: string | null} | {page: 'drafts'; subject: string | null} | {page: 'snoozed'; subject: string | null} | {page: 'scheduled'; subject: string | null} | {page: 'calendar'; title: string} | {page: 'news'; headline: string | null} | {page: 'sign-in'};
 
 export function tabTitle(page: TitlePage): string {
   switch (page.page) {
@@ -16,6 +16,8 @@ export function tabTitle(page: TitlePage): string {
       return page.subject || 'Drafts';
     case 'snoozed':
       return page.subject ?? 'Snoozed';
+    case 'scheduled':
+      return page.subject || 'Scheduled';
     case 'calendar':
       return `${page.title} · Calendar`;
     case 'news':

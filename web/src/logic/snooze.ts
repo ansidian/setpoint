@@ -41,6 +41,9 @@ export function snoozeWhen(at: string | number, now: number, timeZone: string): 
   return `${onDay(day, day.slice(0, 4) === today.slice(0, 4) ? {month: 'short', day: 'numeric'} : {month: 'short', day: 'numeric', year: 'numeric'})}, ${time}`;
 }
 
+/** A scheduled send's moment inside a sentence: "Scheduled for tomorrow 9:00 AM", "… for Mon 9:00 AM". */
+export const scheduledWhen = (at: string | number, now: number, timeZone: string) => snoozeWhen(at, now, timeZone).replace(/^Tomorrow/, 'tomorrow');
+
 /** The menu at `now`: Tomorrow, Next weekday when it isn't tomorrow, and Pick a date and time. */
 export function snoozeOptions(now: number, taskTime: string | null, timeZone: string): EmailSnoozeOption[] {
   const today = localDate(now, timeZone);

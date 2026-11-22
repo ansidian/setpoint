@@ -4,8 +4,8 @@
 // docked composer gives way to the selection's pane, a window stays up, Discard counts what can go
 // and one toast's Undo brings every one back, and Enter opens every selected draft in a window. ⌘A
 // in the docked composer selects its words; from the list, every draft. Send later's Tomorrow
-// closes the composer with the scheduled toast, Drafts lists it with its moment, and opening it, by
-// its row or a reload on its route, takes it off the schedule to edit again.
+// closes the composer with the scheduled toast and opens Scheduled on it, to read; Drafts leaves it
+// out, and Cancel send brings it back there to edit.
 import {SEED_NOW} from '@setpoint/shared';
 import type {DraftOut, DraftsOut, Recipient} from '@setpoint/shared';
 import assert from 'node:assert/strict';
@@ -225,11 +225,11 @@ test('⌘A in the docked composer selects its words only; from the list it selec
   }
 });
 
-test('Send later › Tomorrow: the scheduled toast, Drafts\' Scheduled line; opening it, by its row or a reload, unschedules it to edit', async () => {
+test('Send later › Tomorrow: the scheduled toast, then Scheduled open on it to read and out of Drafts; a Drafts link lands there; Cancel send opens it in Drafts to edit', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
-    const [alpha] = await makeDrafts(setpoint, [{subject: 'Alpha', to: [SAM]}]);
-    const page = await openDrafts(setpoint, 1);
+    const [alpha] = await makeDrafts(setpoint, [{subject: 'Alpha', to: [SAM]}, {subject: 'Beta', to: [JUNE]}]);
+    const page = await openDrafts(setpoint, 2);
     await row(page, 'Alpha').click();
     await docked(page).waitFor();
 
@@ -237,28 +237,33 @@ test('Send later › Tomorrow: the scheduled toast, Drafts\' Scheduled line; ope
     await page.getByRole('menu', {name: 'Schedule'}).getByRole('menuitem', {name: /^Tomorrow/}).click();
     const toast = await holdToast(page);
     assert.equal(await toast.textContent(), 'Scheduled for tomorrow 9:00 AMUndo');
-    await docked(page).waitFor({state: 'detached'});
     const held = await until('Alpha scheduled', () => drafts(setpoint), found => found.some(one => one.id === alpha && one.send_state === 'held'));
     assert.ok(Date.parse(held.find(one => one.id === alpha)!.send_at!) > Date.parse(SEED_NOW) + 60 * 60_000, 'held until tomorrow');
-    await until('the row\'s Scheduled line', () => row(page, 'Alpha').locator('.scheduled').textContent(), text => text === 'Scheduled · Tomorrow 9:00 AM');
 
-    // Its row: open, editable, and no longer scheduled.
-    await row(page, 'Alpha').click();
+    // Scheduled opens on it, to read: when it sends, and no composer.
+    await until('on Scheduled', async () => pathOf(page), at => at === `/scheduled/${alpha}`);
+    const pane = page.locator('section.pane[aria-label="Scheduled email"]');
+    await until('its line', () => pane.locator('.sch-notice').textContent(), text => text === 'Send scheduled for tomorrow 9:00 AM');
+    assert.equal(await pane.locator('.rd-subj').textContent(), 'Alpha');
+    assert.equal(await page.locator('.composer').count(), 0, 'nothing to edit');
+    const scheduledRow = page.locator('.scheduled-list .row', {hasText: 'Alpha'});
+    assert.equal(await scheduledRow.locator('.age').textContent(), 'Tomorrow 9:00 AM');
+    assert.equal(await page.locator('.scheduled-list .row').count(), 1, 'Beta isn\'t scheduled');
+
+    // Drafts lists the others only, and a link to it there lands on Scheduled.
+    await page.goto(`${setpoint.base}/drafts`);
+    await row(page, 'Beta').waitFor();
+    assert.equal(await row(page, 'Alpha').count(), 0);
+    await page.goto(`${setpoint.base}/drafts/${alpha}`);
+    await until('sent on to Scheduled', async () => pathOf(page), at => at === `/scheduled/${alpha}`);
+
+    // Cancel send: off the schedule, open in Drafts to edit.
+    await pane.getByRole('button', {name: 'Cancel send'}).click();
+    await until('in Drafts', async () => pathOf(page), at => at === `/drafts/${alpha}`);
     await docked(page).waitFor();
     await until('Alpha unscheduled', () => drafts(setpoint), found => found.some(one => one.id === alpha && one.send_state === null && one.send_at === null));
-    const subject = docked(page).locator('input[aria-label="Subject"]');
-    await subject.fill('Alpha, edited');
+    await docked(page).locator('input[aria-label="Subject"]').fill('Alpha, edited');
     await until('the edit saved', () => subjects(setpoint), found => found.includes('Alpha, edited'));
-    assert.equal(await row(page, 'Alpha').locator('.scheduled').count(), 0);
-
-    // A reload on its route does the same.
-    await setpoint.api('POST', `/mail/drafts/${alpha}/send`, {send_at: new Date(Date.parse(SEED_NOW) + 24 * 60 * 60_000).toISOString()});
-    await page.reload();
-    await docked(page).waitFor();
-    assert.equal(pathOf(page), `/drafts/${alpha}`);
-    await until('unscheduled on reload', () => drafts(setpoint), found => found.some(one => one.id === alpha && one.send_state === null));
-    await docked(page).locator('input[aria-label="Subject"]').fill('Alpha, again');
-    await until('the second edit saved', () => subjects(setpoint), found => found.includes('Alpha, again'));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -178,5 +178,7 @@
 .composer .cmp-write-error > span { color: var(--ink); }
 ::highlight(cmp-write) { background: var(--sub3); }
 
-/* Drafts' row of a draft scheduled to send: its moment on one line, sharing the room with the subject. */
-.drafts-list .row .scheduled { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Scheduled: when each sends, in `caution` as Gmail's, after a small `schedule`. */
+.scheduled-list .row .age.back { width: 128px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; white-space: nowrap; color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); }
+/* The open one's line between its head and its body, as Gmail's. */
+.sch-notice { margin: 0 28px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; border-radius: 10px; background: var(--sub2); color: var(--ink2); font-size: 13px; flex: none; }

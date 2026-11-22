@@ -1,6 +1,7 @@
 // Drafts: the mail the user is writing, kept in Setpoint until it's sent, newest change first, with
 // no account control. Each row names who it goes to, its subject and first words, its account and
 // its age. A draft whose send the provider refused says so in `alert`, one being sent says Sending.
+// One scheduled to send later isn't here but on Scheduled (ScheduledPage.tsx).
 //
 // A row opens its draft in the pane (/drafts/4): a reply's or a forward's under its email, which
 // stays readable above it, a new message's by itself. J and K move the cursor, Enter opens, C writes a
@@ -17,7 +18,7 @@
 // row's right-click has the same, Esc ends the selection, and a plain click opens the one clicked.
 import type {DraftOut, DraftRowOut, DraftsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
+import type {CSSProperties, MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {DRAFTS_PATH, draftPath} from '../../api/drafts.ts';
@@ -27,7 +28,6 @@ import type {Stop} from '../../logic/inbox.ts';
 import type {Route} from '../../logic/route.ts';
 import {broughtForward, counted, discardable, scheduledAt, dropped, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, stacked, toggled} from '../../logic/selection.ts';
 import type {Selection} from '../../logic/selection.ts';
-import {snoozeWhen} from '../../logic/snooze.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {commandKey, echoKey, isTyping, keepTextUnselected, plainKey} from '../../ui/keys.ts';
@@ -58,13 +58,13 @@ const KEYS = [
 ];
 
 /** "To Sam Lee +2", or that it has no one yet. */
-function toLine(row: DraftRowOut): string {
+export function toLine(row: DraftRowOut): string {
   const [first, ...rest] = row.to;
   if (!first) return 'No recipients';
   return `To ${chipLabel(first)}${rest.length ? ` +${rest.length}` : ''}`;
 }
 
-const subjectOf = (row: DraftRowOut) => row.subject.trim() || 'No subject';
+export const subjectOf = (row: DraftRowOut) => row.subject.trim() || 'No subject';
 
 export function DraftsPage({route}: {route: DraftsRoute}) {
   const now = useNow();
@@ -83,7 +83,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
     const ids = new Set(listed?.map(row => row.id));
     if ([...going].some(id => !ids.has(id))) setGoing(new Set([...going].filter(id => ids.has(id))));
   }
-  const rows = useMemo(() => (listed ?? []).filter(row => !going.has(row.id)), [listed, going]);
+  const rows = useMemo(() => (listed ?? []).filter(row => !going.has(row.id) && !scheduledAt(row, now)), [listed, going, now]);
   const stops = useMemo(() => rows.map((row): Stop => ({key: `draft:${row.id}`, kind: 'row', group: 'all', id: row.id})), [rows]);
   const failed = useLoadFailed([load]);
   const composer = useOpenComposer();
@@ -248,7 +248,6 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
             <DraftsEmptyView onNew={() => newMessage()} />
           ) : rows.map(row => {
             const account = accounts.get(row.account_id);
-            const scheduled = scheduledAt(row, now);
             const classes = ['row', at === row.id && 'cur', shown === row.id && 'open', selectedSet.has(row.id) && 'sel'].filter(Boolean).join(' ');
             return (
               <div key={row.id} className={classes} data-id={row.id} onMouseMove={() => at !== row.id && setCursor(row.id)} onMouseDown={keepTextUnselected} onClick={event => clickRow(row.id, event)}>
@@ -259,8 +258,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
                   {row.snippet && <>{' '}<span className="sum">· {row.snippet}</span></>}
                 </span>
                 {row.send_state === 'failed' && <span className="drafted">Couldn't send</span>}
-                {scheduled ? <span className="ink3 num scheduled">Scheduled · {snoozeWhen(scheduled, now, zone)}</span>
-                  : (row.send_state === 'held' || row.send_state === 'sending') && <span className="ink3">Sending</span>}
+                {(row.send_state === 'held' || row.send_state === 'sending') && <span className="ink3">Sending</span>}
                 <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
                 <span className="age" data-tip={fullTimestamp(row.updated_at, zone)}>{age(row.updated_at, now, zone)}</span>
               </div>
@@ -285,8 +283,9 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
 /**
  * A draft as the selection's stack shows it in front: as it would read, not a composer. Its subject,
  * who it goes to, its account and when it changed, from its row at once; its body when it's in.
+ * Scheduled's pane shows one too, with its `notice` between the head and the body.
  */
-function DraftCard({row, accounts, now, timeZone}: {row: DraftRowOut; accounts: ReturnType<typeof useAccounts>['byId']; now: number; timeZone: string}) {
+export function DraftCard({row, accounts, now, timeZone, notice}: {row: DraftRowOut; accounts: ReturnType<typeof useAccounts>['byId']; now: number; timeZone: string; notice?: ReactNode}) {
   const load = {path: draftPath(row.id), ...useResource<DraftOut>(draftPath(row.id))};
   const draft = load.data?.id === row.id ? load.data : undefined;
   const failed = useLoadFailed([load]);
@@ -305,6 +304,7 @@ function DraftCard({row, accounts, now, timeZone}: {row: DraftRowOut; accounts: 
           </div></div>
         </div>
       </div>
+      {notice}
       <div className={arrived ? 'rd-body sk-arrive' : 'rd-body'}>
         {draft ? <div className="mailtext"><DescriptionText blocks={draft.body} /></div>
           : failed ? <LoadFailed what="this draft" loads={[load]} /> : <BodySkeleton />}

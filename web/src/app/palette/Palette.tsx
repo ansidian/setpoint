@@ -57,6 +57,7 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
     {id: 'sent', section: 'goto', label: 'Sent', icon: 'send', run: () => navigate({page: 'sent', open: null})},
     {id: 'drafts', section: 'goto', label: 'Drafts', icon: 'draft', run: () => navigate({page: 'drafts', open: null})},
     {id: 'snoozed', section: 'goto', label: 'Snoozed', icon: 'snooze', run: () => navigate({page: 'snoozed', open: null})},
+    {id: 'scheduled', section: 'goto', label: 'Scheduled', icon: 'schedule', run: () => navigate({page: 'scheduled', open: null})},
     {id: 'calendar', section: 'goto', label: 'Calendar', icon: 'calendar_month', hint: '2', run: () => navigate({page: 'calendar', date: null, item: null, at: null})},
     {id: 'news', section: 'goto', label: 'News', icon: 'newspaper', hint: '3', run: () => navigate({page: 'news', view: 'all', story: null, article: null})},
     ...jobsCommands(),

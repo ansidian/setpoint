@@ -176,6 +176,9 @@ test.each([
   ['Drafts', {page: 'drafts', subject: null}, 'Drafts'],
   ['a draft open', {page: 'drafts', subject: 'Re: Dinner Friday?'}, 'Re: Dinner Friday?'],
   ['a draft with no subject yet', {page: 'drafts', subject: ''}, 'Drafts'],
+  ['Scheduled', {page: 'scheduled', subject: null}, 'Scheduled'],
+  ['a scheduled email open', {page: 'scheduled', subject: 'Re: Dinner Friday?'}, 'Re: Dinner Friday?'],
+  ['a scheduled email with no subject', {page: 'scheduled', subject: ''}, 'Scheduled'],
 ] as const)('tab title: %s', (_name, page, expected) => {
   expect(tabTitle(page)).toBe(expected);
 });
@@ -240,6 +243,10 @@ describe('routes', () => {
     ['/snoozed', '', {page: 'snoozed', open: null}],
     ['/snoozed/12', '', {page: 'snoozed', open: 12}],
     ['/snoozed/nope', '', {page: 'snoozed', open: null}],
+    // Scheduled: the open scheduled email in the address.
+    ['/scheduled', '', {page: 'scheduled', open: null}],
+    ['/scheduled/4', '', {page: 'scheduled', open: 4}],
+    ['/scheduled/nope', '', {page: 'scheduled', open: null}],
     ['/somewhere', '', {page: 'inbox', open: null}],
   ] as const)('%s%s', (path, search, expected) => {
     const route = parseRoute(path, search);
