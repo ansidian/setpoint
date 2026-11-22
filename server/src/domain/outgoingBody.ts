@@ -7,7 +7,6 @@ import type {Recipient} from '@setpoint/shared';
 import {plainText, tidy, writeHtml} from '@setpoint/shared/richText';
 import type {Block, List, Run} from '@setpoint/shared/richText';
 import {safeEmail} from './emailHtml.ts';
-import {formatAddress} from './outgoingMessage.ts';
 
 /** The email a reply quotes or a forward carries, as the record has it. */
 export interface QuotedEmail {
@@ -76,13 +75,15 @@ function originalHtml(email: QuotedEmail): string {
 }
 
 const quoteText = (text: string) => text.replace(/\r\n/g, '\n').split('\n').map(line => (line ? `> ${line}` : '>')).join('\n');
-const list = (recipients: Recipient[] | null) => (recipients ?? []).map(formatAddress).join(', ');
+/** A person as the body names them, as written: "Name <address>", or the address alone. */
+const named = ({name, address}: Recipient) => (name?.trim() ? `${name.trim()} <${address}>` : address);
+const list = (recipients: Recipient[] | null) => (recipients ?? []).map(named).join(', ');
 
 /** The forward's header lines: From, Date, Subject, To and Cc (when it had one). */
 function forwardLines(email: QuotedEmail, timeZone: string): string[] {
   return [
     '---------- Forwarded message ---------',
-    `From: ${formatAddress({name: email.fromName || null, address: email.fromAddress})}`,
+    `From: ${named({name: email.fromName, address: email.fromAddress})}`,
     `Date: ${quotedMoment(email.receivedAt, timeZone)}`,
     `Subject: ${email.subject}`,
     ...(email.to?.length ? [`To: ${list(email.to)}`] : []),

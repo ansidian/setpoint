@@ -158,4 +158,13 @@ describe('composeBody', () => {
     expect(body.html).toContain('From: Sam Ortiz &lt;sam.ortiz@example.org&gt;<br>');
     expect(body.html).not.toContain('<blockquote');
   });
+
+  test('a forward names people as written, as the composer previews them, not as headers encode them', () => {
+    const email = {...original, fromName: 'José Núñez', fromAddress: 'jose@example.es', to: [{name: 'Doe, Jane', address: 'jane.doe@example.com'}], cc: [{name: null, address: 'theo@example.net'}]};
+    const body = composeBody([], {kind: 'forward', email}, ZONE);
+    expect(body.text).toContain('From: José Núñez <jose@example.es>\n');
+    expect(body.text).toContain('To: Doe, Jane <jane.doe@example.com>\nCc: theo@example.net\n');
+    expect(body.html).toContain('From: José Núñez &lt;jose@example.es&gt;<br>');
+    expect(body.html).toContain('To: Doe, Jane &lt;jane.doe@example.com&gt;<br>');
+  });
 });
