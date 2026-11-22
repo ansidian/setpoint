@@ -194,6 +194,46 @@ describe('once per email, history, the ledger', () => {
   });
 });
 
+describe('which model reads an email', () => {
+  const UPS = {fromName: 'UPS', fromAddress: 'auto@ups.example', subject: 'Your package was delivered', bodyText: 'Left at front door.'};
+  const upsRule = (world: Awaited<ReturnType<typeof setup>>['world']) =>
+    createRule(world.store, {match: {from_domains: ['ups.example']}, lane: 'fyi', kind: 'deliveries', enabled: true, mark_read: false, trash: 'never'});
+
+  test('a written sender rule\'s email is read once by the History model, in the rule\'s lane with that read\'s fields', async () => {
+    const {fake, world, deliver} = await setup();
+    setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    upsRule(world);
+    fake.answer(() => decision({lane: 'noise', kind: null, organisation: 'UPS', type: 'shipping', key_date: '2026-10-09', summary: 'Delivered to the front door'}));
+    const id = deliver(UPS);
+    await world.drain();
+    expect(fake.requests.map(request => request.model)).toEqual(['claude-haiku-5-5']);
+    expect(world.message(id)).toMatchObject({lane: 'fyi', kind: 'deliveries', triageSource: 'rule', organisation: 'UPS', summary: 'Delivered to the front door', keyDate: '2026-10-09'});
+    expect(world.store.db.select().from(t.aiUsage).where(eq(t.aiUsage.messageId, id)).all().map(row => row.model)).toEqual(['claude-haiku-5-5']);
+  });
+
+  test.each<[string, (world: Awaited<ReturnType<typeof setup>>['world']) => void, Parameters<Awaited<ReturnType<typeof setup>>['deliver']>[0], string]>([
+    // name, the rules and settings, the email, the triage source
+    ['no rule decides it', () => {}, {subject: 'Northwind Engineering Digest · October'}, 'cheap_model'],
+    ['a learned rule (organisation and type) sorts it', world => {
+      world.store.db.insert(t.triageRules).values({origin: 'learned', match: {organisation: 'Northwind Engineering', type: 'newsletter'}, lane: 'fyi', kind: 'updates', position: 0, createdAt: isoNow(world.store)}).run();
+    }, {subject: 'Northwind Engineering Digest · October'}, 'learned_rule'],
+    ['a user rule decides hard-risk mail', upsRule, {...UPS, subject: 'Payment due for your shipment'}, 'rule'],
+    ['History is set to Sonnet', world => {
+      upsRule(world);
+      updateSettings(world.store, {ai: {history_model: 'claude-sonnet-5-5'}});
+    }, UPS, 'rule'],
+  ])('%s: Sonnet reads it', async (_, arrange, email, source) => {
+    const {fake, world, deliver} = await setup();
+    setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    arrange(world);
+    fake.answer(() => decision());
+    const id = deliver(email);
+    await world.drain();
+    expect(fake.requests.map(request => request.model)).toEqual(['claude-sonnet-5-5']);
+    expect(world.message(id).triageSource).toBe(source);
+  });
+});
+
 describe('a written rule\'s actions', () => {
   const UPS = {fromName: 'UPS', fromAddress: 'auto@ups.example', subject: 'Your package was delivered', bodyText: 'Left at front door.'};
   const ruleCommands = (world: Awaited<ReturnType<typeof setup>>['world'], id: number) =>

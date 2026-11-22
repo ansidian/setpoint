@@ -1,9 +1,10 @@
 // One email through triage: rules first, then the cheap model, then the strong
 // model when the cheap one is unsure, and the policy last (src/domain/triagePolicy.ts).
 //
-// - A rule that decides the lane still has the cheap model read the email, for its organisation,
-//   type, key date, summary and security facts (extracted once, at triage). Without a
-//   model, or when it fails, the rule's lane stands with what the history pass can read.
+// - A rule that decides the lane still has a model read the email, for its organisation, type,
+//   key date, summary and security facts (extracted once, at triage): the extract tier (the
+//   History model), or the cheap model for hard-risk mail. Without a model, or when it fails,
+//   the rule's lane stands with what the history pass can read.
 // - Hard-risk mail goes straight to the strong model unless the user's rule names its
 //   sender or keeps it in Attention.
 // - The cheap model's Attention, unsure, unreadable or protected answers go to the strong model. An
@@ -19,7 +20,8 @@ import {firstMatch, hasHardRisk, needsReading, ruleDecides} from '../domain/tria
 import type {Rule, RuleActions, RuleEmail} from '../domain/triageRules.ts';
 import {detectVerificationCode} from '../domain/verificationCode.ts';
 
-export type Tier = 'cheap' | 'strong';
+// extract: only reads an email a rule has already sorted.
+export type Tier = 'cheap' | 'extract' | 'strong';
 
 export interface TriageEmail extends RuleEmail {
   // Read only for its verification code: some senders put the code only in the HTML.
@@ -82,8 +84,9 @@ export async function triageEmail(context: PipelineContext, email: TriageEmail, 
         tiers.push('strong');
         strong = await ask('strong', 'hard_risk');
       } else {
-        tiers.push('cheap');
-        cheap = await ask('cheap', preRule ? `rule:${preRule.key}` : 'no_rule');
+        const tier = preDecides && !hardRisk ? 'extract' : 'cheap';
+        tiers.push(tier);
+        cheap = await ask(tier, preRule ? `rule:${preRule.key}` : 'no_rule');
         const why = preDecides ? null : escalation(cheap);
         if (why) {
           tiers.push('strong');

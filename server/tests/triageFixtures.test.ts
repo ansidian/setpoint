@@ -21,19 +21,26 @@ const answerOf = (recorded: Recorded | undefined, subject: string, tier: string)
   return typeof recorded === 'string' ? recorded : {tool: {...recorded}};
 };
 
+// Each request's tier, by the model it asked (Settings' defaults).
+const tierOf = (model: string) => {
+  const tier = ({[DEFAULT_TRIAGE_MODELS.cheap]: 'cheap', [DEFAULT_TRIAGE_MODELS.history]: 'extract', [DEFAULT_TRIAGE_MODELS.strong]: 'strong'} as const)[model];
+  if (!tier) throw new Error(`An unexpected model: ${model}`);
+  return tier;
+};
+
 describe('the recorded fixture set, with Anthropic\'s models faked', () => {
   test('every email ends in its expected lane, kind, protection and code, asking the expected models', async () => {
     const fake = await fakeModels();
     const world = triageWorld(fake.endpoints);
     setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
     for (const rule of FIXTURE_RULES) createRule(world.store, {...rule, enabled: true, mark_read: false, trash: 'never'});
-    const models = DEFAULT_TRIAGE_MODELS;
     fake.answer(request => {
       const subject = /^Subject: (.*)$/m.exec(request.input)?.[1] ?? '';
       const fixture = TRIAGE_FIXTURES.find(candidate => candidate.subject === subject);
       if (!fixture) throw new Error(`No fixture for "${subject}"`);
-      const tier = request.model === models.cheap ? 'cheap' : 'strong';
-      return answerOf(tier === 'cheap' ? fixture.cheap : fixture.strong, subject, tier);
+      const tier = tierOf(request.model);
+      // The extract tier reads with the same prompt: the cheap answer stands for it.
+      return answerOf(tier === 'strong' ? fixture.strong : fixture.cheap, subject, tier);
     });
 
     const ids = new Map<string, number>();
@@ -48,7 +55,7 @@ describe('the recorded fixture set, with Anthropic\'s models faked', () => {
     for (const fixture of TRIAGE_FIXTURES) {
       const id = ids.get(fixture.name)!;
       const row = world.message(id);
-      const asked = fake.requests.filter(request => request.input.includes(`Subject: ${fixture.subject}\n`)).map(request => (request.model === models.cheap ? 'cheap' : 'strong'));
+      const asked = fake.requests.filter(request => request.input.includes(`Subject: ${fixture.subject}\n`)).map(request => tierOf(request.model));
       const {expect: wanted} = fixture;
       const got = {
         lane: row.lane, source: row.triageSource, tiers: asked, protected: row.protected, code: row.code,

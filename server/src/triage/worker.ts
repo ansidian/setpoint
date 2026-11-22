@@ -150,7 +150,7 @@ export class TriageWorker implements JobWorker {
     const ask = async (tier: Tier, _reason: string): Promise<Reading | null> => {
       let answer: ModelAnswer;
       try {
-        answer = await askModel(store, clients[tier]!, input, message.id, signal);
+        answer = await askModel(store, (tier === 'extract' ? clients.history ?? clients.cheap : clients[tier])!, input, message.id, signal);
       } catch (caught) {
         const error = asProviderError(caught);
         if (recordTriageFailure(store, error.message)) noteLive(store, {type: 'mail', messages: [], accounts: [], commands: []});

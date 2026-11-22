@@ -38,7 +38,7 @@ export interface TriageFixture {
     code?: string | null;
     source: TriageSource;
     // The models asked, in order.
-    tiers: ('cheap' | 'strong')[];
+    tiers: ('cheap' | 'extract' | 'strong')[];
   };
 }
 
@@ -56,7 +56,7 @@ export const TRIAGE_FIXTURES: TriageFixture[] = [
     name: 'a store\'s delivered notice, decided by the shipped delivery rule', account: 'Business', from: ['Wingtip Toys', 'shipment-tracking@amazon.com'],
     subject: 'Delivered: desk lamp', body: 'Your package with the desk lamp was delivered. It was left at the front door.',
     cheap: sure({lane: 'noise', kind: null, organisation: 'Wingtip Toys', type: 'shipping', summary: 'Left at front door'}, 0.6),
-    expect: {lane: 'fyi', kind: 'deliveries', type: 'shipping', organisation: 'Wingtip Toys', source: 'rule', tiers: ['cheap']},
+    expect: {lane: 'fyi', kind: 'deliveries', type: 'shipping', organisation: 'Wingtip Toys', source: 'rule', tiers: ['extract']},
   },
   {
     name: 'a marketplace\'s item shipped', account: 'Business', from: ['Southridge Video', 'orders@southridgevideo.example'],
@@ -131,7 +131,7 @@ export const TRIAGE_FIXTURES: TriageFixture[] = [
     name: 'a verification code', account: 'Personal', from: ['Contoso Insurance', 'security@contosoinsurance.example'],
     subject: 'Your code is 482913', body: 'Your Contoso Insurance verification code is 482913. It expires in 15 minutes.',
     cheap: sure({lane: 'fyi', kind: 'security', organisation: 'Contoso Insurance', type: 'verification_code', summary: 'Code 482913'}),
-    expect: {lane: 'fyi', kind: 'security', type: 'verification_code', code: '482913', protected: false, source: 'rule', tiers: ['cheap']},
+    expect: {lane: 'fyi', kind: 'security', type: 'verification_code', code: '482913', protected: false, source: 'rule', tiers: ['extract']},
   },
   {
     name: 'a code the model wrongly calls Attention and protected: still a code row', account: 'Business', from: ['Litware', 'accounts@litware.example'],
@@ -152,7 +152,7 @@ export const TRIAGE_FIXTURES: TriageFixture[] = [
     name: 'a password changed, from a sender the user\'s rule sends to Noise: the rule can\'t move it', account: 'Personal', from: ['Tailwind Traders', 'notices@tailwindtraders.example'],
     subject: 'Your password was changed', body: 'The password for your Tailwind Traders account was changed just now.',
     cheap: sure({lane: 'fyi', kind: 'security', organisation: 'Tailwind Traders', type: 'alert', summary: 'Password changed'}),
-    expect: {lane: 'attention', kind: 'security', protected: true, source: 'rule', tiers: ['cheap']},
+    expect: {lane: 'attention', kind: 'security', protected: true, source: 'rule', tiers: ['extract']},
   },
   {
     name: 'a critical security alert', account: 'Work', from: ['Google', 'no-reply@accounts.google.example'],
@@ -225,7 +225,7 @@ export const TRIAGE_FIXTURES: TriageFixture[] = [
     name: 'a sale, by the shipped marketing rule', account: 'Personal', from: ['Tailspin Toys', 'deals@tailspintoys.example'],
     subject: 'Fall sale: 30% off building sets', body: 'Our fall sale is on: 30% off every building set until Sunday. Unsubscribe',
     cheap: sure({lane: 'noise', kind: null, organisation: 'Tailspin Toys', type: 'newsletter', summary: 'Ends Sunday'}),
-    expect: {lane: 'noise', kind: null, source: 'rule', tiers: ['cheap']},
+    expect: {lane: 'noise', kind: null, source: 'rule', tiers: ['extract']},
   },
   {
     name: 'a newsletter', account: 'Personal', from: ['Contoso Coffee', 'journal@contosocoffee.example'],
@@ -243,7 +243,7 @@ export const TRIAGE_FIXTURES: TriageFixture[] = [
     name: 'a social follow, by the shipped social rule', account: 'Personal', from: ['Trailhead Runs', 'no-reply@trailhead.example'],
     subject: 'Morgan Diaz is now following you', body: 'Morgan Diaz is now following you on Trailhead Runs.',
     cheap: sure({lane: 'fyi', kind: 'other', organisation: 'Trailhead Runs', type: null, summary: 'New follower'}, 0.7),
-    expect: {lane: 'noise', kind: null, source: 'rule', tiers: ['cheap']},
+    expect: {lane: 'noise', kind: null, source: 'rule', tiers: ['extract']},
   },
 
   // ---- Unsure: FYI, never Attention ----
