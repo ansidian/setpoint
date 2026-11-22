@@ -101,6 +101,20 @@ export function BodySkeleton({attachment = false}: {attachment?: boolean}) {
   );
 }
 
+/**
+ * Alfred's thread while it's read back after a reload (search/alfred.ts): the question at the
+ * right, as the card shows it, and the answer's two lines under it.
+ */
+export function ThreadSkeleton() {
+  return (
+    <Sk kind="thread" className="sk-answer on-sub">
+      <Bar w="40%" h={10} style={{alignSelf: 'flex-end'}} />
+      <Bar w="72%" h={10} />
+      <Bar w="46%" h={10} />
+    </Sk>
+  );
+}
+
 const AGENDA_TITLES = ['48%', '40%', '60%'];
 const AGENDA_LINES = ['36%', '28%', '44%'];
 

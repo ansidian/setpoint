@@ -9,7 +9,8 @@
 // read) sits above what it's doing now, which shimmers. Two bars hold the answer's place, and the
 // follow-up field is dimmed until the answer is in. Then the trail folds away and the answer fades up.
 // A long list of sources shows its first five and Show all. Proposals in an answer show as the
-// proposal card.
+// proposal card. While the thread is read back after a reload, a skeleton holds its place and the
+// field is dimmed.
 import type {AccountOut, AiOut, AnswerItemOut, CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
@@ -28,6 +29,7 @@ import {navigate} from '../router.ts';
 import {showToast, toastFailure} from '../toast.ts';
 import {foldAway} from '../fold.ts';
 import {Bar, Sk} from '../states/Loading.tsx';
+import {ThreadSkeleton} from '../states/Skeletons.tsx';
 import {openSettings} from '../settings/store.ts';
 import {ProposalCard} from './ProposalCard.tsx';
 import {Account} from './Search.tsx';
@@ -86,7 +88,8 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
   }, [folding]);
   const finished = (trail: AskStep[], current: AskStep | null) => (current ? trail.slice(0, -1) : trail);
   const noKey = ai && !ai.keys.anthropic ? 'Alfred needs an Anthropic key in Settings › AI.' : null;
-  const failure = error ?? (turns.length || asking ? null : noKey);
+  const loading = alfred.loading === true;
+  const failure = error ?? (turns.length || asking || loading ? null : noKey);
   return (
     <div ref={card} className={asking ? 'card answer asking' : 'card answer'} aria-label="Alfred's answer">
       <div className="card-h">
@@ -153,17 +156,18 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
             <Sk kind="answer" className="sk-answer on-sub"><Bar w="72%" h={10} /><Bar w="46%" h={10} /></Sk>
           </>
         )}
+        {loading && <ThreadSkeleton />}
         {openItem && <AnswerItemCard key={`${openItem.turn}:${openItem.item.key}`} turn={openItem.turn} cited={openItem.item} timeZone={timeZone} onClose={() => setOpenItem(null)} />}
         {failure && <div className="failed-line"><Icon name="error" size={16} /><span><SettingsLink text={failure} /></span></div>}
         {/* Dimmed while Alfred answers: Enter waits until the answer is in, the follow-up kept. */}
-        <label className={asking ? 'field asking' : 'field'}>
+        <label className={asking || loading ? 'field asking' : 'field'}>
           <input ref={field} className="grow" aria-label="Ask a follow-up" placeholder={scoped && !turns.length && !asking ? 'Ask about this email…' : 'Ask a follow-up…'}
             value={draft} onChange={event => setDraft(event.target.value)}
             onKeyDown={event => {
               if (event.key === 'Escape') {
                 event.stopPropagation();
                 close();
-              } else if (event.key === 'Enter' && !asking && draft.trim()) {
+              } else if (event.key === 'Enter' && !asking && !loading && draft.trim()) {
                 event.preventDefault();
                 alfred.ask(draft);
                 setDraft('');

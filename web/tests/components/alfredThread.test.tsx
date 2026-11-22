@@ -10,7 +10,7 @@ import {render} from 'vitest-browser-react';
 import {clearCache} from '../../src/api/client.ts';
 import {AlfredWindow} from '../../src/app/search/AlfredWindow.tsx';
 import {AnswerCard} from '../../src/app/search/AnswerCard.tsx';
-import {alfredOf, alfredThread, askAlfred, ENDED_LINE, resetAlfred, startAlfred, useAlfredThread, useClaim} from '../../src/app/search/alfred.ts';
+import {alfredOf, alfredThread, askAlfred, ENDED_LINE, resetAlfred, restoreAlfred, startAlfred, useAlfredThread, useClaim} from '../../src/app/search/alfred.ts';
 import {dismissToast} from '../../src/app/toast.ts';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
 import type {AlfredOrigin} from '../../src/app/search/alfred.ts';
@@ -24,6 +24,8 @@ const HOURS_4 = 4 * 60 * 60_000;
 // Each question sent, and its answer (or the server's refusal), held until the check lets it go.
 let asked: {question: string; conversation: number | null; answer: (text: string) => void; refuse: (code: string) => void}[] = [];
 let turnIds = 0;
+// The conversation's read after a reload, held until the check answers it.
+let read: (status: number, body: unknown) => void = () => {};
 
 beforeEach(() => {
   asked = [];
@@ -40,6 +42,9 @@ beforeEach(() => {
       }));
     }
     if (url.pathname.includes('/alfred/asks/')) return json({step: null});
+    if (url.pathname.includes('/alfred/conversations/')) return new Promise<Response>(resolve => {
+      read = (status, body) => resolve(new Response(JSON.stringify(body), {status, headers: {'content-type': 'application/json'}}));
+    });
     if (url.pathname.endsWith('/accounts')) return json([]);
     return json({keys: {anthropic: true}});
   });
@@ -201,4 +206,35 @@ test('a follow-up the server refuses as ended closes the window with a toast, th
   await expect.element(page.getByText(ENDED_LINE)).toBeVisible();
   await expect.element(windowed()).not.toBeInTheDocument();
   expect(alfredThread()).toBeNull();
+});
+
+const remembered = () => sessionStorage.getItem('alfred.thread');
+const reloaded = () => sessionStorage.setItem('alfred.thread', JSON.stringify({conversation: 5, origin: {kind: 'search'}}));
+const turnOf = (question: string, answer: string): AnswerOut => ({
+  conversation_id: 5, turn_id: 1, ends_at: new Date(Date.now() + HOURS_4).toISOString(), question, answer, emphasis: [], sources: [], items: [], searched: [], proposals: [],
+});
+
+test('after a reload the window shows at once with a skeleton while the thread is read back, then fills with its turns', async () => {
+  reloaded();
+  await render(<Shell place={false} />);
+  restoreAlfred();
+  await expect.element(windowed()).toBeVisible();
+  expect(windowed().element().querySelector('[data-skeleton="thread"]')).not.toBeNull();
+  read(200, {conversation_id: 5, message_id: null, ended: false, turns: [turnOf('When is dinner?', 'Friday at 7.')]});
+  await expect.element(windowed().getByText('Friday at 7.')).toBeVisible();
+  expect(windowed().element().querySelector('[data-skeleton="thread"]')).toBeNull();
+  expect(remembered()).not.toBeNull();
+});
+
+test.each([
+  ['the server has ended it', 200, {conversation_id: 5, message_id: null, ended: true, turns: [turnOf('When is dinner?', 'Friday at 7.')]}],
+  ['the server no longer has it', 404, {error: {code: 'not_found', message: 'No such conversation.'}}],
+])('after a reload, when %s, the skeleton goes quietly and the tab forgets the thread', async (_, status, body) => {
+  reloaded();
+  await render(<Shell place={false} />);
+  restoreAlfred();
+  await expect.element(windowed()).toBeVisible();
+  read(status, body);
+  await expect.element(windowed()).not.toBeInTheDocument();
+  expect(remembered()).toBeNull();
 });

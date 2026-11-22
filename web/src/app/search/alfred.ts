@@ -13,8 +13,8 @@
 // replaced is dropped.
 //
 // A reload: the tab keeps the open conversation's id and origin (sessionStorage), and boot reads
-// the thread back from the server, with no model call. One the server has ended, or no longer has,
-// closes quietly.
+// the thread back from the server, with no model call. The card shows at once, a skeleton holding
+// its place until the read lands. One the server has ended, or no longer has, closes quietly.
 //
 // Ended: the server ends a thread four idle hours after its last question, and each answer says
 // when (`ends_at`). The thread closes itself then, quietly, even with the tab left open, so it's
@@ -49,6 +49,8 @@ export interface AlfredThread {
   error: string | null;
   failed: string | null;
   conversation: number | null;
+  // Being read back from the server after a reload.
+  restoring: boolean;
 }
 
 let thread: AlfredThread | null = null;
@@ -83,7 +85,7 @@ function endOnTime() {
 
 const originKey = (origin: AlfredOrigin) => (origin.kind === 'search' ? 'search' : `email:${origin.id}`);
 const claimed = () => thread !== null && (claims.get(originKey(thread.origin)) ?? 0) > 0;
-const fresh = (origin: AlfredOrigin): AlfredThread => ({origin, turns: [], waiting: null, asking: null, step: null, trail: [], error: null, failed: null, conversation: null});
+const fresh = (origin: AlfredOrigin): AlfredThread => ({origin, turns: [], waiting: null, asking: null, step: null, trail: [], error: null, failed: null, conversation: null, restoring: false});
 
 /** The open thread, or null. */
 export const useAlfredThread = () => useSyncExternalStore(subscribe, () => thread);
@@ -147,13 +149,20 @@ function remembered(): {conversation: number; origin: AlfredOrigin} | null {
 export function restoreAlfred() {
   const saved = remembered();
   if (!saved) return;
+  counter += 1;
   const id = counter;
+  set({...fresh(saved.origin), conversation: saved.conversation, restoring: true});
   alfredConversation(saved.conversation).then(out => {
-    if (id !== counter || thread) return;
-    if (out.ended || !out.turns.length) return forget();
+    // Closed, or replaced by a new question, while it was read.
+    if (id !== counter) return;
+    if (out.ended || !out.turns.length) return closeAlfred();
     set({...fresh(saved.origin), turns: out.turns, conversation: out.conversation_id});
   }, (failure: Error) => {
-    if (failure instanceof ApiFailure && failure.status === 404) forget();
+    if (id !== counter) return;
+    // Gone from the server: it closes. Otherwise (offline, say) it stays for the next reload.
+    if (failure instanceof ApiFailure && failure.status === 404) return closeAlfred();
+    counter += 1;
+    set(null);
   });
 }
 
@@ -176,7 +185,7 @@ function poll(askId: string) {
 
 function send(question: string, anew: boolean) {
   const asked = question.trim();
-  if (!thread || !asked || (thread.waiting !== null && !anew)) return;
+  if (!thread || !asked || thread.restoring || (thread.waiting !== null && !anew)) return;
   const id = counter;
   const askId = `ask-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   const {origin, conversation} = thread;
@@ -223,7 +232,7 @@ export function closeAlfred() {
 /** The thread as the Answer card takes it. Null, it's closed. */
 export function alfredOf(open: AlfredThread | null): Alfred {
   return {
-    open: open !== null, turns: open?.turns ?? [], waiting: open?.waiting ?? null, step: open?.step ?? null, trail: open?.trail ?? [],
+    open: open !== null, loading: open?.restoring ?? false, turns: open?.turns ?? [], waiting: open?.waiting ?? null, step: open?.step ?? null, trail: open?.trail ?? [],
     error: open?.error ?? null, failed: open?.failed ?? null,
     start: question => startAlfred(open?.origin ?? {kind: 'search'}, question),
     ask: askAlfred,

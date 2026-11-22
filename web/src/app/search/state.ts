@@ -181,6 +181,8 @@ export const useNewsSearch = (): NewsSearch => useSearchField<never, StoryRowOut
 export interface Alfred {
   // Whether the card shows.
   open: boolean;
+  // The thread is being read back after a reload: the card holds its place with a skeleton.
+  loading?: boolean;
   turns: AnswerOut[];
   // The question on its way (answers aren't streamed), and what Alfred is doing for it.
   waiting: string | null;
