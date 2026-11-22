@@ -801,9 +801,11 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .mailframe { display: block; width: 100%; border: 0; background: #ffffff; flex: none; color-scheme: light; }
 /* The card keeps the email 16 px from its top and bottom and up to 20 px from its sides,
    outside the email's page so its own styles can't take the room away. The sides give way so the
-   frame keeps 600 px, the width most emails are built at, rather than zooming them down. Night
-   takes the glare off its white (#f2f2f2), Light gives it a hairline ring, not a shadow. */
-.mailframe-box { flex: none; border-radius: var(--r-card); padding: 16px clamp(0px, (100% - 600px) / 2, 20px); background: #ffffff; filter: brightness(var(--mailDim)); box-shadow: 0 0 0 1px var(--mailEdge);
+   frame keeps 600 px, the width most emails are built at, rather than zooming them down. A card
+   narrower than 600 px can't keep that width anyway, so its sides take 16 px like its top (the
+   min() term is 16 px below 600 and nothing from 600 up). Night takes the glare off its white
+   (#f2f2f2), Light gives it a hairline ring, not a shadow. */
+.mailframe-box { flex: none; border-radius: var(--r-card); padding: 16px max(clamp(0px, (100% - 600px) / 2, 20px), min(16px, (600px - 100%) * 100)); background: #ffffff; filter: brightness(var(--mailDim)); box-shadow: 0 0 0 1px var(--mailEdge);
   transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 /* What scrolls an HTML email keeps its scrollbar's room whether it scrolls or not. Otherwise an
    email whose layout follows its width (a max-width media rule) could grow tall enough to bring
