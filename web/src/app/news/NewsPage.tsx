@@ -28,7 +28,7 @@
 // A story slides in over the list as the reader does, with Back. While you were away has no pane to
 // sit in, so it heads All's list, and Done puts it away at once with Undo in the toast, its stories
 // still unseen. Its rows are seen only by opening, as in the pane. Seen and the states are the
-// desktop's. Add to calendar stays on the desktop for now.
+// desktop's. An Upcoming row's Add to calendar opens the editor sheet over News.
 //
 // Keys: `J` / `K` move the cursor, on into a section's Also reported. With a story open, they open
 // the next and previous one. Enter opens (an Also reported row, its article). `O` opens the original
@@ -44,7 +44,7 @@ import type {CSSProperties, MouseEvent as ReactMouseEvent, RefObject} from 'reac
 import {timeZone} from '../../api/auth.ts';
 import {getCached, refresh, useResource, useResources} from '../../api/client.ts';
 import {articlePath, bringRecapBack, markSeen, NEWS_PATH, noteHere, openStory, putRecapAway, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
-import {age, fullTimestamp} from '../../logic/format.ts';
+import {age, fullTimestamp, localDate} from '../../logic/format.ts';
 import {
   ALSO_SHELF, dueSeen, emptySectionLine, isAlsoKey, keepsStory, NEWS_VIEWS, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moveStory, neighbourStory, nextSeen, outletLine,
   pageLayout, pillParts, recapDrawn, recapOnScreen, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState,
@@ -68,6 +68,7 @@ import {NoResults, SearchField} from '../search/Search.tsx';
 import {useNewsSearch} from '../search/state.ts';
 import {showToast, toastFailure} from '../toast.ts';
 import {usePhone} from '../Phone.tsx';
+import {openEditorSheet} from '../phone/EditorSheet.tsx';
 import {slide} from '../phone/slide.ts';
 import {TitleMenu} from '../phone/TitleMenu.tsx';
 import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
@@ -507,7 +508,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
                 <Fragment key={shelf.key}>
                   {section && <div className={header}><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</div>}
                   {line && <div className={`nw-line ${line.state}`}><Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} /><span className="num ell" data-tip={line.text}>{line.text}</span></div>}
-                  {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} adds={!phone} />)}
+                  {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} phone={phone} />)}
                   {/* Still sorting, its section's line turns as the first run's does; once sorted, a quiet section is a paper. */}
                   {empty && <div className="nw-empty">{firstRun ? <span className="spin"><Icon name="progress_activity" size={16} /></span> : <Icon name="newspaper" size={16} />}{empty}</div>}
                   {shelfRows.map((row, at) => (
@@ -664,14 +665,18 @@ function ListRecap({recap, first, rows, now, zone, onOpen, onDone}: {
 
 /**
  * Upcoming (Tech): "Apple event · Tue Oct 20 · 10 AM", its outlet, and Add to calendar, which opens
- * Calendar's editor on it. The row opens a popover with the story that announced it, which opens
- * that story, so it can be read before it's added.
+ * Calendar's editor on it, or on the phone the editor sheet over News. The row opens a popover with
+ * the story that announced it, which opens that story, so it can be read before it's added.
  */
-function Upcoming({upcoming, story, now, zone, onStory, adds}: {upcoming: UpcomingOut; story: StoryRowOut | undefined; now: number; zone: string; onStory: (id: number) => void;
-  // Add to calendar, which the phone leaves out for now.
-  adds: boolean;
+function Upcoming({upcoming, story, now, zone, onStory, phone}: {upcoming: UpcomingOut; story: StoryRowOut | undefined; now: number; zone: string; onStory: (id: number) => void;
+  phone: boolean;
 }) {
   const when = upcomingWhen(upcoming, zone);
+  // Both fill the draft from the keynote's proposal (Editor.tsx), on today until it lands.
+  const add = () => {
+    if (phone) openEditorSheet({kind: 'event', date: localDate(now, zone), upcoming: upcoming.id});
+    else navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: upcoming.id}});
+  };
   const [open, setOpen] = useState(false);
   const menu = useMenuRef(open, () => setOpen(false));
   // The story, from the list when it holds it, else on its own while the popover is open.
@@ -691,23 +696,21 @@ function Upcoming({upcoming, story, now, zone, onStory, adds}: {upcoming: Upcomi
   return (
     <div className={open ? 'nw-up on' : 'nw-up'} onClick={() => setOpen(!open)}
       onContextMenu={event => openContextMenu(event, event.currentTarget, [
-        ...(adds ? [{id: 'event', label: 'Add to calendar', icon: 'event' as const, run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: upcoming.id}})}] : []),
+        {id: 'event', label: 'Add to calendar', icon: 'event', run: add},
         {id: 'story', label: 'Open the story', icon: 'newspaper', run: () => onStory(upcoming.story_id)},
       ])}>
       <span className="ico"><Icon name="event" size={16} /></span>
       <span className="lab">Upcoming</span>
-      <span className="ell" data-tip={`${upcoming.name} · ${when}`}><span className="what">{upcoming.name}</span> <span className="num">· {when}</span></span>
+      <span className="ell" data-tip={`${upcoming.name} · ${when}`}><span className="what">{upcoming.name}</span><span className="num"><span className="sep"> · </span>{when}</span></span>
       <span className="grow" />
       <span className="nw-meta"><span className="outlet">{outletLine(upcoming.lead)}</span></span>
-      {adds && (
-        <button className="btn out sm" type="button"
-          onClick={event => {
-            event.stopPropagation();
-            navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: upcoming.id}});
-          }}>
-          <Icon name="event" size={16} />Add to calendar
-        </button>
-      )}
+      <button className="btn out sm" type="button"
+        onClick={event => {
+          event.stopPropagation();
+          add();
+        }}>
+        <Icon name="event" size={16} />Add to calendar
+      </button>
       {open && (
         <div ref={menu} className="pop nw-up-pop" role="dialog" aria-label={`The story behind ${upcoming.name}`} onClick={event => event.stopPropagation()}>
           {shown ? (

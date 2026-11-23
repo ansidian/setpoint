@@ -286,7 +286,13 @@
   .nw-row .hl { font-size: 15px; line-height: 20px; }
   .nw-row .nw-meta, .nw-lead .nw-meta { font-size: 12.5px; }
 
-  .nw-up { height: auto; min-height: 52px; }
+  .nw-up { height: auto; min-height: 52px; padding-top: 8px; padding-bottom: 8px; }
+  /* Upcoming's name over its day, beside Add to calendar: no hover tip to read a cut one by. */
+  .nw-up > .ell { display: flex; flex-direction: column; gap: 2px; line-height: 18px; }
+  .nw-up .what, .nw-up .num { overflow: hidden; text-overflow: ellipsis; }
+  .nw-up .num { font-size: 12.5px; }
+  .nw-up .sep { display: none; }
+  .nw-up .btn { flex: none; }
   /* The pill without its key: a tap takes it. */
   .nw-pill { padding-right: 12px; }
   .nw-pill .kbd { display: none; }

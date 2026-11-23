@@ -1,11 +1,12 @@
 // News on the phone at 390 × 844 against the seed's sample: All in one column under "News ▾", whose
 // menu has All and the sections; a story sliding in over the list with Back, its sources' articles;
 // While you were away heading All, put away by Done with Undo; seen as on the desktop; Search news
-// with its clear button; and the states (newsStates.spec.ts's fixtures): Unsorted with Show
-// headlines, a stale section, a section with nothing new, and the first run.
+// with its clear button; Upcoming's Add to calendar in the editor sheet over News; and the states
+// (newsStates.spec.ts's fixtures): Unsorted with Show headlines, a stale section, a section with
+// nothing new, and the first run.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
+import type {ItemsOut, NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, holdToast, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -51,7 +52,7 @@ async function seenSettled(page: Page, setpoint: Setpoint): Promise<number[]> {
   return ids;
 }
 
-test('the phone\'s News: "News ▾" with All and the sections, All in one column, a section from the menu; no pane, no Add to calendar', async () => {
+test('the phone\'s News: "News ▾" with All and the sections, All in one column, a section from the menu; no pane', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await news(setpoint);
@@ -64,9 +65,15 @@ test('the phone\'s News: "News ▾" with All and the sections, All in one column
     assert.deepEqual(await page.locator('.nw-list .list > .nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
     assert.equal(await recap(page).locator('.nw-recap-row').count(), 8);
     assert.equal(await page.locator('.pane').count(), 0);
-    // Upcoming, without Add to calendar for now.
-    await page.locator('.nw-up', {hasText: 'Apple event · Tue Oct 20 · 10 AM'}).waitFor();
-    assert.equal(await page.locator('.nw-up button').count(), 0);
+    // Upcoming: its name over its day, neither cut, beside Add to calendar.
+    const upcoming = page.locator('.nw-up', {hasText: 'Apple event'});
+    await upcoming.waitFor();
+    assert.equal(await upcoming.locator('.num').innerText(), 'Tue Oct 20 · 10 AM');
+    assert.ok(await rested(() => upcoming.evaluate(row => {
+      const [what, num] = [row.querySelector<HTMLElement>('.what')!, row.querySelector<HTMLElement>('.num')!];
+      return what.getBoundingClientRect().bottom <= num.getBoundingClientRect().top && [what, num].every(part => part.scrollWidth <= part.clientWidth);
+    })), 'the name over the day, neither cut');
+    assert.equal(await upcoming.getByRole('button', {name: 'Add to calendar'}).count(), 1);
     // Nothing scrolls sideways.
     assert.ok(await list(page).evaluate(scroller => scroller.scrollWidth <= scroller.clientWidth));
 
@@ -246,6 +253,35 @@ test('Search news on the phone: the stories found replace the list, one opens wi
     await page.locator('.hd .ph-title-btn', {hasText: 'News'}).waitFor();
     await row(page, 'Brush fire near the 210').waitFor();
     assert.equal(await page.locator('.hd .search input').inputValue(), '');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Upcoming\'s Add to calendar opens the editor sheet over News on the Apple event, Tue Oct 20 at 10 AM; Create adds it, with Undo', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  const onTheDay = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-20&to=2026-10-21')).items.filter(item => item.title === 'Apple event');
+  try {
+    const page = await news(setpoint);
+    await page.locator('.nw-up', {hasText: 'Apple event'}).getByRole('button', {name: 'Add to calendar'}).tap();
+    const sheet = page.getByRole('dialog', {name: 'New event'});
+    await sheet.waitFor();
+    // Over News, which stays where it was: no Calendar, no popover.
+    assert.equal(new URL(page.url()).pathname, '/news');
+    assert.equal(await page.locator('.nw-up-pop').count(), 0);
+    // Filled from the keynote's proposal.
+    await until('the keynote in the editor', () => sheet.getByLabel('Describe the event').inputValue(), value => value === 'Apple event');
+    assert.deepEqual([await sheet.getByLabel('Date', {exact: true}).inputValue(), await sheet.getByLabel('Start', {exact: true}).inputValue(), await sheet.getByLabel('End', {exact: true}).inputValue()],
+      ['Tue, Oct 20', '10:00 AM', '11:00 AM']);
+    await sheet.getByRole('button', {name: 'Create'}).tap();
+    await sheet.waitFor({state: 'detached'});
+    const toast = await holdToast(page);
+    await until('the toast', () => toast.textContent(), text => text === 'Created Apple eventUndo');
+    await until('the event on the server', onTheDay, items => items.length === 1);
+    assert.equal(new URL(page.url()).pathname, '/news');
+    await toast.getByRole('button', {name: 'Undo'}).tap();
+    await until('the event gone', onTheDay, items => items.length === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
