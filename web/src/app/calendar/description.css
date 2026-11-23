@@ -24,5 +24,8 @@
 .fd .fd-desc-wrap[data-long] > .fd-desc:not(.open) { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
 .fd .fd-desc.open { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
 .fd .fd-more { margin-left: -10px; }
+/* More and Less are `accent`, as the description's links are, pressed or not: something to tap,
+   not more of the text. */
+.fd .fd-desc-wrap > .btn.fd-more { color: var(--accent); }
 /* More is always in the row and shows only on one that runs past 6 lines (DescriptionText.tsx marks it). */
 .fd-desc-wrap:not([data-long]) > .fd-more { display: none; }
