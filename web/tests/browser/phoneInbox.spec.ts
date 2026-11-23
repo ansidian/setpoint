@@ -54,13 +54,18 @@ test('read state on the phone: a tap opens and reads; scrolling and opening Nois
     await page.waitForTimeout(300);
     await setpoint.idle();
     assert.deepEqual(await counts(setpoint).then(value => [value.attention, value.unread]), [3, 19]);
-    assert.equal(await page.locator('.hd .ph-count').textContent(), '19');
+    // One count in the header: Attention's pill. Unread's is in the title's menu.
+    assert.equal(await page.locator('.hd .apill').textContent(), '3');
+    assert.equal(await page.locator('.hd .num:not(.apill)').count(), 0);
 
     await page.locator('.row:has(b[data-tip="Out for delivery"])').tap();
     await page.locator('.rd-subj', {hasText: 'Out for delivery'}).waitFor();
     await until('the server read it', () => counts(setpoint), value => value.unread === 18 && value.attention === 3);
     await page.locator('.ph-back').tap();
-    await until('the count follows', () => page.locator('.hd .ph-count').textContent(), text => text === '18');
+    await page.locator('.hd .ph-title-btn').tap();
+    const unread = page.getByRole('menu', {name: 'Inbox'}).getByRole('menuitemradio', {name: /^Unread/});
+    await until('the count follows', () => unread.textContent(), text => text === 'Unread18');
+    await page.keyboard.press('Escape');
     assert.equal(await page.locator('.hd .apill').textContent(), '3');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -85,9 +90,9 @@ test('no account filter, and plain search with no chips, Ask Alfred leading its 
     await page.locator('.search input').tap();
     await page.keyboard.type('northwind interview ');
     await page.locator('.search-list .result').first().waitFor();
-    // Searching, the top reads Search alone: no attention pill or count beside it, as mail's search clears its controls.
+    // Searching, the top reads Search alone: no attention pill beside it, as mail's search clears its controls.
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
-    assert.equal(await page.locator('.hd .apill, .hd .ph-count').count(), 0);
+    assert.equal(await page.locator('.hd .apill').count(), 0);
     await page.keyboard.press('Enter');
     // Nothing happens to wait for. Enter makes no chips on the phone, and no pause asks for a
     // suggestion, its 700 ms run out on the page's clock.
@@ -154,11 +159,16 @@ test('the title\'s menu switches the views, Unread and Attention with their coun
     assert.equal(await title.textContent(), 'Unread');
     await page.locator('.list .row.unread').first().waitFor();
     assert.equal(await page.locator('.list .row:not(.unread)').count(), 0);
+    // Beside "Unread" a count would read as Unread's, so the header has none and the Inbox tab carries Attention's.
+    assert.equal(await page.locator('.hd .apill').count(), 0);
+    assert.equal(await page.locator('.ph-tabs a', {hasText: 'Inbox'}).locator('.ph-badge').textContent(), '3');
 
     // Attention has nothing to mark read.
     await title.tap();
     await page.getByRole('menu', {name: 'Unread'}).getByRole('menuitemradio', {name: /^Attention/}).tap();
     await until('the Attention view', () => title.textContent(), text => text === 'Attention');
+    assert.equal(await page.locator('.hd .apill').textContent(), '3');
+    assert.equal(await page.locator('.ph-tabs .ph-badge').count(), 0);
     assert.equal(await page.locator('.hd button[aria-label^="Mark"]').count(), 0);
 
     // The Inbox tab goes back to All.

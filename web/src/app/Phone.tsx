@@ -46,7 +46,7 @@ const TABS: {label: string; icon: IconName; on: IconName; page: Route['page']; t
 
 /**
  * The tab bar. The current tab shows in its filled glyph. The Inbox tab is badged with the attention
- * count while Attention waits and the Inbox isn't showing (its header has the pill), and the Agenda
+ * count while Attention waits and the Inbox isn't showing All or Attention (whose header has the pill), and the Agenda
  * tab with the overdue tasks' while any are and the Agenda isn't showing (its Overdue group lists
  * them). On Sent, Drafts and Snoozed the Inbox tab is lit, and a tap on it goes to the Inbox. A tap on the current tab takes its list back to the top, the agenda to today under its past
  * week, as the page's inner scroller is out of reach of iOS's tap on the status bar. While the
@@ -54,7 +54,8 @@ const TABS: {label: string; icon: IconName; on: IconName; page: Route['page']; t
  */
 export function PhoneTabs({route}: {route: Route}) {
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
-  const waiting = route.page !== 'inbox' && counts ? counts.attention : 0;
+  const pill = route.page === 'inbox' && (!route.view || route.view === 'all' || route.view === 'attention');
+  const waiting = !pill && counts ? counts.attention : 0;
   const overdue = useOverdue().length;
   const late = route.page !== 'calendar' ? overdue : 0;
   const select = useSelectBar();

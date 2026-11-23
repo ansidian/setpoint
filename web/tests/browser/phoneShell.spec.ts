@@ -33,7 +33,7 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
 
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-    await until('the count follows', () => page.locator('.hd .ph-count').textContent(), text => text === '18');
+    await page.locator('.list .row:not(.unread):has(b[data-tip^="Interview availability"])').waitFor();
 
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
     await page.locator('.ph-agenda .pitem').first().waitFor();

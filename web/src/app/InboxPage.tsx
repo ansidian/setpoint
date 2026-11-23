@@ -28,14 +28,15 @@
 // view, and Attention has none. An empty view says so, with Show All.
 //
 // On the phone (board 21) the header is the mark, the view's name as a menu ("Inbox ▾": All, Unread,
-// Attention, FYI and Noise, then Sent, Drafts and Snoozed, then Settings: logic/mailMenu.ts), its counts, Mark all as read (as the view reads it) and
-// New message, which opens the composer's sheet (no account filter). The Inbox tab goes back to All.
+// Attention, FYI and Noise, then Sent, Drafts and Snoozed, then Settings: logic/mailMenu.ts), the
+// Attention pill (on All and Attention; elsewhere the Inbox tab has it, so no count beside "Unread"
+// reads as Unread's, which is in the menu), Mark all as read (as the view reads it), Select and New message, which opens the composer's sheet (no account filter). The Inbox tab goes back to All.
 // A plain search field sits under it (no chips), taking sent mail in as the desktop's does, and Ask
 // Alfred leads its results. A row swipes (logic/swipe.ts): right marks it read or unread, left offers
 // Trash, Done and Pin or Unpin, a full swipe running Trash. Select in the header puts a circle on each
 // row: a tap selects, Select all takes every row the list holds, and the tab bar gives way to Done,
-// Pin, Read and Trash for all of them, with one toast and one Undo. Done and Trash end it, Pin and
-// Read keep it, and Cancel, a view, a search or an email opening end it too. No swipes meanwhile.
+// Pin, Read and Trash for all of them, with one toast and one Undo. Each of them ends it, as do
+// Cancel, a view, a search or an email opening. No swipes meanwhile.
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut, Settings} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -955,8 +956,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       ) : <header className="hd">
         {phone && <Mark />}
         {phone && !searching ? <TitleMenu title={mailTitle(menuPlace)} rows={menuRows} /> : <h1 className="hd-title">{searching ? 'Search' : 'Inbox'}</h1>}
-        {phone && !searching && counts && counts.attention > 0 && <span className="apill num" data-tip="Attention, not Done">{counts.attention}</span>}
-        {phone && !searching && counts && counts.unread > 0 && <span className="ph-count num">{counts.unread}</span>}
+        {/* One count on the phone: Attention's, on All and Attention. On the other views the Inbox tab has it. */}
+        {phone && !searching && (view === 'all' || view === 'attention') && counts && counts.attention > 0 && <span className="apill num" data-tip="Attention, not Done">{counts.attention}</span>}
         {/* The views, Unread's with the red unread badge and Attention's with its count. */}
         {!phone && !searching && (
           <Segmented className="ib-views" label="Views" value={view} onChange={switchView} onTab={switchView} segments={INBOX_VIEWS.map(one => ({value: one, label: <>

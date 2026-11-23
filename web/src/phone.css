@@ -26,7 +26,7 @@
   .hd { height: auto; min-height: 48px; flex-wrap: wrap; column-gap: 10px; row-gap: 0; padding: 0 12px 0 20px; border-bottom: 0; }
   .hd > .hd-title { line-height: 48px; font-weight: 600; letter-spacing: -.01em; }
   .hd > .apill { margin-left: -2px; }
-  .hd > .ph-count, .hd > .ph-range { color: var(--ink3); font-size: 12.5px; }
+  .hd > .ph-range { color: var(--ink3); font-size: 12.5px; }
   .hd > .ph-range { padding-right: 8px; }
   .ph-icon { width: 40px; height: 40px; }
   /* Plain search: the words as typed, no key hints. */
