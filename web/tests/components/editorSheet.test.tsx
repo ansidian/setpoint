@@ -87,6 +87,14 @@ test('a new event: Cancel, its title and Create, which waits for a title and sen
   expect(sent[0]!.body).toMatchObject({kind: 'event', calendar_id: 1, title: 'Lunch with Ana', all_day: false, starts_at: '2026-10-09T19:00:00.000Z', ends_at: '2026-10-09T20:00:00.000Z'});
 });
 
+test('on a page that isn\'t a secure context (plain http, as the dev Setpoint on the LAN), where Safari has no crypto.randomUUID, the sheet still opens', async () => {
+  server();
+  vi.spyOn(crypto, 'randomUUID').mockImplementation(() => { throw new TypeError('crypto.randomUUID is not a function'); });
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await expect.element(sheet('New event')).toBeVisible();
+});
+
 test('Task in the sheet makes it a task, its title "New task"', async () => {
   server();
   await render(<PhoneSheets />);

@@ -48,6 +48,7 @@ import {DescriptionField} from './DescriptionField.tsx';
 import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
 import {Sheet} from '../phone/Sheet.tsx';
+import {uuid} from '../uuid.ts';
 import './editor.css';
 
 /** What the editor opens on: New C or D on a day, Edit (E) on an item, or an email's proposal. */
@@ -232,7 +233,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const [recentMenu, setRecentMenu] = useState<{query: string; cur: number; closed: boolean} | null>(null);
   // The line's #project menu: its cursor, and whether Esc closed it, for the project typed.
   const [lineMenu, setLineMenu] = useState<{query: string; cur: number; closed: boolean} | null>(null);
-  const [sessionToken, setSessionToken] = useState(() => crypto.randomUUID());
+  const [sessionToken, setSessionToken] = useState(() => uuid());
   const line = useRef<HTMLInputElement>(null);
   const lineMarks = useRef<HTMLSpanElement>(null);
   const ownForm = useRef<HTMLFormElement>(null);
@@ -495,7 +496,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     // Place Details for the pick ends Google's session (so the next place typed starts a new one),
     // and has the address in full where the suggestion's didn't.
     const id = draft.id;
-    setSessionToken(crypto.randomUUID());
+    setSessionToken(uuid());
     void findPlace(place.place_id, sessionToken).then(found => {
       if (!found.address) return;
       setDrafts(list => list.map(one => (one.id === id && one.place === chosen.place && one.address === chosen.address ? {...one, address: found.address} : one)));

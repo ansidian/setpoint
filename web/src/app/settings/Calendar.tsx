@@ -19,6 +19,7 @@ import {Line, Menu, Page, Row, Section, Select, SkeletonRows, Stepper, Switch, u
 import {KeyRow, SecretRow} from './Ai.tsx';
 import {openSettings} from './store.ts';
 import {refusalWords, withCode} from '../../logic/providerWords.ts';
+import {uuid} from '../uuid.ts';
 
 const INBOX = '';
 const BUFFER_STEP = 5;
@@ -225,7 +226,7 @@ function ProjectRow({project}: {project: TodoistProjectOut}) {
 
 /** Home: type a place, pick a suggestion. Its coordinates come with it. */
 function HomeSearch({onDone}: {onDone: () => void}) {
-  const [session] = useState(() => crypto.randomUUID());
+  const [session] = useState(() => uuid());
   const [found, setFound] = useState<PlaceSuggestionOut[]>([]);
   const ask = useAttempt();
   const pick = useAttempt();
