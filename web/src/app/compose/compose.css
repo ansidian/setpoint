@@ -190,3 +190,12 @@
 .ph-sheet-body > .cmp-place .composer { flex: 1 1 auto; min-height: 0; }
 .ph-sheet .composer :is(input, .desc-edit) { font-size: 16px; }
 .ph-sheet .composer .desc-edit { line-height: 22px; }
+/* Its format row's buttons are finger-sized, 44 px each with 20 px glyphs. When they don't fit the
+   width the row scrolls sideways, Discard last; a link's address keeps the row's height. */
+.ph-sheet .composer .desc-bar { min-height: 52px; gap: 0; padding: 4px 4px max(4px, env(safe-area-inset-bottom)); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.ph-sheet .composer .desc-bar::-webkit-scrollbar { display: none; }
+.ph-sheet .composer .desc-bar .ibtn { width: 44px; height: 44px; flex: none; border-radius: 12px; }
+.ph-sheet .composer .desc-bar .ibtn .icon { width: 20px; height: 20px; }
+.ph-sheet .composer .desc-bar.linking { gap: 8px; padding-left: 16px; }
+.ph-sheet .composer .desc-bar.linking input { height: 44px; font-size: 16px; }
+.ph-sheet .composer .desc-bar.linking .btn { height: 36px; flex: none; }
