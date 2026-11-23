@@ -303,7 +303,9 @@ export function useResources<T>(paths: string[]): (T | undefined)[] {
   useEffect(() => {
     const unmount = key ? key.split('\n').map(mountResource) : [];
     return () => {
-      unmount.forEach(done => done());
+      // Let go once the next list is mounted, so a path in both stays on screen, its answer kept: a
+      // longer list (the phone's agenda loading on) never drops what it already shows.
+      queueMicrotask(() => unmount.forEach(done => done()));
       lists.delete(key);
     };
   }, [key]);
