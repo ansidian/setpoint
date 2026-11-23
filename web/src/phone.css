@@ -208,6 +208,51 @@
   .ph-detail .card-h { min-height: 48px; padding-top: 14px; }
   .ph-detail .card-acts { display: none; }
 
+  /* ---------- Sheets and the title menu (phone/) ---------- */
+  /* The full-screen sheet: over the reader and the tab bar, under the bottom sheet and the toast. It
+     slides up from the bottom edge over 260 ms, the modal timing, and closes at once. */
+  .ph-sheet { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--page); padding-top: env(safe-area-inset-top); outline: none;
+    animation: ph-sheet-in var(--dur-slow) var(--ease); }
+  @keyframes ph-sheet-in { from { transform: translateY(100%); } }
+  /* Its top bar: Cancel or Back at the start, the title in the middle, the action at the end. */
+  .ph-sheet-top { height: 48px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 6px; border-bottom: 1px solid var(--hair); }
+  .ph-sheet-top > .ph-sheet-lead { justify-self: start; height: 40px; color: var(--ink); font-size: 15px; font-weight: 400; }
+  .ph-sheet-top > .ph-back { padding: 0 10px 0 6px; }
+  .ph-sheet-title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; text-align: center; }
+  .ph-sheet-top > .ph-sheet-act { grid-column: 3; justify-self: end; height: 32px; font-size: 14px; }
+  .ph-sheet-act:disabled { opacity: .5; }
+  .ph-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
+
+  /* The bottom sheet: `modal`, its top corners a popover's 18, rising from the bottom edge over 260 ms
+     as its scrim fades in. It follows a drag down and settles back over 180 ms. */
+  .ph-bs-scrim { position: fixed; inset: 0; z-index: 32; background: var(--scrim); animation: ph-fade var(--dur-slow) var(--ease); }
+  .ph-bs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 33; max-height: calc(100% - 48px - env(safe-area-inset-top)); overflow-y: auto; display: flex; flex-direction: column;
+    padding: 0 8px max(12px, env(safe-area-inset-bottom)); border-radius: var(--r-popover) var(--r-popover) 0 0; background: var(--modal); box-shadow: inset 0 1px 0 var(--edgeOn), var(--shadow-pop);
+    touch-action: none; outline: none; animation: ph-bs-in var(--dur-slow) var(--ease); }
+  @keyframes ph-bs-in { from { transform: translateY(100%); } }
+  .ph-bs-grab { width: 36px; height: 5px; flex: none; margin: 6px auto 0; border-radius: 999px; background: var(--sub3); }
+  .ph-bs-title { margin: 0; padding: 10px 12px 6px; font-size: 13px; font-weight: 500; color: var(--ink3); }
+  /* Its choices: 48 px rows, radius 10, `ink` with an 18 px `ink2` glyph and what they say on the right in `ink3`. */
+  .ph-bs-i { height: 48px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: var(--r-row); color: var(--ink); font-size: 15px; text-align: left;
+    transition: background-color var(--dur-medium) var(--ease); }
+  .ph-bs-i:active { background: var(--sub2); transition-duration: 0s; }
+  .ph-bs-i .icon { color: var(--ink2); }
+  .ph-bs-detail { margin-left: auto; color: var(--ink3); font-size: 13px; white-space: nowrap; }
+
+  /* The title menu: the title and its `expand_more`, then the shared menu under it at the phone's
+     44 px rows, a count in `ink3` and the check for the current row. A tap outside lands on nothing. */
+  .hd > .ph-title { position: relative; min-width: 0; }
+  .ph-title-btn { display: inline-flex; align-items: center; gap: 2px; margin-left: -6px; padding: 0 4px 0 6px; border-radius: var(--r-row); font: inherit; color: var(--ink); line-height: 36px; }
+  .ph-title-btn .icon { color: var(--ink3); flex: none; transition: transform var(--dur-medium) var(--ease); }
+  .ph-title-btn[aria-expanded="true"] .icon { transform: rotate(180deg); }
+  .ph-title-btn:active { background: var(--sub2); }
+  .ph-title-catch { position: fixed; inset: 0; z-index: 24; }
+  .ph-title-pop { position: absolute; top: calc(100% - 4px); left: -12px; z-index: 25; min-width: 232px; max-width: calc(100vw - 24px); line-height: normal; font-weight: 400; letter-spacing: 0; }
+  .ph-title-pop .menu-i { height: 44px; font-size: 15px; color: var(--ink); }
+  .ph-title-pop .menu-i > .ph-title-count { margin-left: auto; color: var(--ink3); font-size: 13px; }
+  .ph-title-pop .menu-i > .ph-title-count + .ph-title-check { margin-left: 0; }
+  .ph-title-pop .menu-i[aria-checked="false"] > .ph-title-check { visibility: hidden; }
+
   /* ---------- Settings: on the desktop ---------- */
   .ph-settings { flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px 20px; color: var(--ink2); }
   .ph-settings p { margin: 0; }

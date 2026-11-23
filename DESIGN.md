@@ -150,7 +150,7 @@ account labels 13; summaries in Attention 13.5; group headers 12; search's rows 
 | --- | --- |
 | 999 | buttons, chips, tags, pills, icon buttons, toggles, avatars, day numbers |
 | 26 | modals (Settings) |
-| 18 | popovers, ⌘K, the floating detail, cards (proposal, Answer) |
+| 18 | popovers, ⌘K, the floating detail, cards (proposal, Answer), the phone's bottom sheet (top corners) |
 | 14 | the pattern prompt, attachments, the email frame |
 | 12 | the images-hidden bar |
 | 10 | nav items, account rows, menu items, fields, search, calendar rows, segmented outer |
@@ -210,7 +210,10 @@ menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N"
 180 ms and Settings 8 px over 260 ms, their scrims fading in; a pane's content over a narrow
 window's list (on a desktop the pane is always there), and the editor however it's opened,
 slides in 12 px over 180 ms; Alfred's Answer card and a proposal slide down 6 px, and
-fold away when closed. ⌘K, Settings, the "+N" popover and menus close at once.
+fold away when closed. On the phone a full-screen sheet slides up from the bottom edge over
+260 ms, and a bottom sheet rises the same way as its scrim fades in, following a drag down and
+settling back over 180 ms when it isn't dragged far enough to close. ⌘K, Settings, the "+N" popover,
+menus and the phone's sheets close at once.
 
 **Loading**: a page whose data is on its
 way draws its rows' skeleton in their shapes, bars in `sub2` (`sub3` inside a `sub` group). It
