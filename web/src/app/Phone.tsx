@@ -1,7 +1,7 @@
 // The phone's shell (board 21): below 640 px the same pages and routes in one
-// column, with Inbox, Agenda and News in a tab bar at the bottom in place of the sidebar. Settings stays on
-// the desktop: a Settings link (a reconnect alert's) says so here, with Sign out. News is its own
-// page's (news/NewsPage.tsx), in one column.
+// column, with Inbox, Agenda and News in a tab bar at the bottom in place of the sidebar. Settings is
+// a page of its own (settings/PhoneSettings.tsx), and News is its own page's (news/NewsPage.tsx), in
+// one column.
 import type {MailCountsOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {useResource} from '../api/client.ts';
@@ -10,9 +10,8 @@ import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {viewport} from '../tokens.ts';
 import type {IconName} from '../ui/glyphs.ts';
-import {Icon, Mark} from '../ui/Icon.tsx';
+import {Icon} from '../ui/Icon.tsx';
 import {currentRoute, navigate} from './router.ts';
-import {askSignOut} from './signOut.ts';
 import {toInbox} from './toInbox.ts';
 
 const PHONE = window.matchMedia(`(max-width: ${viewport.phoneBelow - 1}px)`);
@@ -68,21 +67,5 @@ export function PhoneTabs({route}: {route: Route}) {
         );
       })}
     </nav>
-  );
-}
-
-/** A Settings page's address on the phone. */
-export function PhoneSettings() {
-  return (
-    <>
-      <header className="hd">
-        <Mark />
-        <h1 className="hd-title">Settings</h1>
-      </header>
-      <div className="content ph-settings">
-        <p>Settings is on the desktop</p>
-        <button className="btn ghost" type="button" onClick={askSignOut}><Icon name="door_open" size={17} />Sign out</button>
-      </div>
-    </>
   );
 }

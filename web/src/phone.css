@@ -251,7 +251,7 @@
   .ph-title-pop .menu-i > .ph-title-count + .ph-title-check { margin-left: 0; }
   .ph-title-pop .menu-i[aria-checked="false"] > .ph-title-check { visibility: hidden; }
 
-  /* ---------- Settings and News: on the desktop ---------- */
+  /* ---------- News: on the desktop ---------- */
   .ph-settings { flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px 20px; color: var(--ink2); }
   .ph-settings p { margin: 0; }
 

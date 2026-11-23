@@ -4,10 +4,10 @@
 // ⌘, Settings, ⌘J Light or Night, `4` Jobs (jobs/, a wiring point; when it's off, its page says so),
 // and `` ` `` to open or fold the sidebar from 1100 px (sidebarRail.ts). Settings is a modal over
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
-// phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings says
-// it's on the desktop; the composer opens in a full-screen sheet. ⌘K, Jobs and Sent stay there (their
-// addresses open the Inbox). Alfred's window is the phone's pill and sheet (PhoneAlfred.tsx). On the
-// desktop every arrival (a
+// phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings is a page
+// there (settings/PhoneSettings.tsx) and the composer opens in a full-screen sheet; ⌘K, Jobs and Sent
+// stay on the desktop (their addresses open the Inbox). Alfred's window is the phone's pill and sheet
+// (PhoneAlfred.tsx). On the desktop every arrival (a
 // load, a return to the tab) with an overdue task opens on its banner (OverdueBanner.tsx), over
 // everything but the toast.
 import {useEffect} from 'react';
@@ -22,9 +22,10 @@ import {goToJobs, jobsMailSlots, JobsPage} from './jobs/index.ts';
 import {NewsPage} from './news/NewsPage.tsx';
 import {ContextMenu} from './ContextMenu.tsx';
 import {Palette} from './palette/Palette.tsx';
-import {isPhone, PhoneSettings, PhoneTabs, usePhone} from './Phone.tsx';
+import {isPhone, PhoneTabs, usePhone} from './Phone.tsx';
 import {currentRoute, navigate, useRoute} from './router.ts';
 import {selectSearch} from './search/Search.tsx';
+import {PhoneSettings} from './settings/PhoneSettings.tsx';
 import {Settings} from './settings/Settings.tsx';
 import {openSettings} from './settings/store.ts';
 import {Sidebar} from './Sidebar.tsx';
@@ -81,7 +82,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key === ',') {
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key === ',' && !isPhone()) {
         event.preventDefault();
         openSettings('accounts');
         return;
@@ -134,7 +135,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
           : route.page === 'calendar' ? (phone ? <Agenda route={route} /> : <CalendarPage route={route} />)
             : route.page === 'news' ? <NewsPage route={route} />
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)
-              : phone ? <PhoneSettings /> : null}
+              : phone ? <PhoneSettings page={route.section} /> : null}
         {!phone && <ComposerWindows />}
         {phone ? <PhoneAlfred route={route} /> : <AlfredWindow />}
         <OfflinePill />

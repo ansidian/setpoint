@@ -3,9 +3,12 @@
 // link an ntfy notification carries (`deepLinkPath`): an email, an event, one occurrence of a
 // recurring event, a task's day, and a Settings page. Sign-in's fields are 16 px, so iOS doesn't
 // zoom into them. The web manifest opens Setpoint standalone (News is phoneNews.spec.ts's).
+// Settings is a page: Notifications and Appearance, the others on the desktop, and Sign out.
 import assert from 'node:assert/strict';
+import http from 'node:http';
+import type {AddressInfo} from 'node:net';
 import {after} from 'node:test';
-import type {ItemsOut} from '@setpoint/shared';
+import type {ItemsOut, Settings} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import {box, counts, email, inbox} from './phoneHelpers.ts';
@@ -140,11 +143,11 @@ test('deep links at the iPhone size: an email, an event, one occurrence, a task\
     await until('the agenda starts on the day', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 20 – 27');
     assert.equal((await page.locator('.ph-agenda .pday').first().textContent())!.startsWith('Tue, Oct 20'), true);
 
-    // A reconnect alert's Settings link: Settings is on the desktop, with Sign out.
+    // A reconnect alert's Settings link lands on a page: Accounts is on the desktop, with Sign out.
     await page.goto(`${setpoint.base}${deepLinkPath({to: 'settings', page: 'accounts'})}`);
-    await page.locator('.ph-settings', {hasText: 'Settings is on the desktop'}).waitFor();
+    await page.locator('.ph-set', {hasText: 'Accounts is on the desktop'}).waitFor();
     assert.equal(new URL(page.url()).pathname, '/settings/accounts');
-    await page.locator('.ph-settings button', {hasText: 'Sign out'}).tap();
+    await page.locator('.ph-set-foot button', {hasText: 'Sign out'}).tap();
     // It asks once, in the toast.
     await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).tap();
     await page.getByLabel('Password').waitFor();
@@ -189,6 +192,78 @@ test('the web manifest opens the Inbox standalone with the home screen icon', as
     assert.deepEqual([display, start, icons.map(icon => icon.sizes)], ['standalone', '/inbox', ['180x180']]);
     const icon = await page.request.get(`${setpoint.base}${icons[0]!.src}`);
     assert.equal(icon.headers()['content-type'], 'image/png');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** A fake ntfy on 127.0.0.1 that takes every publish, so no check reaches a real one. */
+async function fakeNtfy() {
+  const server = http.createServer((request, response) => {
+    request.resume();
+    request.on('end', () => response.writeHead(200, {'content-type': 'application/json'}).end('{"id":"msg","event":"message"}'));
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  return {url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, close: () => new Promise(resolve => server.close(resolve))};
+}
+
+test('phone Settings: Notifications and Appearance with the title menu between them, a switch saves, the theme switches; the other pages are on the desktop', async () => {
+  const ntfy = await fakeNtfy();
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    await setpoint.api('PATCH', '/settings', {notifications: {ntfy_server: ntfy.url}});
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/settings/notifications`);
+    // The desktop's Notifications page in the phone's column, the tab bar under it.
+    const fyi = page.getByRole('switch', {name: 'FYI mail'});
+    await fyi.waitFor();
+    assert.equal(await page.locator('.hd .ph-title-btn').textContent(), 'Notifications');
+    assert.equal(await page.locator('.settings[role="dialog"]').count(), 0, 'no modal');
+    assert.equal(await page.locator('.ph-tabs').count(), 1);
+    const scroll = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+    assert.equal(scroll[0], scroll[1], 'nothing scrolls sideways');
+    // A switch saves.
+    const was = (await setpoint.api<Settings>('GET', '/settings')).notifications.fyi_mail;
+    await fyi.tap();
+    await until('it saved', async () => (await setpoint.api<Settings>('GET', '/settings')).notifications.fyi_mail, on => on === !was);
+    assert.equal(await fyi.getAttribute('aria-checked'), String(!was));
+
+    // The title menu goes to Appearance, where Night and Light switch the page.
+    await page.locator('.hd .ph-title-btn').tap();
+    assert.deepEqual(await page.getByRole('menu').getByRole('menuitemradio').allTextContents(), ['Notifications', 'Appearance']);
+    await page.getByRole('menuitemradio', {name: 'Appearance'}).tap();
+    await page.getByRole('radio', {name: /Night/}).tap();
+    await until('Night', () => page.evaluate(() => document.documentElement.dataset.theme), theme => theme === 'night');
+    assert.equal(new URL(page.url()).pathname, '/settings/appearance');
+    await page.getByRole('radio', {name: /Light/}).tap();
+    await until('Light', () => page.evaluate(() => document.documentElement.dataset.theme), theme => theme === 'light');
+
+    // Each other page says it's on the desktop.
+    for (const [page_, label] of [['mail', 'Mail'], ['calendar', 'Calendar'], ['news', 'News'], ['jobs', 'Jobs'], ['ai', 'AI'], ['security', 'Security']] as const) {
+      await page.goto(`${setpoint.base}/settings/${page_}`);
+      await page.locator('.ph-set-away', {hasText: `${label} is on the desktop`}).waitFor();
+      assert.equal(await page.locator('.hd .ph-title-btn').textContent(), label);
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+    await ntfy.close();
+  }
+});
+
+test('phone Settings: opening Settings from the app lands on its page, as Alfred\'s Settings › AI with no key does', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    await page.locator('.search input').tap();
+    await page.keyboard.type('lease renewal');
+    await page.locator('.search-list .result').first().waitFor();
+    await page.locator('.search-list .ask').tap();
+    // With no Anthropic key the card says so, and its link opens Settings › AI: on the desktop.
+    await page.locator('.search-list .answer .failed-line', {hasText: 'Settings › AI'}).getByRole('button', {name: 'Settings › AI'}).tap();
+    await page.locator('.ph-set-away', {hasText: 'AI is on the desktop'}).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/settings/ai');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

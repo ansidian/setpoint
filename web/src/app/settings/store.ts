@@ -1,8 +1,11 @@
 // Whether Settings is open, and on which page (a modal over the current page,
 // not in the address bar). /settings/<page> still opens it, over the Inbox (App.tsx), so a
-// reconnect link or a notification lands on the right page.
+// reconnect link or a notification lands on the right page. The phone has no modal: there Settings
+// is a page (PhoneSettings.tsx), and opening Settings goes to its address.
 import {useSyncExternalStore} from 'react';
 import type {SettingsPage} from '../../logic/route.ts';
+import {viewport} from '../../tokens.ts';
+import {navigate} from '../router.ts';
 
 let page: SettingsPage | null = null;
 // Add to rule's New rule from: Mail's Add rule, open and filled in, until it's added or
@@ -12,6 +15,10 @@ const listeners = new Set<() => void>();
 const changed = () => listeners.forEach(listener => listener());
 
 export function openSettings(next: SettingsPage = 'accounts') {
+  if (window.matchMedia(`(max-width: ${viewport.phoneBelow - 1}px)`).matches) {
+    navigate({page: 'settings', section: next});
+    return;
+  }
   page = next;
   changed();
 }
