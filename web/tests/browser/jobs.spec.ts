@@ -922,8 +922,8 @@ test('From history\'s subject opens its email too, J / K staying among From hist
   try {
     jobsChange(setpoint, ITEM_EMAILS);
     const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/jobs`);
-    await page.locator('.jb-fold-t').click();
+    // Arriving with From history open (Settings › Jobs's Show): a press inside it mid-unfold can slide away under the pointer.
+    await page.goto(`${setpoint.base}/jobs/from-history`);
     const history = page.locator('.jb-hist', {hasText: 'Support Specialist'});
     await itemSubject(page, 'Thanks for your interest in the Support Specialist role').click();
     await itemEmail(page).locator('.rd-subj', {hasText: 'Update on your application'}).waitFor();
@@ -1066,8 +1066,10 @@ test('From history: Choose… is a menu of the candidates, each opening its post
   try {
     const page = await setpoint.page('target');
     const margies = await applicationId(setpoint, 'Margie\'s Travel', 'Associate Developer');
-    await page.goto(`${setpoint.base}/jobs`);
-    await page.locator('.jb-fold-t').click();
+    // Arriving with From history open (Settings › Jobs's Show): Playwright brings a button into view
+    // mid-unfold by scrolling the fold's clipping box, which the unfold then scrolls back, sliding the
+    // row away between the press and the release. Board 32 unfolds it by its line.
+    await page.goto(`${setpoint.base}/jobs/from-history`);
     const history = (text: string) => page.locator('.jb-hist[data-need]', {hasText: text});
     await history('Margie').getByRole('button', {name: 'Choose…'}).click();
     const menu = page.getByRole('menu', {name: 'Choose the posting'});
