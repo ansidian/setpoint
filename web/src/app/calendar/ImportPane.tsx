@@ -13,6 +13,7 @@ import {alreadyLine, droppedLine, importLabel, progressLine, refusedLine, rowMar
 import {Icon} from '../../ui/Icon.tsx';
 import {colourVar, useAccounts} from '../accounts.ts';
 import {Select} from '../settings/parts.tsx';
+import {Sheet} from '../phone/Sheet.tsx';
 import {CalendarName} from './Pickers.tsx';
 import {closeReview, pickCalendar, retryRow, runImport, tick, tickAll} from './importRun.ts';
 import type {ImportReview} from './importRun.ts';
@@ -24,9 +25,11 @@ interface ImportPaneProps {
   // The one picked until the user picks another.
   fallback: number | null;
   timeZone: string;
+  // In the phone's full-screen sheet: its name and Cancel in the sheet's top bar, Import its action.
+  sheet?: boolean;
 }
 
-export function ImportPane({review, calendars, fallback, timeZone}: ImportPaneProps) {
+export function ImportPane({review, calendars, fallback, timeZone, sheet = false}: ImportPaneProps) {
   const {read, ticked, rows, order, running} = review;
   const calendarId = review.calendarId ?? fallback;
   const calendar = calendars.find(one => one.id === calendarId) ?? null;
@@ -38,15 +41,21 @@ export function ImportPane({review, calendars, fallback, timeZone}: ImportPanePr
   const all = ticked.size === read.events.length;
   // Once a run has gone, only its refused events can be sent again, by their Retry.
   const ran = order !== null && !running;
-  return (
-    <section className="rpane cal-import" aria-label="Import events" style={{'--c': colourVar(calendar?.colour ?? 'cool')} as CSSProperties}>
-      <div className="rp-head">
+  const status = running && counts
+    ? <span className="imp-progress num" role="status">{progressLine(counts.settled, counts.total)}</span>
+    : ran && counts && counts.failed
+      ? <span className="imp-progress failing num" role="status">{refusedLine(counts.failed)}</span>
+      : null;
+  const pane = (
+    <section className={sheet ? 'cal-import ph-import' : 'rpane cal-import'} aria-label="Import events" style={{'--c': colourVar(calendar?.colour ?? 'cool')} as CSSProperties}>
+      {!sheet && <div className="rp-head">
         <div className="grow">
           <div className="rp-date ell" data-tip={review.name}>Import {review.name}</div>
           <div className="rp-sub ink3 num">{read.events.length.toLocaleString('en-US')} events</div>
         </div>
         <button className="ibtn" type="button" aria-label="Close the import" data-tip="Close · Esc" onClick={closeReview}><Icon name="close" /></button>
-      </div>
+      </div>}
+      {sheet && <div className="rp-sub ink3 num ph-import-count">{read.events.length.toLocaleString('en-US')} events</div>}
       <div className="imp-to">
         <span className="ink2">Into</span>
         {calendar && (running || ran
@@ -88,14 +97,20 @@ export function ImportPane({review, calendars, fallback, timeZone}: ImportPanePr
         </div>
         {left && <div className="imp-left ink3 num">{left}</div>}
       </div>
-      <div className="rp-foot imp-foot">
-        {running && counts
-          ? <span className="imp-progress num" role="status">{progressLine(counts.settled, counts.total)}</span>
-          : ran && counts && counts.failed
-            ? <span className="imp-progress failing num" role="status">{refusedLine(counts.failed)}</span>
-            : <button type="button" className="btn" disabled={!ticked.size || !calendar} onClick={() => calendar && void runImport(calendar.id, calendar.name)}>{importLabel(ticked.size)}</button>}
-        <button type="button" className="btn quiet" onClick={closeReview}>{ran ? 'Close' : 'Cancel'}<span className="kbd">Esc</span></button>
-      </div>
+      {sheet ? status && <div className="rp-foot imp-foot">{status}</div> : (
+        <div className="rp-foot imp-foot">
+          {status ?? <button type="button" className="btn" disabled={!ticked.size || !calendar} onClick={() => calendar && void runImport(calendar.id, calendar.name)}>{importLabel(ticked.size)}</button>}
+          <button type="button" className="btn quiet" onClick={closeReview}>{ran ? 'Close' : 'Cancel'}<span className="kbd">Esc</span></button>
+        </div>
+      )}
     </section>
+  );
+  if (!sheet) return pane;
+  // Import waits while a run goes, and once one has gone, when only Retry sends again.
+  return (
+    <Sheet title={`Import ${review.name}`} onClose={closeReview}
+      action={{label: 'Import', disabled: !ticked.size || !calendar || running || ran, onClick: () => calendar && void runImport(calendar.id, calendar.name)}}>
+      {pane}
+    </Sheet>
   );
 }

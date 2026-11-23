@@ -23,6 +23,7 @@ import {NewsPage} from './news/NewsPage.tsx';
 import {ContextMenu} from './ContextMenu.tsx';
 import {Palette} from './palette/Palette.tsx';
 import {isPhone, PhoneTabs, usePhone} from './Phone.tsx';
+import {PhoneSheets} from './phone/EditorSheet.tsx';
 import {currentRoute, navigate, useRoute} from './router.ts';
 import {selectSearch} from './search/Search.tsx';
 import {PhoneSettings} from './settings/PhoneSettings.tsx';
@@ -138,6 +139,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
               : phone ? <PhoneSettings page={route.section} /> : null}
         {!phone && <ComposerWindows />}
         {phone ? <PhoneAlfred route={route} /> : <AlfredWindow />}
+        {phone && <PhoneSheets />}
         <OfflinePill />
         <ToastPill />
       </main>

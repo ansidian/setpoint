@@ -6,7 +6,8 @@
 // - Jobs with an application open, with a Needs you item's email open, and with its menus open
 //   (Assign to…, and More with Merge with…'s submenu)
 // - every Settings page, Jobs with its history pass running and the AI down, and Jobs off
-// - the phone's Inbox, and its News with a story open (Jobs isn't on the phone).
+// - the phone's Inbox, its News with a story open, and its editor sheet over the Agenda (Jobs isn't
+//   on the phone).
 // Settings skips 1100, because its fixed modal draws there as at the target. Assign to…, More, the
 // history pass and Jobs off stay at the target, because they don't change with width.
 // On each, at rest: nothing scrolls sideways, no text is cut by an overflow: hidden box (an ellipsis
@@ -41,6 +42,8 @@ interface Route {
   open?: (page: Page) => Promise<void>;
   // Where it's read, when that isn't all of WIDTHS. The target comes first, where `visit` leaves it.
   widths?: number[];
+  // What axe reads, when it's a sheet over a page that's swept on its own.
+  within?: string;
 }
 
 /** Problems on the page as it rests, each naming its element. */
@@ -282,7 +285,7 @@ async function axe(page: Page, setpoint: Setpoint, route: Route, theme: typeof T
   await show(page, theme);
   // What the page asked for answered and drawn, so a late answer can't change it under axe.
   await setpoint.idle();
-  const results = await rested(() => new AxeBuilder({page}).analyze());
+  const results = await rested(() => (route.within ? new AxeBuilder({page}).include(route.within) : new AxeBuilder({page})).analyze());
   const found: string[] = [];
   for (const violation of results.violations) {
     for (const node of violation.nodes) {
@@ -336,6 +339,25 @@ test('the phone\'s Inbox and News keep to their boxes in Night, and axe finds no
       for (const theme of THEMES) found.push(...await axe(page, setpoint, route, theme));
       found.push(...await sweepAt(page, setpoint, route, SIZES.iphone.width, heard));
     }
+    assert.deepEqual(found, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the phone\'s editor sheet keeps to its boxes in Night, and axe finds nothing in Night or Light', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    const heard = listen(setpoint, page);
+    const route: Route = {name: 'the phone\'s editor sheet', path: '/calendar', shows: '.ph-agenda .pitem', within: '.ph-sheet', open: async at => {
+      await at.getByRole('button', {name: 'New event'}).tap();
+      await at.locator('.ph-editor').waitFor();
+    }};
+    await visit(page, setpoint.base, route);
+    const found: string[] = [];
+    for (const theme of THEMES) found.push(...await axe(page, setpoint, route, theme));
+    found.push(...await sweepAt(page, setpoint, route, SIZES.iphone.width, heard));
     assert.deepEqual(found, []);
   } finally {
     await setpoint.stop();

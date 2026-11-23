@@ -1,0 +1,51 @@
+/* The editor and the .ics review in the phone's full-screen sheet (EditorSheet.tsx), and the
+   Agenda's + and detail actions. Under phone.css's breakpoint, so the desktop never sees them.
+   Fields are 16 px, below which iOS zooms in on focus. Pickers and menus fit 375 px. */
+@media (max-width: 639px) {
+  /* The editor fills the sheet: its fields scroll, and the scope prompt sits at the bottom. */
+  .ph-sheet .ph-sheet-body:has(> .ph-editor, > .ph-import) { display: flex; flex-direction: column; overflow: hidden; }
+  .ph-editor, .ph-import { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; outline: none; }
+  .ph-editor .ed-head { height: 52px; padding: 0 12px 0 20px; }
+  .ph-editor .ed-scroll { padding-bottom: 24px; }
+  .ph-sheet .kbd { display: none; }
+
+  .ph-editor .field { height: 40px; }
+  .ph-editor .field.big { height: 48px; }
+  .ph-editor input, .ph-editor textarea, .ph-editor select, .ph-editor [contenteditable], .ph-editor .field,
+  .ph-editor .nl-marks { font-size: 16px; }
+  /* At 16 px a day and two times don't fit one line: the day takes its own, the times the next. */
+  .ph-editor .prow:has(> .pick-time) { flex-wrap: wrap; row-gap: 8px; }
+  .ph-editor .prow:has(> .pick-time) > .pick-date { flex: 1 1 100%; }
+  .ph-editor .prow .pick-time { flex: 1 1 0; }
+  .ph-editor .menu-i { min-height: 40px; font-size: 15px; }
+
+  /* Menus and pickers stay inside the screen: never wider than it, and scrolling when long. */
+  .ph-editor .pop.menu { max-width: calc(100vw - 32px); max-height: min(360px, 50dvh); overflow-y: auto; }
+  .ph-editor .menu-anchor > .pop.menu.datepop { width: min(296px, calc(100vw - 32px)); max-height: none; }
+  .ph-editor .lr-pop { width: calc(100vw - 32px); }
+  .ph-editor .scope-pop { margin: auto 12px max(12px, env(safe-area-inset-bottom)); }
+  .ph-editor .ropt { min-height: 48px; }
+  .ph-editor .scope-acts .btn { height: 40px; }
+
+  /* The review: its file's count, then the calendar and the events. */
+  .ph-import .ph-import-count { padding: 10px 20px 0; }
+  .ph-import .rp-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .ph-import .imp-row { min-height: 44px; }
+  .ph-import .imp-foot { padding: 12px 20px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--hair); }
+
+  /* The detail's actions: Edit, then the task's Complete and Delete, sized for a finger. */
+  .ph-detail .card-acts { display: flex; padding: 8px 12px 12px; }
+  .ph-detail .card-acts .kbd { display: none; }
+  .ph-detail .card-acts .btn { height: 40px; padding: 0 14px; font-size: 15px; }
+  .ph-detail .card-acts .ibtn { width: 40px; height: 40px; }
+  /* A toast (Saved, Completed, Reopened) rises under the open detail rather than over its actions:
+     the card lifts clear of it while it shows. */
+  .main:has(.toast:not(.leaving)) .fd.ph-detail { bottom: calc(66px + max(6px, env(safe-area-inset-bottom)) + 66px); transition: bottom var(--dur-medium) var(--ease); }
+  .ph-detail .fd-mark.check { width: 32px; height: 32px; margin: -6px 2px -6px -8px; display: grid; place-items: center; }
+
+  /* An invitation's card in the reader: Add to calendar keeps its words, Download is its glyph
+     alone (named still), so the file's name has room. */
+  .attach[data-type="calendar"] > a.dl { font-size: 0; gap: 0; width: 36px; justify-content: center; padding: 0; }
+
+  .hd > .ph-new { margin-right: -6px; width: 40px; height: 40px; }
+}

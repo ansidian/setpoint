@@ -47,6 +47,7 @@ import {CalendarName, DateField, ProjectField, stepCursor, TimeField} from './Pi
 import {DescriptionField} from './DescriptionField.tsx';
 import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
+import {Sheet} from '../phone/Sheet.tsx';
 import './editor.css';
 
 /** What the editor opens on: New C or D on a day, Edit (E) on an item, or an email's proposal. */
@@ -165,6 +166,9 @@ interface EditorProps {
   place?: {day: string; at?: number};
   // The editor as an email's proposal card.
   card?: EditorCard;
+  // The editor in the phone's full-screen sheet (phone/EditorSheet.tsx): its title, Cancel and
+  // Save or Create in the sheet's top bar, in place of the head's title and close and the footer.
+  sheet?: boolean;
 }
 
 /**
@@ -186,7 +190,7 @@ export interface EditorCard {
   missed?: {line: string; tip: string | null} | null;
 }
 
-export function Editor({open, calendars, today, timeZone, dayItems, handed, onPreview, onCreate, onSave, onDelete, onClose, onEscape, onDirty, onKeep, place, card}: EditorProps) {
+export function Editor({open, calendars, today, timeZone, dayItems, handed, onPreview, onCreate, onSave, onDelete, onClose, onEscape, onDirty, onKeep, place, card, sheet = false}: EditorProps) {
   const {data: settings} = useResource<Settings>(SETTINGS_PATH);
   const {data: projects} = useResource<TodoistProjectOut[]>(open.kind === 'task' ? TODOIST_PROJECTS_PATH : null);
   // Where a task with no project goes, as the server picks it: Settings' default project, else Todoist's Inbox.
@@ -670,9 +674,16 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // The fields the prefill fills: a skeleton while it's on its way, then what it gave.
   // The model's answer sweeps in (`sks`). Missed, the rules' values only fade in (`ska`).
   const sk = filling ? ' skf' : arrived ? (card?.missed ? ' ska' : ' sks') : '';
-  return (
-    <form ref={form} tabIndex={-1} className={card ? `editor card prop${card.pending ? ' pending' : ''}${card.quiet ? ' in-answer' : ''}` : `rpane editor${handed ? ' handed' : ''}`}
-      aria-label={card ? (kind === 'event' ? 'Proposal: add to calendar' : 'Proposal: add as task') : editing ? `Edit ${noun}` : `New ${noun}`} onKeyDown={onKeyDown}
+  const title = editing ? `Edit ${noun}` : `New ${noun}`;
+  const legends = (
+    <>
+      {draft.fromEmail.length > 0 && <span className="legend"><Icon name="mail" size={14} /><span>From the email</span></span>}
+      {updating && <span className="legend"><Icon name="event" size={14} /><span>Already on {updating} (will update)</span></span>}
+    </>
+  );
+  const editor = (
+    <form ref={form} tabIndex={-1} className={card ? `editor card prop${card.pending ? ' pending' : ''}${card.quiet ? ' in-answer' : ''}` : sheet ? 'editor ph-editor' : `rpane editor${handed ? ' handed' : ''}`}
+      aria-label={card ? (kind === 'event' ? 'Proposal: add to calendar' : 'Proposal: add as task') : title} onKeyDown={onKeyDown}
       onSubmit={event => {
         event.preventDefault();
         submit();
@@ -685,7 +696,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           {card.missed && <span className="card-miss" role="status" data-tip={card.missed.tip ?? undefined}><Icon name="error" size={16} />{card.missed.line}</span>}
         </div>
       ) : <div className="ed-head">
-        <span className="grow ed-title">{editing ? `Edit ${noun}` : `New ${noun}`}</span>
+        {sheet ? <span className="grow" /> : <span className="grow ed-title">{title}</span>}
         {editing ? (
           <span className="menu-host">
             <button type="button" className="ibtn" aria-label="More" aria-expanded={menu === 'more'} onClick={() => setMenu(menu === 'more' ? null : 'more')}><Icon name="more_horiz" /></button>
@@ -699,7 +710,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           <Segmented role="tab" label="Item type" value={kind} onChange={switchKind}
             segments={[{value: 'event', label: 'Event'}, {value: 'task', label: 'Task'}]} />
         )}
-        <button type="button" className="ibtn" aria-label="Close editor" data-tip="Close · Esc" onClick={onClose}><Icon name="close" /></button>
+        {!sheet && <button type="button" className="ibtn" aria-label="Close editor" data-tip="Close · Esc" onClick={onClose}><Icon name="close" /></button>}
       </div>}
 
       <div className="ed-scroll" inert={filling}>
@@ -985,6 +996,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           <ScopePrompt title={`Change recurring ${noun}`} choices={choices} value={scope} action="Save" onChange={setScope}
             onConfirm={submit} onCancel={() => setAsking(false)} />
         </div>
+      ) : sheet ? (
+        (draft.fromEmail.length > 0 || updating) && <div className="ed-foot">{legends}</div>
       ) : (
         <div className="ed-foot">
           <button type="submit" className="btn" disabled={card ? card.pending || filling : editing ? !!projectProblem : ready.length !== drafts.length}>
@@ -992,11 +1005,17 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             {editing ? 'Save' : drafts.length > 1 ? `Create ${drafts.length} ${noun}s` : `Create ${noun}`}<span className="kbd">⌘Enter</span>
           </button>
           <button type="button" className="btn quiet" onClick={onClose}>Cancel<span className="kbd">Esc</span></button>
-          {draft.fromEmail.length > 0 && <span className="legend"><Icon name="mail" size={14} /><span>From the email</span></span>}
-          {updating && <span className="legend"><Icon name="event" size={14} /><span>Already on {updating} (will update)</span></span>}
+          {legends}
         </div>
       )}
     </form>
+  );
+  if (!sheet) return editor;
+  // The scope prompt, while it asks, has the say: the top bar's action waits.
+  return (
+    <Sheet title={title} onClose={onClose} action={asking && editing ? undefined : {label: editing ? 'Save' : 'Create', disabled: editing ? !!projectProblem : ready.length !== drafts.length, onClick: submit}}>
+      {editor}
+    </Sheet>
   );
 }
 
