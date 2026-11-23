@@ -24,9 +24,12 @@ export function TitleMenu({title, rows}: {title: string; rows: TitleMenuRow[]}) 
   }, [open]);
   return (
     <div className="hd-title ph-title">
-      <button ref={button} className="ph-title-btn" type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="ell">{title}</span><Icon name="expand_more" size={18} />
-      </button>
+      {/* The page's heading, as the plain title is. */}
+      <h1 className="ph-title-h">
+        <button ref={button} className="ph-title-btn" type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <span className="ell">{title}</span><Icon name="expand_more" size={18} />
+        </button>
+      </h1>
       {open && (
         <>
           <div className="ph-title-catch" onClick={() => setOpen(false)} />

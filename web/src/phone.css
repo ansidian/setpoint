@@ -240,6 +240,7 @@
   /* The title menu: the title and its `expand_more`, then the shared menu under it at the phone's
      44 px rows, a count in `ink3` and the check for the current row. A tap outside lands on nothing. */
   .hd > .ph-title { position: relative; min-width: 0; }
+  .ph-title-h { margin: 0; font: inherit; letter-spacing: inherit; }
   .ph-title-btn { display: inline-flex; align-items: center; gap: 2px; margin-left: -6px; padding: 0 4px 0 6px; border-radius: var(--r-row); font: inherit; color: var(--ink); line-height: 36px; }
   .ph-title-btn .icon { color: var(--ink3); flex: none; transition: transform var(--dur-medium) var(--ease); }
   .ph-title-btn[aria-expanded="true"] .icon { transform: rotate(180deg); }
