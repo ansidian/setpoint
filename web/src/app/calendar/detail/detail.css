@@ -61,9 +61,13 @@
 .fd-title, .fd-place, .fd-link, .fd-address, .fd-when { user-select: text; -webkit-user-select: text; }
 .fd .card-acts { display: flex; align-items: center; gap: 2px; padding: 8px 10px 10px 12px; border-top: 1px solid var(--hair); }
 .fd .card-acts .ibtn[aria-disabled="true"]:hover { background: none; color: var(--ink2); }
-/* Delete stands apart: 9 px further, after a 1 × 14 px `hair` divider. */
+/* Delete stands apart from the actions beside it: 9 px further, after a 1 × 14 px `hair` divider
+   centred in the gap and on the buttons, whatever their size. With none beside it, the space
+   before it sets it apart, and it has no divider. */
 .fd .card-acts .ibtn.danger { position: relative; margin-left: 9px; }
-.fd .card-acts .ibtn.danger::before { content: ""; position: absolute; left: -6px; top: 6px; width: 1px; height: 14px; background: var(--hair); }
+.fd .card-acts .ibtn.danger::before { content: ""; position: absolute; left: -6px; top: calc(50% - 7px); width: 1px; height: 14px; background: var(--hair); }
+.fd .card-acts .grow + .ibtn.danger { margin-left: 0; }
+.fd .card-acts .grow + .ibtn.danger::before { content: none; }
 
 /* Colour: the calendar's own, then the swatches an event can take. */
 .fd-swatches { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 12px; }
