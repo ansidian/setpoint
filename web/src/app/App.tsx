@@ -5,7 +5,7 @@
 // and `` ` `` to open or fold the sidebar from 1100 px (sidebarRail.ts). Settings is a modal over
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
 // phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings and News
-// say they're on the desktop; ⌘K, Jobs and Sent stay there (their addresses open the Inbox). On the desktop every arrival (a
+// say they're on the desktop; the composer opens in a full-screen sheet. ⌘K, Jobs and Sent stay there (their addresses open the Inbox). On the desktop every arrival (a
 // load, a return to the tab) with an overdue task opens on its banner (OverdueBanner.tsx), over
 // everything but the toast.
 import {useEffect} from 'react';
@@ -143,11 +143,12 @@ export function App({arrive = false}: {arrive?: boolean}) {
           <Palette />
           <ContextMenu />
           <Tip />
-          <SendWatch />
-          <ComposerRoot />
           <OverdueArrival />
         </>
       )}
+      {/* The composers, on the phone too, where each puts up its own sheet. */}
+      <SendWatch />
+      <ComposerRoot />
     </div>
   );
 }

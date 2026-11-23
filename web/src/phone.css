@@ -125,17 +125,15 @@
   .mailframe { border-radius: var(--r-card); }
   .sk-head { padding: 10px 20px 0; gap: 16px; }
   .mailtext { font-size: 15px; }
-  /* The actions share the width, 2, 3 or 4 of them. Done leads, with its label `ink` 500 and its
+  /* The actions share the width, three of them. Done leads, with its label `ink` 500 and its
      check `good`, the done glyph's own colour. */
   .ph-acts { min-height: 58px; flex: none; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px 8px max(6px, env(safe-area-inset-bottom)); }
   .ph-acts > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 14px; color: var(--ink2); font-size: 11.5px; }
   .ph-acts .icon { color: var(--ink); }
   .ph-acts > .ph-done { color: var(--ink); font-weight: 500; }
   .ph-acts > .ph-done .icon { color: var(--good); }
-  /* Marked unread, the email shows the list's unread dot before its subject, and the swapped icon
-     pops in with it. */
+  /* Marked unread, the email shows the list's unread dot before its subject, popping in. */
   .rd-subj .rd-unread { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: var(--ink); margin-right: 10px; vertical-align: .3em; animation: ph-pop var(--dur-fast) var(--ease); }
-  .ph-acts .ph-swap { display: block; animation: ph-pop var(--dur-fast) var(--ease); }
   @keyframes ph-pop { from { transform: scale(.4); } }
   /* Trash turns `alert` as it's pressed. */
   .ph-acts > button.trash:active, .ph-acts > button.trash:active .icon { color: var(--alert); }

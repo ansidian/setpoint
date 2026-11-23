@@ -27,8 +27,8 @@
 // in Unread stays there, drawn read, until the user leaves the view. Mark all as read follows the
 // view, and Attention has none. An empty view says so, with Show All.
 //
-// On the phone (board 21) the header is the mark, Inbox and its counts and Mark all as read (no
-// account filter). A plain search field sits under it (no chips, no Alfred).
+// On the phone (board 21) the header is the mark, Inbox and its counts, Mark all as read and New
+// message, which opens the composer's sheet (no account filter). A plain search field sits under it (no chips, no Alfred).
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut, Settings} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -868,6 +868,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           <>
             {/* Not while searching: it would read the hidden Inbox's mail, not the results. */}
             {!searching && <button className="ibtn ph-icon" type="button" aria-label="Mark all as read" onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
+            <button className="ibtn ph-icon" type="button" aria-label="New message" onClick={() => newMessage()}><Icon name="edit" size={20} /></button>
           </>
         )}
         <EmptyPaneButton pane={pane} />

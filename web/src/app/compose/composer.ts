@@ -35,6 +35,10 @@
 // pane, it has the pane by itself, and showing an email closes it into Drafts. On Drafts, the open
 // draft is the page's own (its address names it).
 //
+// The phone: its one composer is in the pane, never a window, and a full-screen sheet shows it over
+// whatever page is up, Send and Cancel in the sheet's bar. Opening another takes its place. An email
+// shown there doesn't open its draft by itself: Reply takes it up again (the server answers with it).
+//
 // Popping out: the composer leaves the pane for a window in the main area's bottom right corner,
 // which stays up over other mail and every other page. Windows line up leftward in the order they
 // popped out. It is one composer in two places: each stays mounted in a host element of its own
@@ -69,6 +73,7 @@ import {broughtBackLine, counted, discardedLine, discardFailedLine, scheduledAt}
 import {scheduledWhen} from '../../logic/snooze.ts';
 import type {Block} from '../../logic/description.ts';
 import {currentRoute, navigate} from '../router.ts';
+import {isPhone} from '../Phone.tsx';
 import {dismissToast, failureLine, showToast, toastFailure} from '../toast.ts';
 import {composerHost, whenPlaced} from './place.ts';
 import {failureText, refusalWords} from '../../logic/providerWords.ts';
@@ -241,7 +246,9 @@ function release(one: OpenComposer) {
 }
 
 /** Opens the draft in the pane (the one there gives way) or in a window of its own. */
-function show(draft: Pick<DraftOut, 'id' | 'message_id' | 'kind' | 'to' | 'cc' | 'bcc'>, {caret = true, floating = false, subject = false} = {}) {
+function show(draft: Pick<DraftOut, 'id' | 'message_id' | 'kind' | 'to' | 'cc' | 'bcc'>, {caret = true, floating: asked = false, subject = false} = {}) {
+  // The phone has no windows: its one composer is in the pane, which its sheet shows.
+  const floating = asked && !isPhone();
   let rest = without(draft.id);
   const pane = rest.find(one => !one.floating);
   if (!floating && pane) {
@@ -267,7 +274,9 @@ function change(draftId: number, changes: Partial<OpenComposer>) {
  * once, waiting, and takes the draft when the server answers. A new message starts popped out, so
  * the page stays as it is under it, and so does each answer to a selection (`floating`).
  */
-export function startComposer(input: DraftCreateInput, {floating = input.kind === 'new'} = {}) {
+export function startComposer(input: DraftCreateInput, {floating: asked = input.kind === 'new'} = {}) {
+  // The phone has no windows: each opening takes the pane, which its sheet shows, one at a time.
+  const floating = asked && !isPhone();
   const already = input.kind === 'new' ? null : composers.find(one => one.messageId === input.message_id && one.kind === input.kind);
   if (already) {
     // Already open: R again brings its window back and puts the caret in it. Asked for in a window
@@ -577,7 +586,8 @@ export function switchKind(current: DraftOut, kind: Exclude<DraftKind, 'new'>, {
  * One that was in a window opens in a window again, wherever the user is.
  */
 function reopen(draft: DraftOut, {floating = false} = {}) {
-  if (!floating) showPaneFor(draft);
+  // The phone's sheet is over whatever page is up: it needs no page of its own.
+  if (!floating && !isPhone()) showPaneFor(draft);
   show(draft, {floating});
 }
 

@@ -182,3 +182,11 @@
 .scheduled-list .row .age.back { width: 128px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; white-space: nowrap; color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); }
 /* The open one's line between its head and its body, as Gmail's. */
 .sch-notice { margin: 0 28px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; border-radius: 10px; background: var(--sub2); color: var(--ink2); font-size: 13px; flex: none; }
+
+/* The phone: the composer fills its full-screen sheet (phone/Sheet.tsx) under the sheet's bar, and
+   scrolls as one, the format row held at its foot. Its fields' text is 16 px, so Safari doesn't zoom
+   in as one takes the caret. */
+.ph-sheet-body:has(> .cmp-place) { display: flex; flex-direction: column; }
+.ph-sheet-body > .cmp-place .composer { flex: 1 1 auto; min-height: 0; }
+.ph-sheet .composer :is(input, .desc-edit) { font-size: 16px; }
+.ph-sheet .composer .desc-edit { line-height: 22px; }

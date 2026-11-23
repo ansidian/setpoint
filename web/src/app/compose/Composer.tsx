@@ -24,7 +24,10 @@
 // and Bcc too when the shared fill rule says it has Cc, so nothing moves.
 //
 // It is mounted once, by ComposerRoot, into the host element its places take in turn (place.ts):
-// the reader under its email, a new message's pane, Drafts' pane and the floating window.
+// the reader under its email, a new message's pane, Drafts' pane and the floating window. On the
+// phone its place is a full-screen sheet (phone/Sheet.tsx) it puts up itself: the sheet's title
+// names the kind, its bar has Cancel (Esc: the draft kept) and Send (Send anyway when it asks
+// first), and the format row has no Send of its own, Send later or Pop out.
 import type {AccountOut, DraftOut, DraftsOut, DraftUpdateInput, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {isEmpty, plainText, sameDescription} from '@setpoint/shared/richText';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
@@ -56,6 +59,8 @@ import {attach, composerHost, detach, pruneHosts, whenPlaced} from './place.ts';
 import {Bar, Dot, Sk} from '../states/Loading.tsx';
 import {SnoozeMenu} from '../SnoozeMenu.tsx';
 import {useHelpMeWrite, WriteButton, WriteLine} from './WriteLine.tsx';
+import {usePhone} from '../Phone.tsx';
+import {Sheet} from '../phone/Sheet.tsx';
 import './compose.css';
 
 export function Composer({open, message, accounts, timeZone}: {
@@ -100,6 +105,9 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   const waiting = draft === null;
   // A reply's or forward's window over its own email: its × docks it there rather than closing.
   const route = useRoute();
+  // On the phone the composer's place is its sheet: Send and Cancel are in the sheet's bar.
+  const phone = usePhone();
+  const sheet = phone && !open.floating;
   const home = open.floating && open.messageId !== null && shownEmail(route) === open.messageId;
   // Cc and Bcc show when the draft has them, and while it's on its way when it will (Reply all's
   // other recipients), so their rows don't push in when it comes.
@@ -228,22 +236,31 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
 
   // The caret: in the body, at its start, when there's someone to send to already; else in To.
   // Once it's in its place, which may come after it's drawn.
+  const landCaret = () => {
+    if (open.focus === 'to') return to.current?.focus();
+    const field = body.current;
+    if (!field) return;
+    field.focus();
+    const range = document.createRange();
+    range.setStart(field, 0);
+    range.collapse(true);
+    document.getSelection()?.removeAllRanges();
+    document.getSelection()?.addRange(range);
+  };
   useLayoutEffect(() => {
     if (!open.focus) return;
-    whenPlaced(open.key, () => {
-      if (open.focus === 'to') return to.current?.focus();
-      const field = body.current;
-      if (!field) return;
-      field.focus();
-      const range = document.createRange();
-      range.setStart(field, 0);
-      range.collapse(true);
-      document.getSelection()?.removeAllRanges();
-      document.getSelection()?.addRange(range);
-    });
+    whenPlaced(open.key, landCaret);
     // Once per opening.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open.key]);
+
+  // The phone's sheet takes the focus as it opens, after the caret's landing: it lands again.
+  useEffect(() => {
+    if (!sheet || !open.focus) return;
+    landCaret();
+    // Once per opening, as the sheet opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open.key, sheet]);
 
   const showCopies = () => {
     setCopies(true);
@@ -286,7 +303,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
     if (!command && !event.altKey) event.stopPropagation();
   };
 
-  return (
+  const composer = (
     <section className={`composer${dropping ? ' dropping' : ''}`} aria-label="Composer" onKeyDown={onKeyDown}
       onDragOver={event => {
         if (!carriesFiles(event)) return;
@@ -330,7 +347,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
       )}
       <div className="cmp-row cmp-head">
         {!subjectShown && kind !== 'new' && (
-          <ReplyType kind={kind} messageId={open.messageId} floating={open.floating} waiting={waiting} onPopOut={() => draft && popOut(draft.id)}
+          <ReplyType kind={kind} messageId={open.messageId} floating={open.floating || sheet} waiting={waiting} onPopOut={() => draft && popOut(draft.id)}
             onKind={next => draft && switchKind({...draft, ...latest.current}, next)}
             onEditSubject={() => {
               if (!draft) return;
@@ -345,7 +362,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
           <Sk kind="composer-from" className="cmp-from-sk"><Dot size={7} /><Bar w={58} /><Bar w={128} /></Sk>
         )}
         <span className="grow" />
-        {!open.floating && (
+        {!open.floating && !sheet && (
           <button className="ibtn sm" type="button" aria-label="Pop out" data-tip="Pop out" onMouseDown={event => event.preventDefault()} onClick={() => draft && popOut(draft.id)}><Icon name="pip" size={16} /></button>
         )}
       </div>
@@ -392,7 +409,7 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
           </>
         )}
         beforeBar={<WriteLine help={help} body={fields.body} />}
-        barStart={(
+        barStart={sheet ? null : (
           <span className="cmp-send-group">
             <button className={warning ? 'btn cmp-send asks' : 'btn cmp-send'} type="button" data-tip={warning?.line} aria-description={warning?.line} onMouseDown={event => event.preventDefault()} onClick={sendNow}>
               {warning ? 'Send anyway' : 'Send'}<span className="kbd">⌘↵</span>
@@ -423,6 +440,17 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
           </>
         )} />
     </section>
+  );
+  if (!sheet) return composer;
+  // The phone: the composer here, in its host, and its sheet over the page, which the host moves into.
+  return (
+    <>
+      {composer}
+      <Sheet title={kind === 'new' ? 'New message' : KIND_NAMES[kind]} onClose={() => closeComposerAt(open.key)}
+        action={{label: warning ? 'Send anyway' : 'Send', onClick: sendNow, disabled: waiting}}>
+        <ComposerPlace composerKey={open.key} />
+      </Sheet>
+    </>
   );
 }
 

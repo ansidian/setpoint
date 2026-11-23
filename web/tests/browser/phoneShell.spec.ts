@@ -85,7 +85,7 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     assert.deepEqual(await box(page, '.pane'), {x: 0, y: 0, width: 390, height: 844});
     assert.equal(await page.locator('.rd-tools').isVisible(), false);
-    assert.deepEqual(await page.locator('.ph-acts button').allTextContents(), ['Done', 'Trash', 'Mark unread', 'Open in Gmail']);
+    assert.deepEqual(await page.locator('.ph-acts button').allTextContents(), ['Done', 'Reply', 'More']);
     await page.locator('.ph-back').tap();
     await until('Back closes it', () => page.locator('.pane').count(), count => count === 0);
     assert.equal(new URL(page.url()).pathname, '/inbox');

@@ -15,7 +15,7 @@
 // opens its composer again when it's shown.
 //
 // On the phone (board 21) it covers the page: Back and Pin at the top, the email
-// full width, and Done (on Attention mail), Trash, Mark unread (then Mark read) and Open in Gmail at the bottom.
+// full width, and Done (on Attention mail) or Trash, Reply and More at the bottom (phone/ReaderBar.tsx).
 //
 // EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
 // body, with no tools, actions, slot or commands of its own.
@@ -41,6 +41,7 @@ import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
 import {CodeCard} from './Code.tsx';
 import {ComposerSlot} from './compose/Composer.tsx';
+import {ReaderBar} from './phone/ReaderBar.tsx';
 import {showEmail, startComposer, useOpenComposer} from './compose/composer.ts';
 import {Conversation} from './Conversation.tsx';
 import {copyText, openContextMenu} from './ContextMenu.tsx';
@@ -166,7 +167,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // The composer, and the drafts that open it again: the desktop's only.
   const composer = useOpenComposer();
   const {data: drafts} = useResource<DraftsOut>(phone ? null : DRAFTS_PATH);
-  const {data: from} = useResource<FromOut>(phone ? null : FROM_PATH);
+  // From: whom Reply all would reach, on the phone too.
+  const {data: from} = useResource<FromOut>(FROM_PATH);
   useEffect(() => {
     if (!phone) showEmail(id, drafts?.drafts);
   }, [id, drafts, phone]);
@@ -176,14 +178,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // A tool's tip, while its words are hidden.
   const tip = (words: string, answer = false) => (size === 'tight' || (answer && size === 'narrow') ? words : undefined);
   // Mark unread on the phone keeps the email open and offers Mark read. The subject shows the unread
-  // dot meanwhile. Each tap pops the swapped icon in (`toggles` keys it), but the first draw doesn't.
+  // dot meanwhile.
   const [unreadFor, setUnreadFor] = useState<number | null>(null);
-  const [toggles, setToggles] = useState<{id: number; count: number}>({id, count: 0});
   const markedUnread = unreadFor === id;
-  const toggled = toggles.id === id ? toggles.count : 0;
   const toggleRead = () => {
     setUnreadFor(markedUnread ? null : id);
-    setToggles({id, count: toggled + 1});
     void (markedUnread ? markRead(id) : markUnread(id)).catch(toastFailure(markedUnread ? 'Failed to mark read' : 'Failed to mark unread'));
   };
   // A copied code reads the email. On the phone it does so after Mark unread too, as Mark read would.
@@ -279,21 +278,18 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} />
       </Swap>
       {!phone && <ComposerSlot open={composer} messageId={id} />}
-      {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
-          email and its account are known, so none moves in or along when the email arrives. Until
-          then the bar stays empty. Done leads, the phone's main job on Attention mail. */}
+      {/* The actions share the bar evenly, drawn once the email's row or the email and its account
+          are known, so none moves in or along when the email arrives. Until then the bar stays
+          empty. Done leads, the phone's main job on Attention mail (phone/ReaderBar.tsx). */}
       {phone && (
         <div className="ph-acts">
           {listed && gmail !== null && (
-            <>
-              {doneable && <button className="ph-done" type="button" onClick={actions.done}><Icon name="check" size={22} />Done</button>}
-              <button className="trash" type="button" onClick={actions.trash}><Icon name="delete" size={22} />Trash</button>
-              <button type="button" onClick={toggleRead}>
-                <span key={toggled} className={toggled ? 'ph-swap' : undefined}><Icon name={markedUnread ? 'mark_email_read' : 'mark_email_unread'} size={22} /></span>
-                {markedUnread ? 'Mark read' : 'Mark unread'}
-              </button>
-              {gmail && <button type="button" onClick={actions.openInGmail}><Icon name="open_in_new" size={22} />Open in Gmail</button>}
-            </>
+            <ReaderBar email={{doneable: !!doneable, replyAll, gmail, markedUnread}} on={{
+              done: actions.done, trash: actions.trash, toggleRead, openInGmail: actions.openInGmail,
+              reply: () => startComposer({kind: 'reply', message_id: id}),
+              replyAll: () => startComposer({kind: 'reply_all', message_id: id}),
+              forward: () => startComposer({kind: 'forward', message_id: id}),
+            }} />
           )}
         </div>
       )}
