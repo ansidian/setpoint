@@ -210,10 +210,14 @@
 
   /* ---------- Sheets and the title menu (phone/) ---------- */
   /* The full-screen sheet: over the reader and the tab bar, under the bottom sheet and the toast. It
-     slides up from the bottom edge over 260 ms, the modal timing, and closes at once. */
-  .ph-sheet { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--page); padding-top: env(safe-area-inset-top); outline: none;
+     slides up from the bottom edge over 260 ms, the modal timing, and closes at once. It covers the
+     part of the screen the user sees, which the keyboard shortens (Sheet.tsx sets the top and
+     height), so its bar stays at the top and its foot just above the keys. */
+  .ph-sheet { position: fixed; left: 0; right: 0; top: var(--sheet-top, 0); height: var(--sheet-height, 100%); z-index: 30; display: flex; flex-direction: column; background: var(--page); padding-top: env(safe-area-inset-top); outline: none;
     animation: ph-sheet-in var(--dur-slow) var(--ease); }
   @keyframes ph-sheet-in { from { transform: translateY(100%); } }
+  /* Above it, as far as Safari has slid the page, the page's own ground: Safari tints the status bar from what's there. */
+  .ph-sheet::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: var(--sheet-top, 0); background: var(--page); pointer-events: none; }
   /* Its top bar: Cancel or Back at the start, the title in the middle, the action at the end. */
   .ph-sheet-top { height: 48px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 6px; border-bottom: 1px solid var(--hair); }
   .ph-sheet-top > .ph-sheet-lead { justify-self: start; height: 40px; color: var(--ink); font-size: 15px; font-weight: 400; }
@@ -222,6 +226,7 @@
   .ph-sheet-top > .ph-sheet-act { grid-column: 3; justify-self: end; height: 32px; font-size: 14px; }
   .ph-sheet-act:disabled { opacity: .5; }
   .ph-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
+  .ph-sheet[data-keyboard] .ph-sheet-body { padding-bottom: 0; }
 
   /* The bottom sheet: `modal`, its top corners a popover's 18, rising from the bottom edge over 260 ms
      as its scrim fades in. It follows a drag down and settles back over 180 ms. */

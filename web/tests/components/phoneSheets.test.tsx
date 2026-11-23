@@ -6,7 +6,7 @@
 // drag must go is logic/sheet.ts's, as a table (sheet.test.ts). Their motion is by eye.
 import {useState} from 'react';
 import type {ReactNode} from 'react';
-import {beforeEach, expect, test, vi} from 'vitest';
+import {beforeEach, expect, onTestFinished, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {BottomSheet, SheetChoice} from '../../src/app/phone/BottomSheet.tsx';
@@ -74,6 +74,61 @@ test('Esc closes the sheet', async () => {
   const sheet = await openSheet();
   await userEvent.keyboard('{Escape}');
   await expect.element(sheet).not.toBeInTheDocument();
+});
+
+/**
+ * The visual viewport, faked: the part of the screen the user sees, which the iPhone's keyboard
+ * shortens without moving the page. `show` sets its top and height and says so, as Safari does.
+ */
+function fakeViewport() {
+  const real = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+  const viewport = Object.assign(new EventTarget(), {offsetTop: 0, height: 844, width: 390});
+  Object.defineProperty(window, 'visualViewport', {configurable: true, value: viewport});
+  onTestFinished(() => {
+    if (real) Object.defineProperty(window, 'visualViewport', real);
+  });
+  return (offsetTop: number, height: number) => {
+    Object.assign(viewport, {offsetTop, height});
+    viewport.dispatchEvent(new Event('resize'));
+  };
+}
+
+// Where the sheet rests, not where its slide is.
+const box = (element: HTMLElement) => [element.offsetTop, element.offsetHeight];
+
+/** Whether the field shows in the sheet, under its top bar and above its foot. */
+function inSheet(sheet: HTMLElement, field: HTMLElement) {
+  const top = sheet.getBoundingClientRect().top;
+  const at = field.getBoundingClientRect();
+  const bar = sheet.querySelector<HTMLElement>('.ph-sheet-top')!;
+  return at.top - top >= bar.offsetTop + bar.offsetHeight && at.bottom - top <= sheet.offsetHeight;
+}
+
+test('the full-screen sheet follows the part of the screen the user sees: the keyboard shortens it, its bar stays at its top, and the field with the caret stays in sight', async () => {
+  const show = fakeViewport();
+  await render(
+    <Opener>{close => (
+      <Sheet title="New message" onClose={close}>
+        <div style={{height: 600}} />
+        <input aria-label="Last field" />
+      </Sheet>
+    )}</Opener>,
+  );
+  await opener.click();
+  const sheet = page.getByRole('dialog', {name: 'New message'}).element() as HTMLElement;
+  expect(box(sheet)).toEqual([0, 844]);
+  const field = page.getByRole('textbox', {name: 'Last field'}).element() as HTMLInputElement;
+  field.focus({preventScroll: true});
+  expect(inSheet(sheet, field)).toBe(true);
+  // The keyboard comes up, and Safari slides the page 120 px up to show the caret.
+  show(120, 420);
+  expect(box(sheet)).toEqual([120, 420]);
+  expect(sheet.hasAttribute('data-keyboard')).toBe(true);
+  expect(inSheet(sheet, field)).toBe(true);
+  // It goes down: the sheet takes the screen again.
+  show(0, 844);
+  expect(box(sheet)).toEqual([0, 844]);
+  expect(sheet.hasAttribute('data-keyboard')).toBe(false);
 });
 
 async function openBottomSheet() {

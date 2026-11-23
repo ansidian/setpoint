@@ -184,15 +184,16 @@
 .sch-notice { margin: 0 28px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; border-radius: 10px; background: var(--sub2); color: var(--ink2); font-size: 13px; flex: none; }
 
 /* The phone: the composer fills its full-screen sheet (phone/Sheet.tsx) under the sheet's bar, and
-   scrolls as one, the format row held at its foot. Its fields' text is 16 px, so Safari doesn't zoom
-   in as one takes the caret. */
-.ph-sheet-body:has(> .cmp-place) { display: flex; flex-direction: column; }
-.ph-sheet-body > .cmp-place .composer { flex: 1 1 auto; min-height: 0; }
-.ph-sheet .composer :is(input, .desc-edit) { font-size: 16px; }
+   is its one scroller, the format row held at its foot; the caret is kept clear of that row. Every
+   field's text is 16 px (the quote's too), so Safari doesn't zoom in as one takes the caret. */
+.ph-sheet-body:has(> .cmp-place) { display: flex; flex-direction: column; overflow: hidden; }
+.ph-sheet-body > .cmp-place .composer { flex: 1 1 auto; min-height: 0; scroll-padding-bottom: 60px; }
+.ph-sheet .composer :is(input, textarea, [contenteditable]) { font-size: 16px; }
 .ph-sheet .composer .desc-edit { line-height: 22px; }
 /* Its format row's buttons are finger-sized, 44 px each with 20 px glyphs. When they don't fit the
    width the row scrolls sideways, Discard last; a link's address keeps the row's height. */
 .ph-sheet .composer .desc-bar { min-height: 52px; gap: 0; padding: 4px 4px max(4px, env(safe-area-inset-bottom)); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.ph-sheet[data-keyboard] .composer .desc-bar { padding-bottom: 4px; }
 .ph-sheet .composer .desc-bar::-webkit-scrollbar { display: none; }
 .ph-sheet .composer .desc-bar .ibtn { width: 44px; height: 44px; flex: none; border-radius: 12px; }
 .ph-sheet .composer .desc-bar .ibtn .icon { width: 20px; height: 20px; }

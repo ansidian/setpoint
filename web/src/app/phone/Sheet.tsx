@@ -14,6 +14,55 @@ export interface SheetAction {
   disabled?: boolean;
 }
 
+/** Past this much of the screen covered, what covers it is the keyboard. */
+const KEYBOARD = 120;
+/** A field's first line, with its padding. */
+const LINE = 48;
+
+/**
+ * Keeps the sheet on the part of the screen the user sees. On the iPhone the keyboard covers the
+ * page rather than shrinking it, and Safari slides the page up to show the caret, which takes the
+ * sheet's bar off the top and leaves its foot (the format row) under the keys. So the sheet takes
+ * the visual viewport's top and height as they change; inside it its own scroller moves instead.
+ * With the keyboard up the home indicator's inset goes too (`data-keyboard`), so nothing gaps above
+ * the keys. The caret, put out of sight by the sheet shrinking, is brought back into it.
+ */
+function followViewport(element: HTMLElement, viewport: VisualViewport) {
+  const follow = () => {
+    const shrank = viewport.height < element.offsetHeight;
+    element.style.setProperty('--sheet-top', `${viewport.offsetTop}px`);
+    element.style.setProperty('--sheet-height', `${viewport.height}px`);
+    element.toggleAttribute('data-keyboard', document.documentElement.clientHeight - viewport.height > KEYBOARD);
+    if (shrank) revealCaret(element);
+  };
+  follow();
+  viewport.addEventListener('resize', follow);
+  viewport.addEventListener('scroll', follow);
+  return () => {
+    viewport.removeEventListener('resize', follow);
+    viewport.removeEventListener('scroll', follow);
+  };
+}
+
+/** Scrolls what holds the focused field so its caret shows, clear of a bar held at its foot. */
+function revealCaret(element: HTMLElement) {
+  const focused = document.activeElement;
+  if (!(focused instanceof HTMLElement) || !element.contains(focused)) return;
+  const selection = document.getSelection();
+  const range = focused.isContentEditable && selection?.rangeCount ? selection.getRangeAt(0) : null;
+  // A caret on an empty line has no box of its own: the field's first line stands in for it.
+  const field = focused.getBoundingClientRect();
+  const caret = range?.getClientRects()[0] ?? {top: field.top, bottom: Math.min(field.bottom, field.top + LINE)};
+  let scroller = focused.parentElement;
+  while (scroller && scroller !== element && !/auto|scroll/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+  if (!scroller || scroller === element) return;
+  const box = scroller.getBoundingClientRect();
+  const foot = parseFloat(getComputedStyle(scroller).scrollPaddingBottom) || 0;
+  const below = caret.bottom - (box.bottom - foot);
+  if (below > 0) scroller.scrollTop += below;
+  else if (caret.top < box.top) scroller.scrollTop -= box.top - caret.top;
+}
+
 /**
  * A full-screen sheet. `back` names where it goes back to ("Inbox") and shows Back in Cancel's place,
  * for a sheet pushed from another. `action` is the top bar's one solid button (Send, Save).
@@ -40,6 +89,12 @@ export function Sheet({title, onClose, back, action, children}: {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
+  }, []);
+  useEffect(() => {
+    const element = sheet.current;
+    const viewport = window.visualViewport;
+    if (!element || !viewport) return;
+    return followViewport(element, viewport);
   }, []);
   return createPortal(
     <div ref={sheet} className="ph-sheet" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>

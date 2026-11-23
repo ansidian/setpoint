@@ -621,6 +621,43 @@ test('the reply-type menu\'s Edit subject turns a reply into a forward that keep
   await expect.poll(() => discarded).toEqual([reply.id]);
 });
 
+test('on the phone every field of the composer\'s sheet is at least 16 px, so Safari doesn\'t zoom in as one takes the caret', async () => {
+  await page.viewport(390, 844);
+  onTestFinished(() => page.viewport(1280, 800));
+  const reply = draftOf({kind: 'reply_all', to: [SAM, JUNE], cc: [RAVI]});
+  const forward = draftOf({kind: 'forward', to: [], subject: 'Fwd: Dinner Friday?'});
+  await compose(reply, [], MESSAGE, [forward]);
+  // The sheet, named for its kind: Reply all, then Forward once Edit subject makes it one.
+  const sheet = page.getByRole('dialog');
+  await expect.element(sheet).toHaveAccessibleName('Reply all');
+  const sizes = new Map<string, string>();
+  const measure = () => {
+    for (const one of sheet.element().querySelectorAll<HTMLElement>('input:not([type="file"]), textarea, [contenteditable]')) {
+      sizes.set(one.getAttribute('aria-label') ?? one.className, getComputedStyle(one).fontSize);
+    }
+  };
+  await userEvent.click(page.getByRole('button', {name: 'Show the quoted email'}));
+  await expect.element(page.getByRole('textbox', {name: 'Quoted email'})).toBeVisible();
+  measure();
+  await userEvent.click(page.getByRole('button', {name: 'Help me write', exact: true}));
+  await expect.element(page.getByRole('textbox', {name: 'Help me write'})).toBeVisible();
+  measure();
+  await userEvent.click(page.getByRole('button', {name: 'Help me write', exact: true}));
+  await userEvent.click(page.getByRole('button', {name: 'Link', exact: true}));
+  await expect.element(page.getByRole('textbox', {name: 'Link address'})).toBeVisible();
+  measure();
+  await userEvent.keyboard('{Escape}');
+  await userEvent.click(page.getByRole('button', {name: 'Reply all, change'}));
+  await userEvent.click(page.getByRole('menuitem', {name: 'Edit subject'}));
+  await expect.element(page.getByRole('textbox', {name: 'Subject'})).toBeVisible();
+  measure();
+  expect([...sizes.keys()]).toEqual(expect.arrayContaining(['To', 'Cc', 'Bcc', 'Message', 'Quoted email', 'Help me write', 'Link address', 'Subject']));
+  expect([...sizes].filter(([, size]) => parseFloat(size) < 16)).toEqual([]);
+  // Closed before the page is cleared, so React takes its sheet down itself.
+  for (const one of openComposers()) closeComposerAt(one.key);
+  await expect.element(sheet).not.toBeInTheDocument();
+});
+
 const paragraph = (text: string): DraftOut['body'] => [{type: 'paragraph', runs: [{text, marks: [], href: null}]}];
 const body = () => document.querySelector('.composer .desc-edit')?.textContent;
 
