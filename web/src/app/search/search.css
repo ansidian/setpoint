@@ -257,4 +257,14 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
   .alf-pill-x { width: 36px; height: 36px; margin-right: 2px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); }
   .alf-pill-x:active { background: var(--sub2); color: var(--ink); }
   .alf-pill.asking .alf-pill-open .icon { animation: twinkle 1.2s ease-in-out infinite alternate; }
+  /* Alfred's proposal (PhoneProposal.tsx): what, when and where, each line wrapping rather than cut,
+     then the conflict line and Add, a whole-width button to tap. */
+  .ph-prop .card-b { gap: 4px; padding: 10px 16px 16px; }
+  .ph-prop-what { font-size: 16px; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+  .ph-prop-when, .ph-prop-home { font-size: 14px; overflow-wrap: anywhere; }
+  .ph-prop-home { display: flex; align-items: center; gap: 8px; }
+  .ph-prop .conflict { margin: 2px 0 0; font-size: 13px; white-space: normal; }
+  .ph-prop-add { margin-top: 10px; height: 44px; width: 100%; justify-content: center; }
+  /* In the sheet the answer has no card, so the proposal keeps its own. */
+  .ph-sheet .answer .ph-prop { background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn); border-radius: var(--r-popover); }
 }

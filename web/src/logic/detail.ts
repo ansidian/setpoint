@@ -13,8 +13,11 @@ export function repeatLine(item: Pick<ItemOut, 'kind' | 'recurrence' | 'all_day'
   return day ? describeRule(item.recurrence, day) : null;
 }
 
+/** When an item, or a proposal's, falls: the fields it reads. */
+export type WhenFields = Pick<ItemOut, 'kind' | 'all_day' | 'starts_at' | 'ends_at' | 'start_date' | 'end_date' | 'due_date' | 'due_at'>;
+
 /** "Wed, Oct 7 · 2:30 – 3:30 PM"; "Sat, Oct 17 · All day"; a task "Wed, Oct 7" or "Wed, Oct 7 · 5:00 PM". */
-export function detailWhen(item: ItemOut, timeZone: string): string {
+export function detailWhen(item: WhenFields, timeZone: string): string {
   if (item.kind === 'task') {
     if (!item.due_date) return 'No date';
     return item.due_at ? `${dayTitle(item.due_date)} · ${clockTime(item.due_at, timeZone)}` : dayTitle(item.due_date);

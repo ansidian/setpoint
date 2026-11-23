@@ -3,19 +3,24 @@
 // conversation waits as a pill above the tab bar, which opens it in the full-screen sheet; Back folds
 // it again and the pill's × closes it. His email rows open the phone's reader and his item rows the
 // item's detail on the Agenda. A reload brings the pill back, unless the server has ended the thread.
+// His proposal is a compact card that fits 375 px, whose Add opens the phone's editor sheet.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {Page} from 'playwright-core';
+import type {ItemsOut} from '@setpoint/shared';
+import type {Locator, Page} from 'playwright-core';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred} from './fakeAlfred.ts';
 import type {AlfredTurn, Call} from './fakeAlfred.ts';
-import {cleanUp, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import {box, inbox} from './phoneHelpers.ts';
 
 after(cleanUp);
 
 const LEASE_QUESTION = 'When does my lease renewal need to be signed?';
+const PROPOSE_QUESTION = 'Put signing the lease renewal on my calendar';
+// Alfred's proposal, longer than a phone's line, at his own day and times (not the email's own reading).
+const PROPOSED_TITLE = 'Sign the lease renewal at the Parkside Apartments leasing office';
 const DENTIST_QUESTION = 'When is my dentist appointment?';
 
 /**
@@ -23,10 +28,22 @@ const DENTIST_QUESTION = 'When is my dentist appointment?';
  * answers resting on the first, as an item the answer cites.
  */
 function phoneAlfred(turn: AlfredTurn): Call {
+  if (turn.question === PROPOSE_QUESTION) return proposeAlfred(turn);
   if (!/dentist/i.test(turn.question)) return leaseAlfred(turn);
   const listed = turn.results.find(result => Array.isArray(result.items)) as {items: {key: string}[]} | undefined;
   if (!listed) return {name: 'list_items', input: {from: '2026-10-07', to: '2026-10-15', query: 'Dentist'}};
   return {name: 'answer', input: {found: true, text: 'Today at 2:30 PM, at Smile Dental.', source_ids: [], item_keys: [listed.items[0]!.key], emphasis: ['2:30 PM']}};
+}
+
+/** The proposal question: searches the lease email, proposes its signing as an event, then answers. */
+function proposeAlfred({question, results}: AlfredTurn): Call {
+  const searched = results.find(result => 'searched' in result) as {results: {message_id: number; email: string}[]} | undefined;
+  const lease = searched?.results.find(row => row.email.includes('Subject: Lease renewal terms'));
+  if (!lease) return {name: 'search_mail', input: {query: 'lease renewal'}};
+  if (!results.some(result => result.ready === true)) {
+    return {name: 'propose_item', input: {owner_instruction: question, message_id: lease.message_id, kind: 'event', title: PROPOSED_TITLE, date: '2026-10-29', start_time: '17:30', end_time: '18:30'}};
+  }
+  return {name: 'answer', input: {found: true, text: 'Here it is, the Thursday before it\'s due.', source_ids: [lease.message_id], emphasis: []}};
 }
 
 async function withAlfred() {
@@ -53,13 +70,38 @@ function asksOf(page: Page): {question: string; conversation_id?: number}[] {
 const pill = (page: Page) => page.locator('.alf-pill');
 const sheet = (page: Page) => page.getByRole('dialog', {name: 'Alfred'});
 
-/** Asks the lease question from search by its Ask Alfred row, and waits for the answer above the results. */
-async function askFromSearch(page: Page) {
+/** Asks a question (the lease one) from search by its Ask Alfred row, and waits for the answer above the results. */
+async function askFromSearch(page: Page, question = LEASE_QUESTION, answer = 'By Oct 31, 2026') {
   await page.locator('.search input').tap();
-  await page.keyboard.type(LEASE_QUESTION);
+  await page.keyboard.type(question);
   await page.locator('.search-list .result').first().waitFor();
   await page.locator('.search-list .ask').tap();
-  await page.locator('.search-list .answer .ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+  await page.locator('.search-list .answer .ans', {hasText: answer}).waitFor();
+}
+
+/**
+ * The proposal card fits the screen: its day and times show whole, in no box narrower than they
+ * are and inside the card, which is inside the screen. And no key hint shows on it.
+ */
+async function proposalFits(card: Locator, where: string) {
+  const fit = await card.evaluate(element => {
+    const shown = (one: Element) => one.getBoundingClientRect();
+    // Whatever shows the day: its text, or a field's value.
+    const day = [...element.querySelectorAll('*')].filter(one => (one instanceof HTMLInputElement ? one.value.includes('Oct 29')
+      : [...one.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent!.includes('Oct 29'))));
+    const cardBox = shown(element);
+    return {
+      days: day.length,
+      clipped: day.filter(one => one.scrollWidth > one.clientWidth + 1 || shown(one).right > cardBox.right + 0.5 || shown(one).left < cardBox.left - 0.5).map(one => (one instanceof HTMLInputElement ? one.value : one.textContent)),
+      right: cardBox.right,
+      width: document.documentElement.clientWidth,
+      hints: [...element.querySelectorAll('.kbd')].filter(one => (one as HTMLElement).offsetParent !== null).map(one => one.textContent),
+    };
+  });
+  assert.ok(fit.days > 0, `${where}: the proposal names its day`);
+  assert.deepEqual(fit.clipped, [], `${where}: the day shows whole`);
+  assert.ok(fit.right <= fit.width, `${where}: the card (to ${fit.right}) is inside the screen (${fit.width})`);
+  assert.deepEqual(fit.hints, [], `${where}: no key hints`);
 }
 
 test('phone Alfred: Ask Alfred in search answers above the results, a follow-up goes below, and a source opens in the reader with Back to Search', async () => {
@@ -187,6 +229,52 @@ test('phone Alfred on the Agenda: a reload keeps the pill with no question asked
     await setpoint.idle();
     assert.equal(await pill(page).count(), 0);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('alfred.thread')), null, 'the tab forgets it');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('phone Alfred\'s proposal: a compact card that fits 375 px, inline and in his sheet; Add opens the editor sheet on his draft, and Create makes it with Undo', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await inbox(setpoint);
+    await page.setViewportSize({width: 375, height: 812});
+    await askFromSearch(page, PROPOSE_QUESTION, 'the Thursday before');
+    const inline = page.locator('.search-list .answer').locator('[aria-label="Proposal: add to calendar"]');
+    await inline.waitFor();
+    await rested(() => proposalFits(inline, 'inline in search'));
+
+    // In his sheet too.
+    await page.locator('.search .search-clear').tap();
+    await page.getByRole('button', {name: 'Open Alfred'}).tap();
+    const card = sheet(page).locator('[aria-label="Proposal: add to calendar"]');
+    await card.waitFor();
+    await rested(() => proposalFits(card, 'in his sheet'));
+    assert.equal(await card.locator('.ph-prop-what').textContent(), PROPOSED_TITLE);
+
+    // Add opens the editor sheet on his draft: his title, day and times.
+    await card.getByRole('button', {name: 'Add to calendar'}).tap();
+    const editor = page.getByRole('dialog', {name: 'New event'});
+    await editor.waitFor();
+    assert.equal(await editor.getByLabel('Describe the event').inputValue(), PROPOSED_TITLE);
+    assert.equal(await editor.getByLabel('Date', {exact: true}).inputValue(), '2026-10-29');
+    assert.equal(await editor.getByLabel('Start', {exact: true}).inputValue(), '17:30');
+    assert.equal(await editor.getByLabel('End', {exact: true}).inputValue(), '18:30');
+    assert.equal(await editor.locator('.kbd:visible').count(), 0, 'no key hints in the sheet');
+
+    // Create makes it, says so with Undo, and leaves his answer under it.
+    await editor.getByRole('button', {name: 'Create'}).tap();
+    await editor.waitFor({state: 'detached'});
+    const toast = await holdToast(page);
+    await toast.getByText(`Created ${PROPOSED_TITLE}`).waitFor();
+    const made = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-29&to=2026-10-30')).items.filter(item => item.title === PROPOSED_TITLE);
+    const [item] = await until('the event made', made, list => list.length === 1);
+    assert.equal(item!.all_day, false);
+    await sheet(page).locator('.ans', {hasText: 'the Thursday before'}).waitFor();
+    // Undo deletes it again.
+    await toast.getByRole('button', {name: 'Undo'}).tap();
+    await until('the event undone', made, list => list.length === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();

@@ -1,12 +1,12 @@
 // Search, the Answer card and the proposal card's rules as tables: highlighted runs, reasons, the
 // results line, what Alfred is asked, what the reader highlights, and how a proposal's time reads.
 // For calendar results: Upcoming then Past, the row's day, and its line with a series' rule.
-import type {AnswerOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} from '@setpoint/shared';
+import type {AnswerOut, CalendarOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   operatorAt, operatorMarks, operatorValues, withOperatorPick,
-  FOLD_OPENS_UNDER, answerItemWhen, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, prefillMissLine, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, answerItemWhen, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, prefillMissLine, proposalHome, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {Run} from '../src/logic/search.ts';
 
@@ -326,6 +326,30 @@ describe('answerItemWhen: an Answer card item row\'s day and time', () => {
     ['another year names it', {date: '2027-01-04', start: null}, 'Mon, Jan 4, 2027'],
   ])('%s', (_name, item, when) => {
     expect(answerItemWhen(item, Date.parse(SEED_NOW), SEED_TIME_ZONE)).toBe(when);
+  });
+});
+
+describe('proposalHome: where the phone\'s proposal card says it would go', () => {
+  const google = (id: number, name: string, fields: Partial<CalendarOut> = {}) =>
+    ({id, provider: 'google', name, colour: 'cyan', visible: true, listed: true, writable: true, ...fields}) as CalendarOut;
+  const calendars = [
+    {id: 1, provider: 'todoist', name: 'Todoist', colour: null, visible: true, listed: true, writable: true} as CalendarOut,
+    google(2, 'Holidays', {writable: false}),
+    google(3, 'Hidden', {visible: false}),
+    google(4, 'Personal', {colour: 'violet'}),
+    google(5, 'Unlisted', {listed: false}),
+  ];
+  test.each([
+    ['an event names its calendar', {kind: 'event', calendar_id: 3, project: null}, calendars, null, {name: 'Hidden', colour: 'cyan'}],
+    ['an event naming none: the first visible one the user can write to', {kind: 'event', calendar_id: null, project: null}, calendars, null, {name: 'Personal', colour: 'violet'}],
+    ['an event naming a read-only or unlisted calendar falls back too', {kind: 'event', calendar_id: 5, project: null}, calendars, null, {name: 'Personal', colour: 'violet'}],
+    ['an event while the calendars come', {kind: 'event', calendar_id: 4, project: null}, undefined, null, null],
+    ['an event with nowhere to go', {kind: 'event', calendar_id: null, project: null}, [calendars[1]!], null, null],
+    ['a task names its project', {kind: 'task', calendar_id: null, project: 'Home'}, calendars, 'Inbox', {name: 'Home', colour: null}],
+    ['a task naming none: the default project', {kind: 'task', calendar_id: null, project: null}, calendars, 'Inbox', {name: 'Inbox', colour: null}],
+    ['a task before the projects come', {kind: 'task', calendar_id: null, project: null}, undefined, null, {name: 'Todoist', colour: null}],
+  ] as const)('%s', (_name, item, list, defaultProject, home) => {
+    expect(proposalHome(item, list, defaultProject)).toEqual(home);
   });
 });
 

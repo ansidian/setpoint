@@ -265,7 +265,7 @@ export function chipTime(item: ItemOut, timeZone: string): string | null {
 }
 
 /** An event's span: "7:00 – 8:00 AM", "11:30 AM – 1:30 PM", "All day". */
-export function timeRange(item: ItemOut, timeZone: string): string {
+export function timeRange(item: Pick<ItemOut, 'all_day' | 'starts_at' | 'ends_at'>, timeZone: string): string {
   if (item.all_day || !item.starts_at || !item.ends_at) return 'All day';
   const start = clockTime(item.starts_at, timeZone);
   // An event with no end ends as it starts, and says its start alone.

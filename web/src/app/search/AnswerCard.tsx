@@ -35,6 +35,7 @@ import {foldAway} from '../fold.ts';
 import {Bar, Sk} from '../states/Loading.tsx';
 import {ThreadSkeleton} from '../states/Skeletons.tsx';
 import {openSettings} from '../settings/store.ts';
+import {PhoneProposal} from './PhoneProposal.tsx';
 import {ProposalCard} from './ProposalCard.tsx';
 import {Account} from './Search.tsx';
 import type {Alfred} from './state.ts';
@@ -166,7 +167,11 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
                 ))}
               </div>
             )}
-            {turn.proposals.map(proposal => <ProposalCard key={`${proposal.message_id}:${proposal.kind}:${proposal.item.title}`} proposal={proposal} now={now} timeZone={timeZone} inAnswer />)}
+            {turn.proposals.map(proposal => {
+              const key = `${proposal.message_id}:${proposal.kind}:${proposal.item.title}`;
+              // On the phone, a compact card whose Add opens the editor sheet.
+              return phone ? <PhoneProposal key={key} proposal={proposal} now={now} /> : <ProposalCard key={key} proposal={proposal} now={now} timeZone={timeZone} inAnswer />;
+            })}
           </Fragment>
         ))}
         {waiting !== null && (

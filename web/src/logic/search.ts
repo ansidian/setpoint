@@ -2,7 +2,7 @@
 // asks, the results line, each reason's parts, the highlighted runs, what the reader highlights,
 // and how a proposal's time reads.
 import {parseOperators, searchTokens} from '@setpoint/shared';
-import type {AnswerItemOut, AnswerOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerItemOut, AnswerOut, CalendarOut, Colour, ProposalItemOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {clockTime, localDate} from './format.ts';
@@ -491,4 +491,18 @@ export function finishedWords(text: string): {words: string; last: string} | nul
   const match = /^(.*\S)\s+(\S+)$/s.exec(text.trimStart());
   if (!match || (match[1]!.split('"').length - 1) % 2 === 1) return null;
   return {words: `${match[1]!} `, last: match[2]!};
+}
+
+/**
+ * Where a proposal would go, for the phone's proposal card: an event's calendar (the one it names,
+ * else the editor's fallback, the first visible Google calendar the user can write to) with its
+ * colour, or a task's project (Settings' default, else Todoist's Inbox, when it names none). Null
+ * while the calendars are still on their way, or with none to write to.
+ */
+export function proposalHome(item: Pick<ProposalItemOut, 'kind' | 'calendar_id' | 'project'>, calendars: readonly CalendarOut[] | undefined, defaultProject: string | null): {name: string; colour: Colour | null} | null {
+  if (item.kind === 'task') return {name: item.project ?? defaultProject ?? 'Todoist', colour: null};
+  if (!calendars) return null;
+  const google = calendars.filter(calendar => calendar.listed && calendar.provider === 'google' && calendar.writable);
+  const calendar = google.find(one => one.id === item.calendar_id) ?? google.find(one => one.visible) ?? google[0];
+  return calendar ? {name: calendar.name, colour: calendar.colour} : null;
 }

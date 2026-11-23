@@ -3,15 +3,17 @@
 // and the .ics import review in a sheet of its own. Anything on the phone
 // opens it with `openEditorSheet`: the Agenda's + (a new item on a day) and Edit (an item), an
 // email's Add to calendar or Add as task (`message`, which fills it from the email's proposal as the
-// desktop's More options does), and an invitation's Add to calendar (`ics`, one event as a draft).
+// desktop's More options does), an invitation's Add to calendar (`ics`, one event as a draft), and
+// Alfred's proposal card (`openProposalSheet`, the draft his answer proposed).
 // An invitation of two or more events opens the review instead (importRun.ts's `openReview`), which
 // shows here too. The shell draws one `PhoneSheets`.
-import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
+import type {CalendarOut, ItemOut, ItemsOut, ProposalOut} from '@setpoint/shared';
 import {useCallback, useEffect, useMemo, useState, useSyncExternalStore} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, itemsPath} from '../../api/items.ts';
 import {itemDays, itemsByDay} from '../../logic/calendar.ts';
+import {emptyDraft, fromProposal} from '../../logic/editorDraft.ts';
 import {addDays, localDate} from '../../logic/format.ts';
 import {editedImport, eventDay} from '../../logic/icsImport.ts';
 import {scopeChoices} from '../../logic/scope.ts';
@@ -44,6 +46,15 @@ const subscribe = (listener: () => void) => {
  */
 export function openEditorSheet(open: EditorOpen) {
   set({...open, seq: ++seq});
+}
+
+/**
+ * Opens the editor sheet on a proposal as it stands, Alfred's in an answer: his title, day, times
+ * and place, not the email's own reading of them again (`message` would ask the server for that).
+ */
+export function openProposalSheet(proposal: ProposalOut, today: string, zone: string) {
+  const draft = fromProposal(emptyDraft(proposal.kind, today), {proposal, reminders: null, newProject: false}, zone);
+  openEditorSheet({kind: proposal.kind, date: draft.date, kept: {drafts: [draft], active: draft.id, kind: proposal.kind}});
 }
 
 export const closeEditorSheet = () => set(null);
