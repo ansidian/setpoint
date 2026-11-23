@@ -261,7 +261,13 @@
   .nw-sec { height: 30px; font-size: 12px; }
   .nw-state, .nw-line { min-height: 40px; font-size: 13px; }
   .nw-state .btn { flex: none; }
-  .nw-raw { min-height: 44px; }
+  /* No hover to read a cut line by: the states' lines and Show headlines' headlines wrap. */
+  .nw-state, .nw-line { padding-top: 8px; padding-bottom: 8px; align-items: flex-start; }
+  .nw-state > .icon, .nw-line > .icon, .nw-state > .spin { margin-top: 1px; }
+  .nw-state > .ell, .nw-line > .ell { white-space: normal; line-height: 18px; }
+  .nw-state .btn { margin: -4px 0; }
+  .nw-raw { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+  .nw-raw .hl { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .nw-also .nw-raw { padding-left: 32px; }
 
   .nw-lead, .nw-lead.noimg { grid-template-columns: 12px minmax(0, 1fr); grid-template-areas: "img img" "nd txt"; row-gap: 12px; column-gap: 8px; padding: 12px 16px 14px 8px; }
@@ -275,7 +281,7 @@
   .nw-row > .nd { grid-area: nd; height: 20px; }
   .nw-row > .txt { grid-area: txt; }
   .nw-row > .side { grid-area: side; flex-direction: row; align-items: center; gap: 0; min-width: 0; }
-  .nw-row > .side > .nw-meta + .nw-meta::before { content: "·"; margin: 0 6px; color: var(--ink3); }
+  .nw-row > .side > .nw-meta + .nw-meta::before { content: "·"; margin-left: 6px; color: var(--ink3); }
   .nw-row > :last-child { grid-area: img; margin-left: 4px; }
   .nw-row .hl { font-size: 15px; line-height: 20px; }
   .nw-row .nw-meta, .nw-lead .nw-meta { font-size: 12.5px; }

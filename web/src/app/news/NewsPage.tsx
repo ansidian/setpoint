@@ -13,8 +13,8 @@
 // it (NewsDay.tsx), never in the list. It's chosen from the visit's first answer and held for it.
 // Its stories are never seen by being on screen, only by opening, which opens them in the recap's
 // modal (RecapModal.tsx). The page tells the server when the user is on News, and the recap's stories
-// once the pane shows them (useHere below). So an hour away puts it away, and nothing else on the web
-// does.
+// once the pane shows them (useHere below). So on the desktop an hour away puts it away, and nothing
+// else does (the phone's Done is below).
 //
 // The states (boards 29a, 29b): the Unsorted line while sorting is down,
 // with Show headlines listing what waits, and the first run's line, both above the list from
@@ -475,10 +475,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
           <div className={[listArrived ? 'list sk-arrive' : 'list', phone && 'ph-news'].filter(Boolean).join(' ')} ref={list}>
             {/* Until its first answer, the list's skeleton in its rows' shapes, or why it didn't come. */}
             {!latest && (listFailed ? <LoadFailed what="News" loads={[listLoad]} /> : <NewsSkeleton blocks={view === 'all'} />)}
-            {listRecap && <ListRecap recap={listRecap} rows={rows} now={now} zone={zone} onOpen={openStoryOf} onDone={recapDone} />}
             {showHeadlines && (
               <>
-                <div className={listRecap ? 'nw-sec' : 'nw-sec first'}><Icon name="pending" size={14} />Unsorted<span className="day num">{waitingOut ? waitingOut.count.toLocaleString('en-US') : ''}</span></div>
+                <div className="nw-sec first"><Icon name="pending" size={14} />Unsorted<span className="day num">{waitingOut ? waitingOut.count.toLocaleString('en-US') : ''}</span></div>
                 {waitingOut?.articles.map(article => (
                   <a key={article.id} className="nw-raw" href={article.url} target="_blank" rel="noopener noreferrer">
                     <span className="hl">{article.headline}</span>
@@ -491,6 +490,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
                 ))}
               </>
             )}
+            {/* Under what Show headlines lists, which the line over the list asked for. */}
+            {listRecap && <ListRecap recap={listRecap} first={!showHeadlines} rows={rows} now={now} zone={zone} onOpen={openStoryOf} onDone={recapDone} />}
             {layout.map((shelf, index) => {
               const shelfRows = shelf.ids.flatMap(id => rows.get(id) ?? []);
               const section = view === 'all' ? NEWS_SECTIONS.find(one => one === shelf.key) : undefined;
@@ -628,8 +629,10 @@ function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zo
  * then its stories as the pane draws them, each headline `ink` until opened, then `ink2`. Its rows
  * aren't the list's (no `data-key`), so being on screen never sees them: only opening does.
  */
-function ListRecap({recap, rows, now, zone, onOpen, onDone}: {
+function ListRecap({recap, first, rows, now, zone, onOpen, onDone}: {
   recap: HeldRecap;
+  // At the top of the list, with no border over it.
+  first: boolean;
   rows: ReadonlyMap<number, StoryRowOut>;
   now: number;
   zone: string;
@@ -639,7 +642,7 @@ function ListRecap({recap, rows, now, zone, onOpen, onDone}: {
   const since = recapSince(recap.since, now, zone);
   return (
     <section className="nw-recap" aria-label="While you were away">
-      <div className="nw-sec first">
+      <div className={first ? 'nw-sec first' : 'nw-sec'}>
         <Icon name="history" size={14} /><span className="ell">While you were away</span>
         {since && <span className="day num">{since}</span>}
         <button className="btn ghost sm nw-recap-done" type="button" onClick={onDone}>Done</button>
