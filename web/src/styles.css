@@ -671,7 +671,14 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .toast .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* The phone's toast: `cardOn`, 14 px apart, its tone's 16 px glyph
    bare, and a line with an action shows its time draining as a 2 px hairline along its bottom. */
-.toast.ph { height: 40px; gap: 14px; padding: 0 6px 0 16px; background: var(--cardOn); }
+.toast.ph { height: 40px; max-width: calc(100% - 32px); gap: 14px; padding: 0 6px 0 16px; background: var(--cardOn); }
+/* It keeps 16 px from the screen's sides: a long line ends in an ellipsis, a failure wraps to a second
+   line before its ellipsis, and its action keeps its size, taking a tap anywhere up the toast's height. */
+.toast.ph .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.toast.ph.failed { width: max-content; height: auto; min-height: 40px; padding-block: 8px; border-radius: 20px; white-space: normal; }
+.toast.ph.failed .txt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 18px; overflow-wrap: anywhere; }
+.toast.ph .btn { position: relative; }
+.toast.ph .btn::before { content: ""; position: absolute; inset: -7px -6px -7px -7px; }
 .toast.ph:not(:has(button)) { padding-right: 16px; }
 .toast.ph.done, .toast.ph.gone, .toast.ph.failed, .toast.ph.pinned { padding-left: 12px; }
 .toast.ph .tone { width: 18px; height: 18px; display: grid; place-items: center; margin-right: -4px; flex: none; }

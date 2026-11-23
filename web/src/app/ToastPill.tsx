@@ -178,7 +178,7 @@ function Pill({toast}: {toast: Toast}) {
     return (
       <div ref={ref} className={className} role="status" style={style} onPointerDown={press}>
         {phoneTone && <span className="tone"><Icon name={PHONE_GLYPHS[phoneTone]} size={16} /></span>}
-        <span>{toast.text}</span>
+        <span className="txt">{toast.text}</span>
         {action && <button className="btn ghost sm" type="button" onClick={run}>{action.label}</button>}
       </div>
     );

@@ -295,7 +295,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   380 px at most, with an `alert` edge. A failure with an action (Open, Try again) and a confirm
   (Sign out) wait for an answer, with no ring; a confirm has a quiet Cancel (Esc) and a solid `ink`
   action (↵), and takes those keys outside a field. The phone's toast is as it was: `cardOn`, a bare
-  glyph, a hairline, and everything runs its time. Send joins it: the server holds a sent email 6 seconds, and the toast reads
+  glyph, a hairline, and everything runs its time. It keeps 16 px from the screen's sides: a long
+  line ends in an ellipsis, a failure wraps to two lines, and its action keeps its size. Send joins it: the server holds a sent email 6 seconds, and the toast reads
   "Sending" with Undo, which opens the composer again as it was.
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
 - **Right-click** opens an item's actions at the pointer; selected text, links and fields keep the
