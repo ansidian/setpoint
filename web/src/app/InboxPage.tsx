@@ -28,7 +28,8 @@
 // view, and Attention has none. An empty view says so, with Show All.
 //
 // On the phone (board 21) the header is the mark, Inbox and its counts, Mark all as read and New
-// message, which opens the composer's sheet (no account filter). A plain search field sits under it (no chips, no Alfred).
+// message, which opens the composer's sheet (no account filter). A plain search field sits under it
+// (no chips), and Ask Alfred leads its results.
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut, Settings} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -169,10 +170,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
   const untrashing = (id: number) => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
   const search = useSearch(phone, phone ? NO_SCOPE : WITH_SENT);
-  // Alfred's thread from search shows above the results while the search is active (on the phone,
-  // while it's open); elsewhere it's in Alfred's window (search/alfred.ts).
+  // Alfred's thread from search shows above the results while the search is active; elsewhere it's in
+  // Alfred's window, or the phone's pill and sheet (search/alfred.ts).
   // The place is claimed before any question, so a thread asked here never shows in the window first.
-  const place = search.active || phone;
+  const place = search.active;
   useClaim(place ? SEARCH_ORIGIN : null);
   const thread = useAlfredThread();
   const inline = place && thread?.origin.kind === 'search' ? thread : null;

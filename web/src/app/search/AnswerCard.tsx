@@ -11,7 +11,9 @@
 // A long list of sources shows its first five and Show all. Proposals in an answer show as the
 // proposal card. While the thread is read back after a reload, a skeleton holds its place and the
 // field is dimmed. In Alfred's window the header is the window's title: it folds the window to its
-// bar and back.
+// bar and back. On the phone an item's row opens its detail on the Agenda instead, and the follow-up
+// field takes the keys only when tapped, so no keyboard rises on its own. In the phone's sheet the
+// sheet's top bar is the card's header.
 import type {AccountOut, AiOut, AnswerItemOut, CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
@@ -26,6 +28,7 @@ import type {AskStep} from '@setpoint/shared';
 import {Icon} from '../../ui/Icon.tsx';
 import {ItemCard} from '../calendar/detail/ItemCard.tsx';
 import {rectIn} from '../calendar/geometry.ts';
+import {usePhone} from '../Phone.tsx';
 import {navigate} from '../router.ts';
 import {showToast, toastFailure} from '../toast.ts';
 import {foldAway} from '../fold.ts';
@@ -36,7 +39,7 @@ import {ProposalCard} from './ProposalCard.tsx';
 import {Account} from './Search.tsx';
 import type {Alfred} from './state.ts';
 
-export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, windowed = false, minimized = false, onMinimize, onOpen}: {
+export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, windowed = false, minimized = false, onMinimize, sheet = false, onItem, onOpen}: {
   alfred: Alfred;
   // Ask about this email: the card is about one email, and shows every question.
   scoped: boolean;
@@ -50,8 +53,14 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
   // In Alfred's window: folded to its title bar, and the title's click.
   minimized?: boolean;
   onMinimize?: () => void;
+  // In the phone's sheet: no header of its own (the sheet's top bar is it), and every question shows.
+  sheet?: boolean;
+  // On the phone, an item's row: its detail on the Agenda (by default, there at once).
+  onItem?: (item: AnswerItemOut) => void;
   onOpen: (id: number) => void;
 }) {
+  const phone = usePhone();
+  const openOnAgenda = onItem ?? (phone ? (item: AnswerItemOut) => navigate(answerItemRoute(item)) : null);
   const [draft, setDraft] = useState('');
   // The turns whose every source shows.
   const [allSources, setAllSources] = useState<ReadonlySet<number>>(new Set());
@@ -68,9 +77,9 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
   const {data: ai} = useResource<AiOut>(AI_PATH);
   // The field takes the keys when the card opens and after each answer.
   useEffect(() => {
-    if (waiting !== null || (windowed && !card.current?.contains(document.activeElement))) return;
+    if (waiting !== null || phone || (windowed && !card.current?.contains(document.activeElement))) return;
     field.current?.focus();
-  }, [turns.length, waiting, windowed]);
+  }, [turns.length, waiting, windowed, phone]);
   // A question that failed comes back to the field, to ask again once fixed.
   const [restored, setRestored] = useState<string | null>(null);
   if (failed !== restored) {
@@ -96,7 +105,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
   const failure = error ?? (turns.length || asking || loading ? null : noKey);
   return (
     <div ref={card} className={asking ? 'card answer asking' : 'card answer'} aria-label="Alfred's answer">
-      {onMinimize ? (
+      {sheet ? null : onMinimize ? (
         <div className="card-h alf-title" onMouseDown={event => event.preventDefault()} onClick={onMinimize}>
           <Icon name="auto_awesome" size={16} alfred />
           <button className="card-title alf-title-text" type="button" aria-expanded={!minimized} aria-label={minimized ? 'Open the window' : 'Minimize the window'}>Alfred</button>
@@ -117,7 +126,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
         {turns.map((turn, index) => (
           <Fragment key={turn.turn_id}>
             {index > 0 && <div className="turn-sep" />}
-            {showsQuestion(index, scoped || windowed) && <div className="q">{turn.question}</div>}
+            {showsQuestion(index, scoped || windowed || sheet) && <div className="q">{turn.question}</div>}
             {folding && index === turns.length - 1 && <Trail steps={folding} folding />}
             {turn.answer ? <p className="ans"><Bold text={turn} /></p> : (
               <div className="ans-none">
@@ -144,10 +153,10 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
                   return next;
                 })} />
                 {turn.items.map(item => (
-                  <button key={item.key} type="button" data-key={item.key} data-turn={turn.turn_id} aria-haspopup="dialog"
+                  <button key={item.key} type="button" data-key={item.key} data-turn={turn.turn_id} aria-haspopup={openOnAgenda ? undefined : 'dialog'}
                     className={openItem?.turn === turn.turn_id && openItem.item.key === item.key ? 'src item open' : 'src item'}
-                    aria-expanded={openItem?.turn === turn.turn_id && openItem.item.key === item.key}
-                    onClick={() => setOpenItem(open => (open?.turn === turn.turn_id && open.item.key === item.key ? null : {turn: turn.turn_id, item}))}>
+                    aria-expanded={openOnAgenda ? undefined : openItem?.turn === turn.turn_id && openItem.item.key === item.key}
+                    onClick={() => (openOnAgenda ? openOnAgenda(item) : setOpenItem(open => (open?.turn === turn.turn_id && open.item.key === item.key ? null : {turn: turn.turn_id, item})))}>
                     <span className="line">
                       <Icon name={item.kind === 'task' ? 'task_alt' : 'event'} size={16} />
                       <span className="grow ell">{item.title}</span>
@@ -163,7 +172,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
         {waiting !== null && (
           <>
             {turns.length > 0 && <div className="turn-sep" />}
-            {showsQuestion(turns.length, scoped || windowed) && <div className="q">{waiting}</div>}
+            {showsQuestion(turns.length, scoped || windowed || sheet) && <div className="q">{waiting}</div>}
             <Trail steps={finished(alfred.trail, alfred.step)}>
               <div className="waiting"><span className="spin"><Icon name="progress_activity" size={16} /></span><span className="now">{alfredStepLine(alfred.step, scoped)}</span></div>
             </Trail>
@@ -196,6 +205,8 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
 }
 
 const itemRoute = (item: ItemOut, edit = false): Route => ({page: 'calendar', date: null, item: item.id, at: item.occurrence_start, ...(edit ? {edit: true} as const : {})});
+/** An item an answer rests on, where the calendar (the phone's Agenda) opens its detail. */
+export const answerItemRoute = (item: AnswerItemOut): Route => ({page: 'calendar', date: null, item: item.id, at: item.occurrence_start});
 
 /**
  * The floating detail's card for an item the answer rests on, beside the answer with its title level

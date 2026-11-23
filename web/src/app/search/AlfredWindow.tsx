@@ -5,7 +5,7 @@
 // Answer card: a follow-up continues the thread, an email's row opens it in the Inbox's reader, and
 // an item's row opens its detail card beside the window. × and Esc in the window close it; Esc
 // elsewhere leaves it alone, as with composer windows.
-import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {useLayoutEffect, useRef, useState} from 'react';
 import type {KeyboardEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {openMessage} from '../../api/mail.ts';
@@ -15,7 +15,7 @@ import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {navigate, useRoute} from '../router.ts';
 import {toastFailure} from '../toast.ts';
-import {alfredOf, alfredWindowed, closeAlfred, toggleAlfredMinimized, useAlfredMinimized, useAlfredThread, useAlfredWindowed} from './alfred.ts';
+import {alfredOf, toggleAlfredMinimized, useAlfredMinimized, useAlfredThread, useAlfredWindowed} from './alfred.ts';
 import {AnswerCard} from './AnswerCard.tsx';
 import './search.css';
 
@@ -61,12 +61,3 @@ export function AlfredWindow() {
   );
 }
 
-/** On the phone, which has no windows: a thread no place shows closes, as it did when its page went. */
-export function AlfredLetGo() {
-  const windowed = useAlfredWindowed();
-  useEffect(() => {
-    // As the store has it now, not as it was when this drew: a place may have claimed it since.
-    if (windowed && alfredWindowed()) closeAlfred();
-  }, [windowed]);
-  return null;
-}

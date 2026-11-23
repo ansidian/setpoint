@@ -5,9 +5,10 @@
 //
 // Where it shows: inline, where it was asked, while that place is on screen and claims it (Inbox
 // search while it's active, the reader on that email). Anywhere else on the desktop it's in
-// Alfred's window (AlfredWindow.tsx), at the right of the composer windows' row. On the phone a
-// thread no place claims closes, as the phone has no windows. Its title folds the window to its
-// bar and back, as a composer window's does; it opens unfolded each time it comes to the window.
+// Alfred's window (AlfredWindow.tsx), at the right of the composer windows' row. The phone has no
+// windows: there it waits as a pill above the tab bar that opens it in a full-screen sheet
+// (PhoneAlfred.tsx). The window's title folds it to its bar and back, as a composer window's does;
+// it opens unfolded each time it comes to the window.
 //
 // A question in flight lands here wherever the user has gone. Answers aren't streamed: what Alfred
 // is doing for it is asked again every STEP_POLL_MS. An answer to a thread since closed or

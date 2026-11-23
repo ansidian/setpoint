@@ -67,7 +67,7 @@ test('read state on the phone: a tap opens and reads; scrolling and opening Nois
   }
 });
 
-test('no account filter, and plain search with no chips and no Alfred', async () => {
+test('no account filter, and plain search with no chips, Ask Alfred leading its results', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await inbox(setpoint);
@@ -95,7 +95,7 @@ test('no account filter, and plain search with no chips and no Alfred', async ()
     assert.equal(await page.locator('.search .qchip').count(), 0, 'no chips');
     assert.ok(reads.length > 0 && reads.every(read => read === 'words'), `its searches ask for no reading: ${reads.join()}`);
     assert.equal(await page.locator('.search input').inputValue(), 'northwind interview ');
-    assert.equal(await page.locator('.search-list .ask').isVisible(), false, 'no Ask Alfred');
+    assert.equal(await page.locator('.search-list .ask').isVisible(), true, 'Ask Alfred leads the results');
     await page.locator('.search-list .result').first().tap();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);

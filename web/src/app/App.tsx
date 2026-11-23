@@ -6,7 +6,8 @@
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
 // phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings says
 // it's on the desktop; the composer opens in a full-screen sheet. ⌘K, Jobs and Sent stay there (their
-// addresses open the Inbox). On the desktop every arrival (a
+// addresses open the Inbox). Alfred's window is the phone's pill and sheet (PhoneAlfred.tsx). On the
+// desktop every arrival (a
 // load, a return to the tab) with an overdue task opens on its banner (OverdueBanner.tsx), over
 // everything but the toast.
 import {useEffect} from 'react';
@@ -37,7 +38,8 @@ import {fillMailSlots} from './slots.tsx';
 import {showToast} from './toast.ts';
 import {ToastPill} from './ToastPill.tsx';
 import {ComposerRoot, ComposerWindows, SendWatch} from './compose/Composer.tsx';
-import {AlfredLetGo, AlfredWindow} from './search/AlfredWindow.tsx';
+import {AlfredWindow} from './search/AlfredWindow.tsx';
+import {PhoneAlfred} from './search/PhoneAlfred.tsx';
 import {restoreAlfred} from './search/alfred.ts';
 import {DraftsPage} from './compose/DraftsPage.tsx';
 import {SnoozedPage} from './SnoozedPage.tsx';
@@ -55,9 +57,9 @@ export function App({arrive = false}: {arrive?: boolean}) {
   const phone = usePhone();
   const rail = useRail();
 
-  // Alfred's conversation from before a reload comes back on the desktop (search/alfred.ts).
+  // Alfred's conversation from before a reload comes back (search/alfred.ts).
   useEffect(() => {
-    if (!isPhone()) restoreAlfred();
+    restoreAlfred();
   }, []);
 
   // An address for a Settings page opens the modal over the Inbox, and the address becomes the Inbox's.
@@ -134,7 +136,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)
               : phone ? <PhoneSettings /> : null}
         {!phone && <ComposerWindows />}
-        {phone ? <AlfredLetGo /> : <AlfredWindow />}
+        {phone ? <PhoneAlfred route={route} /> : <AlfredWindow />}
         <OfflinePill />
         <ToastPill />
       </main>
