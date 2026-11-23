@@ -97,11 +97,14 @@ export function BottomSheet({title, onClose, children}: {title: string; onClose:
   );
 }
 
+/** A choice's glyph colour, for a sheet whose choices are actions (the reader's More); `ink2` without one. */
+export type SheetTone = 'ink3' | 'accent' | 'alert' | 'good' | 'violet' | 'sun';
+
 /** One of a bottom sheet's choices: its glyph, its words and what it says on the right (a time). Choosing it closes the sheet. */
-export function SheetChoice({icon, label, detail, onChoose}: {icon?: IconName; label: string; detail?: string; onChoose: () => void}) {
+export function SheetChoice({icon, tone, label, detail, onChoose}: {icon?: IconName; tone?: SheetTone; label: string; detail?: string; onChoose: () => void}) {
   const close = useContext(Close);
   return (
-    <button className="ph-bs-i" type="button" onClick={() => {
+    <button className={tone ? `ph-bs-i t-${tone}` : 'ph-bs-i'} type="button" onClick={() => {
       onChoose();
       close();
     }}>

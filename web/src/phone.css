@@ -237,6 +237,13 @@
     transition: background-color var(--dur-medium) var(--ease); }
   .ph-bs-i:active { background: var(--sub2); transition-duration: 0s; }
   .ph-bs-i .icon { color: var(--ink2); }
+  /* An action's glyph in its colour, as the swipe tray and the toasts have it (the reader's More). */
+  .ph-bs-i.t-ink3 .icon { color: var(--ink3); }
+  .ph-bs-i.t-accent .icon { color: var(--accent); }
+  .ph-bs-i.t-alert .icon { color: var(--alert); }
+  .ph-bs-i.t-good .icon { color: var(--good); }
+  .ph-bs-i.t-violet .icon { color: var(--violet); }
+  .ph-bs-i.t-sun .icon { color: var(--sunGlyph); }
   .ph-bs-detail { margin-left: auto; color: var(--ink3); font-size: 13px; white-space: nowrap; }
 
   /* The title menu: the title and its `expand_more`, then the shared menu under it at the phone's

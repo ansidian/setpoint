@@ -2,20 +2,22 @@
 // More. More opens a bottom sheet of the rest, one row each: Reply all (when the email has others to
 // reply to), Forward, Snooze (received mail not snoozed) or Snoozed with its return (a snoozed email,
 // whose sheet changes the time or ends it), Add to calendar, Add as task, Trash (when
-// Done leads), Mark read or Mark unread (not on sent mail), and Open in Gmail (Gmail's mail). A row
-// is an entry in `moreRows`'s list, so another action is one more entry there. Snooze's row opens
-// Snooze's own sheet (SnoozeSheet.tsx) as More's closes.
+// Done leads), and Mark read or Mark unread (not on sent mail). Open in Gmail stays on the desktop:
+// on the phone it would leave Setpoint for Gmail's site. A row is an entry in `moreRows`'s list, so
+// another action is one more entry there, its glyph in its action's colour as the swipe tray and the
+// toasts have it (Snooze `violet`, Trash `alert`, read state `accent`), the rest `ink3`. Snooze's row
+// opens Snooze's own sheet (SnoozeSheet.tsx) as More's closes.
 import {useState} from 'react';
 import {Icon} from '../../ui/Icon.tsx';
 import type {IconName} from '../../ui/glyphs.ts';
 import {BottomSheet, SheetChoice} from './BottomSheet.tsx';
+import type {SheetTone} from './BottomSheet.tsx';
 import {SnoozeSheet} from './SnoozeSheet.tsx';
 
 /** What the email offers, as the reader knows it. */
 export interface ReaderBarEmail {
   doneable: boolean;
   replyAll: boolean;
-  gmail: boolean;
   // Marked unread here: More offers Mark read.
   markedUnread: boolean;
   // Sent mail: no read state to change.
@@ -33,7 +35,6 @@ export interface ReaderBarActions {
   replyAll: () => void;
   forward: () => void;
   toggleRead: () => void;
-  openInGmail: () => void;
   // Snooze until a moment (ms), or a snoozed email's new moment.
   snooze: (until: number) => void;
   // Ends a snoozed email's snooze.
@@ -45,6 +46,7 @@ export interface ReaderBarActions {
 
 export interface MoreRow {
   icon: IconName;
+  tone: SheetTone;
   label: string;
   detail?: string;
   run: () => void;
@@ -53,15 +55,16 @@ export interface MoreRow {
 /** More's rows, in their order, for this email. Snooze's row runs `openSnooze`, which puts its sheet up. */
 export function moreRows(email: ReaderBarEmail, on: ReaderBarActions, openSnooze: () => void): MoreRow[] {
   const rows: (MoreRow | false)[] = [
-    email.replyAll && {icon: 'reply_all', label: 'Reply all', run: on.replyAll},
-    {icon: 'forward', label: 'Forward', run: on.forward},
-    email.snoozeable && {icon: 'snooze', label: 'Snooze', run: openSnooze},
-    !!email.snoozed && {icon: 'snooze', label: 'Snoozed', detail: email.snoozed!.when, run: openSnooze},
-    {icon: 'event', label: 'Add to calendar', run: on.addEvent},
-    {icon: 'task_alt', label: 'Add as task', run: on.addTask},
-    email.doneable && {icon: 'delete', label: 'Trash', run: on.trash},
-    !email.sent && (email.markedUnread ? {icon: 'mark_email_read', label: 'Mark read', run: on.toggleRead} : {icon: 'mark_email_unread', label: 'Mark unread', run: on.toggleRead}),
-    email.gmail && {icon: 'open_in_new', label: 'Open in Gmail', run: on.openInGmail},
+    email.replyAll && {icon: 'reply_all', tone: 'ink3', label: 'Reply all', run: on.replyAll},
+    {icon: 'forward', tone: 'ink3', label: 'Forward', run: on.forward},
+    email.snoozeable && {icon: 'snooze', tone: 'violet', label: 'Snooze', run: openSnooze},
+    !!email.snoozed && {icon: 'snooze', tone: 'violet', label: 'Snoozed', detail: email.snoozed!.when, run: openSnooze},
+    {icon: 'event', tone: 'ink3', label: 'Add to calendar', run: on.addEvent},
+    {icon: 'task_alt', tone: 'ink3', label: 'Add as task', run: on.addTask},
+    email.doneable && {icon: 'delete', tone: 'alert', label: 'Trash', run: on.trash},
+    !email.sent && (email.markedUnread
+      ? {icon: 'mark_email_read', tone: 'accent', label: 'Mark read', run: on.toggleRead}
+      : {icon: 'mark_email_unread', tone: 'accent', label: 'Mark unread', run: on.toggleRead}),
   ];
   return rows.filter(row => row !== false);
 }
@@ -79,7 +82,7 @@ export function ReaderBar({email, on}: {email: ReaderBarEmail; on: ReaderBarActi
       <button type="button" aria-haspopup="dialog" aria-expanded={more} onClick={() => setMore(true)}><Icon name="more_horiz" size={22} />More</button>
       {more && (
         <BottomSheet title="More" onClose={() => setMore(false)}>
-          {moreRows(email, on, () => setSnoozing(true)).map(row => <SheetChoice key={row.label} icon={row.icon} label={row.label} detail={row.detail} onChoose={row.run} />)}
+          {moreRows(email, on, () => setSnoozing(true)).map(row => <SheetChoice key={row.label} icon={row.icon} tone={row.tone} label={row.label} detail={row.detail} onChoose={row.run} />)}
         </BottomSheet>
       )}
       {snoozing && <SnoozeSheet onPick={on.snooze} snoozed={email.snoozed ? {until: email.snoozed.until, onUnsnooze: on.unsnooze} : undefined} onClose={() => setSnoozing(false)} />}

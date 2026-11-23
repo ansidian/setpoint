@@ -284,15 +284,14 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} />
       </Swap>
       {!phone && <ComposerSlot open={composer} messageId={id} />}
-      {/* The actions share the bar evenly, drawn once the email's row or the email and its account
-          are known, so none moves in or along when the email arrives. Until then the bar stays
-          empty. Done leads, the phone's main job on Attention mail (phone/ReaderBar.tsx). */}
+      {/* The actions share the bar evenly, drawn once the email's row is known, so none moves in or
+          along when the email arrives. Until then the bar stays empty. Done leads, the phone's main job on Attention mail (phone/ReaderBar.tsx). */}
       {phone && (
         <div className="ph-acts">
-          {listed && gmail !== null && (
-            <ReaderBar email={{doneable: !!doneable, replyAll, gmail, markedUnread, sent: sentMail, snoozeable: snoozes,
+          {listed && (
+            <ReaderBar email={{doneable: !!doneable, replyAll, markedUnread, sent: sentMail, snoozeable: snoozes,
               snoozed: phoneSnoozed ? {until: snoozedUntil!, when: snoozeWhen(snoozedUntil!, now, timeZone)} : null}} on={{
-              done: actions.done, trash: actions.trash, toggleRead, openInGmail: actions.openInGmail, snooze: until => actions.snooze?.(until), unsnooze: () => actions.unsnooze?.(),
+              done: actions.done, trash: actions.trash, toggleRead, snooze: until => actions.snooze?.(until), unsnooze: () => actions.unsnooze?.(),
               addEvent: () => openEditorSheet({kind: 'event', date: localDate(now, timeZone), message: id}),
               addTask: () => openEditorSheet({kind: 'task', date: localDate(now, timeZone), message: id}),
               reply: () => startComposer({kind: 'reply', message_id: id}),

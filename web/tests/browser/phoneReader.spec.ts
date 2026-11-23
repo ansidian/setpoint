@@ -117,15 +117,15 @@ test('the reader\'s Copy on an email marked unread reads it again, and offers Ma
   }
 });
 
-test('the reader\'s actions follow the email: Attention mail has Done, other Gmail mail leads with Trash, and iCloud mail has no Open in Gmail', async () => {
+test('the reader\'s actions follow the email: Attention mail has Done, other mail leads with Trash, and Gmail\'s mail has no Open in Gmail on the phone', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
     const actions = () => page.locator('.ph-acts > button').allTextContents();
     const rows = () => page.locator('.ph-bs .ph-bs-i').allTextContents();
     for (const [row, subject, labels, moreLabels] of [
-      ['.list .row:has(b[data-tip^="Final exam schedule"])', 'Final exam schedule', 'Done,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Trash,Mark unread,Open in Gmail'],
-      ['.row:has-text("Woodgrove Bank")', 'Statement ready', 'Trash,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Mark unread,Open in Gmail'],
+      ['.list .row:has(b[data-tip^="Final exam schedule"])', 'Final exam schedule', 'Done,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Trash,Mark unread'],
+      ['.row:has-text("Woodgrove Bank")', 'Statement ready', 'Trash,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Mark unread'],
       ['.row:has-text("Proseware")', 'Bill is ready', 'Trash,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Mark unread'],
     ] as const) {
       await page.locator(row).first().tap();

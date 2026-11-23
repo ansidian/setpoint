@@ -228,7 +228,7 @@ test('phone search takes sent mail in: the user\'s reply reads To its recipient 
     await until('its bar', () => page.locator('.ph-acts > button').allTextContents(), shown => shown.join() === 'Trash,Reply,More');
     assert.equal(await page.locator('.ph-top button[aria-label="Pin"]').count(), 0);
     await page.locator('.ph-acts button', {hasText: 'More'}).tap();
-    assert.deepEqual(await page.locator('.ph-bs .ph-bs-i').allTextContents(), ['Forward', 'Add to calendar', 'Add as task', 'Open in Gmail']);
+    assert.deepEqual(await page.locator('.ph-bs .ph-bs-i').allTextContents(), ['Forward', 'Add to calendar', 'Add as task']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

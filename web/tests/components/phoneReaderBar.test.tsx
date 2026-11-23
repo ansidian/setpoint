@@ -1,10 +1,10 @@
 // The phone reader's bottom bar (app/phone/ReaderBar.tsx) at 390 × 844: Done or Trash, Reply and
-// More, and More's rows for each kind of email, as a table. A row runs its action and closes the
-// sheet. The reader's journeys through them are phoneReader.spec.ts's.
+// More, and More's rows for each kind of email, as a table, with each row's glyph and its colour.
+// Open in Gmail is never one of them. A row runs its action and closes the sheet. The reader's journeys through them are phoneReader.spec.ts's.
 import {beforeEach, expect, test, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
-import {ReaderBar} from '../../src/app/phone/ReaderBar.tsx';
+import {moreRows, ReaderBar} from '../../src/app/phone/ReaderBar.tsx';
 import type {ReaderBarActions, ReaderBarEmail} from '../../src/app/phone/ReaderBar.tsx';
 
 beforeEach(async () => {
@@ -12,10 +12,10 @@ beforeEach(async () => {
 });
 
 const actions = (): ReaderBarActions => ({
-  done: vi.fn(), trash: vi.fn(), reply: vi.fn(), replyAll: vi.fn(), forward: vi.fn(), toggleRead: vi.fn(), openInGmail: vi.fn(), snooze: vi.fn(), unsnooze: vi.fn(), addEvent: vi.fn(), addTask: vi.fn(),
+  done: vi.fn(), trash: vi.fn(), reply: vi.fn(), replyAll: vi.fn(), forward: vi.fn(), toggleRead: vi.fn(), snooze: vi.fn(), unsnooze: vi.fn(), addEvent: vi.fn(), addTask: vi.fn(),
 });
 
-const PLAIN: ReaderBarEmail = {doneable: false, replyAll: false, gmail: false, markedUnread: false, sent: false, snoozeable: true, snoozed: null};
+const PLAIN: ReaderBarEmail = {doneable: false, replyAll: false, markedUnread: false, sent: false, snoozeable: true, snoozed: null};
 // A snoozed email where the page changes or ends its snooze (Snoozed, the Inbox's search).
 const SNOOZED = {until: '2026-10-09T16:00:00.000Z', when: 'Fri 9:00 AM'};
 const MAKE = ['Add to calendar', 'Add as task'];
@@ -36,13 +36,12 @@ test.each([
 });
 
 test.each([
-  ['Gmail mail with others to reply to, Done leading', {...PLAIN, doneable: true, replyAll: true, gmail: true}, ['Reply all', 'Forward', 'Snooze', ...MAKE, 'Trash', 'Mark unread', 'Open in Gmail']],
-  ['Gmail mail to the user alone', {...PLAIN, gmail: true}, ['Forward', 'Snooze', ...MAKE, 'Mark unread', 'Open in Gmail']],
-  ['iCloud mail marked unread here', {...PLAIN, markedUnread: true}, ['Forward', 'Snooze', ...MAKE, 'Mark read']],
-  ['iCloud mail with others, Trash leading', {...PLAIN, replyAll: true}, ['Reply all', 'Forward', 'Snooze', ...MAKE, 'Mark unread']],
+  ['mail with others to reply to, Done leading', {...PLAIN, doneable: true, replyAll: true}, ['Reply all', 'Forward', 'Snooze', ...MAKE, 'Trash', 'Mark unread']],
+  ['mail to the user alone', PLAIN, ['Forward', 'Snooze', ...MAKE, 'Mark unread']],
+  ['mail marked unread here', {...PLAIN, markedUnread: true}, ['Forward', 'Snooze', ...MAKE, 'Mark read']],
   ['an email already snoozed: Snoozed with its return', {...PLAIN, snoozeable: false, snoozed: SNOOZED}, ['Forward', 'SnoozedFri 9:00 AM', ...MAKE, 'Mark unread']],
   ['an email already snoozed where the page can\'t change it', {...PLAIN, snoozeable: false}, ['Forward', ...MAKE, 'Mark unread']],
-  ['sent mail: no Snooze and no read state', {...PLAIN, sent: true, snoozeable: false, gmail: true}, ['Forward', ...MAKE, 'Open in Gmail']],
+  ['sent mail: no Snooze and no read state', {...PLAIN, sent: true, snoozeable: false}, ['Forward', ...MAKE]],
 ])('More\'s rows: %s', async (_, email, rows) => {
   await draw(email);
   await page.getByRole('button', {name: 'More'}).click();
@@ -50,12 +49,34 @@ test.each([
   expect(labels('.ph-bs .ph-bs-i')).toEqual(rows);
 });
 
+// Each row's glyph and its colour: the swipe tray's and the toasts' for the same action, the rest ink3.
+test.each([
+  ['Reply all', 'reply_all', 'ink3'],
+  ['Forward', 'forward', 'ink3'],
+  ['Snooze', 'snooze', 'violet'],
+  ['Add to calendar', 'event', 'ink3'],
+  ['Add as task', 'task_alt', 'ink3'],
+  ['Trash', 'delete', 'alert'],
+  ['Mark unread', 'mark_email_unread', 'accent'],
+])('More\'s %s: %s in %s', (label, icon, tone) => {
+  const row = moreRows({...PLAIN, doneable: true, replyAll: true}, actions(), () => {}).find(one => one.label === label);
+  expect(row && [row.icon, row.tone]).toEqual([icon, tone]);
+});
+
+test.each([
+  ['Snoozed', {...PLAIN, snoozeable: false, snoozed: SNOOZED}, 'snooze', 'violet'],
+  ['Mark read', {...PLAIN, markedUnread: true}, 'mark_email_read', 'accent'],
+])('More\'s %s: its glyph and colour', (label, email, icon, tone) => {
+  const row = moreRows(email, actions(), () => {}).find(one => one.label === label);
+  expect(row && [row.icon, row.tone]).toEqual([icon, tone]);
+});
+
 test('Reply in the bar, and a row of More, each run their action; the row closes the sheet', async () => {
-  const on = await draw({...PLAIN, doneable: true, replyAll: true, gmail: true});
+  const on = await draw({...PLAIN, doneable: true, replyAll: true});
   await page.getByRole('button', {name: 'Reply', exact: true}).click();
   expect(on.reply).toHaveBeenCalledOnce();
 
-  for (const [label, action] of [['Reply all', 'replyAll'], ['Forward', 'forward'], ['Add to calendar', 'addEvent'], ['Add as task', 'addTask'], ['Trash', 'trash'], ['Mark unread', 'toggleRead'], ['Open in Gmail', 'openInGmail']] as const) {
+  for (const [label, action] of [['Reply all', 'replyAll'], ['Forward', 'forward'], ['Add to calendar', 'addEvent'], ['Add as task', 'addTask'], ['Trash', 'trash'], ['Mark unread', 'toggleRead']] as const) {
     await page.getByRole('button', {name: 'More'}).click();
     const sheet = page.getByRole('dialog', {name: 'More'});
     await sheet.getByRole('button', {name: label}).click();
