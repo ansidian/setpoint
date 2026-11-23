@@ -2,13 +2,10 @@
 // test all go through notify(), which logs each one and delivers it by ntfy. Nothing else knows
 // about ntfy (the lint enforces it). Topics come from Settings › Notifications
 // (`setpoint-reminders`, `setpoint-mail`). Each notification's click opens the exact email, item or
-// Settings page. While an iPhone is paired, an email or item opens in the iPhone app.
-// The link is chosen as each notification is sent, so a retry follows a pairing or a Revoke since.
-// ntfy is one delivery. APNs could later be a second beside it, given the same Notification.
-import {appLink, deepLinkPath} from '@setpoint/shared';
+// Settings page on the web.
+import {deepLinkPath} from '@setpoint/shared';
 import type {DeepLink, Lane, NotificationKind, NotificationOut, NotifyStatusOut, NotifyTopic} from '@setpoint/shared';
 import {desc, eq} from 'drizzle-orm';
-import {hasPairedDevice} from '../auth/devices.ts';
 import * as t from '../db/schema.ts';
 import {readSecret} from '../secrets/store.ts';
 import {getSettings} from '../settings.ts';
@@ -29,7 +26,7 @@ export interface Notification {
 }
 
 export interface NotifierOptions {
-  // Setpoint's own origin, for web click links. Without it, only the app's links go.
+  // Setpoint's own origin, for click links. Without it, a notification has none.
   publicUrl: string | null;
   // The network. Tests pass a fake ntfy's.
   fetch?: typeof fetch;
@@ -93,11 +90,9 @@ export class Notifier {
     return present(row!);
   }
 
-  /** The app's link while an iPhone is paired, else the web's on the public URL. None without either. */
+  /** The web's link on the public URL, or none without one. */
   private click(link: DeepLink | undefined): string | null {
     if (!link) return null;
-    const app = hasPairedDevice(this.store) ? appLink(link) : null;
-    if (app) return app;
     return this.options.publicUrl ? new URL(deepLinkPath(link), this.options.publicUrl).href : null;
   }
 
