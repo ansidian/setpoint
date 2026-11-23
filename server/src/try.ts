@@ -17,9 +17,15 @@
 //   npm run try -- --reset          seeds data/dev afresh
 //   npm run try -- --build          the built web app, no hot reload
 //   npm run try -- --build --no-build   the last build, as it is
+//   npm run try -- --lan            also on this Mac's LAN address, for a phone on the same network
 //   SETPOINT_PORT=7451 npm run try
 //   npm run try                     (in a worktree) this worktree's web app on setpoint-dev's data
 //   npm run try -- --own [--reset] [--build]   (in a worktree) its own Setpoint on a copy of data/dev
+//
+// With --lan, Vite listens on every interface, not only the loopback, and passes a change from its
+// own page at the LAN address on as from http://localhost:<port>, the server's own origin. Anyone on
+// the network can reach the page; the password still guards it. Passkeys need localhost or https,
+// so on the phone sign in with the password.
 //
 // Its data is the sample's, nothing real, apart from News. News is data/news-snapshot/'s real news
 // when the checkout has one (src/dev/newsSnapshot.ts). DEV_PASSWORD is a test value for this local
@@ -42,9 +48,9 @@ const WORKTREE_PORTS = 7460;
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SERVER = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
-const flags = ['--reset', '--build', '--no-build', '--own'];
+const flags = ['--reset', '--build', '--no-build', '--own', '--lan'];
 const unknown = args.filter(arg => !flags.includes(arg));
-if (unknown.length) fail(`Unknown argument: ${unknown.join(' ')}. Usage: npm run try [-- --reset] [--build [--no-build]] [--own, in a worktree]`, 2);
+if (unknown.length) fail(`Unknown argument: ${unknown.join(' ')}. Usage: npm run try [-- --reset] [--build [--no-build]] [--lan] [--own, in a worktree]`, 2);
 
 // A worktree's .git is a file naming the main checkout's.
 const worktree = fs.statSync(path.join(ROOT, '.git'), {throwIfNoEntry: false})?.isFile() ?? false;
@@ -89,6 +95,8 @@ A change to the server needs its own: npm run try -- --own.
 /** A whole Setpoint: setpoint-dev in the main checkout, or a worktree's own (--own) on a copy of its data. */
 async function runOwn() {
   const built = args.includes('--build');
+  const lan = args.includes('--lan');
+  if (lan && built) fail('--lan is for the hot-reloading Vite; leave out --build.', 2);
   const dataDir = own ? copyOfShared() : path.join(ROOT, 'data', 'dev');
   const port = process.env.SETPOINT_PORT ? Number(process.env.SETPOINT_PORT) : own ? await freePorts(WORKTREE_PORTS, 2) : SHARED_PORT;
   const base = `http://localhost:${port}`;
@@ -114,8 +122,9 @@ async function runOwn() {
 
   // Each in its own process group, so stopping one stops what npm started under it too.
   const server = spawn('npm', ['run', 'dev'], {cwd: SERVER, env, stdio: ['inherit', 'pipe', 'inherit'], detached: true});
-  const vite = built ? null : spawn('npx', ['vite', '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
-    {cwd: path.join(ROOT, 'web'), env: {...process.env, SETPOINT_PORT: String(apiPort)}, stdio: 'inherit', detached: true});
+  const lanEnv = lan ? {SETPOINT_PAGE_ORIGIN: base, SETPOINT_LAN: '1'} : {};
+  const vite = built ? null : spawn('npx', ['vite', '--host', lan ? '0.0.0.0' : '127.0.0.1', '--port', String(port), '--strictPort'],
+    {cwd: path.join(ROOT, 'web'), env: {...process.env, SETPOINT_PORT: String(apiPort), ...lanEnv}, stdio: 'inherit', detached: true});
   supervise([server, vite]);
 
   let ready = false;
@@ -131,9 +140,16 @@ async function runOwn() {
     const where = own ? `a copy of setpoint-dev's data in ${dataDir}, removed when this stops` : path.relative(ROOT, dataDir);
     console.log(`
 Setpoint is at ${base}${built ? '' : ', hot reloading (its API on :' + apiPort + ')'}, with the sample's data (its clock is the seed's, ${where}).
-Sign in with the password "${DEV_PASSWORD}". From a page's console (an agent's browser pane):
+${lan ? lanLine() : ''}Sign in with the password "${DEV_PASSWORD}". From a page's console (an agent's browser pane):
   await fetch('/api/auth/sign-in', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: '${DEV_PASSWORD}'})}); location.reload();
 ${pairingLink()}`);
+  }
+
+  /** Where a phone on the same network opens it. */
+  function lanLine(): string {
+    const addresses = Object.values(os.networkInterfaces()).flat()
+      .filter(one => one && one.family === 'IPv4' && !one.internal).map(one => `http://${one!.address}:${port}`);
+    return addresses.length ? `On the network: ${addresses.join(', ')} (sign in with the password).\n` : 'No LAN address found.\n';
   }
 
   /** A one-time link pairing the iPhone app (in the Simulator, which reaches this Mac's localhost). */
