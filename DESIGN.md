@@ -267,8 +267,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   Ask about this email in the reader and ⌘K, and help me write in the composer. Nothing else about the AI takes a hue.
 - **Favicon:** `favicon.svg` (the mark on a 32 px `card` tile, radius 7, with an `edgeOn`
   border, in Night's colours), 16 and 32 px PNGs (the 16 px one redrawn on its pixel grid: the middle
-  chip level, set apart by the wider gap above it) and a 180 px square `apple-touch-icon`; no web
-  manifest.
+  chip level, set apart by the wider gap above it) and a 180 px square `apple-touch-icon`, which the web
+  manifest also names, so Add to Home Screen opens Setpoint standalone.
 
 ## Interaction rules
 

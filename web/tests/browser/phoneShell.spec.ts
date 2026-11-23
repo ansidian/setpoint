@@ -2,7 +2,7 @@
 // Northwind, the reader on it, the agenda), the one column and its tab bar, and every kind of deep
 // link an ntfy notification carries (`deepLinkPath`): an email, an event, one occurrence of a
 // recurring event, a task's day, and a Settings page. Sign-in's fields are 16 px, so iOS doesn't
-// zoom into them.
+// zoom into them. News's tab says it's on the desktop, and the web manifest opens Setpoint standalone.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
@@ -171,6 +171,28 @@ test('the tab bar: Inbox is badged with Attention\'s count on another page, foll
     await until('the agenda starts on the day', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 20 – 27');
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
     await until('today\'s agenda', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 7 – 14');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the News tab says News is on the desktop, and the web manifest opens the Inbox standalone with the home screen icon', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    await page.locator('.ph-tab', {hasText: 'News'}).tap();
+    await page.locator('.ph-news', {hasText: 'News is on the desktop'}).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/news');
+    assert.equal(await page.locator('.ph-tab.on').textContent(), 'News');
+    // A missing file would be the app's page: the manifest is read as one, and so is its icon.
+    const href = await page.locator('link[rel="manifest"]').getAttribute('href');
+    const manifest = await page.request.get(`${setpoint.base}${href}`);
+    assert.equal(manifest.headers()['content-type'], 'application/manifest+json');
+    const {display, start_url: start, icons} = await manifest.json() as {display: string; start_url: string; icons: {src: string; sizes: string}[]};
+    assert.deepEqual([display, start, icons.map(icon => icon.sizes)], ['standalone', '/inbox', ['180x180']]);
+    const icon = await page.request.get(`${setpoint.base}${icons[0]!.src}`);
+    assert.equal(icon.headers()['content-type'], 'image/png');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
