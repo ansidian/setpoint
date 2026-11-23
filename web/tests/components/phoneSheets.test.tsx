@@ -131,6 +131,26 @@ test('the full-screen sheet follows the part of the screen the user sees: the ke
   expect(sheet.hasAttribute('data-keyboard')).toBe(false);
 });
 
+test('with the keyboard up, the page under the full-screen sheet stays covered: its ground spans the whole screen, wherever Safari has slid the part the user sees', async () => {
+  const show = fakeViewport();
+  await render(
+    <>
+      <p style={{position: 'fixed', inset: 0}}>The email under it</p>
+      <Opener>{close => <Sheet title="New event" onClose={close}><input aria-label="Title" /></Sheet>}</Opener>
+    </>,
+  );
+  await opener.click();
+  const sheet = page.getByRole('dialog', {name: 'New event'}).element() as HTMLElement;
+  // The keyboard up, Safari has slid the page 120 px: the sheet takes the 420 px the user sees.
+  show(120, 420);
+  expect(box(sheet)).toEqual([120, 420]);
+  const covered = (x: number, y: number) => sheet.contains(document.elementFromPoint(x, y));
+  // Above it, below it (under Safari's form bar and the keys) and in it: the sheet's, never the email's.
+  expect([[195, 10], [195, 100], [195, 300], [195, 560], [195, 700], [5, 843], [389, 843]].map(([x, y]) => covered(x!, y!))).toEqual(Array(7).fill(true));
+  // It adds nothing to scroll.
+  expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(844);
+});
+
 async function openBottomSheet() {
   const chosen: string[] = [];
   await render(

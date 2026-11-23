@@ -25,7 +25,8 @@ const LINE = 48;
  * sheet's bar off the top and leaves its foot (the format row) under the keys. So the sheet takes
  * the visual viewport's top and height as they change; inside it its own scroller moves instead.
  * With the keyboard up the home indicator's inset goes too (`data-keyboard`), so nothing gaps above
- * the keys. The caret, put out of sight by the sheet shrinking, is brought back into it.
+ * the keys. The caret, put out of sight by the sheet shrinking, is brought back into it. Its ground
+ * covers the rest of the screen.
  */
 function followViewport(element: HTMLElement, viewport: VisualViewport) {
   const follow = () => {
@@ -98,6 +99,11 @@ export function Sheet({title, onClose, back, action, children}: {
   }, []);
   return createPortal(
     <div ref={sheet} className="ph-sheet" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
+      {/* The page's ground beyond the sheet, above and below it, past the whole screen: what Safari
+          shows around the part the user sees (under its form bar and the keys, or while the page
+          and the sheet move out of step) is the sheet's, never the page under it. It rides the
+          sheet's slide in. */}
+      <div className="ph-sheet-ground" aria-hidden="true" />
       <header className="ph-sheet-top">
         {back === undefined
           ? <button className="btn quiet ph-sheet-lead" type="button" onClick={onClose}>Cancel</button>

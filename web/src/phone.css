@@ -216,8 +216,9 @@
   .ph-sheet { position: fixed; left: 0; right: 0; top: var(--sheet-top, 0); height: var(--sheet-height, 100%); z-index: 30; display: flex; flex-direction: column; background: var(--page); padding-top: env(safe-area-inset-top); outline: none;
     animation: ph-sheet-in var(--dur-slow) var(--ease); }
   @keyframes ph-sheet-in { from { transform: translateY(100%); } }
-  /* Above it, as far as Safari has slid the page, the page's own ground: Safari tints the status bar from what's there. */
-  .ph-sheet::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: var(--sheet-top, 0); background: var(--page); pointer-events: none; }
+  /* Around it, a screen's height above and below, the page's own ground: the page under it never
+     shows, and Safari tints the status bar from what's there. Behind the sheet's own parts. */
+  .ph-sheet-ground { position: absolute; left: 0; right: 0; top: -100lvh; bottom: -100lvh; z-index: -1; background: var(--page); }
   /* Its top bar: Cancel or Back at the start, the title in the middle, the action at the end. */
   .ph-sheet-top { height: 48px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 6px; border-bottom: 1px solid var(--hair); }
   .ph-sheet-top > .ph-sheet-lead { justify-self: start; height: 40px; color: var(--ink); font-size: 15px; font-weight: 400; }
