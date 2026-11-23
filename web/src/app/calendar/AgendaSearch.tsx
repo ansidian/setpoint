@@ -1,4 +1,4 @@
-// The phone Agenda's search results (D792), in the agenda list's place while the header's field
+// The phone Agenda's search results, in the agenda list's place while the header's field
 // holds words: the results line, then Upcoming and Past, each row its day, its calendar's chip or
 // its ring, its title with the matches marked, and under it the desktop's line and why it matched.
 // 50 at a time with Show more, and the no-results line. Plain words only: no chips or marks. The

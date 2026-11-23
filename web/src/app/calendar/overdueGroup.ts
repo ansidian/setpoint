@@ -1,4 +1,4 @@
-// The phone's Overdue group (D791's, in the desktop banner's place): the open Todoist tasks overdue
+// The phone's Overdue group (in the desktop banner's place): the open Todoist tasks overdue
 // over the banner's 30 days, the most recently due first, without those a snooze holds off. The
 // Agenda shows them at the top of today and its tab counts them. A snooze is the banner's: 1 hour, 3
 // hours or Tomorrow, kept in this browser (overdueSnoozed.ts) until it ends or the task moves on.

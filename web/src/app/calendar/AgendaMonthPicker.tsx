@@ -1,4 +1,4 @@
-// The phone Agenda's month picker (D790): the header's month opens it in the bottom sheet, on the
+// The phone Agenda's month picker: the header's month opens it in the bottom sheet, on the
 // month of the day in view, that day marked and today in `alert`. ‹ › step the months, as a swipe
 // left or right does (logic/monthSwipe.ts); a day jumps the agenda to it and Today goes back to
 // today; either closes the sheet.

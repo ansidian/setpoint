@@ -1,10 +1,10 @@
 // Calendar on the phone (board 21): the agenda, empty days collapsed (logic/phone.ts). It opens on
 // today with the past week above it, and loads on a week at a time as it nears the end, until four
-// empty weeks in a row leave a Show later row (D790). The header's month, the day in view's, opens
+// empty weeks in a row leave a Show later row. The header's month, the day in view's, opens
 // the month picker, which jumps to any day; older days than the week before are the picker's.
-// Overdue tasks lead today as its Overdue group, each with how long it's overdue (D791), and the
+// Overdue tasks lead today as its Overdue group, each with how long it's overdue, and the
 // detail of one snoozes it in the bottom sheet, as does swiping its line left (phone/swipe.tsx). The header's search button opens a plain field
-// whose results take the list's place (D792); its clear button leaves search.
+// whose results take the list's place; its clear button leaves search.
 // The routes are Calendar's: /calendar/item/3?at=… opens that item's detail over the agenda.
 // /calendar/2026-10-07 brings that day to the top (or starts the agenda there when it's outside
 // what's loaded). + in the header opens the editor sheet (phone/EditorSheet.tsx) on a new event on
