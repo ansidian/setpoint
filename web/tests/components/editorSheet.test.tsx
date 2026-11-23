@@ -80,7 +80,7 @@ test('a new event: Cancel, its title and Create, which waits for a title and sen
   // The desktop's head and footer give way to the top bar: no close button, no footer Create.
   expect(document.querySelector('.ph-sheet [aria-label="Close editor"], .ph-sheet .ed-foot')).toBeNull();
   await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch with Ana 12-1pm');
-  await expect.element(page.getByLabelText('Start', {exact: true})).toHaveValue('12:00 PM');
+  await expect.element(page.getByLabelText('Start', {exact: true})).toHaveValue('12:00');
   await userEvent.click(create);
   await expect.element(sheet('New event')).not.toBeInTheDocument();
   await expect.poll(() => sent.map(one => one.at)).toEqual(['POST /api/items']);
@@ -149,28 +149,122 @@ test('a repeating event\'s Save asks which of its events, the top bar\'s action 
   expect(sent[0]!.body).toMatchObject({changes: {title: 'Gym class'}, scope: 'all'});
 });
 
-test('its fields are at least 16 px, so iOS doesn\'t zoom in on one, and the date picker fits the screen', async () => {
-  server();
-  await render(<PhoneSheets />);
-  openEditorSheet({kind: 'event', date: '2026-10-09'});
-  await expect.element(sheet('New event')).toBeVisible();
-  for (const field of document.querySelectorAll<HTMLElement>('.ph-editor input, .ph-editor textarea, .ph-editor [contenteditable="true"]')) {
+/** Each day and time field shows its whole value, at 16 px or more, as do the rest of the sheet's fields. */
+function fieldsFit() {
+  for (const field of document.querySelectorAll<HTMLElement>('.ph-editor input, .ph-editor textarea, .ph-editor [contenteditable="true"], .ph-editor .native-pick .shown')) {
     expect(parseFloat(getComputedStyle(field).fontSize), field.getAttribute('aria-label') ?? field.className).toBeGreaterThanOrEqual(16);
   }
-  // The date and both times each show their whole value.
-  for (const label of ['Date', 'Start', 'End']) {
-    const input = page.getByLabelText(label, {exact: true}).element() as HTMLInputElement;
-    expect(input.scrollWidth, label).toBeLessThanOrEqual(input.clientWidth);
-  }
-  await userEvent.click(page.getByLabelText('Date', {exact: true}));
-  const picker = document.querySelector('.ph-editor .datepop');
-  expect(picker).not.toBeNull();
-  const box = picker!.getBoundingClientRect();
-  expect(box.left).toBeGreaterThanOrEqual(0);
-  expect(box.right).toBeLessThanOrEqual(375);
+  const shown = [...document.querySelectorAll<HTMLElement>('.ph-editor .native-pick .shown')];
+  expect(shown.length).toBeGreaterThan(0);
+  for (const value of shown) expect(value.scrollWidth, value.textContent!).toBeLessThanOrEqual(value.clientWidth);
+}
+
+test('its fields are at least 16 px, so iOS doesn\'t zoom in on one, and a day and its times show whole: an event\'s, a task\'s with its time and ×, a custom reminder\'s', async () => {
+  server();
+  await render(<PhoneSheets />);
+  // The widest days and times there are: a Wednesday the 30th, a quarter to eleven.
+  openEditorSheet({kind: 'event', date: '2026-09-30'});
+  await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch 10:45am-12:45pm');
+  await expect.element(page.getByLabelText('End', {exact: true})).toHaveValue('12:45');
+  fieldsFit();
+  closeEditorSheet();
+  openEditorSheet({kind: 'task', date: '2026-09-30'});
+  await expect.element(sheet('New task')).toBeVisible();
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Add a time'}));
+  await userEvent.fill(page.getByLabelText('Time', {exact: true}), '10:45');
+  await expect.element(sheet('New task').getByRole('button', {name: 'Remove due date'})).toBeVisible();
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Add reminder', exact: true}));
+  await userEvent.click(page.getByRole('menuitem', {name: /Custom/}));
+  await expect.element(page.getByLabelText('Reminder date')).toHaveValue('2026-09-30');
+  fieldsFit();
 });
 
-test('every picker and menu in the sheet fits the screen: the times, the calendar, the repeat, a reminder\'s, a task\'s project and labels', async () => {
+test('the day and times are iOS\'s own pickers, and a pick changes the draft: the start moves the event, the end ends it, an earlier end runs past midnight', async () => {
+  const sent = server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch with Ana 12-1pm');
+  expect(['Date', 'Start', 'End date', 'End'].map(label => (page.getByLabelText(label, {exact: true}).element() as HTMLInputElement).type)).toEqual(['date', 'time', 'date', 'time']);
+  await userEvent.fill(page.getByLabelText('Date', {exact: true}), '2026-10-12');
+  await expect.element(page.getByLabelText('End date', {exact: true})).toHaveValue('2026-10-12');
+  await userEvent.fill(page.getByLabelText('Start', {exact: true}), '13:30');
+  // The end keeps the hour.
+  await expect.element(page.getByLabelText('End', {exact: true})).toHaveValue('14:30');
+  await userEvent.fill(page.getByLabelText('End', {exact: true}), '15:00');
+  expect([...document.querySelectorAll('.ph-editor .native-pick .shown')].map(one => one.textContent)).toEqual(['Mon, Oct 12', '1:30 PM', 'Mon, Oct 12', '3:00 PM']);
+  // Neither the typed fields' month nor their list of times.
+  expect(document.querySelector('.ph-editor .datepop, .ph-editor .timelist')).toBeNull();
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Create'}));
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]!.body).toMatchObject({title: 'Lunch with Ana', all_day: false, starts_at: '2026-10-12T20:30:00.000Z', ends_at: '2026-10-12T22:00:00.000Z'});
+
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the event'), 'Late show 11pm');
+  await userEvent.fill(page.getByLabelText('End', {exact: true}), '01:00');
+  await expect.element(page.getByLabelText('End date', {exact: true})).toHaveValue('2026-10-10');
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Create'}));
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]!.body).toMatchObject({title: 'Late show', starts_at: '2026-10-10T06:00:00.000Z', ends_at: '2026-10-10T08:00:00.000Z'});
+});
+
+test('an all-day event\'s Starts and Ends are its first and last days', async () => {
+  const sent = server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the event'), 'Trip');
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'All day', exact: true}));
+  await expect.element(page.getByLabelText('Start', {exact: true})).not.toBeInTheDocument();
+  await userEvent.fill(page.getByLabelText('End date', {exact: true}), '2026-10-11');
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Create'}));
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]!.body).toMatchObject({title: 'Trip', all_day: true, start_date: '2026-10-09', end_date: '2026-10-12'});
+});
+
+test('a task\'s due day and time are iOS\'s pickers too, and its × leaves it with no date', async () => {
+  const sent = server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'task', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the task'), 'Pay rent');
+  await userEvent.fill(page.getByLabelText('Due date', {exact: true}), '2026-10-14');
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Add a time'}));
+  await userEvent.fill(page.getByLabelText('Time', {exact: true}), '08:15');
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Create'}));
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]!.body).toMatchObject({kind: 'task', title: 'Pay rent', due_date: '2026-10-14', due_at: '2026-10-14T15:15:00.000Z'});
+
+  openEditorSheet({kind: 'task', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the task'), 'Someday');
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Remove due date'}));
+  await expect.element(page.getByLabelText('Due date', {exact: true})).toHaveValue('');
+  expect(document.querySelector('.ph-editor .pick-date .shown')!.textContent).toBe('No date');
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Create'}));
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]!.body).toMatchObject({title: 'Someday', due_date: null, due_at: null});
+});
+
+test('a new task\'s custom reminder is picked with iOS\'s pickers: its day and time, then Add', async () => {
+  const sent = server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'task', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the task'), 'Pay rent 5pm');
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Add reminder', exact: true}));
+  await userEvent.click(page.getByRole('menuitem', {name: /Custom/}));
+  const day = page.getByLabelText('Reminder date', {exact: true});
+  const time = page.getByLabelText('Reminder time', {exact: true});
+  // Opened, it waits for a tap rather than popping a picker up.
+  expect(document.activeElement).not.toBe(day.element());
+  expect([(day.element() as HTMLInputElement).type, (time.element() as HTMLInputElement).type]).toEqual(['date', 'time']);
+  await userEvent.fill(day, '2026-10-08');
+  await userEvent.fill(time, '20:00');
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Add', exact: true}));
+  await expect.element(sheet('New task').getByRole('group', {name: 'Custom reminder'})).not.toBeInTheDocument();
+  await userEvent.click(sheet('New task').getByRole('button', {name: 'Create'}));
+  await expect.poll(() => sent.length).toBe(1);
+  // 21 hours before 5 PM the next day.
+  expect((sent[0]!.body.reminders as number[])).toContain(21 * 60);
+});
+
+test('every menu in the sheet fits the screen: the calendar, the repeat, a reminder\'s, a task\'s project and labels', async () => {
   server();
   setCached('/todoist/projects', [{id: 'p1', name: 'Home', colour: 'berry_red', inbox: false, command: null}, {id: 'p2', name: 'Inbox', colour: 'grey', inbox: true, command: null}]);
   setCached('/todoist/labels', [{id: 'l1', name: 'errand', colour: 'grey'}]);
@@ -184,10 +278,6 @@ test('every picker and menu in the sheet fits the screen: the times, the calenda
   };
   openEditorSheet({kind: 'event', date: '2026-10-09'});
   await expect.element(sheet('New event')).toBeVisible();
-  for (const label of ['Start', 'End']) {
-    await userEvent.click(page.getByLabelText(label, {exact: true}));
-    await fits(label);
-  }
   for (const name of ['Calendar', 'Repeat', 'Add reminder']) {
     await userEvent.click(sheet('New event').getByRole('button', {name, exact: true}));
     await fits(name);

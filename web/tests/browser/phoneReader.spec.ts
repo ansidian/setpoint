@@ -297,7 +297,7 @@ test('an invitation\'s card offers Add to calendar: one event opens the editor s
     await sheet.waitFor();
     assert.match(new URL(page.url()).pathname, new RegExp(`^/inbox/${id}$`), 'the reader stays under it');
     assert.deepEqual([await page.getByLabel('Date', {exact: true}).inputValue(), await page.getByLabel('Start', {exact: true}).inputValue(), await page.getByLabel('End', {exact: true}).inputValue()],
-      ['Tue, Oct 20', '2:00 PM', '2:45 PM']);
+      ['2026-10-20', '14:00', '14:45']);
     await sheet.getByRole('button', {name: 'Create'}).tap();
     await sheet.waitFor({state: 'detached'});
     await page.locator('.toast', {hasText: /^Imported Interview with Trey Research/}).waitFor({timeout: 10_000});

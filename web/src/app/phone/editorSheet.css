@@ -1,6 +1,6 @@
 /* The editor and the .ics review in the phone's full-screen sheet (EditorSheet.tsx), and the
    Agenda's + and detail actions. Under phone.css's breakpoint, so the desktop never sees them.
-   Fields are 16 px, below which iOS zooms in on focus. Pickers and menus fit 375 px. */
+   Fields are 16 px, below which iOS zooms in on focus. Menus fit 375 px. */
 @media (max-width: 639px) {
   /* The editor fills the sheet: its fields scroll, and the scope prompt sits at the bottom. */
   .ph-sheet .ph-sheet-body:has(> .ph-editor, > .ph-import) { display: flex; flex-direction: column; overflow: hidden; }
@@ -13,15 +13,31 @@
   .ph-editor .field.big { height: 48px; }
   .ph-editor input, .ph-editor textarea, .ph-editor select, .ph-editor [contenteditable], .ph-editor .field,
   .ph-editor .nl-marks { font-size: 16px; }
-  /* At 16 px a day and two times don't fit one line: the day takes its own, the times the next. */
-  .ph-editor .prow:has(> .pick-time) { flex-wrap: wrap; row-gap: 8px; }
-  .ph-editor .prow:has(> .pick-time) > .pick-date { flex: 1 1 100%; }
-  .ph-editor .prow .pick-time { flex: 1 1 0; }
   .ph-editor .menu-i { min-height: 40px; font-size: 15px; }
+
+  /* The day and times are iOS's own pickers, in rows as its Calendar has them: Starts and Ends (a
+     task's Due), each a day and a time, lined up in columns. A field shows its value as the
+     desktop's do, and its native input, unseen, lies over the whole of it to take the tap. */
+  /* The clock beside the Starts row, as each glyph beside its field. */
+  .ph-editor .eg > .icon.g-when { align-self: start; margin-top: 11.5px; }
+  .ph-editor .ph-when { display: grid; grid-template-columns: auto minmax(0, 1fr) 96px 24px; align-items: center; gap: 8px 6px; }
+  .ph-editor .ph-when-label { grid-column: 1; min-width: 46px; display: flex; align-items: center; gap: 4px; color: var(--ink2); font-size: 15px; }
+  .ph-editor .ph-when > .ph-add-time { grid-column: span 2; justify-self: start; height: 40px; font-size: 15px; }
+  .ph-editor .ph-when.task { grid-template-columns: minmax(0, 1fr) 96px 24px auto; }
+  .ph-editor .ph-when.task > .pick-date:last-child { grid-column: span 3; }
+  .ph-editor .native-pick { min-width: 0; display: flex; }
+  .ph-editor .native-pick > .field { position: relative; flex: 1 1 auto; min-width: 0; }
+  .ph-editor .native-pick .shown { white-space: nowrap; overflow: hidden; }
+  .ph-editor .native-pick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; appearance: none; -webkit-appearance: none; font-size: 16px; }
+  .ph-editor .native-pick .clear { position: relative; z-index: 1; }
+
+  /* Custom…'s reminder: its day and time, then Add (or Done) and Cancel under them. */
+  .ph-editor .custom-reminder { display: grid; grid-template-columns: auto auto minmax(0, 1fr) 96px; align-items: center; gap: 8px 6px; }
+  .ph-editor .custom-reminder .pick-date { grid-column: 1 / 4; }
+  .ph-editor .custom-reminder .btn.sm { grid-row: 2; height: 40px; padding: 0 14px; font-size: 15px; }
 
   /* Menus and pickers stay inside the screen: never wider than it, and scrolling when long. */
   .ph-editor .pop.menu { max-width: calc(100vw - 32px); max-height: min(360px, 50dvh); overflow-y: auto; }
-  .ph-editor .menu-anchor > .pop.menu.datepop { width: min(296px, calc(100vw - 32px)); max-height: none; }
   .ph-editor .lr-pop { width: calc(100vw - 32px); }
   .ph-editor .scope-pop { margin: auto 12px max(12px, env(safe-area-inset-bottom)); }
   .ph-editor .ropt { min-height: 48px; }

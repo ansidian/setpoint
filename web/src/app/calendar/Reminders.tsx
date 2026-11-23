@@ -2,16 +2,18 @@
 // A preset's chip shows its words ("10 min before"). Any other shows the moment it goes off, with
 // the offset quiet beside it. Custom… opens a date and a time under the row. The moment picked is
 // kept as its offset from the item's moment, so it moves with the item. Past 4 weeks either side
-// it's refused, saying why. A custom chip reopens it at its moment. A task with no date has no
+// it's refused, saying why. A custom chip reopens it at its moment. On the phone the date and time are
+// iOS's own pickers. A task with no date has no
 // Custom…, and says reminders need one.
 import {useEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {dayTitle} from '../../logic/calendar.ts';
-import {parseClock, parseDay, timeChoices} from '../../logic/compose.ts';
+import {clockLabel, parseClock, parseDay, timeChoices} from '../../logic/compose.ts';
 import {localDate, instantAt, minutesOf} from '../../logic/format.ts';
+import {inputTime, readInputTime} from '../../logic/nativeWhen.ts';
 import {customProblem, inOrder, offsetAt, relativeLine, REMINDER_MAX, REMINDER_PRESETS, reminderMoment, reminderWords} from '../../logic/reminders.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {DateField, TimeField} from './Pickers.tsx';
+import {DateField, NativeField, TimeField} from './Pickers.tsx';
 
 export interface RemindersRowProps {
   reminders: number[];
@@ -30,6 +32,8 @@ export interface RemindersRowProps {
   // The glyph's class: the line's reminder tint when the line set some.
   glyph?: string;
   menuItems?: ReactNode;
+  // The phone's: Custom…'s day and time are iOS's own pickers (NativeField).
+  native?: boolean;
 }
 
 /** The moment being picked, and the reminder it replaces (null for a new one). */
@@ -39,7 +43,7 @@ interface Picking {
   minutes: number;
 }
 
-export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, menuOpen, menuRef, onMenu, onChange, chips, menuItems, glyph}: RemindersRowProps) {
+export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, menuOpen, menuRef, onMenu, onChange, chips, menuItems, glyph, native = false}: RemindersRowProps) {
   const [picking, setPicking] = useState<Picking | null>(null);
   const dateField = useRef<HTMLDivElement>(null);
   const addButton = useRef<HTMLButtonElement>(null);
@@ -53,11 +57,11 @@ export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, me
     const moment = reminderMoment(anchor, replaces ?? 0);
     setPicking({replaces, date: localDate(moment, timeZone), minutes: minutesOf(moment, timeZone)});
   };
-  // Opened, the date takes focus, so Esc and typing go to the picker.
+  // Opened, the date takes focus, so Esc and typing go to the picker. iOS's own pickers wait for a tap.
   const opened = picking !== null;
   useEffect(() => {
-    if (opened) dateField.current?.querySelector('input')?.focus();
-  }, [opened]);
+    if (opened && !native) dateField.current?.querySelector('input')?.focus();
+  }, [opened, native]);
 
   const offset = picking && anchor !== null ? offsetAt(anchor, Date.parse(instantAt(picking.date, picking.minutes, timeZone))) : null;
   const problem = offset === null ? null : customProblem(offset);
@@ -128,13 +132,23 @@ export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, me
           <span />
           <div className="prow custom-reminder" role="group" aria-label="Custom reminder" onKeyDown={onKeyDown}>
             <div ref={dateField} className="custom-date">
-              <DateField className="date" label="Reminder date" value={picking.date} shown={dayTitle(picking.date)} today={today}
-                read={text => parseDay(text, today)} onValue={date => setPicking({...picking, date})} />
+              {native
+                ? <NativeField type="date" className="date" label="Reminder date" value={picking.date} shown={dayTitle(picking.date)} onValue={date => setPicking({...picking, date})} />
+                : <DateField className="date" label="Reminder date" value={picking.date} shown={dayTitle(picking.date)} today={today}
+                  read={text => parseDay(text, today)} onValue={date => setPicking({...picking, date})} />}
             </div>
-            <TimeField className="time num" label="Reminder time" value={picking.minutes} choices={timeChoices()}
-              read={text => parseClock(text, picking.minutes)} onValue={minutes => setPicking({...picking, minutes})} />
+            {native
+              ? <NativeField type="time" className="time num" label="Reminder time" value={inputTime(picking.minutes)} shown={clockLabel(picking.minutes)}
+                onValue={value => {
+                  const minutes = readInputTime(value);
+                  if (minutes !== null) setPicking({...picking, minutes});
+                }} />
+              : <TimeField className="time num" label="Reminder time" value={picking.minutes} choices={timeChoices()}
+                read={text => parseClock(text, picking.minutes)} onValue={minutes => setPicking({...picking, minutes})} />}
             <button type="button" className="btn sm" disabled={!!problem} onClick={commit}>{picking.replaces === null ? 'Add' : 'Done'}</button>
-            <button type="button" className="ibtn sm" aria-label="Cancel custom reminder" data-tip="Cancel · Esc" onClick={close}><Icon name="close" size={16} /></button>
+            {native
+              ? <button type="button" className="btn quiet sm" aria-label="Cancel custom reminder" onClick={close}>Cancel</button>
+              : <button type="button" className="ibtn sm" aria-label="Cancel custom reminder" data-tip="Cancel · Esc" onClick={close}><Icon name="close" size={16} /></button>}
           </div>
           <span />
           {/* How far the moment is from the item's, and what that counts from. Or why it can't be. */}

@@ -1,4 +1,5 @@
-// The fields the editor and the proposal card share, each typeable. Project has its menu of
+// The fields the editor and the proposal card share, each typeable (on the phone, the day and the
+// times are iOS's own pickers instead: NativeField). Project has its menu of
 // Todoist's projects and New project. The date has a month to pick from. A time has its list in
 // 15-minute steps. Each draws in its host's `.field` and `.menu` styles. The mini month is the
 // sidebar's too.
@@ -348,6 +349,48 @@ export function TimeField({className, label, value, blank, choices, read, onValu
           ))}
         </div>
       )}
+    </span>
+  );
+}
+
+/**
+ * On the phone, a day or a time picked with iOS's own picker, in place of the typed fields above:
+ * the field shows its value as they do ("Wed, Oct 7", "1:00 PM", or `placeholder` in `ink3`), and a
+ * native input over the whole of it takes the tap. `value` is the input's ("2026-10-07", "13:00").
+ * An emptied one (iOS's Reset) is `onClear`'s, and goes back without it; the × takes it off too.
+ */
+export function NativeField({type, className, label, value, shown, placeholder, min, onValue, onClear}: {
+  type: 'date' | 'time';
+  className: string;
+  label: string;
+  value: string;
+  shown: string;
+  placeholder?: string;
+  min?: string;
+  onValue: (value: string) => void;
+  onClear?: () => void;
+}) {
+  return (
+    <span className={`native-pick pick-${type}`}>
+      <label className={`field ${className}`}>
+        <span className={`grow left shown${shown ? '' : ' ink3'}`} aria-hidden="true">{shown || placeholder}</span>
+        <input type={type} aria-label={label} value={value} min={min}
+          onClick={event => {
+            // Where the browser draws its picker on asking (Chrome), the tap opens it as iOS's does.
+            try {
+              event.currentTarget.showPicker();
+            } catch {
+              // It's open already, or this browser opens it by itself.
+            }
+          }}
+          onChange={event => {
+            if (event.target.value) onValue(event.target.value);
+            else onClear?.();
+          }} />
+        {onClear && value && (
+          <button type="button" className="ibtn sm clear" aria-label={`Remove ${label.toLowerCase()}`} onClick={onClear}><Icon name="close" size={16} /></button>
+        )}
+      </label>
     </span>
   );
 }

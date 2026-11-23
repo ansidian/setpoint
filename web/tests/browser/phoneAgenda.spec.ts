@@ -163,7 +163,7 @@ test('+ opens the editor sheet on the day in view, and Create adds the event the
     // Over the agenda and the tab bar, the whole screen.
     const box = (await rested(() => sheet.boundingBox()))!;
     assert.deepEqual([box.x, box.y, box.width, box.height], [0, 0, 390, 844]);
-    assert.equal(await page.getByLabel('Date', {exact: true}).inputValue(), 'Wed, Oct 7');
+    assert.equal(await page.getByLabel('Date', {exact: true}).inputValue(), '2026-10-07');
     await page.getByLabel('Describe the event').fill('Lunch with Ana 12-1pm');
     await sheet.getByRole('button', {name: 'Create'}).tap();
     await sheet.waitFor({state: 'detached'});

@@ -273,7 +273,7 @@ test('Upcoming\'s Add to calendar opens the editor sheet over News on the Apple 
     // Filled from the keynote's proposal.
     await until('the keynote in the editor', () => sheet.getByLabel('Describe the event').inputValue(), value => value === 'Apple event');
     assert.deepEqual([await sheet.getByLabel('Date', {exact: true}).inputValue(), await sheet.getByLabel('Start', {exact: true}).inputValue(), await sheet.getByLabel('End', {exact: true}).inputValue()],
-      ['Tue, Oct 20', '10:00 AM', '11:00 AM']);
+      ['2026-10-20', '10:00', '11:00']);
     await sheet.getByRole('button', {name: 'Create'}).tap();
     await sheet.waitFor({state: 'detached'});
     const toast = await holdToast(page);

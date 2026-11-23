@@ -29,6 +29,7 @@ import {LINE_FIELDS, dropPhrases} from '../../logic/linePhrase.ts';
 import type {LineField} from '../../logic/linePhrase.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
 import {isEmpty, sameDescription} from '../../logic/description.ts';
+import {endDatePicked, endOf, endTimePicked, inputTime, lastDayPicked, readInputTime} from '../../logic/nativeWhen.ts';
 import {anchorOf, changesOf, createInput, DEFAULT_LENGTH, DEFAULT_START, draftPreview, emptyDraft, fromIcs, fromItem, fromProposal, readLine, remindersOf, retype, retypeEdit, withDefaults} from '../../logic/editorDraft.ts';
 import type {Draft, Manual} from '../../logic/editorDraft.ts';
 import {addDays, clockTime, instantAt} from '../../logic/format.ts';
@@ -43,7 +44,7 @@ import {Segmented} from '../../ui/Segmented.tsx';
 import {placeMenu, useMenuRef} from '../../ui/popover.ts';
 import {colourVar, useAccounts} from '../accounts.ts';
 import {LineReference} from './LineReference.tsx';
-import {CalendarName, DateField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
+import {CalendarName, DateField, NativeField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
 import {DescriptionField} from './DescriptionField.tsx';
 import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
@@ -682,6 +683,67 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       {updating && <span className="legend"><Icon name="event" size={14} /><span>Already on {updating} (will update)</span></span>}
     </>
   );
+  // A new task can go to Todoist with no date, its time going with it. A day picked brings one back.
+  // An edited subtask's too, which stays in its task's checklist. A task's date stays on.
+  const clearDate = kind === 'task' && (!editing || editing.parent_id !== null) ? () => {
+    change({undated: true, start: null, ...(editing ? {reminders: [], repeat: null} : {})}, ['date', 'time']);
+    form.current?.focus();
+  } : undefined;
+  const removeTime = () => {
+    // An event keeps its days.
+    change({start: null, end: null, days: extraDays(draft.start, draft.end, 1) + 1}, ['time']);
+    // The fields it was beside go: the editor keeps focus, for ⌘Enter and Esc.
+    form.current?.focus();
+  };
+  const addTime = () => change({start: DEFAULT_START, end: kind === 'event' ? (draft.days - 1) * 1440 + DEFAULT_START + DEFAULT_LENGTH : null, days: 1}, ['time']);
+  const dateClass = `date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`;
+  // On the phone the day and times are iOS's own pickers, in rows as its Calendar has them: an
+  // event's Starts and Ends, each a day and a time (an all-day one's days alone). A task's one row,
+  // its due day and time, takes no word, leaving its day room for its ×.
+  const ends = draft.start !== null && draft.end !== null ? endOf(draft.date, draft.end) : null;
+  const phoneWhen = (
+    <div className={`ph-when ${kind}${sk}`}>
+      {kind === 'event' && <span className="ph-when-label">Starts{mark('date', 'time')}</span>}
+      <NativeField type="date" className={dateClass} label={kind === 'task' ? 'Due date' : 'Date'} value={draft.undated ? '' : draft.date}
+        shown={draft.undated ? '' : dayTitle(draft.date)} placeholder={kind === 'event' ? 'Pick a day' : 'No date'}
+        onValue={date => change({date, undated: false}, ['date'])} onClear={clearDate} />
+      {draft.undated ? null : draft.start !== null ? (
+        <>
+          <NativeField type="time" className={`time num${changed('start') ? ' changed' : ''}`} label={kind === 'task' ? 'Time' : 'Start'} value={inputTime(draft.start)} shown={clockLabel(draft.start)}
+            onValue={value => {
+              const start = readInputTime(value);
+              if (start !== null) change({start, end: draft.end === null ? null : start + (draft.end - draft.start!)}, ['time']);
+            }} />
+          {kind === 'task' && <button type="button" className="ibtn sm" aria-label="Remove time" onClick={removeTime}><Icon name="close" size={16} /></button>}
+        </>
+      ) : <button type="button" className="btn quiet sm ph-add-time" onClick={addTime}>Add a time</button>}
+      {kind === 'task' && mark('date', 'time')}
+      {kind === 'event' && (
+        <>
+          <span className="ph-when-label">Ends</span>
+          <NativeField type="date" className={`date${changed('date') ? ' changed' : ''}`} label="End date" value={ends?.date ?? lastDay} min={draft.date}
+            shown={dayTitle(ends?.date ?? lastDay)}
+            onValue={to => change(draft.start === null || draft.end === null ? {days: lastDayPicked(draft.date, to)} : {end: endDatePicked(draft.date, draft.start, draft.end, to)}, ['date'])} />
+          {draft.start !== null && draft.end !== null && (
+            <>
+              <NativeField type="time" className={`time num${changed('end') ? ' changed' : ''}`} label="End" value={inputTime(draft.end)}
+                shown={draft.end === draft.start ? '' : clockLabel(draft.end)} placeholder={NO_END}
+                onValue={value => {
+                  const minutes = readInputTime(value);
+                  if (minutes !== null) change({end: endTimePicked(draft.start!, draft.end!, minutes)}, ['time']);
+                }} />
+              <button type="button" className="ibtn sm" aria-label="All day" onClick={removeTime}><Icon name="close" size={16} /></button>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+  // An empty new draft has nothing to conflict yet: the preview waits for a title or a time.
+  const preview = !card && kind === 'event' && draft.start !== null && lastDay === draft.date && (editing || draft.text.trim() !== '' || draft.manual.includes('time')) && (
+    <ConflictPreview draft={draft} items={dayItems(draft.date)} except={editing?.key ?? null} free={editing ? isFree(editing) : false} title={draft.title || draft.text} colour={calendar?.colour ?? null}
+      calendarColour={id => (calendars ?? []).find(one => one.id === id)?.colour ?? null} isNew={!editing} timeZone={timeZone} />
+  );
   const editor = (
     <form ref={form} tabIndex={-1} className={card ? `editor card prop${card.pending ? ' pending' : ''}${card.quiet ? ' in-answer' : ''}` : sheet ? 'editor ph-editor' : `rpane editor${handed ? ' handed' : ''}`}
       aria-label={card ? (kind === 'event' ? 'Proposal: add to calendar' : 'Proposal: add as task') : title} onKeyDown={onKeyDown}
@@ -748,18 +810,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
         <div className="eg">
           <Icon name="schedule" size={17} className={`g-when ${echo.when ?? ''}`} />
-          <div className={`prow${lastDay !== draft.date ? ' days' : ''}${sk}`}>
-            <DateField className={`date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`} label={kind === 'task' ? 'Due date' : 'Date'}
+          {sheet ? phoneWhen : <div className={`prow${lastDay !== draft.date ? ' days' : ''}${sk}`}>
+            <DateField className={dateClass} label={kind === 'task' ? 'Due date' : 'Date'}
               value={draft.undated ? null : draft.date} placeholder={kind === 'event' ? 'Pick a day' : 'No date'}
               shown={draft.undated ? '' : lastDay === draft.date ? dayTitle(draft.date) : `${dayTitle(draft.date)} – ${dayTitle(lastDay)}`}
               today={today} read={text => parseDay(text, today)} onValue={date => change({date, undated: false}, ['date'])}
               range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change({...spanTo(from, to, draft.start, draft.end), undated: false}, ['date'])} : undefined}
-              // A new task can go to Todoist with no date, its time going with it. A day picked brings one back.
-              // An edited subtask's too, which stays in its task's checklist. A task's date stays on.
-              onClear={kind === 'task' && (!editing || editing.parent_id !== null) ? () => {
-                change({undated: true, start: null, ...(editing ? {reminders: [], repeat: null} : {})}, ['date', 'time']);
-                form.current?.focus();
-              } : undefined} />
+              onClear={clearDate} />
             {draft.undated ? null : draft.start !== null ? (
               <>
                 <TimeField className={`time num${changed('start') ? ' changed' : ''}`} label="Start" value={draft.start} choices={timeChoices()}
@@ -774,15 +831,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                   </>
                 )}
                 <button type="button" className="ibtn sm" aria-label={kind === 'event' ? 'All day' : 'Remove time'} data-tip={kind === 'event' ? 'All day' : 'Remove time'}
-                  onClick={() => {
-                    // An event keeps its days.
-                    change({start: null, end: null, days: extraDays(draft.start, draft.end, 1) + 1}, ['time']);
-                    // The fields it was beside go: the editor keeps focus, for ⌘Enter and Esc.
-                    form.current?.focus();
-                  }}><Icon name="close" size={16} /></button>
+                  onClick={removeTime}><Icon name="close" size={16} /></button>
               </>
             ) : (
-              <button type="button" className="btn quiet sm" onClick={() => change({start: DEFAULT_START, end: kind === 'event' ? (draft.days - 1) * 1440 + DEFAULT_START + DEFAULT_LENGTH : null, days: 1}, ['time'])}>
+              <button type="button" className="btn quiet sm" onClick={addTime}>
                 {kind === 'event' ? 'All day · Add a time' : 'Add a time'}
               </button>
             )}
@@ -792,7 +844,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               </span>
             )}
             {mark('date', 'time')}
-          </div>
+          </div>}
           {was && (
             <>
               <span />
@@ -934,7 +986,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </>
           )}
 
-          <RemindersRow reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today} glyph={`g-remind ${echo.reminder ?? ''}`}
+          <RemindersRow native={sheet} reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today} glyph={`g-remind ${echo.reminder ?? ''}`}
             menuOpen={menu === 'reminder'} menuRef={menuRef} onMenu={open => setMenu(open ? 'reminder' : null)}
             onChange={list => {
               // Ticked beside the line's they're picked. One the line set, taken out, sets them by hand.
@@ -966,11 +1018,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             note={editing && original && draft.descriptionLossy && !sameDescription(draft.description, original.description) ? 'Saving drops formatting Setpoint can\'t show' : null} />
         </div>
 
-        {/* An empty new draft has nothing to conflict yet: the preview waits for a title or a time. */}
-        {!card && kind === 'event' && draft.start !== null && lastDay === draft.date && (editing || draft.text.trim() !== '' || draft.manual.includes('time')) && (
-          <ConflictPreview draft={draft} items={dayItems(draft.date)} except={editing?.key ?? null} free={editing ? isFree(editing) : false} title={draft.title || draft.text} colour={calendar?.colour ?? null}
-            calendarColour={id => (calendars ?? []).find(one => one.id === id)?.colour ?? null} isNew={!editing} timeZone={timeZone} />
-        )}
+        {preview}
 
         {!editing && !card && (
           <div className="batch">
