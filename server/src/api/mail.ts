@@ -73,15 +73,14 @@ export function mailApi(store: Store, {engine, drafting, draftFiles}: MailApiOpt
     return c.json(gmailLink(store, input.account, input.id));
   });
   // The HTML body as its own page, for the reader's sandboxed frame. It has its own policy, not the
-  // app's (?frame=app is the iPhone app's, with no script). Plain-text email has none. ?images=show
-  // loads its images (the rule's or the images bar's Show), ?images=hide doesn't, and without it the
-  // rule decides. The web's page, named either way, is always the same page. So the browser keeps
-  // it a while, and an email opened again shows without asking (sign-out clears it).
+  // app's. Plain-text email has none. ?images=show loads its images (the rule's or the images bar's
+  // Show), ?images=hide doesn't, and without it the rule decides. The page named either way is
+  // always the same page. So the browser keeps it a while, and an email opened again shows without
+  // asking (sign-out clears it).
   api.get('/mail/messages/:id/body', c => {
     const images = c.req.query('images');
-    const frame = c.req.query('frame') === 'app' ? 'app' : 'web';
-    const page = messageBody(store, id(c.req.param('id')), images === 'show' ? true : images === 'hide' ? false : null, frame);
-    if (frame === 'web' && (images === 'show' || images === 'hide')) c.header('Cache-Control', `private, max-age=${BODY_KEPT_S}`);
+    const page = messageBody(store, id(c.req.param('id')), images === 'show' ? true : images === 'hide' ? false : null);
+    if (images === 'show' || images === 'hide') c.header('Cache-Control', `private, max-age=${BODY_KEPT_S}`);
     c.header('Content-Security-Policy', page.policy);
     c.header('X-Content-Type-Options', 'nosniff');
     c.header('Referrer-Policy', 'no-referrer');
