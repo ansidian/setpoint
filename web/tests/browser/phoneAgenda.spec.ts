@@ -14,6 +14,7 @@ import type {Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
+import {instantScrolls, scrollsAsked} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -141,6 +142,7 @@ const todays = (page: Page, title: string) => page.locator('.ph-agenda [data-day
 async function agenda(setpoint: Setpoint) {
   const page = await setpoint.page('iphone');
   await page.clock.install();
+  await instantScrolls(page);
   await page.goto(`${setpoint.base}/calendar`);
   await page.locator('.ph-agenda .pitem').first().waitFor();
   return page;
@@ -296,7 +298,7 @@ test('Delete waits out its toast: Undo keeps the item, and left alone it goes; a
   }
 });
 
-test('the month picker jumps to a day at the top, far off or near, and Today and the tab go back to today', async () => {
+test('the month picker jumps to a day at the top, far off or near, and Today goes back to today, as the tab does, gliding when today is loaded', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await agenda(setpoint);
@@ -320,12 +322,23 @@ test('the month picker jumps to a day at the top, far off or near, and Today and
     await until('today at the top', () => topDay(page), day => day === '2026-10-07');
     assert.equal(new URL(page.url()).pathname, '/calendar');
 
-    // A day already loaded comes to the top, and the tab goes back to today.
+    // Far off again, the tab opens the agenda on today: nothing to glide through.
+    await page.locator('.hd .ph-month-btn').tap();
+    await picker.getByRole('button', {name: 'Next month'}).tap();
+    await picker.getByRole('button', {name: '2026-11-20'}).tap();
+    await until('the day at the top', () => topDay(page), day => day === '2026-11-20');
+    await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
+    await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    assert.deepEqual(await scrollsAsked(page), []);
+
+    // A day already loaded comes to the top at once, and the tab glides back to today.
     await page.locator('.hd .ph-month-btn').tap();
     await picker.getByRole('button', {name: '2026-10-14'}).tap();
     await until('the day at the top', () => topDay(page), day => day === '2026-10-14');
+    assert.deepEqual(await scrollsAsked(page), []);
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
     await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    assert.deepEqual(await scrollsAsked(page), ['smooth']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

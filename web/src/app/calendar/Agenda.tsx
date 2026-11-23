@@ -80,24 +80,33 @@ export function Agenda({route}: {route: CalendarRoute}) {
 
   // The day the agenda opens on, and the weeks loaded after it. A day to bring to the top (`focus`):
   // a link's, the picker's or today's, each once, by its count.
-  const [focus, setFocus] = useState({day: linkedDay ?? today, n: 0});
+  // `glide`: scrolled there smoothly, as the tab bar takes the Inbox and News to their tops.
+  const [focus, setFocus] = useState({day: linkedDay ?? today, n: 0, glide: false});
   const [seenLink, setSeenLink] = useState(linkedDay);
   if (seenLink !== linkedDay) {
     setSeenLink(linkedDay);
-    if (linkedDay && !route.item) setFocus({day: linkedDay, n: focus.n + 1});
+    if (linkedDay && !route.item) setFocus({day: linkedDay, n: focus.n + 1, glide: false});
   }
   const [{anchor, weeks}, setWindow] = useState(() => ({anchor: agendaAnchor(today, FIRST_WEEKS, linkedDay ?? today), weeks: FIRST_WEEKS}));
-  const go = (day: string) => {
-    setFocus({day, n: focus.n + 1});
+  const go = (day: string, glide = false) => {
+    setFocus({day, n: focus.n + 1, glide});
     navigate(day === today ? AGENDA : {...AGENDA, date: day}, {replace: true});
   };
   const goRef = useRef(go);
   useEffect(() => {
     goRef.current = go;
   });
+  // The tab again glides to today when it's in what's loaded; further off, the agenda opens there.
+  const loadedRef = useRef({anchor: '', weeks: 0});
   useEffect(() => onAgendaToday(() => {
-    goRef.current(localDate(serverNow(), timeZone()));
+    const day = localDate(serverNow(), timeZone());
+    const {anchor: at, weeks: count} = loadedRef.current;
+    goRef.current(day, agendaAnchor(at, count, day) === at);
   }), []);
+
+  useEffect(() => {
+    loadedRef.current = {anchor, weeks};
+  });
 
   const chunks = agendaChunks(anchor, weeks);
   const start = chunks[0]!.from;
@@ -187,8 +196,15 @@ export function Agenda({route}: {route: CalendarRoute}) {
     const day = scroller?.querySelector<HTMLElement>(`[data-days~="${focus.day}"]`);
     if (!scroller || !day) return;
     const off = () => day.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-    scroller.scrollTop += off();
-    if (Math.abs(off()) <= 1 || (allLoaded && more)) revealed.current = focus.n;
+    // A glide is asked for once: the frames it scrolls through mustn't set it again. Short of
+    // what's under the day to bring it to the top, it jumps and tries again as more loads.
+    if (focus.glide && scroller.scrollTop + off() <= scroller.scrollHeight - scroller.clientHeight + 1) {
+      revealed.current = focus.n;
+      scroller.scrollTo({top: scroller.scrollTop + off(), behavior: 'smooth'});
+    } else {
+      scroller.scrollTop += off();
+      if (Math.abs(off()) <= 1 || (allLoaded && more)) revealed.current = focus.n;
+    }
     follow();
   });
   const takeList = () => {

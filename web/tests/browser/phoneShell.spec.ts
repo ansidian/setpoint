@@ -12,7 +12,7 @@ import type {ItemsOut, Settings} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
-import {box, counts, email, inbox} from './phoneHelpers.ts';
+import {box, counts, email, inbox, instantScrolls, scrollsAsked} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -163,7 +163,7 @@ test('deep links at the iPhone size: an email, an event, one occurrence, a task\
   }
 });
 
-test('the tab bar: Inbox is badged with Attention\'s count on another page, following it, and Agenda goes back to today', async () => {
+test('the tab bar: Inbox is badged with Attention\'s count on another page, following it, and Agenda glides back to today', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -175,11 +175,13 @@ test('the tab bar: Inbox is badged with Attention\'s count on another page, foll
     assert.equal(await badge.textContent(), '3');
     await setpoint.api('POST', `/mail/messages/${await email(setpoint, 'Final exam')}/done`, {done: true});
     await until('the badge follows', () => badge.textContent(), text => text === '2');
-    // A later week's agenda: its tab goes back to today, under the past week.
+    // A later week's agenda: its tab glides back to today, under the past week.
+    await instantScrolls(page);
     await page.goto(`${setpoint.base}${deepLinkPath({to: 'day', date: '2026-10-20'})}`);
     await until('the day at the top', () => topDay(page), day => day === '2026-10-20');
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
     await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    assert.deepEqual(await scrollsAsked(page), ['smooth']);
     assert.equal(new URL(page.url()).pathname, '/calendar');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

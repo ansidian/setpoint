@@ -38,3 +38,23 @@ export async function swipe(row: Locator, from: number, to: number, click = true
     if (clicks) element.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: end, clientY: y}));
   }, [from, to, click] as const);
 }
+
+/**
+ * From the next page load, a list's `scrollTo` lands at once and is recorded with the behaviour it
+ * asked for, so a check reads where a glide ends and that it asked to glide, not its motion.
+ */
+export async function instantScrolls(page: Page) {
+  await page.addInitScript(() => {
+    const asked: string[] = [];
+    (window as unknown as {scrollsAsked: string[]}).scrollsAsked = asked;
+    const scrollTo = Element.prototype.scrollTo;
+    Element.prototype.scrollTo = function (this: Element, ...args: unknown[]) {
+      const options = typeof args[0] === 'object' && args[0] ? args[0] as ScrollToOptions : {left: args[0] as number, top: args[1] as number};
+      asked.push(options.behavior ?? 'auto');
+      Reflect.apply(scrollTo, this, [{...options, behavior: 'instant'}]);
+    } as typeof Element.prototype.scrollTo;
+  });
+}
+
+/** The behaviours asked of `scrollTo` since the page loaded, in order (instantScrolls). */
+export const scrollsAsked = (page: Page) => page.evaluate(() => (window as unknown as {scrollsAsked: string[]}).scrollsAsked);
