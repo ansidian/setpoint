@@ -1,6 +1,6 @@
 // An email's attachments: 44 px cards, radius 14, 280 wide, with the type's tile (its colour and
 // glyph), the name and "PDF · 184 KB". PDF, image and CSV open a preview over the reading pane.
-// Esc or × closes it. Every card and the preview's head offer Download. A card with no preview is
+// Esc or × closes it; on the phone it's a full-screen sheet with Back and Download. Every card and the preview's head offer Download. A card with no preview is
 // one Download link. An invitation (.ics) has Add to calendar. It reads the stored attachment on the
 // server into the same review as an import from Calendar. An invitation that can't be read says so
 // in place of its size. On the phone the reader stays, and the editor or the review opens over it
@@ -18,6 +18,7 @@ import {Icon} from '../ui/Icon.tsx';
 import {landIcs} from './calendar/importRun.ts';
 import {openContextMenu} from './ContextMenu.tsx';
 import {usePhone} from './Phone.tsx';
+import {Sheet} from './phone/Sheet.tsx';
 import {PreviewSkeleton} from './states/Skeletons.tsx';
 import {failureLine} from './toast.ts';
 import {failureText} from '../logic/providerWords.ts';
@@ -63,7 +64,7 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
           );
         })}
       </div>
-      {open && <Preview key={open.id} messageId={messageId} file={open} kind={previewKind(open)!} onClose={() => setOpen(null)} />}
+      {open && <Preview key={open.id} messageId={messageId} file={open} kind={previewKind(open)!} phone={phone} onClose={() => setOpen(null)} />}
     </>
   );
 }
@@ -118,7 +119,8 @@ function Download({messageId, file}: {messageId: number; file: AttachmentOut}) {
 
 type Loaded = {state: 'loading'} | {state: 'failed'; message: string} | {state: 'ready'; url: string; rows: string[][] | null};
 
-function Preview({messageId, file, kind, onClose}: {messageId: number; file: AttachmentOut; kind: PreviewKind; onClose: () => void}) {
+/** The preview: over the reading pane, or on the phone a full-screen sheet with Back and Download. */
+function Preview({messageId, file, kind, phone, onClose}: {messageId: number; file: AttachmentOut; kind: PreviewKind; phone: boolean; onClose: () => void}) {
   const [loaded, setLoaded] = useState<Loaded>({state: 'loading'});
 
   useEffect(() => {
@@ -135,8 +137,9 @@ function Preview({messageId, file, kind, onClose}: {messageId: number; file: Att
     };
   }, [messageId, file.id, kind]);
 
-  // Esc closes the preview first, before the reader.
+  // Esc closes the preview first, before the reader. The phone's sheet has its own.
   useEffect(() => {
+    if (phone) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
@@ -145,17 +148,10 @@ function Preview({messageId, file, kind, onClose}: {messageId: number; file: Att
     };
     document.addEventListener('keydown', onKey, true);
     return () => document.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
+  }, [onClose, phone]);
 
-  return (
-    <div className="attach-preview pop" role="dialog" aria-label={`Preview of ${file.filename}`}>
-      <div className="preview-head">
-        <span className="ell grow">{file.filename}</span>
-        <span className="ink3 num">{attachmentLabel(file)}</span>
-        <Download messageId={messageId} file={file} />
-        <button type="button" className="ibtn sm" aria-label="Close preview" onClick={onClose}><Icon name="close" size={16} /></button>
-      </div>
-      <div className="preview-body">
+  const body = (
+    <div className="preview-body">
         {loaded.state === 'loading' && <PreviewSkeleton />}
         {loaded.state === 'failed' && <div className="preview-line">{failureText('Failed to load the preview', loaded.message)}</div>}
         {loaded.state === 'ready' && kind === 'pdf' && <iframe className="preview-pdf" title={file.filename} src={loaded.url} />}
@@ -167,7 +163,24 @@ function Preview({messageId, file, kind, onClose}: {messageId: number; file: Att
             </tbody>
           </table>
         )}
+    </div>
+  );
+  if (phone) {
+    return (
+      <Sheet title={file.filename} back="Back" onClose={onClose} action={{label: 'Download', onClick: () => download(attachmentUrl(messageId, file.id), file.filename)}}>
+        <div className="ph-preview">{body}</div>
+      </Sheet>
+    );
+  }
+  return (
+    <div className="attach-preview pop" role="dialog" aria-label={`Preview of ${file.filename}`}>
+      <div className="preview-head">
+        <span className="ell grow">{file.filename}</span>
+        <span className="ink3 num">{attachmentLabel(file)}</span>
+        <Download messageId={messageId} file={file} />
+        <button type="button" className="ibtn sm" aria-label="Close preview" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
+      {body}
     </div>
   );
 }

@@ -361,6 +361,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .row .subj.code-line { display: flex; align-items: center; gap: 10px; }
 /* The reply mark on an email the user answered, in `ink3`. */
 .row .replied { flex: none; display: inline-flex; color: var(--ink3); }
+/* The marks' box is the phone's (phone.css): here each mark sits in the row as before. */
+.row .marks { display: contents; }
 /* An email with an unsent draft says so in words, in `alert`, as a draft waiting on the user. */
 .row .drafted { flex: none; color: var(--alert); }
 .row .trash-in { flex: none; font-size: 12px; color: var(--ink3); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }

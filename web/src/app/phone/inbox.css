@@ -1,0 +1,31 @@
+/* The phone's Inbox and reader pieces of their own (phone/SnoozeSheet.tsx), under the phone's
+   breakpoint as phone.css's rules are. */
+@media (max-width: 639px) {
+  /* Snooze's Pick a date…: two rows as the sheet's choices, the day and the time on the right in
+     iOS's own pickers, then the moment in `ink3` (or why not, in `alert`) and Snooze, full width. */
+  .ph-pick { display: flex; flex-direction: column; padding: 0 0 4px; }
+  .ph-pick-field { height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px; color: var(--ink); font-size: 15px; }
+  .ph-pick-field input { min-width: 0; height: 36px; padding: 0 10px; border-radius: var(--r-row); background: var(--sub2); color: var(--ink); font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .ph-pick-line { margin: 8px 12px 12px; color: var(--ink3); font-size: 13px; }
+  .ph-pick-line.alert { color: var(--alert); }
+  .ph-pick-go { height: 44px; margin: 0 4px; justify-content: center; font-size: 15px; }
+
+  /* An attachment's preview in the full-screen sheet: the whole body, a PDF or image filling it and
+     a CSV's table scrolling both ways. */
+  .ph-preview { height: 100%; display: flex; }
+  .ph-preview > .preview-body { flex: 1 1 auto; }
+  .ph-preview .preview-csv { font-size: 13px; }
+
+  /* The reader's thread on the phone: each line wraps rather than being cut, its day and time on
+     the first line with who sent it, its first words under them. */
+  .pane .rd-conv { display: flex; flex-direction: column; padding: 4px 20px 24px; }
+  .pane .rd-conv-line { display: grid; grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: "day time who" "words words words"; align-items: baseline;
+    height: auto; min-height: 44px; padding: 8px; column-gap: 8px; row-gap: 2px; }
+  .pane .rd-conv-line > span { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+  .pane .rd-conv-line .day { grid-area: day; }
+  .pane .rd-conv-line .time { grid-area: time; margin-left: 0; text-align: left; }
+  .pane .rd-conv-line .who { grid-area: who; }
+  .pane .rd-conv-line .words { grid-area: words; font-size: 14px; }
+  .pane .rd-conv-line.more { display: flex; align-items: center; }
+  .pane .rd-conv-line.here::before { top: 12px; height: calc(100% - 24px); }
+}

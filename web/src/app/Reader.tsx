@@ -15,7 +15,8 @@
 // opens its composer again when it's shown.
 //
 // On the phone (board 21) it covers the page: Back and Pin at the top, the email
-// full width, and Done (on Attention mail) or Trash, Reply and More at the bottom (phone/ReaderBar.tsx).
+// full width with its thread under it, and Done (on Attention mail) or Trash, Reply and More at the
+// bottom (phone/ReaderBar.tsx), More holding Snooze, Add to calendar and Add as task among the rest.
 //
 // EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
 // body, with no tools, actions, slot or commands of its own.
@@ -29,7 +30,7 @@ import {prefillFromMessage, proposeFromMessage} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
 import {hasOthers} from '../logic/composer.ts';
-import {dayOf, fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
+import {dayOf, fullTimestamp, localDate, readerTime, trashLeft} from '../logic/format.ts';
 import {factRows, fitTools, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../logic/reader.ts';
 import {snoozeable, snoozedLine} from '../logic/snooze.ts';
@@ -42,6 +43,7 @@ import {Attachments} from './Attachments.tsx';
 import {CodeCard} from './Code.tsx';
 import {ComposerSlot} from './compose/Composer.tsx';
 import {ReaderBar} from './phone/ReaderBar.tsx';
+import {openEditorSheet} from './phone/EditorSheet.tsx';
 import {showEmail, startComposer, useOpenComposer} from './compose/composer.ts';
 import {Conversation} from './Conversation.tsx';
 import {copyText, openContextMenu} from './ContextMenu.tsx';
@@ -130,8 +132,9 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // Opens another email (an Answer card's source).
   // `sent` says whether the user sent it, when the caller knows (a conversation line, the reply line).
   onOpen: (id: number, sent?: boolean) => void;
-  // Where the phone's Back goes: the Inbox, or the search results the email was opened from.
-  back?: 'Inbox' | 'Search';
+  // Where the phone's Back goes: the Inbox, the search results the email was opened from, or Back to
+  // the email of its thread it was opened from.
+  back?: 'Inbox' | 'Search' | 'Back';
   // Opened from Sent: its tools are Trash and Open in Gmail, as sent-only mail's are anywhere.
   sent?: boolean;
 }) {
@@ -161,7 +164,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const provider = listed ? accounts.get(listed.account_id)?.provider : undefined;
   const gmail = message ? message.open_url !== null : provider === undefined ? null : provider === 'gmail';
   const phone = usePhone();
-  const canSnooze = !phone && !sentMail && !!actions.snooze && !!listed && snoozeable(listed);
+  const snoozes = !sentMail && !!actions.snooze && !!listed && snoozeable(listed);
+  const canSnooze = !phone && snoozes;
   // A snoozed email's Snoozed tool, on the desktop: its menu changes the time or ends it.
   const snoozedMenu = !phone && !!snoozedUntil && !!actions.unsnooze && !!actions.snooze;
   // The composer, and the drafts that open it again: the desktop's only.
@@ -208,7 +212,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         <div className="ph-top">
           <button className="btn quiet ph-back" type="button" onClick={actions.close}><Icon name="chevron_left" size={20} />{back}</button>
           <span className="grow" />
-          {!snoozedUntil && (
+          {!snoozedUntil && !sentMail && (
             <button className="ibtn ph-icon" type="button" aria-label={pinned ? 'Unpin' : 'Pin'} aria-pressed={pinned} onClick={actions.pin}>
               <Icon name={pinned ? 'keep-fill' : 'keep'} size={20} />
             </button>
@@ -284,8 +288,10 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
       {phone && (
         <div className="ph-acts">
           {listed && gmail !== null && (
-            <ReaderBar email={{doneable: !!doneable, replyAll, gmail, markedUnread}} on={{
-              done: actions.done, trash: actions.trash, toggleRead, openInGmail: actions.openInGmail,
+            <ReaderBar email={{doneable: !!doneable, replyAll, gmail, markedUnread, sent: sentMail, snoozeable: snoozes}} on={{
+              done: actions.done, trash: actions.trash, toggleRead, openInGmail: actions.openInGmail, snooze: until => actions.snooze?.(until),
+              addEvent: () => openEditorSheet({kind: 'event', date: localDate(now, timeZone), message: id}),
+              addTask: () => openEditorSheet({kind: 'task', date: localDate(now, timeZone), message: id}),
               reply: () => startComposer({kind: 'reply', message_id: id}),
               replyAll: () => startComposer({kind: 'reply_all', message_id: id}),
               forward: () => startComposer({kind: 'forward', message_id: id}),
@@ -553,9 +559,7 @@ function Email({listed, message, load, accounts, now, timeZone, marks, cards, un
 }) {
   const failed = useLoadFailed([load]);
   const arrived = useArrival(message !== undefined);
-  // The phone's reader is frozen as it was: no line, no list.
-  const phone = usePhone();
-  const conversation = cards && onOpen && !phone ? onOpen : undefined;
+  const conversation = cards && onOpen ? onOpen : undefined;
   return (
     <>
       {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} cards={cards} unread={unread} onCodeCopied={onCodeCopied} onOpen={conversation} /> : <HeadSkeleton />}

@@ -1,11 +1,11 @@
 // A phone header's title as a menu: "Title ▾" opens a short menu under it (the Inbox's views, News's
 // sections), each row with an optional count and the current one checked, apart by dividers. A
-// choice closes it, as do Esc and a tap anywhere else, which the tap spends: it opens nothing under it.
+// `command` row (the Inbox's Settings) goes somewhere rather than being one of the choices. A choice closes it, as do Esc and a tap anywhere else, which the tap spends: it opens nothing under it.
 import {useEffect, useRef, useState} from 'react';
 import {Icon} from '../../ui/Icon.tsx';
 import {placeMenu} from '../../ui/popover.ts';
 
-export type TitleMenuRow = {label: string; count?: number; checked?: boolean; onChoose: () => void} | 'divider';
+export type TitleMenuRow = {label: string; count?: number; checked?: boolean; command?: boolean; onChoose: () => void} | 'divider';
 
 /** The header's title (`hd-title`) and its menu of `rows`. */
 export function TitleMenu({title, rows}: {title: string; rows: TitleMenuRow[]}) {
@@ -37,13 +37,13 @@ export function TitleMenu({title, rows}: {title: string; rows: TitleMenuRow[]}) 
             {rows.map((row, index) => (row === 'divider'
               ? <div key={`divider-${index}`} className="menu-sep" role="separator" />
               : (
-                <button key={row.label} className="menu-i" type="button" role="menuitemradio" aria-checked={row.checked ?? false} onClick={() => {
+                <button key={row.label} className="menu-i" type="button" role={row.command ? 'menuitem' : 'menuitemradio'} aria-checked={row.command ? undefined : row.checked ?? false} onClick={() => {
                   setOpen(false);
                   row.onChoose();
                 }}>
                   <span className="ell">{row.label}</span>
                   {row.count !== undefined && <span className="ph-title-count num">{row.count}</span>}
-                  <Icon name="check" size={16} className="ph-title-check" />
+                  {!row.command && <Icon name="check" size={16} className="ph-title-check" />}
                 </button>
               )))}
           </div>

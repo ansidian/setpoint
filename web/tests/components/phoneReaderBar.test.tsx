@@ -12,10 +12,11 @@ beforeEach(async () => {
 });
 
 const actions = (): ReaderBarActions => ({
-  done: vi.fn(), trash: vi.fn(), reply: vi.fn(), replyAll: vi.fn(), forward: vi.fn(), toggleRead: vi.fn(), openInGmail: vi.fn(),
+  done: vi.fn(), trash: vi.fn(), reply: vi.fn(), replyAll: vi.fn(), forward: vi.fn(), toggleRead: vi.fn(), openInGmail: vi.fn(), snooze: vi.fn(), addEvent: vi.fn(), addTask: vi.fn(),
 });
 
-const PLAIN: ReaderBarEmail = {doneable: false, replyAll: false, gmail: false, markedUnread: false};
+const PLAIN: ReaderBarEmail = {doneable: false, replyAll: false, gmail: false, markedUnread: false, sent: false, snoozeable: true};
+const MAKE = ['Add to calendar', 'Add as task'];
 
 async function draw(email: ReaderBarEmail, on = actions()) {
   await render(<div className="ph-acts"><ReaderBar email={email} on={on} /></div>);
@@ -33,10 +34,12 @@ test.each([
 });
 
 test.each([
-  ['Gmail mail with others to reply to, Done leading', {doneable: true, replyAll: true, gmail: true, markedUnread: false}, ['Reply all', 'Forward', 'Trash', 'Mark unread', 'Open in Gmail']],
-  ['Gmail mail to the user alone', {...PLAIN, gmail: true}, ['Forward', 'Mark unread', 'Open in Gmail']],
-  ['iCloud mail marked unread here', {...PLAIN, markedUnread: true}, ['Forward', 'Mark read']],
-  ['iCloud mail with others, Trash leading', {...PLAIN, replyAll: true}, ['Reply all', 'Forward', 'Mark unread']],
+  ['Gmail mail with others to reply to, Done leading', {...PLAIN, doneable: true, replyAll: true, gmail: true}, ['Reply all', 'Forward', 'Snooze', ...MAKE, 'Trash', 'Mark unread', 'Open in Gmail']],
+  ['Gmail mail to the user alone', {...PLAIN, gmail: true}, ['Forward', 'Snooze', ...MAKE, 'Mark unread', 'Open in Gmail']],
+  ['iCloud mail marked unread here', {...PLAIN, markedUnread: true}, ['Forward', 'Snooze', ...MAKE, 'Mark read']],
+  ['iCloud mail with others, Trash leading', {...PLAIN, replyAll: true}, ['Reply all', 'Forward', 'Snooze', ...MAKE, 'Mark unread']],
+  ['an email already snoozed (found by search)', {...PLAIN, snoozeable: false}, ['Forward', ...MAKE, 'Mark unread']],
+  ['sent mail: no Snooze and no read state', {...PLAIN, sent: true, snoozeable: false, gmail: true}, ['Forward', ...MAKE, 'Open in Gmail']],
 ])('More\'s rows: %s', async (_, email, rows) => {
   await draw(email);
   await page.getByRole('button', {name: 'More'}).click();
@@ -45,11 +48,11 @@ test.each([
 });
 
 test('Reply in the bar, and a row of More, each run their action; the row closes the sheet', async () => {
-  const on = await draw({doneable: true, replyAll: true, gmail: true, markedUnread: false});
+  const on = await draw({...PLAIN, doneable: true, replyAll: true, gmail: true});
   await page.getByRole('button', {name: 'Reply', exact: true}).click();
   expect(on.reply).toHaveBeenCalledOnce();
 
-  for (const [label, action] of [['Reply all', 'replyAll'], ['Forward', 'forward'], ['Trash', 'trash'], ['Mark unread', 'toggleRead'], ['Open in Gmail', 'openInGmail']] as const) {
+  for (const [label, action] of [['Reply all', 'replyAll'], ['Forward', 'forward'], ['Add to calendar', 'addEvent'], ['Add as task', 'addTask'], ['Trash', 'trash'], ['Mark unread', 'toggleRead'], ['Open in Gmail', 'openInGmail']] as const) {
     await page.getByRole('button', {name: 'More'}).click();
     const sheet = page.getByRole('dialog', {name: 'More'});
     await sheet.getByRole('button', {name: label}).click();

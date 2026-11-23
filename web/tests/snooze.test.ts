@@ -7,7 +7,7 @@ import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {attentionRows, groupByDay, heldUnread, viewList} from '../src/logic/all.ts';
 import {inboxAfterSnooze} from '../src/logic/inbox.ts';
-import {nextWeekday, pickOutcome, pickStart, readPickTime, scheduledWhen, snoozeable, snoozedLine, snoozeOptions, snoozeWhen} from '../src/logic/snooze.ts';
+import {nextWeekday, pickFields, pickFieldsOutcome, pickOutcome, pickStart, readPickTime, scheduledWhen, snoozeable, snoozedLine, snoozeOptions, snoozeWhen} from '../src/logic/snooze.ts';
 
 const zone = SEED_TIME_ZONE;
 // The seed's clock: 9:12 AM Pacific on Wed, Oct 7 (UTC−7).
@@ -59,6 +59,22 @@ describe('Pick reads its time as it\'s typed', () => {
     expect(pickStart(now, null, zone)).toEqual({date: '2026-10-08', text: '9:00 AM'});
     expect(pickStart(now, '08:30', zone)).toEqual({date: '2026-10-08', text: '8:30 AM'});
   });
+});
+
+describe('the phone\'s Pick a date…, from iOS\'s own date and time fields', () => {
+  test('its fields start tomorrow, at the task time', () => {
+    expect(pickFields(now, null, zone)).toEqual({date: '2026-10-08', time: '09:00'});
+    expect(pickFields(now, '08:30', zone)).toEqual({date: '2026-10-08', time: '08:30'});
+  });
+
+  test.each([
+    ['a day ahead', '2026-10-12', '14:00', {until: at('2026-10-12T21:00:00.000Z'), line: 'Mon, Oct 12, 2:00 PM'}],
+    ['a morning, its hour with its leading zero', '2026-10-12', '09:05', {until: at('2026-10-12T16:05:00.000Z'), line: 'Mon, Oct 12, 9:05 AM'}],
+    ['later today', '2026-10-07', '17:00', {until: at('2026-10-08T00:00:00.000Z'), line: 'Wed, Oct 7, 5:00 PM'}],
+    ['earlier today', '2026-10-07', '08:00', {problem: 'That time has passed'}],
+    ['the day field emptied', '', '09:00', {problem: 'Pick a day'}],
+    ['the time field emptied', '2026-10-12', '', {problem: 'Pick a time'}],
+  ])('%s', (_name, date, time, expected) => expect(pickFieldsOutcome(date, time, now, zone)).toEqual(expected));
 });
 
 describe('a snoozed email\'s words', () => {

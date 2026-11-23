@@ -1,4 +1,5 @@
-// The phone's Inbox at 390 × 844 (board 21): its two-line rows, read state by taps, and plain search.
+// The phone's Inbox at 390 × 844 (board 21): its two-line rows and their marks, read state by taps,
+// the views menu under its title, and plain search, which takes sent mail in.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
@@ -96,7 +97,8 @@ test('no account filter, and plain search with no chips, Ask Alfred leading its 
     assert.ok(reads.length > 0 && reads.every(read => read === 'words'), `its searches ask for no reading: ${reads.join()}`);
     assert.equal(await page.locator('.search input').inputValue(), 'northwind interview ');
     assert.equal(await page.locator('.search-list .ask').isVisible(), true, 'Ask Alfred leads the results');
-    await page.locator('.search-list .result').first().tap();
+    // The user's own reply to Priya comes first: search takes sent mail in.
+    await page.locator('.search-list .result', {hasText: 'Interview availability'}).tap();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -129,6 +131,94 @@ test('phone search: no Mark all as read meanwhile, Back to Search from a result,
     assert.equal(await page.locator('.hd-title').textContent(), 'Inbox');
     assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'BODY');
     await markAll.waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the title\'s menu switches the views, Unread and Attention with their counts, and the Inbox tab goes back to All; Settings opens its page', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const title = page.locator('.hd .ph-title-btn');
+    const menu = page.getByRole('menu', {name: 'Inbox'});
+    await title.tap();
+    await menu.waitFor();
+    const rows = await menu.locator('.menu-i').evaluateAll(found => found.map(row => `${row.textContent}${row.getAttribute('aria-checked') === 'true' ? ' ✓' : ''}`));
+    assert.deepEqual(rows, ['All ✓', 'Unread19', 'Attention3', 'FYI', 'Noise', 'Settings']);
+
+    // Unread: the header names it, and every row it lists is unread.
+    await menu.getByRole('menuitemradio', {name: /^Unread/}).tap();
+    await until('the Unread view', () => page.evaluate(() => window.location.search), search => search === '?view=unread');
+    assert.equal(await title.textContent(), 'Unread');
+    await page.locator('.list .row.unread').first().waitFor();
+    assert.equal(await page.locator('.list .row:not(.unread)').count(), 0);
+
+    // Attention has nothing to mark read.
+    await title.tap();
+    await page.getByRole('menu', {name: 'Unread'}).getByRole('menuitemradio', {name: /^Attention/}).tap();
+    await until('the Attention view', () => title.textContent(), text => text === 'Attention');
+    assert.equal(await page.locator('.hd button[aria-label^="Mark"]').count(), 0);
+
+    // The Inbox tab goes back to All.
+    await page.locator('.ph-tabs a', {hasText: 'Inbox'}).tap();
+    await until('All again', () => title.textContent(), text => text === 'Inbox');
+    assert.equal(new URL(page.url()).search, '');
+
+    await title.tap();
+    await page.getByRole('menu', {name: 'Inbox'}).getByRole('menuitem', {name: 'Settings'}).tap();
+    await until('Settings', () => page.evaluate(() => window.location.pathname), path => path === '/settings/notifications');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('on the phone a row\'s reply mark and Draft tag sit on its sender\'s line, clear of the sender, the account and the subject', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    // A reply left on the phone is a draft, and its row says so.
+    await page.locator('.row:has(b[data-tip="Out for delivery"])').tap();
+    await page.locator('.ph-acts button', {hasText: 'Reply'}).tap();
+    const reply = page.getByRole('dialog', {name: 'Reply'});
+    await reply.locator('.cmp-from > button').waitFor();
+    await page.keyboard.type('Thanks!');
+    await until('the draft is kept', () => setpoint.api<{drafts: {snippet: string}[]}>('GET', '/mail/drafts'), out => out.drafts.some(one => one.snippet === 'Thanks!'));
+    await reply.getByRole('button', {name: 'Cancel'}).tap();
+    await page.locator('.ph-back').tap();
+
+    for (const [row, mark] of [['.row:has(b[data-tip="Out for delivery"])', '.drafted'], ['.row:has(.replied)', '.replied']] as const) {
+      const at = page.locator(`.list ${row}`).first();
+      await at.locator(mark).waitFor();
+      const boxOf = async (selector: string) => (await rested(() => at.locator(selector).boundingBox()))!;
+      const [from, marks, account, line] = await Promise.all([boxOf('.from'), boxOf('.marks'), boxOf('.ac'), boxOf('.subj')]);
+      assert.ok(marks.y + marks.height <= line.y, `${mark}: marks bottom ${marks.y + marks.height}, subject top ${line.y}`);
+      assert.ok(from.x + from.width <= marks.x && marks.x + marks.width <= account.x, `${mark}: sender ${from.x}–${from.x + from.width}, marks ${marks.x}–${marks.x + marks.width}, account ${account.x}`);
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('phone search takes sent mail in: the user\'s reply reads To its recipient and opens with no Pin, Snooze or read state', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    await page.locator('.search input').tap();
+    await page.keyboard.type('cabin');
+    const sent = page.locator('.search-list .result', {hasText: /^To\s*Theo Walsh/}).first();
+    await sent.waitFor();
+    // Theo's own emails, which the user answered, carry the reply mark.
+    await page.locator('.search-list .result', {hasText: 'Theo Walsh'}).locator('.replied').first().waitFor();
+    await sent.tap();
+    await page.locator('.rd-subj', {hasText: 'Cabin weekend in November'}).waitFor();
+    await until('its bar', () => page.locator('.ph-acts > button').allTextContents(), shown => shown.join() === 'Trash,Reply,More');
+    assert.equal(await page.locator('.ph-top button[aria-label="Pin"]').count(), 0);
+    await page.locator('.ph-acts button', {hasText: 'More'}).tap();
+    assert.deepEqual(await page.locator('.ph-bs .ph-bs-i').allTextContents(), ['Forward', 'Add to calendar', 'Add as task', 'Open in Gmail']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

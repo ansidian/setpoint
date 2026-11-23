@@ -93,6 +93,26 @@ export function pickOutcome(date: string, text: string, now: number, timeZone: s
   return {until, line: `${onDay(date, {weekday: 'short', month: 'short', day: 'numeric'})}, ${time.label}`};
 }
 
+/**
+ * The phone's Pick a date…, whose fields are iOS's own date and time pickers: the first day and time
+ * they hold (tomorrow at the task time), as the fields' values ("2026-10-12", "09:00").
+ */
+export function pickFields(now: number, taskTime: string | null, timeZone: string): {date: string; time: string} {
+  const minutes = taskTimeMinutes(taskTime);
+  return {date: addDays(localDate(now, timeZone), 1), time: `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`};
+}
+
+/** What the phone's picked fields would snooze until, as pickOutcome says it, or why not. */
+export function pickFieldsOutcome(date: string, time: string, now: number, timeZone: string): {until: number; line: string} | {problem: string} {
+  const clock = /^(\d{2}):(\d{2})/.exec(time);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return {problem: 'Pick a day'};
+  if (!clock) return {problem: 'Pick a time'};
+  const minutes = Number(clock[1]) * 60 + Number(clock[2]);
+  const until = Date.parse(instantAt(date, minutes, timeZone));
+  if (until <= now) return {problem: 'That time has passed'};
+  return {until, line: `${onDay(date, {weekday: 'short', month: 'short', day: 'numeric'})}, ${clockLabel(minutes)}`};
+}
+
 /** Whether a row can be snoozed: received mail, not snoozed already. Sent-only mail can't (the server refuses it). */
 export const snoozeable = (row: Pick<MessageRowOut, 'sent_only' | 'snoozed_until'>) => !row.sent_only && !row.snoozed_until;
 

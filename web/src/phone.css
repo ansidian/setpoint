@@ -48,22 +48,23 @@
   .arow .l3 { font-size: 13.5px; }
   .gh { height: 30px; font-size: 12px; padding: 0 16px 0 20px; }
   .gh .preview { display: none; }
-  /* Two lines a row, as Attention's: the sender, account and age, then
-     the subject under the sender, so neither is cut to a few characters. */
-  .row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; grid-template-areas: "ud from ac age" ". subj subj subj"; align-items: center; height: auto; min-height: 62px; padding: 8px 16px 8px 8px; column-gap: 8px; row-gap: 3px; }
+  /* Two lines a row, as Attention's: the sender, its marks (replied, snoozed, Draft), a Done row's
+     tag, the account and age, then the subject under the sender, so neither is cut to a few
+     characters. Each cell keeps 8 px before it as a margin, so a row without marks or a tag has no
+     gap where they'd be. */
+  .row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto auto auto; grid-template-areas: "ud from mk tag ac age" ". subj subj subj subj subj"; align-items: center; height: auto; min-height: 62px; padding: 8px 16px 8px 8px; column-gap: 0; row-gap: 3px; }
   .row .ud { grid-area: ud; }
-  .row .from, .list.all .row .from { grid-area: from; width: auto; }
+  .row .from, .list.all .row .from { grid-area: from; width: auto; margin-left: 8px; }
+  .row .marks { grid-area: mk; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; white-space: nowrap; font-size: 13px; }
   /* The summary in the subject's place wraps to a second line rather than being cut at ~45
      characters, and Attention's does the same. */
-  .row .subj { grid-area: subj; }
+  .row .subj { grid-area: subj; margin-left: 8px; }
   .row .subj:not(.code-line), .arow .l3 { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
-  .row .ac { grid-area: ac; width: auto; }
-  /* A Done row's tag gets its own cell on the sender's line, before the account.
-     Only Done rows take the extra column, so the others keep their gaps. */
-  .list.all .row.done { grid-template-columns: 12px minmax(0, 1fr) auto auto auto; grid-template-areas: "ud from tag ac age" ". subj subj subj subj"; }
-  .list.all .row .tag { grid-area: tag; margin-right: 0; }
+  .row .ac { grid-area: ac; width: auto; margin-left: 8px; }
+  /* A Done row's tag gets its own cell on the sender's line, before the account. */
+  .list.all .row .tag { grid-area: tag; margin: 0 0 0 8px; }
   /* Dates never wrap: the age takes the room it needs. */
-  .row .age, .list.all .row .age { grid-area: age; width: auto; min-width: 36px; white-space: nowrap; }
+  .row .age, .list.all .row .age { grid-area: age; width: auto; min-width: 36px; white-space: nowrap; margin-left: 8px; }
   /* … and an Attention row's age hugs its account, as board 21 draws it. */
   .arow .r1 .age { width: auto; min-width: 0; white-space: nowrap; }
   /* The skeleton's rows (loading.css) take the same two lines and padding. */

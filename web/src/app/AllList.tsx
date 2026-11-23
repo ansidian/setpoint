@@ -30,7 +30,6 @@ import {useRowSlot} from './slots.tsx';
 import {SnoozeMenu} from './SnoozeMenu.tsx';
 import type {Beat} from './fold.ts';
 import {Count} from './Count.tsx';
-import {usePhone} from './Phone.tsx';
 import {TriageNote, useHealthBars} from './states/States.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
 
@@ -167,7 +166,6 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   const delays = foldDelays(shown, runOf);
   // Under a health bar the first band keeps its top line (boards 17, 19a).
   const bars = useHealthBars();
-  const phone = usePhone();
   // The row whose Snooze menu is open: it keeps its pointer look until the menu closes.
   const [snoozing, setSnoozing] = useState<string | null>(null);
   return (
@@ -255,11 +253,16 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
                 <Icon name="auto_delete" size={14} />{trashLeft(row.trash_due_at, now)}
               </span>
             )}
-            {/* The reply mark on an email the user answered. The phone's list has none. */}
-            {row.replied_at && !phone && <RepliedMark at={row.replied_at} now={now} timeZone={timeZone} />}
-            {row.snoozed_until && <SnoozedMark until={row.snoozed_until} now={now} timeZone={timeZone} />}
-            {row.returned_at && !row.snoozed_until && <ReturnedMark row={row} timeZone={timeZone} />}
-            {row.draft && !phone && <span className="drafted">Draft</span>}
+            {/* The marks: the reply mark on an email the user answered, a snooze's, and a draft's tag.
+                One box, so the phone's row gives them one place on the sender's line. */}
+            {(row.replied_at || row.snoozed_until || row.returned_at || row.draft) && (
+              <span className="marks">
+                {row.replied_at && <RepliedMark at={row.replied_at} now={now} timeZone={timeZone} />}
+                {row.snoozed_until && <SnoozedMark until={row.snoozed_until} now={now} timeZone={timeZone} />}
+                {row.returned_at && !row.snoozed_until && <ReturnedMark row={row} timeZone={timeZone} />}
+                {row.draft && <span className="drafted">Draft</span>}
+              </span>
+            )}
             {slot && afterSubject(row)}
             {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
             <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>

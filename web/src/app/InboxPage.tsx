@@ -27,9 +27,11 @@
 // in Unread stays there, drawn read, until the user leaves the view. Mark all as read follows the
 // view, and Attention has none. An empty view says so, with Show All.
 //
-// On the phone (board 21) the header is the mark, Inbox and its counts, Mark all as read and New
-// message, which opens the composer's sheet (no account filter). A plain search field sits under it
-// (no chips), and Ask Alfred leads its results.
+// On the phone (board 21) the header is the mark, the view's name as a menu ("Inbox ▾": All, Unread,
+// Attention, FYI and Noise, then Settings), its counts, Mark all as read (as the view reads it) and
+// New message, which opens the composer's sheet (no account filter). The Inbox tab goes back to All.
+// A plain search field sits under it (no chips), taking sent mail in as the desktop's does, and Ask
+// Alfred leads its results.
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut, Settings} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -67,6 +69,8 @@ import {useNow} from './clock.ts';
 import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
+import {TitleMenu} from './phone/TitleMenu.tsx';
+import {openSettings} from './settings/store.ts';
 import {askCard, EmailCard, Reader} from './Reader.tsx';
 import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
@@ -94,9 +98,8 @@ import {EmptyView} from './EmptyView.tsx';
 
 type InboxRoute = Extract<Route, {page: 'inbox'}>;
 
-// The desktop's search takes sent mail in. The phone's answers stay as the iPhone app's are.
+// Search takes sent mail in.
 const WITH_SENT: SearchScope = {sent: 'include'};
-const NO_SCOPE: SearchScope = {};
 
 const VIEW_LABELS: Record<InboxView, string> = {all: 'All', unread: 'Unread', attention: 'Attention', fyi: 'FYI', noise: 'Noise'};
 
@@ -159,8 +162,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const accountWidth = useAccountColumn(accountList);
   const phone = usePhone();
   const compact = useCompact();
-  // The phone has the one list.
-  const view: InboxView = phone ? 'all' : route.view ?? 'all';
+  const view: InboxView = route.view ?? 'all';
   const inboxLoad = {path: INBOX_PATH, ...useResource<InboxOut>(INBOX_PATH)};
   const inbox = inboxLoad.data;
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
@@ -169,7 +171,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // Undo, or a refused Trash, lets one back.
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
   const untrashing = (id: number) => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
-  const search = useSearch(phone, phone ? NO_SCOPE : WITH_SENT);
+  const search = useSearch(phone, WITH_SENT);
   // Alfred's thread from search shows above the results while the search is active; elsewhere it's in
   // Alfred's window, or the phone's pill and sheet (search/alfred.ts).
   // The place is claimed before any question, so a thread asked here never shows in the window first.
@@ -275,6 +277,11 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const open = route.open;
   // The way the user last stepped to an email.
   const [travelled, setTravelled] = useState<{id: number; travel: Travel} | null>(null);
+  // On the phone, the emails a thread's row (or the "You replied" line) was opened from, newest last.
+  // The reader's Back goes back to each in turn, as Safari's does, before the list. Back to one takes
+  // it off, and the list clears them.
+  const [trail, setTrail] = useState<number[]>([]);
+  if (trail.length && (open === null || open === trail.at(-1))) setTrail(open === null ? [] : trail.slice(0, -1));
 
   // An email the address opens (a deep link, a reload, Back) is opened: read, as a click would.
   useEffect(() => {
@@ -307,6 +314,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
    */
   function openEmail(id: number, key?: string, travel: Travel | null = null) {
     if (selected.length) clearSelection();
+    if (trail.length) setTrail([]);
     setTravelled(travel ? {id, travel} : null);
     const stop = (key ? stops.find(item => item.key === key) : null) ?? stopOf(stops, id);
     if (stop?.kind === 'row') setCursor(stop.key);
@@ -364,6 +372,19 @@ export function InboxPage({route}: {route: InboxRoute}) {
   /** Closes the reader: on the phone it slides back off the list (Back, Done, Trash). */
   function close() {
     slide(phoneSlide(phone, open, null), () => go({open: null}));
+  }
+
+  /** Another email from the open one's thread, its reply line or its Answer card. On the phone Back comes back here. */
+  function openFromReader(id: number) {
+    const from = open;
+    openEmail(id);
+    if (phone && from !== null && from !== id) setTrail([...trail, from]);
+  }
+
+  /** The reader's Back: to the email this one was opened from, else the list. */
+  function back() {
+    if (phone && trail.length) window.history.back();
+    else close();
   }
 
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;
@@ -683,7 +704,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       undos.push(back);
       toast = showToast(`Marked ${ids.length} as read`, {label: 'Undo', run: back, key: '⌘Z'});
     },
-    close,
+    close: back,
   };
 
   // The pane beside the list: the open email, else the selection, else empty.
@@ -847,7 +868,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
     <>
       <header className="hd">
         {phone && <Mark />}
-        <h1 className="hd-title">{searching ? 'Search' : 'Inbox'}</h1>
+        {phone && !searching ? <TitleMenu title={view === 'all' ? 'Inbox' : VIEW_LABELS[view]} rows={[
+          ...INBOX_VIEWS.map(one => ({
+            label: VIEW_LABELS[one], checked: one === view, onChoose: () => switchView(one),
+            ...(one === 'unread' && unreadHere > 0 ? {count: unreadHere} : one === 'attention' && attentionHere > 0 ? {count: attentionHere} : {}),
+          })),
+          'divider',
+          {label: 'Settings', command: true, onChoose: () => openSettings('notifications')},
+        ]} /> : <h1 className="hd-title">{searching ? 'Search' : 'Inbox'}</h1>}
         {phone && !searching && counts && counts.attention > 0 && <span className="apill num" data-tip="Attention, not Done">{counts.attention}</span>}
         {phone && !searching && counts && counts.unread > 0 && <span className="ph-count num">{counts.unread}</span>}
         {/* The views, Unread's with the red unread badge and Attention's with its count. */}
@@ -868,7 +896,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {phone && (
           <>
             {/* Not while searching: it would read the hidden Inbox's mail, not the results. */}
-            {!searching && <button className="ibtn ph-icon" type="button" aria-label="Mark all as read" onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
+            {!searching && markable && <button className="ibtn ph-icon" type="button" aria-label={markScope} onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
             <button className="ibtn ph-icon" type="button" aria-label="New message" onClick={() => newMessage()}><Icon name="edit" size={20} /></button>
           </>
         )}
@@ -898,7 +926,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             }} />
         )}
         {open !== null && (
-          <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={id => openEmail(id)} back={searching ? 'Search' : 'Inbox'}
+          <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={openFromReader} back={trail.length ? 'Back' : searching ? 'Search' : 'Inbox'}
             marks={searching ? readerMarks(open, search.listed, alfred.turns) : []}
             canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}

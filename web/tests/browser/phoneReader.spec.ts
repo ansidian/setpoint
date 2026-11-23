@@ -5,11 +5,13 @@
 // The bar's and More's rows for each kind of email are components/phoneReaderBar.test.tsx's. An
 // invitation's card has Add to calendar, as on the desktop: the reader stays, and the editor or the
 // import review opens over it in the full-screen sheet (the dev provider serves src/dev/icsFiles.ts by name).
+// The thread under the email and Back through it, Snooze's sheet with Undo and Pick a date…, Add to
+// calendar and Add as task from More, and an attachment's preview in its own sheet.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AllOut, DraftOut, DraftsOut, InboxOut, ItemsOut} from '@setpoint/shared';
+import type {AllOut, DraftOut, DraftsOut, InboxOut, ItemsOut, MessageOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -122,9 +124,9 @@ test('the reader\'s actions follow the email: Attention mail has Done, other Gma
     const actions = () => page.locator('.ph-acts > button').allTextContents();
     const rows = () => page.locator('.ph-bs .ph-bs-i').allTextContents();
     for (const [row, subject, labels, moreLabels] of [
-      ['.list .row:has(b[data-tip^="Final exam schedule"])', 'Final exam schedule', 'Done,Reply,More', 'Forward,Trash,Mark unread,Open in Gmail'],
-      ['.row:has-text("Woodgrove Bank")', 'Statement ready', 'Trash,Reply,More', 'Forward,Mark unread,Open in Gmail'],
-      ['.row:has-text("Proseware")', 'Bill is ready', 'Trash,Reply,More', 'Forward,Mark unread'],
+      ['.list .row:has(b[data-tip^="Final exam schedule"])', 'Final exam schedule', 'Done,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Trash,Mark unread,Open in Gmail'],
+      ['.row:has-text("Woodgrove Bank")', 'Statement ready', 'Trash,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Mark unread,Open in Gmail'],
+      ['.row:has-text("Proseware")', 'Bill is ready', 'Trash,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Mark unread'],
     ] as const) {
       await page.locator(row).first().tap();
       await page.locator('.rd-subj', {hasText: subject}).waitFor();
@@ -311,6 +313,130 @@ test('an invitation\'s card offers Add to calendar: one event opens the editor s
     await review.waitFor({state: 'detached'});
     assert.match(new URL(page.url()).pathname, new RegExp(`^/inbox/${id}$`));
     await until('the schedule on Oct 15', () => dayTitles(setpoint, '2026-10-15'), list => ['Opening keynote', 'Hiring panel'].every(title => list.includes(title)), 10_000);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** Theo's newest email in the seed's cabin thread, and the one he sent on Oct 1. */
+async function cabin(setpoint: Setpoint) {
+  const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+  const theo = all.days.flatMap(day => day.rows).filter(row => row.from_name === 'Theo Walsh' && row.subject.endsWith('Cabin weekend in November'))
+    .sort((one, other) => other.received_at.localeCompare(one.received_at));
+  return {newest: theo[0]!.id, oct1: theo.find(row => row.received_at.startsWith('2026-10-02') || row.received_at.startsWith('2026-10-01'))!.id};
+}
+
+test('the thread under the email: a line opens that email, whose Back goes back to it, and then to the Inbox', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const {newest, oct1} = await cabin(setpoint);
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox/${newest}`);
+    const here = page.locator('.rd-conv-line.here');
+    await here.waitFor();
+    await page.locator('.rd-head .rd-replied', {hasText: 'You replied'}).waitFor();
+    // Every line wraps rather than being cut.
+    const cut = await page.locator('.rd-conv-line > span').evaluateAll(all => all.filter(node => node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
+    assert.deepEqual(cut, []);
+    assert.equal(await page.locator('.ph-back').textContent(), 'Inbox');
+
+    await page.locator('.rd-conv-line', {hasText: 'Could you bring the board games'}).tap();
+    await until('Oct 1\'s email', () => page.evaluate(() => window.location.pathname), path => path === `/inbox/${oct1}`);
+    await here.filter({hasText: '5:30 PM'}).waitFor();
+    assert.equal(await page.locator('.ph-back').textContent(), 'Back');
+
+    await page.locator('.ph-back').tap();
+    await until('back to the newest', () => page.evaluate(() => window.location.pathname), path => path === `/inbox/${newest}`);
+    await until('its Back is the Inbox\'s again', () => page.locator('.ph-back').textContent(), text => text === 'Inbox');
+    await page.locator('.ph-back').tap();
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Snooze from More: Tomorrow puts the email off with Undo in the toast, and Pick a date… snoozes until the day and time picked', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await reading(setpoint, 'Dinner Friday?');
+    const id = Number(new URL(page.url()).pathname.split('/').at(-1));
+    const snoozedUntil = async () => (await setpoint.api<MessageOut>('GET', `/mail/messages/${id}`)).snoozed_until ?? null;
+    const openSnooze = async () => {
+      await page.locator('.ph-acts button', {hasText: 'More'}).tap();
+      await page.getByRole('dialog', {name: 'More'}).locator('.ph-bs-i', {hasText: 'Snooze'}).tap();
+      const times = page.getByRole('dialog', {name: 'Snooze'});
+      await times.waitFor();
+      return times;
+    };
+
+    // The seed's Wednesday: Tomorrow is Thursday, which is also the next weekday, so it's alone.
+    const times = await openSnooze();
+    assert.deepEqual(await times.locator('.ph-bs-i').allTextContents(), ['TomorrowThu 9:00 AM', 'Pick a date…']);
+    await times.locator('.ph-bs-i', {hasText: 'Tomorrow'}).tap();
+    const toast = await holdToast(page);
+    assert.equal(await toast.textContent(), 'Snoozed until Tomorrow 9:00 AMUndo');
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    await until('snoozed until Thursday', snoozedUntil, until => until === '2026-10-08T16:00:00.000Z');
+    await toast.locator('button', {hasText: 'Undo'}).tap();
+    await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
+    await until('back in the Inbox', snoozedUntil, until => until === null);
+    await page.evaluate(() => document.documentElement.removeAttribute('data-hold-toast'));
+
+    // Pick a date…: the sheet turns into its day and time fields, the moment said under them.
+    await (await openSnooze()).locator('.ph-bs-i', {hasText: 'Pick a date'}).tap();
+    const pick = page.getByRole('dialog', {name: 'Pick a date'});
+    await pick.waitFor();
+    assert.equal(await pick.locator('.ph-pick-line').textContent(), 'Until Thu, Oct 8, 9:00 AM');
+    await pick.getByLabel('Day').fill('2026-10-07');
+    await pick.getByLabel('Time').fill('08:00');
+    await pick.locator('.ph-pick-line', {hasText: 'That time has passed'}).waitFor();
+    assert.equal(await pick.getByRole('button', {name: 'Snooze'}).isDisabled(), true);
+    await pick.getByLabel('Day').fill('2026-10-12');
+    await pick.getByLabel('Time').fill('14:00');
+    await pick.locator('.ph-pick-line', {hasText: 'Until Mon, Oct 12, 2:00 PM'}).waitFor();
+    await pick.getByRole('button', {name: 'Snooze'}).tap();
+    await pick.waitFor({state: 'detached'});
+    await until('snoozed until Monday 2 PM', snoozedUntil, until => until === '2026-10-12T21:00:00.000Z');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Add to calendar and Add as task in More open the editor\'s sheet over the reader, filled from the email', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await reading(setpoint, 'Dinner Friday?');
+    const path = new URL(page.url()).pathname;
+    for (const [row, title] of [['Add to calendar', 'New event'], ['Add as task', 'New task']] as const) {
+      await more(page, row);
+      const sheet = page.getByRole('dialog', {name: title});
+      await sheet.waitFor();
+      await until(`${title} filled from the email`, () => sheet.locator('.nl-input').inputValue(), text => text.includes('Dinner'));
+      assert.equal(new URL(page.url()).pathname, path, 'the reader stays under it');
+      await sheet.getByRole('button', {name: 'Cancel'}).tap();
+      await sheet.waitFor({state: 'detached'});
+    }
+    await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('an attachment\'s preview opens full-screen with Back and Download, and Back returns to the email', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await reading(setpoint, 'Lease renewal terms');
+    await page.locator('.attach .open', {hasText: 'Renewal agreement.pdf'}).tap();
+    const preview = page.getByRole('dialog', {name: 'Renewal agreement.pdf'});
+    await preview.locator('.preview-pdf').waitFor();
+    await preview.getByRole('button', {name: 'Download'}).waitFor();
+    await preview.getByRole('button', {name: 'Back'}).tap();
+    await preview.waitFor({state: 'detached'});
+    await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
