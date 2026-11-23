@@ -20,9 +20,10 @@
      desktop's do, and its native input, unseen, lies over the whole of it to take the tap. */
   /* The clock beside the Starts row, as each glyph beside its field. */
   .ph-editor .eg > .icon.g-when { align-self: start; margin-top: 11.5px; }
-  .ph-editor .ph-when { display: grid; grid-template-columns: auto minmax(0, 1fr) 96px 24px; align-items: center; gap: 8px 6px; }
+  .ph-editor .ph-when { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) 96px 24px; align-items: center; gap: 8px 6px; }
   .ph-editor .ph-when-label { grid-column: 1; min-width: 46px; display: flex; align-items: center; gap: 4px; color: var(--ink2); font-size: 15px; }
   .ph-editor .ph-when > .ph-add-time { grid-column: span 2; justify-self: start; height: 40px; font-size: 15px; }
+  .ph-editor .ph-when.event > .srcm { position: absolute; left: -27px; top: 61px; }
   .ph-editor .ph-when.task { grid-template-columns: minmax(0, 1fr) 96px 24px auto; }
   .ph-editor .ph-when.task > .pick-date:last-child { grid-column: span 3; }
   .ph-editor .native-pick { min-width: 0; display: flex; }

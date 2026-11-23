@@ -699,11 +699,12 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const dateClass = `date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`;
   // On the phone the day and times are iOS's own pickers, in rows as its Calendar has them: an
   // event's Starts and Ends, each a day and a time (an all-day one's days alone). A task's one row,
-  // its due day and time, takes no word, leaving its day room for its ×.
+  // its due day and time, takes no word, leaving its day room for its ×. An event the email gave no
+  // day has only Starts, its "Pick a day", as the desktop has.
   const ends = draft.start !== null && draft.end !== null ? endOf(draft.date, draft.end) : null;
   const phoneWhen = (
     <div className={`ph-when ${kind}${sk}`}>
-      {kind === 'event' && <span className="ph-when-label">Starts{mark('date', 'time')}</span>}
+      {kind === 'event' && <span className="ph-when-label">Starts</span>}
       <NativeField type="date" className={dateClass} label={kind === 'task' ? 'Due date' : 'Date'} value={draft.undated ? '' : draft.date}
         shown={draft.undated ? '' : dayTitle(draft.date)} placeholder={kind === 'event' ? 'Pick a day' : 'No date'}
         onValue={date => change({date, undated: false}, ['date'])} onClear={clearDate} />
@@ -718,7 +719,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
         </>
       ) : <button type="button" className="btn quiet sm ph-add-time" onClick={addTime}>Add a time</button>}
       {kind === 'task' && mark('date', 'time')}
-      {kind === 'event' && (
+      {kind === 'event' && !draft.undated && (
         <>
           <span className="ph-when-label">Ends</span>
           <NativeField type="date" className={`date${changed('date') ? ' changed' : ''}`} label="End date" value={ends?.date ?? lastDay} min={draft.date}
@@ -737,6 +738,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           )}
         </>
       )}
+      {/* An event's mark sits under the clock, beside Ends, where it takes no room from the days. */}
+      {kind === 'event' && mark('date', 'time')}
     </div>
   );
   // An empty new draft has nothing to conflict yet: the preview waits for a title or a time.
