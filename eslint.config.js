@@ -200,7 +200,7 @@ const moduleBoundary = {
 };
 
 export default tseslint.config(
-  {ignores: ['**/node_modules/', '**/dist/', '**/data/', 'server/drizzle/meta/', 'design-export/', 'reviews/', '.claude/', 'shared/compose/compose.js']},
+  {ignores: ['**/node_modules/', '**/dist/', '**/data/', 'server/drizzle/meta/', 'design-export/', 'reviews/', '.claude/']},
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

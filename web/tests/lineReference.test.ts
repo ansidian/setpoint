@@ -1,19 +1,17 @@
 // "What the line reads" (shared/compose/reference.json) can't drift from the parser.
-// Each example runs through the iPhone's parseTitle (composeApp.ts, what compose.js is built from) on
-// the seed's Wed, Oct 7, 2026. Its kept phrase is hidden as the editor hides it. What it read is
-// said in the editor's own words (the Date and time fields, Repeat, Reminders, Place, Calendar,
-// Project), and a row's `reads` must be exactly that. The examples are cases in cases.json too.
+// Each example runs through the editor's parseTitle on the seed's Wed, Oct 7, 2026. Its kept phrase
+// is hidden as the editor hides it. What it read is said in the editor's own words (the Date and
+// time fields, Repeat, Reminders, Place, Calendar, Project), and a row's `reads` must be exactly that.
 import {describe, expect, test} from 'vitest';
 import {dayTitle} from '../src/logic/calendar.ts';
-import {clockLabel, describeRule} from '../src/logic/compose.ts';
-import {parseTitle} from '../src/logic/composeApp.ts';
+import {clockLabel, describeRule, parseTitle} from '../src/logic/compose.ts';
 import {addDays} from '../src/logic/format.ts';
 import {LINE_REFERENCE} from '../src/logic/lineReference.ts';
 import type {ReferenceRow} from '../src/logic/lineReference.ts';
 import {masked, unmasked} from '../src/logic/plain.ts';
 import {reminderWords} from '../src/logic/reminders.ts';
 
-// As composeBundle.test.ts's: the seed's day, Google calendars and Todoist projects, and a new item's
+// The seed's day, Google calendars and Todoist projects, and a new item's
 // reminders counting from today at 9:00 AM.
 const TODAY = '2026-10-07';
 const CALENDARS = ['Personal', 'Classes', 'Jobs'];
@@ -34,7 +32,8 @@ function times(start: number, end: number | null): string {
 function reads(row: ReferenceRow): string {
   const at = row.plain ? row.example.indexOf(row.plain) : -1;
   const hidden = masked(row.example, at >= 0 ? [{start: at, end: at + row.plain!.length}] : []);
-  const parsed = parseTitle({text: hidden.text, kind: row.kind, today: TODAY, calendars: CALENDARS, projects: PROJECTS, remind: REMIND});
+  const names = row.kind === 'task' ? PROJECTS : CALENDARS;
+  const parsed = parseTitle(hidden.text, TODAY, CALENDARS, null, {kind: row.kind === 'task' ? 'project' : 'calendar', names, picked: null}, null, REMIND);
   const said: string[] = [];
   if (row.plain) said.push(`“${unmasked(parsed.title, hidden.words)}”`);
   if (parsed.days !== null && parsed.days > 1) said.push(`${dayTitle(parsed.date!)} – ${dayTitle(addDays(parsed.date!, parsed.days - 1))}, all day`);

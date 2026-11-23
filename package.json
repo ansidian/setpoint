@@ -27,7 +27,6 @@
     "test:watch": "vitest --project server --project web",
     "test:browser": "node web/tests/browser/run.ts",
     "contract:record": "SETPOINT_UPDATE_CONTRACT=1 vitest run --project server contract.test",
-    "compose:record": "SETPOINT_UPDATE_COMPOSE=1 vitest run --project web composeBundle",
     "release:check": "node web/tests/release.ts"
   },
   "devDependencies": {
