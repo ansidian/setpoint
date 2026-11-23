@@ -36,6 +36,14 @@
   .ph-editor .custom-reminder .pick-date { grid-column: 1 / 4; }
   .ph-editor .custom-reminder .btn.sm { grid-row: 2; height: 40px; padding: 0 14px; font-size: 15px; }
 
+  /* The conflict preview, under the day and times it's about. With the keyboard up only its line
+     stays, so the fields under it keep their place above the keys. */
+  .ph-editor .eg > .conflict { padding: 4px 0 0; }
+  .ph-editor .eg > .conflict > .flabel { display: none; }
+  .ph-editor .conflict .verdict { font-size: 14px; }
+  .ph-sheet[data-keyboard] .ph-editor .eg > .conflict > :not(.verdict) { display: none; }
+  .ph-sheet[data-keyboard] .ph-editor .eg > .conflict .verdict { margin-top: 0; }
+
   /* Menus and pickers stay inside the screen: never wider than it, and scrolling when long. */
   .ph-editor .pop.menu { max-width: calc(100vw - 32px); max-height: min(360px, 50dvh); overflow-y: auto; }
   .ph-editor .lr-pop { width: calc(100vw - 32px); }

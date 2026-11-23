@@ -851,6 +851,14 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               <div className="ink3 num was">{was}</div>
             </>
           )}
+          {/* On the phone the preview sits under the day and times it's about, above the keyboard
+              while the line is typed. With the keyboard up it folds to its one line (editorSheet.css). */}
+          {sheet && preview && (
+            <>
+              <span />
+              {preview}
+            </>
+          )}
 
           {kind === 'event' && editing && <RepeatRow draft={draft} open={menu === 'repeat'} menuRef={menuRef} onToggle={() => setMenu(menu === 'repeat' ? null : 'repeat')} onPick={recurrence => {
             change({recurrence}, ['recurrence']);
@@ -1018,7 +1026,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             note={editing && original && draft.descriptionLossy && !sameDescription(draft.description, original.description) ? 'Saving drops formatting Setpoint can\'t show' : null} />
         </div>
 
-        {preview}
+        {!sheet && preview}
 
         {!editing && !card && (
           <div className="batch">
