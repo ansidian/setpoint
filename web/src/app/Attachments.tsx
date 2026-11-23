@@ -3,7 +3,8 @@
 // Esc or × closes it. Every card and the preview's head offer Download. A card with no preview is
 // one Download link. An invitation (.ics) has Add to calendar. It reads the stored attachment on the
 // server into the same review as an import from Calendar. An invitation that can't be read says so
-// in place of its size. Desktop only: on the phone (its layout frozen) it stays a Download link.
+// in place of its size. On the phone the reader stays, and the editor or the review opens over it
+// in the full-screen sheet.
 import type {AttachmentOut} from '@setpoint/shared';
 import {useEffect, useState} from 'react';
 import {timeZone} from '../api/auth.ts';
@@ -38,7 +39,7 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
         {files.map(file => {
           const kind = previewKind(file);
           const type = attachmentType(file);
-          if (type === 'calendar' && !phone) return <Invitation key={file.id} messageId={messageId} file={file} />;
+          if (type === 'calendar') return <Invitation key={file.id} messageId={messageId} file={file} phone={phone} />;
           const about = (
             <>
               <span className="type"><Icon name={TYPE_GLYPHS[type]} /></span>
@@ -72,7 +73,7 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
  * (landIcs: the editor's draft, the review, or the toast when there's nothing to import). A file
  * that can't be read says so in place of its size, in the parser's words.
  */
-function Invitation({messageId, file}: {messageId: number; file: AttachmentOut}) {
+function Invitation({messageId, file, phone}: {messageId: number; file: AttachmentOut; phone: boolean}) {
   const [reading, setReading] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const add = () => {
@@ -81,7 +82,7 @@ function Invitation({messageId, file}: {messageId: number; file: AttachmentOut})
     setProblem(null);
     readIcsAttachment(messageId, file.id).then(read => {
       setReading(false);
-      landIcs(file.filename, read, timeZone());
+      landIcs(file.filename, read, timeZone(), {stay: phone});
     }, (error: unknown) => {
       setReading(false);
       setProblem(error instanceof ApiFailure && error.code === 'invalid_input' ? error.message : failureLine(`Failed to read ${file.filename}`, error));

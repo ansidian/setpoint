@@ -2,12 +2,16 @@
 // and the actions each email gets in its bar and its More sheet; Mark all as read from the top. Its
 // composer's sheet: a reply sent from the bar and brought back by Undo, Reply all and a forward from More, a new message from the Inbox's
 // header, each held behind "Sending", and a reply left on the phone that the desktop opens again.
-// The bar's and More's rows for each kind of email are components/phoneReaderBar.test.tsx's.
+// The bar's and More's rows for each kind of email are components/phoneReaderBar.test.tsx's. An
+// invitation's card has Add to calendar, as on the desktop: the reader stays, and the editor or the
+// import review opens over it in the full-screen sheet (the dev provider serves src/dev/icsFiles.ts by name).
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AllOut, DraftOut, DraftsOut, InboxOut} from '@setpoint/shared';
+import type {AllOut, DraftOut, DraftsOut, InboxOut, ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, holdToast, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 import {counts, email, inbox} from './phoneHelpers.ts';
 
@@ -247,6 +251,66 @@ test('a reply started on the phone and left with Cancel is kept, and the desktop
     const desk = await setpoint.page('target');
     await desk.goto(page.url());
     await desk.locator('.pane .composer').getByRole('textbox', {name: 'Message'}).filter({hasText: 'Count me in.'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** The seed's interview confirmation, with any more .ics files linked to it. */
+function interviewEmail(setpoint: Setpoint, more: string[] = []) {
+  const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+  try {
+    database.exec('PRAGMA busy_timeout = 5000');
+    const {id} = database.prepare('SELECT id FROM messages WHERE subject = ?').get('Interview confirmed: Data Engineer I') as {id: number};
+    const insert = database.prepare('INSERT INTO attachments (message_id, provider_id, filename, mime_type, size_bytes) VALUES (?, ?, ?, ?, 900)');
+    more.forEach((filename, index) => insert.run(id, `phone-${index}`, filename, 'text/calendar'));
+    return id;
+  } finally {
+    database.close();
+  }
+}
+
+async function dayTitles(setpoint: Setpoint, date: string) {
+  const next = new Date(Date.parse(`${date}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  const {items} = await setpoint.api<ItemsOut>('GET', `/items?from=${date}&to=${next}`);
+  return items.filter(item => !item.command).map(item => item.title);
+}
+
+test('an invitation\'s card offers Add to calendar: one event opens the editor sheet over the reader, two or more the review', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const id = interviewEmail(setpoint, ['northwind-devcon.ics']);
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox/${id}`);
+    await page.locator('.rd-subj', {hasText: 'Interview confirmed: Data Engineer I'}).waitFor();
+    const card = page.locator('.attach[data-type="calendar"]', {hasText: 'invite.ics'});
+    // The card in place of a plain Download link, its name with room beside its two buttons.
+    assert.deepEqual(await card.locator(':scope > .dl').evaluateAll(parts => parts.map(part => part.getAttribute('aria-label') ?? part.textContent)), ['Add to calendar', 'Download']);
+    const name = (await rested(() => card.locator('.name').boundingBox()))!;
+    assert.ok(name.width >= 60, `the name has room (${name.width} px)`);
+
+    await card.getByRole('button', {name: 'Add to calendar'}).tap();
+    const sheet = page.getByRole('dialog', {name: 'New event'});
+    await sheet.waitFor();
+    assert.match(new URL(page.url()).pathname, new RegExp(`^/inbox/${id}$`), 'the reader stays under it');
+    assert.deepEqual([await page.getByLabel('Date', {exact: true}).inputValue(), await page.getByLabel('Start', {exact: true}).inputValue(), await page.getByLabel('End', {exact: true}).inputValue()],
+      ['Tue, Oct 20', '2:00 PM', '2:45 PM']);
+    await sheet.getByRole('button', {name: 'Create'}).tap();
+    await sheet.waitFor({state: 'detached'});
+    await page.locator('.toast', {hasText: /^Imported Interview with Trey Research/}).waitFor({timeout: 10_000});
+    await until('the interview on Oct 20', () => dayTitles(setpoint, '2026-10-20'), list => list.some(title => title.startsWith('Interview with Trey Research')));
+
+    // A schedule: the review in the sheet, its count, then Import in the top bar.
+    await page.locator('.attach[data-type="calendar"]', {hasText: 'northwind-devcon.ics'}).getByRole('button', {name: 'Add to calendar'}).tap();
+    const review = page.getByRole('dialog', {name: 'Import northwind-devcon.ics'});
+    await review.waitFor();
+    assert.deepEqual(await review.locator('.imp-item .title').allTextContents(), ['Opening keynote', 'Hiring panel', 'Closing remarks']);
+    await review.locator('.ph-sheet-top').getByRole('button', {name: 'Import'}).tap();
+    await page.locator('.toast', {hasText: 'Imported 3 events to Personal'}).waitFor({timeout: 20_000});
+    await review.waitFor({state: 'detached'});
+    assert.match(new URL(page.url()).pathname, new RegExp(`^/inbox/${id}$`));
+    await until('the schedule on Oct 15', () => dayTitles(setpoint, '2026-10-15'), list => ['Opening keynote', 'Hiring panel'].every(title => list.includes(title)), 10_000);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

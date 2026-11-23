@@ -57,9 +57,10 @@ export function handIcs(event: IcsEventOut | null) {
 /**
  * An email's .ics, once read, lands as a file from Calendar does (icsLanding). If there is nothing
  * to import, the toast says so. Otherwise Calendar opens on the event's day, with one event in the
- * editor and two or more in the review.
+ * editor and two or more in the review. On the phone (`stay`) the reader stays, and the editor or
+ * the review opens over it in the full-screen sheet (phone/EditorSheet.tsx).
  */
-export function landIcs(name: string, read: IcsReadOut, timeZone: string) {
+export function landIcs(name: string, read: IcsReadOut, timeZone: string, {stay = false} = {}) {
   const landing = icsLanding(read, timeZone);
   if (landing.kind === 'nothing') {
     showToast(landing.line);
@@ -67,7 +68,7 @@ export function landIcs(name: string, read: IcsReadOut, timeZone: string) {
   }
   if (landing.kind === 'draft') handIcs(landing.event);
   else openReview(name, read);
-  navigate({page: 'calendar', date: landing.date, item: null, at: null});
+  if (!stay) navigate({page: 'calendar', date: landing.date, item: null, at: null});
 }
 
 /** A file of two or more events opens the review, its past events unticked. */
