@@ -14,7 +14,7 @@ import type {Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
-import {instantScrolls, scrollsAsked} from './phoneHelpers.ts';
+import {instantScrolls, scrollsAsked, swipe} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -339,6 +339,47 @@ test('the month picker jumps to a day at the top, far off or near, and Today goe
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
     await until('today at the top', () => topDay(page), day => day === '2026-10-07');
     assert.deepEqual(await scrollsAsked(page), ['smooth']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the month picker swipes left to the next month and right to the one before, a swipe on a day not picking it, one from the screen\'s edge being Safari\'s Back', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await agenda(setpoint);
+    const picker = page.getByRole('dialog', {name: 'Go to a day'});
+    await page.locator('.hd .ph-month-btn').tap();
+    await picker.getByText('October 2026').waitFor();
+    // Started on a day, with the click a mouse sends after it: the month turns, the day isn't picked.
+    const grid = picker.locator('.mini');
+    await swipe(picker.getByRole('button', {name: '2026-10-14'}), 300, 200);
+    await picker.getByText('November 2026').waitFor();
+    await swipe(grid, 100, 220, false);
+    await picker.getByText('October 2026').waitFor();
+    await swipe(grid, 100, 220);
+    await picker.getByText('September 2026').waitFor();
+    // From the screen's edge it's Back's, and a short drag is a tap's: the month stays.
+    await swipe(grid, 8, 200);
+    await swipe(grid, 200, 180, false);
+    assert.equal(await picker.locator('.mini-head .name').textContent(), 'September 2026');
+    // A thumb drifting down as it swipes turns the month and leaves the sheet where it is.
+    await grid.evaluate(element => {
+      const fire = (type: string, x: number, y: number) => element.dispatchEvent(new PointerEvent(type, {bubbles: true, isPrimary: true, pointerId: 9, pointerType: 'touch', button: 0, clientX: x, clientY: y}));
+      fire('pointerdown', 300, 400);
+      for (const step of [0.25, 0.5, 0.75, 1]) fire('pointermove', 300 - 100 * step, 400 + 30 * step);
+      (window as unknown as {sheetMoved: string}).sheetMoved = element.closest<HTMLElement>('.ph-bs')!.style.transform;
+      fire('pointerup', 200, 430);
+    });
+    assert.equal(await page.evaluate(() => (window as unknown as {sheetMoved: string}).sheetMoved), '');
+    await picker.getByText('October 2026').waitFor();
+    await swipe(grid, 100, 220);
+    await picker.getByText('September 2026').waitFor();
+    // The next tap on a day is a pick.
+    await picker.getByRole('button', {name: '2026-09-28'}).tap();
+    await picker.waitFor({state: 'detached'});
+    await until('the day at the top', () => topDay(page), day => day === '2026-09-28');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

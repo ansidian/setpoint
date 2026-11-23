@@ -38,8 +38,9 @@
   .ph-agenda .ph-res-why b { color: var(--ink2); font-weight: 500; }
   .ph-agenda.ph-agenda-search .no-results { margin: 16px 20px; }
 
-  /* The month picker: the mini month at a finger's size, Today under it. */
-  .ph-month { padding: 0 12px 12px; display: flex; flex-direction: column; }
+  /* The month picker: the mini month at a finger's size, Today under it. A sideways drag is its
+     swipe to the next or previous month (AgendaMonthPicker.tsx), one up or down the sheet's. */
+  .ph-month { padding: 0 12px 12px; display: flex; flex-direction: column; touch-action: pan-y; }
   .ph-month .ph-month-head { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 0 4px 8px; }
   .ph-month .ph-month-head .name { font-size: 16px; }
   .ph-month .ph-month-head .ibtn { width: 40px; height: 40px; }
