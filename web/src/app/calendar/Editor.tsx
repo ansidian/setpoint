@@ -1028,7 +1028,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
         {!sheet && preview}
 
-        {!editing && !card && (
+        {/* Batch drafts are the desktop's: on the phone, one item at a time. */}
+        {!editing && !card && !sheet && (
           <div className="batch">
             {drafts.filter(one => one.id !== draft.id).map(one => (
               <div key={one.id} className="drafted-row">

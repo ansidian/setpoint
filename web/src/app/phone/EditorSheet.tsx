@@ -1,5 +1,6 @@
-// The phone's editor: the desktop's editor (calendar/Editor.tsx) in the full-screen sheet, with the
-// same fields and line, and the .ics import review in a sheet of its own. Anything on the phone
+// The phone's editor: the desktop's editor (calendar/Editor.tsx) in the full-screen sheet, with its
+// line and fields, the day and times as iOS's own pickers and one item at a time (no Add another),
+// and the .ics import review in a sheet of its own. Anything on the phone
 // opens it with `openEditorSheet`: the Agenda's + (a new item on a day) and Edit (an item), an
 // email's Add to calendar or Add as task (`message`, which fills it from the email's proposal as the
 // desktop's More options does), and an invitation's Add to calendar (`ics`, one event as a draft).

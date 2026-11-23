@@ -14,6 +14,7 @@ import {render} from 'vitest-browser-react';
 import '../../src/app/calendar/calendar.css';
 import {clearCache, setCached} from '../../src/api/client.ts';
 import {CALENDARS_PATH} from '../../src/api/items.ts';
+import {Editor} from '../../src/app/calendar/Editor.tsx';
 import {closeEditorSheet, openEditorSheet, PhoneSheets, removeItem} from '../../src/app/phone/EditorSheet.tsx';
 import {deleteWithUndo, toggleDone} from '../../src/app/phone/itemActions.ts';
 import {dismissToast} from '../../src/app/toast.ts';
@@ -262,6 +263,19 @@ test('a new task\'s custom reminder is picked with iOS\'s pickers: its day and t
   await expect.poll(() => sent.length).toBe(1);
   // 21 hours before 5 PM the next day.
   expect((sent[0]!.body.reminders as number[])).toContain(21 * 60);
+});
+
+test('Add another is the desktop\'s: the phone\'s sheet makes one item at a time', async () => {
+  server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch with Ana 12-1pm');
+  expect(document.querySelector('.ph-editor .batch')).toBeNull();
+  await expect.element(page.getByRole('button', {name: 'Add another'})).not.toBeInTheDocument();
+  closeEditorSheet();
+  await render(<Editor open={{kind: 'event', date: '2026-10-09'}} calendars={CALENDARS} today="2026-10-07" timeZone={SEED_TIME_ZONE} handed={false}
+    dayItems={() => []} onPreview={() => {}} onCreate={() => {}} onSave={() => {}} onDelete={() => {}} onClose={() => {}} />);
+  await expect.element(page.getByRole('button', {name: 'Add another'})).toBeVisible();
 });
 
 test('every menu in the sheet fits the screen: the calendar, the repeat, a reminder\'s, a task\'s project and labels', async () => {
