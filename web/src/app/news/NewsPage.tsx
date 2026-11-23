@@ -111,6 +111,9 @@ function listing(view: NewsView, answer: Answer): Listing {
     alsoReported: list.also_reported};
 }
 
+/** No rows to see: the phone's list under an open story. */
+const NO_SHELVES: Layout = [];
+
 /** Search's results as one shelf, newest first. */
 const SEARCH_SHELF = 'search';
 
@@ -328,7 +331,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
     navigate({page: 'news', view: next, story: keep ? open : null, article: keep ? route.article : null});
   }
 
-  useSeen(list, shown, rows);
+  // On the phone an open story covers the list, so nothing under it is on screen: seen waits for Back,
+  // when what's on screen starts its second.
+  useSeen(list, phone && open !== null ? NO_SHELVES : shown, rows);
   useListFade(list, view);
   // The pane beside the list: the open story, else empty, with the recap on All.
   const pane = useEmptyPane(open !== null, PANE_PATHS);

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -188,6 +188,35 @@ test('seen on the phone: the rows wholly on screen for about a second; a row bel
     await page.reload();
     await row(page, 'Brush fire near the 210').waitFor();
     for (const id of seen) assert.match(await page.locator(`.nw-list [data-key][data-story="${id}"]`).first().getAttribute('class') ?? '', /\bseen\b/);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('seen on the phone waits while a story covers the list: the rows under it stay new, and are seen a second after Back', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    await setpoint.api('POST', '/news/recap/done');
+    const hurricane = await storyId(setpoint, 'Hurricane Teresa makes landfall in the Florida Panhandle as a Category 3');
+    const brush = await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres');
+    const before = await stateOf(setpoint, brush);
+    assert.notEqual(before, 'seen');
+    const page = await setpoint.page('iphone');
+    await page.clock.install();
+    await page.goto(`${setpoint.base}/news/story/${hurricane}`);
+    await page.locator('.pane .rd-subj', {hasText: 'Hurricane Teresa'}).waitFor();
+    await row(page, 'Brush fire near the 210').waitFor();
+    await until('the hurricane seen', () => stateOf(setpoint, hurricane), state => state === 'seen');
+    // Well past the second a row needs, with the story over the list.
+    await pauseClock(page);
+    await page.clock.runFor(3000);
+    await setpoint.idle();
+    assert.equal(await stateOf(setpoint, brush), before, 'under the story, not seen');
+    await page.locator('.pane .ph-back').tap();
+    await until('the pane closes', () => page.locator('.pane').count(), count => count === 0);
+    await page.clock.runFor(1500);
+    await until('seen after Back', () => stateOf(setpoint, brush), state => state === 'seen');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
