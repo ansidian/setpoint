@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {
-  articleSchema, missedSchema, newsPageSchema, newsSectionOutSchema, newsSeenSchema, newsSourcesSchema, recapDoneSchema, recapSchema, SEED_NOW, storySchema,
+  articleSchema, newsPageSchema, newsSectionOutSchema, newsSeenSchema, newsSourcesSchema, recapDoneSchema, recapSchema, SEED_NOW, storySchema,
 } from '@setpoint/shared';
 import type {NewsSection} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -25,7 +25,7 @@ import {noteHere, putRecapAway, recapState} from '../src/news/recap.ts';
 import {DEFAULT_NEWS_SOURCES, ensureNewsSources, LOCAL_SOURCES_FILE, localSourcesSchema, registerNewsSources} from '../src/news/sources.ts';
 import {expireNews, markSeen} from '../src/news/store.ts';
 import {NewsWorker} from '../src/news/worker.ts';
-import {articleDetail, missed, newsPage, newsRecap, newsSection, newsSources, storyDetail} from '../src/queries/news.ts';
+import {articleDetail, newsPage, newsRecap, newsSection, newsSources, storyDetail} from '../src/queries/news.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
 import {ProviderError} from '../src/sync/errors.ts';
 import {Adapters} from '../src/sync/registry.ts';
@@ -99,7 +99,7 @@ describe('the page and its 48 hours', () => {
     expect(recap.stories[0]!.expired_at).toBe(new Date(Date.parse(ago(47)) + 48 * HOUR).toISOString());
     // No recap has been put away yet, so it's since the user's last look before it left.
     expect(recap.since).toBe(ago(30));
-    expect(newsPage(w.store)).toMatchObject({missed: {count: 1, since: ago(30)}, recap});
+    expect(newsPage(w.store)).toMatchObject({recap});
     expect(liveEvents(w).filter(event => event.type === 'news').at(-1)).toEqual({type: 'news', stories: [unseen, seen], sections: ['local'], sources: []});
   });
 
@@ -266,15 +266,10 @@ describe('While you were away', () => {
       ['ai', 'Google DeepMind'], ['ai', 'OpenAI opens'],
       ['general', 'Tornado outbreak'], ['general', 'Amtrak derailment'],
     ]);
-    expect(newsPage(w.store).missed).toEqual({count: 8, since: NEWS_LAST_LOOKED});
-    // The iPhone app's Catch up: the same stories by the day they left, biggest first.
-    const catchUp = missedSchema.parse(missed(w.store));
-    expect(catchUp).toMatchObject({since: NEWS_LAST_LOOKED, count: 8, days: [{date: '2026-10-06'}]});
-    expect(catchUp.days[0]!.stories.map(story => story.headline.split(' ')[0])).toEqual(['Tornado', 'Google', 'Overnight', 'OpenAI', 'Amtrak', 'iOS', 'Teen', 'Samsung']);
+    expect(newsPage(w.store).recap).toEqual(recap);
 
     putRecapAway(w.store);
-    expect(newsPage(w.store)).toMatchObject({missed: null, recap: null});
-    expect(missed(w.store)).toEqual({since: null, count: 0, days: []});
+    expect(newsPage(w.store).recap).toBeNull();
     // Its stories stay unseen and in search's archive.
     expect(recap.stories.map(story => storyDetail(w.store, story.id).state)).toEqual(recap.stories.map(() => 'new'));
     const source = w.store.db.select().from(t.newsSources).get()!;
@@ -328,7 +323,7 @@ describe('While you were away', () => {
     expect(recapIds(w)).toEqual([away]);
   });
 
-  test('the routes: News on screen fixes it, Done puts it away with an event, and Undo puts it back as it was; the iPhone app\'s seen fixes it too', async () => {
+  test('the routes: News on screen fixes it, Done puts it away with an event, and Undo puts it back as it was; seeing one of its stories fixes it too', async () => {
     const w = world({seed: true});
     const c = await signedIn(w);
     const page = newsPageSchema.parse((await c.send('GET', '/api/news')).body);
@@ -343,13 +338,13 @@ describe('While you were away', () => {
     const done = recapDoneSchema.parse((await c.send('POST', '/api/news/recap/done')).body);
     expect(done.undo).toEqual({put_away_at: null, shown_at: SEED_NOW, story_ids: ids});
     expect(liveEvents(w).slice(before)).toEqual([{type: 'news', stories: [], sections: ['local', 'tech', 'ai', 'general'], sources: []}]);
-    expect(newsPageSchema.parse((await c.send('GET', '/api/news')).body)).toMatchObject({missed: null, recap: null});
+    expect(newsPageSchema.parse((await c.send('GET', '/api/news')).body)).toMatchObject({recap: null});
     expect((await c.send('POST', '/api/news/recap/undo', {body: done.undo})).status).toBe(204);
     expect(newsPageSchema.parse((await c.send('GET', '/api/news')).body).recap).toEqual(page.recap);
     expect((await c.send('POST', '/api/news/recap/undo', {body: {put_away_at: 'Friday'}})).status).toBe(400);
 
-    // The iPhone app's Catch up, before the page has shown it: seeing one of its stories fixes it, so
-    // the seen one stays and nothing slides in, though it's no longer what Missed held.
+    // Before the page has shown it, seeing one of its stories (from a section, say) fixes it, so the
+    // seen one stays and nothing slides in, though it's no longer what can be in it.
     putRecapAway(w.store);
     const source = w.store.db.select().from(t.newsSources).get()!;
     const recent = new Date(w.store.now().getTime() - 47 * HOUR).toISOString();
@@ -359,13 +354,13 @@ describe('While you were away', () => {
     expect(recapIds(w)).toEqual(left.slice(0, 2));
     await c.send('POST', '/api/news/seen', {body: {story_ids: [left[0]]}});
     expect(recapState(w.store)).toMatchObject({storyIds: left.slice(0, 2), hereAt: w.store.now().toISOString()});
-    expect(missedSchema.parse((await c.send('GET', '/api/news/missed')).body).days[0]!.stories.map(story => [story.id, story.state]))
+    expect(newsPageSchema.parse((await c.send('GET', '/api/news')).body).recap!.stories.map(story => [story.id, story.state]))
       .toEqual([[left[0], 'seen'], [left[1], 'new']]);
   });
 });
 
 describe('the routes', () => {
-  test('All, a section, a story, an article, Catch up, Settings › News and seen, on the seed', async () => {
+  test('All, a section, a story, an article, Settings › News and seen, on the seed', async () => {
     const w = world({seed: true});
     const c = await signedIn(w);
     const page = newsPageSchema.parse((await c.send('GET', '/api/news')).body);
@@ -377,7 +372,6 @@ describe('the routes', () => {
     expect(articleSchema.parse((await c.send('GET', `/api/news/articles/${nbc.article_id}`)).body)).toMatchObject({byline: 'Staff report', summary_only: false});
     const metered = w.store.db.select().from(t.newsArticles).where(eq(t.newsArticles.metered, true)).get()!;
     expect((await c.send('GET', `/api/news/articles/${metered.id}`)).status).toBe(404);
-    expect(missedSchema.parse((await c.send('GET', '/api/news/missed')).body).count).toBe(8);
     newsSourcesSchema.parse((await c.send('GET', '/api/news/sources')).body);
     expect((await c.send('GET', '/api/news/stories/99999')).status).toBe(404);
 

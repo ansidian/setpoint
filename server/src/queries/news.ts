@@ -5,7 +5,7 @@
 // recap's stories follow src/domain/news.ts. Sorting adds the bar (a story under it never shows:
 // not on the page, in the recap or in search), and search over the 90-day archive.
 import type {
-  AlsoReportedOut, ArticleOut, MissedOut, NewsBlockOut, NewsDayOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
+  AlsoReportedOut, ArticleOut, NewsBlockOut, NewsDayOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
   RecapOut, RecapStoryOut, SectionHealthOut, StoryFactOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
 import {NEWS_SECTIONS, NEWS_SOURCE_ICONS} from '@setpoint/shared';
@@ -151,12 +151,6 @@ function lastLookBefore(store: Store, at: string): string | null {
  * blocks' order. Null when it holds nothing.
  */
 export function newsRecap(store: Store): RecapOut | null {
-  const recap = rankedRecap(store);
-  return recap && {since: recap.since, stories: recap.stories};
-}
-
-/** The recap, and its stories' ids biggest first, as Catch up orders a day. */
-function rankedRecap(store: Store): RecapOut & {ids: number[]} | null {
   const state = recapState(store);
   const ids = store.db.select({id: t.newsStories.id}).from(t.newsStories)
     .where(state.storyIds ? and(inArray(t.newsStories.id, state.storyIds), overBar(), writtenCondition()) : recapCondition(state.putAwayAt))
@@ -167,7 +161,7 @@ function rankedRecap(store: Store): RecapOut & {ids: number[]} | null {
     return row?.expired_at ? [{...row, section: main.get(id) ?? row.sections[0]!, expired_at: row.expired_at}] : [];
   }));
   if (!stories.length) return null;
-  return {since: state.putAwayAt ?? lastLookBefore(store, stories.map(story => story.expired_at).sort()[0]!), stories, ids};
+  return {since: state.putAwayAt ?? lastLookBefore(store, stories.map(story => story.expired_at).sort()[0]!), stories};
 }
 
 /**
@@ -186,8 +180,7 @@ export function newsPage(store: Store): NewsPageOut {
     const shown = blockSize(own.map(story => story.score));
     return {section, stories: own.slice(0, shown).map(story => loaded.get(story.id)!), more: rows.length - shown, upcoming: upcoming(store, section, now), health: lines.get(section) ?? null};
   });
-  const recap = newsRecap(store);
-  return {blocks, missed: recap && {count: recap.stories.length, since: recap.since}, recap};
+  return {blocks, recap: newsRecap(store)};
 }
 
 /** A section's full list, biggest first, then Also reported: its stories left unwritten under the write gate, each as its lead article. */
@@ -233,24 +226,6 @@ export function articleDetail(store: Store, articleId: number): ArticleOut {
     published_at: article.publishedAt, headline: article.headline, url: article.url,
     text: article.summaryOnly || article.discovery ? null : article.extractedText,
     feed_summary: article.feedSummary, summary_only: article.summaryOnly, discovery: article.discovery, image: image ? imageOut(image) : null,
-  };
-}
-
-/**
- * The iPhone app's Catch up: the recap's stories by the local day each left the page, newest day first, biggest first within it.
- */
-export function missed(store: Store): MissedOut {
-  const recap = rankedRecap(store);
-  const stories = recap ? [...recap.stories].sort((a, b) => recap.ids.indexOf(a.id) - recap.ids.indexOf(b.id)) : [];
-  const days = new Map<string, RecapStoryOut[]>();
-  for (const story of stories) {
-    const date = localDay(story.expired_at, store.timeZone);
-    days.set(date, [...(days.get(date) ?? []), story]);
-  }
-  return {
-    since: recap?.since ?? null,
-    count: stories.length,
-    days: [...days.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([date, list]) => ({date, stories: list})),
   };
 }
 

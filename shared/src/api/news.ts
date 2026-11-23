@@ -6,7 +6,6 @@
 //   GET  /api/news/sections/:section       NewsSectionOut (that section's full list, biggest first, then Also reported)
 //   GET  /api/news/stories/:id             StoryOut (the story pane), without marking it seen
 //   GET  /api/news/articles/:id            ArticleOut (a source opened in the pane); a metered article is 404
-//   GET  /api/news/missed                  MissedOut (the iPhone app's Catch up: the recap's stories by day)
 //   GET  /api/news/sources                 NewsSourcesOut (Settings › News)
 //   GET  /api/news/day                     NewsDayOut (News's empty pane: freshness, today, the quiet facts)
 //   GET  /api/news/images/:id              Setpoint's own copy of an image (outlets never see the user's browsing)
@@ -32,7 +31,7 @@
 // "mark all seen".
 import {z} from 'zod';
 import {AI_PROVIDERS, HEALTH_STATES, NEWS_ADAPTERS, NEWS_HAZARDS, NEWS_SECTIONS, NEWS_SOURCE_ICONS, NEWS_SOURCE_KINDS, STORY_STATES} from '../enums.ts';
-import {id, instant, localDate} from './common.ts';
+import {id, instant} from './common.ts';
 import type {ProposalOut} from './search.ts';
 
 export const newsSectionSchema = z.enum(NEWS_SECTIONS);
@@ -157,20 +156,9 @@ export const recapSchema = z.strictObject({
 });
 export type RecapOut = z.infer<typeof recapSchema>;
 
-/**
- * The iPhone app's Missed strip at the top of All, fed the recap:
- * "11 stories you missed since Mon".
- */
-export const missedStripSchema = z.strictObject({
-  count: z.int().positive(),
-  since: instant.nullable(),
-});
-export type MissedStripOut = z.infer<typeof missedStripSchema>;
-
-/** All: one block per section in NEWS_SECTIONS order, and the recap (and the iPhone app's strip from it). */
+/** All: one block per section in NEWS_SECTIONS order, and the recap. */
 export const newsPageSchema = z.strictObject({
   blocks: z.array(newsBlockSchema).length(NEWS_SECTIONS.length),
-  missed: missedStripSchema.nullable(),
   recap: recapSchema.nullable(),
 });
 export type NewsPageOut = z.infer<typeof newsPageSchema>;
@@ -262,24 +250,6 @@ export const articleSchema = z.strictObject({
   image: newsImageSchema.nullable(),
 });
 export type ArticleOut = z.infer<typeof articleSchema>;
-
-/** One day of the iPhone app's Catch up, by the local day its stories left the page ("TUESDAY", "Oct 6"). */
-export const missedDaySchema = z.strictObject({
-  date: localDate,
-  stories: z.array(recapStorySchema).min(1),
-});
-export type MissedDayOut = z.infer<typeof missedDaySchema>;
-
-/**
- * The iPhone app's Catch up (board 28): the recap's stories by the day they left the page, newest
- * day first, biggest first within a day. Fixed as the recap is, so nothing slides in as they're seen.
- */
-export const missedSchema = z.strictObject({
-  since: instant.nullable(),
-  count: z.int().nonnegative(),
-  days: z.array(missedDaySchema),
-});
-export type MissedOut = z.infer<typeof missedSchema>;
 
 /** A source's health, as on Settings › Accounts, or null until its first check. */
 export const newsSourceHealthSchema = z.strictObject({

@@ -1,5 +1,5 @@
 // News's routes (shapes and the list in `@setpoint/shared` src/api/news.ts). They cover All, a
-// section, a story, an article, the iPhone app's Catch up, Settings › News, Setpoint's image copies,
+// section, a story, an article, Settings › News, Setpoint's image copies,
 // and stories seen. They cover sorting's state (Unsorted and the first run), Show headlines, search,
 // and Upcoming's Add to calendar. They cover the recap's state: News on screen, Done and its Undo.
 // They're mounted under /api behind the session, like the rest of the API. They're read-only apart
@@ -16,7 +16,7 @@ import {proposeFromNewsEvent} from '../news/proposal.ts';
 import {noteHere, putRecapAway, undoPutAway} from '../news/recap.ts';
 import {newsStatus, unsortedArticles} from '../news/sortState.ts';
 import {markSeen} from '../news/store.ts';
-import {articleDetail, missed, newsDay, newsPage, newsRecap, newsSearch, newsSection, newsSources, storyDetail, storyRows} from '../queries/news.ts';
+import {articleDetail, newsDay, newsPage, newsRecap, newsSearch, newsSection, newsSources, storyDetail, storyRows} from '../queries/news.ts';
 import type {Store} from '../store.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
@@ -42,7 +42,6 @@ export function newsApi(store: Store, {imagesDir = null, origin = c => new URL(c
   api.get('/news/sections/:section', c => c.json(newsSection(store, parse(newsSectionSchema, c.req.param('section')))));
   api.get('/news/stories/:id', c => c.json(storyDetail(store, id(c.req.param('id')))));
   api.get('/news/articles/:id', c => c.json(articleDetail(store, id(c.req.param('id')))));
-  api.get('/news/missed', c => c.json(missed(store)));
   api.get('/news/sources', c => c.json(newsSources(store)));
   api.get('/news/day', c => c.json(newsDay(store)));
   api.get('/news/status', c => c.json(newsStatus(store)));
@@ -61,8 +60,8 @@ export function newsApi(store: Store, {imagesDir = null, origin = c => new URL(c
   });
   api.post('/news/seen', async c => {
     const ids = parse(newsSeenInput, await body(c)).story_ids;
-    // Seeing a story is being on News, and seeing one of the recap's means it's on screen: the iPhone
-    // app's Catch up fixes it as the page does.
+    // Seeing a story is being on News, and seeing one of the recap's means it's on screen, so it
+    // fixes the recap as News on screen does.
     const recap = newsRecap(store)?.stories.map(story => story.id) ?? [];
     noteHere(store, recap.some(id => ids.includes(id)) ? recap : null);
     const seen = markSeen(store, ids);
