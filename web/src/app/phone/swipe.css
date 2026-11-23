@@ -1,0 +1,24 @@
+/* A list's rows swiping on the phone (phone/swipe.tsx), under the phone's breakpoint as phone.css's
+   rules are. */
+@media (max-width: 639px) {
+  /* A row's swipe: its cells follow the finger by `--sw` while the tray behind
+     them grows from the side it's pulled from, as wide as the gap. Let go, they settle over 180 ms.
+     Vertical drags stay the list's scroll. */
+  .list.all .row { touch-action: pan-y; }
+  [data-swipe] { overflow: hidden; }
+  [data-swipe] > :not(.sw) { transform: translateX(var(--sw, 0px)); }
+  [data-swipe="settle"] > :not(.sw) { transition: transform var(--dur-medium) var(--ease); }
+  [data-swipe="settle"] > .sw { transition: width var(--dur-medium) var(--ease); }
+  .sw { position: absolute; top: 0; bottom: 0; display: flex; overflow: hidden; }
+  .sw.lead { left: 0; width: max(0px, var(--sw, 0px)); }
+  .sw.trail { right: 0; width: max(0px, calc(var(--sw, 0px) * -1)); flex-direction: row-reverse; }
+  .sw-b { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; overflow: hidden;
+    color: var(--onInk); font-size: 12px; font-weight: 500; white-space: nowrap; transition: flex-grow var(--dur-fast) var(--ease); }
+  .sw-b.accent { background: var(--accent); }
+  .sw-b.alert { background: var(--alert); }
+  .sw-b.good { background: var(--good); }
+  .sw-b.sun { background: var(--sunGlyph); }
+  /* Past the full-swipe line the first action takes the whole tray, so letting go runs it. */
+  .sw.armed .sw-b:not(:first-child) { flex-grow: 0; }
+  .sw.armed .sw-b:not(:first-child) > * { opacity: 0; }
+}

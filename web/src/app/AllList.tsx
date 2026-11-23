@@ -10,6 +10,8 @@
 // (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles quiet with a Done
 // tag. Each row has mail's slot after its subject (slots.tsx), which another module may fill.
 // Sent draws its days here too, each row naming who it went to (`from`), with no slot.
+// On the phone its rows swipe (phone/swipe.tsx) as the page says, and Select's mode puts a circle
+// before each one.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, UIEvent} from 'react';
@@ -30,6 +32,8 @@ import {useRowSlot} from './slots.tsx';
 import {SnoozeMenu} from './SnoozeMenu.tsx';
 import type {Beat} from './fold.ts';
 import {Count} from './Count.tsx';
+import {useSwipes} from './phone/swipe.tsx';
+import type {SwipeAct, SwipeActs} from './phone/swipe.tsx';
 import {TriageNote, useHealthBars} from './states/States.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
 
@@ -63,7 +67,7 @@ const NO_ROWS: MessageRowOut[] = [];
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
 export function AllList({attention, days, shelf, lanes = true, fill = false, empty = null, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
-  label = 'Inbox', from, slot = true, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, selectionSnooze, onAnswer, onCodeCopied}: {
+  label = 'Inbox', from, slot = true, swipe = null, selecting = false, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, selectionSnooze, onAnswer, onCodeCopied}: {
   // Attention's rows, every Attention email not yet Done.
   attention: MessageRowOut[];
   days: DayView[];
@@ -96,6 +100,10 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   // What a row shows in the sender's place (Sent's "To Sam Ortiz"), and whether mail's slot shows.
   from?: (row: MessageRowOut) => ReactNode;
   slot?: boolean;
+  // On the phone, what each row's swipes offer and what picking one does (phone/swipe.tsx). None while selecting.
+  swipe?: {acts: (row: MessageRowOut, key: string) => SwipeActs; run: (row: MessageRowOut, act: SwipeAct) => void} | null;
+  // On the phone, Select's mode: each row has its circle, ticked while it's selected, and a tap selects.
+  selecting?: boolean;
   onPoint: (key: string) => void;
   // A click on a row, with its modifiers: ⌘ or Ctrl and ⇧ select, a plain one opens.
   onOpen: (id: number, key: string, event: MouseEvent) => void;
@@ -113,6 +121,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   const today = localDate(now, timeZone);
   const nearEnd = (list: HTMLElement) => list.scrollHeight - list.scrollTop - list.clientHeight < 600;
   const onScroll = (event: UIEvent<HTMLElement>) => {
+    swipes.close();
     if (nearEnd(event.currentTarget)) onNearEnd();
   };
   const section = useRef<HTMLElement>(null);
@@ -158,6 +167,19 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
     ];
   }, [attention, days, shelf, lanes, prompt, today]);
   const shown = useFold(entries, RULES, FOLD_HOLD_MS);
+  // Each row by its key, for its swipes.
+  const rowsByKey = useMemo(() => new Map(entries.flatMap(entry => (entry.item.kind === 'row' ? [[entry.key, entry.item.row] as const] : []))), [entries]);
+  const swipes = useSwipes({
+    enabled: swipe !== null && !selecting,
+    acts: key => {
+      const row = rowsByKey.get(key);
+      return row && swipe ? swipe.acts(row, key) : null;
+    },
+    run: (key, act) => {
+      const row = rowsByKey.get(key);
+      if (row && swipe) swipe.run(row, act);
+    },
+  });
   // Every row the list holds, for the slot after the subject, asked about all at once.
   const slotRows = useMemo(() => entries.flatMap(entry => (entry.item.kind === 'row' ? [entry.item.row] : [])), [entries]);
   const afterSubject = useRowSlot(slot ? slotRows : NO_ROWS);
@@ -169,7 +191,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   // The row whose Snooze menu is open: it keeps its pointer look until the menu closes.
   const [snoozing, setSnoozing] = useState<string | null>(null);
   return (
-    <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label={label} onScroll={onScroll}>
+    <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait', selecting && 'selecting'].filter(Boolean).join(' ')} aria-label={label} onScroll={onScroll} {...(swipe ? swipes.handlers : {})}>
       {bars}
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key), item.kind === 'row' && item.shelf);
@@ -235,6 +257,12 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         return (
           <div key={key} ref={ref} className={classes} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
+            {swipe && !leaving && swipes.tray(key)}
+            {selecting && !leaving && (
+              <span className="pick" role="checkbox" aria-checked={selected.has(row.id)} aria-label={`${line.from}, ${line.subject}`}>
+                <Icon name={selected.has(row.id) ? 'check_circle-fill' : 'radio_button_unchecked'} size={22} />
+              </span>
+            )}
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
             {from ? from(row) : <span className="from">{line.from}</span>}
             {/* A live code has Copy and its countdown wherever it is. Once it's expired, the code is inside the subject. */}

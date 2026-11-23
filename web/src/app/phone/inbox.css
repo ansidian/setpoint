@@ -28,4 +28,20 @@
   .pane .rd-conv-line .words { grid-area: words; font-size: 14px; }
   .pane .rd-conv-line.more { display: flex; align-items: center; }
   .pane .rd-conv-line.here::before { top: 12px; height: calc(100% - 24px); }
+
+  /* Select: a text button in the header, Cancel, the count and Select all in its place while it's
+     on, a circle before each row (ticked `accent` while it's selected), and the tab bar's place
+     taken by Done, Pin, Read and Trash (phone/selectBar.tsx). */
+  .hd .btn.ph-text { height: 40px; padding: 0 10px; font-size: 15px; color: var(--ink); }
+  .hd .btn.ph-text:disabled { color: var(--ink3); }
+  .hd.ph-selecting { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); padding: 0 8px; }
+  .hd.ph-selecting > .hd-title { text-align: center; font-variant-numeric: tabular-nums; }
+  .hd.ph-selecting > .ph-text:first-child { justify-self: start; }
+  .hd.ph-selecting > .ph-text:last-child { justify-self: end; }
+  .list.all.selecting .row { grid-template-columns: 34px 12px minmax(0, 1fr) auto auto auto auto; grid-template-areas: "pk ud from mk tag ac age" "pk . subj subj subj subj subj"; padding-left: 12px; }
+  .row .pick { grid-area: pk; align-self: center; display: grid; place-items: center; color: var(--ink3); }
+  .row.sel .pick { color: var(--accent); }
+  .list.all.selecting .row.sel { background: var(--sub); }
+  .ph-selbar > button:disabled { color: var(--ink3); }
+  .ph-selbar > button:disabled .icon { color: var(--ink3); }
 }

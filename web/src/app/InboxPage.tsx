@@ -31,7 +31,11 @@
 // Attention, FYI and Noise, then Settings), its counts, Mark all as read (as the view reads it) and
 // New message, which opens the composer's sheet (no account filter). The Inbox tab goes back to All.
 // A plain search field sits under it (no chips), taking sent mail in as the desktop's does, and Ask
-// Alfred leads its results.
+// Alfred leads its results. A row swipes (logic/swipe.ts): right marks it read or unread, left offers
+// Trash, Done and Pin or Unpin, a full swipe running Trash. Select in the header puts a circle on each
+// row: a tap selects, Select all takes every row the list holds, and the tab bar gives way to Done,
+// Pin, Read and Trash for all of them, with one toast and one Undo. Done and Trash end it, Pin and
+// Read keep it, and Cancel, a view, a search or an email opening end it too. No swipes meanwhile.
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut, Settings} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -70,6 +74,10 @@ import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
 import {TitleMenu} from './phone/TitleMenu.tsx';
+import {showSelectBar} from './phone/selectBar.tsx';
+import type {SwipeAct} from './phone/swipe.tsx';
+import {rowSwipes} from '../logic/swipe.ts';
+import type {RowSwipe} from '../logic/swipe.ts';
 import {openSettings} from './settings/store.ts';
 import {askCard, EmailCard, Reader} from './Reader.tsx';
 import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
@@ -102,6 +110,16 @@ type InboxRoute = Extract<Route, {page: 'inbox'}>;
 const WITH_SENT: SearchScope = {sent: 'include'};
 
 const VIEW_LABELS: Record<InboxView, string> = {all: 'All', unread: 'Unread', attention: 'Attention', fyi: 'FYI', noise: 'Noise'};
+
+// What each of a phone row's swipes shows behind it.
+const SWIPE_ACTS: Record<RowSwipe, SwipeAct> = {
+  read: {id: 'read', label: 'Read', icon: 'mark_email_read', tone: 'accent'},
+  unread: {id: 'unread', label: 'Unread', icon: 'mark_email_unread', tone: 'accent'},
+  trash: {id: 'trash', label: 'Trash', icon: 'delete', tone: 'alert', leaves: true},
+  done: {id: 'done', label: 'Done', icon: 'check', tone: 'good'},
+  pin: {id: 'pin', label: 'Pin', icon: 'keep', tone: 'sun'},
+  unpin: {id: 'unpin', label: 'Unpin', icon: 'keep_off', tone: 'sun'},
+};
 
 /**
  * Whether any of the Pinned shelf shows in the list, where a pin lands. With no shelf yet, whether
@@ -268,11 +286,22 @@ export function InboxPage({route}: {route: InboxRoute}) {
   }
   const setCursor = (key: string | null) => setTrack(current => ({...current, cursor: key}));
   // The emails ⌘ or Ctrl-click and ⇧-click selected this visit: those still in the list, in its
-  // order. None on the phone.
+  // order. On the phone, those Select's mode picked, and none outside it.
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
-  const selected = useMemo(() => (phone ? [] : inListOrder(selection.ids, stops)), [phone, selection.ids, stops]);
+  const [selectMode, setSelectMode] = useState(false);
+  // Select's mode lasts only on the phone, in the list: a search or an email opening ends it.
+  const selecting = phone && selectMode && !search.active && route.open === null;
+  if (selectMode && !selecting) {
+    setSelectMode(false);
+    setSelection(NO_SELECTION);
+  }
+  const selected = useMemo(() => (phone && !selecting ? [] : inListOrder(selection.ids, stops)), [phone, selecting, selection.ids, stops]);
   const select = setSelection;
   const clearSelection = () => setSelection(NO_SELECTION);
+  const endSelecting = () => {
+    setSelectMode(false);
+    clearSelection();
+  };
 
   const open = route.open;
   // The way the user last stepped to an email.
@@ -304,7 +333,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   function switchView(next: InboxView) {
     if (next === view) return;
     const {view: _was, ...rest} = route;
-    clearSelection();
+    endSelecting();
     navigate(next === 'all' ? {...rest, open: null} : {...rest, open: null, view: next});
   }
 
@@ -334,6 +363,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
    * plain click ends the selection and opens it. Selecting opens and reads nothing.
    */
   function clickRow(id: number, key: string, event?: ReactMouseEvent) {
+    if (selecting) {
+      select(toggled({...selection, ids: selected}, id, null));
+      return;
+    }
     const adding = !phone && !!event && !event.altKey && (event.metaKey || event.ctrlKey);
     const ranging = !phone && !!event && !event.altKey && !adding && event.shiftKey;
     if (!adding && !ranging) {
@@ -711,7 +744,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // A new message has the pane to itself while no email is open.
   const composer = useOpenComposer();
   const writing = !phone && open === null && composer?.messageId === null && !composer.floating ? composer : null;
-  const showsSelection = open === null && selected.length > 0 && !compact && !writing;
+  const showsSelection = !phone && open === null && selected.length > 0 && !compact && !writing;
   const pane = useEmptyPane(open !== null || showsSelection || writing !== null, PANE_PATHS);
   // Without the selection's pane (where a pane covers the list, or a new message has it), its Snooze is
   // the first selected row's in the list, and snoozes them all.
@@ -721,6 +754,40 @@ export function InboxPage({route}: {route: InboxRoute}) {
     if (selectionAnchor) document.querySelector(`[data-key="${selectionAnchor}"]`)?.scrollIntoView({block: 'nearest'});
     openSnooze('selection');
   };
+
+  // Every row the list holds is selected: Select all turns to Deselect all.
+  const allPicked = selecting && stops.some(stop => stop.kind === 'row') && stops.every(stop => stop.kind !== 'row' || selected.includes(stop.id));
+  // A row's swipe, picked: read and unread change in place with nothing to say, as swiping back undoes
+  // them; Trash and Done leave with their toast and Undo; Pin and Unpin move it on or off the shelf.
+  const swipeRun = (id: number, act: RowSwipe) => {
+    if (act === 'read') on.read([id]);
+    else if (act === 'unread') on.markUnread([id]);
+    else if (act === 'trash') on.trash([id]);
+    else if (act === 'done') on.done([id]);
+    else on.pin([id]);
+  };
+
+  // Select's bar in the tab bar's place, while its mode is on. Done and Trash end the mode; Pin and
+  // Read keep it, the bar's words following what's selected.
+  const selectOffers = selectionOffers(selectedRows);
+  const selectBar = selecting ? {
+    // With nothing selected yet, Pin and Read, as they'll mostly be.
+    count: selected.length, done: selectOffers.done > 0, pin: !selected.length || selectOffers.pin, read: !selected.length || selectOffers.read,
+    on: {
+      done: () => {
+        on.done(selected);
+        endSelecting();
+      },
+      trash: () => {
+        on.trash(selected);
+        endSelecting();
+      },
+      pin: () => on.pin(selected),
+      read: () => (selectOffers.read ? on.markRead(selected) : on.markUnread(selected)),
+    },
+  } : null;
+  useLayoutEffect(() => showSelectBar(selectBar));
+  useEffect(() => () => showSelectBar(null), []);
 
   // Attached again with each render as it's drawn, before any key can come: a passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
@@ -866,7 +933,15 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   return (
     <>
-      <header className="hd">
+      {selecting ? (
+        // Select's header: Cancel, how many are selected, and Select all or Deselect all.
+        <header className="hd ph-selecting">
+          <button className="btn quiet ph-text" type="button" onClick={endSelecting}>Cancel</button>
+          <h1 className="hd-title">{selected.length ? `${selected.length} selected` : 'Select emails'}</h1>
+          <button className="btn quiet ph-text" type="button" disabled={!stops.some(stop => stop.kind === 'row')}
+            onClick={() => (allPicked ? clearSelection() : selectAll())}>{allPicked ? 'Deselect all' : 'Select all'}</button>
+        </header>
+      ) : <header className="hd">
         {phone && <Mark />}
         {phone && !searching ? <TitleMenu title={view === 'all' ? 'Inbox' : VIEW_LABELS[view]} rows={[
           ...INBOX_VIEWS.map(one => ({
@@ -897,12 +972,13 @@ export function InboxPage({route}: {route: InboxRoute}) {
           <>
             {/* Not while searching: it would read the hidden Inbox's mail, not the results. */}
             {!searching && markable && <button className="ibtn ph-icon" type="button" aria-label={markScope} onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
+            {!searching && <button className="btn quiet ph-text" type="button" onClick={() => setSelectMode(true)}>Select</button>}
             <button className="ibtn ph-icon" type="button" aria-label="New message" onClick={() => newMessage()}><Icon name="edit" size={20} /></button>
           </>
         )}
         <EmptyPaneButton pane={pane} />
         <SearchField search={search} operators onAsk={askAlfred} onEnter={first => setCursor(`all:${first.id}`)} />
-      </header>
+      </header>}
       <div className="content" style={accountWidth} onContextMenu={onContextMenu}>
         {firstWait && waitedLong ? (
           <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
@@ -920,6 +996,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={view === 'all' || view === 'attention' ? prompt : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin} onSnooze={phone ? undefined : (id, until) => on.snooze([id], until)}
             selectionSnooze={selectionAnchor ? {key: selectionAnchor, pick: forSelection.snooze} : null}
+            selecting={selecting} swipe={phone && !selecting ? {acts: (row, key) => {
+              const offered = rowSwipes(row);
+              // Done takes a row out of Attention's band; in its day the row stays, ticked.
+              const act = (one: RowSwipe) => (one === 'done' && key.startsWith('attention:') ? {...SWIPE_ACTS.done, leaves: true} : SWIPE_ACTS[one]);
+              return {lead: offered.lead.map(act), trail: offered.trail.map(act)};
+            }, run: (row, act) => swipeRun(row.id, act.id as RowSwipe)} : null}
             onCodeCopied={id => on.read([id])} onAnswer={(answer, yes) => {
               setAnswered(new Set([...answered, answer.id]));
               void answerPrompt(answer.id, yes).catch(toastFailure('Failed to answer'));
