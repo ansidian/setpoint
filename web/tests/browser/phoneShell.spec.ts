@@ -61,7 +61,7 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
   try {
     const page = await inbox(setpoint);
     assert.equal(await page.locator('.sb').count(), 0);
-    assert.deepEqual(await page.locator('.ph-tab').allTextContents(), ['Inbox', 'Agenda']);
+    assert.deepEqual(await page.locator('.ph-tab').allTextContents(), ['Inbox', 'Agenda', 'News']);
     // The list, as on the desktop: Attention, the Pinned shelf, then the days, Today first.
     const headers = (await page.locator('.gh').allTextContents()).map(text => text.trim().split(/\s/)[0]!.toLowerCase());
     assert.deepEqual(headers.slice(0, 3), ['attention', 'pinned', 'today']);

@@ -1,6 +1,7 @@
 // The phone's shell (board 21): below 640 px the same pages and routes in one
-// column, with Inbox and Agenda in a tab bar at the bottom in place of the sidebar. Settings stays on
-// the desktop: a Settings link (a reconnect alert's) says so here, with Sign out.
+// column, with Inbox, Agenda and News in a tab bar at the bottom in place of the sidebar. Settings stays on
+// the desktop: a Settings link (a reconnect alert's) says so here, with Sign out. News's page says
+// it's on the desktop until the phone reads it.
 import type {MailCountsOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {useResource} from '../api/client.ts';
@@ -8,6 +9,7 @@ import {COUNTS_PATH} from '../api/mail.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {viewport} from '../tokens.ts';
+import type {IconName} from '../ui/glyphs.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
 import {currentRoute, navigate} from './router.ts';
 import {askSignOut} from './signOut.ts';
@@ -33,9 +35,11 @@ export const isPhone = () => PHONE.matches;
  */
 export const useCompact = () => useSyncExternalStore(onCompact, () => COMPACT.matches);
 
-const TABS: {label: string; icon: 'inbox' | 'calendar_today'; page: Route['page']; to: Route; scroller: string}[] = [
-  {label: 'Inbox', icon: 'inbox', page: 'inbox', to: {page: 'inbox', open: null}, scroller: '.content > .list'},
-  {label: 'Agenda', icon: 'calendar_today', page: 'calendar', to: {page: 'calendar', date: null, item: null, at: null}, scroller: '.ph-agenda'},
+// Each tab's glyph, and its filled one for the current tab. Material's newspaper is the same path filled.
+const TABS: {label: string; icon: IconName; on: IconName; page: Route['page']; to: Route; scroller: string}[] = [
+  {label: 'Inbox', icon: 'inbox', on: 'inbox-fill', page: 'inbox', to: {page: 'inbox', open: null}, scroller: '.content > .list'},
+  {label: 'Agenda', icon: 'calendar_today', on: 'calendar_today-fill', page: 'calendar', to: {page: 'calendar', date: null, item: null, at: null}, scroller: '.ph-agenda'},
+  {label: 'News', icon: 'newspaper', on: 'newspaper', page: 'news', to: {page: 'news', view: 'all', story: null, article: null}, scroller: '.ph-news'},
 ];
 
 /**
@@ -58,7 +62,7 @@ export function PhoneTabs({route}: {route: Route}) {
             navigate(tab.page === 'inbox' ? toInbox() : tab.to);
             if (was === tab.page) document.querySelector(tab.scroller)?.scrollTo({top: 0, behavior: 'smooth'});
           }}>
-            <Icon name={on ? `${tab.icon}-fill` : tab.icon} size={22} />{tab.label}
+            <Icon name={on ? tab.on : tab.icon} size={22} />{tab.label}
             {tab.page === 'inbox' && waiting > 0 && <span className="ph-badge num" data-tip="Attention, not Done">{waiting}</span>}
           </a>
         );
@@ -78,6 +82,21 @@ export function PhoneSettings() {
       <div className="content ph-settings">
         <p>Settings is on the desktop</p>
         <button className="btn ghost" type="button" onClick={askSignOut}><Icon name="door_open" size={17} />Sign out</button>
+      </div>
+    </>
+  );
+}
+
+/** News's page on the phone, until the phone reads it. */
+export function PhoneNews() {
+  return (
+    <>
+      <header className="hd">
+        <Mark />
+        <h1 className="hd-title">News</h1>
+      </header>
+      <div className="content ph-settings ph-news">
+        <p>News is on the desktop</p>
       </div>
     </>
   );

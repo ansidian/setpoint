@@ -4,8 +4,8 @@
 // ⌘, Settings, ⌘J Light or Night, `4` Jobs (jobs/, a wiring point; when it's off, its page says so),
 // and `` ` `` to open or fold the sidebar from 1100 px (sidebarRail.ts). Settings is a modal over
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
-// phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings, ⌘K, News,
-// Jobs and Sent stay on the desktop (their addresses open the Inbox). On the desktop every arrival (a
+// phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings and News
+// say they're on the desktop; ⌘K, Jobs and Sent stay there (their addresses open the Inbox). On the desktop every arrival (a
 // load, a return to the tab) with an overdue task opens on its banner (OverdueBanner.tsx), over
 // everything but the toast.
 import {useEffect} from 'react';
@@ -20,7 +20,7 @@ import {goToJobs, jobsMailSlots, JobsPage} from './jobs/index.ts';
 import {NewsPage} from './news/NewsPage.tsx';
 import {ContextMenu} from './ContextMenu.tsx';
 import {Palette} from './palette/Palette.tsx';
-import {isPhone, PhoneSettings, PhoneTabs, usePhone} from './Phone.tsx';
+import {isPhone, PhoneNews, PhoneSettings, PhoneTabs, usePhone} from './Phone.tsx';
 import {currentRoute, navigate, useRoute} from './router.ts';
 import {selectSearch} from './search/Search.tsx';
 import {Settings} from './settings/Settings.tsx';
@@ -70,11 +70,11 @@ export function App({arrive = false}: {arrive?: boolean}) {
     navigate(toInbox(), {replace: true});
   }, [settingsLink]);
 
-  // Below 640 px News, Jobs and Sent aren't in the navigation: their addresses open the Inbox.
-  const phoneNews = phone && (route.page === 'news' || route.page === 'jobs' || route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed' || route.page === 'scheduled');
+  // Below 640 px Jobs, Sent and the other mail pages aren't in the navigation: their addresses open the Inbox.
+  const phoneElsewhere = phone && (route.page === 'jobs' || route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed' || route.page === 'scheduled');
   useEffect(() => {
-    if (phoneNews) navigate(toInbox(), {replace: true});
-  }, [phoneNews]);
+    if (phoneElsewhere) navigate(toInbox(), {replace: true});
+  }, [phoneElsewhere]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -129,7 +129,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
           : route.page === 'snoozed' ? (phone ? null : <SnoozedPage route={route} />)
           : route.page === 'scheduled' ? (phone ? null : <ScheduledPage route={route} />)
           : route.page === 'calendar' ? (phone ? <Agenda route={route} /> : <CalendarPage route={route} />)
-            : route.page === 'news' ? (phone ? null : <NewsPage route={route} />)
+            : route.page === 'news' ? (phone ? <PhoneNews /> : <NewsPage route={route} />)
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)
               : phone ? <PhoneSettings /> : null}
         {!phone && <ComposerWindows />}

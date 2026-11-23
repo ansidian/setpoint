@@ -9,7 +9,7 @@
   .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; padding-top: env(safe-area-inset-top); }
   .main { grid-template-rows: auto minmax(0, 1fr); }
   /* The tab bar ends at the home indicator's inset, not a guess at it. */
-  .ph-tabs { min-height: 54px; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: 1fr 1fr; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  .ph-tabs { min-height: 54px; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   .ph-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; color: var(--ink3); }
   .ph-tab.on { color: var(--ink); }
   /* The header's attention pill, shrunk onto the Inbox tab while another page shows. */
@@ -253,7 +253,7 @@
   .ph-title-pop .menu-i > .ph-title-count + .ph-title-check { margin-left: 0; }
   .ph-title-pop .menu-i[aria-checked="false"] > .ph-title-check { visibility: hidden; }
 
-  /* ---------- Settings: on the desktop ---------- */
+  /* ---------- Settings and News: on the desktop ---------- */
   .ph-settings { flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px 20px; color: var(--ink2); }
   .ph-settings p { margin: 0; }
 
