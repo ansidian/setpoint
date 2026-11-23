@@ -32,7 +32,6 @@ describe('reads', () => {
     ['Dockerfile', ['image']],
     ['.dockerignore', ['image']],
     ['package-lock.json', ['unit', 'image', 'browser']],
-    ['shared/contract/mail-inbox.json', ['unit', 'image']],
     ['server/tests/fakeGoogle.ts', ['unit', 'image']],
     ['web/tests/inbox.test.ts', ['unit', 'image']],
     ['web/tests/components/select.test.tsx', ['unit', 'image']],

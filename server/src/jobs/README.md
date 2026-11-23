@@ -95,8 +95,6 @@ files marked *imports* import the folders.
 | `web/tests/browser/jobsStates.spec.ts` | the browser checks of the states, Settings › Jobs and Settings › AI's Jobs group in Night and Light; it goes with Jobs, and imports nothing from the folders |
 | Jobs's lines in `web/tests/browser/settings.spec.ts` (30a's nav, 30b's Jobs group, its usage row and the total with it, $25.20 for $21.35), `sweep.spec.ts` (the states and Jobs off, with their `node:path` and `node:sqlite` imports) and `web/tests/shell.test.ts` (`/jobs/from-history`) | they import nothing from the folders; with Jobs removed, the boards' Jobs patches go too |
 | `web/tests/browser/jobs.spec.ts`, and Jobs's lines in `sweep.spec.ts`, `news.spec.ts`, `palette.spec.ts`, `compact.spec.ts` and `web/tests/shell.test.ts` | the browser checks and the sweep's Jobs route; the shell's lists that now name Jobs; they import nothing from the folders |
-| `server/tests/contract.test.ts`, the `jobs` `noteLive` | the iPhone app's contract records the event (it ignores the type) |
-| `shared/contract/` | the recorded `jobs` event and `LIVE_EVENT_TYPES` (re-recorded by `npm run contract:record`) |
 | `server/vitest.config.ts`, `include` | runs `src/jobs/tests/` |
 | `eslint.config.js`, `ROOT`, `JOBS_FOLDERS`, `JOBS_WIRING`, `moduleBoundary` and its block, and the `node:path` and `node:url` imports only they use | the lint rule |
 
@@ -236,8 +234,8 @@ the lint rule still refuses an import of Jobs from triage.
 - **The empty pane's recent movement**: `GET /api/jobs/movement` ([`queries.ts`](queries.ts)
   `jobsMovement`) answers each application's latest status change, newest first, the last eight: an email
   that set a status it didn't have or a status set by hand (from what its emails had set). Turning
-  Ghosted isn't a move: it's the clock, not news. With the accounts Jobs reads and its earliest email, for the pane's quiet line. Not in the
-  iPhone app's contract. It's under `/jobs`, so the `jobs` event refreshes it.
+  Ghosted isn't a move: it's the clock, not news. With the accounts Jobs reads and its earliest email, for the pane's quiet
+  line. It's under `/jobs`, so the `jobs` event refreshes it.
 
 ## Needs you's answers and the corrections
 
@@ -355,4 +353,4 @@ npx drizzle-kit generate --config src/jobs/drizzle.config.ts --name <what change
 3. On each database Jobs ran on, apply `drop.sql` (keep a copy before deleting the folder): it drops
    every `jobs_` table and `jobs_migrations`, and leaves mail untouched
    ([`tests/drop.test.ts`](tests/drop.test.ts) proves it on a database holding both).
-4. `npm run contract:record` once setpoint-ios is pinned past the change, then `npm test`.
+4. `npm test`.

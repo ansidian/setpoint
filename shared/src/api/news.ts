@@ -326,7 +326,7 @@ export const newsSourcesSchema = z.strictObject({
 export type NewsSourcesOut = z.infer<typeof newsSourcesSchema>;
 
 /**
- * News's pane with nothing open, under the recap. Not in the iPhone app's contract.
+ * News's pane with nothing open, under the recap.
  * Today is since the user's midnight, the month since midnight on the 1st. No count of new stories.
  */
 export interface NewsDayOut {

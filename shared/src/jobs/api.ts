@@ -502,7 +502,7 @@ export interface JobMoveOut {
 
 /**
  * GET /api/jobs/movement: Jobs's pane with nothing open, newest first, one per application.
- * Not in the iPhone app's contract. No counts: the quiet line names the accounts Jobs reads and the
+ * No counts: the quiet line names the accounts Jobs reads and the
  * month of the earliest email it has.
  */
 export interface JobsMovementOut {

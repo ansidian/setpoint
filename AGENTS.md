@@ -73,8 +73,6 @@ Todoist tasks.
   waits for what it reads, and a check that races is fixed by removing the dependence, never by
   adding a wait. The lint enforces the pause and bound rules.
 - A fix whose check went red on its own says so in the commit ("the X check caught it").
-- `shared/contract/` pins what the iPhone app reads. Re-record (`npm run contract:record`) only
-  once setpoint-ios handles the change.
 
 ## Boundaries (the lint enforces them)
 

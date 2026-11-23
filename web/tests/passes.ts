@@ -36,8 +36,8 @@ const named = (...files: string[]) => (file: string) => files.includes(file);
 const prose = (file: string) => (!file.includes('/') && /\.md$|^LICENSE$/.test(file)) || under('docs')(file);
 // The export, less what the app builds from (its stylesheet and fonts) and the glyphs' tests read.
 const boards = (file: string) => under('design-export')(file) && !under('design-export/styles', 'design-export/glyphs')(file);
-// What only npm test runs: Vitest's files, the contract it records, its fakes and component tests.
-const unitOnly = (file: string) => /\.test\.tsx?$/.test(file) || under('shared/contract', 'server/tests', 'web/tests/components')(file);
+// What only npm test runs: Vitest's files, its fakes and component tests.
+const unitOnly = (file: string) => /\.test\.tsx?$/.test(file) || under('server/tests', 'web/tests/components')(file);
 const SPEC = /^web\/tests\/browser\/([^/]+)\.spec\.ts$/;
 const spec = (file: string) => SPEC.test(file);
 // The app and what a browser run builds, boots and drives it with, less the spec files themselves.

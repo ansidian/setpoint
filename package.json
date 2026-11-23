@@ -26,7 +26,6 @@
     "test": "node web/tests/unit.ts",
     "test:watch": "vitest --project server --project web",
     "test:browser": "node web/tests/browser/run.ts",
-    "contract:record": "SETPOINT_UPDATE_CONTRACT=1 vitest run --project server contract.test",
     "release:check": "node web/tests/release.ts"
   },
   "devDependencies": {

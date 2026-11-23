@@ -352,7 +352,7 @@ const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'holidays' | 'todoist';
   {key: 'jobs', name: 'Jobs', provider: 'google', colour: 'violet', account: 'Jobs', accessRole: 'owner'},
   {key: 'todoist', name: 'Todoist', provider: 'todoist', colour: null, account: null},
   // A subscribed holiday calendar, which Google lets the user only read. Last, so the others
-  // keep the ids the iPhone app's recorded contract names. Listed before Todoist all the same.
+  // keep their ids. Listed before Todoist all the same.
   {key: 'holidays', name: 'Holidays in United States', provider: 'google', colour: 'good', account: 'Personal', accessRole: 'reader'},
 ];
 

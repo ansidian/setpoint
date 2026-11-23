@@ -345,7 +345,7 @@ export const SAMPLE_STORIES: SampleStory[] = [
   {sections: ['general'], headline: 'Automaker recalls 1.2 million pickups over a brake defect', oneLine: 'Dealers will replace a brake line for free',
     score: 62, ...gone('21:30'), articles: [{outlet: 'NBC News', at: at('tue', '07:15')}, 'Reuters', 'USA Today']},
   // ---- Under the write gate: Also reported only, headline and outlet. Last, so the stories
-  // above keep their ids (the iPhone contract's fixtures name some). ----
+  // above keep their ids. ----
   {sections: ['local'], headline: 'Central library hosts a fall book sale this weekend', held: true,
     score: 37, first: at('tue', '12:40'), facts: [[at('tue', '12:40'), 'A book sale runs Saturday and Sunday']],
     articles: [{outlet: 'LAist', at: at('tue', '12:40')}]},

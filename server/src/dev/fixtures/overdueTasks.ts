@@ -1,6 +1,6 @@
 // Overdue Todoist tasks for the overdue banner, at the seed's 9:12 AM on Wed, Oct 7: one due at
 // 8:00 AM today, one from Monday and one from Sep 24. Kept out of the seed itself, which the browser
-// checks and the iPhone app's recorded contract start from, so only the dev Setpoint (`npm run seed`,
+// checks start from, so only the dev Setpoint (`npm run seed`,
 // `npm run try`) and the banner's own check have them. A timed task is all-day with a time, as
 // Todoist's sync writes one (providers/todoist/sync.ts).
 import {eq} from 'drizzle-orm';

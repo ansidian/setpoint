@@ -1,7 +1,7 @@
 // Drafts and sending. A draft lives in Setpoint only until it is sent: Gmail and iCloud never see
-// one. Starting a draft fills it on the server (who it goes to, the subject, the From), so the web
-// and the iPhone app agree. Send holds the email on the server for SEND_HOLD_MS, with Undo, then
-// sends it through the account's provider. None of these answers is in the iPhone app's contract.
+// one. Starting a draft fills it on the server (who it goes to, the subject, the From), so every
+// page agrees. Send holds the email on the server for SEND_HOLD_MS, with Undo, then sends it
+// through the account's provider.
 import {z} from 'zod';
 import type {Block, List} from '../richText.ts';
 import type {Recipient} from '../message.ts';

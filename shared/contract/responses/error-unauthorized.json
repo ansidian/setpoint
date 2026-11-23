@@ -1,6 +1,0 @@
-{
-  "error": {
-    "code": "unauthorized",
-    "message": "This iPhone isn't paired with Setpoint any more."
-  }
-}

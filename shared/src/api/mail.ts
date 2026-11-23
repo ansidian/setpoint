@@ -4,7 +4,7 @@
 //   GET  /api/mail/counts                      MailCountsOut (the sidebar and the tab title)
 //   GET  /api/mail/day                         MailDayOut (the Inbox's empty pane)
 //   GET  /api/mail/all?account_id=&before=&limit=   AllOut
-//   GET  /api/mail/sent?account_id=&before=&limit=  SentOut (not in the iPhone app's contract)
+//   GET  /api/mail/sent?account_id=&before=&limit=  SentOut
 //   GET  /api/mail/messages/:id                MessageOut, without marking it read
 //   POST /api/mail/messages/:id/open           MessageOut; marks it read (a command) if unread
 //   POST /api/mail/messages/:id/read           {unread}            CommandOut (Mark read / unread)
@@ -12,7 +12,7 @@
 //   POST /api/mail/messages/:id/pin            {pinned}            MessageOut (local, no provider)
 //   POST /api/mail/messages/:id/snooze         {until}             MessageOut (local, no provider)
 //   POST /api/mail/messages/:id/unsnooze       MessageOut (local, no provider)
-//   GET  /api/mail/snoozed                     SnoozedOut, soonest return first (not in the iPhone app's contract)
+//   GET  /api/mail/snoozed                     SnoozedOut, soonest return first
 //   POST /api/mail/messages/:id/trash          CommandOut; /untrash is Undo
 //   POST /api/mail/mark-all-read               {account_id?}       {commands: CommandOut[]}
 //   GET/POST /api/mail/trusted-domains, DELETE /api/mail/trusted-domains/:domain
@@ -56,16 +56,14 @@ export interface MessageRowOut {
   // Mail the user sent to others, which never came in: only on such mail, which only the web asks
   // for (Sent, and search with `sent`). Mail to yourself is received mail and has no such key.
   sent_only?: true;
-  // When the user replied to it (the row's reply mark), left out while they haven't. Not in the
-  // iPhone app's contract yet.
+  // When the user replied to it (the row's reply mark), left out while they haven't.
   replied_at?: string;
   // A draft answers it (a reply, reply all or forward the user started). Left out otherwise.
   draft?: true;
-  // Snoozed until then: out of the Inbox, still in All and search. Left out while it isn't. Not in
-  // the iPhone app's contract, which never sees snoozed mail in its Inbox.
+  // Snoozed until then: out of the Inbox, still in All and search. Left out while it isn't.
   snoozed_until?: string;
   // When it last returned from a snooze (the row's returned mark; `received_at` stays its arrival).
-  // Left out while it never has. Not in the iPhone app's contract.
+  // Left out while it never has.
   returned_at?: string;
 }
 
@@ -93,7 +91,7 @@ export interface MailCountsOut {
 
 /**
  * How the mail day is going, for the Inbox's pane with nothing open. Today is since
- * the user's midnight. Not in the iPhone app's contract.
+ * the user's midnight.
  */
 export interface MailDayOut {
   // Emails marked Done today.
@@ -217,7 +215,7 @@ export interface MessageOut extends MessageRowOut {
   open_url: string | null;
   // Who it was sent to and what it answers, from its headers. All five are left out while Setpoint
   // hasn't read them (mail from before they were kept, until the header pass reaches it). Empty
-  // lists and a null In-Reply-To mean the email had none. Not in the iPhone app's contract yet.
+  // lists and a null In-Reply-To mean the email had none.
   to?: Recipient[];
   cc?: Recipient[];
   reply_to?: Recipient[];
@@ -227,10 +225,10 @@ export interface MessageOut extends MessageRowOut {
   // The email the user sent in reply to it (with `replied_at`), left out while they haven't.
   reply_id?: number;
   // The sender's unsubscribe page (an https address from List-Unsubscribe), left out when it had
-  // none. Not in the iPhone app's contract yet.
+  // none.
   unsubscribe_url?: string;
   // The other emails of its thread in its account, received and sent, oldest first, trashed mail left
-  // out. Empty when it is alone. Not in the iPhone app's contract yet.
+  // out. Empty when it is alone.
   conversation?: ConversationEmailOut[];
 }
 
