@@ -20,7 +20,7 @@ import {AnswerCard, answerItemRoute} from './AnswerCard.tsx';
 import './search.css';
 
 // Where the sheet's Back goes: the page under it.
-const PAGE_NAMES: Partial<Record<Route['page'], string>> = {inbox: 'Inbox', calendar: 'Agenda', news: 'News', settings: 'Settings'};
+const PAGE_NAMES: Partial<Record<Route['page'], string>> = {inbox: 'Inbox', sent: 'Sent', drafts: 'Drafts', snoozed: 'Snoozed', calendar: 'Agenda', news: 'News', settings: 'Settings'};
 
 export function PhoneAlfred({route}: {route: Route}) {
   const thread = useAlfredThread();
@@ -48,7 +48,7 @@ export function PhoneAlfred({route}: {route: Route}) {
     );
   }
   // Over the reader or an item's detail the tab bar is out of sight, and so is the pill.
-  const covered = (route.page === 'inbox' && route.open !== null) || (route.page === 'calendar' && route.item !== null);
+  const covered = ((route.page === 'inbox' || route.page === 'sent' || route.page === 'snoozed') && route.open !== null) || (route.page === 'calendar' && route.item !== null);
   if (covered) return null;
   return (
     <div className={thread.waiting !== null ? 'alf-pill asking' : 'alf-pill'}>

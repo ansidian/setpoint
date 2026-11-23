@@ -5,10 +5,9 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AllOut, InboxOut} from '@setpoint/shared';
-import type {Locator} from 'playwright-core';
 import {cleanUp, holdToast, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
-import {counts, email, inbox} from './phoneHelpers.ts';
+import {counts, email, inbox, swipe} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -18,22 +17,6 @@ const inAll = async (setpoint: Setpoint, ids: number[]) => {
   const shown = new Set((await allRows(setpoint)).map(row => row.id));
   return ids.filter(id => shown.has(id)).length;
 };
-
-/**
- * A finger on `row` from x `from` to x `to`, in steps, then lifted, and the click the browser sends
- * after a press that didn't scroll (none for one Safari took as Back).
- */
-async function swipe(row: Locator, from: number, to: number, click = true) {
-  await row.evaluate((element, [start, end, clicks]) => {
-    // Sent to the row itself, so its height on screen doesn't matter.
-    const y = 400;
-    const fire = (type: string, x: number) => element.dispatchEvent(new PointerEvent(type, {bubbles: true, isPrimary: true, pointerId: 9, pointerType: 'touch', button: 0, clientX: x, clientY: y}));
-    fire('pointerdown', start);
-    for (const step of [0.1, 0.25, 0.5, 0.75, 1]) fire('pointermove', start + (end - start) * step);
-    fire('pointerup', end);
-    if (clicks) element.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: end, clientY: y}));
-  }, [from, to, click] as const);
-}
 
 test('on the phone a row swipes: right reads and unreads it, left rests on Pin, Done and Trash, and all the way trashes it with Undo', async () => {
   const setpoint = await startSetpoint();

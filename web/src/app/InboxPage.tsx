@@ -28,7 +28,7 @@
 // view, and Attention has none. An empty view says so, with Show All.
 //
 // On the phone (board 21) the header is the mark, the view's name as a menu ("Inbox ▾": All, Unread,
-// Attention, FYI and Noise, then Settings), its counts, Mark all as read (as the view reads it) and
+// Attention, FYI and Noise, then Sent, Drafts and Snoozed, then Settings: logic/mailMenu.ts), its counts, Mark all as read (as the view reads it) and
 // New message, which opens the composer's sheet (no account filter). The Inbox tab goes back to All.
 // A plain search field sits under it (no chips), taking sent mail in as the desktop's does, and Ask
 // Alfred leads its results. A row swipes (logic/swipe.ts): right marks it read or unread, left offers
@@ -74,11 +74,13 @@ import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
 import {TitleMenu} from './phone/TitleMenu.tsx';
+import {useMailMenu} from './phone/mailMenu.ts';
+import {mailTitle, VIEW_LABELS} from '../logic/mailMenu.ts';
+import type {MailPlace} from './phone/mailMenu.ts';
 import {showSelectBar} from './phone/selectBar.tsx';
 import type {SwipeAct} from './phone/swipe.tsx';
 import {rowSwipes} from '../logic/swipe.ts';
 import type {RowSwipe} from '../logic/swipe.ts';
-import {openSettings} from './settings/store.ts';
 import {askCard, EmailCard, Reader} from './Reader.tsx';
 import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
@@ -109,7 +111,6 @@ type InboxRoute = Extract<Route, {page: 'inbox'}>;
 // Search takes sent mail in.
 const WITH_SENT: SearchScope = {sent: 'include'};
 
-const VIEW_LABELS: Record<InboxView, string> = {all: 'All', unread: 'Unread', attention: 'Attention', fyi: 'FYI', noise: 'Noise'};
 
 // What each of a phone row's swipes shows behind it.
 const SWIPE_ACTS: Record<RowSwipe, SwipeAct> = {
@@ -270,6 +271,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
     : []), [view, inboxGroups, allRows]);
   // Whether Mark all as read has anything to read, in this view.
   const markable = view === 'attention' ? false : view === 'fyi' || view === 'noise' ? viewReadIds.length > 0 : markAllReadIds(inboxGroups, allRows).length > 0;
+  // The phone's title menu: the views, then Sent, Drafts and Snoozed, then Settings.
+  const menuPlace: MailPlace = {page: 'inbox', view, unread: unreadHere, attention: attentionHere, onView: switchView};
+  const menuRows = useMailMenu(menuPlace);
   const markScope = view === 'fyi' || view === 'noise' ? `Mark ${VIEW_LABELS[view]} as read` : 'Mark all as read';
   // Results in Trash leave the search's list until Undo.
   const sections = useMemo(() => ({...resultSections(search.results, search.out, search.mentions, trashing), leftOut: leftOutSection(search.results, search.out, search.leftOut, trashing)}),
@@ -943,14 +947,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         </header>
       ) : <header className="hd">
         {phone && <Mark />}
-        {phone && !searching ? <TitleMenu title={view === 'all' ? 'Inbox' : VIEW_LABELS[view]} rows={[
-          ...INBOX_VIEWS.map(one => ({
-            label: VIEW_LABELS[one], checked: one === view, onChoose: () => switchView(one),
-            ...(one === 'unread' && unreadHere > 0 ? {count: unreadHere} : one === 'attention' && attentionHere > 0 ? {count: attentionHere} : {}),
-          })),
-          'divider',
-          {label: 'Settings', command: true, onChoose: () => openSettings('notifications')},
-        ]} /> : <h1 className="hd-title">{searching ? 'Search' : 'Inbox'}</h1>}
+        {phone && !searching ? <TitleMenu title={mailTitle(menuPlace)} rows={menuRows} /> : <h1 className="hd-title">{searching ? 'Search' : 'Inbox'}</h1>}
         {phone && !searching && counts && counts.attention > 0 && <span className="apill num" data-tip="Attention, not Done">{counts.attention}</span>}
         {phone && !searching && counts && counts.unread > 0 && <span className="ph-count num">{counts.unread}</span>}
         {/* The views, Unread's with the red unread badge and Attention's with its count. */}

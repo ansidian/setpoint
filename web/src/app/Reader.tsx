@@ -33,7 +33,7 @@ import {hasOthers} from '../logic/composer.ts';
 import {dayOf, fullTimestamp, localDate, readerTime, trashLeft} from '../logic/format.ts';
 import {factRows, fitTools, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../logic/reader.ts';
-import {snoozeable, snoozedLine} from '../logic/snooze.ts';
+import {snoozeable, snoozedLine, snoozeWhen} from '../logic/snooze.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
 import {phraseRuns, PREFILL_WAIT_MS, segments} from '../logic/search.ts';
 import type {PrefillMiss} from '../logic/search.ts';
@@ -134,7 +134,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   onOpen: (id: number, sent?: boolean) => void;
   // Where the phone's Back goes: the Inbox, the search results the email was opened from, or Back to
   // the email of its thread it was opened from.
-  back?: 'Inbox' | 'Search' | 'Back';
+  back?: 'Inbox' | 'Search' | 'Back' | 'Sent' | 'Snoozed';
   // Opened from Sent: its tools are Trash and Open in Gmail, as sent-only mail's are anywhere.
   sent?: boolean;
 }) {
@@ -168,6 +168,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const canSnooze = !phone && snoozes;
   // A snoozed email's Snoozed tool, on the desktop: its menu changes the time or ends it.
   const snoozedMenu = !phone && !!snoozedUntil && !!actions.unsnooze && !!actions.snooze;
+  // And on the phone, More's Snoozed row and its sheet.
+  const phoneSnoozed = phone && !sentMail && !!snoozedUntil && !!actions.unsnooze && !!actions.snooze;
   // The composer, and the drafts that open it again: the desktop's only.
   const composer = useOpenComposer();
   const {data: drafts} = useResource<DraftsOut>(phone ? null : DRAFTS_PATH);
@@ -288,8 +290,9 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
       {phone && (
         <div className="ph-acts">
           {listed && gmail !== null && (
-            <ReaderBar email={{doneable: !!doneable, replyAll, gmail, markedUnread, sent: sentMail, snoozeable: snoozes}} on={{
-              done: actions.done, trash: actions.trash, toggleRead, openInGmail: actions.openInGmail, snooze: until => actions.snooze?.(until),
+            <ReaderBar email={{doneable: !!doneable, replyAll, gmail, markedUnread, sent: sentMail, snoozeable: snoozes,
+              snoozed: phoneSnoozed ? {until: snoozedUntil!, when: snoozeWhen(snoozedUntil!, now, timeZone)} : null}} on={{
+              done: actions.done, trash: actions.trash, toggleRead, openInGmail: actions.openInGmail, snooze: until => actions.snooze?.(until), unsnooze: () => actions.unsnooze?.(),
               addEvent: () => openEditorSheet({kind: 'event', date: localDate(now, timeZone), message: id}),
               addTask: () => openEditorSheet({kind: 'task', date: localDate(now, timeZone), message: id}),
               reply: () => startComposer({kind: 'reply', message_id: id}),
@@ -609,7 +612,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           <div className="ell selectable">
             <span className="name" data-tip={listed.from_address} data-tip-quick>{listed.from_name}</span>{line && <> <span className={line.tone}><span className="rd-sep">· </span>{line.text}</span></>}
           </div>
-          <div className="to">{listed.sent_only
+          <div className={listed.sent_only ? 'to sent' : 'to'}>{listed.sent_only
             ? sentTo && <span data-tip={sentTo.tip ?? undefined} data-tip-quick>{recipientText(sentTo).replace(/^To /, 'to ')}</span>
             : <span data-tip={account?.address} data-tip-quick>to you</span>}</div>
         </div>

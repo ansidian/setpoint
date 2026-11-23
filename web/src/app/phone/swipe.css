@@ -1,11 +1,13 @@
-/* A list's rows swiping on the phone (phone/swipe.tsx): the Inbox's rows and the Agenda's Overdue
-   lines, under the phone's breakpoint as phone.css's rules are. */
+/* A list's rows swiping on the phone (phone/swipe.tsx): the Inbox's, Sent's, Drafts' and Snoozed's
+   rows and the Agenda's Overdue lines, under the phone's breakpoint as phone.css's rules are. */
 @media (max-width: 639px) {
   /* A row's swipe: its cells follow the finger by `--sw` while the tray behind
      them grows from the side it's pulled from, as wide as the gap. Let go, they settle over 180 ms.
      Vertical drags stay the list's scroll. */
-  .list.all .row, .ph-overdue .ph-swipe { touch-action: pan-y; }
+  .list.all .row, .drafts-list .row, .snoozed-list .row, .ph-overdue .ph-swipe { touch-action: pan-y; }
   .ph-overdue .ph-swipe { position: relative; }
+  /* A Snoozed row's Unsnooze under the pointer is its swipe's on the phone. */
+  .snoozed-list .row .hact { display: none; }
   [data-swipe] { overflow: hidden; }
   [data-swipe] > :not(.sw) { transform: translateX(var(--sw, 0px)); }
   [data-swipe="settle"] > :not(.sw) { transition: transform var(--dur-medium) var(--ease); }

@@ -5,8 +5,9 @@
 // and `` ` `` to open or fold the sidebar from 1100 px (sidebarRail.ts). Settings is a modal over
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
 // phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings is a page
-// there (settings/PhoneSettings.tsx) and the composer opens in a full-screen sheet; ⌘K, Jobs and Sent
-// stay on the desktop (their addresses open the Inbox). Alfred's window is the phone's pill and sheet
+// there (settings/PhoneSettings.tsx) and the composer opens in a full-screen sheet. Sent, Drafts and
+// Snoozed are the phone's too, from the Inbox's title menu; ⌘K, Jobs and Scheduled stay on the
+// desktop (their addresses open the Inbox). Alfred's window is the phone's pill and sheet
 // (PhoneAlfred.tsx). On the desktop every arrival (a
 // load, a return to the tab) with an overdue task opens on its banner (OverdueBanner.tsx), over
 // everything but the toast.
@@ -75,8 +76,8 @@ export function App({arrive = false}: {arrive?: boolean}) {
     navigate(toInbox(), {replace: true});
   }, [settingsLink]);
 
-  // Below 640 px Jobs, Sent and the other mail pages aren't in the navigation: their addresses open the Inbox.
-  const phoneElsewhere = phone && (route.page === 'jobs' || route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed' || route.page === 'scheduled');
+  // Below 640 px Jobs and Scheduled aren't in the navigation: their addresses open the Inbox.
+  const phoneElsewhere = phone && (route.page === 'jobs' || route.page === 'scheduled');
   useEffect(() => {
     if (phoneElsewhere) navigate(toInbox(), {replace: true});
   }, [phoneElsewhere]);
@@ -129,9 +130,9 @@ export function App({arrive = false}: {arrive?: boolean}) {
       {!phone && <Sidebar route={route} />}
       <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
         {route.page === 'inbox' ? <InboxPage route={route} />
-          : route.page === 'sent' ? (phone ? null : <SentPage route={route} />)
-          : route.page === 'drafts' ? (phone ? null : <DraftsPage route={route} />)
-          : route.page === 'snoozed' ? (phone ? null : <SnoozedPage route={route} />)
+          : route.page === 'sent' ? <SentPage route={route} />
+          : route.page === 'drafts' ? <DraftsPage route={route} />
+          : route.page === 'snoozed' ? <SnoozedPage route={route} />
           : route.page === 'scheduled' ? (phone ? null : <ScheduledPage route={route} />)
           : route.page === 'calendar' ? (phone ? <Agenda route={route} /> : <CalendarPage route={route} />)
             : route.page === 'news' ? <NewsPage route={route} />

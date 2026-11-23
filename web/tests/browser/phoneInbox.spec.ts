@@ -137,7 +137,7 @@ test('phone search: no Mark all as read meanwhile, Back to Search from a result,
   }
 });
 
-test('the title\'s menu switches the views, Unread and Attention with their counts, and the Inbox tab goes back to All; Settings opens its page', async () => {
+test('the title\'s menu switches the views, Unread and Attention with their counts, and the Inbox tab goes back to All; Sent follows them, and Settings opens its page', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -146,7 +146,7 @@ test('the title\'s menu switches the views, Unread and Attention with their coun
     await title.tap();
     await menu.waitFor();
     const rows = await menu.locator('.menu-i').evaluateAll(found => found.map(row => `${row.textContent}${row.getAttribute('aria-checked') === 'true' ? ' ✓' : ''}`));
-    assert.deepEqual(rows, ['All ✓', 'Unread19', 'Attention3', 'FYI', 'Noise', 'Settings']);
+    assert.deepEqual(rows, ['All ✓', 'Unread19', 'Attention3', 'FYI', 'Noise', 'Sent', 'Settings']);
 
     // Unread: the header names it, and every row it lists is unread.
     await menu.getByRole('menuitemradio', {name: /^Unread/}).tap();

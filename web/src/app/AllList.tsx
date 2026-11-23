@@ -67,7 +67,7 @@ const NO_ROWS: MessageRowOut[] = [];
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
 export function AllList({attention, days, shelf, lanes = true, fill = false, empty = null, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
-  label = 'Inbox', from, slot = true, swipe = null, selecting = false, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, selectionSnooze, onAnswer, onCodeCopied}: {
+  label = 'Inbox', from, slot = true, swipe = null, selecting = false, focusable = false, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, selectionSnooze, onAnswer, onCodeCopied}: {
   // Attention's rows, every Attention email not yet Done.
   attention: MessageRowOut[];
   days: DayView[];
@@ -102,6 +102,8 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   slot?: boolean;
   // On the phone, what each row's swipes offer and what picking one does (phone/swipe.tsx). None while selecting.
   swipe?: {acts: (row: MessageRowOut, key: string) => SwipeActs; run: (row: MessageRowOut, act: SwipeAct) => void} | null;
+  // A list whose rows hold nothing to focus (Sent's on the phone) takes the focus itself, so a keyboard can scroll it.
+  focusable?: boolean;
   // On the phone, Select's mode: each row has its circle, ticked while it's selected, and a tap selects.
   selecting?: boolean;
   onPoint: (key: string) => void;
@@ -191,7 +193,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   // The row whose Snooze menu is open: it keeps its pointer look until the menu closes.
   const [snoozing, setSnoozing] = useState<string | null>(null);
   return (
-    <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait', selecting && 'selecting'].filter(Boolean).join(' ')} aria-label={label} onScroll={onScroll} {...(swipe ? swipes.handlers : {})}>
+    <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait', selecting && 'selecting'].filter(Boolean).join(' ')} aria-label={label} tabIndex={focusable ? 0 : undefined} onScroll={onScroll} {...(swipe ? swipes.handlers : {})}>
       {bars}
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key), item.kind === 'row' && item.shelf);

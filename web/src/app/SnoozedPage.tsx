@@ -11,6 +11,12 @@
 // on the open email or else the one under the cursor (A only with the email open, where the reader
 // knows its recipients). S opens the open email's snooze menu. The sidebar's row shows only while something is snoozed; the list emptied
 // here says so.
+//
+// On the phone (board 21) the header is the mark and "Snoozed ▾" as the Inbox's title menu. A row
+// swiped left offers Unsnooze, which a full swipe runs, and Snooze, which opens the snooze sheet
+// (phone/SnoozeSheet.tsx) for a new time or Unsnooze. Nothing selects. The reader slides in over the
+// list with Back to Snoozed, its More holding Snoozed with the return, whose sheet does the same.
+// Done, Trash and Unsnooze there go back to the list, where the toast is.
 import type {ItemKind, MessageRowOut, RuleOut, Settings, SnoozedOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -26,7 +32,7 @@ import type {Route} from '../logic/route.ts';
 import {readerActions} from '../logic/reader.ts';
 import {snoozedLine, snoozeWhen} from '../logic/snooze.ts';
 import {tabTitle} from '../logic/title.ts';
-import {Icon} from '../ui/Icon.tsx';
+import {Icon, Mark} from '../ui/Icon.tsx';
 import {echoKey, isTyping, keepTextUnselected, plainKey} from '../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
 import {startComposer} from './compose/composer.ts';
@@ -41,15 +47,31 @@ import {LoadFailed, useLoadFailed} from './states/Loading.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
 import {toInbox} from './toInbox.ts';
+import {phoneSlide} from '../logic/phone.ts';
+import {usePhone} from './Phone.tsx';
+import {TitleMenu} from './phone/TitleMenu.tsx';
+import {useMailMenu} from './phone/mailMenu.ts';
+import {mailTitle} from '../logic/mailMenu.ts';
+import {slide} from './phone/slide.ts';
+import {SnoozeSheet} from './phone/SnoozeSheet.tsx';
+import {useSwipes} from './phone/swipe.tsx';
+import type {SwipeAct} from './phone/swipe.tsx';
 
 type SnoozedRoute = Extract<Route, {page: 'snoozed'}>;
 
 // The page's Undos, newest last, for ⌘Z: each takes its own toast with it.
 const undos: (() => void)[] = [];
 
+// A row's swipes on the phone, at the right edge: Unsnooze, then Snooze's sheet.
+const UNSNOOZE_SWIPE: SwipeAct = {id: 'unsnooze', label: 'Unsnooze', icon: 'inbox', tone: 'accent', leaves: true};
+const SNOOZE_SWIPE: SwipeAct = {id: 'snooze', label: 'Snooze', icon: 'snooze', tone: 'violet'};
+const PHONE_MENU = {page: 'snoozed'} as const;
+
 export function SnoozedPage({route}: {route: SnoozedRoute}) {
   const now = useNow();
   const zone = timeZone();
+  const phone = usePhone();
+  const menuRows = useMailMenu(PHONE_MENU);
   const {list: accountList, byId: accounts} = useAccounts();
   const accountWidth = useAccountColumn(accountList);
   const load = {path: SNOOZED_PATH, ...useResource<SnoozedOut>(SNOOZED_PATH)};
@@ -60,7 +82,12 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   const [cursor, setCursor] = useState<number | null>(null);
   const open = route.open;
   const at = cursor !== null && rows.some(row => row.id === cursor) ? cursor : null;
-  const go = (id: number | null) => navigate({page: 'snoozed', open: id});
+  // On the phone, the emails a conversation's line was opened from, newest last, as the Inbox's:
+  // Back goes to each in turn before the list.
+  const [trail, setTrail] = useState<number[]>([]);
+  if (trail.length && (open === null || open === trail.at(-1))) setTrail(open === null ? [] : trail.slice(0, -1));
+  // On the phone the reader slides in over the list and back off it.
+  const go = (id: number | null) => slide(phoneSlide(phone, open, id), () => navigate({page: 'snoozed', open: id}));
   const neighbour = (id: number, delta: 1 | -1) => {
     const index = rows.findIndex(row => row.id === id);
     return index < 0 ? null : rows[index + delta]?.id ?? null;
@@ -89,7 +116,8 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
     const wasOpen = open === id;
     const show = () => setLeaving(ids => new Set([...ids].filter(one => one !== id)));
     if (leaves) {
-      if (wasOpen) go(neighbour(id, 1) ?? neighbour(id, -1));
+      // The phone goes back to the list, where the toast is, as the Inbox does.
+      if (wasOpen) go(phone ? null : neighbour(id, 1) ?? neighbour(id, -1));
       setLeaving(ids => new Set(ids).add(id));
     }
     const sent = change().then(() => true, error => {
@@ -248,14 +276,27 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   });
 
   const openRow = listed(open ?? -1);
+  // The row whose snooze sheet is up, from its swipe.
+  const [resnoozing, setResnoozing] = useState<MessageRowOut | null>(null);
+  const swipes = useSwipes({
+    enabled: phone,
+    acts: key => (rows.some(row => String(row.id) === key) ? {lead: [], trail: [UNSNOOZE_SWIPE, SNOOZE_SWIPE]} : null),
+    run: (key, act) => {
+      const row = rows.find(one => String(one.id) === key);
+      if (!row) return;
+      if (act.id === 'unsnooze') unsnoozeRow(row.id);
+      else setResnoozing(row);
+    },
+  });
   return (
     <>
       <header className="hd">
-        <h1 className="hd-title">Snoozed</h1>
+        {phone && <Mark />}
+        {phone ? <TitleMenu title={mailTitle(PHONE_MENU)} rows={menuRows} /> : <h1 className="hd-title">Snoozed</h1>}
         <span className="grow" />
       </header>
       <div className="content" style={accountWidth}>
-        <section className="list snoozed-list" aria-label="Snoozed" onContextMenu={onContextMenu}>
+        <section className="list snoozed-list" aria-label="Snoozed" onContextMenu={onContextMenu} onScroll={swipes.close} {...(phone ? swipes.handlers : {})}>
           {!load.data ? (failed ? <LoadFailed what="Snoozed" loads={[load]} /> : <AllSkeleton />) : rows.length === 0 ? (
             <div className="view-empty">
               <div className="ve-block">
@@ -273,7 +314,8 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
               unsnoozeRow(row.id);
             };
             return (
-              <div key={row.id} className={classes} data-id={row.id} onMouseMove={() => at !== row.id && setCursor(row.id)} onMouseDown={keepTextUnselected} onClick={() => go(row.id)}>
+              <div key={row.id} className={classes} data-id={row.id} data-swipe-key={row.id} onMouseMove={() => at !== row.id && setCursor(row.id)} onMouseDown={keepTextUnselected} onClick={() => go(row.id)}>
+                {phone && swipes.tray(String(row.id))}
                 <Gutter beat={null} />
                 <span className="from">{line.from}</span>
                 <span className="subj">
@@ -288,8 +330,11 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
           })}
         </section>
         {open !== null && (
-          <Reader id={open} row={openRow} accounts={accounts} now={now} timeZone={zone}
-            canStep={{previous: neighbour(open, -1) !== null, next: neighbour(open, 1) !== null}} onOpen={id => go(id)}
+          <Reader id={open} row={openRow} accounts={accounts} now={now} timeZone={zone} back={trail.length ? 'Back' : 'Snoozed'}
+            canStep={{previous: neighbour(open, -1) !== null, next: neighbour(open, 1) !== null}} onOpen={id => {
+              go(id);
+              if (phone && id !== open) setTrail([...trail, open]);
+            }}
             actions={{
               done: () => doneRow(open),
               trash: () => trashRow(open),
@@ -300,10 +345,13 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
               snoozeKey: true,
               openInGmail: () => openInGmail(open),
               step: delta => step(delta),
-              close: () => go(null),
+              close: () => (phone && trail.length ? window.history.back() : go(null)),
               markUnread: () => unreadRow(open),
               codeCopied: () => {},
             }} />
+        )}
+        {resnoozing?.snoozed_until && (
+          <SnoozeSheet snoozed={{until: resnoozing.snoozed_until, onUnsnooze: () => unsnoozeRow(resnoozing.id)}} onPick={until => resnooze(resnoozing.id, until)} onClose={() => setResnoozing(null)} />
         )}
       </div>
     </>

@@ -113,6 +113,9 @@
   .rd-meta .who > .ell { display: flex; flex-direction: column; gap: 1px; }
   .rd-meta .who > .ell > :not(.name) { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rd-meta .rd-sep, .rd-meta .to { display: none; }
+  /* Sent mail names who it went to under the user's name, in the sender's line's place. */
+  .rd-meta .who:has(.to.sent) > .ell > :not(.name) { display: none; }
+  .rd-meta .to.sent { display: block; font-size: 12.5px; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rd-meta .account { grid-column: 3; grid-row: 1; justify-self: end; }
   .rd-meta .time { grid-column: 3; grid-row: 2; justify-self: end; }
   /* The desktop's right column (account, time, a waiting trash) dissolves into this grid, and the

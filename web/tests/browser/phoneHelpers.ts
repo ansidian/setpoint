@@ -1,7 +1,8 @@
-// What the phone's specs share (phoneShell, phoneInbox, phoneReader, phoneAgenda): the seed's
-// counts and emails, the Inbox at 390 × 844 (board 21), and an element's box once it rests.
+// What the phone's specs share (phoneShell, phoneInbox, phoneReader, phoneAgenda, phoneSwipe,
+// phoneLists): the seed's counts and emails, the Inbox at 390 × 844 (board 21), an element's box once
+// it rests, and a finger's swipe.
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
 import {rested} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -21,3 +22,19 @@ export async function inbox(setpoint: Setpoint): Promise<Page> {
 }
 
 export const box = async (page: Page, selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
+
+/**
+ * A finger on `row` from x `from` to x `to`, in steps, then lifted, and the click the browser sends
+ * after a press that didn't scroll (none for one Safari took as Back).
+ */
+export async function swipe(row: Locator, from: number, to: number, click = true) {
+  await row.evaluate((element, [start, end, clicks]) => {
+    // Sent to the row itself, so its height on screen doesn't matter.
+    const y = 400;
+    const fire = (type: string, x: number) => element.dispatchEvent(new PointerEvent(type, {bubbles: true, isPrimary: true, pointerId: 9, pointerType: 'touch', button: 0, clientX: x, clientY: y}));
+    fire('pointerdown', start);
+    for (const step of [0.1, 0.25, 0.5, 0.75, 1]) fire('pointermove', start + (end - start) * step);
+    fire('pointerup', end);
+    if (clicks) element.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: end, clientY: y}));
+  }, [from, to, click] as const);
+}

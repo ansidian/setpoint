@@ -20,6 +20,12 @@
 //
 // Search: the header's field searches sent mail only, in the selected account when one is. Its words
 // stay words, with no suggestions.
+//
+// On the phone (board 21) the header is the mark, "Sent ▾" as the Inbox's title menu, New message and
+// the search field, with no account control: All's mail, whatever the address names. A row swiped left
+// offers Trash, which a full swipe runs, and nothing else swipes or selects. The reader slides in over
+// the list with Back to Sent, and Trash goes back to the list, where the toast is. A sent email of its
+// conversation opens over it with Back to it.
 import type {ItemKind, MessageRowOut, MessageOut, SentOut, SentRowOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -47,6 +53,13 @@ import {emailActions, selectionAnswers} from './emailActions.ts';
 import {SentEmptyView} from './EmptyView.tsx';
 import {beats} from './fold.ts';
 import {useCompact, usePhone} from './Phone.tsx';
+import {phoneSlide} from '../logic/phone.ts';
+import {Icon, Mark} from '../ui/Icon.tsx';
+import {TitleMenu} from './phone/TitleMenu.tsx';
+import {useMailMenu} from './phone/mailMenu.ts';
+import {mailTitle} from '../logic/mailMenu.ts';
+import {slide} from './phone/slide.ts';
+import type {SwipeAct} from './phone/swipe.tsx';
 import {askCard, EmailCard, Reader} from './Reader.tsx';
 import {answerEach, answerKey, closeComposer, newMessage, openComposer, useOpenComposer} from './compose/composer.ts';
 import {NewMessagePane} from './compose/Composer.tsx';
@@ -69,6 +82,10 @@ const ALL = ALL_ACCOUNTS;
 let lastOpened: number | null = null;
 // ⌘Z: what undoes each Trash made here, newest last. The toast's Undo runs the same one.
 const undos: (() => void)[] = [];
+
+// A row's swipe on the phone: Trash, at the right edge.
+const TRASH_SWIPE: SwipeAct = {id: 'trash', label: 'Trash', icon: 'delete', tone: 'alert', leaves: true};
+const PHONE_MENU = {page: 'sent'} as const;
 
 /**
  * A sent email's row as Sent draws it: read, in no lane, with its subject. Mail to yourself keeps
@@ -100,7 +117,8 @@ export function SentPage({route}: {route: SentRoute}) {
   const accountWidth = useAccountColumn(accountList);
   // An address naming no mail account goes to All, once the accounts are in.
   const unknownAccount = route.account !== undefined && accountList.length > 0 && !accounts.has(route.account);
-  const account = route.account && !unknownAccount ? route.account : null;
+  // The phone has no account control, so it shows All's mail.
+  const account = route.account && !unknownAccount && !phone ? route.account : null;
   useEffect(() => {
     if (unknownAccount) navigate({page: 'sent', open: route.open}, {replace: true});
   }, [unknownAccount, route.open]);
@@ -157,6 +175,11 @@ export function SentPage({route}: {route: SentRoute}) {
   const clearSelection = () => setSelection(NO_SELECTION);
 
   const open = route.open;
+  // On the phone, the sent emails a conversation's line was opened from, newest last, as the Inbox's:
+  // Back goes to each in turn before the list.
+  const [trail, setTrail] = useState<number[]>([]);
+  if (trail.length && (open === null || open === trail.at(-1))) setTrail(open === null ? [] : trail.slice(0, -1));
+  const menuRows = useMailMenu(PHONE_MENU);
   const [travelled, setTravelled] = useState<{id: number; travel: Travel} | null>(null);
   // An email the address opens (a deep link, a reload, Back) is opened, as a click would.
   useEffect(() => {
@@ -182,7 +205,7 @@ export function SentPage({route}: {route: SentRoute}) {
     if (stop?.kind === 'row') setCursor(stop.key);
     lastOpened = id;
     if (searching) search.opened(id);
-    go({open: id});
+    slide(phoneSlide(phone, open, id), () => go({open: id}));
     void openMessage(id).catch(toastFailure('Failed to mark read'));
   }
 
@@ -212,15 +235,24 @@ export function SentPage({route}: {route: SentRoute}) {
 
   // From the reader: an email of its conversation the user didn't send is received mail, not
   // Sent's, so it opens in the Inbox with the Inbox's tools. The rest open here.
-  const openFromReader = (id: number, sent?: boolean) => (sent === false ? navigate({page: 'inbox', open: id}) : openEmail(id));
+  const openFromReader = (id: number, sent?: boolean) => {
+    if (sent === false) return navigate({page: 'inbox', open: id});
+    const from = open;
+    openEmail(id);
+    if (phone && from !== null && from !== id) setTrail([...trail, from]);
+  };
 
-  const close = () => go({open: null});
+  // On the phone the reader slides back off the list.
+  const close = () => slide(phoneSlide(phone, open, null), () => go({open: null}));
+  // The phone reader's Back: to the email this one was opened from, else the list.
+  const back = () => (phone && trail.length ? window.history.back() : close());
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;
   // What E acts on: the open email, else the row under the cursor.
   const target = open ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
   // A new message has the pane to itself while no email is open.
   const composer = useOpenComposer();
-  const writing = open === null && composer?.messageId === null && !composer.floating ? composer : null;
+  // None on the phone, where the composer puts up its own sheet.
+  const writing = !phone && open === null && composer?.messageId === null && !composer.floating ? composer : null;
   const rowOf = (id: number): MessageRowOut | undefined => {
     const row = sentRows.get(id);
     return row ? asSent(row) : search.listed.find(result => result.id === id);
@@ -241,7 +273,8 @@ export function SentPage({route}: {route: SentRoute}) {
     for (const id of ids) beats.set(id, 'trash');
     setTrashing(trashed => new Set([...trashed, ...ids]));
     if (wasOpen !== null) {
-      const next = nextAfterLeaving(stops, cursor, wasOpen);
+      // The phone goes back to the list, where the toast is, as the Inbox does.
+      const next = phone ? null : nextAfterLeaving(stops, cursor, wasOpen);
       if (next !== null) openEmail(next, undefined, 'next');
       else close();
     }
@@ -267,7 +300,7 @@ export function SentPage({route}: {route: SentRoute}) {
       }));
       if (wasOpen !== null) {
         lastOpened = wasOpen;
-        navigate({...route, open: wasOpen});
+        slide(phoneSlide(phone, null, wasOpen), () => navigate({...route, open: wasOpen}));
       }
     };
     undos.push(back);
@@ -322,7 +355,7 @@ export function SentPage({route}: {route: SentRoute}) {
       const next = open ? neighbour(stops, open, delta) : null;
       if (next !== null) openEmail(next, undefined, delta > 0 ? 'next' : 'prev');
     },
-    close,
+    close: back,
   };
 
   useLayoutEffect(() => {
@@ -429,11 +462,13 @@ export function SentPage({route}: {route: SentRoute}) {
   return (
     <>
       <header className="hd">
-        <h1 className="hd-title">{searching ? 'Search' : 'Sent'}</h1>
-        {!searching && accountList.length > 0 && (
+        {phone && <Mark />}
+        {phone && !searching ? <TitleMenu title={mailTitle(PHONE_MENU)} rows={menuRows} /> : <h1 className="hd-title">{searching ? 'Search' : 'Sent'}</h1>}
+        {!phone && !searching && accountList.length > 0 && (
           <SentAccounts accounts={accountList} withMail={withMail} value={account ?? ALL} onPick={pick} />
         )}
         <span className="grow" />
+        {phone && <button className="ibtn ph-icon" type="button" aria-label="New message" onClick={() => newMessage()}><Icon name="edit" size={20} /></button>}
         <SearchField search={search} operators label={shownAccount ? `Search sent from ${shownAccount.label}` : 'Search sent mail'} onEnter={first => setCursor(`all:${first.id}`)} />
       </header>
       <div className="content" style={accountWidth} onContextMenu={onContextMenu}>
@@ -447,7 +482,8 @@ export function SentPage({route}: {route: SentRoute}) {
             empty={empty ? <SentEmptyView account={shownAccount} style={dotStyle(shownAccount?.colour)} onAll={() => pick(ALL)} /> : null}
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={arrived} more={more} dimmed={firstWait}
             loading={!ready ? (failed ? <LoadFailed what="Sent" loads={[firstLoad]} /> : <AllSkeleton />) : null}
-            onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={nothing} onNearEnd={loadMore} onUnpin={nothing} />
+            onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={nothing} onNearEnd={loadMore} onUnpin={nothing}
+            focusable={phone} swipe={phone ? {acts: () => ({lead: [], trail: [TRASH_SWIPE]}), run: row => trash([row.id])} : null} />
         )}
         {writing && <NewMessagePane open={writing} />}
         {showsSelection && (
@@ -460,7 +496,7 @@ export function SentPage({route}: {route: SentRoute}) {
         )}
         {open !== null && (
           <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={openFromReader}
-            sent canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
+            sent back={trail.length ? 'Back' : searching ? 'Search' : 'Sent'} canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}
       </div>
     </>

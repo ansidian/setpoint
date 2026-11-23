@@ -16,6 +16,11 @@
 // pane shows the selection (SelectionPane) with Open ↵, which opens each in a window, and Discard
 // for the ones that can go, under one toast with Undo. A draft up in a window stays up. A selected
 // row's right-click has the same, Esc ends the selection, and a plain click opens the one clicked.
+//
+// On the phone (board 21) the header is the mark, "Drafts ▾" as the Inbox's title menu and New
+// message. A row opens its draft in the composer's full-screen sheet; Cancel closes it, the draft
+// kept, and neither leaves an address behind for Back to open it again. A row swiped left offers
+// Discard (not one being sent), which a full swipe runs, with Undo in the toast. Nothing selects.
 import type {DraftOut, DraftRowOut, DraftsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent, ReactNode} from 'react';
@@ -29,7 +34,7 @@ import type {Route} from '../../logic/route.ts';
 import {broughtForward, counted, discardable, scheduledAt, dropped, draftOffers, inListOrder, NO_SELECTION, ranged, selectedAll, stacked, toggled} from '../../logic/selection.ts';
 import type {Selection} from '../../logic/selection.ts';
 import {tabTitle} from '../../logic/title.ts';
-import {Icon} from '../../ui/Icon.tsx';
+import {Icon, Mark} from '../../ui/Icon.tsx';
 import {commandKey, echoKey, isTyping, keepTextUnselected, plainKey} from '../../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
@@ -37,7 +42,12 @@ import {openContextMenu} from '../ContextMenu.tsx';
 import type {MenuAction} from '../ContextMenu.tsx';
 import {EmptyPane, EmptyPaneButton, useEmptyPane} from '../EmptyPane.tsx';
 import {DraftsEmptyView} from '../EmptyView.tsx';
-import {useCompact} from '../Phone.tsx';
+import {useCompact, usePhone} from '../Phone.tsx';
+import {TitleMenu} from '../phone/TitleMenu.tsx';
+import {useMailMenu} from '../phone/mailMenu.ts';
+import {mailTitle} from '../../logic/mailMenu.ts';
+import {useSwipes} from '../phone/swipe.tsx';
+import type {SwipeAct} from '../phone/swipe.tsx';
 import {EmailOnly, PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {navigate} from '../router.ts';
@@ -50,6 +60,10 @@ import {closeComposer, discardDrafts, newMessage, openDraft, popOutDrafts, useOp
 import type {OpenComposer} from './composer.ts';
 
 type DraftsRoute = Extract<Route, {page: 'drafts'}>;
+
+// A row's swipe on the phone: Discard, at the right edge.
+const DISCARD_SWIPE: SwipeAct = {id: 'discard', label: 'Discard', icon: 'delete', tone: 'alert', leaves: true};
+const PHONE_MENU = {page: 'drafts'} as const;
 
 const KEYS = [
   {keys: ['J', 'K'], does: 'Move'},
@@ -72,6 +86,8 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
   const {list: accountList, byId: accounts} = useAccounts();
   const accountWidth = useAccountColumn(accountList);
   const compact = useCompact();
+  const phone = usePhone();
+  const menuRows = useMailMenu(PHONE_MENU);
   const load = {path: DRAFTS_PATH, ...useResource<DraftsOut>(DRAFTS_PATH)};
   const listed = load.data?.drafts;
   // Drafts Discard took out here, hidden at once until the list no longer has them. A refused
@@ -109,8 +125,9 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
     was.current = composer;
     // Windows aren't the pane's: popping it out empties the pane, and its row docks it again.
     if (composer && composer.draftId !== null && composer.draftId !== shown) navigate({page: 'drafts', open: composer.draftId}, {replace: true});
-    else if (!composer && before && before.draftId === shown) navigate({page: 'drafts', open: null});
-  }, [composer, shown]);
+    // On the phone the sheet's open draft leaves no address behind it.
+    else if (!composer && before && before.draftId === shown) navigate({page: 'drafts', open: null}, {replace: phone});
+  }, [composer, shown, phone]);
 
   const open = composer && composer.draftId !== null && composer.draftId === shown ? composer : null;
   // The pane beside the list: the open draft, else the selection. From 640 to 1099 px a pane covers
@@ -134,7 +151,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
   /** A draft opens in the pane, as a click on its row does, and the selection ends. */
   function openRow(id: number) {
     clearSelection();
-    navigate({page: 'drafts', open: id});
+    navigate({page: 'drafts', open: id}, {replace: phone});
   }
 
   /**
@@ -143,8 +160,8 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
    * clicked to it joins. A plain click ends the selection and opens it.
    */
   function clickRow(id: number, event: ReactMouseEvent) {
-    const adding = !event.altKey && (event.metaKey || event.ctrlKey);
-    const ranging = !event.altKey && !adding && event.shiftKey;
+    const adding = !phone && !event.altKey && (event.metaKey || event.ctrlKey);
+    const ranging = !phone && !event.altKey && !adding && event.shiftKey;
     if (!adding && !ranging) {
       openRow(id);
       return;
@@ -192,6 +209,13 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
     ...(offer.discard ? [{id: 'discard', group: 'act', label: discardLabel, icon: 'delete', danger: true, run: forSelection.discard} satisfies MenuAction] : []),
     {id: 'clear', group: 'clear', label: 'Clear selection', icon: 'close', hint: 'Esc', run: forSelection.clear},
   ];
+  // A row's swipe on the phone, for one that can go.
+  const swipes = useSwipes({
+    enabled: phone,
+    acts: key => (rows.some(row => `draft:${row.id}` === key && discardable(row)) ? {lead: [], trail: [DISCARD_SWIPE]} : null),
+    run: key => discardRows([Number(key.slice('draft:'.length))]),
+  });
+
   // Whether the keys act on the selection: while no draft is open over it.
   const onSelection = open === null && selected.length > 0;
 
@@ -238,34 +262,40 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
   return (
     <>
       <header className="hd">
-        <h1 className="hd-title">Drafts</h1>
+        {phone && <Mark />}
+        {phone ? <TitleMenu title={mailTitle(PHONE_MENU)} rows={menuRows} /> : <h1 className="hd-title">Drafts</h1>}
         <span className="grow" />
+        {phone && <button className="ibtn ph-icon" type="button" aria-label="New message" onClick={() => newMessage()}><Icon name="edit" size={20} /></button>}
         <EmptyPaneButton pane={pane} />
       </header>
       <div className="content" style={accountWidth} onContextMenu={onContextMenu}>
-        <section className="list drafts-list" aria-label="Drafts">
+        <section className="list drafts-list" aria-label="Drafts" onScroll={swipes.close} {...(phone ? swipes.handlers : {})}>
           {!load.data ? (failed ? <LoadFailed what="Drafts" loads={[load]} /> : <AllSkeleton />) : rows.length === 0 ? (
             <DraftsEmptyView onNew={() => newMessage()} />
           ) : rows.map(row => {
             const account = accounts.get(row.account_id);
             const classes = ['row', at === row.id && 'cur', shown === row.id && 'open', selectedSet.has(row.id) && 'sel'].filter(Boolean).join(' ');
             return (
-              <div key={row.id} className={classes} data-id={row.id} onMouseMove={() => at !== row.id && setCursor(row.id)} onMouseDown={keepTextUnselected} onClick={event => clickRow(row.id, event)}>
+              <div key={row.id} className={classes} data-id={row.id} data-swipe-key={`draft:${row.id}`} onMouseMove={() => at !== row.id && setCursor(row.id)} onMouseDown={keepTextUnselected} onClick={event => clickRow(row.id, event)}>
+                {phone && swipes.tray(`draft:${row.id}`)}
                 <span className="ud" />
                 <span className="from">{toLine(row)}</span>
                 <span className="subj">
                   <b>{subjectOf(row)}</b>
                   {row.snippet && <>{' '}<span className="sum">· {row.snippet}</span></>}
                 </span>
-                {row.send_state === 'failed' && <span className="drafted">Couldn't send</span>}
-                {(row.send_state === 'held' || row.send_state === 'sending') && <span className="ink3">Sending</span>}
+                <span className="marks">
+                  {row.send_state === 'failed' && <span className="drafted">Couldn't send</span>}
+                  {(row.send_state === 'held' || row.send_state === 'sending') && <span className="ink3">Sending</span>}
+                </span>
                 <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
                 <span className="age" data-tip={fullTimestamp(row.updated_at, zone)}>{age(row.updated_at, now, zone)}</span>
               </div>
             );
           })}
         </section>
-        {open ? <DraftPane open={open} accounts={accounts} timeZone={zone} /> : showsSelection ? (
+        {/* On the phone the composer puts up its own sheet. */}
+        {phone ? null : open ? <DraftPane open={open} accounts={accounts} timeZone={zone} /> : showsSelection ? (
           <SelectionPane label="Selected drafts" heading={counted(selectedRows.length, '1 draft selected', n => `${n} drafts selected`)}
             tools={<>
               <button className="tool" type="button" data-hint="enter" onClick={forSelection.open}><Icon name="draft" />Open<span className="kbd">↵</span></button>

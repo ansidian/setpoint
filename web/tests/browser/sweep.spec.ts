@@ -6,8 +6,8 @@
 // - Jobs with an application open, with a Needs you item's email open, and with its menus open
 //   (Assign to…, and More with Merge with…'s submenu)
 // - every Settings page, Jobs with its history pass running and the AI down, and Jobs off
-// - the phone's Inbox, its News with a story open, and its editor sheet over the Agenda (Jobs isn't
-//   on the phone).
+// - the phone's Inbox, Sent, Drafts and Snoozed, its News with a story open, and its editor sheet
+//   over the Agenda (Jobs isn't on the phone).
 // Settings skips 1100, because its fixed modal draws there as at the target. Assign to…, More, the
 // history pass and Jobs off stay at the target, because they don't change with width.
 // On each, at rest: nothing scrolls sideways, no text is cut by an overflow: hidden box (an ellipsis
@@ -322,9 +322,14 @@ test('the main pages keep to their boxes in Night at their widths, and axe finds
   }
 });
 
-test('the phone\'s Inbox and News keep to their boxes in Night, and axe finds nothing in Night or Light', async () => {
+test('the phone\'s Inbox, Sent, Drafts, Snoozed and News keep to their boxes in Night, and axe finds nothing in Night or Light', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
+    // A draft and a snoozed email, which the seed has none of.
+    const subject = async (start: string) => (await setpoint.api<InboxOut>('GET', '/mail/inbox')).groups.flatMap(group => group.rows).find(row => row.subject.startsWith(start))!.id;
+    const draft = await setpoint.api<{id: number}>('POST', '/mail/drafts', {kind: 'reply', message_id: await subject('Interview availability')});
+    await setpoint.api('PATCH', `/mail/drafts/${draft.id}`, {body: [{type: 'paragraph', runs: [{text: 'Tuesday works.', marks: [], href: null}]}]});
+    await setpoint.api('POST', `/mail/messages/${await subject('Final exam schedule')}/snooze`, {until: '2026-10-12T16:00:00.000Z'});
     const page = await setpoint.page('iphone');
     const heard = listen(setpoint, page);
     const {stories} = await setpoint.api<NewsSectionOut>('GET', '/news/sections/local');
@@ -332,6 +337,9 @@ test('the phone\'s Inbox and News keep to their boxes in Night, and axe finds no
     const found: string[] = [];
     for (const route of [
       {name: 'the phone\'s Inbox', path: '/inbox', shows: '.list .row'},
+      {name: 'the phone\'s Sent', path: '/sent', shows: '.list .row'},
+      {name: 'the phone\'s Drafts', path: '/drafts', shows: '.drafts-list .row'},
+      {name: 'the phone\'s Snoozed', path: '/snoozed', shows: '.snoozed-list .row'},
       {name: 'the phone\'s News', path: '/news', shows: '.nw-recap .nw-recap-row'},
       {name: 'the phone\'s News, a story open', path: `/news/story/${story}`, shows: '.pane .rd-subj'},
     ]) {
