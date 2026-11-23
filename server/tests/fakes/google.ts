@@ -326,7 +326,8 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       if (!placesKeys.has(request.headers['x-goog-api-key'] as string)) return googleError(403, 'API key not valid. Please pass a valid API key.', 'API_KEY_INVALID', 'PERMISSION_DENIED');
       const body = request.body as {locationRestriction?: {circle: {radius: number}}};
       const radius = body.locationRestriction?.circle.radius ?? Infinity;
-      return {status: 200, body: {suggestions: places.filter(place => place.radius <= radius).map(place => ({placePrediction: {
+      // The list's order is Google's; like Google, at most five.
+      return {status: 200, body: {suggestions: places.filter(place => place.radius <= radius).slice(0, 5).map(place => ({placePrediction: {
         placeId: place.placeId, text: {text: `${place.main}, ${place.secondary}`}, distanceMeters: place.distanceMeters,
         structuredFormat: {mainText: {text: place.main}, secondaryText: {text: place.secondary}},
       }}))}};

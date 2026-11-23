@@ -108,7 +108,7 @@ describe('Places', () => {
     return {w, google, c};
   }
 
-  test('a&b auto: normalised, restricted near Home, widened when sparse, nearest first, one session', async () => {
+  test('a&b auto: normalised, near Home and wide at once, nearest first, one session', async () => {
     const {google, c} = await placesWorld();
     google.setPlaces([
       {placeId: 'far', main: 'A & B Auto', secondary: 'Glendale, CA', distanceMeters: 19_000, radius: 20_000},
@@ -120,9 +120,11 @@ describe('Places', () => {
       {place_id: 'far', name: 'A & B Auto', address: 'Glendale, CA'},
     ]);
     const calls = google.requests.filter(request => request.path === '/v1/places:autocomplete');
-    expect(calls.map(call => [call.body.input, call.body.sessionToken, call.body.locationRestriction.circle.radius, call.body.locationBias])).toEqual([
-      ['a & b auto', 'editor-session-1', 12_000, undefined], ['a & b auto', 'editor-session-1', 24_000, undefined],
+    const area = (call: (typeof calls)[number]) => [call.body.input, call.body.sessionToken, call.body.locationRestriction?.circle.radius ?? null, call.body.locationBias?.circle.radius ?? null];
+    expect(calls.map(area).sort()).toEqual([
+      ['a & b auto', 'editor-session-1', null, 12_000], ['a & b auto', 'editor-session-1', 12_000, null],
     ]);
+    expect(calls.map(call => call.body.locationBias?.circle.center ?? call.body.locationRestriction.circle.center)).toEqual([{latitude: 34.1016, longitude: -118.3267}, {latitude: 34.1016, longitude: -118.3267}]);
     expect(calls[0]!.headers['x-goog-fieldmask']).toBe('suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.distanceMeters');
     // Each suggestion's address from Place Details: the address alone, leaving the session open.
     const details = google.requests.filter(request => request.path.startsWith('/v1/places/'));
@@ -149,6 +151,35 @@ describe('Places', () => {
     const calls = google.requests.length;
     expect(await c.send('GET', '/api/places?query=blue%20door&session_token=editor-session-1')).toMatchObject({status: 503, body: {error: {code: 'places_not_configured'}}});
     expect(google.requests).toHaveLength(calls);
+  });
+
+  // Near: within 12 km of Home (radius ≤ 12 km), listed nearest first. Wide: Google's order (the
+  // list's), those not already listed following: at least two, or enough to make five.
+  const near = (id: string, distanceMeters: number) => ({placeId: id, main: id, secondary: 'Los Angeles, CA', distanceMeters, radius: 5_000});
+  const far = (id: string, distanceMeters: number) => ({placeId: id, main: id, secondary: 'Far, CA', distanceMeters, radius: 40_000});
+  test.each<[string, ReturnType<typeof near>[], string[]]>([
+    ['five near and a famous far place: the near five, then two far', [far('t1-airport', 35_000), near('t1-n4', 4_000), near('t1-n1', 1_000), far('t1-rental', 36_000), near('t1-n3', 3_000), near('t1-n2', 2_000), near('t1-n5', 5_000), far('t1-third', 30_000)], ['t1-n1', 't1-n2', 't1-n3', 't1-n4', 't1-n5', 't1-airport', 't1-rental']],
+    ['wide finds only what near listed: the near five alone', [near('t2-n1', 1_000), near('t2-n2', 2_000), near('t2-n3', 3_000), near('t2-n4', 4_000), near('t2-n5', 5_000)], ['t2-n1', 't2-n2', 't2-n3', 't2-n4', 't2-n5']],
+    ['five near and three far: only two far', [far('t6-a', 30_000), far('t6-b', 31_000), far('t6-c', 32_000), near('t6-n1', 1_000), near('t6-n2', 2_000), near('t6-n3', 3_000), near('t6-n4', 4_000), near('t6-n5', 5_000)], ['t6-n1', 't6-n2', 't6-n3', 't6-n4', 't6-n5', 't6-a', 't6-b']],
+    ['two near and five far: three far make five', [far('t7-f1', 30_000), far('t7-f2', 31_000), far('t7-f3', 32_000), far('t7-f4', 33_000), far('t7-f5', 34_000), near('t7-n1', 1_000), near('t7-n2', 2_000)], ['t7-n1', 't7-n2', 't7-f1', 't7-f2', 't7-f3']],
+    ['one near: four far make five', [far('t3-f1', 30_000), far('t3-f2', 20_000), far('t3-f3', 25_000), far('t3-f4', 40_000), near('t3-n1', 2_000)], ['t3-n1', 't3-f1', 't3-f2', 't3-f3', 't3-f4']],
+    ['nothing near: the wide five in Google\'s order', [far('t4-f1', 27_000), far('t4-f2', 14_000), far('t4-f3', 30_000), far('t4-f4', 20_000), far('t4-f5', 50_000)], ['t4-f1', 't4-f2', 't4-f3', 't4-f4', 't4-f5']],
+  ])('%s', async (_case, places, expected) => {
+    const {google, c} = await placesWorld();
+    google.setPlaces(places);
+    const answer = await c.send('GET', '/api/places?query=lax&session_token=editor-session-1');
+    expect((answer.body as {place_id: string}[]).map(place => place.place_id)).toEqual(expected);
+    expect(google.requests.filter(request => request.path === '/v1/places:autocomplete')).toHaveLength(2);
+  });
+
+  test('without a Home, one request with no area', async () => {
+    const {w, google, c} = await placesWorld();
+    updateSettings(w.store, {calendar: {home: null}});
+    google.setPlaces([far('t5-f1', 30_000), near('t5-n1', 1_000)]);
+    const answer = await c.send('GET', '/api/places?query=lax&session_token=editor-session-1');
+    expect((answer.body as {place_id: string}[]).map(place => place.place_id)).toEqual(['t5-n1', 't5-f1']);
+    const calls = google.requests.filter(request => request.path === '/v1/places:autocomplete');
+    expect(calls.map(call => [call.body.locationRestriction, call.body.locationBias, call.body.origin])).toEqual([[undefined, undefined, undefined]]);
   });
 
   test('a place\'s details give Home its coordinates, closing the session; Google\'s refusal is a 502', async () => {
