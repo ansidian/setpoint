@@ -676,7 +676,7 @@ test('the phone has no Jobs: its address opens the Inbox, and its tabs don\'t na
     await page.goto(`${setpoint.base}/jobs`);
     await until('the Inbox', () => Promise.resolve(new URL(page.url()).pathname), pathname => pathname === '/inbox');
     await page.locator('.list .row').first().waitFor();
-    assert.deepEqual(await page.locator('.ph-tabs .ph-tab').evaluateAll(tabs => tabs.map(tab => tab.textContent!.replace(/\d+/g, ''))), ['Inbox', 'Agenda']);
+    assert.deepEqual(await page.locator('.ph-tabs .ph-tab').evaluateAll(tabs => tabs.map(tab => tab.textContent!.replace(/\d+/g, ''))), ['Inbox', 'Agenda', 'News']);
     assert.equal(await page.locator('.jb-col, .nav.jobs').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
