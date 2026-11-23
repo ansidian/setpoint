@@ -1,5 +1,5 @@
 // The phone Inbox's Select bar: while Select's mode is on, it takes the tab bar's place with Done,
-// Pin, Read and Trash for every selected email, as the iOS app's did. The Inbox says what it offers
+// Pin, Read and Trash for every selected email, as the iOS app's did. Each ends the mode. The Inbox says what it offers
 // (`showSelectBar`), and the shell draws it where the tabs are (Phone.tsx).
 import {useSyncExternalStore} from 'react';
 import {Icon} from '../../ui/Icon.tsx';

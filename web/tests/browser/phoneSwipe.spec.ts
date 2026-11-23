@@ -91,16 +91,31 @@ test('on the phone Select puts circles on the rows and the tab bar\'s place to D
     await woodgrove.tap();
     await page.locator('.hd .hd-title', {hasText: '3 selected'}).waitFor();
 
-    // Pin keeps the selection, its button turning to Unpin.
+    // Pin ends the mode, as every batch does, and the three go on the shelf.
     await bar.locator('button', {hasText: 'Pin'}).tap();
-    await bar.locator('button', {hasText: 'Unpin'}).waitFor();
+    await page.locator('.ph-tabs').waitFor();
+    assert.equal(await page.locator('.list .pick').count(), 0);
     await until('pinned', () => allRows(setpoint), rows => ids.every(id => rows.find(row => row.id === id)?.pinned));
-    await bar.locator('button', {hasText: 'Unpin'}).tap();
-    await bar.locator('button', {hasText: /^Pin$/}).waitFor();
-    await until('unpinned', () => allRows(setpoint), rows => ids.every(id => !rows.find(row => row.id === id)?.pinned));
+    // Selected again, every one pinned: Unpin, and the mode ends again.
+    await page.locator('.hd button', {hasText: 'Select'}).tap();
+    for (const sender of senders) await page.locator('.list .row', {hasText: sender}).first().tap();
     await page.locator('.hd .hd-title', {hasText: '3 selected'}).waitFor();
+    await bar.locator('button', {hasText: 'Unpin'}).tap();
+    await page.locator('.ph-tabs').waitFor();
+    await until('unpinned', () => allRows(setpoint), rows => ids.every(id => !rows.find(row => row.id === id)?.pinned));
+
+    // Read ends it too.
+    await page.locator('.hd button', {hasText: 'Select'}).tap();
+    await page.locator('.list .row', {hasText: 'Proseware'}).first().tap();
+    await page.locator('.hd .hd-title', {hasText: '1 selected'}).waitFor();
+    await bar.locator('button', {hasText: /^(Read|Unread)$/}).tap();
+    await page.locator('.ph-tabs').waitFor();
+    assert.equal(await page.locator('.list .pick').count(), 0);
 
     // Trash: one toast for the three, and the mode ends; Undo puts every one back.
+    await page.locator('.hd button', {hasText: 'Select'}).tap();
+    for (const sender of senders) await page.locator('.list .row', {hasText: sender}).first().tap();
+    await page.locator('.hd .hd-title', {hasText: '3 selected'}).waitFor();
     await bar.locator('button', {hasText: 'Trash'}).tap();
     await holdToast(page);
     const toast = page.locator('.toast', {hasText: 'Moved 3 to Trash'});

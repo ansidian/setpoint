@@ -771,8 +771,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
     else on.pin([id]);
   };
 
-  // Select's bar in the tab bar's place, while its mode is on. Done and Trash end the mode; Pin and
-  // Read keep it, the bar's words following what's selected.
+  // Select's bar in the tab bar's place, while its mode is on, its words following what's selected.
+  // Every batch ends the mode: once it's done, the list shows what it did.
   const selectOffers = selectionOffers(selectedRows);
   const selectBar = selecting ? {
     // With nothing selected yet, Pin and Read, as they'll mostly be.
@@ -786,8 +786,15 @@ export function InboxPage({route}: {route: InboxRoute}) {
         on.trash(selected);
         endSelecting();
       },
-      pin: () => on.pin(selected),
-      read: () => (selectOffers.read ? on.markRead(selected) : on.markUnread(selected)),
+      pin: () => {
+        on.pin(selected);
+        endSelecting();
+      },
+      read: () => {
+        if (selectOffers.read) on.markRead(selected);
+        else on.markUnread(selected);
+        endSelecting();
+      },
     },
   } : null;
   useLayoutEffect(() => showSelectBar(selectBar));
