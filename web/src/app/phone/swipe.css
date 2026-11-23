@@ -1,10 +1,11 @@
-/* A list's rows swiping on the phone (phone/swipe.tsx), under the phone's breakpoint as phone.css's
-   rules are. */
+/* A list's rows swiping on the phone (phone/swipe.tsx): the Inbox's rows and the Agenda's Overdue
+   lines, under the phone's breakpoint as phone.css's rules are. */
 @media (max-width: 639px) {
   /* A row's swipe: its cells follow the finger by `--sw` while the tray behind
      them grows from the side it's pulled from, as wide as the gap. Let go, they settle over 180 ms.
      Vertical drags stay the list's scroll. */
-  .list.all .row { touch-action: pan-y; }
+  .list.all .row, .ph-overdue .ph-swipe { touch-action: pan-y; }
+  .ph-overdue .ph-swipe { position: relative; }
   [data-swipe] { overflow: hidden; }
   [data-swipe] > :not(.sw) { transform: translateX(var(--sw, 0px)); }
   [data-swipe="settle"] > :not(.sw) { transition: transform var(--dur-medium) var(--ease); }
@@ -18,6 +19,7 @@
   .sw-b.alert { background: var(--alert); }
   .sw-b.good { background: var(--good); }
   .sw-b.sun { background: var(--sunGlyph); }
+  .sw-b.violet { background: var(--violet); }
   /* Past the full-swipe line the first action takes the whole tray, so letting go runs it. */
   .sw.armed .sw-b:not(:first-child) { flex-grow: 0; }
   .sw.armed .sw-b:not(:first-child) > * { opacity: 0; }

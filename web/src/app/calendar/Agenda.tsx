@@ -3,7 +3,7 @@
 // empty weeks in a row leave a Show later row (D790). The header's month, the day in view's, opens
 // the month picker, which jumps to any day; older days than the week before are the picker's.
 // Overdue tasks lead today as its Overdue group, each with how long it's overdue (D791), and the
-// detail of one snoozes it in the bottom sheet. The header's search button opens a plain field
+// detail of one snoozes it in the bottom sheet, as does swiping its line left (phone/swipe.tsx). The header's search button opens a plain field
 // whose results take the list's place (D792); its clear button leaves search.
 // The routes are Calendar's: /calendar/item/3?at=… opens that item's detail over the agenda.
 // /calendar/2026-10-07 brings that day to the top (or starts the agenda there when it's outside
@@ -44,6 +44,8 @@ import {AgendaMonthPicker} from './AgendaMonthPicker.tsx';
 import {AgendaSearch} from './AgendaSearch.tsx';
 import {onAgendaToday} from './agendaToday.ts';
 import {useOverdue, useSnoozeOverdue} from './overdueGroup.ts';
+import {useSwipes} from '../phone/swipe.tsx';
+import type {SwipeAct} from '../phone/swipe.tsx';
 import './detail/detail.css';
 import './agendaPhone.css';
 
@@ -122,6 +124,12 @@ export function Agenda({route}: {route: CalendarRoute}) {
   const overdueKeys = useMemo(() => new Set(overdue.map(item => item.key)), [overdue]);
   const {snooze, until} = useSnoozeOverdue();
   const [snoozing, setSnoozing] = useState<ItemOut | null>(null);
+  // An Overdue line swiped left offers Snooze, and all the way opens its sheet.
+  const swipes = useSwipes({
+    enabled: true,
+    acts: key => (overdue.some(item => item.key === key) ? {lead: [], trail: [SNOOZE_ACT]} : null),
+    run: key => setSnoozing(overdue.find(item => item.key === key) ?? null),
+  });
 
   // A link to an item already on screen (its Overdue line, a result) leaves the agenda where it is.
   const routeKey = route.item ? itemKey(route.item, route.at) : null;
@@ -251,11 +259,15 @@ export function Agenda({route}: {route: CalendarRoute}) {
                     {wx && <span className={`pwx ${wx.tone}`} data-tip={wx.line}><span className="temps num"><span className="hi">{wx.high}</span> / {wx.low}</span><Icon name={wx.icon} size={17} /></span>}
                   </div>
                   {group.length > 0 && (
-                    <div className="ph-overdue" role="group" aria-label="Overdue">
+                    <div className="ph-overdue" role="group" aria-label="Overdue" {...swipes.handlers}>
                       <div className="ph-overdue-h">Overdue<span className="num">{group.length}</span></div>
                       {group.map(item => (
-                        <AgendaLine key={item.key} item={item} when={`${overdueFor(item, now, zone)} overdue`} past={false} overdue
-                          calendar={colours.get(item.calendar_id)} selected={item.key === selectedKey} ring={ring} />
+                        // Its swipe's box: the tray beside the line's link.
+                        <div key={item.key} className="ph-swipe" data-swipe-key={item.key}>
+                          {swipes.tray(item.key)}
+                          <AgendaLine item={item} when={`${overdueFor(item, now, zone)} overdue`} past={false} overdue
+                            calendar={colours.get(item.calendar_id)} selected={item.key === selectedKey} ring={ring} />
+                        </div>
                       ))}
                     </div>
                   )}
@@ -310,6 +322,9 @@ export function Agenda({route}: {route: CalendarRoute}) {
     </>
   );
 }
+
+// An Overdue line's one swipe.
+const SNOOZE_ACT: SwipeAct = {id: 'snooze', label: 'Snooze', icon: 'snooze', tone: 'violet'};
 
 /** A result's detail: its item, kept for an occurrence outside what the agenda has loaded. */
 function openResult(result: CalendarSearchResultOut, setPicked: (item: ItemOut) => void) {

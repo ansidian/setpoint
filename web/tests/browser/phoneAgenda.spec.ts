@@ -1,8 +1,8 @@
 // The phone's agenda at 390 × 844 (board 21): today at the top with the past week above it, an
 // item's detail, reminders, forecasts and now. Its range: later weeks load as the end nears, until
 // four empty weeks leave Show later; the header's month opens the month picker, which jumps to any
-// day, and the tab and Today go back to today. Today's Overdue group, its snooze and the tab's
-// count; search, its results and their details. Then its changes on the seed: + opens the editor sheet on the day in
+// day, and the tab and Today go back to today. Today's Overdue group, its snooze (from a detail or a
+// swipe) and the tab's count; search, its results and their details. Then its changes on the seed: + opens the editor sheet on the day in
 // view and Create adds the event there; Edit saves, with Undo; a repeating event's edit asks which
 // of its events; a task's ring completes it and its done check reopens it; Delete waits out its
 // toast, Undo keeping the item, and a repeating event's asks which of its events in the bottom
@@ -396,6 +396,42 @@ test('overdue tasks lead today as its Overdue group, the tab counts them, and a 
     assert.equal(await page.locator('.ph-agenda [data-days="2026-10-05"] .pitem', {hasText: 'Submit the parking permit form'}).count(), 1);
     await toast.getByRole('button', {name: 'Undo'}).tap();
     await until('back', rows, list => list.length === 3);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('an Overdue line swiped left offers Snooze, and swiped all the way opens its sheet; neither opens its detail', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen', fixtures: ['overdue-tasks']});
+  try {
+    const page = await agenda(setpoint);
+    const line = page.locator('.ph-agenda [data-days="2026-10-07"] .ph-overdue .ph-swipe', {hasText: 'Submit the parking permit form'});
+    await line.waitFor();
+    // A finger from x `from` to x `to`, then lifted, and the click the browser sends after it.
+    const swipe = (from: number, to: number) => line.evaluate((element, [start, end]) => {
+      // Sent to the line itself, so its height on screen doesn't matter.
+      const y = 400;
+      const fire = (type: string, x: number) => element.dispatchEvent(new PointerEvent(type, {bubbles: true, isPrimary: true, pointerId: 9, pointerType: 'touch', button: 0, clientX: x, clientY: y}));
+      fire('pointerdown', start);
+      for (const step of [0.1, 0.25, 0.5, 0.75, 1]) fire('pointermove', start + (end - start) * step);
+      fire('pointerup', end);
+      element.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: end, clientY: y}));
+    }, [from, to] as const);
+    await swipe(300, 240);
+    await line.locator('.sw-b', {hasText: 'Snooze'}).tap();
+    const sheet = page.getByRole('dialog', {name: 'Snooze Submit the parking permit form'});
+    await sheet.waitFor();
+    assert.equal(await page.locator('.ph-detail').count(), 0);
+    await page.keyboard.press('Escape');
+    await sheet.waitFor({state: 'detached'});
+    await swipe(340, 30);
+    await sheet.waitFor();
+    assert.equal(await page.locator('.ph-detail').count(), 0);
+    await sheet.getByRole('button', {name: /^Tomorrow/}).tap();
+    await holdToast(page);
+    await page.locator('.toast', {hasText: 'Snoozed Submit the parking permit form'}).waitFor();
+    await line.waitFor({state: 'detached'});
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

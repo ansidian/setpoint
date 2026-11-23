@@ -19,7 +19,7 @@ export interface SwipeAct {
   id: string;
   label: string;
   icon: IconName;
-  tone: 'accent' | 'alert' | 'good' | 'sun';
+  tone: 'accent' | 'alert' | 'good' | 'sun' | 'violet';
   // It takes the row out of the list (Trash, Done): the row slides off the way it went before it folds.
   leaves?: boolean;
 }
