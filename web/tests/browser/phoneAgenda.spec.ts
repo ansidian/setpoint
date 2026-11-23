@@ -1,5 +1,8 @@
-// The phone's agenda at 390 × 844 (board 21): today and the next 7 days, an item's detail,
-// reminders, forecasts and now. Then its changes on the seed: + opens the editor sheet on the day in
+// The phone's agenda at 390 × 844 (board 21): today at the top with the past week above it, an
+// item's detail, reminders, forecasts and now. Its range: later weeks load as the end nears, until
+// four empty weeks leave Show later; the header's month opens the month picker, which jumps to any
+// day, and the tab and Today go back to today. Today's Overdue group, its snooze and the tab's
+// count; search, its results and their details. Then its changes on the seed: + opens the editor sheet on the day in
 // view and Create adds the event there; Edit saves, with Undo; a repeating event's edit asks which
 // of its events; a task's ring completes it and its done check reopens it; Delete waits out its
 // toast, Undo keeping the item, and a repeating event's asks which of its events in the bottom
@@ -14,16 +17,27 @@ import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
 
-test('the agenda: today and the next 7 days, empty days folded, an item\'s detail read-only', async () => {
+/** The agenda's topmost day whose line still shows, its first for folded empty days. */
+const topDay = (page: Page) => page.locator('.ph-agenda').evaluate(list => {
+  const top = list.getBoundingClientRect().top;
+  return ([...list.querySelectorAll<HTMLElement>('.ph-day')].find(day => day.getBoundingClientRect().bottom > top + 1)?.dataset.days ?? '').split(' ')[0];
+});
+
+test('the agenda: today at the top under the past week, empty days folded, an item\'s detail', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ph-agenda .pitem').first().waitFor();
     await page.locator('.ph-agenda .pwx').first().waitFor();
-    assert.equal(await page.locator('.hd .ph-range').textContent(), 'Oct 7 – 14');
-    assert.deepEqual((await page.locator('.ph-agenda .pday').allTextContents()).map(text => text.trim()), [
-      'Today · Wed, Oct 778° / 61°', 'Thu, Oct 872° / 59°', 'Fri, Oct 9', 'Sat, Oct 10 – Sun, Oct 11No events', 'Mon, Oct 12', 'Tue, Oct 1364° / 55°', 'Wed, Oct 14',
+    assert.equal(await page.locator('.hd .ph-month-btn').textContent(), 'October');
+    await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    const heads = (await page.locator('.ph-agenda .pday').allTextContents()).map(text => text.trim());
+    const today = heads.indexOf('Today · Wed, Oct 778° / 61°');
+    // The past week above, its weekend folded.
+    assert.deepEqual(heads.slice(0, today), ['Wed, Sep 30', 'Thu, Oct 1', 'Fri, Oct 2', 'Sat, Oct 3 – Sun, Oct 4No events', 'Mon, Oct 5', 'Tue, Oct 6']);
+    assert.deepEqual(heads.slice(today, today + 8), [
+      'Today · Wed, Oct 778° / 61°', 'Thu, Oct 872° / 59°', 'Fri, Oct 9', 'Sat, Oct 10 – Sun, Oct 11No events', 'Mon, Oct 12', 'Tue, Oct 1364° / 55°', 'Wed, Oct 14', 'Thu, Oct 15',
     ]);
     // A forecast's high and low sit before its icon, as a month cell's do.
     assert.equal(await page.locator('.ph-agenda .pwx').first().getAttribute('data-tip'), 'Sunny · 78° / 61°');
@@ -82,7 +96,7 @@ test('an empty day with a forecast keeps its own line to show it, "No events" be
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ph-agenda [data-days="2026-10-11"] .pwx').waitFor();
-    assert.deepEqual((await page.locator('.ph-agenda .pday').allTextContents()).map(text => text.trim()).slice(3, 5), [
+    assert.deepEqual([await page.locator('.ph-agenda [data-days="2026-10-10"] .pday').textContent(), await page.locator('.ph-agenda [data-days="2026-10-11"] .pday').textContent()], [
       'Sat, Oct 10No events74° / 58°', 'Sun, Oct 11No events77° / 60°',
     ]);
     // "No events" follows the date, and the forecast takes the end, on one 30 px line.
@@ -121,6 +135,8 @@ async function day(setpoint: Setpoint, date: string) {
 }
 const titles = async (setpoint: Setpoint, date: string) => (await day(setpoint, date)).map(item => item.title);
 const line = (page: Page, title: string) => page.locator('.ph-agenda .pitem', {hasText: title});
+// Today's line of it, the past week having its own.
+const todays = (page: Page, title: string) => page.locator('.ph-agenda [data-days="2026-10-07"] .pitem', {hasText: title});
 
 async function agenda(setpoint: Setpoint) {
   const page = await setpoint.page('iphone');
@@ -131,7 +147,7 @@ async function agenda(setpoint: Setpoint) {
 }
 
 async function openDetail(page: Page, title: string) {
-  await line(page, title).first().tap();
+  await todays(page, title).first().tap();
   await page.locator('.ph-detail .fd-title', {hasText: title}).waitFor();
 }
 
@@ -274,6 +290,153 @@ test('Delete waits out its toast: Undo keeps the item, and left alone it goes; a
     await page.clock.runFor(UNDO_MS);
     await until('today\'s Gym deleted', () => titles(setpoint, '2026-10-07'), list => !list.includes('Gym'), 10_000);
     assert.ok((await titles(setpoint, '2026-10-09')).includes('Gym'), 'Friday\'s stays');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the month picker jumps to a day at the top, far off or near, and Today and the tab go back to today', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await agenda(setpoint);
+    await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    const picker = page.getByRole('dialog', {name: 'Go to a day'});
+    await page.locator('.hd .ph-month-btn').tap();
+    await picker.getByText('October 2026').waitFor();
+    for (let step = 0; step < 4; step += 1) await picker.getByRole('button', {name: 'Next month'}).tap();
+    await picker.getByRole('button', {name: '2027-02-15'}).tap();
+    await picker.waitFor({state: 'detached'});
+    // Far off, the agenda opens there, with the week before it above.
+    await until('the day at the top', () => topDay(page), day => day === '2027-02-15');
+    assert.equal(new URL(page.url()).pathname, '/calendar/2027-02-15');
+    assert.equal(await page.locator('.hd .ph-month-btn').textContent(), 'February 2027');
+    assert.equal(await page.locator('.ph-agenda .ph-day').first().getAttribute('data-days').then(days => days!.split(' ')[0]), '2027-02-08');
+
+    // Today goes back.
+    await page.locator('.hd .ph-month-btn').tap();
+    await picker.getByText('February 2027').waitFor();
+    await picker.getByRole('button', {name: 'Today'}).tap();
+    await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    assert.equal(new URL(page.url()).pathname, '/calendar');
+
+    // A day already loaded comes to the top, and the tab goes back to today.
+    await page.locator('.hd .ph-month-btn').tap();
+    await picker.getByRole('button', {name: '2026-10-14'}).tap();
+    await until('the day at the top', () => topDay(page), day => day === '2026-10-14');
+    await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
+    await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the agenda loads on by itself until four empty weeks, then Show later loads four more', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    // March 2027 emptied: every repeating event there goes.
+    const {items} = await setpoint.api<ItemsOut>('GET', '/items?from=2027-02-01&to=2027-06-01');
+    for (const id of new Set(items.map(item => item.id))) await setpoint.api('POST', `/items/${id}/delete`, {scope: 'all'});
+    await until('emptied', () => setpoint.api<ItemsOut>('GET', '/items?from=2027-02-01&to=2027-06-01'), out => out.items.length === 0, 10_000);
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/calendar/2027-03-01`);
+    const later = page.locator('.ph-agenda .ph-later');
+    await later.waitFor();
+    // The day it opens on keeps its own line, and the four weeks after it fold into one.
+    assert.deepEqual(await page.locator('.ph-agenda .pday').allTextContents(), ['Mon, Feb 22 – Sun, Feb 28No events', 'Mon, Mar 1No events', 'Tue, Mar 2 – Sun, Mar 28No events']);
+    await until('the day at the top', () => topDay(page), day => day === '2027-03-01');
+    await later.getByRole('button', {name: 'Show later'}).tap();
+    await until('four more weeks', () => page.locator('.ph-agenda .pday').last().textContent(), text => text === 'Tue, Mar 2 – Sun, Apr 25No events');
+    await later.waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('overdue tasks lead today as its Overdue group, the tab counts them, and a detail\'s Snooze holds one off with Undo', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen', fixtures: ['overdue-tasks']});
+  try {
+    const page = await agenda(setpoint);
+    const group = page.locator('.ph-agenda [data-days="2026-10-07"] .ph-overdue');
+    await group.locator('.pitem').first().waitFor();
+    const rows = () => group.locator('.pitem').evaluateAll(lines => lines.map(one => `${one.querySelector('.when')!.textContent}|${one.querySelector('.ell')!.textContent}`));
+    assert.equal(await group.locator('.ph-overdue-h').textContent(), 'Overdue3');
+    // The most recently due first, each saying how long it's been overdue.
+    assert.deepEqual(await rows(), ['1 hr overdue|Call the landlord about the heater', '2 days overdue|Submit the parking permit form', '13 days overdue|Renew the library card']);
+    // Today's own lines leave out the one due today; Monday keeps its own.
+    assert.equal(await page.locator('.ph-agenda [data-days="2026-10-07"] > .pitem', {hasText: 'Call the landlord'}).count(), 0);
+    assert.equal(await page.locator('.ph-agenda [data-days="2026-10-05"] .pitem', {hasText: 'Submit the parking permit form'}).count(), 1);
+    // The group's head is under today's, never over it.
+    const [head, label] = await rested(() => Promise.all([page.locator('.ph-agenda [data-days="2026-10-07"] .pday').boundingBox(), group.locator('.ph-overdue-h').boundingBox()]));
+    assert.ok(label!.y >= head!.y + head!.height, 'the Overdue label sits under today\'s head');
+
+    // The tab counts them on another page, not on the Agenda.
+    const badge = page.locator('.ph-tab', {hasText: 'Agenda'}).locator('.ph-badge');
+    assert.equal(await badge.count(), 0);
+    await page.locator('.ph-tab', {hasText: 'Inbox'}).tap();
+    await until('the Agenda tab\'s count', () => badge.textContent(), text => text === '3');
+    await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
+
+    // Snooze, from its detail, in the bottom sheet with when each ends.
+    await group.locator('.pitem', {hasText: 'Submit the parking permit form'}).tap();
+    await page.locator('.ph-detail .fd-title', {hasText: 'Submit the parking permit form'}).waitFor();
+    await page.locator('.ph-detail').getByRole('button', {name: 'Snooze'}).tap();
+    const sheet = page.getByRole('dialog', {name: 'Snooze Submit the parking permit form'});
+    await sheet.waitFor();
+    assert.deepEqual(await sheet.locator('.ph-bs-i').evaluateAll(choices => choices.map(one => `${one.querySelector('.ell')!.textContent}|${one.querySelector('.ph-bs-detail')!.textContent}`)),
+      ['1 hour|10:12 AM', '3 hours|12:12 PM', 'Tomorrow|Thu 9:00 AM']);
+    await sheet.getByRole('button', {name: /^1 hour/}).tap();
+    const toast = await holdToast(page);
+    await toast.getByText('Snoozed Submit the parking permit form').waitFor();
+    await until('held off', rows, list => list.length === 2 && !list.some(one => one.includes('parking')));
+    assert.equal(await page.locator('.ph-detail').count(), 0);
+    // Its day keeps its line.
+    assert.equal(await page.locator('.ph-agenda [data-days="2026-10-05"] .pitem', {hasText: 'Submit the parking permit form'}).count(), 1);
+    await toast.getByRole('button', {name: 'Undo'}).tap();
+    await until('back', rows, list => list.length === 3);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('search: plain words, the results in the list\'s place, a result\'s detail and back, and clear leaves it where the agenda was', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await agenda(setpoint);
+    await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    await page.getByRole('button', {name: 'Search'}).tap();
+    const field = page.getByLabel('Search events and tasks');
+    await field.waitFor();
+    // Until there are words, the agenda stays.
+    assert.ok(await page.locator('.ph-agenda[aria-label="Agenda"]').isVisible());
+    await field.fill('smile');
+    const results = page.getByRole('region', {name: 'Search results'});
+    await results.locator('.ph-res').first().waitFor();
+    assert.equal(await results.locator('.ph-res-count').textContent(), '1 result');
+    assert.deepEqual(await results.locator('.pday').allTextContents(), ['Upcoming']);
+    assert.equal(await results.locator('.ph-res-why').textContent(), 'Place Smile Dental');
+    assert.ok(!(await page.locator('.ph-agenda[aria-label="Agenda"]').isVisible()));
+
+    // A result's detail opens over the results, and closing it comes back to them.
+    await results.locator('.ph-res', {hasText: 'Dentist'}).tap();
+    await page.locator('.ph-detail .fd-title', {hasText: 'Dentist'}).waitFor();
+    await page.locator('.ph-detail button[aria-label="Close"]').tap();
+    await page.locator('.ph-detail').waitFor({state: 'detached'});
+    await results.locator('.ph-res', {hasText: 'Dentist'}).waitFor();
+
+    // Plain words: a date word stays a word, never a chip.
+    await field.fill('march ');
+    await results.locator('.no-results, .ph-res').first().waitFor();
+    assert.equal(await page.locator('.hd .search .qchip').count(), 0);
+    assert.equal(await field.inputValue(), 'march ');
+
+    // Clear leaves search, the agenda where it was.
+    await page.getByRole('button', {name: 'Clear search'}).tap();
+    await page.locator('.hd .search').waitFor({state: 'detached'});
+    await until('the agenda where it was', () => topDay(page), day => day === '2026-10-07');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -52,6 +52,8 @@ export interface DetailActions {
   copy?: (item: ItemOut) => void;
   colour?: (item: ItemOut, colour: EventColour | null) => void;
   remove?: (item: ItemOut) => void;
+  // An overdue task on the phone, its snooze times in the bottom sheet (the banner's).
+  snooze?: (task: ItemOut) => void;
   // Off Calendar: the item there, with its card.
   open?: (item: ItemOut) => void;
 }
@@ -215,6 +217,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
             <span className="dot" style={{...colour, width: 12, height: 12}} />
           </button>
         )}
+        {actions?.snooze && <button className="ibtn sm" aria-label="Snooze" data-tip="Snooze" onClick={act(one => actions.snooze!(one))}><Icon name="snooze" size={16} /></button>}
         {offers('remove') && <button className="ibtn sm danger" aria-label="Delete" aria-disabled={fixed || undefined} data-tip="Delete · Del" onClick={act(one => actions!.remove!(one))}><Icon name="delete" size={16} /></button>}
       </div>}
       {picking && (

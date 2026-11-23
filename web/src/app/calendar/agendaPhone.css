@@ -1,0 +1,50 @@
+/* The phone Agenda's range, month picker, Overdue group and search (Agenda.tsx). Under phone.css's
+   breakpoint, so the desktop never sees them; phone.css keeps the agenda's own lines and days. */
+@media (max-width: 639px) {
+  /* The header: Agenda, the day in view's month (the picker), search and +. */
+  .hd > .ph-month-btn { height: 36px; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px 0 10px; border-radius: 999px; color: var(--ink2); font-size: 14px; font-weight: 500; white-space: nowrap; }
+  .hd > .ph-month-btn .icon { color: var(--ink3); }
+  .hd > .ph-month-btn:active, .hd > .ph-find.on { background: var(--sub2); }
+  .hd > .ph-find { margin-right: -6px; }
+
+  /* Under the results, the agenda waits where it was scrolled to. */
+  .ph-agenda[hidden] { display: none; }
+
+  /* Overdue leads today: its label in `caution`, then each task's ring, title and how long it's late. */
+  .ph-agenda .ph-overdue-h { height: 28px; flex: none; display: flex; align-items: center; gap: 8px; padding: 2px 20px 0; font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--caution); }
+  .ph-agenda .ph-overdue-h .num { color: var(--ink3); letter-spacing: 0; }
+  .ph-agenda .pitem.late .when { color: var(--caution); }
+  .ph-agenda .ph-overdue { display: flex; flex-direction: column; }
+  .ph-agenda .ph-overdue:not(:last-child) { margin: 0 0 4px; padding-bottom: 4px; border-bottom: 1px solid var(--hair); }
+
+  /* After four empty weeks, the way on. */
+  .ph-agenda .ph-later { min-height: 100vh; flex: none; display: flex; flex-direction: column; border-top: 1px solid var(--hair); }
+  .ph-agenda .ph-later > button, .ph-agenda .ph-res-more { height: 48px; flex: none; color: var(--ink2); font-size: 14px; }
+  .ph-agenda .ph-res-more { border-top: 1px solid var(--hair); }
+  .ph-agenda .ph-later > button:active, .ph-agenda .ph-res-more:active { background: var(--sub2); }
+  .ph-agenda .ph-end { height: 1px; flex: none; }
+
+  /* The results: Upcoming and Past as day heads, each row its day, its mark and two or three lines. */
+  .ph-agenda .ph-res-count { padding: 10px 20px 8px; flex: none; color: var(--ink3); font-size: 12.5px; }
+  .ph-agenda .ph-res-count + .pday { border-top: 1px solid var(--hair); }
+  .ph-agenda .pitem.ph-res { height: auto; min-height: 56px; align-items: flex-start; padding: 9px 20px; }
+  .ph-agenda .ph-res .when { line-height: 20px; }
+  .ph-agenda .ph-res .when .year { color: var(--ink3); }
+  .ph-agenda .ph-res .mk { height: 20px; }
+  .ph-agenda .ph-res .cbar { width: 3px; height: 16px; border-radius: 2px; background: var(--c); }
+  .ph-agenda .ph-res-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .ph-agenda .ph-res-title { line-height: 20px; font-size: 15px; }
+  .ph-agenda .ph-res-line, .ph-agenda .ph-res-why { line-height: 18px; color: var(--ink3); font-size: 12.5px; }
+  .ph-agenda .ph-res-why b { color: var(--ink2); font-weight: 500; }
+  .ph-agenda.ph-agenda-search .no-results { margin: 16px 20px; }
+
+  /* The month picker: the mini month at a finger's size, Today under it. */
+  .ph-month { padding: 0 12px 12px; display: flex; flex-direction: column; }
+  .ph-month .ph-month-head { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 0 4px 8px; }
+  .ph-month .ph-month-head .name { font-size: 16px; }
+  .ph-month .ph-month-head .ibtn { width: 40px; height: 40px; }
+  .ph-month .mini { --miniDay: 40px; row-gap: 4px; padding: 0; }
+  .ph-month .mini > * { font-size: 15px; }
+  .ph-month .mini > .h { height: 24px; font-size: 12px; }
+  .ph-month .ph-month-today { height: 44px; margin-top: 8px; justify-content: center; font-size: 15px; }
+}

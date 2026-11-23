@@ -161,9 +161,9 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
 
 export type CalendarSearch = SearchFieldState<CalendarSearchChip, CalendarSearchOut, CalendarSearchResultOut>;
 
-/** The calendar's search, its results in the right pane. */
-export const useCalendarSearch = (): CalendarSearch =>
-  useSearchField<CalendarSearchChip, CalendarSearchResultOut, CalendarSearchOut>((text, chips, after) => searchCalendar({text, chips, offset: after?.next_offset ?? 0}), false);
+/** The calendar's search, its results in the right pane. The phone's Agenda's is `plain`: its words as typed, never chips. */
+export const useCalendarSearch = (plain = false): CalendarSearch =>
+  useSearchField<CalendarSearchChip, CalendarSearchResultOut, CalendarSearchOut>((text, chips, after) => searchCalendar({text, chips, offset: after?.next_offset ?? 0}), plain);
 
 /** News's search: words only, no chips, over the 90-day archive. One page of stories, newest first. */
 export interface NewsSearchPage {

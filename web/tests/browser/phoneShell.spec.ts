@@ -10,10 +10,17 @@ import type {AddressInfo} from 'node:net';
 import {after} from 'node:test';
 import type {ItemsOut, Settings} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
+import type {Page} from 'playwright-core';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import {box, counts, email, inbox} from './phoneHelpers.ts';
 
 after(cleanUp);
+
+/** The agenda's topmost day whose line still shows, its first for folded empty days. */
+const topDay = (page: Page) => page.locator('.ph-agenda').evaluate(list => {
+  const top = list.getBoundingClientRect().top;
+  return ([...list.querySelectorAll<HTMLElement>('.ph-day')].find(day => day.getBoundingClientRect().bottom > top + 1)?.dataset.days ?? '').split(' ')[0];
+});
 
 test('board 21: the Inbox after reading Northwind, the reader on it, and the agenda', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
@@ -133,15 +140,14 @@ test('deep links at the iPhone size: an email, an event, one occurrence, a task\
     assert.equal(await page.locator('.ph-detail .fd-when').textContent(), 'Fri, Oct 9 · 7:00 – 8:00 AM');
     assert.equal(await page.locator('.ph-agenda .pitem.sel').getAttribute('data-key'), gymFriday.key);
 
-    // A task's reminder opens its day: within the 8 days, the agenda keeps today first and shows it.
+    // A task's reminder opens its day, brought to the top of the agenda.
     await page.goto(`${setpoint.base}${deepLinkPath({to: 'day', date: '2026-10-08'})}`);
-    await page.locator('.ph-agenda [data-days="2026-10-08"]').waitFor();
-    assert.equal(await page.locator('.hd .ph-range').textContent(), 'Oct 7 – 14');
+    await until('the day at the top', () => topDay(page), day => day === '2026-10-08');
+    assert.equal(await page.locator('.hd .ph-month-btn').textContent(), 'October');
     assert.ok(await page.locator('.ph-agenda [data-days="2026-10-08"] .pitem', {hasText: 'Renew car registration'}).isVisible());
-    // Further out, the agenda starts there.
+    // Further out too.
     await page.goto(`${setpoint.base}${deepLinkPath({to: 'day', date: '2026-10-20'})}`);
-    await until('the agenda starts on the day', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 20 – 27');
-    assert.equal((await page.locator('.ph-agenda .pday').first().textContent())!.startsWith('Tue, Oct 20'), true);
+    await until('the day at the top', () => topDay(page), day => day === '2026-10-20');
 
     // A reconnect alert's Settings link lands on a page: Accounts is on the desktop, with Sign out.
     await page.goto(`${setpoint.base}${deepLinkPath({to: 'settings', page: 'accounts'})}`);
@@ -157,7 +163,7 @@ test('deep links at the iPhone size: an email, an event, one occurrence, a task\
   }
 });
 
-test('the tab bar: Inbox is badged with Attention\'s count on another page, following it, and Agenda goes back to today\'s week', async () => {
+test('the tab bar: Inbox is badged with Attention\'s count on another page, following it, and Agenda goes back to today', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -169,11 +175,12 @@ test('the tab bar: Inbox is badged with Attention\'s count on another page, foll
     assert.equal(await badge.textContent(), '3');
     await setpoint.api('POST', `/mail/messages/${await email(setpoint, 'Final exam')}/done`, {done: true});
     await until('the badge follows', () => badge.textContent(), text => text === '2');
-    // A later week's agenda: its tab goes back to today's.
+    // A later week's agenda: its tab goes back to today, under the past week.
     await page.goto(`${setpoint.base}${deepLinkPath({to: 'day', date: '2026-10-20'})}`);
-    await until('the agenda starts on the day', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 20 – 27');
+    await until('the day at the top', () => topDay(page), day => day === '2026-10-20');
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
-    await until('today\'s agenda', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 7 – 14');
+    await until('today at the top', () => topDay(page), day => day === '2026-10-07');
+    assert.equal(new URL(page.url()).pathname, '/calendar');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

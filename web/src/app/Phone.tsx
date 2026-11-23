@@ -11,6 +11,8 @@ import {routePath} from '../logic/route.ts';
 import {viewport} from '../tokens.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
+import {agendaToToday} from './calendar/agendaToday.ts';
+import {useOverdue} from './calendar/overdueGroup.ts';
 import {currentRoute, navigate} from './router.ts';
 import {toInbox} from './toInbox.ts';
 
@@ -43,13 +45,16 @@ const TABS: {label: string; icon: IconName; on: IconName; page: Route['page']; t
 
 /**
  * The tab bar. The current tab shows in its filled glyph. The Inbox tab is badged with the attention
- * count while Attention waits and the Inbox isn't showing (its header has the pill). A tap on the
- * current tab takes its list back to the top (the agenda to today), as the page's inner scroller is
- * out of reach of iOS's tap on the status bar.
+ * count while Attention waits and the Inbox isn't showing (its header has the pill), and the Agenda
+ * tab with the overdue tasks' while any are and the Agenda isn't showing (its Overdue group lists
+ * them). A tap on the current tab takes its list back to the top, the agenda to today under its past
+ * week, as the page's inner scroller is out of reach of iOS's tap on the status bar.
  */
 export function PhoneTabs({route}: {route: Route}) {
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
   const waiting = route.page !== 'inbox' && counts ? counts.attention : 0;
+  const overdue = useOverdue().length;
+  const late = route.page !== 'calendar' ? overdue : 0;
   return (
     <nav className="ph-tabs" aria-label="Pages">
       {TABS.map(tab => {
@@ -59,10 +64,11 @@ export function PhoneTabs({route}: {route: Route}) {
             event.preventDefault();
             const was = currentRoute().page;
             navigate(tab.page === 'inbox' ? toInbox() : tab.to);
-            if (was === tab.page) document.querySelector(tab.scroller)?.scrollTo({top: 0, behavior: 'smooth'});
+            if (was === tab.page && !(tab.page === 'calendar' && agendaToToday())) document.querySelector(tab.scroller)?.scrollTo({top: 0, behavior: 'smooth'});
           }}>
             <Icon name={on ? tab.on : tab.icon} size={22} />{tab.label}
             {tab.page === 'inbox' && waiting > 0 && <span className="ph-badge num" data-tip="Attention, not Done">{waiting}</span>}
+            {tab.page === 'calendar' && late > 0 && <span className="ph-badge num" data-tip="Overdue">{late}</span>}
           </a>
         );
       })}
