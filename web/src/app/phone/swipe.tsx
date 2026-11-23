@@ -65,23 +65,32 @@ export function useSwipes({enabled, acts, run}: {
   const drag = useRef<Drag | null>(null);
   // The row resting open, and where.
   const rest = useRef<{row: HTMLElement; key: string; offset: number; acts: SwipeActs} | null>(null);
+  // The row sliding off, and what it showed, once the list no longer offers it anything.
+  const gone = useRef<{key: string; acts: SwipeActs} | null>(null);
   // The press ended a drag, or closed a row: its click isn't the row's. Caught on the window before
-  // anything else hears it (a link's own navigation included), and let go at the next press, so a
-  // press that sends no click doesn't take the next one's.
-  const swallowing = useRef<((event: MouseEvent) => void) | null>(null);
+  // anything else hears it (a link's own navigation included), and let go at the next press anywhere,
+  // since a finger's drag sends no click and the next tap (the toast's Undo) must be its own.
+  const swallowing = useRef<{click: (event: MouseEvent) => void; press: () => void} | null>(null);
   const release = () => {
-    if (swallowing.current) window.removeEventListener('click', swallowing.current, true);
+    const armed = swallowing.current;
+    if (!armed) return;
+    window.removeEventListener('click', armed.click, true);
+    window.removeEventListener('pointerdown', armed.press, true);
     swallowing.current = null;
   };
   const swallow = () => {
     release();
-    const catcher = (event: MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      release();
+    const armed = {
+      click: (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        release();
+      },
+      press: release,
     };
-    swallowing.current = catcher;
-    window.addEventListener('click', catcher, true);
+    swallowing.current = armed;
+    window.addEventListener('click', armed.click, true);
+    window.addEventListener('pointerdown', armed.press, true);
   };
   useEffect(() => release, []);
   const latest = useRef({acts, run});
@@ -95,36 +104,42 @@ export function useSwipes({enabled, acts, run}: {
   };
   // Back to closed: it settles, and its tray goes once it has.
   const settleClosed = (row: HTMLElement) => {
+    // Its key now: a row the list is folding away has none by the time it settles.
+    const key = row.dataset.swipeKey ?? row.dataset.key;
     place(row, 0, true);
     rest.current = null;
     let done = false;
-    const finish = () => {
-      if (done) return;
+    const finish = (event?: TransitionEvent) => {
+      // Its cells' slide, not a fill's fade or a button's growth.
+      if (done || (event && event.propertyName !== 'transform')) return;
       done = true;
       row.removeEventListener('transitionend', finish);
       if (rest.current?.row === row || drag.current?.row === row) return;
       delete row.dataset.swipe;
       row.style.removeProperty('--sw');
-      setState(current => (current && (row.dataset.swipeKey ?? row.dataset.key) === current.key ? null : current));
+      setState(current => (current && key === current.key ? null : current));
     };
     row.addEventListener('transitionend', finish);
     window.setTimeout(finish, SETTLE_MS);
   };
   // Off the side it went, its first action filling the tray, while the list folds it away.
-  const slideOff = (row: HTMLElement, key: string, side: SwipeSide) => {
+  const slideOff = (row: HTMLElement, key: string, side: SwipeSide, acts: SwipeActs) => {
     rest.current = null;
-    place(row, (side === 'lead' ? 1 : -1) * row.getBoundingClientRect().width, true);
+    gone.current = {key, acts};
+    // A quarter past its width, so no cell's edge is left showing.
+    place(row, (side === 'lead' ? 1.25 : -1.25) * row.getBoundingClientRect().width, true);
     setState({key, side, armed: true, open: false});
     window.setTimeout(() => {
       if (rest.current?.row === row || drag.current?.row === row) return;
       delete row.dataset.swipe;
       row.style.removeProperty('--sw');
+      if (gone.current?.key === key) gone.current = null;
       setState(current => (current?.key === key ? null : current));
     }, GONE_MS);
   };
   // Picking `act` on the row: it leaves or settles closed, then the list runs it.
-  const pick = (row: HTMLElement, key: string, side: SwipeSide, act: SwipeAct) => {
-    if (act.leaves) slideOff(row, key, side);
+  const pick = (row: HTMLElement, key: string, side: SwipeSide, act: SwipeAct, acts: SwipeActs) => {
+    if (act.leaves) slideOff(row, key, side, {...acts, [side]: [act]});
     else settleClosed(row);
     latest.current.run(key, act);
   };
@@ -201,7 +216,7 @@ export function useSwipes({enabled, acts, run}: {
     const counts = {lead: at.acts.lead.length, trail: at.acts.trail.length};
     const outcome = swipeRelease(at.offset, counts, at.width);
     if ('run' in outcome) {
-      pick(at.row, at.key, outcome.run, at.acts[outcome.run][0]!);
+      pick(at.row, at.key, outcome.run, at.acts[outcome.run][0]!, at.acts);
       return;
     }
     if (outcome.rest === 0) {
@@ -224,15 +239,16 @@ export function useSwipes({enabled, acts, run}: {
   const tray = (key: string): ReactNode => {
     if (!state || state.key !== key) return null;
     const open = rest.current?.key === key ? rest.current : null;
-    const acts = (open?.acts ?? drag.current?.acts ?? latest.current.acts(key))?.[state.side] ?? [];
+    const held = open?.acts ?? (drag.current?.key === key ? drag.current.acts : null) ?? (gone.current?.key === key ? gone.current.acts : null);
+    const acts = (held ?? latest.current.acts(key))?.[state.side] ?? [];
     return (
       <span className={['sw', state.side, state.armed && 'armed'].filter(Boolean).join(' ')} aria-hidden={state.open ? undefined : true}>
         {acts.map(act => (
           <button key={act.id} className={`sw-b ${act.tone}`} type="button" tabIndex={state.open ? undefined : -1} onClick={event => {
             event.preventDefault();
             event.stopPropagation();
-            const row = rest.current?.row;
-            if (row) pick(row, key, state.side, act);
+            const resting = rest.current;
+            if (resting) pick(resting.row, key, state.side, act, resting.acts);
             else latest.current.run(key, act);
           }}>
             <Icon name={act.icon} size={20} /><span>{act.label}</span>

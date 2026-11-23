@@ -408,16 +408,16 @@ test('an Overdue line swiped left offers Snooze, and swiped all the way opens it
     const page = await agenda(setpoint);
     const line = page.locator('.ph-agenda [data-days="2026-10-07"] .ph-overdue .ph-swipe', {hasText: 'Submit the parking permit form'});
     await line.waitFor();
-    // A finger from x `from` to x `to`, then lifted, and the click the browser sends after it.
-    const swipe = (from: number, to: number) => line.evaluate((element, [start, end]) => {
+    // A finger from x `from` to x `to`, then lifted, and the click a mouse sends after it.
+    const swipe = (from: number, to: number, click = true) => line.evaluate((element, [start, end, clicks]) => {
       // Sent to the line itself, so its height on screen doesn't matter.
       const y = 400;
       const fire = (type: string, x: number) => element.dispatchEvent(new PointerEvent(type, {bubbles: true, isPrimary: true, pointerId: 9, pointerType: 'touch', button: 0, clientX: x, clientY: y}));
       fire('pointerdown', start);
       for (const step of [0.1, 0.25, 0.5, 0.75, 1]) fire('pointermove', start + (end - start) * step);
       fire('pointerup', end);
-      element.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: end, clientY: y}));
-    }, [from, to] as const);
+      if (clicks) element.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: end, clientY: y}));
+    }, [from, to, click] as const);
     await swipe(300, 240);
     await line.locator('.sw-b', {hasText: 'Snooze'}).tap();
     const sheet = page.getByRole('dialog', {name: 'Snooze Submit the parking permit form'});
@@ -425,7 +425,8 @@ test('an Overdue line swiped left offers Snooze, and swiped all the way opens it
     assert.equal(await page.locator('.ph-detail').count(), 0);
     await page.keyboard.press('Escape');
     await sheet.waitFor({state: 'detached'});
-    await swipe(340, 30);
+    // As a finger does it, with no click after: the sheet's choice is still a tap.
+    await swipe(340, 30, false);
     await sheet.waitFor();
     assert.equal(await page.locator('.ph-detail').count(), 0);
     await sheet.getByRole('button', {name: /^Tomorrow/}).tap();

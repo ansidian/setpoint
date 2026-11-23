@@ -65,9 +65,9 @@ test('on the phone a row swipes: right reads and unreads it, left rests on Pin, 
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
     await until('out of Attention', () => counts(setpoint), value => value.attention === 2);
 
-    // All the way left: Trash, with Undo bringing it back.
+    // All the way left, as a finger does it (no click after): Trash, with Undo bringing it back.
     const interview = await email(setpoint, 'Interview availability');
-    await swipe(page.locator('.list .row[data-key^="attention:"]:has(b[data-tip^="Interview availability"])'), 340, 30);
+    await swipe(page.locator('.list .row[data-key^="attention:"]:has(b[data-tip^="Interview availability"])'), 340, 30, false);
     await holdToast(page);
     const toast = page.locator('.toast', {hasText: 'Moved to Trash'});
     await toast.waitFor();

@@ -257,7 +257,8 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         return (
           <div key={key} ref={ref} className={classes} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
-            {swipe && !leaving && swipes.tray(key)}
+            {/* Its tray, while it's swiped, and as it slides off on its way out. */}
+            {swipe && swipes.tray(key)}
             {selecting && !leaving && (
               <span className="pick" role="checkbox" aria-checked={selected.has(row.id)} aria-label={`${line.from}, ${line.subject}`}>
                 <Icon name={selected.has(row.id) ? 'check_circle-fill' : 'radio_button_unchecked'} size={22} />
