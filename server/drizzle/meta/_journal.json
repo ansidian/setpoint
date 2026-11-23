@@ -407,6 +407,13 @@
       "when": 1795379098241,
       "tag": "0057_alfred_item_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "6",
+      "when": 1795471107279,
+      "tag": "0058_drop_devices",
+      "breakpoints": true
     }
   ]
 }

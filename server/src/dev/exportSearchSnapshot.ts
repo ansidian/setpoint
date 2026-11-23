@@ -20,7 +20,7 @@ const isKept = (table: string) => KEPT.has(table) || table.startsWith('messages_
 
 // What must be gone. These tables are emptied like any other. This is the check that they were.
 const CREDENTIALS = [
-  ['secrets', 'ciphertext'], ['sources', 'credentials'], ['owner', 'password_hash'], ['sessions', 'hash'], ['devices', 'hash'], ['ha_token', 'hash'],
+  ['secrets', 'ciphertext'], ['sources', 'credentials'], ['owner', 'password_hash'], ['sessions', 'hash'], ['ha_token', 'hash'],
   ['recovery_codes', 'hash'], ['passkeys', 'credential_id'], ['calendar_channels', 'token_hash'],
 ] as const;
 

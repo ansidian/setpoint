@@ -188,8 +188,7 @@ export function regenerateRecoveryCodes(store: Store, expectedGeneration: number
 }
 
 /**
- * Recovery with a code: spends it, sets the new password, clears every passkey, paired iPhone and
- * strict mode (they may be what was lost) and issues new codes. A wrong or spent code changes nothing.
+ * Recovery with a code: spends it, sets the new password, clears every passkey and strict mode (they may be what was lost) and issues new codes. A wrong or spent code changes nothing.
  */
 export async function recover(store: Store, code: string, newPassword: string, cost = BCRYPT_COST): Promise<{generation: number; codes: string[]}> {
   const owner = getOwner(store);
@@ -202,9 +201,6 @@ export async function recover(store: Store, code: string, newPassword: string, c
     if (!normaliseCode(code) || !spent) throw unauthorized('Recovery failed.', 'recovery_failed');
     store.db.update(t.owner).set({passwordHash, authMode: 'password_or_passkey'}).run();
     store.db.delete(t.passkeys).run();
-    // Paired iPhones too, as the phone may be what was lost.
-    store.db.delete(t.devices).run();
-    store.db.delete(t.pairingCodes).run();
     replaceRecoveryCodes(store, codes);
   });
   if (generation === null) throw unauthorized('Recovery failed.', 'recovery_failed');
@@ -212,7 +208,7 @@ export async function recover(store: Store, code: string, newPassword: string, c
 }
 
 /**
- * Expired pending sign-ins, challenges, setup tokens and pairing codes, and sessions ended or idle
+ * Expired pending sign-ins, challenges, and setup tokens, and sessions ended or idle
  * for 30 days. Each sign-in sweeps them so the tables stay small (a cookie that stops being sent
  * never comes back to be deleted).
  */
@@ -223,7 +219,6 @@ export function sweepExpiredAuth(store: Store) {
     store.db.delete(t.pendingSignIns).where(lte(t.pendingSignIns.expiresAt, now)).run();
     store.db.delete(t.webauthnChallenges).where(lte(t.webauthnChallenges.expiresAt, now)).run();
     store.db.delete(t.setupTokens).where(lte(t.setupTokens.expiresAt, now)).run();
-    store.db.delete(t.pairingCodes).where(lte(t.pairingCodes.expiresAt, now)).run();
     store.db.delete(t.sessions).where(or(lte(t.sessions.lastUsedAt, monthAgo), lte(t.sessions.endedAt, monthAgo))).run();
   });
 }

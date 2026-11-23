@@ -1,7 +1,7 @@
 // Settings' row pattern: a page's head, sections with their uppercase label,
 // `sub` groups of rows 52 px or more, 34 × 20 switches, selects, steppers and small menus. Every
 // page is built from these, the drawn ones (boards 17, 18a, 18b) and the rest alike.
-import {cloneElement, useCallback, useEffect, useRef, useState} from 'react';
+import {cloneElement, useEffect, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, ReactElement, ReactNode} from 'react';
 import type {Colour} from '@setpoint/shared';
 import type {HealthKind} from '../../logic/health.ts';
@@ -223,9 +223,7 @@ export function useAttempt() {
       setBusy(false);
     }
   }
-  // Stable, for an effect's answer to say what happened ("Paired iPhone 17 Pro").
-  const say = useCallback((text: string) => setLine({text}), []);
-  return {line, busy, attempt, clear: () => setLine(null), say};
+  return {line, busy, attempt, clear: () => setLine(null)};
 }
 
 const TITLES = [150, 186, 132, 210, 168, 120];

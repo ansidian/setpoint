@@ -5,10 +5,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {serveStatic} from '@hono/node-server/serve-static';
 import {
-  accountOrderInput, accountUpdateInput, gmailAuthorizeInput, icloudConnectInput, claimInput, commandListInput, credentialsInput, pairInput, passkeyResponseInput, recoverInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, ATTACHMENTS_MAX_BYTES,
+  accountOrderInput, accountUpdateInput, gmailAuthorizeInput, icloudConnectInput, claimInput, commandListInput, credentialsInput, passkeyResponseInput, recoverInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, ATTACHMENTS_MAX_BYTES,
 } from '@setpoint/shared';
 import type {
-  ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MeOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SignInOut,
+  ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MeOut, ReadyOut, RecoveryCodesOut, SecretName, SignInOut,
 } from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {Hono} from 'hono';
@@ -27,8 +27,6 @@ import type {AlfredOptions} from '../alfred/ask.ts';
 import type {WriteOptions} from '../alfred/write.ts';
 import type {PrefillOptions} from '../alfred/prefill.ts';
 import {haTokenMatches} from '../auth/haToken.ts';
-import {bearerToken, findDevice, pairDevice, revokeDevice} from '../auth/devices.ts';
-import type {Device} from '../auth/devices.ts';
 import {createSession, endSession, findSession, hasRecentPassword} from '../auth/sessions.ts';
 import type {Session} from '../auth/sessions.ts';
 import {commandPresenter, activeCommands, getCommand, moveBackCommand, retryCommand} from '../commands/index.ts';
@@ -67,9 +65,9 @@ import {mailApi} from './mail.ts';
 import {searchApi} from './search.ts';
 import {securityApi} from './security.ts';
 
-// A request is signed in by the browser's session cookie or a paired iPhone's bearer token, never
-// both. `alive` says whether it still is, for the live stream's checks.
-export type Env = {Variables: {session: Session | null; device: Device | null; alive: () => boolean}};
+// A request is signed in by the browser's session cookie. `alive` says whether it still is, for the
+// live stream's checks.
+export type Env = {Variables: {session: Session; alive: () => boolean}};
 
 /**
  * Connecting mail accounts (Settings › Accounts), from the providers: Gmail's OAuth consent and
@@ -271,14 +269,6 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json({recovery_codes: codes} satisfies RecoveryCodesOut);
   });
 
-  // The iPhone app's side of pairing: the code from Settings › Security's QR for a device
-  // token. The code is the proof, and the app sends no Origin, so there is no origin check. A wrong
-  // code spends no password attempt, because it's 256 random bits and lives five minutes.
-  app.post('/api/auth/pair', async c => {
-    const input = parse(pairInput, await body(c));
-    return c.json(pairDevice(store, input.code, input.name) satisfies PairOut, 201);
-  });
-
   app.post('/api/auth/sign-out', c => {
     ownPage(c);
     const secret = readCookie(c, cookies.session);
@@ -389,29 +379,15 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   for (const module of tokenRoutes) app.route('/api', module);
 
-  // ---- Everything else needs the session, or a paired iPhone's token ----
+  // ---- Everything else needs the session ----
 
   app.use('/api/*', async (c: Context<Env>, next: Next) => {
-    if (c.req.header('authorization') !== undefined) {
-      const token = bearerToken(c.req.header('authorization'));
-      const device = token ? findDevice(store, token) : null;
-      if (!token || !device) {
-        c.header('WWW-Authenticate', 'Bearer realm="setpoint"');
-        return c.json(errorBody('unauthorized', 'This iPhone isn\'t paired with Setpoint any more.'), 401);
-      }
-      // No origin check: a browser sends no bearer token by itself, so another page can't ride on it.
-      c.set('session', null);
-      c.set('device', device);
-      c.set('alive', () => findDevice(store, token, false) !== null);
-      return next();
-    }
     const secret = readCookie(c, cookies.session);
     const session = secret ? findSession(store, secret) : null;
     if (!secret || !session) return c.json(errorBody('unauthorized', 'Sign in to Setpoint.'), 401);
     if (!['GET', 'HEAD'].includes(c.req.method)) ownPage(c);
     if (session.renewed) setSessionCookie(c, cookies, secret);
     c.set('session', session);
-    c.set('device', null);
     c.set('alive', () => findSession(store, secret, false) !== null);
     await next();
   });
@@ -419,21 +395,13 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.get('/api/me', c => {
     const session = c.get('session');
     return c.json({
-      method: session?.method ?? 'device', time_zone: store.timeZone, now: isoNow(store), recent_password: session ? hasRecentPassword(store, session) : false,
+      method: session.method, time_zone: store.timeZone, now: isoNow(store), recent_password: hasRecentPassword(store, session),
     } satisfies MeOut);
-  });
-
-  // The app's Unpair: its own token stops working.
-  app.delete('/api/device', c => {
-    const device = c.get('device');
-    if (!device) throw forbidden('Only a paired iPhone unpairs itself here; a browser revokes one in Settings › Security.', 'device_only');
-    revokeDevice(store, device.id);
-    return c.body(null, 204);
   });
 
   // ---- Settings › Security (src/api/security.ts) ----
 
-  app.route('/api', securityApi(store, {cookies, origin, rp, bcryptCost}));
+  app.route('/api', securityApi(store, {cookies, rp, bcryptCost}));
 
   // ---- Mail, drafts and sending, and trusted domains (src/api/mail.ts) ----
 
@@ -545,7 +513,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   // Server-Sent Events of LiveEvents. `ready` starts each connection with the id to resume from.
   // `mail`, `items`, `health` and `news` name what changed. `resync` means refetch everything. A
-  // comment and a `ping` every 25 s keep it open. It ends once the session or the iPhone's token
+  // comment and a `ping` every 25 s keep it open. It ends once the session
   // stops working, or the server stops.
   let streams = 0;
   app.get('/api/events', c => {

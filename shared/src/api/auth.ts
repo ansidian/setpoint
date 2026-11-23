@@ -41,9 +41,9 @@ export const passkeyResponseInput = z.strictObject({response: z.record(z.string(
 /** POST /api/auth/recover: a recovery code and a new password. Passkeys are cleared. */
 export const recoverInput = z.strictObject({recovery_code: z.string().min(1).max(200), new_password: newPassword});
 
-/** GET /api/me. A paired iPhone's bearer token reads as `device`. */
+/** GET /api/me. */
 export interface MeOut {
-  method: SessionMethod | 'device';
+  method: SessionMethod;
   time_zone: string;
   // The server's clock: the dev server runs from the seed's moment (SEED_NOW), so ages match the sample data.
   now: string;
@@ -59,17 +59,9 @@ export interface PasskeyOut {
   last_used_at: string | null;
   backed_up: boolean | null;
 }
-/** A paired iPhone, signed in with its device token. */
-export interface DeviceOut {
-  id: number;
-  name: string;
-  paired_at: string;
-  last_used_at: string | null;
-}
 export interface SecurityOut {
   auth_mode: AuthMode;
   passkeys: PasskeyOut[];
-  devices: DeviceOut[];
   recovery: {remaining: number; generated_at: string | null};
   recent_password: boolean;
 }
@@ -79,27 +71,3 @@ export const authModeInput = z.strictObject({auth_mode: z.enum(AUTH_MODES)});
 export const passkeyLabelInput = z.strictObject({label: z.string().trim().min(1).max(80)});
 export const registerPasskeyInput = z.strictObject({label: z.string().trim().min(1).max(80), response: z.record(z.string(), z.unknown())});
 
-/**
- * POST /api/security/pairing (Add iPhone, with the password confirmed in the last 10 minutes): a
- * one-time code for five minutes, replacing any earlier one. The QR holds `link`,
- * `setpoint://pair?server=…&code=…`. DELETE /api/security/pairing withdraws it.
- */
-export interface PairingOut {
-  server: string;
-  code: string;
-  link: string;
-  expires_at: string;
-}
-
-/**
- * POST /api/auth/pair, from the iPhone app, needing no session: the code for a device token, sent
- * from then on as `Authorization: Bearer <token>`. It has no idle timeout. It ends when revoked in
- * Settings › Security, by the app's DELETE /api/device, or at recovery, and then every request is
- * 401. `name` is the phone's model ("iPhone 17 Pro"), or "iPhone" when left out.
- */
-export const DEVICE_NAME_MAX = 80;
-export const pairInput = z.strictObject({code: z.string().min(1).max(200), name: z.string().trim().max(DEVICE_NAME_MAX).optional()});
-export interface PairOut {
-  token: string;
-  device: DeviceOut;
-}

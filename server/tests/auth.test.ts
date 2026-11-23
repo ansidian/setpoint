@@ -1,5 +1,6 @@
 // Sign-in: the first claim by setup token, the password and its shared budget, sessions stored as
 // hashes, recovery codes, security transitions, strict mode and passkeys' challenges.
+import {readFileSync} from 'node:fs';
 import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
@@ -337,5 +338,34 @@ describe('sign-in over HTTP', () => {
     const pending = response.headers.getSetCookie().find(line => line.startsWith('setpoint_pending='))!.split(';')[0]!;
     const verify = await c.send('POST', '/api/auth/passkey/verify', {body: {response: {id: 'cred', rawId: 'cred', type: 'public-key', response: {}}}, headers: {cookie: pending}});
     expect(verify).toMatchObject({status: 401, body: {error: {code: 'passkey_failed'}}});
+  });
+});
+
+describe('no paired devices', () => {
+  test('a bearer token signs nothing in, and pairing is gone', async () => {
+    const w = world({seed: true});
+    const c = await signedIn(w);
+    const bare = client(w);
+    for (const authorization of ['Bearer', `Bearer sp_device_${'A'.repeat(43)}`, `Bearer ${c.cookie!.split('=')[1]}`]) {
+      expect((await bare.send('GET', '/api/me', {headers: {authorization}})).status).toBe(401);
+    }
+    expect((await bare.send('POST', '/api/auth/pair', {body: {code: 'x'}})).status).not.toBe(201);
+    expect((await c.send('GET', '/api/security')).body).not.toHaveProperty('devices');
+  });
+
+  // 0058 drops the paired iPhones and their pairing codes with their tables.
+  test('migration 0058 drops the devices and pairing tables, rows and all', () => {
+    const w = world();
+    const tables = () => w.store.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('devices', 'pairing_codes')").all();
+    expect(tables()).toEqual([]);
+    const run = (file: string) => {
+      const sql = readFileSync(new URL(`../drizzle/${file}.sql`, import.meta.url), 'utf8');
+      for (const statement of sql.split('--> statement-breakpoint')) w.store.sqlite.exec(statement);
+    };
+    run('0020_devices');
+    w.store.sqlite.exec("INSERT INTO devices (hash, name, created_at) VALUES ('h', 'iPhone', '2026-11-01T00:00:00.000Z')");
+    w.store.sqlite.exec("INSERT INTO pairing_codes (hash, created_at, expires_at) VALUES ('c', '2026-11-01T00:00:00.000Z', '2026-11-01T00:05:00.000Z')");
+    run('0058_drop_devices');
+    expect(tables()).toEqual([]);
   });
 });

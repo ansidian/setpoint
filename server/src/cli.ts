@@ -8,9 +8,6 @@
 //   npm run cli -- jobs-token       a new bearer token for the browser extension's POST /api/jobs/check,
 //                                  replacing (revoking) any earlier one; shown once
 //   npm run cli -- jobs-token --revoke   revoke the extension's token
-//   npm run cli -- pair-link        a setpoint://pair link for the iPhone app, as Settings › Security's
-//                                   Add iPhone shows, for the server at SETPOINT_PUBLIC_URL (else
-//                                   localhost); works once, for five minutes, replacing any earlier one
 //   npm run cli -- triage-history   start or resume the one-time model pass over backfilled history
 //   npm run cli -- search-terms     how much mail has search terms; --apply gives the go-ahead to read the rest
 //   npm run cli -- jobs-reread      what Jobs would read again now it reads HTML; --apply does it
@@ -23,7 +20,6 @@
 // It uses the same SETPOINT_DATA_DIR as the server (data/dev by default).
 import {loadConfig} from './config.ts';
 import {openDatabase} from './db/open.ts';
-import {issuePairingCode} from './auth/devices.ts';
 import {haTokenIssuedAt, issueHaToken, revokeHaToken} from './auth/haToken.ts';
 import {getOwner, issueSetupToken} from './auth/owner.ts';
 import {SetpointError} from './errors.ts';
@@ -44,7 +40,6 @@ const USAGE = `Usage:
   ha-token --revoke   revoke Home Assistant's token
   jobs-token      print a new token for the browser extension's Jobs check, replacing any earlier one
   jobs-token --revoke   revoke the extension's token
-  pair-link       print a one-time link that pairs the iPhone app, as Settings › Security's Add iPhone does
   jobs-reread [--apply]   what Jobs would read again now it reads HTML; --apply does it (the server reads them)
   jobs-repair-facts [--apply]   the JDs' salaries and locations that were cut; --apply reads them again from the saved JDs
   jobs-repair-postings [--apply]   the application pages saved as JDs; --apply takes them away and looks each up again (the server does)
@@ -57,7 +52,7 @@ async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   const valid = ((command === 'ha-token' || command === 'jobs-token') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
     || ((command === 'codes' || command === 'search-terms' || command === 'jobs-reread' || command === 'jobs-repair-facts' || command === 'jobs-repair-postings') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
-    || (['setup-token', 'status', 'triage-history', 'pair-link'].includes(command ?? '') && rest.length === 0);
+    || (['setup-token', 'status', 'triage-history'].includes(command ?? '') && rest.length === 0);
   if (!command || !valid) {
     console.log(USAGE);
     return command === '--help' || command === '-h' ? 0 : 1;
@@ -94,12 +89,6 @@ async function main(argv: string[]): Promise<number> {
       const {token} = issueJobsToken(store);
       console.log(`Jobs token for ${config.databasePath}${replaced ? ' (the earlier one no longer works)' : ''}. It's shown once:\n\n${token}\n`);
       console.log('Paste it into the extension\'s options, beside Setpoint\'s address.');
-      return 0;
-    }
-    if (command === 'pair-link') {
-      const {link, expires_at: expiresAt} = issuePairingCode(store, config.publicUrl ?? `http://localhost:${config.port}`);
-      console.log(`Pairing link for ${config.databasePath}, valid once until ${expiresAt} (it replaces any earlier one):\n\n${link}\n`);
-      console.log(`In the Simulator: xcrun simctl openurl booted '${link}'`);
       return 0;
     }
     if (command === 'triage-history') {

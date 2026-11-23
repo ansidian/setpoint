@@ -22,7 +22,6 @@ const CREDENTIALS: [string, string][] = [
   ['ciphertext of a key', `INSERT INTO secrets (name, ciphertext, updated_at) VALUES ('anthropic_api_key', ?, '${NOW}')`],
   ['password hash', `INSERT INTO owner (id, password_hash, claimed_at) VALUES (1, ?, '${NOW}')`],
   ['session hash', `INSERT INTO sessions (hash, security_generation, method, created_at, last_used_at) VALUES (?, 1, 'password', '${NOW}', '${NOW}')`],
-  ['device hash', `INSERT INTO devices (hash, name, created_at) VALUES (?, 'A phone', '${NOW}')`],
   ['home assistant hash', `INSERT INTO ha_token (id, hash, created_at) VALUES (1, ?, '${NOW}')`],
   ['recovery code hash', `INSERT INTO recovery_codes (hash, generated_at) VALUES (?, '${NOW}')`],
   ['source credentials', `INSERT INTO sources (provider, credentials, sync_mode, interval_seconds, created_at) VALUES ('todoist', ?, 'poll', 60, '${NOW}')`],
@@ -72,7 +71,7 @@ describe('exportSearchSnapshot.ts', () => {
       sqlite.close();
     });
     const rows = (table: string) => (sqlite.prepare(`SELECT count(*) AS rows FROM ${table}`).get() as {rows: number}).rows;
-    for (const table of ['secrets', 'owner', 'sessions', 'devices', 'ha_token', 'recovery_codes', 'sources', 'sync_cursors', 'settings', 'not_in_any_list', 'jobs', 'items', 'news_articles']) {
+    for (const table of ['secrets', 'owner', 'sessions', 'ha_token', 'recovery_codes', 'sources', 'sync_cursors', 'settings', 'not_in_any_list', 'jobs', 'items', 'news_articles']) {
       expect(rows(table), table).toBe(0);
     }
     expect(rows('messages')).toBe((live.sqlite.prepare('SELECT count(*) AS rows FROM messages').get() as {rows: number}).rows);

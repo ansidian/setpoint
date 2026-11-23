@@ -6,7 +6,7 @@
 // - Calendar (a calendar hidden, Home, weather, and calendar colours written to Google, waiting,
 //   refused, tried again and changed back)
 // - Todoist (project colours, the same way, and the task rings that take them)
-// - AI (a key set write-only, a model), Appearance, and Security's recovery codes and paired iPhones.
+// - AI (a key set write-only, a model), Appearance, and Security's recovery codes.
 // The passkey ceremony is in passkey.spec.ts.
 // Boards 30a and 30b: Settings › News (sources by section, read-only, no key row) and AI's
 // News group (its models, the cap, this month and its usage), and the cap reached.
@@ -18,7 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AccountOut, AiOut, CalendarOut, MessageOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AccountOut, AiOut, CalendarOut, MessageOut, NewsSourcesOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {choose, cleanUp, rested, startSetpoint, test, until} from './harness.ts';
@@ -922,12 +922,12 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
     await openAt(page, setpoint.base, 'security');
     await page.locator('.settings .set-row', {hasText: '8 left'}).waitFor();
     assert.equal(await page.locator('.settings .set-label', {hasText: 'Confirm it'}).count(), 0, 'no password asked for: it was given at the claim');
+    assert.equal(await page.locator('.settings .set-label', {hasText: 'iPhones'}).count(), 0, 'no paired devices');
     // Sign out is the nav's foot only, and Add passkey has its + as Add rule does.
     assert.equal(await page.locator('.settings').getByRole('button', {name: 'Sign out'}).count(), 1);
     assert.equal(await page.locator('.settings .set-label').getByRole('button', {name: 'Add passkey'}).locator('svg').count(), 1);
     // No passkeys is an empty line, as Mail's "No rules yet · Add rule" is, not a passkey named "None
     // yet". The recovery row is titled, its count its value.
-    // Passkeys' own, not iPhones'.
     const none = page.locator('.settings .set-row', {hasText: 'Add passkey'});
     assert.equal(await none.locator('.set-empty').textContent(), 'None yet · Add passkey');
     const recovery = page.locator('.settings .set-row', {hasText: '8 left'});
@@ -941,61 +941,6 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
     await codes.waitFor();
     assert.equal((await codes.textContent())!.trim().split('\n').length, 8);
     await page.locator('.settings .set-row', {hasText: '8 left'}).waitFor();
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('Security › iPhones: Add iPhone shows the QR and its link, the phone pairing closes it and lists the phone; Esc withdraws a code, Revoke ends a token', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await openAt(page, setpoint.base, 'security');
-    const group = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: 'iPhones'})});
-    const add = group.locator('.set-label').getByRole('button', {name: 'Add iPhone'});
-    const panel = group.locator('.set-row.pairing');
-    const none = group.locator('.set-row', {hasText: 'None yet'});
-    assert.equal(await none.locator('.set-empty').textContent(), 'None yet · Add iPhone');
-    /** The app's exchange, from outside the browser: no cookie, no Origin. */
-    const pair = (code: string) => fetch(`${setpoint.base}/api/auth/pair`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code, name: 'iPhone 17 Pro'})});
-    const shownCode = async () => new URL((await panel.locator('.pair-link code').textContent())!).searchParams.get('code')!;
-
-    // The QR holds the link shown beside it, to this Setpoint. Add iPhone rests while it shows.
-    await add.click();
-    await panel.waitFor();
-    const link = (await panel.locator('.pair-link code').textContent())!;
-    assert.match(link, new RegExp(`^setpoint://pair\\?server=${encodeURIComponent(setpoint.base).replace(/[.%]/g, '\\$&')}&code=[A-Za-z0-9_-]{43}$`));
-    assert.equal(await panel.locator('svg.qr').getAttribute('aria-label'), 'Pairing QR code');
-    assert.equal(await add.isDisabled(), true);
-    await panel.getByText('Works once · Expires in 5 min').waitFor();
-
-    // The phone pairs: the panel closes by itself and the phone is listed.
-    const paired = await pair(await shownCode());
-    assert.equal(paired.status, 201);
-    const {token} = await paired.json() as PairOut;
-    await panel.waitFor({state: 'detached'});
-    const row = group.locator('.set-row', {hasText: 'iPhone 17 Pro'});
-    assert.equal(await row.locator('.s').textContent(), 'Paired 9:12 AM');
-    await page.locator('.settings .line', {hasText: 'Paired iPhone 17 Pro'}).waitFor();
-    assert.equal(await add.isDisabled(), false);
-
-    // Esc withdraws the code shown, and leaves Settings open.
-    await add.click();
-    await panel.waitFor();
-    const withdrawn = await shownCode();
-    await page.keyboard.press('Escape');
-    await panel.waitFor({state: 'detached'});
-    await setpoint.idle();
-    assert.equal(await page.locator('.settings').count(), 1, 'Settings stays open');
-    assert.equal((await pair(withdrawn)).status, 401);
-
-    // Revoke, with no password asked: the row goes and the token is refused.
-    await row.getByRole('button', {name: 'Revoke'}).click();
-    await row.waitFor({state: 'detached'});
-    await none.waitFor();
-    await page.locator('.settings .line', {hasText: 'Revoked iPhone 17 Pro'}).waitFor();
-    assert.equal((await fetch(`${setpoint.base}/api/me`, {headers: {Authorization: `Bearer ${token}`}})).status, 401);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

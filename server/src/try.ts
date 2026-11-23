@@ -1,10 +1,10 @@
 // The one dev Setpoint, in one step (launch.json's setpoint-dev). It runs Vite on its port, with
 // hot reload, proxying /api to the dev server on the next port (SETPOINT_PUBLIC_URL is Vite's, so
-// pairing links and sign-in name it). With --build, the dev server itself serves the web app built
+// sign-in names it). With --build, the dev server itself serves the web app built
 // into data/dev/web (not web/dist, which may be stale, and which a browser run in this checkout may
 // be serving), as prod serves it. It seeds data/dev with the sample the first time and makes its
 // owner with the password "dev". It starts the dev server on its own port, then prints how to sign
-// in and a link that pairs the iPhone app with it. Sessions share it and may change its data.
+// in. Sessions share it and may change its data.
 //
 // From a git worktree it's that worktree's web app in front of setpoint-dev's API. Only its Vite
 // runs, on the next free port from 7460. It proxies to the API on 7451 and passes its own page's
@@ -60,7 +60,6 @@ if (own && !worktree) fail('--own is for a worktree; here, npm run try is the on
 // its node_modules, @setpoint/shared included, which is the main checkout's shared/.
 if (worktree && !fs.existsSync(path.join(ROOT, 'node_modules', 'vite'))) fail(`This worktree has no node_modules of its own. Run npm ci in ${ROOT}, then npm run try again.`);
 const {default: Database} = await import('better-sqlite3');
-const {cliLine} = await import('./dev/cliLine.ts');
 const {ensureDevOwner} = await import('./dev/devOwner.ts');
 const {newsSnapshotIn} = await import('./dev/newsSnapshot.ts');
 const {seedFile} = await import('./dev/seedFile.ts');
@@ -142,7 +141,7 @@ async function runOwn() {
 Setpoint is at ${base}${built ? '' : ', hot reloading (its API on :' + apiPort + ')'}, with the sample's data (its clock is the seed's, ${where}).
 ${lan ? lanLine() : ''}Sign in with the password "${DEV_PASSWORD}". From a page's console (an agent's browser pane):
   await fetch('/api/auth/sign-in', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: '${DEV_PASSWORD}'})}); location.reload();
-${pairingLink()}`);
+`);
   }
 
   /** Where a phone on the same network opens it. */
@@ -150,16 +149,6 @@ ${pairingLink()}`);
     const addresses = Object.values(os.networkInterfaces()).flat()
       .filter(one => one && one.family === 'IPv4' && !one.internal).map(one => `http://${one!.address}:${port}`);
     return addresses.length ? `On the network: ${addresses.join(', ')} (sign in with the password).\n` : 'No LAN address found.\n';
-  }
-
-  /** A one-time link pairing the iPhone app (in the Simulator, which reaches this Mac's localhost). */
-  function pairingLink(): string {
-    const issued = spawnSync(process.execPath, ['src/cli.ts', 'pair-link'], {cwd: SERVER, env, encoding: 'utf8'});
-    const link = issued.stdout.match(/^setpoint:\/\/pair\?\S+$/m)?.[0];
-    if (issued.status !== 0 || !link) return `Couldn't make a pairing link: ${issued.stderr.trim() || 'no link'}\n`;
-    return `Pair the iPhone app (once; a new link: ${cliLine(dataDir, port, 'pair-link')}):
-  xcrun simctl openurl booted '${link}'
-`;
   }
 }
 

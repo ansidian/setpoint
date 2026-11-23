@@ -67,8 +67,8 @@
 .settings .set-row.dragging { opacity: .5; }
 /* A button at a row's end is 30 px, the height of the selects and stepper beside it. The shared
    `.btn.sm` stays 26 elsewhere, as do a label's buttons and the head's Connect buttons. Only the row's
-   own buttons, its state's and its form's. A rule's prompt and the pairing panel's Copy keep theirs, and
-   Add rule's form takes 30 for its Add and Cancel only, by its own rule below. */
+   own buttons, its state's and its form's. A rule's prompt keeps theirs, and Add rule's
+   form takes 30 for its Add and Cancel only, by its own rule below. */
 .settings .set-row:not(.rule-form) > .btn.sm, .settings .set-row > :is(.state, .form) > .btn.sm { height: 30px; }
 /* A quiet one at a row's very end lands its words on the rows' 16 px edge, where an outlined one's edge
    is (F12). */
@@ -334,20 +334,6 @@
 .settings .amount { color: var(--ink); font-size: 12.5px; width: 92px; text-align: right; flex: none; white-space: nowrap; }
 .settings .cost { color: var(--ink); font-weight: 500; flex: none; }
 .settings .s > .caution { color: var(--caution); }
-
-/* Security › iPhones: the pairing panel, its QR on a tile that scans in either theme (dark
-   modules on the lightest surface the theme has), the link in mono beside Copy, and its countdown,
-   in `caution` through its last minute as a code's is. */
-.settings .set-row.pairing { align-items: center; gap: 16px; padding-top: 14px; padding-bottom: 14px; }
-.settings .qr { width: 132px; height: 132px; flex: none; border-radius: var(--r-row); background: var(--ink); color: var(--onInk); }
-:root[data-theme="light"] .settings .qr { background: var(--cardOn); color: var(--ink); box-shadow: inset 0 0 0 1px var(--edge); }
-.settings .qr.expired { opacity: .25; }
-.settings .pairing .lines { gap: 6px; min-width: 0; }
-.settings .pair-link { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.settings .pair-link code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink2); user-select: all; -webkit-user-select: all; }
-.settings .pairing .s.soon { color: var(--caution); }
-.settings .pairing .again { color: var(--ink2); }
-.settings .pairing .again:hover, .settings .pairing .again:focus-visible { color: var(--ink); }
 
 /* The narrowest windows of the compact tier (640 to 739 px, a modal of 608 to 707) can't hold a source's
    name, sync and state side by side. The sync column goes, News's name gives way to 120 px as Accounts'
