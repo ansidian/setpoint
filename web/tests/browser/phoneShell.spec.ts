@@ -215,7 +215,7 @@ async function fakeNtfy() {
   return {url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, close: () => new Promise(resolve => server.close(resolve))};
 }
 
-test('phone Settings: Notifications and Appearance with the title menu between them, a switch saves, the theme switches; the other pages are on the desktop', async () => {
+test('phone Settings: Notifications and Appearance with the title menu between them and Inbox the way back, a switch saves, the theme switches; the other pages are on the desktop', async () => {
   const ntfy = await fakeNtfy();
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -252,6 +252,13 @@ test('phone Settings: Notifications and Appearance with the title menu between t
       await page.locator('.ph-set-away', {hasText: `${label} is on the desktop`}).waitFor();
       assert.equal(await page.locator('.hd .ph-title-btn').textContent(), label);
     }
+
+    // Inbox, after a divider, is the way back, from a page reached by a link too.
+    await page.locator('.hd .ph-title-btn').tap();
+    assert.deepEqual(await page.getByRole('menu').getByRole('menuitem').allTextContents(), ['Inbox']);
+    await page.getByRole('menu').getByRole('menuitem', {name: 'Inbox'}).tap();
+    await until('the Inbox', () => page.evaluate(() => window.location.pathname), path => path === '/inbox');
+    await page.locator('.list .row').first().waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
