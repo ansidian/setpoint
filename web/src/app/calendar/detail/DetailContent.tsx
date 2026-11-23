@@ -89,7 +89,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const colour = {'--c': colourVar(item.colour ?? calendar?.colour ?? (item.kind === 'task' ? undefined : 'cool'))} as CSSProperties;
   const fixed = item.read_only || !actions;
   const act = (run: (one: ItemOut) => void) => () => !fixed && run(item);
-  // Without actions (the phone) every one is drawn, unavailable. A read-only item leaves them out.
+  // Without actions (a card that only shows the item) every one is drawn, unavailable. A read-only item leaves them out.
   // A subtask has no Copy, whose paste would make a task of its own.
   const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !item.read_only && !(action === 'copy' && item.parent_id !== null) && (!actions || !!actions[action]);
   const complete = item.kind === 'task';
@@ -119,7 +119,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const played = justDone.has(item.key);
   const markClass = `fd-mark${pending ? ' pending' : ''}${played ? ' just-done' : ''}`;
   // With actions, a task's ring completes it, and its done check reopens it, as the
-  // Today block's lines and the day pane's rows do. Without them (the phone) it's a mark.
+  // Today block's lines and the day pane's rows do, and the phone's Agenda. Without them it's a mark.
   const stuck = !!item.command || (item.done && !item.can_reopen);
   const mark = complete && actions ? (
     <button className={`${markClass} check`} type="button" aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled={fixed || stuck || undefined}
@@ -200,7 +200,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
           </button>
         )}
         <span className="grow" />
-        {/* The phone's card (no actions) keeps a footer Complete, unavailable. */}
+        {/* A card with no actions keeps a footer Complete, unavailable. */}
         {complete && !actions && (
           <button className={item.done ? 'ibtn sm' : 'ibtn sm affirm'} aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled
             data-tip={item.command ? retryingLine(item.command, timeZone) ?? 'Waiting for Todoist' : item.done && !item.can_reopen ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}>

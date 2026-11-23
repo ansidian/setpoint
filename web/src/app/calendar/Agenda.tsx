@@ -1,9 +1,12 @@
-// Calendar on the phone (board 21): a read-only agenda of today and the next 7
-// days, empty days collapsed (logic/phone.ts). The routes are Calendar's: /calendar/item/3?at=…
-// opens that item's detail, read-only, over the agenda. /calendar/2026-10-07 brings that day into
-// view (or starts the agenda there when it's further out).
+// Calendar on the phone (board 21): an agenda of today and the next 7 days, empty days collapsed
+// (logic/phone.ts). The routes are Calendar's: /calendar/item/3?at=… opens that item's detail over
+// the agenda. /calendar/2026-10-07 brings that day into view (or starts the agenda there when it's
+// further out). + in the header opens the editor sheet (phone/EditorSheet.tsx) on a new event on the
+// day in view: the topmost day whose line is still showing. The detail offers Edit (the same sheet),
+// a task's ring (its done check reopens it) and Delete with Undo, a repeating event's asking which
+// of its events. Nothing drags: moving and resizing stay on the desktop's grids.
 import type {CalendarOut, ItemOut, ItemsOut, WeatherDayOut} from '@setpoint/shared';
-import {Fragment, useEffect} from 'react';
+import {Fragment, useEffect, useMemo} from 'react';
 import type {CSSProperties} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
@@ -22,6 +25,9 @@ import {useNow} from '../clock.ts';
 import {navigate} from '../router.ts';
 import {PhoneAgendaSkeleton} from '../states/Skeletons.tsx';
 import {DetailContent} from './detail/DetailContent.tsx';
+import type {DetailActions} from './detail/DetailContent.tsx';
+import {openEditorSheet, removeItem} from '../phone/EditorSheet.tsx';
+import {toggleDone, usePhoneChanges} from '../phone/itemActions.ts';
 import './detail/detail.css';
 
 type CalendarRoute = Extract<Route, {page: 'calendar'}>;
@@ -39,7 +45,11 @@ export function Agenda({route}: {route: CalendarRoute}) {
   const linkedDay = route.date ?? (route.at ? localDate(route.at, zone) : linkedItem?.id === route.item && linkedItem ? itemDays(linkedItem, zone)[0] ?? null : null);
   const start = agendaStart(today, linkedDay);
   const end = addDays(start, AGENDA_DAYS);
-  const {data: items} = useResource<ItemsOut>(itemsPath(start, end));
+  const {data: loaded} = useResource<ItemsOut>(itemsPath(start, end));
+  // Deletes held by their toast are gone, and a task being checked or reopened shows as it will be.
+  const {gone, ticking} = usePhoneChanges();
+  const items = useMemo(() => loaded && {...loaded, items: loaded.items.flatMap(item => (gone(item) ? []
+    : ticking.has(item.key) ? [{...item, done: ticking.get(item.key)!}] : [item]))}, [loaded, gone, ticking]);
   const {data: weather} = useResource<WeatherDayOut[]>(weatherPath(start, end));
 
   const forecast = new Map((weather ?? []).map(day => [day.date, day]));
@@ -48,7 +58,21 @@ export function Agenda({route}: {route: CalendarRoute}) {
 
   const selectedKey = route.item ? itemKey(route.item, route.at) : null;
   const selected = (selectedKey ? items?.items.find(item => item.key === selectedKey) : undefined)
-    ?? (linkedItem && linkedItem.id === route.item && !route.at ? linkedItem : undefined);
+    ?? (linkedItem && linkedItem.id === route.item && !route.at && !gone(linkedItem) ? linkedItem : undefined);
+  // A deleted item's detail goes with it.
+  const shown = selectedKey ? loaded?.items.find(item => item.key === selectedKey) ?? (linkedItem?.key === selectedKey ? linkedItem : undefined) : undefined;
+  const deleted = !!shown && gone(shown);
+  useEffect(() => {
+    if (deleted) navigate(AGENDA, {replace: true});
+  }, [deleted]);
+  const actions: DetailActions = {
+    // A repeating task's completion is an item of its own, and the task moves on to its next date:
+    // the card it was in closes.
+    complete: task => toggleDone(task, () => {
+      if (task.recurring && !task.done) navigate(AGENDA, {replace: true});
+    }),
+    remove: removeItem,
+  };
 
   const title = tabTitle({page: 'calendar', title: monthName(`${monthOf(start)}-01`)});
   useEffect(() => {
@@ -68,6 +92,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
         <h1 className="hd-title">Agenda</h1>
         <span className="grow" />
         <span className="ph-range num">{agendaRange(start)}</span>
+        <button className="ibtn ph-new" type="button" aria-label="New event" onClick={() => openEditorSheet({kind: 'event', date: dayInView() ?? start})}><Icon name="add" /></button>
       </header>
       <div className="content">
         <section className="ph-agenda" aria-label="Agenda">
@@ -117,8 +142,8 @@ export function Agenda({route}: {route: CalendarRoute}) {
             <div className="fd ph-detail" role="dialog" aria-label={selected.title}>
               <div className="card">
                 <div className="fd-body">
-                  <DetailContent target={{item: selected, date: linkedDay ?? today, calendar: colours.get(selected.calendar_id)}} timeZone={zone}
-                    onClose={() => navigate(AGENDA)} onEdit={() => {}} />
+                  <DetailContent target={{item: selected, date: linkedDay ?? today, calendar: colours.get(selected.calendar_id)}} timeZone={zone} actions={actions}
+                    onClose={() => navigate(AGENDA)} onEdit={() => openEditorSheet({kind: selected.kind, date: itemDays(selected, zone)[0] ?? today, item: selected})} />
                 </div>
               </div>
             </div>
@@ -138,6 +163,15 @@ function NowLine({now, timeZone}: {now: number; timeZone: string}) {
       <span className="line" />
     </div>
   );
+}
+
+/** The topmost day whose line still shows under the header, its first day for folded empty days. */
+function dayInView(): string | null {
+  const list = document.querySelector('.ph-agenda');
+  if (!list) return null;
+  const top = list.getBoundingClientRect().top;
+  const day = [...list.querySelectorAll<HTMLElement>('.ph-day')].find(one => one.getBoundingClientRect().bottom > top + 1);
+  return day?.dataset.days?.split(' ')[0] ?? null;
 }
 
 const reveal = (selector: string) => document.querySelector(selector)?.scrollIntoView({block: 'nearest'});
