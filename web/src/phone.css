@@ -181,9 +181,10 @@
   .ph-agenda .pitem .mk { width: 13px; flex: none; display: grid; place-items: center; }
   .ph-agenda .pitem .mk .ring { margin: 0; }
   /* An event is its calendar's chip, as on the month and week grids: the calendar's tint, its
-     3 px bar, its title level with the tasks' titles. Past ones are at .55. */
+     3 px bar, its title level with the tasks' titles. A past one turns grey, as on the grids: its
+     title `ink3`, its fill at half the tint and its bar at 45%. */
   .ph-agenda .pitem.chip .ell { flex: 1 1 auto; margin: 4px 0; line-height: 34px; padding: 0 10px 0 25px; border-radius: 6px; background: color-mix(in oklch, var(--c) var(--evtint), transparent); box-shadow: inset 3px 0 0 var(--c); }
-  .ph-agenda .pitem.chip.past .ell { opacity: .55; }
+  .ph-agenda .pitem.chip.past .ell { background: color-mix(in oklch, var(--c) calc(var(--evtint) / 2), transparent); box-shadow: inset 3px 0 0 color-mix(in oklch, var(--c) 45%, transparent); }
   .ph-agenda .pitem .pl { color: var(--ink3); }
   .ph-agenda .pitem.past, .ph-agenda .pitem.past .when { color: var(--ink3); }
   /* Now, among today's lines: the right pane's now-line (`alert` time, dot and line at .7), 16 px tall. */
