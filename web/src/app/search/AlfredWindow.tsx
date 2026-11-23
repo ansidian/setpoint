@@ -1,5 +1,6 @@
 // Alfred's window: the open conversation when no place on screen shows it inline (search/alfred.ts),
-// at the right end of the composer windows' row over any desktop page, never folded. Beside a
+// at the right end of the composer windows' row over any desktop page. Its title folds it to its bar
+// and back, as a composer window's does. Beside a
 // composer window on a narrow desktop, it narrows so the composer keeps its toolbar whole. It's the same
 // Answer card: a follow-up continues the thread, an email's row opens it in the Inbox's reader, and
 // an item's row opens its detail card beside the window. × and Esc in the window close it; Esc
@@ -14,12 +15,14 @@ import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {navigate, useRoute} from '../router.ts';
 import {toastFailure} from '../toast.ts';
-import {alfredOf, alfredWindowed, closeAlfred, useAlfredThread, useAlfredWindowed} from './alfred.ts';
+import {alfredOf, alfredWindowed, closeAlfred, toggleAlfredMinimized, useAlfredMinimized, useAlfredThread, useAlfredWindowed} from './alfred.ts';
 import {AnswerCard} from './AnswerCard.tsx';
+import './search.css';
 
 export function AlfredWindow() {
   const thread = useAlfredThread();
   const windowed = useAlfredWindowed();
+  const minimized = useAlfredMinimized();
   const route = useRoute();
   const now = useNow(null);
   const {byId: accounts} = useAccounts();
@@ -46,9 +49,10 @@ export function AlfredWindow() {
   };
   return (
     <div ref={row} className="cmp-windows alf-windows">
-      <section className="alf-window" aria-label="Alfred's window" style={room ? {width: alfredWindowWidth(room, beside)} : {visibility: 'hidden'}} onKeyDown={close}>
+      <section className={minimized ? 'alf-window min' : 'alf-window'} aria-label="Alfred's window" onKeyDown={close}
+        style={room ? {width: alfredWindowWidth(room, beside, minimized)} : {visibility: 'hidden'}}>
         <AnswerCard alfred={alfred} scoped={thread.origin.kind === 'email'} openId={route.page === 'inbox' ? route.open : null} accounts={accounts} now={now} timeZone={timeZone()}
-          windowed onOpen={id => {
+          windowed minimized={minimized} onMinimize={toggleAlfredMinimized} onOpen={id => {
             navigate({page: 'inbox', open: id});
             void openMessage(id).catch(toastFailure('Failed to mark read'));
           }} />

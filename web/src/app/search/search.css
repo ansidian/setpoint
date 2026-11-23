@@ -130,6 +130,15 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .alf-window { position: absolute; right: 0; bottom: 0; max-height: 100%; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; pointer-events: auto;
   border-radius: var(--r-popover); box-shadow: var(--shadow-pop); transform-origin: bottom right; animation: cmp-pop var(--dur-medium) var(--ease); }
 .alf-window .answer { margin: 0; }
+/* Its header is the window's title bar, drawn as a composer window's is: tinted, ruled off, and
+   darker on hover. It folds the window to the bar and stays on top as the thread scrolls. */
+.alf-window .alf-title { min-height: 40px; padding: 0 8px 0 16px; position: sticky; top: 0; z-index: 3; cursor: pointer; border-bottom: 1px solid var(--hair);
+  border-radius: var(--r-popover) var(--r-popover) 0 0; background: color-mix(in srgb, var(--ink) 4%, var(--cardOn)); transition: background var(--dur-fast) var(--ease); }
+@media (hover: hover) { .alf-window .alf-title:hover { background: color-mix(in srgb, var(--ink) 8%, var(--cardOn)); } }
+.alf-window .alf-title-text { flex: 1 1 auto; min-width: 0; height: 40px; text-align: left; font-size: inherit; color: var(--ink); cursor: pointer; }
+.alf-window .answer .card-b { padding-top: 14px; }
+.alf-window.min .answer > :not(.alf-title) { display: none; }
+.alf-window.min .alf-title { border-bottom: none; border-radius: var(--r-popover); }
 .ans { margin: 0; max-width: 620px; font-size: 15px; line-height: 1.45; color: var(--ink); user-select: text; -webkit-user-select: text; }
 .ans b { font-weight: 500; }
 /* The answer's key fact points at its evidence: underlined in the yellow the email marks it

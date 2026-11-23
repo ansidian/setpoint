@@ -6,7 +6,8 @@
 // Where it shows: inline, where it was asked, while that place is on screen and claims it (Inbox
 // search while it's active, the reader on that email). Anywhere else on the desktop it's in
 // Alfred's window (AlfredWindow.tsx), at the right of the composer windows' row. On the phone a
-// thread no place claims closes, as the phone has no windows.
+// thread no place claims closes, as the phone has no windows. Its title folds the window to its
+// bar and back, as a composer window's does; it opens unfolded each time it comes to the window.
 //
 // A question in flight lands here wherever the user has gone. Answers aren't streamed: what Alfred
 // is doing for it is asked again every STEP_POLL_MS. An answer to a thread since closed or
@@ -61,6 +62,8 @@ const claims = new Map<string, number>();
 let poller: number | null = null;
 // Closes the thread when the server ends it.
 let ender: number | null = null;
+// Alfred's window folded to its title bar.
+let minimized = false;
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach(listener => listener());
@@ -69,6 +72,7 @@ const subscribe = (listener: () => void) => {
   return () => listeners.delete(listener);
 };
 function set(next: AlfredThread | null) {
+  if (next === null) minimized = false;
   thread = next;
   endOnTime();
   notify();
@@ -96,6 +100,14 @@ export const useAlfredWindowed = () => useSyncExternalStore(subscribe, () => thr
 export const alfredThread = () => thread;
 /** Whether the open thread is in Alfred's window now, as the store has it. */
 export const alfredWindowed = () => thread !== null && !claimed();
+/** Whether Alfred's window is folded to its title bar. */
+export const useAlfredMinimized = () => useSyncExternalStore(subscribe, () => minimized);
+
+/** Folds Alfred's window to its title bar, or brings it back. */
+export function toggleAlfredMinimized() {
+  minimized = !minimized;
+  notify();
+}
 
 /** While mounted with an origin, this place shows the thread inline when it's that origin's. */
 export function useClaim(origin: AlfredOrigin | null) {
@@ -103,6 +115,8 @@ export function useClaim(origin: AlfredOrigin | null) {
   useLayoutEffect(() => {
     if (key === null) return;
     claims.set(key, (claims.get(key) ?? 0) + 1);
+    // Shown inline, it comes back to the window unfolded.
+    if (claimed()) minimized = false;
     notify();
     return () => {
       const left = (claims.get(key) ?? 1) - 1;
@@ -213,6 +227,7 @@ export function startAlfred(origin: AlfredOrigin, question?: string) {
   counter += 1;
   stopPolling();
   forget();
+  minimized = false;
   set(fresh(origin));
   if (question) send(question, true);
 }

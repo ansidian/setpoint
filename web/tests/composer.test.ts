@@ -172,8 +172,11 @@ describe('the composer\'s windows, when they don\'t all fit', () => {
     ['beside composer windows in a wide row, its own width', 1400, true, 440],
     ['beside them, as wide as leaves a composer window its toolbar', 800, true, 388],
     ['beside them in a narrow row, no narrower than 320', 732, true, 320],
-  ])('Alfred\'s window: %s', (_, room, beside, width) => {
-    expect(alfredWindowWidth(room, beside)).toBe(width);
+    ['minimized, a title bar as wide as a composer window\'s', 1400, false, 320, true],
+    ['minimized beside composer windows, the same bar', 732, true, 320, true],
+    ['minimized in a row narrower than the bar, the row', 300, false, 300, true],
+  ])('Alfred\'s window: %s', (_, room, beside, width, minimized = false) => {
+    expect(alfredWindowWidth(room, beside, minimized)).toBe(width);
   });
 
   test('Alfred\'s window keeps the row\'s right end: the windows start left of what it reserves', () => {

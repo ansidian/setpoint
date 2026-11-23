@@ -47,7 +47,7 @@ import {PaneEdge} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {readHtml} from '../../logic/description.ts';
 import {alfredWindowWidth, arrangeWindows, placeWindows, WINDOW_GAP} from '../../logic/composer.ts';
-import {useAlfredWindowed} from '../search/alfred.ts';
+import {useAlfredMinimized, useAlfredWindowed} from '../search/alfred.ts';
 import {attachFiles, canReplyAll, closeComposer, closeComposerAt, discard, dismissFileError, dock, foldWindows, popOut, queueSave, queueTyped, removeFile, shownEmail, switchKind, toggleMinimized, send, unsaved, useComposers, useFills, useFileError, useSaveError, useUploads, watchSends} from './composer.ts';
 import {useRoute} from '../router.ts';
 import type {OpenComposer} from './composer.ts';
@@ -859,8 +859,9 @@ export function ComposerWindows() {
     observer.observe(element);
     return () => observer.disconnect();
   }, [any]);
-  // Alfred's window, when it's up, keeps the row's right end.
-  const reserve = useAlfredWindowed() ? alfredWindowWidth(room, true) + WINDOW_GAP : 0;
+  // Alfred's window, when it's up, keeps the row's right end: its bar's width when folded.
+  const alfredMinimized = useAlfredMinimized();
+  const reserve = useAlfredWindowed() ? alfredWindowWidth(room, true, alfredMinimized) + WINDOW_GAP : 0;
   const left = Math.max(0, room - reserve);
   const {fold, hidden} = left ? arrangeWindows(windows, left) : {fold: [], hidden: []};
   // Folded in the store, so a window stays folded until the user brings it back.

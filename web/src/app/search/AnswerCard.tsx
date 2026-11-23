@@ -10,7 +10,8 @@
 // follow-up field is dimmed until the answer is in. Then the trail folds away and the answer fades up.
 // A long list of sources shows its first five and Show all. Proposals in an answer show as the
 // proposal card. While the thread is read back after a reload, a skeleton holds its place and the
-// field is dimmed.
+// field is dimmed. In Alfred's window the header is the window's title: it folds the window to its
+// bar and back.
 import type {AccountOut, AiOut, AnswerItemOut, CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
@@ -35,7 +36,7 @@ import {ProposalCard} from './ProposalCard.tsx';
 import {Account} from './Search.tsx';
 import type {Alfred} from './state.ts';
 
-export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, windowed = false, onOpen}: {
+export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, windowed = false, minimized = false, onMinimize, onOpen}: {
   alfred: Alfred;
   // Ask about this email: the card is about one email, and shows every question.
   scoped: boolean;
@@ -46,6 +47,9 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
   // In Alfred's window, over another page: every question shows (the search field isn't there), and
   // the field takes the keys only while they're already in the card.
   windowed?: boolean;
+  // In Alfred's window: folded to its title bar, and the title's click.
+  minimized?: boolean;
+  onMinimize?: () => void;
   onOpen: (id: number) => void;
 }) {
   const [draft, setDraft] = useState('');
@@ -92,12 +96,23 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
   const failure = error ?? (turns.length || asking || loading ? null : noKey);
   return (
     <div ref={card} className={asking ? 'card answer asking' : 'card answer'} aria-label="Alfred's answer">
-      <div className="card-h">
-        <Icon name="auto_awesome" size={16} alfred />
-        <span className="card-title">Alfred</span>
-        <span className="grow" />
-        <button className="ibtn sm" type="button" aria-label="Close answer" onClick={close}><Icon name="close" size={16} /></button>
-      </div>
+      {onMinimize ? (
+        <div className="card-h alf-title" onMouseDown={event => event.preventDefault()} onClick={onMinimize}>
+          <Icon name="auto_awesome" size={16} alfred />
+          <button className="card-title alf-title-text" type="button" aria-expanded={!minimized} aria-label={minimized ? 'Open the window' : 'Minimize the window'}>Alfred</button>
+          <button className="ibtn sm" type="button" aria-label="Close answer" onClick={event => {
+            event.stopPropagation();
+            close();
+          }}><Icon name="close" size={16} /></button>
+        </div>
+      ) : (
+        <div className="card-h">
+          <Icon name="auto_awesome" size={16} alfred />
+          <span className="card-title">Alfred</span>
+          <span className="grow" />
+          <button className="ibtn sm" type="button" aria-label="Close answer" onClick={close}><Icon name="close" size={16} /></button>
+        </div>
+      )}
       <div className="card-b">
         {turns.map((turn, index) => (
           <Fragment key={turn.turn_id}>

@@ -10,7 +10,7 @@ import {render} from 'vitest-browser-react';
 import {clearCache} from '../../src/api/client.ts';
 import {AlfredWindow} from '../../src/app/search/AlfredWindow.tsx';
 import {AnswerCard} from '../../src/app/search/AnswerCard.tsx';
-import {alfredOf, alfredThread, askAlfred, ENDED_LINE, resetAlfred, restoreAlfred, startAlfred, useAlfredThread, useClaim} from '../../src/app/search/alfred.ts';
+import {alfredOf, alfredThread, askAlfred, closeAlfred, ENDED_LINE, resetAlfred, restoreAlfred, startAlfred, useAlfredThread, useClaim} from '../../src/app/search/alfred.ts';
 import {dismissToast} from '../../src/app/toast.ts';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
 import type {AlfredOrigin} from '../../src/app/search/alfred.ts';
@@ -104,6 +104,36 @@ test('a thread asked inline moves to the window when its place goes, with the sa
   await expect.element(inline().getByText('Blue Door.')).toBeVisible();
   await expect.element(inline().getByText('Friday at 7.')).toBeVisible();
   await expect.element(windowed()).not.toBeInTheDocument();
+});
+
+test('the window\'s title folds it to its bar and back, and it opens unfolded each time it comes to the window', async () => {
+  const screen = await render(<Shell place={false} />);
+  startAlfred(SEARCH, 'When is dinner?');
+  await expect.poll(() => asked.length).toBe(1);
+  asked[0]!.answer('Friday at 7.');
+  await expect.element(windowed().getByText('Friday at 7.')).toBeVisible();
+
+  await userEvent.click(windowed().getByRole('button', {name: 'Minimize the window'}));
+  await expect.element(windowed().getByRole('button', {name: 'Open the window'})).toHaveAttribute('aria-expanded', 'false');
+  await expect.element(windowed().getByText('Friday at 7.')).not.toBeVisible();
+  await expect.element(windowed().getByLabelText('Ask a follow-up')).not.toBeVisible();
+  await userEvent.click(windowed().getByRole('button', {name: 'Open the window'}));
+  await expect.element(windowed().getByText('Friday at 7.')).toBeVisible();
+
+  // Shown inline meanwhile, it comes back to the window unfolded.
+  await userEvent.click(windowed().getByRole('button', {name: 'Minimize the window'}));
+  await screen.rerender(<Shell place />);
+  await expect.element(inline().getByText('Friday at 7.')).toBeVisible();
+  await screen.rerender(<Shell place={false} />);
+  await expect.element(windowed().getByText('Friday at 7.')).toBeVisible();
+
+  // So does a new thread after this one closes.
+  await userEvent.click(windowed().getByRole('button', {name: 'Minimize the window'}));
+  closeAlfred();
+  await expect.element(windowed()).not.toBeInTheDocument();
+  startAlfred(SEARCH, 'Where?');
+  await expect.element(windowed().getByText('Where?')).toBeVisible();
+  await expect.element(windowed().getByRole('button', {name: 'Minimize the window'})).toHaveAttribute('aria-expanded', 'true');
 });
 
 test('a question in flight when its place goes lands in the window', async () => {
