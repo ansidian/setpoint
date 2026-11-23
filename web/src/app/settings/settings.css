@@ -382,8 +382,9 @@
   /* Fields at 16 px, so iOS doesn't zoom into them, and a long one takes its row's width. */
   .settings.ph-set .fld { height: 40px; font-size: 16px; width: 100%; }
   .settings.ph-set .fld-at { flex: 1 1 100%; }
-  /* A page that's on the desktop says so. */
-  .settings.ph-set .ph-set-away { flex-direction: row; align-items: center; gap: 10px; padding: 16px 20px; color: var(--ink2); }
+  /* A page that's on the desktop says so in one line, its glyph in `ink3` 12 px before the words. */
+  .settings.ph-set .ph-set-away { flex-direction: row; align-items: center; gap: 12px; padding: 16px 20px; color: var(--ink2); }
+  .settings.ph-set .ph-set-away > .icon { color: var(--ink3); }
   .settings.ph-set .ph-set-away p { margin: 0; }
   .settings.ph-set .ph-set-foot { padding: 8px 20px max(24px, env(safe-area-inset-bottom)); }
 }
