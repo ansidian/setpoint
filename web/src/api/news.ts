@@ -2,8 +2,9 @@
 // Seen shows at once wherever the story is loaded, with its dot gone. Then the server's answer and
 // its `news` event take over. An opened story is loaded before it's marked seen, so the pane still
 // has what was new since the user last looked. This file also has sorting's state and Show
-// headlines, Settings › News, search, Upcoming's proposal, the user on News and the recap on screen.
-import type {NewsPageOut, NewsProposalOut, NewsSearchOut, NewsSection, NewsSectionOut, NewsSeenOut, StoryOut, StoryRowOut} from '@setpoint/shared';
+// headlines, Settings › News, search, Upcoming's proposal, the user on News, the recap on screen and
+// the phone's Done on it.
+import type {NewsPageOut, NewsProposalOut, NewsSearchOut, NewsSection, NewsSectionOut, NewsSeenOut, RecapDoneOut, RecapUndoOut, StoryOut, StoryRowOut} from '@setpoint/shared';
 import {serverNow} from './auth.ts';
 import {cachedPaths, getCached, getJson, refresh, refreshIfShown, sendJson, updateCached} from './client.ts';
 
@@ -67,6 +68,12 @@ export async function openStory(id: number, onFailed: (error: Error) => void): P
  * The server puts the recap away once it has shown and the user has then been away an hour.
  */
 export const noteHere = (recap: number[] | null) => sendJson<void>('POST', '/news/here', {recap});
+
+/** The phone's Done on the recap: put away at once, its stories still unseen. Answers what Undo puts back. */
+export const putRecapAway = () => sendJson<RecapDoneOut>('POST', '/news/recap/done');
+
+/** Done's Undo: the recap's state as it was before. */
+export const bringRecapBack = (undo: RecapUndoOut) => sendJson<void>('POST', '/news/recap/undo', undo);
 
 /** Search news over the 90-day archive, expired stories included, newest first. */
 export const searchNews = (text: string) => getJson<NewsSearchOut>(`/news/search?q=${encodeURIComponent(text)}`);

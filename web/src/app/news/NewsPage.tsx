@@ -23,6 +23,13 @@
 // replaces the list with the stories found, as mail's search replaces its list. The header reads
 // Search, the segmented control goes, and Esc clears it.
 //
+// On the phone (below 640 px) it's one column: the mark, then "News ▾", a menu of All and the
+// sections in place of the segmented control, and Search news under it, its clear button leaving it.
+// A story slides in over the list as the reader does, with Back. While you were away has no pane to
+// sit in, so it heads All's list, and Done puts it away at once with Undo in the toast, its stories
+// still unseen. Its rows are seen only by opening, as in the pane. Seen and the states are the
+// desktop's. Add to calendar stays on the desktop for now.
+//
 // Keys: `J` / `K` move the cursor, on into a section's Also reported. With a story open, they open
 // the next and previous one. Enter opens (an Also reported row, its article). `O` opens the original
 // article. `N` takes the new stories. Tab and Shift-Tab step All | Local | Tech | AI | General. Esc
@@ -35,20 +42,21 @@ import {NEWS_SECTIONS} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent, RefObject} from 'react';
 import {timeZone} from '../../api/auth.ts';
-import {getCached, useResource, useResources} from '../../api/client.ts';
-import {articlePath, markSeen, NEWS_PATH, noteHere, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
+import {getCached, refresh, useResource, useResources} from '../../api/client.ts';
+import {articlePath, bringRecapBack, markSeen, NEWS_PATH, noteHere, openStory, putRecapAway, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
   ALSO_SHELF, dueSeen, emptySectionLine, isAlsoKey, keepsStory, NEWS_VIEWS, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moveStory, neighbourStory, nextSeen, outletLine,
   pageLayout, pillParts, recapDrawn, recapOnScreen, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState,
-  visitDots, sectionLayout, sight, storiesOnScreen, storyKey, unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
+  visitDots, sectionLayout, sight, storiesOnScreen, storyKey, unseen, unsortedLine, upcomingWhen, waiting, waitingSince, recapSince,
 } from '../../logic/news.ts';
+import {phoneSlide} from '../../logic/phone.ts';
 import {resultsLine} from '../../logic/search.ts';
 import type {HeldRecap, Layout, Sightings, VisitDots} from '../../logic/news.ts';
 import type {NewsView, Route} from '../../logic/route.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {motion, news as newsTiming} from '../../tokens.ts';
-import {Icon} from '../../ui/Icon.tsx';
+import {Icon, Mark} from '../../ui/Icon.tsx';
 import {Segmented, useListFade} from '../../ui/Segmented.tsx';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useMenuRef} from '../../ui/popover.ts';
@@ -58,7 +66,10 @@ import {navigate} from '../router.ts';
 import {SettingsLink} from '../search/AnswerCard.tsx';
 import {NoResults, SearchField} from '../search/Search.tsx';
 import {useNewsSearch} from '../search/state.ts';
-import {toastFailure} from '../toast.ts';
+import {showToast, toastFailure} from '../toast.ts';
+import {usePhone} from '../Phone.tsx';
+import {slide} from '../phone/slide.ts';
+import {TitleMenu} from '../phone/TitleMenu.tsx';
 import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
 import {NewsSkeleton} from '../states/Skeletons.tsx';
 import {NewsImage} from './NewsImage.tsx';
@@ -128,6 +139,7 @@ interface Hold {
 let lastOpened: number | null = null;
 
 export function NewsPage({route}: {route: NewsRoute}) {
+  const phone = usePhone();
   const now = useNow();
   const zone = timeZone();
   const {view} = route;
@@ -259,13 +271,14 @@ export function NewsPage({route}: {route: NewsRoute}) {
     setCursor(key);
     setOpenKey(key);
     setVisit(current => ({...current, dots: openedInVisit(current.dots, keyStory(key))}));
-    go({story: keyStory(key), article: null});
+    // On the phone the story slides in over the list.
+    slide(phoneSlide(phone, open, keyStory(key)), () => go({story: keyStory(key), article: null}));
   }
   function closeRecap() {
     setRecapAt(null);
   }
   function close() {
-    go({story: null, article: null});
+    slide(phoneSlide(phone, open, null), () => go({story: null, article: null}));
   }
   /** A story row's right-click: Open, Open at its leading outlet, Copy link. The cursor moves there and nothing opens, so nothing is seen. */
   function onContextMenu(event: ReactMouseEvent) {
@@ -284,7 +297,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   function openStoryOf(id: number) {
     const key = storyKeys.find(one => keyStory(one) === id);
     if (key) openAt(key);
-    else go({story: id, article: null});
+    else slide(phoneSlide(phone, open, id), () => go({story: id, article: null}));
   }
   function step(delta: 1 | -1) {
     const next = neighbourStory(storyKeys, shownOpenKey, delta);
@@ -320,7 +333,28 @@ export function NewsPage({route}: {route: NewsRoute}) {
   // The pane beside the list: the open story, else empty, with the recap on All.
   const pane = useEmptyPane(open !== null, PANE_PATHS);
   // The user on News, with the recap's stories once the pane shows them: fixed, and put away an hour after they leave.
-  useHere(recapNow.held !== undefined && recapOnScreen(drawn && pane.drawn, open !== null) ? recapShown?.ids ?? null : null);
+  // On the phone the recap heads the list, so it's on screen whenever it's drawn and no story covers it.
+  useHere(recapNow.held !== undefined && recapOnScreen(drawn && (phone || pane.drawn), open !== null) ? recapShown?.ids ?? null : null);
+
+  /**
+   * The phone's Done: the recap goes at once, held away for the visit, and the toast offers Undo once the
+   * server has it. Undo brings back the recap as it was and asks All again. A refusal brings it back.
+   */
+  function recapDone() {
+    const before = recapNow;
+    setRecapHold({...recapNow, held: null});
+    putRecapAway().then(done => {
+      showToast('Recap put away', {label: 'Undo', run: () => {
+        bringRecapBack(done.undo).then(() => {
+          setRecapHold(current => ({...current, held: before.held}));
+          return refresh(NEWS_PATH);
+        }).catch(toastFailure('Failed to bring the recap back'));
+      }});
+    }, (error: Error) => {
+      setRecapHold(current => ({...current, held: before.held}));
+      toastFailure('Failed to put the recap away')(error);
+    });
+  }
 
   // Attached again with each render as it's drawn, before any key can come. A passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
@@ -370,7 +404,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
     navigate({page: 'news', view: next, story: null, article: null});
   };
   const rowProps = {rows, cursor, openKey: shownOpenKey, arrived, now, zone, onPoint: (key: string) => key !== cursor && setCursor(key), onOpen: openAt};
-  const firstShelf = !showHeadlines;
+  // The phone's recap, heading All's list.
+  const listRecap = phone && recapShown ? recapShown : null;
+  const firstShelf = !showHeadlines && !listRecap;
   // The pane's trouble: sorting stopped, and each whole section stale or failing (as the list's lines say).
   const trouble: PaneTrouble[] = [
     ...(unsorted ? [{text: unsorted.text, glyph: 'warning' as const, ...(unsorted.settings ? {fix: {label: 'Settings › AI', run: () => openSettings('ai')}} : {})}] : []),
@@ -383,8 +419,11 @@ export function NewsPage({route}: {route: NewsRoute}) {
   return (
     <>
       <header className="hd">
-        <h1 className="hd-title">{searching ? 'Search' : 'News'}</h1>
-        {!searching && (
+        {phone && <Mark />}
+        {phone && !searching
+          ? <TitleMenu title={view === 'all' ? 'News' : SECTION_LABELS[view]} rows={VIEW_SEGMENTS.map(segment => ({label: segment.label, checked: segment.value === view, onChoose: () => switchTo(segment.value)}))} />
+          : <h1 className="hd-title">{searching ? 'Search' : 'News'}</h1>}
+        {!searching && !phone && (
           <Segmented value={view} onChange={switchTo} onTab={stepSection} segments={VIEW_SEGMENTS} />
         )}
         <span className="grow" />
@@ -415,7 +454,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
             </button>
           )}
           {searching ? (
-            <div className="list search-list" ref={list}>
+            <div className={phone ? 'list search-list ph-news' : 'list search-list'} ref={list}>
               {search.error && <div className="bar muted failing"><Icon name="warning" size={16} />{search.error}</div>}
               {search.out && search.out.total > 0 && (
                 <div className="bar muted">
@@ -428,12 +467,13 @@ export function NewsPage({route}: {route: NewsRoute}) {
               {search.out && search.out.total === 0 && <NoResults lead="No stories match" search={search} />}
             </div>
           ) : (
-          <div className={listArrived ? 'list sk-arrive' : 'list'} ref={list}>
+          <div className={[listArrived ? 'list sk-arrive' : 'list', phone && 'ph-news'].filter(Boolean).join(' ')} ref={list}>
             {/* Until its first answer, the list's skeleton in its rows' shapes, or why it didn't come. */}
             {!latest && (listFailed ? <LoadFailed what="News" loads={[listLoad]} /> : <NewsSkeleton blocks={view === 'all'} />)}
+            {listRecap && <ListRecap recap={listRecap} rows={rows} now={now} zone={zone} onOpen={openStoryOf} onDone={recapDone} />}
             {showHeadlines && (
               <>
-                <div className="nw-sec first"><Icon name="pending" size={14} />Unsorted<span className="day num">{waitingOut ? waitingOut.count.toLocaleString('en-US') : ''}</span></div>
+                <div className={listRecap ? 'nw-sec' : 'nw-sec first'}><Icon name="pending" size={14} />Unsorted<span className="day num">{waitingOut ? waitingOut.count.toLocaleString('en-US') : ''}</span></div>
                 {waitingOut?.articles.map(article => (
                   <a key={article.id} className="nw-raw" href={article.url} target="_blank" rel="noopener noreferrer">
                     <span className="hl">{article.headline}</span>
@@ -461,7 +501,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
                 <Fragment key={shelf.key}>
                   {section && <div className={header}><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</div>}
                   {line && <div className={`nw-line ${line.state}`}><Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} /><span className="num ell" data-tip={line.text}>{line.text}</span></div>}
-                  {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} />)}
+                  {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} adds={!phone} />)}
                   {/* Still sorting, its section's line turns as the first run's does; once sorted, a quiet section is a paper. */}
                   {empty && <div className="nw-empty">{firstRun ? <span className="spin"><Icon name="progress_activity" size={16} /></span> : <Icon name="newspaper" size={16} />}{empty}</div>}
                   {shelfRows.map((row, at) => (
@@ -479,7 +519,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
         {open !== null && (
           <StoryPane storyId={open} articleId={route.article} row={rows.get(open)} lookedAt={looked} now={now} timeZone={zone}
             canStep={{previous: neighbourStory(storyKeys, shownOpenKey, -1) !== null, next: neighbourStory(storyKeys, shownOpenKey, 1) !== null}}
-            onStep={step} onOriginal={openOriginal} onArticle={article => go({article})} onBack={() => go({article: null})} onClose={close} />
+            onStep={step} onOriginal={openOriginal} onArticle={article => go({article})} onBack={() => go({article: null})} onClose={close}
+            back={searching ? 'Search' : view === 'all' ? 'News' : SECTION_LABELS[view]} />
         )}
         {pane.drawn && <NewsDay settle={pane.settle} recap={recapShown} rows={rows} trouble={trouble} now={now} zone={zone} openAt={recapAt} onRecap={setRecapAt} />}
         {recapOpen.shown && (
@@ -578,11 +619,50 @@ function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zo
 }
 
 /**
+ * While you were away at the top of All, on the phone: its header with "since Mon 10:40 PM" and Done,
+ * then its stories as the pane draws them, each headline `ink` until opened, then `ink2`. Its rows
+ * aren't the list's (no `data-key`), so being on screen never sees them: only opening does.
+ */
+function ListRecap({recap, rows, now, zone, onOpen, onDone}: {
+  recap: HeldRecap;
+  rows: ReadonlyMap<number, StoryRowOut>;
+  now: number;
+  zone: string;
+  onOpen: (id: number) => void;
+  onDone: () => void;
+}) {
+  const since = recapSince(recap.since, now, zone);
+  return (
+    <section className="nw-recap" aria-label="While you were away">
+      <div className="nw-sec first">
+        <Icon name="history" size={14} /><span className="ell">While you were away</span>
+        {since && <span className="day num">{since}</span>}
+        <button className="btn ghost sm nw-recap-done" type="button" onClick={onDone}>Done</button>
+      </div>
+      {recap.ids.flatMap(id => rows.get(id) ?? []).map(row => {
+        const meta = rowMeta(row, now, zone, recap.named[row.id] ?? row.sections[0]!);
+        return (
+          <button key={row.id} type="button" className={row.state === 'seen' ? 'nw-recap-row seen' : 'nw-recap-row'} data-story={row.id} onClick={() => onOpen(row.id)}>
+            <span className="hl">{row.headline}</span>
+            <span className="nw-meta">
+              {[meta.section, meta.outlet, meta.age].filter(Boolean).map((part, at) => <Fragment key={at}>{at > 0 && <span>·</span>}<span className={at === 1 ? 'outlet' : undefined}>{part}</span></Fragment>)}
+            </span>
+          </button>
+        );
+      })}
+    </section>
+  );
+}
+
+/**
  * Upcoming (Tech): "Apple event · Tue Oct 20 · 10 AM", its outlet, and Add to calendar, which opens
  * Calendar's editor on it. The row opens a popover with the story that announced it, which opens
  * that story, so it can be read before it's added.
  */
-function Upcoming({upcoming, story, now, zone, onStory}: {upcoming: UpcomingOut; story: StoryRowOut | undefined; now: number; zone: string; onStory: (id: number) => void}) {
+function Upcoming({upcoming, story, now, zone, onStory, adds}: {upcoming: UpcomingOut; story: StoryRowOut | undefined; now: number; zone: string; onStory: (id: number) => void;
+  // Add to calendar, which the phone leaves out for now.
+  adds: boolean;
+}) {
   const when = upcomingWhen(upcoming, zone);
   const [open, setOpen] = useState(false);
   const menu = useMenuRef(open, () => setOpen(false));
@@ -603,7 +683,7 @@ function Upcoming({upcoming, story, now, zone, onStory}: {upcoming: UpcomingOut;
   return (
     <div className={open ? 'nw-up on' : 'nw-up'} onClick={() => setOpen(!open)}
       onContextMenu={event => openContextMenu(event, event.currentTarget, [
-        {id: 'event', label: 'Add to calendar', icon: 'event', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: upcoming.id}})},
+        ...(adds ? [{id: 'event', label: 'Add to calendar', icon: 'event' as const, run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: upcoming.id}})}] : []),
         {id: 'story', label: 'Open the story', icon: 'newspaper', run: () => onStory(upcoming.story_id)},
       ])}>
       <span className="ico"><Icon name="event" size={16} /></span>
@@ -611,13 +691,15 @@ function Upcoming({upcoming, story, now, zone, onStory}: {upcoming: UpcomingOut;
       <span className="ell" data-tip={`${upcoming.name} · ${when}`}><span className="what">{upcoming.name}</span> <span className="num">· {when}</span></span>
       <span className="grow" />
       <span className="nw-meta"><span className="outlet">{outletLine(upcoming.lead)}</span></span>
-      <button className="btn out sm" type="button"
-        onClick={event => {
-          event.stopPropagation();
-          navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: upcoming.id}});
-        }}>
-        <Icon name="event" size={16} />Add to calendar
-      </button>
+      {adds && (
+        <button className="btn out sm" type="button"
+          onClick={event => {
+            event.stopPropagation();
+            navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: upcoming.id}});
+          }}>
+          <Icon name="event" size={16} />Add to calendar
+        </button>
+      )}
       {open && (
         <div ref={menu} className="pop nw-up-pop" role="dialog" aria-label={`The story behind ${upcoming.name}`} onClick={event => event.stopPropagation()}>
           {shown ? (

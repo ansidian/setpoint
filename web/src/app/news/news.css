@@ -249,3 +249,60 @@
 .nw-row, .nw-lead, .nw-up, .nw-up-story, .nw-raw, .src-row { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .nw-row, .nw-lead, .nw-up { cursor: default; }
 
+
+/* ---------- The phone (below 640 px): one column ---------- */
+/* After the container queries above, which a 390 px list also meets. The list's 20 px gutter as the
+   Inbox's. A lead is its image across the column, then its headline, line and meta; a row is its
+   headline over its outlet and age, its thumbnail on the right. While you were away heads All with
+   Done. The story slides in over the list as the reader does (phone.css draws the slide). */
+@media (max-width: 639px) {
+  .nw-list { view-transition-name: ph-list; }
+  .nw-sec, .nw-state, .nw-line, .nw-empty, .nw-up, .nw-raw, .nw-also-hd { padding-left: 20px; padding-right: 16px; }
+  .nw-sec { height: 30px; font-size: 12px; }
+  .nw-state, .nw-line { min-height: 40px; font-size: 13px; }
+  .nw-state .btn { flex: none; }
+  .nw-raw { min-height: 44px; }
+  .nw-also .nw-raw { padding-left: 32px; }
+
+  .nw-lead, .nw-lead.noimg { grid-template-columns: 12px minmax(0, 1fr); grid-template-areas: "img img" "nd txt"; row-gap: 12px; column-gap: 8px; padding: 12px 16px 14px 8px; }
+  .nw-lead > .nw-ph { grid-area: img; width: auto; height: auto; aspect-ratio: 16 / 9; margin-left: 12px; }
+  .nw-lead > .nd { grid-area: nd; }
+  .nw-lead > .txt { grid-area: txt; }
+  .nw-lead .hl { font-size: 18px; line-height: 1.3; }
+  .nw-lead .sm { font-size: 14px; }
+
+  .nw-row { grid-template-columns: 12px minmax(0, 1fr) 72px; grid-template-areas: "nd txt img" "nd side img"; align-items: start; column-gap: 8px; row-gap: 4px; padding: 10px 16px 10px 8px; min-height: 68px; }
+  .nw-row > .nd { grid-area: nd; height: 20px; }
+  .nw-row > .txt { grid-area: txt; }
+  .nw-row > .side { grid-area: side; flex-direction: row; align-items: center; gap: 0; min-width: 0; }
+  .nw-row > .side > .nw-meta + .nw-meta::before { content: "·"; margin: 0 6px; color: var(--ink3); }
+  .nw-row > :last-child { grid-area: img; margin-left: 4px; }
+  .nw-row .hl { font-size: 15px; line-height: 20px; }
+  .nw-row .nw-meta, .nw-lead .nw-meta { font-size: 12.5px; }
+
+  .nw-up { height: auto; min-height: 52px; }
+  /* The pill without its key: a tap takes it. */
+  .nw-pill { padding-right: 12px; }
+  .nw-pill .kbd { display: none; }
+
+  /* While you were away: its header with Done, its stories as the pane's rows. */
+  .nw-recap { display: flex; flex-direction: column; flex: none; border-bottom: 1px solid var(--hair); }
+  .nw-recap .nw-sec { padding-right: 8px; }
+  .nw-recap .nw-sec .day { margin-left: auto; }
+  .nw-recap-done { flex: none; height: 26px; padding: 0 10px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); }
+  .nw-recap-row { display: flex; flex-direction: column; gap: 3px; padding: 10px 16px 10px 20px; text-align: left; flex: none; }
+  .nw-recap-row .hl { color: var(--ink); font-size: 15px; font-weight: 500; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color var(--dur-fast) var(--ease); }
+  .nw-recap-row.seen .hl { color: var(--ink2); font-weight: 400; }
+
+  /* Taps, not a pointer or keys: no cursor stays on a row, and a tap lands at once in `sub2`. */
+  .nw-row.cur:not(.open), .nw-lead.cur:not(.open), .nw-also .nw-raw.cur { background: none; }
+  .nw-row, .nw-lead, .nw-up, .nw-raw, .nw-recap-row, .src-row { transition: background-color var(--dur-medium) var(--ease); }
+  :is(.nw-row, .nw-lead, .nw-up, .nw-raw, .nw-recap-row, .src-row):active { background: var(--sub2); transition-duration: 0s; }
+
+  /* The story and article at the phone's reading size, 20 px in. */
+  .st-head, .ar-head { padding: 10px 20px 12px; }
+  .st-body, .ar-body { padding: 16px 20px 24px; }
+  .st-img { margin: 0 20px; height: auto; aspect-ratio: 16 / 9; }
+  .st-sum { font-size: 15px; }
+  .nw-up-pop { left: 12px; width: calc(100% - 24px); }
+}

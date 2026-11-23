@@ -5,6 +5,9 @@
 // opening its article in the same pane. An article shows Back to story `Esc` and Open at its outlet
 // `O`, its head, image and extracted text. One whose page can't be read here (board 26b) shows its
 // feed summary under a note with Read at, then Also in this story.
+//
+// On the phone the pane takes the screen over the list (phone.css), and its top bar is the reader's:
+// Back, named for where it goes (the list, or the story from an article), and Open at the outlet.
 import type {ArticleOut, StoryOut, StoryRowOut, StorySourceOut} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
 import type {CSSProperties} from 'react';
@@ -16,13 +19,14 @@ import {articleNote, dayWord, factsSince, foldFacts, foldLine, initials, SECTION
 import {Icon} from '../../ui/Icon.tsx';
 import {copyText, openContextMenu} from '../ContextMenu.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
+import {usePhone} from '../Phone.tsx';
 import {PaneEdge} from '../Reader.tsx';
 import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
 import type {Load} from '../states/Loading.tsx';
 import {BodySkeleton, StoryBodySkeleton} from '../states/Skeletons.tsx';
 import {NewsImage} from './NewsImage.tsx';
 
-export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, canStep, onStep, onOriginal, onArticle, onBack, onClose}: {
+export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, canStep, onStep, onOriginal, onArticle, onBack, onClose, back}: {
   storyId: number;
   articleId: number | null;
   // Its row in the list, so the tools are right before the story itself has loaded.
@@ -38,7 +42,10 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
   onBack: () => void;
   // Closes the pane: the compact tier's Back, where the pane covers the list.
   onClose: () => void;
+  // The phone's Back: what the list it goes back to is called.
+  back: string;
 }) {
+  const phone = usePhone();
   const width = useReadingPaneWidth();
   const {data: loaded} = useResource<StoryOut>(storyPath(storyId));
   const story = loaded?.id === storyId ? loaded : undefined;
@@ -49,7 +56,8 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
   if (articleId !== null) {
     return (
       <section className="pane" aria-label="Article" style={style}>
-        <PaneEdge width={width} />
+        {!phone && <PaneEdge width={width} />}
+        {phone && <PhoneTop back="Story" outlet={article?.outlet ?? null} onBack={onBack} onOriginal={onOriginal} />}
         <div className="rd-tools">
           <button className="tool" type="button" onClick={onBack}><Icon name="arrow_back" />Back to story<span className="kbd">Esc</span></button>
           <span className="grow" />
@@ -65,7 +73,8 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
   const lead = story?.lead ?? row?.lead;
   return (
     <section className="pane" aria-label="Story" style={style}>
-      <PaneEdge width={width} />
+      {!phone && <PaneEdge width={width} />}
+      {phone && <PhoneTop back={back} outlet={lead?.outlet ?? null} onBack={onClose} onOriginal={onOriginal} />}
       <div className="rd-tools">
         <button className="ibtn rd-back" type="button" aria-label="Back to the list" data-tip="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
         {lead && <button className="tool" type="button" data-hint="o" onClick={onOriginal}><Icon name="open_in_new" />Open at {lead.outlet}<span className="kbd">O</span></button>}
@@ -77,6 +86,17 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
         <StoryContent storyId={storyId} row={row} lookedAt={lookedAt} now={now} timeZone={timeZone} onArticle={onArticle} />
       </div>
     </section>
+  );
+}
+
+/** The phone's top bar: Back, and Open at the outlet once it's known. */
+function PhoneTop({back, outlet, onBack, onOriginal}: {back: string; outlet: string | null; onBack: () => void; onOriginal: () => void}) {
+  return (
+    <div className="ph-top">
+      <button className="btn quiet ph-back" type="button" onClick={onBack}><Icon name="chevron_left" size={20} />{back}</button>
+      <span className="grow" />
+      {outlet && <button className="ibtn ph-icon" type="button" aria-label={`Open at ${outlet}`} onClick={onOriginal}><Icon name="open_in_new" size={20} /></button>}
+    </div>
   );
 }
 

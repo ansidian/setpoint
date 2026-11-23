@@ -1,7 +1,7 @@
 // The phone's shell (board 21): below 640 px the same pages and routes in one
 // column, with Inbox, Agenda and News in a tab bar at the bottom in place of the sidebar. Settings stays on
-// the desktop: a Settings link (a reconnect alert's) says so here, with Sign out. News's page says
-// it's on the desktop until the phone reads it.
+// the desktop: a Settings link (a reconnect alert's) says so here, with Sign out. News is its own
+// page's (news/NewsPage.tsx), in one column.
 import type {MailCountsOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {useResource} from '../api/client.ts';
@@ -82,21 +82,6 @@ export function PhoneSettings() {
       <div className="content ph-settings">
         <p>Settings is on the desktop</p>
         <button className="btn ghost" type="button" onClick={askSignOut}><Icon name="door_open" size={17} />Sign out</button>
-      </div>
-    </>
-  );
-}
-
-/** News's page on the phone, until the phone reads it. */
-export function PhoneNews() {
-  return (
-    <>
-      <header className="hd">
-        <Mark />
-        <h1 className="hd-title">News</h1>
-      </header>
-      <div className="content ph-settings ph-news">
-        <p>News is on the desktop</p>
       </div>
     </>
   );

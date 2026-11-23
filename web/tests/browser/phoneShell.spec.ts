@@ -2,7 +2,7 @@
 // Northwind, the reader on it, the agenda), the one column and its tab bar, and every kind of deep
 // link an ntfy notification carries (`deepLinkPath`): an email, an event, one occurrence of a
 // recurring event, a task's day, and a Settings page. Sign-in's fields are 16 px, so iOS doesn't
-// zoom into them. News's tab says it's on the desktop, and the web manifest opens Setpoint standalone.
+// zoom into them. The web manifest opens Setpoint standalone (News is phoneNews.spec.ts's).
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
@@ -177,14 +177,10 @@ test('the tab bar: Inbox is badged with Attention\'s count on another page, foll
   }
 });
 
-test('the News tab says News is on the desktop, and the web manifest opens the Inbox standalone with the home screen icon', async () => {
+test('the web manifest opens the Inbox standalone with the home screen icon', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
-    await page.locator('.ph-tab', {hasText: 'News'}).tap();
-    await page.locator('.ph-news', {hasText: 'News is on the desktop'}).waitFor();
-    assert.equal(new URL(page.url()).pathname, '/news');
-    assert.equal(await page.locator('.ph-tab.on').textContent(), 'News');
     // A missing file would be the app's page: the manifest is read as one, and so is its icon.
     const href = await page.locator('link[rel="manifest"]').getAttribute('href');
     const manifest = await page.request.get(`${setpoint.base}${href}`);

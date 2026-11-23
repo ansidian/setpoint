@@ -717,16 +717,3 @@ test('a narrow list: with a story open at 1280 × 800, Upcoming keeps everything
     await setpoint.stop();
   }
 });
-
-test('the phone: News isn\'t in the navigation, and its address opens the Inbox', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('iphone');
-    await page.goto(`${setpoint.base}/news`);
-    await page.waitForURL(/\/inbox$/);
-    assert.deepEqual(await page.locator('.ph-tab').allTextContents(), ['Inbox', 'Agenda']);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});

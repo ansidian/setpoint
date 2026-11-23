@@ -6,7 +6,7 @@
 // - Jobs with an application open, with a Needs you item's email open, and with its menus open
 //   (Assign to…, and More with Merge with…'s submenu)
 // - every Settings page, Jobs with its history pass running and the AI down, and Jobs off
-// - the phone's Inbox (Jobs isn't on the phone).
+// - the phone's Inbox, and its News with a story open (Jobs isn't on the phone).
 // Settings skips 1100, because its fixed modal draws there as at the target. Assign to…, More, the
 // history pass and Jobs off stay at the target, because they don't change with width.
 // On each, at rest: nothing scrolls sideways, no text is cut by an overflow: hidden box (an ellipsis
@@ -319,16 +319,23 @@ test('the main pages keep to their boxes in Night at their widths, and axe finds
   }
 });
 
-test('the phone\'s Inbox keeps to its boxes in Night, and axe finds nothing in Night or Light', async () => {
+test('the phone\'s Inbox and News keep to their boxes in Night, and axe finds nothing in Night or Light', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('iphone');
     const heard = listen(setpoint, page);
-    const route = {name: 'the phone\'s Inbox', path: '/inbox', shows: '.list .row'};
-    await visit(page, setpoint.base, route);
+    const {stories} = await setpoint.api<NewsSectionOut>('GET', '/news/sections/local');
+    const story = stories.find(one => one.headline.startsWith('Brush fire near the 210'))!.id;
     const found: string[] = [];
-    for (const theme of THEMES) found.push(...await axe(page, setpoint, route, theme));
-    found.push(...await sweepAt(page, setpoint, route, SIZES.iphone.width, heard));
+    for (const route of [
+      {name: 'the phone\'s Inbox', path: '/inbox', shows: '.list .row'},
+      {name: 'the phone\'s News', path: '/news', shows: '.nw-recap .nw-recap-row'},
+      {name: 'the phone\'s News, a story open', path: `/news/story/${story}`, shows: '.pane .rd-subj'},
+    ]) {
+      await visit(page, setpoint.base, route);
+      for (const theme of THEMES) found.push(...await axe(page, setpoint, route, theme));
+      found.push(...await sweepAt(page, setpoint, route, SIZES.iphone.width, heard));
+    }
     assert.deepEqual(found, []);
   } finally {
     await setpoint.stop();
