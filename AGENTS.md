@@ -51,9 +51,7 @@ Todoist tasks.
   removed when it stops.
 - Don't add launch.json entries or `data/` copies. A check that needs its own instance runs it from
   your scratchpad and leaves nothing behind.
-- Pairing it is a session's job: when the Simulator's app says Pair Again, open the link
-  `npm run try` prints; pair the Chrome extension only when a check needs it (extension/README.md).
-  The owner's own extension and phone stay on prod.
+- Pair the Chrome extension only when a check needs it (extension/README.md).
 
 ## Tests own behaviour
 

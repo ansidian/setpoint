@@ -1,6 +1,6 @@
 // The small ? at the editor's line's trailing edge, and "What the line reads" it opens
-// under it: one example of each kind of phrase and what it reads (shared/compose/reference.json, the
-// iPhone's words too). The phrases should need no learning, and this is the backup. Esc closes it and
+// under it: one example of each kind of phrase and what it reads (shared/compose/reference.json). The
+// phrases should need no learning, and this is the backup. Esc closes it and
 // not the editor, and focus goes back to the ?. A press outside it, or focus leaving it, closes it too.
 import {useEffect, useRef, useState} from 'react';
 import {LINE_REFERENCE} from '../../logic/lineReference.ts';

@@ -179,7 +179,7 @@ export function fromItem(item: ItemOut, timeZone: string): Draft {
 
 /**
  * An email's or a keynote's proposal as a new draft: its title in the line as words only,
- * none of them read, as the iPhone's typeTitle. Its day, time, place, calendar and project
+ * none of them read. Its day, time, place, calendar and project
  * are what the line falls back to, so the line still reads what's typed after it. With no day from
  * the email it starts with none, which Create then asks for.
  */

@@ -158,7 +158,7 @@ export const recapSchema = z.strictObject({
 export type RecapOut = z.infer<typeof recapSchema>;
 
 /**
- * The iPhone app's Missed strip at the top of All, fed the recap until setpoint-ios has its own:
+ * The iPhone app's Missed strip at the top of All, fed the recap:
  * "11 stories you missed since Mon".
  */
 export const missedStripSchema = z.strictObject({

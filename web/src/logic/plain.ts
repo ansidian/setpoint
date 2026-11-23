@@ -1,6 +1,6 @@
-// A lit phrase clicked (or ⌥⌫ with the caret in it) is title words again, as the
-// iPhone's tap is (setpoint-ios QuickAddDraft's `makePlain`, the same rules). The editor keeps the
-// line's plain spans and hides their words from the parser, so `parseTitle` needs nothing new.
+// A lit phrase clicked or tapped (or ⌥⌫ with the caret in it) is title words again. The editor
+// keeps the line's plain spans and hides their words from the parser, so `parseTitle` needs nothing
+// new.
 import type {Mark} from './compose.ts';
 
 /** Part of the line, `end` exclusive (UTF-16 offsets, as a Mark's). */

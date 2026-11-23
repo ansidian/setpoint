@@ -10,7 +10,7 @@ export interface ReferenceRow {
   kind: 'event' | 'task';
   // What it reads, in the editor's own words.
   reads: string;
-  // The phrase in the example kept as words (a click, ⌥⌫, or the iPhone's tap).
+  // The phrase in the example kept as words (a click, a tap or ⌥⌫).
   plain?: string;
 }
 

@@ -70,8 +70,8 @@ export const searchInput = z.strictObject({
   chips: z.array(searchChipSchema).max(MAX_SEARCH_CHIPS).default([]),
   // The sidebar's account, when search runs inside one (as an account chip would).
   account_id: id.optional(),
-  // Mail the user sent to others, only when asked: the iPhone app never asks, so its answers stay as
-  // they were. Mail to yourself is received mail, and is found either way.
+  // Mail the user sent to others, only when asked. Mail to yourself is received mail, and is found
+  // either way.
   sent: z.enum(SEARCH_SENT).optional(),
   limit: z.int().min(1).max(200).default(50),
   // Paging.

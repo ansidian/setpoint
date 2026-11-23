@@ -669,7 +669,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .toast.wraps .tb { align-self: center; }
 /* The comma that joins them, for a reader that hears them as one line. */
 .toast .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-/* The phone's toast as it was (its layout is frozen): `cardOn`, 14 px apart, its tone's 16 px glyph
+/* The phone's toast: `cardOn`, 14 px apart, its tone's 16 px glyph
    bare, and a line with an action shows its time draining as a 2 px hairline along its bottom. */
 .toast.ph { height: 40px; gap: 14px; padding: 0 6px 0 16px; background: var(--cardOn); }
 .toast.ph:not(:has(button)) { padding-right: 16px; }

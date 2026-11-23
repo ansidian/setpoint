@@ -3,8 +3,8 @@
 // during the hold still sends it, once. Undo within the hold takes the job back and returns the
 // draft as it was. Once the worker has claimed the job (src/sending/worker.ts), Undo is refused.
 //
-// Sending stays outside the command layer: a command's kind is a pinned enum in the iPhone app's
-// contract, and a send has no mirror row to change up front or Move back.
+// Sending stays outside the command layer: a send has no mirror row to change up front or Move
+// back.
 import {SEND_HOLD_MS} from '@setpoint/shared';
 import type {DraftOut} from '@setpoint/shared';
 import {and, eq} from 'drizzle-orm';

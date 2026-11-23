@@ -1,6 +1,4 @@
-// A lit phrase made title words again, as tables. The rules are the iPhone's
-// (setpoint-ios QuickAddDraft: `type`, `makePlain`, `masked`, `unmasked`). Today is the seed's Wed,
-// Oct 7, 2026.
+// A lit phrase made title words again, as tables. Today is the seed's Wed, Oct 7, 2026.
 import {describe, expect, test} from 'vitest';
 import {parseTitle} from '../src/logic/compose.ts';
 import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../src/logic/plain.ts';

@@ -33,7 +33,7 @@ const stateOf = async (setpoint: Setpoint, id: number) => (await setpoint.api<St
 
 /**
  * All without its recap, as it is once an hour away has put it away. This is for the checks about
- * the blocks under it, whose rows it would push down. The route stays for the iPhone app.
+ * the blocks under it, whose rows it would push down.
  */
 const putRecapAway = (setpoint: Setpoint) => setpoint.api('POST', '/news/recap/done');
 

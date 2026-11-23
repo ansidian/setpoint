@@ -6,7 +6,7 @@ import {usePhone} from './Phone.tsx';
 import {dismissToast, useToast} from './toast.ts';
 import type {Toast} from './toast.ts';
 
-// The phone keeps its toast as it was (its layout is frozen): these tones' glyphs alone, bare.
+// The phone's toast: these tones' glyphs alone, bare.
 const PHONE_TONES = {done: 'done', read: 'done', gone: 'gone', failed: 'failed', pinned: 'pinned'} as const;
 const PHONE_GLYPHS = {done: 'check', gone: 'delete', failed: 'error', pinned: 'keep'} as const;
 // The time ring's radius in its 22 px disc, its 1.5 px stroke inside the disc's edge.
@@ -118,7 +118,7 @@ function Pill({toast}: {toast: Toast}) {
    * past SWIPE_PX, it goes. Short of it (or cancelled), it snaps back.
    */
   const press = (down: ReactPointerEvent) => {
-    // The phone's toast doesn't swipe (the phone's layout is frozen).
+    // The phone's toast doesn't swipe.
     if (down.button !== 0 || toast.leaving || phone) return;
     const pointer = down.pointerId;
     const from = down.clientX;

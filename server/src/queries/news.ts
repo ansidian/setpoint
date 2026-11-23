@@ -237,8 +237,7 @@ export function articleDetail(store: Store, articleId: number): ArticleOut {
 }
 
 /**
- * The iPhone app's Catch up, until setpoint-ios has its own recap: the recap's stories by the
- * local day each left the page, newest day first, biggest first within it.
+ * The iPhone app's Catch up: the recap's stories by the local day each left the page, newest day first, biggest first within it.
  */
 export function missed(store: Store): MissedOut {
   const recap = rankedRecap(store);

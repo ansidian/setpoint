@@ -1,6 +1,6 @@
 // How a draft starts: who a reply goes to, its subject and the address it is written from. Pure, so
-// the web and the iPhone app get the same draft from the server, and the web knows from the same
-// rule whether an email has anyone for Reply all.
+// the server fills the draft and the web knows from the same rule whether an email has anyone for
+// Reply all.
 //
 // - Reply goes to Reply-To when the sender set one, else to the sender. A reply to mail the user
 //   sent goes back to its own recipients, as Gmail's does.
