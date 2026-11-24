@@ -17,8 +17,8 @@ import {findAll, removeElement, replaceElement} from 'domutils';
 import {parse} from 'parse5';
 import {adapter} from 'parse5-htmlparser2-tree-adapter';
 
-/** The page's base style, before the email's own: the board's `.paper` (Helvetica, 13 / 1.35, `#1d1f22` on white). */
-export const FRAME_STYLE = 'html, body { margin: 0; padding: 0; background: #ffffff; } body { font: 13px/1.35 Helvetica, Arial, sans-serif; color: #1d1f22; -webkit-font-smoothing: antialiased; overflow-wrap: break-word; } img { max-width: 100%; }';
+/** The page's base style, before the email's own: the board's `.paper` (Helvetica, 13 / 1.35, `#1d1f22` on white), with iOS text autosizing off: a page zoomed to fit keeps its text at the size its own line heights expect. */
+export const FRAME_STYLE = 'html, body { margin: 0; padding: 0; background: #ffffff; } body { font: 13px/1.35 Helvetica, Arial, sans-serif; color: #1d1f22; -webkit-font-smoothing: antialiased; overflow-wrap: break-word; } img { max-width: 100%; } html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }';
 
 /**
  * The page's own box, after the email's styles. The frame is as tall as its page, so a page

@@ -136,6 +136,12 @@ describe('remote content', () => {
     expect(page).toContain(`<style>html, body { height: 100vh !important; display: inline-flex !important; }</style><style>${PAGE_BOX}</style></head>`);
   });
 
+  test('the page turns text autosizing off, so a page zoomed to fit keeps its text at the size its line heights expect', () => {
+    const head = emailPage({styles: [], body: '<p>Hi</p>'}).split('</head>')[0];
+    expect(head).toMatch(/html \{[^}]*-webkit-text-size-adjust: 100%;[^}]*\}/);
+    expect(head).toMatch(/html \{[^}]*[^-]text-size-adjust: 100%;[^}]*\}/);
+  });
+
   test('the page ends with the measuring script, after the email, and nothing else runs', () => {
     const page = emailPage(safeEmail('<p>Hi</p><script>steal()</script>', false));
     expect(page.endsWith(`<p>Hi</p><script>${MEASURE_SCRIPT}</script></body></html>`)).toBe(true);
