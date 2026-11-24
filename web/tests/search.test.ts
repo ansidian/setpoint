@@ -1,12 +1,12 @@
 // Search, the Answer card and the proposal card's rules as tables: highlighted runs, reasons, the
 // results line, what Alfred is asked, what the reader highlights, and how a proposal's time reads.
 // For calendar results: Upcoming then Past, the row's day, and its line with a series' rule.
-import type {AnswerOut, CalendarOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} from '@setpoint/shared';
+import type {AnswerOut, CalendarOut, ItemOut, MatchReasonOut, ProposalOut, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   operatorAt, operatorMarks, operatorValues, withOperatorPick,
-  FOLD_OPENS_UNDER, answerItemWhen, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, prefillMissLine, proposalHome, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, answerItemWhen, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, prefillMissLine, proposalHome, proposalSummary, replacedTurns, shownProposals, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {Run} from '../src/logic/search.ts';
 
@@ -592,5 +592,45 @@ describe('the field\'s operators', () => {
     ['has:', 4, 'attachment', 'has:attachment ', 15],
   ])('a pick in %s', (text, caret, value, next, at) => {
     expect(withOperatorPick(text, operatorAt(text, caret)!, value)).toEqual({text: next, caret: at});
+  });
+});
+
+describe('proposalSummary: Alfred\'s chip\'s line for what he set beyond the title, day, times and place', () => {
+  const item = {kind: 'event' as const, calendar_id: 2, title: 'Dentist', all_day: false, starts_at: '2026-10-13T22:00:00.000Z', ends_at: '2026-10-13T23:00:00.000Z', start_date: null, end_date: null, due_date: null, due_at: null, time_zone: zone, place: null, project: null};
+  const proposal = (fields: Partial<ProposalOut['item']>, alfred: ProposalOut['alfred']): ProposalOut => ({kind: 'event', message_id: null, from_email: [], conflict: null, item: {...item, ...fields}, ...(alfred ? {alfred} : {})});
+  test.each<[string, ProposalOut, {now: string; was: string | null} | null]>([
+    ['nothing more set: no line', proposal({}, undefined), null],
+    ['his calendar, colour and description aren\'t on it', proposal({colour: 'alert', description: 'Bring the card'}, ['calendar', 'colour', 'description']), null],
+    ['repeat, reminders and Time to Leave, in that order', proposal({recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=TU', reminders: [30, 10], leave_reminder: true}, ['repeat', 'reminders', 'leave_reminder']), {now: 'Weekly on Tuesday · 10 min, 30 min before · Time to Leave', was: null}],
+    ['only what he set', proposal({recurrence: 'RRULE:FREQ=DAILY', reminders: [30]}, ['reminders']), {now: '30 min before', was: null}],
+    ['a task\'s repeat in Todoist\'s words', {...proposal({}, ['repeat']), kind: 'task', item: {...item, kind: 'task', starts_at: null, ends_at: null, due_date: '2026-10-09', repeat: 'every fri'}}, {now: 'Every Friday', was: null}],
+  ])('%s', (_name, given, expected) => {
+    expect(proposalSummary(given, zone)).toEqual(expected);
+  });
+
+  test('a change says the fields it changes as they become, and as they were', () => {
+    const was = {reminders: [10], recurrence: null, leave_reminder: false} as unknown as ItemOut;
+    const change = {...proposal({reminders: [60], recurrence: null}, undefined), change: {item: {...item, ...was} as ItemOut, changes: {reminders: [60]}, scope: 'this' as const}};
+    expect(proposalSummary(change, zone)).toEqual({now: '1 hour before', was: '10 min before'});
+    const cleared = {...change, item: {...change.item, reminders: []}, change: {...change.change, changes: {reminders: []}}};
+    expect(proposalSummary(cleared, zone)).toEqual({now: 'No reminders', was: '10 min before'});
+  });
+});
+
+describe('shownProposals and replacedTurns: a later proposal replaces an earlier one not created or saved', () => {
+  const dentist = {kind: 'event', message_id: null, from_email: [], conflict: null, item: {title: 'Dentist'}} as unknown as ProposalOut;
+  const turn = (turnId: number, proposals: ProposalOut[]) => ({turn_id: turnId, proposals} as AnswerOut);
+  const shown = (turns: AnswerOut[], acted: string[] = []) => shownProposals(turns, new Set(acted)).map(list => list.map(one => `${one.turn_id}:${one.index}`));
+  test.each<[string, AnswerOut[], string[], string[][], boolean[]]>([
+    ['one proposal stands', [turn(1, [dentist])], [], [['1:0']], [false]],
+    ['a later proposal replaces it', [turn(1, [dentist]), turn(2, [dentist])], [], [[], ['2:0']], [true, false]],
+    ['a later answer without one leaves it', [turn(1, [dentist]), turn(2, [])], [], [['1:0'], []], [false, false]],
+    ['created here, it isn\'t replaced (its chip has folded away)', [turn(1, [dentist]), turn(2, [dentist])], ['1:0'], [['1:0'], ['2:0']], [false, false]],
+    ['read back replaced, it\'s gone', [turn(1, [{...dentist, replaced: true}]), turn(2, [dentist])], [], [[], ['2:0']], [true, false]],
+    ['read back created, it\'s gone and its line isn\'t muted', [turn(1, [{...dentist, acted: true}]), turn(2, [dentist])], [], [[], ['2:0']], [false, false]],
+    ['a turn without one isn\'t muted', [turn(1, [])], [], [[]], [false]],
+  ])('%s', (_name, turns, acted, expected, muted) => {
+    expect(shown(turns, acted)).toEqual(expected);
+    expect(replacedTurns(turns, new Set(acted))).toEqual(muted);
   });
 });

@@ -10,6 +10,7 @@ import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {alfredStep} from '../src/alfred/ask.ts';
 import {fenced} from '../src/alfred/prompt.ts';
+import {calendarNamed, colourNamed} from '../src/alfred/naming.ts';
 import {runTool} from '../src/alfred/tools.ts';
 import * as t from '../src/db/schema.ts';
 import {searchCalendar} from '../src/search/calendar.ts';
@@ -410,6 +411,186 @@ describe('Alfred and the calendar', () => {
     expect(steps).toEqual([null, {tool: 'search_calendar', query: 'dinner with sam'}, {tool: 'propose_change'}]);
     expect(out.body.proposals).toEqual([expect.objectContaining({message_id: null, change: expect.objectContaining({scope: 'this', changes: expect.objectContaining({starts_at: '2026-10-11T02:00:00.000Z'})})})]);
     expect(out.body.proposals[0].change.item).toMatchObject({id: dinner.id, starts_at: dinner.startsAt});
+  });
+});
+
+describe('Alfred sets the rest of the editor\'s fields', () => {
+  const toolContext = (w: World, questions: string[]) => ({store: w.store, seen: new Set<number>(), read: [], searched: [] as string[], questions, proposals: [] as ProposalOut[], items: new Map<string, AnswerItemOut>()});
+  const calendarId = (w: World, name: string) => w.store.db.select().from(t.calendars).where(eq(t.calendars.name, name)).get()!.id;
+
+  test.each([
+    ['Classes', 'Classes'],
+    ['classes', 'Classes'],
+    ['class', 'Classes'],
+    ['jobs', 'Jobs'],
+  ])('the calendar named %s is %s', (asked, name) => {
+    const w = world({seed: true});
+    expect(calendarNamed(w.store, asked)).toEqual({value: calendarId(w, name)});
+  });
+
+  test.each([
+    // Several hold it, none is called it, or the one called it is read-only: the list to ask from.
+    ['o', '"o" could be Personal or Jobs. Ask the user which they mean.'],
+    ['Gym', 'No calendar is called "Gym". Ask the user which they mean: Personal, Classes, Jobs.'],
+    ['holidays', 'No calendar is called "holidays". Ask the user which they mean: Personal, Classes, Jobs.'],
+  ])('the calendar named %s is refused', (asked, error) => {
+    expect(calendarNamed(world({seed: true}).store, asked)).toEqual({error});
+  });
+
+  test('an exact name beats a partial one, and a name on two accounts is told apart by the account', () => {
+    const w = world({seed: true});
+    const personal = w.store.db.select().from(t.calendars).where(eq(t.calendars.name, 'Personal')).get()!;
+    const jobs = w.store.db.select().from(t.calendars).where(eq(t.calendars.name, 'Jobs')).get()!;
+    const travel = w.store.db.insert(t.calendars).values({provider: 'google', providerId: 'jobs-travel', accountId: jobs.accountId, name: 'Jobs travel', position: 9, accessRole: 'owner'}).returning().get();
+    expect(calendarNamed(w.store, 'jobs')).toEqual({value: jobs.id});
+    expect(calendarNamed(w.store, 'travel')).toEqual({value: travel.id});
+    w.store.db.insert(t.calendars).values({provider: 'google', providerId: 'classes-2', accountId: jobs.accountId, name: 'Classes', position: 10, accessRole: 'writer'}).run();
+    expect(calendarNamed(w.store, 'classes')).toEqual({error: '"classes" could be Classes (Personal) or Classes (Jobs). Ask the user which they mean.'});
+    // An existing event moves within its account.
+    expect(calendarNamed(w.store, 'classes', personal.accountId)).toEqual({value: calendarId(w, 'Classes')});
+  });
+
+  test.each([
+    ['Tomato', {value: 'alert'}],
+    ['tomato', {value: 'alert'}],
+    ['blueb', {value: 'cool'}],
+    ['Graphite', {value: 'ink2'}],
+    ['an', {error: '"an" could be Banana or Tangerine. Ask the user which they mean.'}],
+    ['red', {error: 'No colour is called "red". Ask the user which they mean: Lavender, Sage, Grape, Flamingo, Banana, Tangerine, Peacock, Graphite, Blueberry, Basil, Tomato.'}],
+  ])('the colour named %s', (asked, named) => {
+    expect(colourNamed(asked)).toEqual(named);
+  });
+
+  test('propose_item sets a description, reminders, a named calendar and colour, Time to Leave and a weekly repeat, and says which it set', () => {
+    const w = world({seed: true});
+    const question = 'add dentist Tuesday at 3 at Bright Smile, remind me 30 min before, on Classes, in Tomato, weekly, leave on time, note: bring the insurance card';
+    const context = toolContext(w, [question]);
+    const out = runTool(context, 'propose_item', {
+      owner_instruction: question, kind: 'event', title: 'Dentist', date: '2026-10-13', start_time: '15:00', place: 'Bright Smile',
+      reminders: [30], calendar: 'classes', colour: 'Tomato', leave_reminder: true, repeat: 'weekly', description: 'Bring the insurance card',
+    });
+    expect(JSON.parse(out.output)).toMatchObject({ready: true, title: 'Dentist'});
+    const [proposal] = context.proposals;
+    expect(proposal!.item).toMatchObject({
+      calendar_id: calendarId(w, 'Classes'), reminders: [30], colour: 'alert', leave_reminder: true, recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=TU',
+      description: 'Bring the insurance card',
+    });
+    expect(proposal!.alfred).toEqual(['repeat', 'reminders', 'leave_reminder', 'calendar', 'colour', 'description']);
+  });
+
+  test('a proposal Alfred sets nothing more on is as before: no reminders (Settings\' default), no repeat, nothing listed', () => {
+    const w = world({seed: true});
+    const context = toolContext(w, ['add dentist Tuesday at 3']);
+    runTool(context, 'propose_item', {owner_instruction: 'add dentist Tuesday at 3', kind: 'event', title: 'Dentist', date: '2026-10-13', start_time: '15:00'});
+    const [proposal] = context.proposals;
+    expect(proposal!.alfred).toBeUndefined();
+    expect(Object.keys(proposal!.item)).not.toEqual(expect.arrayContaining(['reminders']));
+    expect(proposal!.item).not.toHaveProperty('recurrence');
+  });
+
+  test('an event over several days: all day to its last day (exclusive end), or timed to its end time on that day', () => {
+    const w = world({seed: true});
+    const question = 'add a conference Oct 20 to 22';
+    const allDay = toolContext(w, [question]);
+    runTool(allDay, 'propose_item', {owner_instruction: question, kind: 'event', title: 'Conference', date: '2026-10-20', end_date: '2026-10-22'});
+    expect(allDay.proposals[0]!.item).toMatchObject({all_day: true, start_date: '2026-10-20', end_date: '2026-10-23'});
+    expect(allDay.proposals[0]!.alfred).toEqual(['days']);
+    const timed = toolContext(w, [question]);
+    runTool(timed, 'propose_item', {owner_instruction: question, kind: 'event', title: 'Conference', date: '2026-10-20', start_time: '09:00', end_time: '17:00', end_date: '2026-10-22'});
+    expect(timed.proposals[0]!.item).toMatchObject({all_day: false, starts_at: '2026-10-20T16:00:00.000Z', ends_at: '2026-10-23T00:00:00.000Z'});
+  });
+
+  test('a task takes its repeat in Todoist\'s words, reminders and a description in Markdown', () => {
+    const w = world({seed: true});
+    const question = 'remind me to water the plants every Friday';
+    const context = toolContext(w, [question]);
+    runTool(context, 'propose_item', {owner_instruction: question, kind: 'task', title: 'Water the plants', date: '2026-10-09', repeat: 'weekly', reminders: [0], description: 'The ferns too'});
+    expect(context.proposals[0]!.item).toMatchObject({repeat: 'every fri', reminders: [0], description: 'The ferns too'});
+  });
+
+  test('propose_item refuses extras that don\'t fit, saying why', () => {
+    const w = world({seed: true});
+    const question = 'add it';
+    const reason = (input: Record<string, unknown>) => JSON.parse(runTool(toolContext(w, [question]), 'propose_item', {owner_instruction: question, title: 'Dentist', date: '2026-10-13', ...input}).output).error;
+    expect(reason({kind: 'event', calendar: 'Gym'})).toBe('No calendar is called "Gym". Ask the user which they mean: Personal, Classes, Jobs.');
+    expect(reason({kind: 'event', colour: 'red'})).toMatch(/^No colour is called "red"/);
+    expect(reason({kind: 'task', calendar: 'Classes'})).toBe('A task goes to Todoist; calendar is for events.');
+    expect(reason({kind: 'event', start_time: '15:00', leave_reminder: true})).toBe('Time to Leave needs a start time and a place.');
+    expect(reason({kind: 'event', repeat: 'fortnightly'})).toMatch(/^repeat must be one of/);
+    expect(reason({kind: 'event', date: undefined, repeat: 'weekly'})).toBe('A repeat starts on a day: give the date too.');
+    expect(reason({kind: 'event', end_date: '2026-10-12'})).toBe('end_date is the last day, on or after date.');
+    expect(reason({kind: 'event', reminders: [30, 'soon']})).toMatch(/^reminders must be whole minutes/);
+    updateSettings(w.store, {time_to_leave: {enabled: false}});
+    expect(reason({kind: 'event', start_time: '15:00', place: 'Bright Smile', leave_reminder: true})).toMatch(/^Time to Leave is off/);
+  });
+
+  test('propose_change adds to the description, replaces reminders, moves the calendar on its account and sets a colour, all as Save takes them', () => {
+    const w = world({seed: true});
+    const question = 'put dinner with Sam on Classes in Basil, remind me an hour before, and note to book a table';
+    const context = toolContext(w, [question]);
+    const dinner = w.store.db.select().from(t.items).where(eq(t.items.title, 'Dinner with Sam')).get()!;
+    const out = JSON.parse(runTool(context, 'propose_change', {owner_instruction: question, key: String(dinner.id), calendar: 'Classes', colour: 'Basil', reminders: [45], description: 'Book a table'}).output);
+    expect(out.changes.sort()).toEqual(['calendar_id', 'colour', 'description', 'reminders']);
+    const {changes} = context.proposals[0]!.change!;
+    expect(changes).toMatchObject({calendar_id: calendarId(w, 'Classes'), colour: 'good', reminders: [45]});
+    expect(changes.description).toBe(dinner.description ? `${dinner.description}<br><br>Book a table` : 'Book a table');
+    expect(context.proposals[0]!.item).toMatchObject({calendar_id: calendarId(w, 'Classes'), colour: 'good', reminders: [45]});
+    // Not on another account's calendar.
+    expect(JSON.parse(runTool(toolContext(w, [question]), 'propose_change', {owner_instruction: question, key: String(dinner.id), calendar: 'Jobs'}).output).error).toMatch(/^No calendar is called "Jobs"/);
+  });
+
+  test('a recurring event\'s calendar or repeat changes as a series', () => {
+    const w = world({seed: true});
+    const question = 'make the lecture daily';
+    const listed = JSON.parse(runTool(toolContext(w, [question]), 'list_items', {from: '2026-10-08', to: '2026-10-08', query: 'lecture'}).output).items as {key: string}[];
+    const reason = (input: Record<string, unknown>) => JSON.parse(runTool(toolContext(w, [question]), 'propose_change', {owner_instruction: question, key: listed[0]!.key, ...input}).output);
+    expect(reason({repeat: 'daily'}).error).toBe('A recurring event\'s repeat changes for the series: give scope following or all.');
+    expect(reason({calendar: 'Personal'}).error).toBe('A recurring event moves to another calendar as a series: give scope following or all.');
+    expect(reason({repeat: 'daily', scope: 'all'})).toMatchObject({ready: true, changes: ['recurrence'], scope: 'all'});
+  });
+
+  /** A model that proposes Dentist for the first question, and again with a reminder for the follow-up. */
+  const dentistModel = (questions: string[], heard: string[]) => (request: FakeRequest): FakeAnswer => {
+    const {text, results} = read(request);
+    if (results.some(result => result.output.includes('"ready":true'))) return {calls: [{name: 'answer', input: {found: true, text: 'Ready for you to review.', source_ids: []}}]};
+    heard.push(text);
+    const follow = text.endsWith(questions[1]!);
+    return {calls: [{name: 'propose_item', input: {
+      owner_instruction: follow ? questions[1] : questions[0], kind: 'event', title: 'Dentist', date: '2026-10-13', start_time: '15:00', ...(follow ? {reminders: [30]} : {}),
+    }}]};
+  };
+
+  test('a follow-up\'s proposal replaces the earlier card not yet created, and the thread read back agrees', async () => {
+    const {c, fake} = await alfredWorld();
+    const questions = ['add dentist Tuesday at 3', 'add a 30 min reminder'];
+    fake.answer(dentistModel(questions, []));
+    const first = (await c.send('POST', '/api/alfred/ask', {body: {question: questions[0]}})).body;
+    expect(first.proposals[0]).not.toHaveProperty('replaced');
+    const second = (await c.send('POST', '/api/alfred/ask', {body: {question: questions[1], conversation_id: first.conversation_id}})).body;
+    expect(second.proposals[0].item.reminders).toEqual([30]);
+    const thread = (await c.send('GET', `/api/alfred/conversations/${first.conversation_id}`)).body;
+    expect(thread.turns.map((turn: {proposals: ProposalOut[]}) => turn.proposals.map(proposal => [proposal.replaced ?? false, proposal.acted ?? false]))).toEqual([[[true, false]], [[false, false]]]);
+  });
+
+  test('a created card stays when a follow-up proposes, and the follow-up tells Alfred it was created, once', async () => {
+    const {c, fake} = await alfredWorld();
+    const questions = ['add dentist Tuesday at 3', 'add a 30 min reminder', 'and another at 10 min'];
+    const heard: string[] = [];
+    fake.answer(dentistModel(questions, heard));
+    const first = (await c.send('POST', '/api/alfred/ask', {body: {question: questions[0]}})).body;
+    expect((await c.send('POST', '/api/alfred/acted', {body: {turn_id: first.turn_id, index: 0}})).status).toBe(204);
+    await c.send('POST', '/api/alfred/ask', {body: {question: questions[1], conversation_id: first.conversation_id}});
+    await c.send('POST', '/api/alfred/ask', {body: {question: questions[2], conversation_id: first.conversation_id}});
+    const thread = (await c.send('GET', `/api/alfred/conversations/${first.conversation_id}`)).body;
+    expect(thread.turns.map((turn: {proposals: ProposalOut[]}) => turn.proposals.map(proposal => [proposal.replaced ?? false, proposal.acted ?? false]))).toEqual([[[false, true]], [[true, false]], [[false, false]]]);
+    expect(heard[1]).toBe('The user created the proposed event "Dentist".\n\nThe user\'s question: add a 30 min reminder');
+    expect(heard[2]).toBe(questions[2]);
+    // Acted on a card already replaced, it's acted alone; and a proposal that isn't there is a 404.
+    expect((await c.send('POST', '/api/alfred/acted', {body: {turn_id: thread.turns[1].turn_id, index: 0}})).status).toBe(204);
+    const after = (await c.send('GET', `/api/alfred/conversations/${first.conversation_id}`)).body;
+    expect(after.turns[1].proposals[0]).toMatchObject({acted: true});
+    expect(after.turns[1].proposals[0]).not.toHaveProperty('replaced');
+    expect((await c.send('POST', '/api/alfred/acted', {body: {turn_id: first.turn_id, index: 1}})).status).toBe(404);
   });
 });
 

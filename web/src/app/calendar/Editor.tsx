@@ -69,6 +69,8 @@ export interface EditorOpen {
   ics?: IcsEventOut;
   // Alfred's change to `item`: the draft opens with it applied.
   change?: ProposalChangeOut;
+  // Alfred's proposal opened on the phone: called once its Create or Save goes through.
+  onActed?: () => void;
 }
 
 /** Where a new event was put on the week view: its time when the line names none. */
@@ -397,6 +399,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     if (next.date !== undefined || next.start !== undefined || next.end !== undefined) edited.push('date', 'time');
     if (next.place !== undefined) edited.push('place');
     if (next.description !== undefined) edited.push('description');
+    if (next.reminders !== undefined || next.leaveReminder !== undefined || next.lineReminders !== undefined) edited.push('reminders');
+    if (next.calendarId !== undefined) edited.push('calendar');
+    if (next.colour !== undefined) edited.push('colour');
+    if (next.recurrence !== undefined || next.repeat !== undefined) edited.push('repeat');
     // A row's change deletes its field's phrase from the line. The other fields that phrase set
     // ("fri 7-9pm" with a day picked) keep their values, as if set in their rows too.
     const fields = manual.filter((field): field is LineField => (LINE_FIELDS as readonly string[]).includes(field));
@@ -408,15 +414,19 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     const unpicked: Partial<Draft> = {...(fields.includes('place') ? {picked: null} : {}), ...(fields.includes('calendar') ? {pickedCalendar: null} : {})};
     setDrafts(list => list.map(one => {
       if (one.id !== draft.id) return one;
-      const set = {...one, ...next, manual: [...new Set([...one.manual, ...manual, ...(cut?.held ?? [])])], fromEmail: one.fromEmail.filter(field => !edited.includes(field))};
+      const set = {...one, ...next, manual: [...new Set([...one.manual, ...manual, ...(cut?.held ?? [])])], fromEmail: one.fromEmail.filter(field => !edited.includes(field)), fromAlfred: one.fromAlfred.filter(field => !edited.includes(field))};
       if (!cut || one.text !== raw.text) return set;
       return reread({...set, ...unpicked, text: cut.text, plain: retyped(one.plain, one.text, cut.text)}, cut.text);
     }));
   };
-  // Alfred's change marks what he changed with his glyph, as the email marks what it gave.
-  const markLabel = open.change ? 'Alfred\'s change' : 'From the email';
-  const mark = (...fields: Marked[]) => (fields.some(field => draft.fromEmail.includes(field))
-    ? <span className="srcm" role="img" aria-label={markLabel} data-tip={markLabel}><Icon name={open.change ? 'auto_awesome' : 'mail'} size={14} /></span> : null);
+  // Alfred marks what he changed or set with his glyph, as the email marks what it gave.
+  const alfredLabel = open.change ? 'Alfred\'s change' : 'From Alfred';
+  const mark = (...fields: Marked[]) => {
+    const alfred = fields.some(field => draft.fromAlfred.includes(field));
+    if (!alfred && !fields.some(field => draft.fromEmail.includes(field))) return null;
+    const label = alfred ? alfredLabel : 'From the email';
+    return <span className="srcm" role="img" aria-label={label} data-tip={label}><Icon name={alfred ? 'auto_awesome' : 'mail'} size={14} /></span>;
+  };
   // The email's title is the line's, so its mark sits at the line's trailing edge.
   const titleMark = mark('title');
   // An edited item's Title is its line, and so is a new item's: its title words
@@ -428,7 +438,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     if (next.title !== one.title) edited.push('title');
     if (next.date !== one.date || next.undated !== one.undated || next.start !== one.start || next.end !== one.end) edited.push('date', 'time');
     if (next.place !== one.place) edited.push('place');
-    return edited.length ? {...next, fromEmail: next.fromEmail.filter(field => !edited.includes(field))} : next;
+    if (next.calendarId !== one.calendarId) edited.push('calendar');
+    if (next.recurrence !== one.recurrence || next.repeat !== one.repeat) edited.push('repeat');
+    return edited.length ? {...next, fromEmail: next.fromEmail.filter(field => !edited.includes(field)), fromAlfred: next.fromAlfred.filter(field => !edited.includes(field))} : next;
   };
   // Each draft's phrases made words since it was last typed into, as its line and words were before
   // each. ⌘Z in the line takes them back, newest first, and then it's the line's own undo again.
@@ -685,7 +697,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const title = editing ? `Edit ${noun}` : `New ${noun}`;
   const legends = (
     <>
-      {draft.fromEmail.length > 0 && <span className="legend"><Icon name={open.change ? 'auto_awesome' : 'mail'} size={14} /><span>{markLabel}</span></span>}
+      {draft.fromEmail.length > 0 && <span className="legend"><Icon name="mail" size={14} /><span>From the email</span></span>}
+      {draft.fromAlfred.length > 0 && <span className="legend"><Icon name="auto_awesome" size={14} /><span>{alfredLabel}</span></span>}
       {updating && <span className="legend"><Icon name="event" size={14} /><span>Already on {updating} (will update)</span></span>}
     </>
   );
@@ -874,7 +887,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </>
           )}
 
-          {kind === 'event' && editing && <RepeatRow draft={draft} open={menu === 'repeat'} menuRef={menuRef} onToggle={() => setMenu(menu === 'repeat' ? null : 'repeat')} onPick={recurrence => {
+          {kind === 'event' && editing && <RepeatRow draft={draft} mark={mark('repeat')} open={menu === 'repeat'} menuRef={menuRef} onToggle={() => setMenu(menu === 'repeat' ? null : 'repeat')} onPick={recurrence => {
             change({recurrence}, ['recurrence']);
             setMenu(null);
           }} />}
@@ -884,6 +897,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               <span className="menu-host">
                 <button type="button" className="field" aria-label="Repeat" aria-expanded={menu === 'repeat'} onClick={() => setMenu(menu === 'repeat' ? null : 'repeat')}>
                   <span className="grow left">{describeTaskRepeat(draft.repeat)}</span>
+                  {mark('repeat')}
                   <span className="ink3"><Icon name="expand_more" size={16} /></span>
                 </button>
                 {menu === 'repeat' && (
@@ -936,6 +950,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                   onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
                   <span className="dot sm" style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
                   <span className="grow left">{calendar ? calendarName(calendar) : 'Calendar'}</span>
+                  {mark('calendar')}
                   <span className="ink3"><Icon name="expand_more" size={16} /></span>
                 </button>
                 {lineOpen && menu !== 'calendar' && (
@@ -963,6 +978,18 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                   </div>
                 )}
               </span>
+              {/* An event's own colour, Alfred's or kept from the item: shown with its ×, picked on the floating detail. */}
+              {draft.colour && (
+                <>
+                  <span className="g-colour"><span className="dot" style={{'--c': colourVar(draft.colour)} as CSSProperties} /></span>
+                  <span className="prow" aria-label="Colour">
+                    <span className="qchip">Its own colour
+                      <button type="button" className="x" aria-label="Use the calendar's colour" onClick={() => change({colour: null})}><Icon name="close" size={14} /></button>
+                    </span>
+                    {mark('colour')}
+                  </span>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -1015,12 +1042,15 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               const {reminders, byHand} = rowReminders(list, raw.reminders, lineOffsets(raw.lineReminders, reminderFrom, timeZone));
               change(byHand ? {reminders, lineReminders: []} : {reminders}, byHand ? ['reminders'] : []);
             }}
-            chips={kind === 'event' && draft.leaveReminder && (
-              <span className="qchip ttl" data-tip={leaveTitle}>
-                <Icon name="directions_car" size={14} />Time to Leave
-                <button type="button" className="x" aria-label="Remove Time to Leave" onClick={() => change({leaveReminder: false})}><Icon name="close" size={14} /></button>
-              </span>
-            )}
+            chips={<>
+              {kind === 'event' && draft.leaveReminder && (
+                <span className="qchip ttl" data-tip={leaveTitle}>
+                  <Icon name="directions_car" size={14} />Time to Leave
+                  <button type="button" className="x" aria-label="Remove Time to Leave" onClick={() => change({leaveReminder: false})}><Icon name="close" size={14} /></button>
+                </span>
+              )}
+              {mark('reminders')}
+            </>}
             // An event with a time and a place can have Time to Leave, with Settings' buffer, while Settings has it on.
             menuItems={kind === 'event' && !draft.leaveReminder && draft.start !== null && draft.place.trim() && settings?.time_to_leave.enabled && (
               <button type="button" role="menuitem" className="menu-i" onClick={() => {
@@ -1029,7 +1059,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               }}><Icon name="directions_car" size={16} />Time to Leave{' '}<span className="ink3 num">{settings.time_to_leave.buffer_minutes} min buffer</span></button>
             )} />
 
-          {kind === 'event' && !editing && <RepeatRow draft={draft} open={menu === 'repeat'} menuRef={menuRef} onToggle={() => setMenu(menu === 'repeat' ? null : 'repeat')} onPick={recurrence => {
+          {kind === 'event' && !editing && <RepeatRow draft={draft} mark={mark('repeat')} open={menu === 'repeat'} menuRef={menuRef} onToggle={() => setMenu(menu === 'repeat' ? null : 'repeat')} onPick={recurrence => {
             change({recurrence}, ['recurrence']);
             setMenu(null);
           }} />}
@@ -1069,7 +1099,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             onConfirm={submit} onCancel={() => setAsking(false)} />
         </div>
       ) : sheet ? (
-        (draft.fromEmail.length > 0 || updating) && <div className="ed-foot">{legends}</div>
+        (draft.fromEmail.length > 0 || draft.fromAlfred.length > 0 || updating) && <div className="ed-foot">{legends}</div>
       ) : (
         <div className="ed-foot">
           <button type="submit" className="btn" disabled={card ? card.pending || filling : editing ? !!projectProblem : ready.length !== drafts.length}>
@@ -1091,13 +1121,14 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   );
 }
 
-function RepeatRow({draft, open, menuRef, onToggle, onPick}: {draft: Draft; open: boolean; menuRef: (menu: HTMLElement | null) => void; onToggle: () => void; onPick: (rule: string | null) => void}) {
+function RepeatRow({draft, mark, open, menuRef, onToggle, onPick}: {draft: Draft; mark: ReactNode; open: boolean; menuRef: (menu: HTMLElement | null) => void; onToggle: () => void; onPick: (rule: string | null) => void}) {
   return (
     <>
       <Icon name="repeat" size={17} />
       <span className="menu-host">
         <button type="button" className="field" aria-label="Repeat" aria-expanded={open} onClick={onToggle}>
           <span className="grow left">{describeRule(draft.recurrence, draft.date)}</span>
+          {mark}
           <span className="ink3"><Icon name="expand_more" size={16} /></span>
         </button>
         {open && (

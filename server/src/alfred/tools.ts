@@ -5,6 +5,8 @@
 // Google keeps). search_calendar is Calendar's own search, with undated Todoist tasks too.
 // propose_item builds the same proposal as Add to calendar / Add as task, from an email or from the
 // user's words alone. propose_change prepares a change to an existing item for the editor's Save.
+// Both take what the editor sets beyond the title, day, times and place: a description, reminders,
+// a calendar or colour by name (naming.ts), Time to Leave, a repeat and an event's last day.
 // read_attachment hands the model a PDF attached to an email it has seen, as a document. A module's
 // registered tools (Jobs' search_jobs and get_application) run here too. None of them changes anything.
 //
@@ -13,7 +15,7 @@
 // fenced as untrusted. A proposal (a new item or a change) comes only when the tool quotes one of
 // the user's own messages, one per question.
 import type {AnswerApplicationOut, AnswerItemOut, ItemKind, ItemOut, ProposalOut, RecurringScope} from '@setpoint/shared';
-import {calendarSearchInput, RECURRING_SCOPES, searchInput} from '@setpoint/shared';
+import {calendarSearchInput, RECURRING_SCOPES, REMINDER_LIMIT_MINUTES, searchInput} from '@setpoint/shared';
 import {and, asc, eq} from 'drizzle-orm';
 import {bodyOf} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
@@ -24,11 +26,13 @@ import {itemDetail, itemsInRange} from '../queries/items.ts';
 import {conversationOf} from '../queries/thread.ts';
 import {searchCalendar} from '../search/calendar.ts';
 import {searchMail} from '../search/search.ts';
+import {getSettings} from '../settings.ts';
 import type {Store} from '../store.ts';
+import {calendarNamed, colourNamed} from './naming.ts';
 import {fenced} from './prompt.ts';
-import {proposeChange, proposeFromMessage, proposeFromWords} from './proposals.ts';
+import {proposeChange, proposeFromMessage, proposeFromWords, REPEATS} from './proposals.ts';
 import type {AlfredRegistration} from './registered.ts';
-import type {ChangeEdits} from './proposals.ts';
+import type {ChangeEdits, Extras, Repeat} from './proposals.ts';
 import type {Invite} from './proposals.ts';
 
 const SEARCH_PAGE = 10;
@@ -199,6 +203,67 @@ function searchCalendarTool(context: ToolContext, input: Record<string, unknown>
   });
 }
 
+const MAX_REMINDERS = 5;
+
+/**
+ * What a propose call sets beyond the title, day, times and place, checked and its names matched,
+ * or why not. `accountId` keeps a changed event's calendar on its account. `timed` and `placed` say
+ * whether the item will have a start and a place, which Time to Leave needs.
+ */
+function extrasOf(context: ToolContext, input: Record<string, unknown>, kind: ItemKind, {accountId = null, timed, placed, date}: {accountId?: number | null; timed: boolean; placed: boolean; date: string | null}): Extras | ToolOutcome {
+  const extras: Extras = {};
+  const event = kind === 'event';
+  if (input.description !== undefined) {
+    if (typeof input.description !== 'string') return fail('description must be text.');
+    if (input.description.trim()) extras.description = input.description.slice(0, 5000);
+  }
+  if (input.reminders !== undefined) {
+    const list = Array.isArray(input.reminders) ? input.reminders.map(integer) : null;
+    if (!list || list.some(minutes => minutes === null || minutes > REMINDER_LIMIT_MINUTES)) return fail(`reminders must be whole minutes before, each 0 to ${REMINDER_LIMIT_MINUTES}.`);
+    if (list.length > MAX_REMINDERS) return fail(`At most ${MAX_REMINDERS} reminders.`);
+    extras.reminders = [...new Set(list as number[])];
+  }
+  if (input.leave_reminder !== undefined) {
+    if (typeof input.leave_reminder !== 'boolean') return fail('leave_reminder must be true or false.');
+    if (input.leave_reminder) {
+      if (!event) return fail('Time to Leave is for events; a task has none.');
+      if (!getSettings(context.store).time_to_leave.enabled) return fail('Time to Leave is off in Settings › Notifications; say so rather than proposing it.');
+      if (!timed || !placed) return fail('Time to Leave needs a start time and a place.');
+    }
+    extras.leave_reminder = input.leave_reminder;
+  }
+  if (input.calendar !== undefined && text(input.calendar)) {
+    if (!event) return fail('A task goes to Todoist; calendar is for events.');
+    const named = calendarNamed(context.store, text(input.calendar), accountId);
+    if ('error' in named) return fail(named.error);
+    extras.calendar_id = named.value;
+  }
+  if (input.colour !== undefined) {
+    if (!event) return fail('A task has no colour of its own.');
+    if (!text(input.colour) || /^(none|calendar)$/i.test(text(input.colour))) extras.colour = null;
+    else {
+      const named = colourNamed(text(input.colour));
+      if ('error' in named) return fail(named.error);
+      extras.colour = named.value;
+    }
+  }
+  if (input.repeat !== undefined) {
+    if (!(REPEATS as readonly unknown[]).includes(input.repeat)) return fail(`repeat must be one of ${REPEATS.join(', ')}.`);
+    if (input.repeat !== 'none' && !date) return fail('A repeat starts on a day: give the date too.');
+    extras.repeat = input.repeat as Repeat;
+  }
+  if (input.end_date !== undefined && text(input.end_date)) {
+    const last = text(input.end_date);
+    if (!event) return fail('end_date is for an event over several days.');
+    if (!DATE.test(last) || Number.isNaN(Date.parse(last))) return fail('end_date must be YYYY-MM-DD.');
+    if (!date || last < date) return fail('end_date is the last day, on or after date.');
+    extras.end_date = last;
+  }
+  return extras;
+}
+
+const failed = (value: Extras | ToolOutcome): value is ToolOutcome => 'output' in value && 'error' in value;
+
 const sameMessage = (a: string, b: string) => a.replace(/\s+/g, ' ').trim().toLowerCase() === b.replace(/\s+/g, ' ').trim().toLowerCase();
 
 /** Why a proposal can't be made for this question, or null: it must quote the user, once a question. */
@@ -225,18 +290,28 @@ function proposeTool(context: ToolContext, input: Record<string, unknown>): Tool
   if (date && (!DATE.test(date) || Number.isNaN(Date.parse(date)))) return fail('date must be YYYY-MM-DD.');
   if ((start && !TIME.test(start)) || (end && !TIME.test(end))) return fail('Times must be 24-hour HH:MM.');
   if (end && !start) return fail('An end time needs a start time.');
-  if (messageId === null) {
-    if (!text(input.title)) return fail('title is required for a proposal from the user\'s words.');
-    const proposal = proposeFromWords(context.store, kind as ItemKind, {title: text(input.title), date: date || null, start: start || null, end: start ? end || null : null, place: text(input.place) || null});
-    context.proposals.push(proposal);
-    return ok({ready: true, title: proposal.item.title, conflict: proposal.conflict?.label ?? null});
-  }
-  const proposal = proposeFromMessage(context.store, messageId, kind as ItemKind, {
+  if (text(input.end_date) && start && !end) return fail('An event over several days with a start_time needs its end_time on end_date.');
+  // From an email, its day, time and place may come from it; the extras are checked against what it gives.
+  const fromEmail = messageId === null ? null : proposeFromMessage(context.store, messageId, kind as ItemKind, {
     ...(text(input.title) ? {title: text(input.title)} : {}),
     ...(date ? {date} : {}),
     ...(start ? {start, end: end || null} : {}),
     ...(text(input.place) ? {place: text(input.place)} : {}),
   }, context.invites?.get(messageId) ?? null);
+  if (messageId === null && !text(input.title)) return fail('title is required for a proposal from the user\'s words.');
+  const day = fromEmail ? fromEmail.item.start_date ?? fromEmail.item.due_date ?? (fromEmail.item.starts_at ? localDay(fromEmail.item.starts_at, context.store.timeZone) : null) : date || null;
+  const extras = extrasOf(context, input, kind as ItemKind, {
+    timed: fromEmail ? Boolean(fromEmail.item.starts_at) : Boolean(start), placed: fromEmail ? Boolean(fromEmail.item.place) : Boolean(text(input.place)), date: day,
+  });
+  if (failed(extras)) return extras;
+  const proposal = messageId === null
+    ? proposeFromWords(context.store, kind as ItemKind, {title: text(input.title), date: date || null, start: start || null, end: start ? end || null : null, place: text(input.place) || null}, extras)
+    : proposeFromMessage(context.store, messageId, kind as ItemKind, {
+      ...(text(input.title) ? {title: text(input.title)} : {}),
+      ...(date ? {date} : {}),
+      ...(start ? {start, end: end || null} : {}),
+      ...(text(input.place) ? {place: text(input.place)} : {}),
+    }, context.invites?.get(messageId) ?? null, extras);
   context.proposals.push(proposal);
   return ok({ready: true, title: proposal.item.title, conflict: proposal.conflict?.label ?? null});
 }
@@ -275,13 +350,20 @@ function proposeChangeTool(context: ToolContext, input: Record<string, unknown>)
   const end = text(input.end_time);
   if (date && (!DATE.test(date) || Number.isNaN(Date.parse(date)))) return fail('date must be YYYY-MM-DD.');
   if ((start && !TIME.test(start)) || (end && !TIME.test(end))) return fail('Times must be 24-hour HH:MM.');
+  const place = typeof input.place === 'string' ? input.place.trim() || null : item.place;
+  const accountId = context.store.db.select({accountId: t.calendars.accountId}).from(t.calendars).where(eq(t.calendars.id, item.calendar_id)).get()?.accountId ?? null;
+  const day = date || (item.starts_at ? localDay(item.starts_at, context.store.timeZone) : item.start_date ?? item.due_date);
+  const extras = extrasOf(context, input, item.kind, {accountId, timed: input.all_day === true ? false : Boolean(start || (!item.all_day && item.starts_at)), placed: Boolean(place), date: day});
+  if (failed(extras)) return extras;
+  delete extras.end_date;
   const edits: ChangeEdits = {
     ...(text(input.title) ? {title: text(input.title)} : {}),
     ...(date ? {date} : {}), ...(start ? {start} : {}), ...(end ? {end} : {}),
     ...(input.all_day === true ? {all_day: true} : {}),
     ...(typeof input.place === 'string' ? {place: input.place.trim() || null} : {}),
+    ...extras,
   };
-  if (!Object.keys(edits).length) return fail('Say what changes: title, date, start_time, end_time, all_day or place.');
+  if (!Object.keys(edits).length) return fail('Say what changes: title, date, start_time, end_time, all_day, place, description, reminders, leave_reminder, calendar, colour or repeat.');
   let proposal: ProposalOut | null;
   try {
     proposal = proposeChange(context.store, item, edits, scope as RecurringScope);

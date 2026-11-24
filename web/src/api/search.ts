@@ -62,6 +62,9 @@ export const alfredConversation = (id: number) => getJson<ConversationOut>(`/alf
 /** What Alfred is doing for a question on its way, by the id the page gave it. */
 export const alfredStep = (ask: string) => getJson<AskStepOut>(`/alfred/asks/${ask}`);
 
+/** An answer's proposal was created or saved: a later one in the thread leaves it be. */
+export const alfredActed = (turnId: number, index: number) => sendJson<void>('POST', '/alfred/acted', {turn_id: turnId, index});
+
 /** Add to calendar / Add as task: the item pre-filled from the email, created by nothing. */
 export const proposeFromMessage = (messageId: number, kind: ItemKind) => sendJson<ProposalOut>('POST', '/proposals/from-message', {message_id: messageId, kind});
 

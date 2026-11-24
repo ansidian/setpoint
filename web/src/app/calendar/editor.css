@@ -255,3 +255,5 @@
 .editor .desc-field.marked { position: relative; }
 .editor .desc-field.marked > .desc-edit { padding-right: 32px; }
 .editor .desc-field.marked > .srcm { position: absolute; top: 9px; right: 10px; }
+/* An event's own colour takes the glyph column as its swatch. */
+.editor .eg .g-colour { display: flex; justify-content: center; }

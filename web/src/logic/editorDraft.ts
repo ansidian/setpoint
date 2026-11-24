@@ -1,6 +1,6 @@
 // The calendar editor's drafts as pure rules (Editor.tsx draws them): a draft from a day, an item, an
 // email's proposal or an .ics event, the line read and retyped, and what Create or Save sends.
-import type {CalendarOut, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ProposalChangeOut, ProposalField, ProposalOut} from '@setpoint/shared';
+import type {CalendarOut, EventColour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ProposalChangeOut, ProposalField, ProposalOut} from '@setpoint/shared';
 import type {Slot} from '../app/calendar/Editor.tsx';
 import {editedWhen, extraDays, parseTitle, taskRepeat} from './compose.ts';
 import type {ParsedTitle, ReminderBase, ReminderRead} from './compose.ts';
@@ -65,9 +65,14 @@ export interface Draft {
   // A task's Todoist labels and repeat (Todoist's words).
   labels: string[];
   repeat: string | null;
+  // An event's own colour (the floating detail's Colour, or Alfred's). Null takes its calendar's.
+  colour: EventColour | null;
   // Fields an email gave (More options on its proposal card), marked until they're changed. The
   // description's From: line is among them, a mark the server's list doesn't carry.
   fromEmail: Marked[];
+  // Fields Alfred set (his change, or what his proposal set beyond the email's), marked with his
+  // glyph until they're changed.
+  fromAlfred: Marked[];
   // Fields set in their rows: the line's parse leaves them until a phrase for one is typed.
   manual: Manual[];
   // The description as the field reads it (logic/description.ts), written in its provider's
@@ -92,9 +97,10 @@ export const DEFAULT_LENGTH = 60;
 
 let nextDraft = 1;
 
+/** A field that can carry the "from the email" or Alfred's mark. */
+export type Marked = ProposalField | 'description' | 'reminders' | 'calendar' | 'colour' | 'repeat';
+
 /** A proposal as the editor opens on it. */
-/** A field that can carry the "from the email" mark. */
-export type Marked = ProposalField | 'description';
 
 interface Handed {
   proposal: ProposalOut;
@@ -108,7 +114,7 @@ export function emptyDraft(kind: ItemKind, date: string, slot: Slot | null = nul
   return {
     id: nextDraft++, kind, text: '', title: '', plain: [], date, undated: false, day: date, slot: at,
     start: at ? at.start : kind === 'event' ? DEFAULT_START : null, end: at ? at.end : kind === 'event' ? DEFAULT_START + DEFAULT_LENGTH : null, days: at?.days ?? 1,
-    place: '', address: null, picked: null, calendarId: null, reminders: null, lineReminders: [], leaveReminder: false, recurrence: null, project: null, newProject: false, pickedProject: null, pickedCalendar: null, labels: [], repeat: null, description: [], descriptionLossy: false, fromEmail: [], manual: [], base: NO_BASE,
+    place: '', address: null, picked: null, calendarId: null, reminders: null, lineReminders: [], leaveReminder: false, recurrence: null, project: null, newProject: false, pickedProject: null, pickedCalendar: null, labels: [], repeat: null, colour: null, description: [], descriptionLossy: false, fromEmail: [], fromAlfred: [], manual: [], base: NO_BASE,
   };
 }
 
@@ -171,7 +177,12 @@ export function fromChange(change: ProposalChangeOut, timeZone: string): Draft {
   if (changed.includes('title')) marks.push('title');
   if (changed.some(field => ['all_day', 'starts_at', 'ends_at', 'start_date', 'end_date', 'due_date', 'due_at'].includes(field))) marks.push('date', 'time');
   if (changed.includes('place')) marks.push('place');
-  return {...fromItem({...change.item, ...change.changes} as ItemOut, timeZone), fromEmail: marks};
+  if (changed.includes('description')) marks.push('description');
+  if (changed.includes('reminders') || changed.includes('leave_reminder')) marks.push('reminders');
+  if (changed.includes('calendar_id')) marks.push('calendar');
+  if (changed.includes('colour')) marks.push('colour');
+  if (changed.includes('recurrence') || changed.includes('repeat')) marks.push('repeat');
+  return {...fromItem({...change.item, ...change.changes} as ItemOut, timeZone), fromAlfred: marks};
 }
 
 /** An item as the editor's fields. */
@@ -186,7 +197,7 @@ export function fromItem(item: ItemOut, timeZone: string): Draft {
     // A subtask can have no date. It opens with none, and a day picked gives it one.
     id: nextDraft++, kind: item.kind, text: item.title, title: item.title, plain: [], date, undated: item.kind === 'task' && !item.due_date, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
     calendarId: item.calendar_id, reminders: item.reminders, lineReminders: [], leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
-    description: description.blocks, descriptionLossy: description.lossy, fromEmail: [], manual: [], base: NO_BASE,
+    colour: item.kind === 'event' ? item.colour as EventColour | null : null, description: description.blocks, descriptionLossy: description.lossy, fromEmail: [], fromAlfred: [], manual: [], base: NO_BASE,
   };
 }
 
@@ -194,7 +205,9 @@ export function fromItem(item: ItemOut, timeZone: string): Draft {
  * An email's or a keynote's proposal as a new draft: its title in the line as words only,
  * none of them read. Its day, time, place, calendar and project
  * are what the line falls back to, so the line still reads what's typed after it. With no day from
- * the email it starts with none, which Create then asks for.
+ * the email it starts with none, which Create then asks for. What Alfred set beyond those (its
+ * reminders, Time to Leave, repeat, colour and description after the "From:" line) is filled in
+ * and marked as his, and his repeat is held as if picked, so the line doesn't read it away.
  */
 export function fromProposal(draft: Draft, {proposal, reminders, newProject}: Handed, timeZone: string): Draft {
   const item = proposal.item;
@@ -207,10 +220,19 @@ export function fromProposal(draft: Draft, {proposal, reminders, newProject}: Ha
   // The description starts with "From: *subject*", marked as the email's (a keynote's has no marks).
   const source = proposal.source;
   const marks: Marked[] = source && proposal.message_id ? [...proposal.from_email, 'description'] : proposal.from_email;
+  const set = proposal.alfred ?? [];
+  const alfred: Marked[] = [];
+  if (set.includes('days')) alfred.push('date', 'time');
+  if (set.includes('reminders') || set.includes('leave_reminder')) alfred.push('reminders');
+  for (const field of ['calendar', 'colour', 'repeat', 'description'] as const) if (set.includes(field)) alfred.push(field);
+  const description = [...(source ? sourceLine(source) : []), ...readDescription(formatOf(item.kind), item.description).blocks];
+  const repeats = Boolean(item.kind === 'event' ? item.recurrence : item.repeat);
   return {
     ...draft, text: item.title, title: item.title, plain: wordSpans(item.title), date: date ?? draft.date, day: date ?? draft.day, undated: date === null,
     start, end, days, slot: {start, end, days}, place: base.place, address: null, calendarId: base.calendarId, project: base.project, newProject,
-    reminders: reminders ?? draft.reminders, fromEmail: marks, manual: [], base, ...(source ? {description: sourceLine(source)} : {}),
+    reminders: item.reminders ?? reminders ?? draft.reminders, leaveReminder: item.kind === 'event' && Boolean(item.leave_reminder),
+    recurrence: item.kind === 'event' ? item.recurrence ?? null : null, repeat: item.kind === 'task' ? item.repeat ?? null : null, colour: item.kind === 'event' ? item.colour ?? null : null,
+    fromEmail: marks.filter(mark => !alfred.includes(mark)), fromAlfred: alfred, manual: repeats ? ['recurrence'] : [], base, ...(description.length ? {description} : {}),
   };
 }
 
@@ -353,7 +375,7 @@ export function createInput(draft: Draft, timeZone: string, todoist: number | nu
   return {
     kind: 'event', calendar_id: draft.calendarId, title: draft.title.trim(), ...when, due_date: null, due_at: null, time_zone: timeZone,
     recurrence: draft.recurrence, place: draft.place.trim() || null, address: draft.place.trim() ? draft.address : null, attendees: [],
-    ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: draft.leaveReminder, project: null, colour: null, labels: [], repeat: null, description: writeDescription('html', draft.description),
+    ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: draft.leaveReminder, project: null, colour: draft.colour, labels: [], repeat: null, description: writeDescription('html', draft.description),
   };
 }
 
@@ -383,6 +405,7 @@ export function changesOf(draft: Draft, original: Draft, timeZone: string): Item
   if (draft.recurrence !== original.recurrence) changes.recurrence = draft.recurrence;
   if (draft.project !== original.project) changes.project = draft.project;
   if (draft.calendarId !== original.calendarId && draft.calendarId !== null) changes.calendar_id = draft.calendarId;
+  if (draft.kind === 'event' && draft.colour !== original.colour) changes.colour = draft.colour;
   if (draft.kind === 'task' && draft.repeat !== original.repeat) changes.repeat = draft.repeat;
   if (draft.kind === 'task' && draft.labels.join('\n') !== original.labels.join('\n')) changes.labels = draft.labels;
   // Sent only when it reads differently, so one left alone stays as its provider has it.

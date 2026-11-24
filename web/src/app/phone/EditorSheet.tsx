@@ -52,9 +52,9 @@ export function openEditorSheet(open: EditorOpen) {
  * Opens the editor sheet on a proposal as it stands, Alfred's in an answer: his title, day, times
  * and place, not the email's own reading of them again (`message` would ask the server for that).
  */
-export function openProposalSheet(proposal: ProposalOut, today: string, zone: string) {
+export function openProposalSheet(proposal: ProposalOut, today: string, zone: string, onActed?: () => void) {
   const draft = fromProposal(emptyDraft(proposal.kind, today), {proposal, reminders: null, newProject: false}, zone);
-  openEditorSheet({kind: proposal.kind, date: draft.date, kept: {drafts: [draft], active: draft.id, kind: proposal.kind}});
+  openEditorSheet({kind: proposal.kind, date: draft.date, kept: {drafts: [draft], active: draft.id, kind: proposal.kind}, onActed});
 }
 
 export const closeEditorSheet = () => set(null);
@@ -133,11 +133,11 @@ function EditorSheet({open, calendars}: {open: Opened; calendars: CalendarOut[] 
         // The .ics draft is imported with its iCalUID, as on the desktop. Drafts added beside it are created as usual.
         const imported = open.ics ? inputs[0]! : null;
         if (open.ics && imported) void importFromEditor(imported.calendar_id, calendars?.find(one => one.id === imported.calendar_id)?.name ?? 'the calendar', editedImport(open.ics, imported));
-        createFromSheet(imported ? inputs.slice(1) : inputs);
+        createFromSheet(imported ? inputs.slice(1) : inputs, open.onActed);
       }}
       onSave={(item, changes, scope) => {
         closeEditorSheet();
-        saveFromSheet(item, changes, scope);
+        saveFromSheet(item, changes, scope, open.onActed);
       }}
       onDelete={item => {
         closeEditorSheet();

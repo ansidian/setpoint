@@ -25,7 +25,7 @@ import {foldAway} from '../fold.ts';
 const NO_ITEMS = () => [];
 const nothing = () => {};
 
-export function ProposalCard({proposal, now, timeZone, onClose, onCancel, inAnswer = false, fill = null}: {
+export function ProposalCard({proposal, now, timeZone, onClose, onCancel, onActed, inAnswer = false, fill = null}: {
   proposal: ProposalOut;
   // The reader's prefill: on its way, or why it didn't come. Null when it's in or there's none.
   fill?: 'waiting' | PrefillMiss | null;
@@ -36,6 +36,8 @@ export function ProposalCard({proposal, now, timeZone, onClose, onCancel, inAnsw
   inAnswer?: boolean;
   // Cancel and Esc, when they go back to something rather than close (an answer's chip, after Edit).
   onCancel?: () => void;
+  // In an answer: its Create or Save went through.
+  onActed?: () => void;
 }) {
   // Its pickers offer only the calendars listed in Settings › Calendar.
   const calendars = useResource<CalendarOut[]>(CALENDARS_PATH).data?.filter(calendar => calendar.listed);
@@ -69,6 +71,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, onCancel, inAnsw
       done();
       // The card closing is the answer: a create or save says nothing.
       close();
+      onActed?.();
     }
   }
   const create = ([input]: ItemCreateInput[]) => input && send(() => createSettled(input), () => input.create_project && void refresh(TODOIST_PROJECTS_PATH));

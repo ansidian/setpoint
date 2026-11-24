@@ -8,6 +8,7 @@
 //   POST /api/alfred/ask                    AskInput           AnswerOut
 //   GET  /api/alfred/conversations/:id                         ConversationOut (the thread so far)
 //   GET  /api/alfred/asks/:ask_id                              AskStepOut (what Alfred is doing for it)
+//   POST /api/alfred/acted                  AlfredActedInput   204 (a proposal's Create or Save went through)
 //   POST /api/proposals/from-message        ProposalInput      ProposalOut (Add to calendar / Add as task)
 //   POST /api/proposals/prefill             ProposalInput      ProposalPrefillOut (the same, filled by a model)
 //   POST /api/calendar/search               CalendarSearchInput CalendarSearchOut
@@ -16,7 +17,7 @@
 // sends it.
 import {z} from 'zod';
 import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_READS} from '../enums.ts';
-import type {CalendarMatchField, ItemKind, MatchField, RecurringScope, SearchChipKind} from '../enums.ts';
+import type {CalendarMatchField, EventColour, ItemKind, MatchField, RecurringScope, SearchChipKind} from '../enums.ts';
 import {id, instant, localDate} from './common.ts';
 import type {ItemChanges, ItemOut} from './items.ts';
 import type {Recipient} from '../message.ts';
@@ -287,7 +288,7 @@ export type ProposalField = (typeof PROPOSAL_FIELDS)[number];
 /**
  * The item a proposal would create, as POST /api/items takes it, so Create sends it (as the user
  * edited it) and More options opens it in the editor. Fields the email didn't give are null: an
- * event with no time is all day, and one with no date has none yet (the card asks for it). `reminders` is left out, so Settings' default applies.
+ * event with no time is all day, and one with no date has none yet (the card asks for it). Reminders Alfred didn't set are left out, so Settings' default applies.
  */
 export interface ProposalItemOut {
   kind: ItemKind;
@@ -304,7 +305,24 @@ export interface ProposalItemOut {
   place: string | null;
   // A task's Todoist project.
   project: string | null;
+  // What Alfred set beyond those (each missing from a proposal saved before he could). The
+  // description is in its provider's format (HTML for an event, Markdown for a task), after the
+  // source's "From:" line. Reminders missing take Settings' default.
+  description?: string | null;
+  reminders?: number[];
+  leave_reminder?: boolean;
+  colour?: EventColour | null;
+  // An event's rule and a task's Todoist repeat, as the editor's repeat picker writes them.
+  recurrence?: string | null;
+  repeat?: string | null;
 }
+
+/**
+ * The fields Alfred set on a new item beyond its title, day, times and place, for his chip's summary
+ * line and the editor's marks. `days` is an event over several days.
+ */
+export const ALFRED_FIELDS = ['description', 'reminders', 'leave_reminder', 'calendar', 'colour', 'repeat', 'days'] as const;
+export type AlfredField = (typeof ALFRED_FIELDS)[number];
 
 /**
  * Where a proposal came from, for its description's first line, "From:
@@ -342,6 +360,12 @@ export interface ProposalOut {
   conflict: {free: boolean; label: string} | null;
   source?: ProposalSourceOut;
   change?: ProposalChangeOut;
+  // In an Alfred answer: what he set beyond the title, day, times and place (a change says it in `change`).
+  alfred?: AlfredField[];
+  // In an Alfred answer: its Create or Save went through, so a later proposal leaves it be.
+  acted?: boolean;
+  // In an Alfred answer: a later answer in the thread proposed again before this was acted on, so it's gone.
+  replaced?: boolean;
 }
 
 /** Bold runs in an answer ("By **Oct 31, 2026**, …"): UTF-16 offsets into `answer`, end exclusive. */
@@ -390,6 +414,10 @@ export interface ConversationOut {
   ended: boolean;
   turns: AnswerOut[];
 }
+
+/** POST /api/alfred/acted: an answer's proposal (by its turn and its place in it) was created or saved. */
+export const alfredActedInput = z.strictObject({turn_id: id, index: z.int().min(0).max(20)});
+export type AlfredActedInput = z.infer<typeof alfredActedInput>;
 
 /** POST /api/proposals/from-message: Add to calendar / Add as task, pre-filled from the email. */
 export const proposalInput = z.strictObject({message_id: id, kind: z.enum(ITEM_KINDS)});

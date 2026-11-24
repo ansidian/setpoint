@@ -201,17 +201,24 @@ export function leaseAlfred({question, results}: AlfredTurn): Call {
 
 export const ADD_QUESTION = 'add dentist Tuesday at 3';
 export const MOVE_QUESTION = 'move dentist to Thursday';
+export const AMEND_QUESTION = 'remind me 30 min before, weekly, on Classes';
 
 /**
  * The calendar's Alfred, on the seed's week: "add dentist Tuesday at 3" proposes Dentist on Tue Oct
  * 13 at 3 PM from the words alone. "move dentist to Thursday" searches the calendar for the dentist
- * and proposes moving the one it finds to Thu Oct 8. Anything else is board 07's.
+ * and proposes moving the one it finds to Thu Oct 8. The follow-up "remind me 30 min before, weekly,
+ * on Classes" proposes Dentist again with them, saying what changed. Anything else is board 07's.
  */
 export function calendarAlfred(turn: AlfredTurn): Call {
   const {question, results} = turn;
   const asked = question.split('The user\'s question: ').at(-1)!.trim();
   const ready = results.some(result => result.ready === true);
   const done = {name: 'answer', input: {found: true, text: 'Ready for you to review.', source_ids: []}};
+  if (asked === AMEND_QUESTION) {
+    // The thread's second proposal: the first question's result is ready too.
+    if (results.filter(result => result.ready === true).length > 1) return {name: 'answer', input: {found: true, text: 'Added a 30 min reminder, made it weekly and moved it to Classes.', source_ids: []}};
+    return {name: 'propose_item', input: {owner_instruction: asked, kind: 'event', title: 'Dentist', date: '2026-10-13', start_time: '15:00', reminders: [30], repeat: 'weekly', calendar: 'Classes'}};
+  }
   if (asked === ADD_QUESTION) {
     return ready ? done : {name: 'propose_item', input: {owner_instruction: asked, kind: 'event', title: 'Dentist', date: '2026-10-13', start_time: '15:00'}};
   }

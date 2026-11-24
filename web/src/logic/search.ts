@@ -2,11 +2,12 @@
 // asks, the results line, each reason's parts, the highlighted runs, what the reader highlights,
 // and how a proposal's time reads.
 import {parseOperators, searchTokens} from '@setpoint/shared';
-import type {AnswerItemOut, AnswerOut, AskContext, CalendarOut, Colour, ProposalItemOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerItemOut, AnswerOut, AskContext, CalendarOut, Colour, ItemOut, ProposalItemOut, ProposalOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {clockTime, localDate} from './format.ts';
 import {placeName} from './place.ts';
+import {reminderLines} from './reminders.ts';
 import {refusalWords} from './providerWords.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import type {Route} from './route.ts';
@@ -528,4 +529,76 @@ export function proposalHome(item: Pick<ProposalItemOut, 'kind' | 'calendar_id' 
   const google = calendars.filter(calendar => calendar.listed && calendar.provider === 'google' && calendar.writable);
   const calendar = google.find(one => one.id === item.calendar_id) ?? google.find(one => one.visible) ?? google[0];
   return calendar ? {name: calendar.name, colour: calendar.colour} : null;
+}
+
+/** An item's day for its repeat's words: its start's or due day. */
+const repeatDay = (item: Pick<ProposalItemOut, 'start_date' | 'starts_at' | 'due_date' | 'time_zone'>, timeZone: string) =>
+  item.start_date ?? (item.starts_at ? localDate(item.starts_at, item.time_zone ?? timeZone) : item.due_date) ?? localDate(Date.now(), timeZone);
+
+type Summed = Pick<ProposalItemOut, 'kind' | 'start_date' | 'starts_at' | 'due_date' | 'time_zone' | 'recurrence' | 'repeat' | 'reminders' | 'leave_reminder'>;
+
+/** One item's summary parts for the fields asked: its repeat, reminders and Time to Leave. */
+function summaryParts(item: Summed, fields: {repeat: boolean; reminders: boolean; leave: boolean}, timeZone: string): string[] {
+  const parts: string[] = [];
+  if (fields.repeat) parts.push(item.kind === 'event' ? describeRule(item.recurrence ?? null, repeatDay(item, timeZone)) : describeTaskRepeat(item.repeat ?? null));
+  if (fields.reminders) {
+    const lines = reminderLines(item.reminders ?? [], null, timeZone).map(line => line.text);
+    parts.push(lines.length ? lines.join(', ') : 'No reminders');
+  }
+  if (fields.leave) parts.push(item.leave_reminder ? 'Time to Leave' : 'No Time to Leave');
+  return parts;
+}
+
+/**
+ * Alfred's chip's summary line under the place: the repeat, reminders and Time to Leave he set, as
+ * "Weekly on Tuesday · 30 min before · Time to Leave", only those he set. A change says them as they
+ * become and, struck under it, as they were. Null when he set none of them.
+ */
+export function proposalSummary(proposal: ProposalOut, timeZone: string): {now: string; was: string | null} | null {
+  const {change} = proposal;
+  const changed = change ? Object.keys(change.changes) : [];
+  const set = proposal.alfred ?? [];
+  const fields = change
+    ? {repeat: changed.includes('recurrence') || changed.includes('repeat'), reminders: changed.includes('reminders'), leave: changed.includes('leave_reminder')}
+    : {repeat: set.includes('repeat'), reminders: set.includes('reminders'), leave: set.includes('leave_reminder')};
+  if (!fields.repeat && !fields.reminders && !fields.leave) return null;
+  const now = summaryParts(proposal.item, fields, timeZone).join(' · ');
+  const was = change ? summaryParts(change.item as ItemOut & Summed, fields, timeZone).join(' · ') : null;
+  return {now, was: was && was !== now ? was : null};
+}
+
+/** An answer's proposal by its turn and place in it, as the server knows it. */
+export interface ShownProposal {
+  turn_id: number;
+  index: number;
+  proposal: ProposalOut;
+}
+
+/**
+ * Each turn's proposals the Answer card shows. One replaced by a later answer goes, as one already
+ * created or saved when the thread was read back does (its chip folded away then). In the thread
+ * as it stands, a later turn's proposal replaces an earlier one not acted on here (`acted`, by
+ * "turn:index"), as the server does, so the card agrees before a reload.
+ */
+export function shownProposals(turns: AnswerOut[], acted: ReadonlySet<string>): ShownProposal[][] {
+  return turns.map((_, at) => standing(turns, at, acted));
+}
+
+/**
+ * Whether a turn's proposal was replaced by a later one (its answer line then reads as past, muted):
+ * it had one, none stands, and none was created or saved.
+ */
+export function replacedTurns(turns: AnswerOut[], acted: ReadonlySet<string>): boolean[] {
+  return turns.map((turn, at) => turn.proposals.length > 0 && !standing(turns, at, acted).length
+    && turn.proposals.every((proposal, index) => !proposal.acted && !acted.has(`${turn.turn_id}:${index}`)));
+}
+
+function standing(turns: AnswerOut[], at: number, acted: ReadonlySet<string>): ShownProposal[] {
+  const turn = turns[at]!;
+  const later = turns.slice(at + 1).some(next => next.proposals.length > 0);
+  return turn.proposals.flatMap((proposal, index) => {
+    const key = `${turn.turn_id}:${index}`;
+    if (proposal.replaced || proposal.acted || (later && !acted.has(key))) return [];
+    return [{turn_id: turn.turn_id, index, proposal}];
+  });
 }

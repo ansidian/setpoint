@@ -106,10 +106,11 @@ export function toggleDone(task: ItemOut, done?: (command: CommandOut) => void) 
  * The editor sheet's Create: says what it made, with Undo deleting it again. A task with no date
  * isn't on the calendar, so it has no Undo here.
  */
-export function createFromSheet(inputs: ItemCreateInput[]) {
+export function createFromSheet(inputs: ItemCreateInput[], onDone?: () => void) {
   if (!inputs.length) return;
   const title = inputs.length > 1 ? `${inputs.length} items` : inputs[0]!.title;
   void createItems(inputs).then(commands => {
+    onDone?.();
     const undated = inputs.some(input => input.kind === 'task' && !input.due_date);
     showToast(`Created ${title}`, undated ? null : {
       label: 'Undo',
@@ -122,8 +123,9 @@ export function createFromSheet(inputs: ItemCreateInput[]) {
  * The editor sheet's Save: says so, with Undo putting the item back as it was. A change to a
  * repeating event's occurrences can't be undone, as on the desktop: the line alone.
  */
-export function saveFromSheet(item: ItemOut, changes: ItemChanges, scope: RecurringScope) {
+export function saveFromSheet(item: ItemOut, changes: ItemChanges, scope: RecurringScope, onDone?: () => void) {
   void updateItem(item.id, {changes, scope, occurrence_start: item.occurrence_start}).then(() => {
+    onDone?.();
     const line = changes.due_date === null ? `Took the date off ${item.title}` : `Saved ${changes.title ?? item.title}`;
     showToast(line, item.recurring ? null : {
       label: 'Undo',

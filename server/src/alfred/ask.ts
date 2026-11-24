@@ -163,6 +163,33 @@ function present(store: Store, conversationId: number, turn: Turn, touchedAt: st
  */
 const ended = (thread: Conversation, now: string) => Date.parse(now) - Date.parse(thread.touchedAt) > THREAD_IDLE_MS || thread.provider !== 'anthropic';
 
+/** Marks the thread's proposals before `turnId` that weren't acted on as replaced. */
+function replaceEarlier(store: Store, conversationId: number, turnId: number) {
+  const turns = store.db.select({id: t.alfredTurns.id, proposals: t.alfredTurns.proposals}).from(t.alfredTurns).where(eq(t.alfredTurns.conversationId, conversationId)).all();
+  for (const turn of turns) {
+    if (turn.id >= turnId || !turn.proposals.some(proposal => !proposal.acted && !proposal.replaced)) continue;
+    const proposals = turn.proposals.map(proposal => (proposal.acted ? proposal : {...proposal, replaced: true}));
+    store.db.update(t.alfredTurns).set({proposals}).where(eq(t.alfredTurns.id, turn.id)).run();
+  }
+}
+
+/**
+ * POST /api/alfred/acted: an answer's proposal was created or saved, so a later one leaves it be
+ * and the next question says so. Acted wins over replaced.
+ */
+export function proposalActed(store: Store, turnId: number, index: number) {
+  const turn = store.db.select({proposals: t.alfredTurns.proposals}).from(t.alfredTurns).where(eq(t.alfredTurns.id, turnId)).get();
+  const proposal = turn?.proposals[index];
+  if (!turn || !proposal) throw notFound('No such proposal.');
+  if (proposal.acted && !proposal.replaced) return;
+  const proposals = turn.proposals.map((one, at) => {
+    if (at !== index) return one;
+    const {replaced: _replaced, ...kept} = one;
+    return {...kept, acted: true};
+  });
+  store.db.update(t.alfredTurns).set({proposals}).where(eq(t.alfredTurns.id, turnId)).run();
+}
+
 /** GET /api/alfred/conversations/:id: the thread so far, and whether it has ended. */
 export function conversation(store: Store, conversationId: number): ConversationOut {
   const row = store.db.select().from(t.alfredConversations).where(eq(t.alfredConversations.id, conversationId)).get();
@@ -234,7 +261,12 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   // The registered tools on for this question (Jobs', while it's on).
   const registered = enabledRegistrations(store, options.registered);
   // A thread's first question carries the email it's about, or what was on screen.
-  const firstText = thread ? input.question
+  // Proposals the user created or saved since Alfred last heard: said before the follow-up, each once,
+  // so a change to one goes to the item now on the calendar.
+  const noted = new Set(thread?.transcript.noted ?? []);
+  const acted = earlier.flatMap(turn => turn.proposals.flatMap((proposal, index) => (proposal.acted && !noted.has(`${turn.id}:${index}`) ? [{key: `${turn.id}:${index}`, proposal}] : [])));
+  const actedLine = acted.map(({proposal}) => `The user ${proposal.change ? 'saved the proposed change to' : 'created the proposed'} ${proposal.kind} ${JSON.stringify(proposal.item.title)}.`).join(' ');
+  const firstText = thread ? (actedLine ? `${actedLine}\n\nThe user's question: ${input.question}` : input.question)
     : scope !== null ? aboutEmail(store, scope, input.question)
       : input.context ? `${contextLine(store, input.context, registered)}\n\nThe user's question: ${input.question}` : input.question;
   items.push(...client.userTurn(firstText, thread?.transcript.pending ?? []));
@@ -312,7 +344,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   const proposals: ProposalOut[] = context.proposals;
 
   return transaction(store, () => {
-    const transcript = {items, pending, seen: [...context.seen]};
+    const transcript = {items, pending, seen: [...context.seen], noted: [...noted, ...acted.map(one => one.key)]};
     let conversationId: number;
     if (thread) {
       conversationId = thread.id;
@@ -325,6 +357,9 @@ export async function askAlfred(store: Store, input: {question: string; conversa
       conversationId, at: now, question: input.question, answer: found ? final.text : null, emphasis: found ? emphasisOf(final.text, final.emphasis) : [],
       sourceIds, itemSources, applicationSources, searched, proposals,
     }).returning().get();
+    // A new proposal replaces the thread's earlier ones not yet created or saved. Read here, inside
+    // the write, so a Create pressed while Alfred answered stands.
+    if (proposals.length) replaceEarlier(store, conversationId, turn.id);
     return present(store, conversationId, turn, now);
   });
 }

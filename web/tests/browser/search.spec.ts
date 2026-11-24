@@ -21,7 +21,7 @@ import type {AccountOut, AllOut, CalendarOut, ItemsOut, SearchOut, SnoozedOut, T
 import type {Page} from 'playwright-core';
 import {SUGGESTION_PAUSE_MS} from '../../src/app/search/mailSearch.ts';
 import {TYPING_MS} from '../../src/app/search/state.ts';
-import {ADD_QUESTION, calendarAlfred, FAKE_ANTHROPIC_KEY, fakeAlfred, jobsAlfred, KUBERNETES_QUESTION, leaseAlfred, MOVE_QUESTION, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
+import {ADD_QUESTION, AMEND_QUESTION, calendarAlfred, FAKE_ANTHROPIC_KEY, fakeAlfred, jobsAlfred, KUBERNETES_QUESTION, leaseAlfred, MOVE_QUESTION, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
 import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -1576,6 +1576,50 @@ test('Alfred proposes from ⌘K: a new event from the words, made by Create; a c
     await move.waitFor({state: 'detached'});
     assert.deepEqual(await dentists('2026-10-07'), []);
     assert.deepEqual(await dentists('2026-10-08'), ['2026-10-08T21:30:00.000Z']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('Alfred\'s follow-up re-proposes with what it adds, replacing the card not yet created, as a reload agrees; Create makes it with them, and it stays made', async () => {
+  const {setpoint, stop} = await withAlfred({answer: calendarAlfred});
+  try {
+    const page = await setpoint.page(TALL);
+    await page.goto(`${setpoint.base}/calendar?view=week`);
+    await page.locator('.wb', {hasText: 'Dentist'}).first().waitFor();
+    await page.keyboard.press('Meta+k');
+    await page.getByRole('dialog', {name: 'Command palette'}).waitFor();
+    await page.keyboard.insertText(ADD_QUESTION);
+    await page.locator('.palette .item.ask').waitFor();
+    await page.keyboard.press('Meta+Enter');
+    const proposals = alfredWindow(page).getByRole('region', {name: 'Proposal: add to calendar'});
+    await proposals.getByText('Tue, Oct 13 · 3:00 – 4:00 PM').waitFor();
+
+    await alfredWindow(page).getByLabel('Ask a follow-up').fill(AMEND_QUESTION);
+    await alfredWindow(page).getByLabel('Ask a follow-up').press('Enter');
+    await alfredWindow(page).locator('.ans', {hasText: 'Added a 30 min reminder'}).waitFor();
+    await proposals.getByText('Weekly on Tuesday · 30 min before').waitFor();
+    assert.equal(await proposals.count(), 1, 'the first card is replaced');
+    assert.equal(await proposals.getByText('Classes').count(), 1);
+
+    // A reload reads the thread back the same: both lines, one card.
+    await page.reload();
+    await proposals.getByText('Weekly on Tuesday · 30 min before').waitFor();
+    assert.equal(await alfredWindow(page).locator('.ans').count(), 2);
+    assert.equal(await proposals.count(), 1);
+
+    await proposals.getByRole('button', {name: 'Create event'}).click();
+    await proposals.waitFor({state: 'detached'});
+    const classes = (await setpoint.api<CalendarOut[]>('GET', '/calendars')).find(calendar => calendar.name === 'Classes')!;
+    const made = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-13&to=2026-10-14')).items.find(item => item.title === 'Dentist');
+    assert.deepEqual([made?.calendar_id, made?.reminders, made?.recurrence], [classes.id, [30], 'RRULE:FREQ=WEEKLY;BYDAY=TU']);
+
+    // Made, it stays made: a reload doesn't bring its card back.
+    await page.reload();
+    await alfredWindow(page).locator('.ans', {hasText: 'Added a 30 min reminder'}).waitFor();
+    await setpoint.idle();
+    assert.equal(await proposals.count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();

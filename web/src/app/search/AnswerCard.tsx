@@ -24,7 +24,7 @@ import {CALENDARS_PATH, completeItem, itemPath, itemsPath} from '../../api/items
 import {AI_PATH} from '../../api/settings.ts';
 import {addDays, age, fullTimestamp} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
-import {alfredStepDone, alfredStepLine, answerItemWhen, answerSegments, searchedLine, shownSources, showsQuestion} from '../../logic/search.ts';
+import {alfredStepDone, alfredStepLine, answerItemWhen, answerSegments, searchedLine, replacedTurns, shownProposals, shownSources, showsQuestion} from '../../logic/search.ts';
 import type {AskStep} from '@setpoint/shared';
 import {Icon} from '../../ui/Icon.tsx';
 import {ItemCard} from '../calendar/detail/ItemCard.tsx';
@@ -36,6 +36,7 @@ import {foldAway} from '../fold.ts';
 import {Bar, Sk} from '../states/Loading.tsx';
 import {ThreadSkeleton} from '../states/Skeletons.tsx';
 import {openSettings} from '../settings/store.ts';
+import {actedKey, markActed, useActed} from './acted.ts';
 import {ProposalChip} from './ProposalChip.tsx';
 import {Account} from './Search.tsx';
 import type {Alfred} from './state.ts';
@@ -77,6 +78,11 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
     alfred.close();
   };
   const {turns, waiting, error, failed} = alfred;
+  // Each turn's proposals still standing: a later one replaces an earlier one not created or saved.
+  const acted = useActed();
+  const shown = shownProposals(turns, acted);
+  // A turn whose card a later one replaced: its line is past, so it's muted.
+  const replaced = replacedTurns(turns, acted);
   const {data: ai} = useResource<AiOut>(AI_PATH);
   // The field takes the keys when the card opens and after each answer.
   useEffect(() => {
@@ -131,7 +137,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
             {index > 0 && <div className="turn-sep" />}
             {showsQuestion(index, scoped || windowed || sheet) && <div className="q">{turn.question}</div>}
             {folding && index === turns.length - 1 && <Trail steps={folding} folding />}
-            {turn.answer ? <p className="ans"><Bold text={turn} /></p> : (
+            {turn.answer ? <p className={replaced[index] ? 'ans replaced' : 'ans'}><Bold text={turn} /></p> : (
               <div className="ans-none">
                 <p className="ans">Couldn’t find that in your mail or calendar</p>
                 {searchedLine(turn.searched) && <span className="searched">{searchedLine(turn.searched)}</span>}
@@ -170,11 +176,11 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
                 {turn.applications.map(application => <ApplicationRow key={application.application_id} application={application} opens={!phone} />)}
               </div>
             )}
-            {turn.proposals.map(proposal => {
-              const key = `${proposal.message_id}:${proposal.kind}:${proposal.item.title}`;
+            {shown[index]!.map(({turn_id, index, proposal}) => (
               // On the phone, a compact card whose Add opens the editor sheet.
-              return <ProposalChip key={key} proposal={proposal} now={now} timeZone={timeZone} phone={phone} />;
-            })}
+              <ProposalChip key={actedKey(turn_id, index)} proposal={proposal} now={now} timeZone={timeZone} phone={phone}
+                done={acted.has(actedKey(turn_id, index))} onActed={() => markActed(turn_id, index)} />
+            ))}
           </Fragment>
         ))}
         {waiting !== null && (
