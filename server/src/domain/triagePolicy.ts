@@ -70,10 +70,24 @@ const PROTECTED_PATTERNS: [ProtectedReason, RegExp][] = [
   ['money_leaving', /\bunauthori[sz]ed (?:charge|transaction|payment|transfer|withdrawal)\b|\b(?:withdrawal|transfer|wire) of [$€£][\d,.]+ (?:was |has been )?(?:made |sent |initiated )?(?:from|out of) your\b/i],
 ];
 
+// Advice and scam tips name these things as what might happen ("if we notice suspicious activity
+// on your account", "watch for an unrecognized device", "if your account is locked"). A match
+// counts only when none of these lead-ins comes in the few words before it, in the same sentence.
+const HYPOTHETICAL = /\b(?:if|when|whenever|in case|should|watch (?:out )?for|look out for|to report|report any)(?:\s+[^\s.!?]+){0,6}\s*$/i;
+const HYPOTHETICAL_GUARDED = new Set<ProtectedReason>(['account_locked', 'unfamiliar_sign_in']);
+
+function says(reason: ProtectedReason, pattern: RegExp, text: string): boolean {
+  if (!HYPOTHETICAL_GUARDED.has(reason)) return pattern.test(text);
+  for (const match of text.matchAll(new RegExp(pattern.source, `${pattern.flags}g`))) {
+    if (!HYPOTHETICAL.test(text.slice(0, match.index))) return true;
+  }
+  return false;
+}
+
 /** The protected reason the email's own words give, if any. */
 export function protectedFromText(subject: string, body: string): ProtectedReason | null {
   const text = `${subject}\n${body}`;
-  return PROTECTED_PATTERNS.find(([, pattern]) => pattern.test(text))?.[0] ?? null;
+  return PROTECTED_PATTERNS.find(([reason, pattern]) => says(reason, pattern, text))?.[0] ?? null;
 }
 
 // ---- Settling a decision ----

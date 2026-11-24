@@ -73,6 +73,13 @@ export const TRIAGE_FIXTURES: TriageFixture[] = [
     expect: {lane: 'fyi', kind: 'money', type: 'statement', source: 'cheap_model', tiers: ['cheap']},
   },
   {
+    name: 'scam tips that mention suspicious activity: advice, not protected', account: 'Personal', from: ['Woodgrove Bank', 'news@woodgrovebank.example'],
+    subject: 'Stay alert for holiday shopping scams',
+    body: 'Scammers are busy this season. Never share your password or a code we send you. Keep your email address and phone number current so we can reach you if we notice suspicious activity on your account. Unsubscribe · Email preferences',
+    cheap: sure({lane: 'fyi', kind: 'money', organisation: 'Woodgrove Bank', type: 'newsletter', summary: 'Holiday scam tips'}),
+    expect: {lane: 'fyi', kind: 'money', type: 'newsletter', protected: false, source: 'cheap_model', tiers: ['cheap']},
+  },
+  {
     name: 'a bill that autopay covers', account: 'iCloud', from: ['Proseware Internet', 'billing@proseware.example'],
     subject: 'Bill is ready', body: 'Your Proseware bill of $89.99 is ready. Autopay will pay it on Oct 21.',
     cheap: sure({lane: 'fyi', kind: 'money', organisation: 'Proseware', type: 'statement', summary: '$89.99 · Autopay on Oct 21'}),

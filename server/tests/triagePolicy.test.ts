@@ -41,6 +41,16 @@ describe('protectedFromText: the protected class in plain words', () => {
     ['Your banking statement is available', 'Call us right away if you notice suspicious activity.', null],
     ['Increase your account security', 'We use tools to help safeguard your money, including protection against suspicious activity.', null],
     ['Security incident', 'Rotate your keys and review logs for those services for unusual activity.', null],
+    // Hypothetical and advice wording isn't an alert either; a sender saying it happened is.
+    ['Stay alert for holiday shopping scams', 'Keep your email address and phone number current so we can reach you if we notice suspicious activity on your account.', null],
+    ['Scam tips', 'Watch for a suspicious login or an unrecognized device.', null],
+    ['Scam tips', 'If you notice unusual activity on your account, call us.', null],
+    ['Scam tips', 'Report any unauthorized charges.', null],
+    ['Help center', 'If your account is locked, reset your password.', null],
+    ['Account notice', 'We noticed suspicious activity on your account.', 'unfamiliar_sign_in'],
+    ['Account notice', 'There was unusual activity on your account.', 'unfamiliar_sign_in'],
+    ['Security alert', 'New sign-in from an unfamiliar device.', 'unfamiliar_sign_in'],
+    ['Security alert', 'Someone tried to log in to your account.', 'unfamiliar_sign_in'],
     ['Fraud alert', 'An unauthorized charge of $812.00 was made on your card.', 'money_leaving'],
     ['Transfer notice', 'A transfer of $2,500.00 was sent from your checking account.', 'money_leaving'],
     // Routine security mail stays out: cheap to check, not protected.
