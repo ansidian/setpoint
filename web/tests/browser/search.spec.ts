@@ -1859,7 +1859,7 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     assert.equal(await page.locator('.rd-subj').count(), 1, 'the reader stays');
     const exams = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-12-01&to=2027-01-01')).items.filter(item => item.title === 'CS 101 final exam');
     assert.equal((await exams()).length, 0);
-    // Create: pending (.5) until Google Calendar confirms, then the card goes and the toast says where.
+    // Create: pending (.5) until Google Calendar confirms, then the event's detail takes the card's place.
     // The day takes typing. Moved to Friday, the email's mark goes, and the conflict line is
     // Friday's.
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
@@ -1882,10 +1882,14 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     await card.locator('button', {hasText: 'Create'}).click();
     await page.locator('.pane .prop.pending').waitFor();
     create();
-    // The card closing is the answer: a create says nothing.
+    // The new event's floating detail in the card's place is the answer: no toast. Esc closes it.
     await card.waitFor({state: 'detached'});
-    await setpoint.idle();
+    const detail = page.getByRole('dialog', {name: 'CS 101 final exam'});
+    await until('the created detail', () => detail.locator('.fd-when').textContent(), when => when?.startsWith('Fri, Dec 11') ?? false);
     assert.equal(await page.locator('.toast').count(), 0, 'no toast for a create');
+    await page.keyboard.press('Escape');
+    await detail.waitFor({state: 'detached'});
+    assert.equal(await page.locator('h1.rd-subj').count(), 1, 'Esc closes the detail, not the reader');
     const [created] = await exams();
     const classes = (await setpoint.api<CalendarOut[]>('GET', '/calendars')).find(calendar => calendar.name === 'Classes')!;
     assert.deepEqual([created?.calendar_id, created?.starts_at, created?.ends_at, created?.place], [classes.id, '2026-12-12T03:00:00.000Z', '2026-12-12T05:00:00.000Z', 'Contoso University · Room 214']);
@@ -1905,6 +1909,8 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     await line.fill('Study for the final dec 8');
     await card.locator('button', {hasText: 'Create'}).click();
     await card.waitFor({state: 'detached'});
+    // The task's detail, with its Complete.
+    await page.getByRole('dialog', {name: 'Study for the final'}).getByRole('button', {name: 'Complete'}).waitFor();
     const study = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-12-01&to=2027-01-01')).items.find(item => item.title === 'Study for the final');
     assert.deepEqual([study?.kind, study?.due_date, study?.project], ['task', '2026-12-08', 'School']);
     assert.deepEqual(setpoint.pageErrors, []);

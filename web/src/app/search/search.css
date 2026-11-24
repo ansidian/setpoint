@@ -217,6 +217,8 @@ div.src.app:hover { background: var(--sub); }
 /* The proposal (board 08): at the top of the reading pane, or under the answer that proposed it. */
 .prop { margin: 16px 20px 0; }
 .prop.in-answer { margin: 0; }
+/* Created, the item's floating detail takes the proposal's place: its top left (CreatedItem.tsx). */
+.created-at { flex: none; height: 0; margin: 16px 20px 0; }
 .prop.pending { opacity: .5; }
 .prop .card-b { gap: 12px; padding-top: 12px; }
 .pgrid { display: grid; grid-template-columns: 20px minmax(0, 1fr) 16px; column-gap: 10px; row-gap: 8px; align-items: center; }

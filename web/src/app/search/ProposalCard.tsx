@@ -7,6 +7,9 @@
 // provider's words. Alfred's change to an existing item is the editor on that item, his changes
 // filled in and marked: Save sends only what differs from the item, as Calendar's editor does.
 //
+// Opened from the reader, a confirmed Create hands the new item's id to the reader (`onCreated`),
+// which shows its detail in the card's place (CreatedItem.tsx), once the item has been read.
+//
 // In Alfred's answer it opens from his proposal chip's Edit (ProposalChip.tsx), and Cancel goes back to it.
 //
 // Opened from the reader, the model's prefill may be on its way (`fill`): the fields wait locked
@@ -14,18 +17,19 @@
 // the head saying the prefill didn't come.
 import type {CalendarOut, CommandOut, ItemChanges, ItemCreateInput, ItemOut, ProposalOut, RecurringScope} from '@setpoint/shared';
 import {useRef, useState} from 'react';
-import {refresh, useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, createSettled, TODOIST_PROJECTS_PATH, updateSettled} from '../../api/items.ts';
+import {getJson, refresh, setCached, useResource} from '../../api/client.ts';
+import {CALENDARS_PATH, createSettled, itemPath, TODOIST_PROJECTS_PATH, updateSettled} from '../../api/items.ts';
 import {localDate} from '../../logic/format.ts';
 import {failedLine, prefillMissLine} from '../../logic/search.ts';
 import type {PrefillMiss} from '../../logic/search.ts';
 import {Editor} from '../calendar/Editor.tsx';
+import {showToast} from '../toast.ts';
 import {foldAway} from '../fold.ts';
 
 const NO_ITEMS = () => [];
 const nothing = () => {};
 
-export function ProposalCard({proposal, now, timeZone, onClose, onCancel, onActed, inAnswer = false, fill = null}: {
+export function ProposalCard({proposal, now, timeZone, onClose, onCancel, onActed, onCreated, inAnswer = false, fill = null}: {
   proposal: ProposalOut;
   // The reader's prefill: on its way, or why it didn't come. Null when it's in or there's none.
   fill?: 'waiting' | PrefillMiss | null;
@@ -38,6 +42,8 @@ export function ProposalCard({proposal, now, timeZone, onClose, onCancel, onActe
   onCancel?: () => void;
   // In an answer: its Create or Save went through.
   onActed?: () => void;
+  // In the reader: its Create went through, the new item read. The reader takes the card away.
+  onCreated?: (id: number) => void;
 }) {
   // Its pickers offer only the calendars listed in Settings › Calendar.
   const calendars = useResource<CalendarOut[]>(CALENDARS_PATH).data?.filter(calendar => calendar.listed);
@@ -53,8 +59,13 @@ export function ProposalCard({proposal, now, timeZone, onClose, onCancel, onActe
     else setClosed(true);
   };
 
-  /** Create or Save through the command layer, waiting in the card until the provider confirms. */
-  async function send(command: () => Promise<CommandOut>, done: () => void = () => {}) {
+  /**
+   * Create or Save through the command layer, waiting in the card until the provider confirms. A
+   * create from the reader (`made`, its title) then reads the new item, still waiting, so its detail
+   * takes the place at once. A task with no date isn't on the calendar to read: the card closes and
+   * the toast says it was made.
+   */
+  async function send(command: () => Promise<CommandOut>, done: () => void = () => {}, made: string | null = null) {
     if (pending) return;
     setPending(true);
     setFailed(null);
@@ -64,17 +75,27 @@ export function ProposalCard({proposal, now, timeZone, onClose, onCancel, onActe
     } catch (error) {
       setFailed((error as Error).message);
     }
+    const read = made !== null && onCreated && settled && settled.state !== 'failed'
+      ? await getJson<ItemOut>(itemPath(settled.target_id)).catch(() => null)
+      : null;
     setPending(false);
     if (!settled) return;
-    if (settled.state === 'failed') setFailed(failedLine(settled.provider, settled.provider_message));
-    else {
-      done();
-      // The card closing is the answer: a create or save says nothing.
-      close();
-      onActed?.();
+    if (settled.state === 'failed') {
+      setFailed(failedLine(settled.provider, settled.provider_message));
+      return;
     }
+    done();
+    if (read && onCreated) {
+      setCached(itemPath(read.id), read);
+      onCreated(read.id);
+      return;
+    }
+    if (made !== null && onCreated) showToast(`Created ${made}`);
+    // Otherwise the card closing is the answer: to a save, and to a create in Alfred's answer, which lists it.
+    close();
+    onActed?.();
   }
-  const create = ([input]: ItemCreateInput[]) => input && send(() => createSettled(input), () => input.create_project && void refresh(TODOIST_PROJECTS_PATH));
+  const create = ([input]: ItemCreateInput[]) => input && send(() => createSettled(input), () => input.create_project && void refresh(TODOIST_PROJECTS_PATH), input.title);
   const save = (item: ItemOut, changes: ItemChanges, scope: RecurringScope) =>
     send(() => updateSettled(item.id, {changes, scope, occurrence_start: item.occurrence_start}));
   const change = proposal.change;

@@ -40,6 +40,7 @@ import type {PrefillMiss} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
+import {CreatedItemCard} from './CreatedItem.tsx';
 import {CodeCard} from './Code.tsx';
 import {ComposerSlot} from './compose/Composer.tsx';
 import {ReaderBar} from './phone/ReaderBar.tsx';
@@ -387,9 +388,16 @@ function useCards(id: number) {
   const [state, setState] = useState<{id: number; panel: Panel}>({id, panel: null});
   // Another email starts with no card.
   const panel = state.id === id ? state.panel : null;
+  // An item just created from the card: its detail in the card's place (CreatedItem.tsx), until
+  // it's closed or another card opens. Kept apart from the panel, which leaves the place free.
+  const [made, setMade] = useState<{id: number; item: number} | null>(null);
+  const created = made?.id === id ? made.item : null;
   // What the user does sets this email's card, whatever another email left open. An answer
   // arriving late lands only if this email and its card are still the ones shown.
-  const show = (next: Panel) => setState({id, panel: next});
+  const show = (next: Panel) => {
+    setMade(null);
+    setState({id, panel: next});
+  };
   const settle = (change: (panel: Panel) => Panel) => setState(current => (current.id === id ? {id, panel: change(current.panel)} : current));
   // Alfred's thread about this email shows here unless a proposal has the card's place. The place
   // is claimed whether or not there's a thread yet, so one asked here never shows in the window first.
@@ -452,6 +460,13 @@ function useCards(id: number) {
       if (asking) closeAlfred();
       show(null);
     },
+    created,
+    // The card's Create went through: the item's detail takes its place.
+    made(item: number) {
+      setState({id, panel: null});
+      setMade({id, item});
+    },
+    closeMade: () => setMade(null),
   };
   useEffect(() => {
     latest.current = {panel: cards.panel, propose: cards.propose, ask: cards.ask};
@@ -527,8 +542,14 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
   return (
     <>
       {panel && panel.kind !== 'ask' && (panel.fill === 'filled' ? panel.filled : panel.rules) && (
-        <ProposalCard key={panel.kind} proposal={(panel.fill === 'filled' ? panel.filled : panel.rules)!} now={now} timeZone={timeZone} onClose={cards.close}
+        <ProposalCard key={panel.kind} proposal={(panel.fill === 'filled' ? panel.filled : panel.rules)!} now={now} timeZone={timeZone} onClose={cards.close} onCreated={cards.made}
           fill={panel.fill === 'waiting' ? 'waiting' : panel.fill === 'missed' ? panel.miss : null} />
+      )}
+      {cards.created !== null && (
+        <>
+          <div className="created-at" aria-hidden="true" />
+          <CreatedItemCard key={cards.created} id={cards.created} line=".pane .rd-swap > .created-at" onClose={cards.closeMade} />
+        </>
       )}
       {panel?.kind === 'ask' && alfred.open && (
         <AnswerCard alfred={{...alfred, close: cards.close}} scoped openId={id} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />

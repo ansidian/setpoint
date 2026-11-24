@@ -159,10 +159,18 @@ async function undoImport(itemIds: number[]) {
   }
 }
 
-/** One event imported from the editor: sent as the review sends one, with the same toast. */
-export async function importFromEditor(calendarId: number, calendarName: string, event: Parameters<typeof importIcsEvent>[1]) {
+/**
+ * One event imported from the editor: sent as the review sends one, with the same toast. `onSent`
+ * hears its item's id once the server has it, or null when it couldn't send it.
+ */
+export async function importFromEditor(calendarId: number, calendarName: string, event: Parameters<typeof importIcsEvent>[1], onSent?: (id: number | null) => void) {
   try {
-    const command = await untilSettled(await importIcsEvent(calendarId, event));
+    const sent = await importIcsEvent(calendarId, event).catch((error: unknown) => {
+      onSent?.(null);
+      throw error;
+    });
+    onSent?.(sent.target_id);
+    const command = await untilSettled(sent);
     if (command.state === 'failed') {
       showToast(failureText(`Failed to import ${event.title || 'it'}`, refusalWords('google_calendar', command.provider_message, 'Google Calendar refused it.')), {
         label: 'Try again', run: () => void retryChange(command.id).catch(toastFailure('Failed to try again')),

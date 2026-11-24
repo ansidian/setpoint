@@ -104,19 +104,24 @@ export function toggleDone(task: ItemOut, done?: (command: CommandOut) => void) 
 
 /**
  * The editor sheet's Create: says what it made, with Undo deleting it again. A task with no date
- * isn't on the calendar, so it has no Undo here.
+ * isn't on the calendar, so it has no Undo here. `onMade` hears the new items' ids, or an empty list
+ * when it failed.
  */
-export function createFromSheet(inputs: ItemCreateInput[], onDone?: () => void) {
+export function createFromSheet(inputs: ItemCreateInput[], onDone?: () => void, onMade?: (ids: number[]) => void) {
   if (!inputs.length) return;
   const title = inputs.length > 1 ? `${inputs.length} items` : inputs[0]!.title;
   void createItems(inputs).then(commands => {
     onDone?.();
+    onMade?.(commands.map(command => command.target_id));
     const undated = inputs.some(input => input.kind === 'task' && !input.due_date);
     showToast(`Created ${title}`, undated ? null : {
       label: 'Undo',
       run: () => commands.forEach(command => void deleteItem(command.target_id).catch(toastFailure('Failed to undo'))),
     });
-  }, toastFailure(`Failed to create ${title}`));
+  }, error => {
+    onMade?.([]);
+    toastFailure(`Failed to create ${title}`)(error);
+  });
 }
 
 /**

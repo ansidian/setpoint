@@ -300,8 +300,14 @@ test('an invitation\'s card offers Add to calendar: one event opens the editor s
       ['2026-10-20', '14:00', '14:45']);
     await sheet.getByRole('button', {name: 'Create'}).tap();
     await sheet.waitFor({state: 'detached'});
+    // The sheet turns into the new event's detail, as the Agenda shows it. × closes it.
+    const detail = page.locator('.ph-detail.created-detail');
+    await until('the created detail', () => detail.locator('.fd-when').textContent(), when => when?.startsWith('Tue, Oct 20') ?? false);
+    assert.match(await detail.getAttribute('aria-label') ?? '', /^Interview with Trey Research/);
     await page.locator('.toast', {hasText: /^Imported Interview with Trey Research/}).waitFor({timeout: 10_000});
     await until('the interview on Oct 20', () => dayTitles(setpoint, '2026-10-20'), list => list.some(title => title.startsWith('Interview with Trey Research')));
+    await detail.getByRole('button', {name: 'Close'}).tap();
+    await detail.waitFor({state: 'detached'});
 
     // A schedule: the review in the sheet, its count, then Import in the top bar.
     await page.locator('.attach[data-type="calendar"]', {hasText: 'northwind-devcon.ics'}).getByRole('button', {name: 'Add to calendar'}).tap();
