@@ -317,7 +317,8 @@ if (typeof window !== 'undefined') window.addEventListener('focus', refreshAll);
 /**
  * The server refuses with `command_pending` a command on an email or an item while its last one
  * still waits for the provider (opening it, then Trash at once, or Undo while Trash or Complete is
- * on its way). The command is sent again once that one settles, for up to ten seconds.
+ * on its way). A delete is refused only while that change's request is in flight. The command is
+ * sent again once that one settles, for up to ten seconds.
  */
 export async function afterPending<T>(send: () => Promise<T>, waitMs = 10_000): Promise<T> {
   const ends = Date.now() + waitMs;

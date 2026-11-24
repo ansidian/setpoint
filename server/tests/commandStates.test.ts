@@ -1,5 +1,5 @@
 // The command layer's states: pending until the provider confirms, failed in place otherwise, and
-// only Try again or Move back leave a failure.
+// only Try again or Move back leave a failure, or a delete that cancels it.
 import {COMMAND_STATES} from '@setpoint/shared';
 import type {CommandState} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -8,10 +8,10 @@ import type {CommandEvent} from '../src/domain/commandStates.ts';
 
 // Every state × every event. null is a refused transition.
 const TABLE: Record<CommandState, Record<CommandEvent, CommandState | null>> = {
-  pending: {confirm: 'confirmed', fail: 'failed', retry: null, move_back: null},
-  failed: {confirm: null, fail: null, retry: 'pending', move_back: 'reverted'},
-  confirmed: {confirm: null, fail: null, retry: null, move_back: null},
-  reverted: {confirm: null, fail: null, retry: null, move_back: null},
+  pending: {confirm: 'confirmed', fail: 'failed', retry: null, move_back: null, cancel: 'reverted'},
+  failed: {confirm: null, fail: null, retry: 'pending', move_back: 'reverted', cancel: 'reverted'},
+  confirmed: {confirm: null, fail: null, retry: null, move_back: null, cancel: null},
+  reverted: {confirm: null, fail: null, retry: null, move_back: null, cancel: null},
 };
 
 describe('nextCommandState', () => {

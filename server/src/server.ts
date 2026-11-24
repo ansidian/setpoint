@@ -61,12 +61,14 @@ const gmail = google ? new GmailAdapter({client: google, topic: pubsub?.topic ??
 // IDLE wakes the source's sync; `engine` is read only when it fires, after it's built below.
 const icloud = new ICloudAdapter({onChange: sourceId => engine.pushed(sourceId)});
 const holdFile = config.devProviderHold;
+const downFile = config.devProviderDown;
 const adapters = new Adapters({
   ...(gmail ? {gmail} : {}), icloud,
   ...(google ? {google_calendar: googleCalendarAdapter({client: google, publicUrl: config.publicUrl, webhookOrigin: config.webhookOrigin})} : {}),
   todoist: todoistAdapter(),
   weather: weatherAdapter(),
-}, config.production ? null : devProvider({delayMs: 600, refuse: boardRefusals, held: holdFile ? () => fs.existsSync(holdFile) : undefined}));
+}, config.production ? null : devProvider({delayMs: 600, refuse: boardRefusals, held: holdFile ? () => fs.existsSync(holdFile) : undefined,
+  down: downFile ? () => fs.existsSync(downFile) : undefined}));
 // Triage runs as jobs on the same engine. With no AI key, new mail waits in Unsorted.
 // Development only (config refuses it in production): every model call goes to a fake on the loopback.
 const aiEndpoints = config.devAiUrl ? {anthropic: config.devAiUrl} : AI_ENDPOINTS;

@@ -4,13 +4,18 @@
 // menu selects it without the floating detail, and Colour's swatches take the menu's place. Empty
 // grid offers New event here (at a week slot's time) and Paste here on the day clicked. News's rows,
 // the sidebar and the Today block have theirs. Add to rule lists New rule from the sender and the
-// rules it can join in the menu's place.
+// rules it can join in the menu's place. A task whose change waits on its provider offers Delete,
+// which takes that change's place.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {after} from 'node:test';
-import type {ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
+import type {CommandOut, ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, holdToast, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
+import {UNDO_MS} from '../../src/app/toast.ts';
 
 after(cleanUp);
 
@@ -249,6 +254,47 @@ test('a calendar item\'s right-click selects it without the card; its colours in
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
+  }
+});
+
+test('a task whose change waits on Todoist, down: its right-click offers only Delete, and the task stays gone', async () => {
+  // While this file is there the dev provider answers every change with a 503, and the frozen clock
+  // keeps the retry 30 s away, so the change waits, queued.
+  const downDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-down-'));
+  const down = path.join(downDir, 'down');
+  fs.writeFileSync(down, '');
+  const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_PROVIDER_DOWN: down}});
+  try {
+    const day = await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-08');
+    const rent = day.items.find(one => one.title === 'Pay rent')!;
+    await setpoint.api('POST', `/items/${rent.id}/complete`, {done: true});
+    await until('Todoist refused it, to try again', () => setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-08'),
+      now => now.items.find(one => one.id === rent.id)?.command?.retry != null);
+
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    await page.goto(`${setpoint.base}/calendar`);
+    const task = page.locator('.cal-month .cell[data-date="2026-10-07"] .tk', {hasText: 'Pay rent'});
+    await task.waitFor();
+    await rightClick(task);
+    assert.deepEqual(await menu(page).locator('.menu-i').evaluateAll(rows => rows.map(row => [row.textContent, (row as HTMLButtonElement).disabled])),
+      [['Reopen', true], ['Edit', true], ['Clone', false], ['Copy⌘C', false], ['DeleteDel', false]]);
+
+    const sent = page.waitForResponse(response => response.url().endsWith(`/api/items/${rent.id}/delete`));
+    await item(page, 'Delete').click();
+    await page.locator('.toast:not(.leaving)', {hasText: 'Deleted Pay rent'}).waitFor();
+    await page.clock.runFor(UNDO_MS);
+    const answer = await sent;
+    assert.equal(answer.status(), 200);
+    assert.equal((await answer.json() as CommandOut).kind, 'item_delete');
+    // The complete gave way to the delete, which waits on Todoist in its turn, off the grid.
+    assert.deepEqual((await setpoint.api<CommandOut[]>('GET', '/commands')).map(command => [command.kind, command.state]), [['item_delete', 'pending']]);
+    await setpoint.idle();
+    assert.equal(await task.count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+    fs.rmSync(downDir, {recursive: true, force: true});
   }
 });
 

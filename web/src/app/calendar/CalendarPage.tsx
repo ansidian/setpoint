@@ -856,7 +856,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
 
   // ---------- The right-click menu ----------
 
-  /** An item's actions, the floating detail's, unavailable where its card's are (Google's own kinds, a change on its way). */
+  /**
+   * An item's actions, the floating detail's. Google's own kinds take none. While a change is on its
+   * way, only Delete stays, as on its card: the server cancels that change and deletes instead. A
+   * draft (its create not yet answered here) isn't an item yet and takes no menu.
+   */
   const itemMenu = (item: ItemOut, date: string): MenuAction[] => {
     if (item.command?.state === 'failed') {
       return [
@@ -888,7 +892,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           close();
           if (colour !== item.colour) recolour(item, colour);
         }} />} satisfies MenuAction] : []),
-      {id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', hint: 'Del', danger: true, disabled: fixed, run: () => remove([item])},
+      {id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', hint: 'Del', danger: true, run: () => remove([item])},
     ];
   };
 
@@ -896,6 +900,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
    * A subtask's menu, the same wherever it's drawn: Complete or Reopen, Edit, Clone (into
    * the same checklist) and Delete. It has no Copy, whose paste would make a task of its own, and no Move
    * up or down, which its handle has. A refused one's Try again and Move back come first, as an item's do.
+   * Delete stays while a change is on its way, as an item's does.
    */
   const subtaskMenu = (subtask: Pick<SubtaskOut, 'id' | 'title' | 'done' | 'command' | 'parent_id'>, completeIt: () => void, edit: () => void, deleteIt: () => void): MenuAction[] => {
     const fixed = subtask.command !== null;
@@ -903,7 +908,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       {id: 'complete', label: subtask.done ? 'Reopen' : 'Complete', icon: subtask.done ? 'undo' : 'task_alt', disabled: fixed, run: completeIt},
       {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', disabled: fixed, run: edit},
       {id: 'clone', group: 'copy', label: 'Clone', icon: 'control_point_duplicate', run: () => cloneSubtask(subtask)},
-      {id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', hint: 'Del', danger: true, disabled: fixed, run: deleteIt},
+      {id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', hint: 'Del', danger: true, run: deleteIt},
     ];
   };
 
@@ -919,8 +924,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
 
   /** A selection's: Copy, Colour (when every one is an event that can take it), Delete, Clear selection. */
   const selectionMenu = (list: ItemOut[]): MenuAction[] => {
-    const writable = list.filter(item => !item.read_only && !item.command);
-    const colourable = writable.length === list.length && list.every(item => item.kind === 'event' && !item.recurring);
+    const deletable = list.filter(item => !item.read_only);
+    const colourable = list.every(item => !item.read_only && !item.command && item.kind === 'event' && !item.recurring);
     return [
       {id: 'copy', label: `Copy ${list.length} items`, icon: 'content_copy', hint: '⌘C', run: () => copy(list)},
       ...(colourable ? [{id: 'colour', group: 'colour', label: 'Colour', icon: 'contrast', run: () => {},
@@ -928,7 +933,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           close();
           list.forEach(item => item.colour !== colour && recolour(item, colour));
         }} />} satisfies MenuAction] : []),
-      {id: 'delete', group: 'delete', label: `Delete ${writable.length} items`, icon: 'delete', hint: 'Del', danger: true, disabled: !writable.length, run: () => remove(writable)},
+      {id: 'delete', group: 'delete', label: `Delete ${deletable.length} items`, icon: 'delete', hint: 'Del', danger: true, disabled: !deletable.length, run: () => remove(deletable)},
       {id: 'clear', group: 'clear', label: 'Clear selection', icon: 'close', hint: 'Esc', run: () => setSelection([])},
     ];
   };
@@ -1075,7 +1080,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       }
       const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
       const command = (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey;
-      const writable = selectedItems.filter(item => !item.read_only && !item.command);
+      const deletable = selectedItems.filter(item => !item.read_only);
       let handled = true;
       if ((plain && event.key === 'ArrowLeft') || plainKey(event, 'p')) page(-1);
       else if ((plain && event.key === 'ArrowRight') || plainKey(event, 'n')) page(1);
@@ -1102,7 +1107,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         echoKey('o');
         window.open(openLink(detailTarget.item)!.url, '_blank', 'noopener');
       }
-      else if (plain && (event.key === 'Delete' || event.key === 'Backspace') && writable.length && !editor) remove(writable);
+      else if (plain && (event.key === 'Delete' || event.key === 'Backspace') && deletable.length && !editor) remove(deletable);
       else if (command && event.key.toLowerCase() === 'c' && selectedItems.length && !window.getSelection()?.toString()) copy(selectedItems);
       else if (command && event.key.toLowerCase() === 'v' && clipboard.current.length && !editor) paste();
       else if (command && event.key.toLowerCase() === 'z' && undos.current.length && !editor) undos.current.pop()!();

@@ -68,6 +68,12 @@ describe('holding the dev provider (SETPOINT_DEV_PROVIDER_HOLD)', () => {
   test('refused in production', () => {
     expect(() => loadConfig({SETPOINT_DEV_PROVIDER_HOLD: '/tmp/setpoint-hold/hold', NODE_ENV: 'production'})).toThrow('SETPOINT_DEV_PROVIDER_HOLD is for development only');
   });
+
+  test('a down file the same way (SETPOINT_DEV_PROVIDER_DOWN), unset by default and refused in production', () => {
+    expect(loadConfig({}).devProviderDown).toBeNull();
+    expect(loadConfig({SETPOINT_DEV_PROVIDER_DOWN: '/tmp/setpoint-down/down'}).devProviderDown).toBe('/tmp/setpoint-down/down');
+    expect(() => loadConfig({SETPOINT_DEV_PROVIDER_DOWN: '/tmp/setpoint-down/down', NODE_ENV: 'production'})).toThrow('SETPOINT_DEV_PROVIDER_DOWN is for development only');
+  });
 });
 
 describe('the address Setpoint listens on (SETPOINT_HOST)', () => {

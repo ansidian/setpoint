@@ -2,9 +2,14 @@
 // back, items, settings and accounts, search and Places.
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
+import {and, eq} from 'drizzle-orm';
 import {failCommand} from '../src/commands/index.ts';
+import * as t from '../src/db/schema.ts';
 import {zoned} from '../src/dev/sample.ts';
+import {calendarList} from '../src/queries/items.ts';
+import {claimDueJobs} from '../src/sync/jobs.ts';
 import {readEvents, signedIn, world} from './helpers.ts';
+import type {World} from './helpers.ts';
 
 describe('the live stream', () => {
   test('ready, then a typed event naming what changed', async () => {
@@ -51,6 +56,83 @@ describe('commands over the API', () => {
     const c = await signedIn(w);
     await c.send('POST', '/api/items/8/complete', {body: {done: true}});
     expect((await c.send('PATCH', '/api/items/8', {body: {changes: {title: 'Pay October rent'}}})).body.error.code).toBe('command_pending');
+  });
+
+  describe('a delete takes the place of a change still waiting', () => {
+    const queuedJob = (w: World, commandId: number) => w.store.db.select().from(t.jobs).where(and(eq(t.jobs.commandId, commandId), eq(t.jobs.state, 'queued'))).get();
+
+    test('a waiting move is cancelled, the event back in place, and the delete waits instead', async () => {
+      const w = world({seed: true});
+      const c = await signedIn(w);
+      const moved = await c.send('PATCH', '/api/items/3', {body: {changes: {starts_at: zoned('2026-10-10', '19:00'), ends_at: zoned('2026-10-10', '21:00')}}});
+      const deleted = await c.send('POST', '/api/items/3/delete', {body: {}});
+      expect(deleted.body).toMatchObject({kind: 'item_delete', state: 'pending', target_id: 3});
+      expect(queuedJob(w, moved.body.id)).toBeUndefined();
+      expect((await c.send('GET', '/api/items/3')).body).toMatchObject({starts_at: zoned('2026-10-09', '19:00'), command: {id: deleted.body.id, kind: 'item_delete'}});
+      expect((await c.send('GET', '/api/commands')).body.map((command: {id: number}) => command.id)).toEqual([deleted.body.id]);
+    });
+
+    test('a failed change is replaced the same way', async () => {
+      const w = world({seed: true});
+      const c = await signedIn(w);
+      const done = await c.send('POST', '/api/items/8/complete', {body: {done: true}});
+      failCommand(w.store, done.body.id, 'Service Unavailable (503)');
+      const deleted = await c.send('POST', '/api/items/8/delete', {body: {}});
+      expect(deleted.body).toMatchObject({kind: 'item_delete', state: 'pending', target_id: 8});
+      expect((await c.send('GET', '/api/items/8')).body).toMatchObject({done: false, command: {id: deleted.body.id}});
+      expect((await c.send('GET', '/api/commands')).body.map((command: {id: number}) => command.id)).toEqual([deleted.body.id]);
+    });
+
+    test('a create that never reached its provider just goes, and nothing is sent', async () => {
+      const w = world({seed: true});
+      const c = await signedIn(w);
+      const todoist = calendarList(w.store).find(calendar => calendar.provider === 'todoist')!.id;
+      const created = await c.send('POST', '/api/items', {body: {kind: 'task', calendar_id: todoist, title: 'Call the bank', due_date: '2026-10-08'}});
+      expect(created.body).toMatchObject({kind: 'item_create', state: 'pending'});
+      const deleted = await c.send('POST', `/api/items/${created.body.target_id}/delete`, {body: {}});
+      expect(deleted.status).toBe(200);
+      expect((await c.send('GET', `/api/items/${created.body.target_id}`)).status).toBe(404);
+      expect(queuedJob(w, created.body.id)).toBeUndefined();
+      expect((await c.send('GET', '/api/commands')).body).toEqual([]);
+    });
+
+    test('a moved occurrence of a series is put back and that occurrence deleted', async () => {
+      const w = world({seed: true});
+      const c = await signedIn(w);
+      const gym = w.store.db.select().from(t.items).where(eq(t.items.title, 'Gym')).get()!.id;
+      const moved = await c.send('PATCH', `/api/items/${gym}`, {body: {changes: {starts_at: zoned('2026-10-08', '07:00'), ends_at: zoned('2026-10-08', '08:00')}, scope: 'this', occurrence_start: zoned('2026-10-07', '07:00')}});
+      const deleted = await c.send('POST', `/api/items/${moved.body.target_id}/delete`, {body: {scope: 'this'}});
+      expect(deleted.body).toMatchObject({kind: 'item_delete', state: 'pending', target_id: gym});
+      expect((await c.send('GET', `/api/items/${moved.body.target_id}`)).status).toBe(404);
+      expect((await c.send('GET', '/api/commands')).body.map((command: {id: number}) => command.id)).toEqual([deleted.body.id]);
+    });
+
+    test('deleting a moved occurrence with All events deletes the series', async () => {
+      const w = world({seed: true});
+      const c = await signedIn(w);
+      const gym = w.store.db.select().from(t.items).where(eq(t.items.title, 'Gym')).get()!.id;
+      const moved = await c.send('PATCH', `/api/items/${gym}`, {body: {changes: {starts_at: zoned('2026-10-08', '07:00'), ends_at: zoned('2026-10-08', '08:00')}, scope: 'this', occurrence_start: zoned('2026-10-07', '07:00')}});
+      const deleted = await c.send('POST', `/api/items/${moved.body.target_id}/delete`, {body: {scope: 'all'}});
+      expect(deleted.body).toMatchObject({kind: 'item_delete', state: 'pending', target_id: gym});
+      expect(w.store.db.select().from(t.commands).where(eq(t.commands.id, deleted.body.id)).get()!.payload).toMatchObject({item_id: gym, scope: 'all'});
+    });
+
+    test('a change already on its way to the provider is not cancelled: the delete waits', async () => {
+      const w = world({seed: true});
+      const c = await signedIn(w);
+      const done = await c.send('POST', '/api/items/8/complete', {body: {done: true}});
+      claimDueJobs(w.store, new Set());
+      expect((await c.send('POST', '/api/items/8/delete', {body: {}})).body.error.code).toBe('command_pending');
+      expect((await c.send('GET', '/api/commands')).body).toMatchObject([{id: done.body.id, state: 'pending'}]);
+    });
+
+    test('only a delete cancels: an edit still waits its turn', async () => {
+      const w = world({seed: true});
+      const c = await signedIn(w);
+      const done = await c.send('POST', '/api/items/8/complete', {body: {done: true}});
+      failCommand(w.store, done.body.id, 'Service Unavailable (503)');
+      expect((await c.send('PATCH', '/api/items/8', {body: {changes: {title: 'Pay October rent'}}})).body.error.code).toBe('command_failed');
+    });
   });
 
   test('Done and Pin change at once, without a command', async () => {

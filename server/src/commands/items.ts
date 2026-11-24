@@ -9,9 +9,9 @@ import {calendarWritable} from '../domain/calendarAccess.ts';
 import {bySiblingOrder, orderKeyBetween, singleMove} from '../domain/orderKey.ts';
 import {conflict, invalid, notFound} from '../errors.ts';
 import {getSettings} from '../settings.ts';
-import {isoNow} from '../store.ts';
+import {isoNow, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
-import {activeCommand, createCommand} from './index.ts';
+import {activeCommand, cancelCommand, createCommand} from './index.ts';
 import type {CommandRow} from './index.ts';
 import {repeatAfter} from '../providers/todoist/due.ts';
 import {todoistCalendar} from '../providers/todoist/sync.ts';
@@ -160,13 +160,35 @@ export function updateItem(store: Store, itemId: number, input: ItemUpdateInput)
   });
 }
 
-/** Deletes once the provider confirms. Until then the item shows pending. */
+/**
+ * Deletes once the provider confirms. Until then the item shows pending. A change still waiting on
+ * the item (pending or failed) is cancelled first, in the same transaction, and the delete takes its
+ * place. A create that never reached the provider leaves nothing to delete, and an occurrence moved
+ * on its own goes back to its series, which is deleted from that occurrence, in the scope asked for.
+ */
 export function deleteItem(store: Store, itemId: number, input: ItemScopeInput): CommandRow {
-  const row = item(store, itemId);
-  if (row.readOnly) throw invalid('Google Calendar doesn\'t let this kind of event be deleted here.');
-  refuseReadOnlyCalendar(calendar(store, row.calendarId));
-  if (row.kind === 'task' && row.recurringItemId !== null) throw invalid('A completed occurrence can\'t be deleted.');
-  if (row.recurrence && row.recurringItemId === null && input.scope !== 'all' && !input.occurrence_start) throw invalid('Name the occurrence (occurrence_start) to delete part of a recurring event.');
+  return transaction(store, () => {
+    let row = item(store, itemId);
+    if (row.readOnly) throw invalid('Google Calendar doesn\'t let this kind of event be deleted here.');
+    refuseReadOnlyCalendar(calendar(store, row.calendarId));
+    if (row.kind === 'task' && row.recurringItemId !== null) throw invalid('A completed occurrence can\'t be deleted.');
+    if (row.recurrence && row.recurringItemId === null && input.scope !== 'all' && !input.occurrence_start) throw invalid('Name the occurrence (occurrence_start) to delete part of a recurring event.');
+    const waiting = activeCommand(store, 'item', row.id);
+    if (waiting) {
+      const cancelled = cancelCommand(store, waiting.id);
+      const left = store.db.select().from(t.items).where(eq(t.items.id, row.id)).get();
+      if (!left) {
+        return row.recurringItemId !== null && row.originalStart
+          ? deleteItem(store, row.recurringItemId, {scope: input.scope, occurrence_start: row.originalStart})
+          : cancelled;
+      }
+      row = left;
+    }
+    return queueDelete(store, row, input);
+  });
+}
+
+function queueDelete(store: Store, row: ItemRow, input: ItemScopeInput): CommandRow {
   return createCommand(store, {
     target: 'item', kind: 'item_delete', sourceId: calendarSourceId(store, row.calendarId),
     payload: {item_id: row.id, scope: input.scope, occurrence_start: input.occurrence_start},

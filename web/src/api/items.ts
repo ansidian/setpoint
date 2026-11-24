@@ -154,7 +154,7 @@ export const createSettled = (input: ItemCreateInput) => change(async () => unti
 export const updateItem = (id: number, input: {changes: ItemChanges; scope?: RecurringScope; occurrence_start?: string | null}) =>
   change(() => afterPending(() => sendJson<CommandOut>('PATCH', `/items/${id}`, input)));
 
-/** A delete. One right after a change (⌘Z on a paste) waits for that change to reach the provider. */
+/** A delete. The server cancels a change still waiting on the item and deletes instead; one already on its way to the provider is waited for. */
 export const deleteItem = (id: number, input: {scope?: RecurringScope; occurrence_start?: string | null} = {}, {keepalive = false} = {}) =>
   change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/delete`, input, {keepalive})));
 

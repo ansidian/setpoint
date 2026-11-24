@@ -8,7 +8,8 @@
 // - It's confirmed when the provider says so, or failed with the provider's own message. A failed
 //   one stays in place until Try again or Move back. Nothing quietly reverts.
 // One command per target at a time: a second change waits until the first settles (a partial
-// unique index enforces this too).
+// unique index enforces this too). A delete is the one exception: it cancels the waiting change
+// and takes its place, unless that change's request is already on its way to the provider.
 import type {Colour, TodoistColour, CommandKind, CommandOut, CommandRetryOut, CommandTarget, ItemWhen, SourceProvider} from '@setpoint/shared';
 import {and, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -202,6 +203,24 @@ export function moveBackCommand(store: Store, commandId: number): CommandRow {
   return transition(store, commandId, 'move_back', row => {
     restorePrevious(store, row);
     return {settledAt: isoNow(store)};
+  });
+}
+
+/**
+ * A delete taking the place of a change still waiting (pending or failed): its queued job is
+ * dropped and the mirror shows what it held before, as Move back does. Refused while its job is
+ * running, a request already on its way to the provider, whose answer may have done the change.
+ */
+export function cancelCommand(store: Store, commandId: number): CommandRow {
+  return transaction(store, () => {
+    const running = store.db.select({id: t.jobs.id}).from(t.jobs).where(and(eq(t.jobs.commandId, commandId), eq(t.jobs.state, 'running'))).get();
+    if (running) throw conflict('command_pending', 'The last change is still waiting for its provider.');
+    store.db.update(t.jobs).set({state: 'done', finishedAt: isoNow(store), leaseUntil: null})
+      .where(and(eq(t.jobs.commandId, commandId), eq(t.jobs.state, 'queued'))).run();
+    return transition(store, commandId, 'cancel', row => {
+      restorePrevious(store, row);
+      return {settledAt: isoNow(store)};
+    });
   });
 }
 

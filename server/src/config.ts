@@ -32,6 +32,9 @@ export interface Config {
   // sent rather than confirming it, so a browser check decides when the provider confirms.
   // Development only.
   devProviderHold: string | null;
+  // SETPOINT_DEV_PROVIDER_DOWN: a file. While it's there, the dev provider answers every change with
+  // a 503, so changes stay pending, retrying, as while a provider is down. Development only.
+  devProviderDown: string | null;
   // The one Google OAuth client, for Connect Gmail's consent, which Google Calendar rides too
   // (SETPOINT_GOOGLE_CLIENT_ID and _SECRET). Null leaves Gmail and Calendar unconnectable.
   google: {clientId: string; clientSecret: string} | null;
@@ -101,5 +104,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (devAiUrl && !/^http:\/\/127\.0\.0\.1:\d{1,5}$/.test(devAiUrl)) throw new Error('SETPOINT_DEV_AI_URL must be http://127.0.0.1:<port>.');
   const devProviderHold = env.SETPOINT_DEV_PROVIDER_HOLD?.trim() ? path.resolve(env.SETPOINT_DEV_PROVIDER_HOLD) : null;
   if (devProviderHold && production) throw new Error('SETPOINT_DEV_PROVIDER_HOLD is for development only.');
-  return {host, port, dataDir, databasePath: path.join(dataDir, 'setpoint.sqlite'), webDir, timeZone, publicUrl, webhookOrigin, production, clock, devAiUrl, devProviderHold, ...googleConfig(env), ...todoistConfig(env)};
+  const devProviderDown = env.SETPOINT_DEV_PROVIDER_DOWN?.trim() ? path.resolve(env.SETPOINT_DEV_PROVIDER_DOWN) : null;
+  if (devProviderDown && production) throw new Error('SETPOINT_DEV_PROVIDER_DOWN is for development only.');
+  return {host, port, dataDir, databasePath: path.join(dataDir, 'setpoint.sqlite'), webDir, timeZone, publicUrl, webhookOrigin, production, clock, devAiUrl, devProviderHold, devProviderDown, ...googleConfig(env), ...todoistConfig(env)};
 }

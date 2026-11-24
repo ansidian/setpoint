@@ -35,7 +35,8 @@ browser-backed component and extension tests; `q` quits.
   followed by `setpoint.idle()`. A bound under 5 s says why too; "at once"
   is proven by holding the server's answer (the lint asks).
 - Timed windows are held: `holdToast`, `page.clock` with `pauseClock` and `runFor`, a held server
-  answer, `SETPOINT_DEV_PROVIDER_HOLD`. A response waited for is read after `drawn`.
+  answer, `SETPOINT_DEV_PROVIDER_HOLD` (a change in flight) or `SETPOINT_DEV_PROVIDER_DOWN` (a change
+  answered 503, waiting to be tried again). A response waited for is read after `drawn`.
 - One-shot reads of styles or boxes go through `rested`, as do helpers that call readers (the lint
   asks). A choice made from what's in sight or from timing is a pure rule with a table
   (`inSight`, `phoneSlide`, `nextAsk`).

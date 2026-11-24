@@ -25,6 +25,8 @@ export interface DevProviderOptions {
   refuse?: (store: Store, command: CommandRow) => string | null;
   // While this says so, a change waits rather than being confirmed (SETPOINT_DEV_PROVIDER_HOLD).
   held?: () => boolean;
+  // While this says so, every change is answered with a 503, so it waits to be tried again (SETPOINT_DEV_PROVIDER_DOWN).
+  down?: () => boolean;
 }
 
 /** Mail to any address at this domain is refused by the dev provider's send. */
@@ -45,7 +47,7 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}): SourceAdapter {
+export function devProvider({delayMs = 0, refuse, held, down}: DevProviderOptions = {}): SourceAdapter {
   return {
     async sync(context, cursor) {
       assertDev(context);
@@ -88,6 +90,7 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
       assertDev(context);
       await wait(delayMs, context.signal);
       while (held?.()) await wait(50, context.signal);
+      if (down?.()) throw new ProviderError('transient', 'Service Unavailable (503)', {status: 503});
       const refusal = refuse?.(context.store, command);
       if (refusal) throw new ProviderError('permanent', refusal);
       // A new item gets the provider's id, as Google's or Todoist's would.
