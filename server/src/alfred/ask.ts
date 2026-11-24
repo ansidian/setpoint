@@ -2,7 +2,8 @@
 // the answer rests on are its sources. Follow-up turns go in a short thread held here by id. "Ask
 // about this email" scopes a thread to one email. When the mail doesn't say, the answer is null and
 // `searched` says what Alfred searched ("Couldn't find that in your mail or calendar"). The events
-// and tasks an answer rests on are sources too. Anything Alfred would create is a proposal.
+// and tasks an answer rests on are sources too, and the job applications while Jobs registers its
+// tools. Anything Alfred would create is a proposal.
 //
 // Every model call goes in the AI usage ledger (purpose `alfred`). A failed call saves nothing: the
 // thread stays as it was before the question, so asking again works.
@@ -10,7 +11,7 @@
 // The tool loop has a step limit and one reminder when a turn ends without the expected tool call.
 // The provider and model are bound when the thread starts. A failure restores the transcript.
 // Threads end after four idle hours.
-import type {AnswerItemOut, AnswerOut, AnswerSourceOut, AskContext, AskPage, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
+import type {AnswerApplicationOut, AnswerItemOut, AnswerOut, AnswerSourceOut, AskContext, AskPage, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
 import {asc, eq, inArray, lt} from 'drizzle-orm';
 import {withBody} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
@@ -26,9 +27,11 @@ import type {SyncEngine} from '../sync/engine.ts';
 import {ProviderError} from '../sync/errors.ts';
 import {aiKeys, anthropicKey} from '../triage/models.ts';
 import {chooseAlfredModel} from './models.ts';
-import {ALFRED_TOOLS, alfredSystem, ANSWER_NUDGE, fenced, MAX_OUTPUT_TOKENS} from './prompt.ts';
+import {alfredSystem, alfredTools, ANSWER_NUDGE, fenced, MAX_OUTPUT_TOKENS} from './prompt.ts';
 import {attachmentFile} from '../queries/mailBody.ts';
 import {inviteOf} from './proposals.ts';
+import {enabledRegistrations} from './registered.ts';
+import type {AlfredRegistration} from './registered.ts';
 import {attachmentAsked, runTool} from './tools.ts';
 import type {ToolContext} from './tools.ts';
 
@@ -39,6 +42,8 @@ export interface AlfredOptions {
   // Reads an email's invite for a proposal, and a PDF for read_attachment. Without it, a proposal is
   // the text's and no PDF can be read.
   engine?: SyncEngine | null;
+  // Tools a removable module registers (Jobs', from server.ts), offered while it's on.
+  registered?: AlfredRegistration[];
 }
 
 /** Model turns per question before Alfred gives up (help me write's draft too) */
@@ -61,7 +66,9 @@ function stepsOf(store: Store): Map<string, AskStep | null> {
 export const alfredStep = (store: Store, askId: string): AskStep | null => stepsOf(store).get(askId) ?? null;
 
 /** A tool call as a step the card can say: what's searched, whose email is read. */
-function stepOf(store: Store, name: string, input: Record<string, unknown> | null): AskStep | null {
+function stepOf(store: Store, name: string, input: Record<string, unknown> | null, registered: AlfredRegistration[]): AskStep | null {
+  const owner = registered.find(one => one.tools.some(tool => tool.name === name));
+  if (owner) return owner.step(store, name, input);
   if (name === 'search_mail' && typeof input?.query === 'string') return {tool: 'search_mail', query: input.query};
   if (name === 'get_email') {
     const id = Number(input?.message_id);
@@ -104,7 +111,7 @@ const withWeekday = (date: string) => `${WEEKDAYS[new Date(`${date}T12:00:00Z`).
  * line before the question: the page, the dates in view on the Calendar, and what's open. Built from
  * ids and dates only, and an open item's own title.
  */
-export function contextLine(store: Store, context: AskContext): string {
+export function contextLine(store: Store, context: AskContext, registered: AlfredRegistration[] = []): string {
   let open = 'with nothing open';
   if (context.email_id !== undefined) {
     open = `with the email message_id ${context.email_id} open (read it with get_email)`;
@@ -113,7 +120,7 @@ export function contextLine(store: Store, context: AskContext): string {
     const key = context.item.at ? `${context.item.id}@${context.item.at}` : String(context.item.id);
     open = row ? `with the calendar ${row.kind} ${JSON.stringify(row.title)} open (key ${key})` : 'with nothing open';
   } else if (context.application_id !== undefined) {
-    open = `with job application ${context.application_id} open`;
+    open = registered[0]?.openApplication(context.application_id) ?? `with job application ${context.application_id} open`;
   }
   const viewing = context.dates ? `, viewing ${withWeekday(context.dates.from)} to ${withWeekday(context.dates.to)}` : '';
   const means = [open !== 'with nothing open' && '"this" is what\'s open', viewing && 'a weekday is the one in view'].filter(Boolean).join(', and ');
@@ -146,7 +153,7 @@ const endsAt = (touchedAt: string) => new Date(Date.parse(touchedAt) + THREAD_ID
 function present(store: Store, conversationId: number, turn: Turn, touchedAt: string): AnswerOut {
   return {
     conversation_id: conversationId, turn_id: turn.id, ends_at: endsAt(touchedAt), question: turn.question, answer: turn.answer, emphasis: turn.emphasis,
-    sources: sourcesOf(store, turn.sourceIds), items: turn.itemSources, searched: turn.searched, proposals: turn.proposals,
+    sources: sourcesOf(store, turn.sourceIds), items: turn.itemSources, applications: turn.applicationSources, searched: turn.searched, proposals: turn.proposals,
   };
 }
 
@@ -177,6 +184,7 @@ interface Final {
   text: string;
   sourceIds: number[];
   itemKeys: string[];
+  applicationIds: number[];
   emphasis: string[];
 }
 
@@ -184,11 +192,13 @@ function finalOf(input: Record<string, unknown> | null): Final {
   const ids = Array.isArray(input?.source_ids) ? input.source_ids : [];
   const phrases = Array.isArray(input?.emphasis) ? input.emphasis : [];
   const keys = Array.isArray(input?.item_keys) ? input.item_keys : [];
+  const applications = Array.isArray(input?.application_ids) ? input.application_ids : [];
   return {
     found: input?.found !== false,
     text: typeof input?.text === 'string' ? input.text.trim() : '',
     sourceIds: ids.map(Number).filter(id => Number.isSafeInteger(id) && id > 0),
     itemKeys: keys.filter((key): key is string => typeof key === 'string'),
+    applicationIds: applications.map(Number).filter(id => Number.isSafeInteger(id) && id > 0),
     emphasis: phrases.filter((phrase): phrase is string => typeof phrase === 'string'),
   };
 }
@@ -221,18 +231,21 @@ export async function askAlfred(store: Store, input: {question: string; conversa
 
   const earlier = thread ? store.db.select().from(t.alfredTurns).where(eq(t.alfredTurns.conversationId, thread.id)).orderBy(asc(t.alfredTurns.id)).all() : [];
   const items = [...(thread?.transcript.items ?? [])];
+  // The registered tools on for this question (Jobs', while it's on).
+  const registered = enabledRegistrations(store, options.registered);
   // A thread's first question carries the email it's about, or what was on screen.
   const firstText = thread ? input.question
     : scope !== null ? aboutEmail(store, scope, input.question)
-      : input.context ? `${contextLine(store, input.context)}\n\nThe user's question: ${input.question}` : input.question;
+      : input.context ? `${contextLine(store, input.context, registered)}\n\nThe user's question: ${input.question}` : input.question;
   items.push(...client.userTurn(firstText, thread?.transcript.pending ?? []));
 
   const context: ToolContext = {
-    store, read: [], searched: [], proposals: [], invites: new Map(), files: new Map(), documents: new Set(), items: new Map(),
+    store, read: [], searched: [], proposals: [], invites: new Map(), files: new Map(), documents: new Set(), items: new Map(), registered, applications: new Map(),
     seen: new Set([...(thread?.transcript.seen ?? []), ...(scope !== null ? [scope] : [])]),
     questions: [...earlier.map(turn => turn.question), input.question],
   };
-  const system = alfredSystem(localDay(now, store.timeZone), store.timeZone);
+  const system = alfredSystem(localDay(now, store.timeZone), store.timeZone, registered);
+  const tools = alfredTools(registered);
 
   let final: Final | null = null;
   let pending: ToolResult[] = [];
@@ -242,7 +255,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   try {
     for (let step = 0; step < MAX_STEPS && !final; step += 1) {
       const turn = await client.converse({
-        model, system, tools: ALFRED_TOOLS, transcript: items, maxOutputTokens: MAX_OUTPUT_TOKENS,
+        model, system, tools, transcript: items, maxOutputTokens: MAX_OUTPUT_TOKENS,
       });
       recordUsage(store, turn, scope);
       items.push(...turn.assistant);
@@ -254,7 +267,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
             final = finalOf(call.input);
             results.push({id: call.id, output: JSON.stringify({shown: true})});
           } else {
-            const step = input.ask_id ? stepOf(store, call.name, call.input) : null;
+            const step = input.ask_id ? stepOf(store, call.name, call.input, registered) : null;
             if (step) steps.set(input.ask_id!, step);
             // A proposal takes what the email's invite says. It's read here because the tools don't wait.
             const proposed = call.name === 'propose_item' ? Number(call.input?.message_id) : null;
@@ -275,7 +288,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
         nudged = true;
         items.push(...client.userTurn(ANSWER_NUDGE));
       } else {
-        final = {found: Boolean(turn.text.trim()), text: turn.text.trim(), sourceIds: [], itemKeys: [], emphasis: []};
+        final = {found: Boolean(turn.text.trim()), text: turn.text.trim(), sourceIds: [], itemKeys: [], applicationIds: [], emphasis: []};
       }
     }
   } catch (error) {
@@ -292,7 +305,8 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   const found = final.found && Boolean(final.text);
   let sourceIds = found ? [...new Set(final.sourceIds.filter(id => context.seen.has(id)))] : [];
   const itemSources: AnswerItemOut[] = found ? [...new Set(final.itemKeys)].flatMap(key => context.items!.get(key) ?? []) : [];
-  if (found && !sourceIds.length && !itemSources.length) sourceIds = scope !== null ? [scope] : context.read;
+  const applicationSources: AnswerApplicationOut[] = found ? [...new Set(final.applicationIds)].flatMap(id => context.applications!.get(id) ?? []) : [];
+  if (found && !sourceIds.length && !itemSources.length && !applicationSources.length) sourceIds = scope !== null ? [scope] : context.read;
   // What it searched. For a question about one email that it couldn't answer without searching, that email.
   const searched = found || context.searched.length || scope === null ? context.searched : sourcesOf(store, [scope]).map(source => source.subject);
   const proposals: ProposalOut[] = context.proposals;
@@ -309,7 +323,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
     }
     const turn = store.db.insert(t.alfredTurns).values({
       conversationId, at: now, question: input.question, answer: found ? final.text : null, emphasis: found ? emphasisOf(final.text, final.emphasis) : [],
-      sourceIds, itemSources, searched, proposals,
+      sourceIds, itemSources, applicationSources, searched, proposals,
     }).returning().get();
     return present(store, conversationId, turn, now);
   });

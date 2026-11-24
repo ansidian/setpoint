@@ -242,7 +242,9 @@ export type AskStep =
   | {tool: 'list_items'}
   | {tool: 'search_calendar'; query: string}
   | {tool: 'propose_item'; kind: 'event' | 'task'}
-  | {tool: 'propose_change'};
+  | {tool: 'propose_change'}
+  | {tool: 'search_jobs'; query: string | null}
+  | {tool: 'get_application'; company: string};
 
 export interface AskStepOut {
   step: AskStep | null;
@@ -348,6 +350,17 @@ export interface EmphasisOut {
   end: number;
 }
 
+/**
+ * A job application an answer rests on, as Jobs gave it then (only while Jobs is on): its row opens
+ * the application on Jobs. `status` is the word Jobs' row shows ("In process", "Ghosted").
+ */
+export interface AnswerApplicationOut {
+  application_id: number;
+  company: string;
+  title: string;
+  status: string;
+}
+
 export interface AnswerOut {
   conversation_id: number;
   turn_id: number;
@@ -361,6 +374,8 @@ export interface AnswerOut {
   sources: AnswerSourceOut[];
   // The events and tasks it rests on, after the emails.
   items: AnswerItemOut[];
+  // The job applications it rests on, after the events and tasks.
+  applications: AnswerApplicationOut[];
   // What it searched ("Northwind · Rejection · Mar 2026", "lease renewal"), said when it couldn't answer.
   searched: string[];
   proposals: ProposalOut[];

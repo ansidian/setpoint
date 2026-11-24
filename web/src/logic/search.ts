@@ -357,6 +357,8 @@ export function alfredStepLine(step: AskStep | null, scoped = false): string {
   if (step.tool === 'list_items') return 'Checking your calendar…';
   if (step.tool === 'search_calendar') return `Searching your calendar for “${step.query}”…`;
   if (step.tool === 'propose_change') return 'Preparing a change…';
+  if (step.tool === 'search_jobs') return step.query ? `Searching your applications for “${step.query}”…` : 'Looking through your applications…';
+  if (step.tool === 'get_application') return `Reading ${step.company}’s application…`;
   return `Preparing the ${step.kind}…`;
 }
 
@@ -367,6 +369,8 @@ export function alfredStepDone(step: AskStep): {icon: IconName; text: string} {
   if (step.tool === 'list_items') return {icon: 'calendar_today', text: 'Checked your calendar'};
   if (step.tool === 'search_calendar') return {icon: 'calendar_today', text: `Searched your calendar for “${step.query}”`};
   if (step.tool === 'propose_change') return {icon: 'edit', text: 'Prepared a change'};
+  if (step.tool === 'search_jobs') return {icon: 'work', text: step.query ? `Searched your applications for “${step.query}”` : 'Looked through your applications'};
+  if (step.tool === 'get_application') return {icon: 'work', text: `Read ${step.company}’s application`};
   return {icon: 'event', text: `Prepared the ${step.kind}`};
 }
 

@@ -40,7 +40,7 @@ import {MailpiecesWorker} from './mailpieces/worker.ts';
 import {SearchTermsWorker} from './search/terms.ts';
 import {HistoryExtractor} from './triage/history.ts';
 // Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
-import {JobsReader, jobsApi, jobsTokenApi, jobsWeb, migrateJobs} from './jobs/index.ts';
+import {JobsReader, jobsAlfred, jobsApi, jobsTokenApi, jobsWeb, migrateJobs} from './jobs/index.ts';
 import {TriageWorker} from './triage/worker.ts';
 
 const config = loadConfig();
@@ -120,7 +120,7 @@ const ruleTrash = new RuleTrashScheduler({store});
 const snooze = new SnoozeScheduler({store, notifier});
 const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
-  providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints},
+  providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints, registered: [jobsAlfred]},
   // A dev run with no key and no fake model drafts with the dev provider's canned answer.
   drafting: {endpoints: aiEndpoints, canned: config.production || config.devAiUrl ? null : devDraftWriter()}, reading: {endpoints: aiEndpoints}, prefill: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, draftFiles, newsSort,
   routes: [jobsApi(store)],

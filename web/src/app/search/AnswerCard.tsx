@@ -1,7 +1,8 @@
 // Alfred's Answer card (board 07): one or two lines with their bold
 // runs, the sources (email rows that open in the reading pane, then the events and tasks it rests
 // on, each opening the floating detail's card beside the answer, as a Today line does, so the answer
-// stays: Edit and Open in Calendar go there), each follow-up turn below the last, and a follow-up field.
+// stays: Edit and Open in Calendar go there), then the job applications (their rows open them on
+// Jobs), each follow-up turn below the last, and a follow-up field.
 // "Couldn't find that in your mail or calendar" says what it searched. A failure shows the
 // server's words and puts the question back in the field. With no key, the card says so as it opens,
 // and "Settings › AI" in any of its lines opens Settings there. Answers aren't streamed, so while a
@@ -14,7 +15,7 @@
 // bar and back. On the phone an item's row opens its detail on the Agenda instead, and the follow-up
 // field takes the keys only when tapped, so no keyboard rises on its own. In the phone's sheet the
 // sheet's top bar is the card's header.
-import type {AccountOut, AiOut, AnswerItemOut, CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
+import type {AccountOut, AiOut, AnswerApplicationOut, AnswerItemOut, CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
 import {motion} from '../../tokens.ts';
@@ -136,7 +137,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
                 {searchedLine(turn.searched) && <span className="searched">{searchedLine(turn.searched)}</span>}
               </div>
             )}
-            {(turn.sources.length > 0 || turn.items.length > 0) && (
+            {(turn.sources.length > 0 || turn.items.length > 0 || turn.applications.length > 0) && (
               <div className="srcs">
                 {shownSources(turn.sources, allSources.has(turn.turn_id)).shown.map(source => (
                   <button key={source.message_id} type="button" className={source.message_id === openId ? 'src open' : 'src'} data-id={source.message_id} onClick={() => onOpen(source.message_id)}>
@@ -166,6 +167,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
                     <span className="when num">{answerItemWhen(item, now, timeZone)}</span>
                   </button>
                 ))}
+                {turn.applications.map(application => <ApplicationRow key={application.application_id} application={application} opens={!phone} />)}
               </div>
             )}
             {turn.proposals.map(proposal => {
@@ -252,6 +254,27 @@ function AnswerItemCard({turn, cited, timeZone, onClose}: {turn: number; cited: 
         open: one => navigate(itemRoute(one)),
       }}
       onClose={onClose} onEdit={() => navigate(itemRoute(item, true))} />
+  );
+}
+
+/**
+ * A job application the answer rests on: its company and status, then its role. It opens the
+ * application on Jobs; on the phone, which has no Jobs, it shows but doesn't open.
+ */
+function ApplicationRow({application, opens}: {application: AnswerApplicationOut; opens: boolean}) {
+  const content = (
+    <>
+      <span className="line">
+        <span className="who ell">{application.company}</span>
+        <span className="st">· {application.status}</span>
+      </span>
+      <span className="role">{application.title}</span>
+    </>
+  );
+  if (!opens) return <div className="src app" data-application={application.application_id}>{content}</div>;
+  return (
+    <button type="button" className="src app" data-application={application.application_id}
+      onClick={() => navigate({page: 'jobs', open: application.application_id})}>{content}</button>
   );
 }
 

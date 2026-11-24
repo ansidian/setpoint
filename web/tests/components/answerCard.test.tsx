@@ -1,7 +1,8 @@
 // Alfred's Answer card with an answer that rests on an email and calendar items: the email's row
 // opens it in the reading pane, and each item's row, after the emails, opens the floating detail's
 // card for that item as the calendar has it now, the answer staying where it is. The card's Open in
-// Calendar goes there. An item no longer on its day says so. An answer that found nothing says it
+// Calendar goes there. An item no longer on its day says so. A job application's row opens it on Jobs
+// (on the phone it shows but doesn't open). An answer that found nothing says it
 // looked in the mail and the calendar. The server is faked at fetch: Settings › AI's keys, the
 // calendars and the item's day.
 import type {AccountOut, AnswerOut, CalendarOut, ItemOut} from '@setpoint/shared';
@@ -22,7 +23,7 @@ const GYM = {key: '7@2026-10-08T14:00:00.000Z', id: 7, kind: 'event', calendar_i
 const turn = (fields: Partial<AnswerOut>): AnswerOut => ({
   conversation_id: 1, turn_id: 1, ends_at: SEED_NOW, question: 'When is dinner with Sam?', answer: 'Friday at 7:00 PM at Blue Door.', emphasis: [{start: 0, end: 6}],
   sources: [{message_id: 27, account_id: 1, subject: 'Dinner Friday?', organisation: null, from_name: 'Sam Lee', received_at: '2026-10-05T19:40:00Z', pinned: false}],
-  items: [DINNER], searched: [], proposals: [], ...fields,
+  items: [DINNER], applications: [], searched: [], proposals: [], ...fields,
 });
 
 const alfredWith = (turns: AnswerOut[]): Alfred => ({
@@ -121,4 +122,27 @@ test('nothing found says it looked in the mail and the calendar', async () => {
   await card([turn({answer: null, emphasis: [], sources: [], items: [], searched: ['passport']})]);
   await expect.element(page.getByText('Couldn’t find that in your mail or calendar')).toBeVisible();
   expect(document.querySelector('.srcs')).toBeNull();
+});
+
+const WOODGROVE = {application_id: 32, company: 'Woodgrove Bank', title: 'Application Developer', status: 'Offer'};
+
+test('a job application it rests on is a row after the items: its company and status, then its role; it opens the application on Jobs', async () => {
+  await card([turn({sources: [], items: [], applications: [WOODGROVE]})]);
+  const row = page.getByRole('button', {name: /Woodgrove Bank/});
+  await expect.element(row).toHaveTextContent('Woodgrove Bank· OfferApplication Developer');
+  await userEvent.click(row);
+  expect(window.location.pathname).toBe('/jobs/32');
+  // The answer stays.
+  await expect.element(page.getByText('Friday at 7:00 PM at Blue Door.')).toBeVisible();
+});
+
+test('on the phone, which has no Jobs, an application\'s row shows but doesn\'t open', async () => {
+  await page.viewport(390, 844);
+  try {
+    await card([turn({sources: [], items: [], applications: [WOODGROVE]})]);
+    await expect.element(page.getByText('Application Developer')).toBeVisible();
+    expect(page.getByRole('button', {name: /Woodgrove Bank/}).elements()).toEqual([]);
+  } finally {
+    await page.viewport(1280, 800);
+  }
 });

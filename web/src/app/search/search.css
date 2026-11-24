@@ -142,14 +142,14 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
    letters: the sender, then its account's dot and age, then the subject under them. An event or
    task the same: its glyph and title, then its day and time under the title. */
 .alf-window .src { height: auto; min-height: 34px; padding: 7px 12px 8px 10px; column-gap: 8px; row-gap: 2px; }
-.alf-window .src:not(.item) { grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "who pin ac age" "subj subj subj subj"; }
-.alf-window .src:not(.item) .line { display: contents; }
-.alf-window .src:not(.item) .who { grid-area: who; max-width: none; }
-.alf-window .src:not(.item) .line > .grow { grid-area: subj; }
-.alf-window .src:not(.item) .pin { grid-area: pin; }
-.alf-window .src:not(.item) .ac { grid-area: ac; }
+.alf-window .src:not(.item, .app) { grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "who pin ac age" "subj subj subj subj"; }
+.alf-window .src:not(.item, .app) .line { display: contents; }
+.alf-window .src:not(.item, .app) .who { grid-area: who; max-width: none; }
+.alf-window .src:not(.item, .app) .line > .grow { grid-area: subj; }
+.alf-window .src:not(.item, .app) .pin { grid-area: pin; }
+.alf-window .src:not(.item, .app) .ac { grid-area: ac; }
 .alf-window .src .ac .label { display: none; }
-.alf-window .src:not(.item) .age { grid-area: age; }
+.alf-window .src:not(.item, .app) .age { grid-area: age; }
 .alf-window .src.item { grid-template-columns: 16px minmax(0, 1fr); grid-template-areas: "glyph title" ". when"; column-gap: 10px; }
 .alf-window .src.item .line { display: contents; }
 .alf-window .src.item .line > .icon { grid-area: glyph; }
@@ -180,6 +180,13 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .src.item .line > .icon { color: var(--ink3); flex: none; }
 .src.item .line .grow { color: var(--ink); }
 .src.item .when { grid-column: 2 / -1; color: var(--ink3); font-size: 12px; text-align: right; white-space: nowrap; }
+/* A job application: its company and status, then its role under them, at any width. */
+.src.app { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 2px; height: auto; min-height: 34px; padding: 7px 12px 8px 10px; }
+.src.app .line { gap: 0.3em; }
+.src.app .who { max-width: none; flex: 0 1 auto; }
+.src.app .st { color: var(--ink3); white-space: nowrap; flex: none; }
+.src.app .role { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+div.src.app:hover { background: var(--sub); }
 .srcs .more { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 6px; border-radius: var(--r-row); color: var(--ink3); font-size: 12.5px; }
 .srcs .more:hover { background: var(--sub); color: var(--ink2); }
 .turn-sep { height: 1px; background: var(--hair); margin: 4px 0 2px; flex: none; }
@@ -268,13 +275,13 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
   .answer .src { min-height: 44px; }
   /* An email's row is two lines, as a search result's: the sender, account and age, then the subject
      under them, so neither is cut to a few letters. */
-  .answer .src:not(.item) { height: auto; padding: 7px 12px 8px 10px; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "who pin ac age" "subj subj subj subj"; column-gap: 8px; row-gap: 2px; }
-  .answer .src:not(.item) .line { display: contents; }
-  .answer .src:not(.item) .who { grid-area: who; max-width: none; }
-  .answer .src:not(.item) .line > .grow { grid-area: subj; }
-  .answer .src:not(.item) .pin { grid-area: pin; }
-  .answer .src:not(.item) .ac { grid-area: ac; }
-  .answer .src:not(.item) .age { grid-area: age; min-width: 0; }
+  .answer .src:not(.item, .app) { height: auto; padding: 7px 12px 8px 10px; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "who pin ac age" "subj subj subj subj"; column-gap: 8px; row-gap: 2px; }
+  .answer .src:not(.item, .app) .line { display: contents; }
+  .answer .src:not(.item, .app) .who { grid-area: who; max-width: none; }
+  .answer .src:not(.item, .app) .line > .grow { grid-area: subj; }
+  .answer .src:not(.item, .app) .pin { grid-area: pin; }
+  .answer .src:not(.item, .app) .ac { grid-area: ac; }
+  .answer .src:not(.item, .app) .age { grid-area: age; min-width: 0; }
   .answer .field { height: 40px; }
   .answer .field input { font-size: 16px; }
   /* In the sheet the card is the page under its top bar, not a card on one. */

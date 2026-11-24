@@ -21,7 +21,7 @@ import type {AccountOut, AllOut, CalendarOut, ItemsOut, SearchOut, SnoozedOut, T
 import type {Page} from 'playwright-core';
 import {SUGGESTION_PAUSE_MS} from '../../src/app/search/mailSearch.ts';
 import {TYPING_MS} from '../../src/app/search/state.ts';
-import {ADD_QUESTION, calendarAlfred, FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, MOVE_QUESTION, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
+import {ADD_QUESTION, calendarAlfred, FAKE_ANTHROPIC_KEY, fakeAlfred, jobsAlfred, KUBERNETES_QUESTION, leaseAlfred, MOVE_QUESTION, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
 import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -1510,6 +1510,33 @@ test('Alfred from ⌘K: on Calendar, typed and ⌘Enter, the window answers, the
     await alfredWindow(page).locator('.ans', {hasText: 'By Oct 31, 2026'}).waitFor();
     await setpoint.idle();
     assert.equal(asks.length, 1);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('Alfred from ⌘K on Jobs: the answer cites the application whose posting names it, and its row opens it there, the window staying', async () => {
+  const {setpoint, stop} = await withAlfred({answer: jobsAlfred});
+  try {
+    const page = await setpoint.page(TALL);
+    await page.goto(`${setpoint.base}/jobs`);
+    await page.locator('.jb-scroll .jb-tr').first().waitFor();
+    const asks = asksOf(page) as {question: string; context?: unknown}[];
+    await page.keyboard.press('Meta+k');
+    await page.getByRole('dialog', {name: 'Command palette'}).waitFor();
+    await page.keyboard.insertText(KUBERNETES_QUESTION);
+    await page.locator('.palette .item.ask').waitFor();
+    await page.keyboard.press('Meta+Enter');
+    const row = alfredWindow(page).locator('.src.app');
+    await row.waitFor();
+    assert.deepEqual(asks.map(ask => [ask.question, ask.context]), [[KUBERNETES_QUESTION, {page: 'jobs'}]]);
+    assert.equal(await row.textContent(), 'Woodgrove Bank· OfferApplication Developer');
+    const id = Number(await row.getAttribute('data-application'));
+    await row.click();
+    await page.waitForURL(`${setpoint.base}/jobs/${id}`);
+    await page.getByRole('heading', {name: 'Application Developer'}).waitFor();
+    assert.equal(await alfredWindow(page).locator('.ans', {hasText: 'One application lists Kubernetes'}).count(), 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();

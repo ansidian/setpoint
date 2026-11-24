@@ -1,0 +1,1 @@
+ALTER TABLE `alfred_turns` ADD `application_sources` text DEFAULT '[]' NOT NULL;

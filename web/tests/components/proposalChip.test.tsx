@@ -36,7 +36,7 @@ const DENTIST: ProposalOut = {
 
 const answer = (proposal: ProposalOut): AnswerOut => ({
   conversation_id: 1, turn_id: 1, ends_at: SEED_NOW, question: 'Move gym to Thursday', answer: 'Ready for you to review.', emphasis: [],
-  sources: [], items: [], searched: [], proposals: [proposal],
+  sources: [], items: [], applications: [], searched: [], proposals: [proposal],
 });
 const alfredWith = (turns: AnswerOut[]): Alfred => ({open: true, turns, waiting: null, step: null, trail: [], error: null, failed: null, start: vi.fn(), ask: vi.fn(), close: vi.fn()});
 const json = (body: unknown) => new Response(JSON.stringify(body), {status: 200, headers: {'content-type': 'application/json'}});

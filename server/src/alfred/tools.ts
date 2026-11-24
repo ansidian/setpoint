@@ -5,14 +5,14 @@
 // Google keeps). search_calendar is Calendar's own search, with undated Todoist tasks too.
 // propose_item builds the same proposal as Add to calendar / Add as task, from an email or from the
 // user's words alone. propose_change prepares a change to an existing item for the editor's Save.
-// read_attachment hands the model a PDF attached to an email it has seen, as a document. None of
-// them changes anything.
+// read_attachment hands the model a PDF attached to an email it has seen, as a document. A module's
+// registered tools (Jobs' search_jobs and get_application) run here too. None of them changes anything.
 //
 // Each tool has one result shape as JSON. A failure is a short reason the model can act on (without
 // provider bodies). Date ranges are checked and capped (92 days, 366 with a query). Email text is
 // fenced as untrusted. A proposal (a new item or a change) comes only when the tool quotes one of
 // the user's own messages, one per question.
-import type {AnswerItemOut, ItemKind, ItemOut, ProposalOut, RecurringScope} from '@setpoint/shared';
+import type {AnswerApplicationOut, AnswerItemOut, ItemKind, ItemOut, ProposalOut, RecurringScope} from '@setpoint/shared';
 import {calendarSearchInput, RECURRING_SCOPES, searchInput} from '@setpoint/shared';
 import {and, asc, eq} from 'drizzle-orm';
 import {bodyOf} from '../db/bodies.ts';
@@ -27,6 +27,7 @@ import {searchMail} from '../search/search.ts';
 import type {Store} from '../store.ts';
 import {fenced} from './prompt.ts';
 import {proposeChange, proposeFromMessage, proposeFromWords} from './proposals.ts';
+import type {AlfredRegistration} from './registered.ts';
 import type {ChangeEdits} from './proposals.ts';
 import type {Invite} from './proposals.ts';
 
@@ -62,6 +63,10 @@ export interface ToolContext {
   documents?: Set<number>;
   // The events and tasks list_items and search_calendar gave this question, by key: what an answer may cite.
   items?: Map<string, AnswerItemOut>;
+  // The registered tools on for this question (Jobs'), and the applications they gave, by id: what
+  // an answer may cite.
+  registered?: AlfredRegistration[];
+  applications?: Map<number, AnswerApplicationOut>;
 }
 
 export interface ToolOutcome {
@@ -329,6 +334,11 @@ export function runTool(context: ToolContext, name: string, input: Record<string
     case 'search_calendar': return searchCalendarTool(context, input);
     case 'propose_item': return proposeTool(context, input);
     case 'propose_change': return proposeChangeTool(context, input);
-    default: return fail(`There's no tool called ${name}.`);
+    default: {
+      const owner = context.registered?.find(one => one.tools.some(tool => tool.name === name));
+      if (!owner) return fail(`There's no tool called ${name}.`);
+      const applications = context.applications ?? (context.applications = new Map());
+      return owner.run({store: context.store, seen: context.seen, cite: application => applications.set(application.application_id, application)}, name, input);
+    }
   }
 }

@@ -37,7 +37,7 @@ beforeEach(() => {
       const endsAt = new Date(Date.now() + HOURS_4).toISOString();
       return new Promise<Response>(resolve => asked.push({
         question: body.question, conversation: body.conversation_id ?? null,
-        answer: text => resolve(json({conversation_id: 5, turn_id: ++turnIds, ends_at: endsAt, question: body.question, answer: text, emphasis: [], sources: [], items: [], searched: [], proposals: []} satisfies AnswerOut)),
+        answer: text => resolve(json({conversation_id: 5, turn_id: ++turnIds, ends_at: endsAt, question: body.question, answer: text, emphasis: [], sources: [], items: [], applications: [], searched: [], proposals: []} satisfies AnswerOut)),
         refuse: code => resolve(new Response(JSON.stringify({error: {code, message: 'This conversation has ended; ask again to start a new one.'}}), {status: 410, headers: {'content-type': 'application/json'}})),
       }));
     }
@@ -241,7 +241,7 @@ test('a follow-up the server refuses as ended closes the window with a toast, th
 const remembered = () => sessionStorage.getItem('alfred.thread');
 const reloaded = () => sessionStorage.setItem('alfred.thread', JSON.stringify({conversation: 5, origin: {kind: 'search'}}));
 const turnOf = (question: string, answer: string): AnswerOut => ({
-  conversation_id: 5, turn_id: 1, ends_at: new Date(Date.now() + HOURS_4).toISOString(), question, answer, emphasis: [], sources: [], items: [], searched: [], proposals: [],
+  conversation_id: 5, turn_id: 1, ends_at: new Date(Date.now() + HOURS_4).toISOString(), question, answer, emphasis: [], sources: [], items: [], applications: [], searched: [], proposals: [],
 });
 
 test('after a reload the window shows at once with a skeleton while the thread is read back, then fills with its turns', async () => {

@@ -59,6 +59,12 @@ files marked *imports* import the folders.
 | `server/src/server.ts`, after `openDatabase` | `migrateJobs(sqlite)`: Jobs's tables, after the app's migrations |
 | `server/src/server.ts`, `createApp`'s `routes` | `routes: [jobsApi(store)]`: Jobs's routes under /api, behind the session |
 | `server/src/server.ts`, `createApp`'s `tokenRoutes` | `tokenRoutes: [jobsTokenApi(store)]`: the browser extension's POST /api/jobs/check, before the session, with Jobs's own token ([`token.ts`](token.ts)) |
+| `server/src/server.ts`, `createApp`'s `alfred.registered` | `registered: [jobsAlfred]`: Jobs's read-only tools for Alfred ([`alfred.ts`](alfred.ts)), offered only while Jobs is on |
+| `server/src/alfred/registered.ts`, `AlfredOptions.registered` in `ask.ts`, `alfredSystem`'s and `alfredTools`' `registered` in `prompt.ts`, and `runTool`'s registered tools in `tools.ts` | the generic hook the line above uses: a module's tools, the words the prompt adds for them, and the source kind they cite; with none registered, Alfred's prompt and tools are mail and calendar alone; it names no module, so it can stay |
+| `shared/src/api/search.ts`, `AnswerApplicationOut`, `AnswerOut.applications`, `AskStep`'s `search_jobs` and `get_application`, and `askContextSchema`'s `application_id` | an answer's applications, Alfred's steps while he reads them, and the application open on Jobs; they import nothing, and with Jobs removed answers carry none |
+| `server/src/db/schema.ts`, `alfred_turns.application_sources`, and `server/drizzle/0059_alfred_application_sources.sql` | each answer's applications, kept with it; with Jobs removed it stays empty, so it can stay |
+| `server/src/alfred/ask.ts`, `contextLine`'s job application line | names the application open on Jobs in a thread's first question; it imports nothing |
+| `web/src/app/search/AnswerCard.tsx`, `ApplicationRow` and `.src.app` in `search.css`, and the `search_jobs` and `get_application` lines of `web/src/logic/search.ts` | an answer's application rows (company · status, then the role), opening `/jobs/12` (on the phone they show but don't open), and the trail's lines; they import nothing, and with no applications draw nothing |
 | `server/src/cli.ts`, `jobs-token` and its lines in `USAGE` | issuing, rotating and revoking the extension's token |
 | `package.json`, `extension:build`, the `typecheck` script's `tsc -p extension/tsconfig.json` and `@types/chrome` | building the extension and typechecking it |
 | `vitest.config.ts`, the `extension/vitest.config.ts` project | the extension's tests in `npm test` |
@@ -236,6 +242,21 @@ the lint rule still refuses an import of Jobs from triage.
   that set a status it didn't have or a status set by hand (from what its emails had set). Turning
   Ghosted isn't a move: it's the clock, not news. With the accounts Jobs reads and its earliest email, for the pane's quiet
   line. It's under `/jobs`, so the `jobs` event refreshes it.
+
+## Alfred
+
+- **What:** [`alfred.ts`](alfred.ts) registers two read-only tools with Alfred, from `server.ts`,
+  offered only while Jobs is on (read on each question). With Jobs off, Alfred's prompt and tools are
+  as if Jobs weren't there.
+- **`search_jobs`:** Search's matching, with the posting's summary, must-haves, nice-to-haves, salary,
+  location and workplace added to its text, then filtered by status (Ghosted as its own) and by words
+  in an in-process application's step. With no words, it lists what the filters match. Up to 25.
+- **`get_application`:** an application's detail: the posting (its text capped at 12,000 characters),
+  the timeline (each email still in the mail by its `message_id`, which Alfred may then read and cite),
+  the open Needs you items at its company, and the applications to it before.
+- **Citing:** every application the tools gave can be one of the answer's sources: `{application_id,
+  company, title, status}`, the status the word the row shows. Posting text and the lines taken from
+  emails are fenced as `<job_content>`, untrusted.
 
 ## Needs you's answers and the corrections
 

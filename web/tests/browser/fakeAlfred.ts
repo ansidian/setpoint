@@ -224,6 +224,21 @@ export function calendarAlfred(turn: AlfredTurn): Call {
   return leaseAlfred(turn);
 }
 
+export const KUBERNETES_QUESTION = 'which applications require Kubernetes?';
+
+/**
+ * Jobs' Alfred: "which applications require Kubernetes?" searches the user's applications for
+ * kubernetes, the seed's Woodgrove Bank posting naming it, and answers citing each one found.
+ * Anything else is board 07's.
+ */
+export function jobsAlfred(turn: AlfredTurn): Call {
+  const {question, results} = turn;
+  if (question.split('The user\'s question: ').at(-1)!.trim() !== KUBERNETES_QUESTION) return leaseAlfred(turn);
+  const found = results.find(result => Array.isArray(result.results) && !('searched' in result)) as {results: {application_id: number}[]} | undefined;
+  if (!found) return {name: 'search_jobs', input: {query: 'kubernetes'}};
+  return {name: 'answer', input: {found: true, text: 'One application lists Kubernetes, Woodgrove Bank\'s.', source_ids: [], application_ids: found.results.map(row => row.application_id)}};
+}
+
 /**
  * Search's checks: any question searches `northwind rejection` and answers with every result as a
  * source, so the sources hold the last-year fixture's Dec 20, 2025.
