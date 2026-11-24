@@ -264,7 +264,7 @@ test('phone Alfred on the Agenda: a reload keeps the pill with no question asked
   }
 });
 
-test('phone Alfred\'s proposal: a compact card that fits 375 px, inline and in his sheet; Add opens the editor sheet on his draft, and Create makes it with Undo', async () => {
+test('phone Alfred\'s proposal: a chip that fits 375 px, inline and in his sheet; Edit opens the editor sheet on his draft, and Create makes it with Undo', async () => {
   const {setpoint, stop} = await withAlfred();
   try {
     const page = await inbox(setpoint);
@@ -280,10 +280,10 @@ test('phone Alfred\'s proposal: a compact card that fits 375 px, inline and in h
     const card = sheet(page).locator('[aria-label="Proposal: add to calendar"]');
     await card.waitFor();
     await rested(() => proposalFits(card, 'in his sheet'));
-    assert.equal(await card.locator('.ph-prop-what').textContent(), PROPOSED_TITLE);
+    assert.equal(await card.locator('.chip-what').textContent(), PROPOSED_TITLE);
 
-    // Add opens the editor sheet on his draft: his title, day and times.
-    await card.getByRole('button', {name: 'Add to calendar'}).tap();
+    // Edit opens the editor sheet on his draft: his title, day and times.
+    await card.getByRole('button', {name: 'Edit'}).tap();
     const editor = page.getByRole('dialog', {name: 'New event'});
     await editor.waitFor();
     assert.equal(await editor.getByLabel('Describe the event').inputValue(), PROPOSED_TITLE);

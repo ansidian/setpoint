@@ -7,6 +7,8 @@
 // provider's words. Alfred's change to an existing item is the editor on that item, his changes
 // filled in and marked: Save sends only what differs from the item, as Calendar's editor does.
 //
+// In Alfred's answer it opens from his proposal chip's Edit (ProposalChip.tsx), and Cancel goes back to it.
+//
 // Opened from the reader, the model's prefill may be on its way (`fill`): the fields wait locked
 // under skeletons, then fill with its answer, or unlock as the rules filled them with a red line in
 // the head saying the prefill didn't come.
@@ -23,7 +25,7 @@ import {foldAway} from '../fold.ts';
 const NO_ITEMS = () => [];
 const nothing = () => {};
 
-export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false, fill = null}: {
+export function ProposalCard({proposal, now, timeZone, onClose, onCancel, inAnswer = false, fill = null}: {
   proposal: ProposalOut;
   // The reader's prefill: on its way, or why it didn't come. Null when it's in or there's none.
   fill?: 'waiting' | PrefillMiss | null;
@@ -32,6 +34,8 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
   // The reader's card closes through the reader. One in an answer closes itself.
   onClose?: () => void;
   inAnswer?: boolean;
+  // Cancel and Esc, when they go back to something rather than close (an answer's chip, after Edit).
+  onCancel?: () => void;
 }) {
   // Its pickers offer only the calendars listed in Settings › Calendar.
   const calendars = useResource<CalendarOut[]>(CALENDARS_PATH).data?.filter(calendar => calendar.listed);
@@ -74,7 +78,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
 
   return (
     <Editor open={{kind: proposal.kind, date: localDate(now, timeZone), ...(change ? {item: change.item, change} : {})}} calendars={calendars} today={localDate(now, timeZone)} timeZone={timeZone}
-      dayItems={NO_ITEMS} handed={false} onPreview={nothing} onCreate={inputs => void create(inputs)} onSave={(item, changes, scope) => void save(item, changes, scope)} onDelete={nothing} onClose={close}
+      dayItems={NO_ITEMS} handed={false} onPreview={nothing} onCreate={inputs => void create(inputs)} onSave={(item, changes, scope) => void save(item, changes, scope)} onDelete={nothing} onClose={onCancel ?? close}
       card={{proposal, pending, failed, quiet: inAnswer, form, filling: fill === 'waiting', missed: fill && fill !== 'waiting' ? prefillMissLine(fill) : null}} />
   );
 }

@@ -8,7 +8,8 @@
 //   against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key; its
 //   window once the user leaves the place it was asked, across pages and a reload, until ×
 // - the proposal card (Calendar's editor) and its Create through the command layer, and the More
-//   menu on Security mail.
+//   menu on Security mail; Alfred's proposal chip from ⌘K, a new event from the words and a change
+//   to one, made only by Create and Save.
 // - Gmail-style operators typed in the field, marked, with people offered after from:
 // Calendar search, from the header's button, `/` or ⌘F, with its results in the right pane. A click,
 // Enter, ↓ and J / K select results on the grid. E goes to the editor and back. Then Esc.
@@ -20,7 +21,7 @@ import type {AccountOut, AllOut, CalendarOut, ItemsOut, SearchOut, SnoozedOut, T
 import type {Page} from 'playwright-core';
 import {SUGGESTION_PAUSE_MS} from '../../src/app/search/mailSearch.ts';
 import {TYPING_MS} from '../../src/app/search/state.ts';
-import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
+import {ADD_QUESTION, calendarAlfred, FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, MOVE_QUESTION, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
 import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -72,8 +73,8 @@ async function idOf(setpoint: Setpoint, subjectStart: string): Promise<number> {
 const chips = (page: Page) => page.locator('.search .qchip:not([aria-hidden])').allTextContents();
 
 /** Setpoint with Alfred's key set and its model calls going to the fake, which reads searches too. */
-async function withAlfred({readings = SEED_READINGS, fixtures = []}: {readings?: Record<string, FakeReading>; fixtures?: string[]} = {}) {
-  const fake = await fakeAlfred(leaseAlfred, {readings});
+async function withAlfred({readings = SEED_READINGS, fixtures = [], answer = leaseAlfred}: {readings?: Record<string, FakeReading>; fixtures?: string[]; answer?: typeof leaseAlfred} = {}) {
+  const fake = await fakeAlfred(answer, {readings});
   const setpoint = await startSetpoint({fixtures, env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
     await fake.close();
     throw error;
@@ -1509,6 +1510,45 @@ test('Alfred from ⌘K: on Calendar, typed and ⌘Enter, the window answers, the
     await alfredWindow(page).locator('.ans', {hasText: 'By Oct 31, 2026'}).waitFor();
     await setpoint.idle();
     assert.equal(asks.length, 1);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('Alfred proposes from ⌘K: a new event from the words, made by Create; a change to the dentist, nothing changed until Save moves it', async () => {
+  const {setpoint, stop} = await withAlfred({answer: calendarAlfred});
+  try {
+    const page = await setpoint.page(TALL);
+    await page.goto(`${setpoint.base}/calendar?view=week`);
+    await page.locator('.wb', {hasText: 'Dentist'}).first().waitFor();
+    const dentists = async (from: string) => (await setpoint.api<ItemsOut>('GET', `/items?from=${from}&to=${from.slice(0, 8)}${String(Number(from.slice(8)) + 1).padStart(2, '0')}`)).items.filter(item => item.title === 'Dentist').map(item => item.starts_at);
+    const ask = async (question: string) => {
+      await page.keyboard.press('Meta+k');
+      await page.getByRole('dialog', {name: 'Command palette'}).waitFor();
+      await page.keyboard.insertText(question);
+      await page.locator('.palette .item.ask').waitFor();
+      await page.keyboard.press('Meta+Enter');
+    };
+
+    await ask(ADD_QUESTION);
+    const add = alfredWindow(page).getByRole('region', {name: 'Proposal: add to calendar'});
+    await add.getByText('Tue, Oct 13 · 3:00 – 4:00 PM').waitFor();
+    assert.equal(await add.getByText('from this email').count(), 0);
+    assert.deepEqual(await dentists('2026-10-13'), [], 'nothing made before Create');
+    await add.getByRole('button', {name: 'Create event'}).click();
+    await add.waitFor({state: 'detached'});
+    assert.deepEqual(await dentists('2026-10-13'), ['2026-10-13T22:00:00.000Z']);
+
+    await ask(MOVE_QUESTION);
+    const move = alfredWindow(page).getByRole('region', {name: 'Proposal: change event'});
+    await move.getByText('Thu, Oct 8 · 2:30 – 3:30 PM').waitFor();
+    await move.getByText('Wed, Oct 7 · 2:30 – 3:30 PM').waitFor();
+    assert.deepEqual(await dentists('2026-10-07'), ['2026-10-07T21:30:00.000Z'], 'nothing changed before Save');
+    await move.getByRole('button', {name: 'Save'}).click();
+    await move.waitFor({state: 'detached'});
+    assert.deepEqual(await dentists('2026-10-07'), []);
+    assert.deepEqual(await dentists('2026-10-08'), ['2026-10-08T21:30:00.000Z']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();

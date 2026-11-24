@@ -223,6 +223,20 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .prop .field.pick { width: 180px; flex: none; text-align: left; }
 .prop .conflict { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
 .prop .conflict.free .icon { color: var(--good); }
+/* Alfred's proposal chip (ProposalChip.tsx): the title, then when, in ink as what it becomes,
+   each old value under its line small, ink3 and struck. The details
+   (which events, the calendar and place, the conflict) sit apart in smaller ink3 lines. Each line
+   wraps rather than being cut. It waits at .5 while the provider confirms. */
+.chip-prop .card-b { gap: 2px; }
+.chip-what { font-size: 15px; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+.chip-when { font-size: 13.5px; color: var(--ink); overflow-wrap: anywhere; }
+.chip-was { font-size: 12px; color: var(--ink3); text-decoration: line-through; overflow-wrap: anywhere; }
+.chip-meta { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 12.5px; color: var(--ink3); }
+.chip-home { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; overflow-wrap: anywhere; }
+.chip-prop .conflict { margin: 0; font-size: 12.5px; white-space: normal; }
+.chip-prop .failed-line { padding-left: 0; margin-top: 6px; }
+.chip-acts { display: flex; gap: 8px; margin-top: 12px; }
+.chip-prop.pending .card-b > :not(.chip-acts) { opacity: .5; }
 .prop-foot { display: flex; align-items: center; gap: 8px; padding: 4px 0 0 30px; }
 .prop-foot .btn.quiet .kbd { margin-left: 4px; }
 .prop-foot .legend { display: inline-flex; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; }
@@ -280,14 +294,13 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
   .alf-fab:active { background: var(--sub2); }
   /* The lists under it keep room at their foot, so their last row scrolls clear of it. */
   .list, .ph-agenda, .news-day { padding-bottom: 68px; }
-  /* Alfred's proposal (PhoneProposal.tsx): what, when and where, each line wrapping rather than cut,
-     then the conflict line and Add, a whole-width button to tap. */
+  /* Alfred's proposal chip on the phone: larger lines, and Create and Edit side by side, each a
+     whole half to tap. */
   .ph-prop .card-b { gap: 4px; padding: 10px 16px 16px; }
-  .ph-prop-what { font-size: 16px; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
-  .ph-prop-when, .ph-prop-home { font-size: 14px; overflow-wrap: anywhere; }
-  .ph-prop-home { display: flex; align-items: center; gap: 8px; }
-  .ph-prop .conflict { margin: 2px 0 0; font-size: 13px; white-space: normal; }
-  .ph-prop-add { margin-top: 10px; height: 44px; width: 100%; justify-content: center; }
+  .ph-prop .chip-what { font-size: 16px; }
+  .ph-prop .chip-when { font-size: 14px; }
+  .ph-prop .chip-meta, .ph-prop .conflict { font-size: 13px; }
+  .ph-prop .chip-acts > .btn { flex: 1; height: 44px; justify-content: center; }
   /* In the sheet the answer has no card, so the proposal keeps its own. */
   .ph-sheet .answer .ph-prop { background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn); border-radius: var(--r-popover); }
 }

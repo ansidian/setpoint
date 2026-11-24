@@ -199,6 +199,31 @@ export function leaseAlfred({question, results}: AlfredTurn): Call {
   return {name: 'answer', input: {found: false, text: '', source_ids: []}};
 }
 
+export const ADD_QUESTION = 'add dentist Tuesday at 3';
+export const MOVE_QUESTION = 'move dentist to Thursday';
+
+/**
+ * The calendar's Alfred, on the seed's week: "add dentist Tuesday at 3" proposes Dentist on Tue Oct
+ * 13 at 3 PM from the words alone. "move dentist to Thursday" searches the calendar for the dentist
+ * and proposes moving the one it finds to Thu Oct 8. Anything else is board 07's.
+ */
+export function calendarAlfred(turn: AlfredTurn): Call {
+  const {question, results} = turn;
+  const asked = question.split('The user\'s question: ').at(-1)!.trim();
+  const ready = results.some(result => result.ready === true);
+  const done = {name: 'answer', input: {found: true, text: 'Ready for you to review.', source_ids: []}};
+  if (asked === ADD_QUESTION) {
+    return ready ? done : {name: 'propose_item', input: {owner_instruction: asked, kind: 'event', title: 'Dentist', date: '2026-10-13', start_time: '15:00'}};
+  }
+  if (asked === MOVE_QUESTION) {
+    if (ready) return done;
+    const found = results.find(result => 'searched' in result && Array.isArray(result.results)) as {results: {key: string}[]} | undefined;
+    if (!found) return {name: 'search_calendar', input: {query: 'dentist'}};
+    return {name: 'propose_change', input: {owner_instruction: asked, key: found.results[0]!.key, date: '2026-10-08'}};
+  }
+  return leaseAlfred(turn);
+}
+
 /**
  * Search's checks: any question searches `northwind rejection` and answers with every result as a
  * source, so the sources hold the last-year fixture's Dec 20, 2025.
