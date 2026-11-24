@@ -167,9 +167,9 @@ describe('the composer\'s windows, when they don\'t all fit', () => {
   });
 
   test.each([
-    ['alone, its own width', 1400, false, 440],
+    ['alone, its own width', 1400, false, 560],
     ['alone in a row narrower than that, the row', 400, false, 400],
-    ['beside composer windows in a wide row, its own width', 1400, true, 440],
+    ['beside composer windows in a wide row, its own width', 1400, true, 560],
     ['beside them, as wide as leaves a composer window its toolbar', 800, true, 388],
     ['beside them in a narrow row, no narrower than 320', 732, true, 320],
     ['minimized, a title bar as wide as a composer window\'s', 1400, false, 320, true],

@@ -145,7 +145,7 @@ export const WINDOW_BAR_WIDTH = 320;
 export const WINDOW_GAP = 12;
 export const WINDOW_MORE_WIDTH = 64;
 /** Alfred's window, at the row's right end when it's up: the composer windows line up to its left. */
-export const ALFRED_WINDOW_WIDTH = 440;
+export const ALFRED_WINDOW_WIDTH = 560;
 
 /** The narrowest Alfred's window goes beside a composer window, and the narrowest that leaves the composer's toolbar whole. */
 export const ALFRED_WINDOW_MIN = 320;

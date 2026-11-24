@@ -138,6 +138,23 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .alf-window .alf-title-text { flex: 1 1 auto; min-width: 0; height: 40px; text-align: left; font-size: inherit; color: var(--ink); cursor: pointer; }
 .alf-window .answer .card-b { padding-top: 14px; }
 .alf-window.min .answer > :not(.alf-title) { display: none; }
+/* In the window a source row takes two lines, so neither the sender nor the subject is cut to a few
+   letters: the sender, then its account's dot and age, then the subject under them. An event or
+   task the same: its glyph and title, then its day and time under the title. */
+.alf-window .src { height: auto; min-height: 34px; padding: 7px 12px 8px 10px; column-gap: 8px; row-gap: 2px; }
+.alf-window .src:not(.item) { grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "who pin ac age" "subj subj subj subj"; }
+.alf-window .src:not(.item) .line { display: contents; }
+.alf-window .src:not(.item) .who { grid-area: who; max-width: none; }
+.alf-window .src:not(.item) .line > .grow { grid-area: subj; }
+.alf-window .src:not(.item) .pin { grid-area: pin; }
+.alf-window .src:not(.item) .ac { grid-area: ac; }
+.alf-window .src .ac .label { display: none; }
+.alf-window .src:not(.item) .age { grid-area: age; }
+.alf-window .src.item { grid-template-columns: 16px minmax(0, 1fr); grid-template-areas: "glyph title" ". when"; column-gap: 10px; }
+.alf-window .src.item .line { display: contents; }
+.alf-window .src.item .line > .icon { grid-area: glyph; }
+.alf-window .src.item .line > .grow { grid-area: title; }
+.alf-window .src.item .when { grid-area: when; grid-column: auto; text-align: left; }
 .alf-window.min .alf-title { border-bottom: none; border-radius: var(--r-popover); }
 .ans { margin: 0; max-width: 620px; font-size: 15px; line-height: 1.45; color: var(--ink); user-select: text; -webkit-user-select: text; }
 .ans b { font-weight: 500; }
