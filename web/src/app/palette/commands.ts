@@ -22,6 +22,8 @@ export interface Offer {
   // What the commands are about, shown above the field (board 20: the open email's subject).
   context?: {label: string; colour: Colour};
   commands: Command[];
+  // The dates in view (the Calendar's), for a question to Alfred asked from here.
+  dates?: {from: string; to: string};
 }
 
 const offers = new Map<symbol, () => Offer>();
@@ -44,5 +46,5 @@ export function useCommands(offer: () => Offer) {
 /** Everything on offer now. */
 export function offered(): Offer {
   const all = [...offers.values()].map(offer => offer());
-  return {context: all.find(offer => offer.context)?.context, commands: all.flatMap(offer => offer.commands)};
+  return {context: all.find(offer => offer.context)?.context, commands: all.flatMap(offer => offer.commands), dates: all.find(offer => offer.dates)?.dates};
 }

@@ -10,7 +10,7 @@
 // The tool loop has a step limit and one reminder when a turn ends without the expected tool call.
 // The provider and model are bound when the thread starts. A failure restores the transcript.
 // Threads end after four idle hours.
-import type {AnswerItemOut, AnswerOut, AnswerSourceOut, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
+import type {AnswerItemOut, AnswerOut, AnswerSourceOut, AskContext, AskPage, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
 import {asc, eq, inArray, lt} from 'drizzle-orm';
 import {withBody} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
@@ -90,6 +90,34 @@ function aboutEmail(store: Store, messageId: number, question: string): string {
   ].join('\n\n');
 }
 
+const PAGE_NAMES: Record<AskPage, string> = {
+  inbox: 'Inbox', sent: 'Sent', drafts: 'Drafts', snoozed: 'Snoozed', scheduled: 'Scheduled', calendar: 'Calendar', news: 'News', jobs: 'Jobs', settings: 'Settings',
+};
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const withWeekday = (date: string) => `${WEEKDAYS[new Date(`${date}T12:00:00Z`).getUTCDay()]} ${date}`;
+
+/**
+ * What was on screen when a thread's first question was asked from ⌘K or the phone's button, as one
+ * line before the question: the page, the dates in view on the Calendar, and what's open. Built from
+ * ids and dates only, and an open item's own title.
+ */
+export function contextLine(store: Store, context: AskContext): string {
+  let open = 'with nothing open';
+  if (context.email_id !== undefined) {
+    open = `with the email message_id ${context.email_id} open (read it with get_email)`;
+  } else if (context.item) {
+    const row = store.db.select({kind: t.items.kind, title: t.items.title}).from(t.items).where(eq(t.items.id, context.item.id)).get();
+    const key = context.item.at ? `${context.item.id}@${context.item.at}` : String(context.item.id);
+    open = row ? `with the calendar ${row.kind} ${JSON.stringify(row.title)} open (key ${key})` : 'with nothing open';
+  } else if (context.application_id !== undefined) {
+    open = `with job application ${context.application_id} open`;
+  }
+  const viewing = context.dates ? `, viewing ${withWeekday(context.dates.from)} to ${withWeekday(context.dates.to)}` : '';
+  const means = [open !== 'with nothing open' && '"this" is what\'s open', viewing && 'a weekday is the one in view'].filter(Boolean).join(', and ');
+  return `The user is on ${PAGE_NAMES[context.page]}${viewing}, ${open}.${means ? ` So ${means}.` : ''}`;
+}
+
 /** Each phrase's first place in the text, for bold runs. */
 function emphasisOf(text: string, phrases: string[]): EmphasisOut[] {
   const runs: EmphasisOut[] = [];
@@ -164,7 +192,7 @@ function finalOf(input: Record<string, unknown> | null): Final {
 }
 
 /** POST /api/alfred/ask: a question, a follow-up in a thread, or one about an email. */
-export async function askAlfred(store: Store, input: {question: string; conversation_id?: number; message_id?: number; ask_id?: string}, options: AlfredOptions = {}): Promise<AnswerOut> {
+export async function askAlfred(store: Store, input: {question: string; conversation_id?: number; message_id?: number; context?: AskContext; ask_id?: string}, options: AlfredOptions = {}): Promise<AnswerOut> {
   const now = isoNow(store);
   let thread: Conversation | null = null;
   if (input.conversation_id) {
@@ -191,7 +219,10 @@ export async function askAlfred(store: Store, input: {question: string; conversa
 
   const earlier = thread ? store.db.select().from(t.alfredTurns).where(eq(t.alfredTurns.conversationId, thread.id)).orderBy(asc(t.alfredTurns.id)).all() : [];
   const items = [...(thread?.transcript.items ?? [])];
-  const firstText = !thread && scope !== null ? aboutEmail(store, scope, input.question) : input.question;
+  // A thread's first question carries the email it's about, or what was on screen.
+  const firstText = thread ? input.question
+    : scope !== null ? aboutEmail(store, scope, input.question)
+      : input.context ? `${contextLine(store, input.context)}\n\nThe user's question: ${input.question}` : input.question;
   items.push(...client.userTurn(firstText, thread?.transcript.pending ?? []));
 
   const context: ToolContext = {

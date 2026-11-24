@@ -82,7 +82,8 @@ export function Sheet({title, onClose, back, action, children}: {
   });
   useFocusReturn();
   useEffect(() => {
-    sheet.current?.focus({preventScroll: true});
+    // It takes the focus, unless a field in it already has (one that opens ready to type).
+    if (!sheet.current?.contains(document.activeElement)) sheet.current?.focus({preventScroll: true});
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       event.preventDefault();

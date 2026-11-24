@@ -1262,7 +1262,7 @@ test('a newsletter with its unsubscribe page offers Unsubscribe beside Ask and i
     assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Add to calendar', 'Add as task', 'Ask about this email']);
     await page.keyboard.press('Meta+k');
     await page.locator('.palette').waitFor();
-    assert.equal(await page.locator('.palette .item', {hasText: 'Unsubscribe'}).count(), 0);
+    assert.equal(await page.locator('.palette .item:not(.ask)', {hasText: 'Unsubscribe'}).count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1489,7 +1489,7 @@ test('U takes the cursor to the next unread email, from the top again past the l
     // ⌘K names it with its key, and goes on from the cursor: Northwind.
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('next unread');
-    assert.deepEqual(await page.locator('.palette .item').allTextContents(), ['Go to next unreadU']);
+    assert.deepEqual(await page.locator('.palette .item:not(.ask)').allTextContents(), ['Go to next unreadU']);
     await page.keyboard.press('Enter');
     await page.locator('.list .row.cur', {hasText: 'Northwind Talent'}).waitFor();
     // From the Calendar, 1 goes to the Inbox.
@@ -1623,7 +1623,7 @@ test('⇧U marks the open email unread and closes the reader; ⌘K names the key
     await page.locator('.rd-subj').waitFor();
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('mark unread');
-    assert.match(await page.locator('.palette [role="option"]', {hasText: 'Mark unread'}).first().textContent() ?? '', /⇧U/);
+    assert.match(await page.locator('.palette [role="option"]:not(.ask)', {hasText: 'Mark unread'}).first().textContent() ?? '', /⇧U/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

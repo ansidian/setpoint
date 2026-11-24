@@ -40,7 +40,7 @@ import {ProposalCard} from './ProposalCard.tsx';
 import {Account} from './Search.tsx';
 import type {Alfred} from './state.ts';
 
-export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, windowed = false, minimized = false, onMinimize, sheet = false, onItem, onOpen}: {
+export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, windowed = false, minimized = false, onMinimize, sheet = false, focusField = false, onItem, onOpen}: {
   alfred: Alfred;
   // Ask about this email: the card is about one email, and shows every question.
   scoped: boolean;
@@ -56,6 +56,8 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
   onMinimize?: () => void;
   // In the phone's sheet: no header of its own (the sheet's top bar is it), and every question shows.
   sheet?: boolean;
+  // The phone's sheet opened on a new thread by a tap: the field takes the keys at once, so the keyboard rises.
+  focusField?: boolean;
   // On the phone, an item's row: its detail on the Agenda (by default, there at once).
   onItem?: (item: AnswerItemOut) => void;
   onOpen: (id: number) => void;
@@ -190,7 +192,8 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
         {failure && <div className="failed-line"><Icon name="error" size={16} /><span><SettingsLink text={failure} /></span></div>}
         {/* Dimmed while Alfred answers: Enter waits until the answer is in, the follow-up kept. */}
         <label className={asking || loading ? 'field asking' : 'field'}>
-          <input ref={field} className="grow" aria-label="Ask a follow-up" placeholder={scoped && !turns.length && !asking ? 'Ask about this email…' : 'Ask a follow-up…'}
+          <input ref={field} className="grow" aria-label="Ask a follow-up" autoFocus={focusField}
+            placeholder={turns.length || asking || loading ? 'Ask a follow-up…' : scoped ? 'Ask about this email…' : 'Ask about your mail or calendar…'}
             value={draft} onChange={event => setDraft(event.target.value)}
             onKeyDown={event => {
               if (event.key === 'Escape') {

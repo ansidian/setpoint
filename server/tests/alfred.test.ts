@@ -177,6 +177,26 @@ describe('Alfred\'s other paths', () => {
     expect((await c.send('GET', `/api/alfred/conversations/${out.body.conversation_id}`)).body.message_id).toBe(exam);
   });
 
+  test('asked from a page: the first turn says what was on screen before the question, and a follow-up carries only its question', async () => {
+    const {w, c, fake} = await alfredWorld();
+    const item = w.store.db.select().from(t.items).where(eq(t.items.kind, 'event')).get()!;
+    const firsts: string[] = [];
+    fake.answer(request => {
+      firsts.push(read(request).text);
+      return {calls: [{name: 'answer', input: {found: false, text: '', source_ids: []}}]};
+    });
+    const context = {page: 'calendar', item: {id: item.id, at: null}, dates: {from: '2026-10-04', to: '2026-10-10'}};
+    const out = await c.send('POST', '/api/alfred/ask', {body: {question: 'when is this?', context}});
+    expect(firsts[0]).toBe(`The user is on Calendar, viewing Sun 2026-10-04 to Sat 2026-10-10, with the calendar event ${JSON.stringify(item.title)} open (key ${item.id}). So "this" is what's open, and a weekday is the one in view.\n\nThe user's question: when is this?`);
+    // The turn keeps the user's own words.
+    expect(out.body.question).toBe('when is this?');
+    await c.send('POST', '/api/alfred/ask', {body: {question: 'and after?', conversation_id: out.body.conversation_id}});
+    expect(firsts[1]).toBe('and after?');
+    // A page with nothing open, and no dates: the page alone.
+    await c.send('POST', '/api/alfred/ask', {body: {question: 'anything new?', context: {page: 'news'}}});
+    expect(firsts[2]).toBe('The user is on News, with nothing open.\n\nThe user\'s question: anything new?');
+  });
+
   test('a turn that ends without the answer tool is reminded once, then its text is the answer', async () => {
     const {c, fake} = await alfredWorld();
     fake.answer(() => ({text: 'Probably the end of the month.'}));

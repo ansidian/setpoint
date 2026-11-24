@@ -17,7 +17,7 @@
 import {z} from 'zod';
 import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_READS} from '../enums.ts';
 import type {CalendarMatchField, ItemKind, MatchField, SearchChipKind} from '../enums.ts';
-import {id, localDate} from './common.ts';
+import {id, instant, localDate} from './common.ts';
 import type {ItemOut} from './items.ts';
 import type {Recipient} from '../message.ts';
 import type {MessageRowOut} from './mail.ts';
@@ -203,14 +203,34 @@ export const searchOpenedInput = z.strictObject({search_id: id, message_id: id, 
 /** The search log: a chip the user took off a search, so a wrong reading can be seen. */
 export const searchChipRemovedInput = z.strictObject({search_id: id, chip: searchChipSchema});
 
+/** The pages Alfred can be asked from (⌘K, the phone's button). */
+export const ASK_PAGES = ['inbox', 'sent', 'drafts', 'snoozed', 'scheduled', 'calendar', 'news', 'jobs', 'settings'] as const;
+export type AskPage = (typeof ASK_PAGES)[number];
+
+/**
+ * What was on screen when a thread's first question was asked from ⌘K or the phone's button: the
+ * page, what's open there (an email, a calendar item by its id and occurrence, a job application),
+ * and on the Calendar the dates in view.
+ */
+export const askContextSchema = z.strictObject({
+  page: z.enum(ASK_PAGES),
+  email_id: id.optional(),
+  item: z.strictObject({id, at: instant.nullable()}).optional(),
+  application_id: id.optional(),
+  dates: z.strictObject({from: localDate, to: localDate}).optional(),
+});
+export type AskContext = z.infer<typeof askContextSchema>;
+
 /**
  * Alfred: a question, a follow-up in the same conversation (`conversation_id`), or one scoped to an
- * open email (`message_id`, Ask about this email). A follow-up keeps its conversation's scope.
+ * open email (`message_id`, Ask about this email). A follow-up keeps its conversation's scope. A
+ * thread's first question can carry what was on screen (`context`).
  */
 export const askInput = z.strictObject({
   question: z.string().trim().min(1).max(2000),
   conversation_id: id.optional(),
   message_id: id.optional(),
+  context: askContextSchema.optional(),
   // The page's own id for this question, to ask what Alfred is doing while it waits.
   ask_id: z.string().regex(/^[A-Za-z0-9-]{8,64}$/).optional(),
 });

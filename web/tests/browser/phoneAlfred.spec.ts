@@ -104,6 +104,35 @@ async function proposalFits(card: Locator, where: string) {
   assert.deepEqual(fit.hints, [], `${where}: no key hints`);
 }
 
+test('phone Alfred: with no conversation the round button asks from any page, the sheet answering; Back on an empty sheet leaves the button', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await inbox(setpoint);
+    const asks = asksOf(page) as {question: string; context?: unknown}[];
+    const button = page.getByRole('button', {name: 'Ask Alfred'});
+    assert.equal(await pill(page).count(), 0);
+    // Back with nothing asked: no conversation, the button again.
+    await button.tap();
+    await sheet(page).waitFor();
+    await sheet(page).getByRole('button', {name: 'Inbox'}).tap();
+    await button.waitFor();
+    assert.equal(await pill(page).count(), 0);
+    // Asked: the sheet answers, and the question carries the page.
+    await button.tap();
+    await sheet(page).getByLabel('Ask a follow-up').fill(LEASE_QUESTION);
+    await sheet(page).getByLabel('Ask a follow-up').press('Enter');
+    await sheet(page).locator('.ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+    assert.deepEqual(asks.map(ask => [ask.question, ask.context]), [[LEASE_QUESTION, {page: 'inbox'}]]);
+    // Back: the conversation waits as the pill, in the button's place.
+    await sheet(page).getByRole('button', {name: 'Inbox'}).tap();
+    await pill(page).waitFor();
+    assert.equal(await button.count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
 test('phone Alfred: Ask Alfred in search answers above the results, a follow-up goes below, and a source opens in the reader with Back to Search', async () => {
   const {setpoint, stop} = await withAlfred();
   try {

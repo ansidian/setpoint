@@ -1,5 +1,6 @@
 // Alfred's open conversation, one for the whole app, so it outlives the page it was asked on: a
-// question from Inbox search, or Ask about this email. One is open at a time, and a new question
+// question from Inbox search, Ask about this email, or from any page (⌘K on the desktop, the phone's
+// Alfred button), which carries what was on screen with its first question. One is open at a time, and a new question
 // replaces it. A follow-up continues it. Only × (or the card's Esc) closes it; clearing the search
 // doesn't.
 //
@@ -22,7 +23,8 @@
 // when (`ends_at`). The thread closes itself then, quietly, even with the tab left open, so it's
 // never on screen once it has ended. A follow-up the server refuses as ended all the same (the Mac
 // asleep past the moment) closes it with a toast, the question dropped.
-import type {AnswerOut, AskStep} from '@setpoint/shared';
+import {ASK_PAGES} from '@setpoint/shared';
+import type {AnswerOut, AskContext, AskStep} from '@setpoint/shared';
 import {useLayoutEffect, useSyncExternalStore} from 'react';
 import {serverNow} from '../../api/auth.ts';
 import {ApiFailure} from '../../api/client.ts';
@@ -35,8 +37,12 @@ const STEP_POLL_MS = 400;
 const STORAGE_KEY = 'alfred.thread';
 export const ENDED_LINE = 'This conversation ended after 4 hours idle';
 
-/** Where a thread was asked: Inbox search, or Ask about this email. */
-export type AlfredOrigin = {kind: 'search'} | {kind: 'email'; id: number};
+/** Where a thread was asked: Inbox search, Ask about this email, or a page (⌘K, the phone's button) with what was on screen. */
+export type AlfredOrigin = {kind: 'search'} | {kind: 'email'; id: number} | {kind: 'page'; context: AskContext};
+
+/** The email a thread is about: Ask about this email's, or the one open where ⌘K asked. */
+export const scopedEmail = (origin: AlfredOrigin): number | null =>
+  origin.kind === 'email' ? origin.id : origin.kind === 'page' ? origin.context.email_id ?? null : null;
 
 export interface AlfredThread {
   origin: AlfredOrigin;
@@ -88,7 +94,8 @@ function endOnTime() {
   ender = window.setTimeout(closeAlfred, Math.max(0, Date.parse(last.ends_at) - serverNow()));
 }
 
-const originKey = (origin: AlfredOrigin) => (origin.kind === 'search' ? 'search' : `email:${origin.id}`);
+// A page's thread is never shown inline: it's in the window or the phone's sheet.
+const originKey = (origin: AlfredOrigin) => (origin.kind === 'email' ? `email:${origin.id}` : origin.kind);
 const claimed = () => thread !== null && (claims.get(originKey(thread.origin)) ?? 0) > 0;
 const fresh = (origin: AlfredOrigin): AlfredThread => ({origin, turns: [], waiting: null, asking: null, step: null, trail: [], error: null, failed: null, conversation: null, restoring: false});
 
@@ -150,10 +157,16 @@ function remembered(): {conversation: number; origin: AlfredOrigin} | null {
   try {
     const saved: unknown = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null');
     if (!saved || typeof saved !== 'object') return null;
-    const {conversation, origin} = saved as {conversation?: unknown; origin?: {kind?: unknown; id?: unknown}};
+    const {conversation, origin} = saved as {conversation?: unknown; origin?: {kind?: unknown; id?: unknown; context?: {page?: unknown; email_id?: unknown}}};
     if (!Number.isSafeInteger(conversation) || !origin) return null;
     if (origin.kind === 'search') return {conversation: conversation as number, origin: {kind: 'search'}};
     if (origin.kind === 'email' && Number.isSafeInteger(origin.id)) return {conversation: conversation as number, origin: {kind: 'email', id: origin.id as number}};
+    // A page's: only its page and open email matter once asked (the scope, and Back's page).
+    const context = origin.context;
+    if (origin.kind === 'page' && context && (ASK_PAGES as readonly unknown[]).includes(context.page)) {
+      const email = Number.isSafeInteger(context.email_id) ? {email_id: context.email_id as number} : {};
+      return {conversation: conversation as number, origin: {kind: 'page', context: {page: context.page as AskContext['page'], ...email}}};
+    }
     return null;
   } catch {
     return null;
@@ -203,10 +216,13 @@ function send(question: string, anew: boolean) {
   if (!thread || !asked || thread.restoring || (thread.waiting !== null && !anew)) return;
   const id = counter;
   const askId = `ask-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  const {origin, conversation} = thread;
+  const {origin} = thread;
+  const conversation = anew ? null : thread.conversation;
   set({...thread, waiting: asked, asking: askId, step: null, trail: [], error: null, failed: null});
   poll(askId);
-  sendQuestion(asked, {conversation: anew ? null : conversation, message: origin.kind === 'email' ? origin.id : null, ask: askId}).then(answer => {
+  // A thread's first question carries what was on screen where it was asked.
+  const context = conversation === null && origin.kind === 'page' ? origin.context : null;
+  sendQuestion(asked, {conversation, message: scopedEmail(origin), context, ask: askId}).then(answer => {
     if (id !== counter || !thread) return;
     stopPolling();
     remember(answer.conversation_id, origin);
@@ -223,7 +239,7 @@ function send(question: string, anew: boolean) {
   });
 }
 
-/** Opens a thread at `origin`, replacing any open one: empty (Ask about this email), or with a first question. */
+/** Opens a thread at `origin`, replacing any open one: empty (Ask about this email, the phone's button), or with a first question. */
 export function startAlfred(origin: AlfredOrigin, question?: string) {
   counter += 1;
   stopPolling();

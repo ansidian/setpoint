@@ -10,7 +10,8 @@ import {cleanUp, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
-const items = (page: Page) => page.locator('.palette .item').allTextContents();
+// The commands, not the Ask Alfred row above them once something is typed (its own checks are alfredAnywhere's and search.spec's).
+const items = (page: Page) => page.locator('.palette .item:not(.ask)').allTextContents();
 const current = (page: Page) => page.locator('.palette .item.cur').textContent();
 
 async function openNorthwind(page: Page, base: string) {
@@ -39,7 +40,7 @@ test('board 20: ⌘K on the open Northwind email', async () => {
     assert.equal(await current(page), 'DoneH');
     assert.equal(await page.locator('.palette .ctx').textContent(), 'Interview availability for Software Engineer I');
     assert.equal(await page.locator('.palette .item .tick').count(), 1);
-    assert.equal(await page.locator('.palette .item', {hasText: 'Night'}).locator('.tick').count(), 1, 'the current theme is ticked');
+    assert.equal(await page.locator('.palette .item:not(.ask)', {hasText: 'Night'}).locator('.tick').count(), 1, 'the current theme is ticked');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -158,7 +159,7 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
     await page.keyboard.press('Enter');
     await until('Light', () => page.evaluate(() => document.documentElement.dataset.theme), theme => theme === 'light');
     await page.keyboard.press('Meta+k');
-    assert.equal(await page.locator('.palette .item', {hasText: 'Light'}).locator('.tick').count(), 1);
+    assert.equal(await page.locator('.palette .item:not(.ask)', {hasText: 'Light'}).locator('.tick').count(), 1);
     await page.keyboard.type('dark');
     assert.deepEqual(await items(page), ['Night']);
     await page.keyboard.press('Enter');
@@ -236,11 +237,12 @@ test('typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" 
       await page.keyboard.press('Escape');
       await page.locator('.settings').waitFor({state: 'detached'});
     }
-    // Nothing found says so.
+    // With nothing found, asking Alfred is the only row, and has the cursor.
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('zebra');
-    const none = page.locator('.palette .none', {hasText: 'No command matches'});
-    await none.waitFor();
+    await page.locator('.palette .item.ask.cur', {hasText: 'Ask Alfred · zebra'}).waitFor();
+    assert.deepEqual(await items(page), []);
+    assert.equal(await page.locator('.palette .none').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

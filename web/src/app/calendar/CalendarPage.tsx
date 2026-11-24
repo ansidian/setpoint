@@ -201,6 +201,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const week = view.week ?? weekStart(selectedDay);
   const shown = mode === 'week' ? weekMonth(week) : view.shown ?? monthOf(selectedDay);
   useEffect(() => rememberMode(mode), [mode]);
+  // The dates in view, for a question to Alfred from ⌘K: the week, or the month.
+  useCommands(() => ({commands: [], dates: mode === 'week' ? {from: week, to: addDays(week, 6)} : {from: `${shown}-01`, to: addDays(`${addMonths(shown, 1)}-01`, -1)}}));
   const [popover, setPopover] = useState<string | null>(null);
   // The editor, and the address it opened on: its draft's day is the selected day until the user picks another (choice 14).
   const [editor, setEditor] = useState<EditorState | null>(() => (keptEditor ? {...keptEditor, at: addressOf(route)} : null));

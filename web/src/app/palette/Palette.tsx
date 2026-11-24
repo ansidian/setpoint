@@ -4,10 +4,18 @@
 // the ones that only have a key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill. Enter
 // runs. Esc closes it, and focus goes back where it was. It rises in over 180 ms and closes at once
 // (DESIGN.md › Motion).
+//
+// Alfred is asked from here on any page. Once something is typed, an Ask Alfred row sits above the
+// first result, the cursor still starting on that result, so Enter does what it did. Up from it (or
+// the wrap from the bottom) reaches the Ask row, and ⌘Enter asks from anywhere in the list. With no
+// command matching, the Ask row is the only row and has the cursor. The question carries the page
+// and what's open there (logic/search.ts › pageContext), and the thread opens in Alfred's window.
+// Asked over Settings, Settings closes first, so the window isn't under it.
 import {useEffect, useRef, useState, useSyncExternalStore} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {markAllRead} from '../../api/mail.ts';
 import {matchedRuns, paletteList, SECTION_LABELS, stepCursor} from '../../logic/palette.ts';
+import {pageContext} from '../../logic/search.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {sidebarFoldable} from '../../logic/sidebar.ts';
 import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
@@ -17,8 +25,9 @@ import {dotStyle} from '../accounts.ts';
 import {newMessage} from '../compose/composer.ts';
 import {jobsCommands} from '../jobs/index.ts';
 import type {SettingsPage} from '../../logic/route.ts';
-import {navigate} from '../router.ts';
-import {openSettings} from '../settings/store.ts';
+import {currentRoute, navigate} from '../router.ts';
+import {startAlfred} from '../search/alfred.ts';
+import {closeSettings, openSettings} from '../settings/store.ts';
 import {askSignOut} from '../signOut.ts';
 import {isRail, toggleSidebar} from '../sidebarRail.ts';
 import {setThemeChoice, useThemeChoice} from '../theme.ts';
@@ -117,12 +126,17 @@ export function Palette() {
 function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
   const theme = useThemeChoice();
   const [query, setQuery] = useState('');
-  const [cursor, setCursor] = useState(0);
+  // Null: where it starts, on the first result.
+  const [cursor, setCursor] = useState<number | null>(null);
   const input = useRef<HTMLInputElement>(null);
   // A page's command stands in for the palette's own of the same id (Mark all as read on the Inbox).
   const groups = paletteList([...offer.commands, ...ownCommands(theme).filter(own => !offer.commands.some(command => command.id === own.id))], query);
   const items = groups.flatMap(group => group.items);
-  const at = Math.min(cursor, Math.max(0, items.length - 1));
+  // The Ask row is the list's first row once something is typed.
+  const asks = query.trim() !== '';
+  const lead = asks ? 1 : 0;
+  const rows = items.length + lead;
+  const at = Math.min(cursor ?? (asks && items.length ? 1 : 0), Math.max(0, rows - 1));
 
   // Focus goes back where it was as it closes, so a command acts on the page.
   useFocusReturn();
@@ -141,6 +155,15 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
     requestAnimationFrame(command.run);
   }
 
+  function ask() {
+    if (!asks) return;
+    const question = query;
+    onClose();
+    // Asked over Settings, it closes, so Alfred's window isn't drawn under it.
+    closeSettings();
+    requestAnimationFrame(() => startAlfred({kind: 'page', context: pageContext(currentRoute(), offer.dates ?? null)}, question));
+  }
+
   function onKeyDown(event: ReactKeyboardEvent) {
     // Nothing typed here reaches the page's own keys.
     event.stopPropagation();
@@ -149,17 +172,21 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
       onClose();
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      setCursor(stepCursor(at, event.key === 'ArrowDown' ? 1 : -1, items.length));
+      setCursor(stepCursor(at, event.key === 'ArrowDown' ? 1 : -1, rows));
+    } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      ask();
     } else if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
       event.preventDefault();
-      run(items[at]);
+      if (asks && at === 0) ask();
+      else run(items[at - lead]);
     } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
       onClose();
     }
   }
 
-  let index = 0;
+  let index = lead;
   return (
     <>
       <div className="palette-scrim" onPointerDown={onClose} />
@@ -172,11 +199,19 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
           <input ref={input} className="grow" value={query} placeholder="Type a command…" aria-label="Type a command" spellCheck={false}
             onChange={event => {
               setQuery(event.target.value);
-              setCursor(0);
+              setCursor(null);
             }} />
           <span className="kbd">Esc</span>
         </div>
         <div className="cmdk-list" role="listbox">
+          {asks && (
+            <button type="button" role="option" aria-selected={at === 0} className={at === 0 ? 'item ask cur' : 'item ask'}
+              onMouseMove={() => at !== 0 && setCursor(0)} onClick={ask}>
+              <Icon name="auto_awesome" alfred />
+              <span className="grow ell">Ask Alfred <span className="ink3">· {query.trim()}</span></span>
+              <span className="kbd">⌘Enter</span>
+            </button>
+          )}
           {groups.map(group => (
             <div key={group.section} role="group" aria-label={SECTION_LABELS[group.section]}>
               <div className="cmdk-label">{SECTION_LABELS[group.section]}</div>
@@ -195,7 +230,7 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
               })}
             </div>
           ))}
-          {!items.length && <div className="none"><Icon name="search_off" size={16} />No command matches</div>}
+          {!items.length && !asks && <div className="none"><Icon name="search_off" size={16} />No command matches</div>}
         </div>
       </div>
     </>

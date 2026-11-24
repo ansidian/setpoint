@@ -15,7 +15,7 @@ import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {navigate, useRoute} from '../router.ts';
 import {toastFailure} from '../toast.ts';
-import {alfredOf, toggleAlfredMinimized, useAlfredMinimized, useAlfredThread, useAlfredWindowed} from './alfred.ts';
+import {alfredOf, scopedEmail, toggleAlfredMinimized, useAlfredMinimized, useAlfredThread, useAlfredWindowed} from './alfred.ts';
 import {AnswerCard} from './AnswerCard.tsx';
 import './search.css';
 
@@ -51,7 +51,7 @@ export function AlfredWindow() {
     <div ref={row} className="cmp-windows alf-windows">
       <section className={minimized ? 'alf-window min' : 'alf-window'} aria-label="Alfred's window" onKeyDown={close}
         style={room ? {width: alfredWindowWidth(room, beside, minimized)} : {visibility: 'hidden'}}>
-        <AnswerCard alfred={alfred} scoped={thread.origin.kind === 'email'} openId={route.page === 'inbox' ? route.open : null} accounts={accounts} now={now} timeZone={timeZone()}
+        <AnswerCard alfred={alfred} scoped={scopedEmail(thread.origin) !== null} openId={route.page === 'inbox' ? route.open : null} accounts={accounts} now={now} timeZone={timeZone()}
           windowed minimized={minimized} onMinimize={toggleAlfredMinimized} onOpen={id => {
             navigate({page: 'inbox', open: id});
             void openMessage(id).catch(toastFailure('Failed to mark read'));

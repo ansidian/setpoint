@@ -2,7 +2,7 @@
 // because a search, an answer and a proposal belong to the screen that asked for them. Create is
 // the one change here. It is a command: pending until its provider confirms it, failed with the
 // provider's words.
-import type {AnswerOut, AskStepOut, CalendarSearchChip, ConversationOut, CalendarSearchOut, ItemKind, ProposalOut, ProposalPrefillOut, SearchChip, SearchOut, SearchRead, SearchSent, SearchSuggestOut} from '@setpoint/shared';
+import type {AnswerOut, AskContext, AskStepOut, CalendarSearchChip, ConversationOut, CalendarSearchOut, ItemKind, ProposalOut, ProposalPrefillOut, SearchChip, SearchOut, SearchRead, SearchSent, SearchSuggestOut} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
 
 export const SETTINGS_PATH = '/settings';
@@ -53,8 +53,8 @@ export const searchOpened = (searchId: number, messageId: number, position: numb
   sendJson<void>('POST', '/search/opened', {search_id: searchId, message_id: messageId, position});
 
 /** A question. A follow-up names its conversation, and Ask about this email names the email. */
-export const askAlfred = (question: string, {conversation, message, ask}: {conversation?: number | null; message?: number | null; ask?: string} = {}) =>
-  sendJson<AnswerOut>('POST', '/alfred/ask', {question, ...(conversation ? {conversation_id: conversation} : {}), ...(message ? {message_id: message} : {}), ...(ask ? {ask_id: ask} : {})});
+export const askAlfred = (question: string, {conversation, message, context, ask}: {conversation?: number | null; message?: number | null; context?: AskContext | null; ask?: string} = {}) =>
+  sendJson<AnswerOut>('POST', '/alfred/ask', {question, ...(conversation ? {conversation_id: conversation} : {}), ...(message ? {message_id: message} : {}), ...(context ? {context} : {}), ...(ask ? {ask_id: ask} : {})});
 
 /** A thread so far, read back after a reload, with whether the server has ended it. No model call. */
 export const alfredConversation = (id: number) => getJson<ConversationOut>(`/alfred/conversations/${id}`);

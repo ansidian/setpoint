@@ -274,6 +274,12 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
   .alf-pill-x { width: 36px; height: 36px; margin-right: 2px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); }
   .alf-pill-x:active { background: var(--sub2); color: var(--ink); }
   .alf-pill.asking .alf-pill-open .icon { animation: twinkle 1.2s ease-in-out infinite alternate; }
+  /* With no conversation, the round button in the pill's place: Alfred's sparkle, 44 px to tap. */
+  .alf-fab { position: absolute; right: 12px; bottom: 12px; z-index: 4; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 999px; background: var(--cardOn);
+    box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); animation: ph-rise var(--dur-medium) var(--ease); }
+  .alf-fab:active { background: var(--sub2); }
+  /* The lists under it keep room at their foot, so their last row scrolls clear of it. */
+  .list, .ph-agenda, .news-day { padding-bottom: 68px; }
   /* Alfred's proposal (PhoneProposal.tsx): what, when and where, each line wrapping rather than cut,
      then the conflict line and Add, a whole-width button to tap. */
   .ph-prop .card-b { gap: 4px; padding: 10px 16px 16px; }

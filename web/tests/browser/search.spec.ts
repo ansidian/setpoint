@@ -1483,6 +1483,38 @@ test('Alfred\'s window: cleared, the search\'s answer stays in the window; on Ca
   }
 });
 
+test('Alfred from ⌘K: on Calendar, typed and ⌘Enter, the window answers, the question carrying the page and its dates; a source row\'s sender shows whole; a reload brings it back', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await setpoint.page(TALL);
+    await page.goto(`${setpoint.base}/calendar?view=week`);
+    await page.locator('.wb', {hasText: 'Dentist'}).first().waitFor();
+    const asks = asksOf(page) as {question: string; context?: unknown}[];
+    await page.keyboard.press('Meta+k');
+    await page.getByRole('dialog', {name: 'Command palette'}).waitFor();
+    await page.keyboard.insertText(LEASE_QUESTION);
+    await page.locator('.palette .item.ask').waitFor();
+    await page.keyboard.press('Meta+Enter');
+    await alfredWindow(page).locator('.ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+    assert.equal(await page.getByRole('dialog', {name: 'Command palette'}).count(), 0);
+    assert.deepEqual(asks.map(ask => [ask.question, ask.context]), [[LEASE_QUESTION, {page: 'calendar', dates: {from: '2026-10-04', to: '2026-10-10'}}]]);
+    // The window's source row: the sender whole, inside its row, at the window's width.
+    const row = await rested(() => alfredWindow(page).locator('.src').first().evaluate(src => {
+      const who = src.querySelector('.who') as HTMLElement;
+      return {who: who.textContent, cut: who.scrollWidth > who.clientWidth + 1, inside: who.getBoundingClientRect().right <= src.getBoundingClientRect().right};
+    }));
+    assert.ok(!row.cut && row.inside, `${row.who} whole`);
+    // A reload brings the thread back to the window, nothing asked.
+    await page.reload();
+    await alfredWindow(page).locator('.ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+    await setpoint.idle();
+    assert.equal(asks.length, 1);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
 test('Alfred\'s window: Ask about this email moves to the window when another email opens, back on its own, and Ask about this email on the other replaces it', async () => {
   const {setpoint, stop} = await withAlfred();
   try {

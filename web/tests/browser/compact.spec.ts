@@ -182,7 +182,7 @@ test('⌘K shows or hides each calendar, as the rows the rail leaves out did', a
     const run = async (typed: string, label: string) => {
       await page.keyboard.press('Meta+k');
       await page.locator('.palette input').fill(typed);
-      await page.locator('.palette .item', {hasText: label}).click();
+      await page.locator('.palette .item:not(.ask)', {hasText: label}).click();
       await page.locator('.palette').waitFor({state: 'detached'});
     };
     await page.goto(`${setpoint.base}/calendar`);

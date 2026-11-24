@@ -2,13 +2,14 @@
 // asks, the results line, each reason's parts, the highlighted runs, what the reader highlights,
 // and how a proposal's time reads.
 import {parseOperators, searchTokens} from '@setpoint/shared';
-import type {AnswerItemOut, AnswerOut, CalendarOut, Colour, ProposalItemOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerItemOut, AnswerOut, AskContext, CalendarOut, Colour, ProposalItemOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {clockTime, localDate} from './format.ts';
 import {placeName} from './place.ts';
 import {refusalWords} from './providerWords.ts';
 import type {IconName} from '../ui/glyphs.ts';
+import type {Route} from './route.ts';
 
 export interface Run {
   start: number;
@@ -324,6 +325,19 @@ export function readerMarks(open: number | null, results: readonly SearchResultO
 
 /** Whether the turn shows its question: every follow-up, and the first when it isn't in the search field. */
 export const showsQuestion = (index: number, scoped: boolean) => index > 0 || scoped;
+
+/**
+ * What's on screen, for a question asked from ⌘K or the phone's button: the page, what's open there
+ * (an email in a mail list, an item on the Calendar, an application on Jobs), and the dates in view.
+ */
+export function pageContext(route: Route, dates: {from: string; to: string} | null = null): AskContext {
+  const context: AskContext = {page: route.page};
+  if ((route.page === 'inbox' || route.page === 'sent' || route.page === 'snoozed') && route.open !== null) context.email_id = route.open;
+  if (route.page === 'calendar' && route.item !== null) context.item = {id: route.item, at: route.at};
+  if (route.page === 'jobs' && route.open !== null) context.application_id = route.open;
+  if (dates) context.dates = dates;
+  return context;
+}
 
 /** Couldn't find that: what Alfred searched, each phrase quoted ("Searched “lease renewal”"). */
 export function searchedLine(searched: readonly string[]): string | null {
