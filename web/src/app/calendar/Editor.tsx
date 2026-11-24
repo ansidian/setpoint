@@ -841,17 +841,21 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                 {kind === 'event' ? 'All day · Add a time' : 'Add a time'}
               </button>
             )}
-            {conflict && (
-              <span className={conflict.free ? 'conflict free' : 'conflict'}>
-                <Icon name={conflict.free ? 'check_circle' : 'layers'} size={16} />{conflict.label}
-              </span>
-            )}
             {mark('date', 'time')}
           </div>}
           {was && (
             <>
               <span />
               <div className="ink3 num was">{was}</div>
+            </>
+          )}
+          {/* The card's conflict line, under the day and times so it's never cut short. */}
+          {conflict && (
+            <>
+              <span />
+              <div className={conflict.free ? 'conflict free' : 'conflict'}>
+                <Icon name={conflict.free ? 'check_circle' : 'layers'} size={16} />{conflict.label}
+              </div>
             </>
           )}
           {/* On the phone the preview sits under the day and times it's about, above the keyboard

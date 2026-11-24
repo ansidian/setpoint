@@ -199,7 +199,7 @@
 }
 
 /* The editor as an email's proposal card (search.css's `.prop` frame, board 08): the card's
-   head, its body in the card's padding with no scroll of its own, the conflict line in the date row
+   head, its body in the card's padding with no scroll of its own, the conflict line under the date row
    in place of the timeline, and a footer with no rule over it. */
 .editor.card { display: block; animation: card-in var(--dur-medium) var(--ease); }
 .answer .card-b > .editor.card { animation: turn-in var(--dur-medium) var(--ease); }
@@ -208,7 +208,7 @@
 /* The ? keeps to the line's field inside the card's padding: on its middle, 8 px in from its edge. */
 .editor.card .line-ref { top: 12px; right: 24px; }
 .editor.card .eg { padding: 12px 16px 0; }
-.editor.card .conflict { padding: 0; display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; min-width: 0; color: var(--ink3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.editor.card .conflict { padding: 0; display: flex; align-items: center; gap: 6px; margin-top: 4px; min-width: 0; color: var(--ink3); font-size: 12.5px; }
 .editor.card .conflict.free .icon { color: var(--good); }
 .editor.card > .failed-line { padding: 12px 16px 0 46px; }
 .editor.card .ed-foot { border-top: 0; padding: 14px 16px 16px 46px; }
