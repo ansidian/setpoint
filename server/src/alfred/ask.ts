@@ -69,7 +69,9 @@ function stepOf(store: Store, name: string, input: Record<string, unknown> | nul
     return row ? {tool: 'get_email', from: row.organisation ?? row.fromName} : null;
   }
   if (name === 'list_items') return {tool: 'list_items'};
+  if (name === 'search_calendar' && typeof input?.query === 'string') return {tool: 'search_calendar', query: input.query};
   if (name === 'propose_item' && (input?.kind === 'event' || input?.kind === 'task')) return {tool: 'propose_item', kind: input.kind};
+  if (name === 'propose_change') return {tool: 'propose_change'};
   return null;
 }
 
@@ -285,7 +287,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   if (!final) throw new SetpointError('alfred_step_limit', 'Alfred ran out of steps before answering. Try a narrower question.', 422);
 
   // Sources are the emails the answer names that this thread has seen, and the events and tasks it
-  // names that list_items gave this question. With neither, they are the email it's about, or the
+  // names that list_items or search_calendar gave this question. With neither, they are the email it's about, or the
   // ones it read for this answer.
   const found = final.found && Boolean(final.text);
   let sourceIds = found ? [...new Set(final.sourceIds.filter(id => context.seen.has(id)))] : [];

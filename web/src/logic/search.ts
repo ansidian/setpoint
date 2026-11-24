@@ -355,6 +355,8 @@ export function alfredStepLine(step: AskStep | null, scoped = false): string {
   if (step.tool === 'search_mail') return `Searching “${step.query}”…`;
   if (step.tool === 'get_email') return `Reading ${step.from}’s email…`;
   if (step.tool === 'list_items') return 'Checking your calendar…';
+  if (step.tool === 'search_calendar') return `Searching your calendar for “${step.query}”…`;
+  if (step.tool === 'propose_change') return 'Preparing a change…';
   return `Preparing the ${step.kind}…`;
 }
 
@@ -363,6 +365,8 @@ export function alfredStepDone(step: AskStep): {icon: IconName; text: string} {
   if (step.tool === 'search_mail') return {icon: 'search', text: `Searched “${step.query}”`};
   if (step.tool === 'get_email') return {icon: 'mail', text: `Read ${step.from}’s email`};
   if (step.tool === 'list_items') return {icon: 'calendar_today', text: 'Checked your calendar'};
+  if (step.tool === 'search_calendar') return {icon: 'calendar_today', text: `Searched your calendar for “${step.query}”`};
+  if (step.tool === 'propose_change') return {icon: 'edit', text: 'Prepared a change'};
   return {icon: 'event', text: `Prepared the ${step.kind}`};
 }
 
@@ -472,9 +476,10 @@ export function calendarResultGroups<R extends Pick<CalendarSearchResultOut, 'up
 /** A result's day in the row's time column: "Oct 9", with the year under it outside this one. */
 /**
  * An Answer card item row's when: "Fri, Oct 9 · 7:00 PM", the day alone for one all day or
- * untimed, and its year when it isn't this year's.
+ * untimed, its year when it isn't this year's, and "No date" for a task without one.
  */
 export function answerItemWhen(item: Pick<AnswerItemOut, 'date' | 'start'>, now: number, timeZone: string): string {
+  if (!item.date) return 'No date';
   const year = item.date.slice(0, 4) === localDate(now, timeZone).slice(0, 4) ? {} : {year: 'numeric'} as const;
   const day = new Date(`${item.date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', ...year, timeZone: 'UTC'});
   return item.start ? `${day} · ${clockTime(item.start, timeZone)}` : day;

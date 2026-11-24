@@ -10,9 +10,10 @@
 // Upcoming (its Add to calendar), it holds the keynote's proposal, as an email's is, its calendar
 // picked the same way, but with no "from the email" marks. Editing an item shows its fields directly
 // (board 14) and says what it was ("Was 7:00 – 8:00 AM"). A recurring event asks This event, This and
-// following or All events in place of the footer before it saves. Nothing is created or changed
-// until ⌘Enter.
-import type {CalendarOut, Colour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ItemsOut, PlaceSuggestionOut, ProposalOut, RecentPlaceOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
+// following or All events in place of the footer before it saves. Alfred's change to an item opens
+// it so, his changes filled in and marked as his, the scope he picked chosen. Nothing is created or
+// changed until ⌘Enter.
+import type {CalendarOut, Colour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ItemsOut, PlaceSuggestionOut, ProposalChangeOut, ProposalOut, RecentPlaceOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
 import {isFree, proposalConflict, TODOIST_COLOURS} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject} from 'react';
@@ -30,7 +31,7 @@ import type {LineField} from '../../logic/linePhrase.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
 import {isEmpty, sameDescription} from '../../logic/description.ts';
 import {endDatePicked, endOf, endTimePicked, inputTime, lastDayPicked, readInputTime} from '../../logic/nativeWhen.ts';
-import {anchorOf, changesOf, createInput, DEFAULT_LENGTH, DEFAULT_START, draftPreview, emptyDraft, fromIcs, fromItem, fromProposal, readLine, remindersOf, retype, retypeEdit, withDefaults} from '../../logic/editorDraft.ts';
+import {anchorOf, changesOf, createInput, DEFAULT_LENGTH, DEFAULT_START, draftPreview, emptyDraft, fromChange, fromIcs, fromItem, fromProposal, readLine, remindersOf, retype, retypeEdit, withDefaults} from '../../logic/editorDraft.ts';
 import type {Draft, Manual} from '../../logic/editorDraft.ts';
 import {addDays, clockTime, instantAt} from '../../logic/format.ts';
 import {calendarMoveChoices, DEFAULT_SCOPE, scopeChoices} from '../../logic/scope.ts';
@@ -66,6 +67,8 @@ export interface EditorOpen {
   slot?: Slot;
   // A one-event .ics file, as a filled-in draft that Create imports with its iCalUID.
   ics?: IcsEventOut;
+  // Alfred's change to `item`: the draft opens with it applied.
+  change?: ProposalChangeOut;
 }
 
 /** Where a new event was put on the week view: its time when the line names none. */
@@ -219,13 +222,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const calendarName = (one: CalendarOut) => <CalendarName label={calendarLabel(one, calendarChoices, accounts)} />;
 
   const [original] = useState(() => (editing ? fromItem(editing, timeZone) : null));
-  const [drafts, setDrafts] = useState<Draft[]>(() => open.kept?.drafts ?? [original ? {...original} : open.ics ? fromIcs(open.ics, timeZone)
+  const [drafts, setDrafts] = useState<Draft[]>(() => open.kept?.drafts ?? [open.change ? fromChange(open.change, timeZone) : original ? {...original} : open.ics ? fromIcs(open.ics, timeZone)
     : card ? fromProposal(emptyDraft(open.kind, open.date), {proposal: card.proposal, reminders: null, newProject: false}, timeZone) : emptyDraft(open.kind, open.date, open.slot ?? null)]);
   const [active, setActive] = useState(open.kept?.active ?? drafts[0]!.id);
   const [kind, setKind] = useState<ItemKind>(open.kept?.kind ?? open.kind);
   useEffect(() => onKeep?.({drafts, active, kind}), [drafts, active, kind, onKeep]);
   const [asking, setAsking] = useState(false);
-  const [scope, setScope] = useState<RecurringScope>(DEFAULT_SCOPE);
+  const [scope, setScope] = useState<RecurringScope>(open.change?.scope ?? DEFAULT_SCOPE);
   const [menu, setMenu] = useState<'calendar' | 'repeat' | 'reminder' | 'labels' | 'more' | null>(null);
   const menuRef = useMenuRef(menu, () => setMenu(null));
   const [places, setPlaces] = useState<{query: string; list: PlaceSuggestionOut[]; cur: number} | null>(null);
@@ -363,10 +366,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // reaching the calendar's keys, and the phrases typed stay.
   const opening = useRef(titleRun(draft.text, parsed.marks));
   useEffect(() => {
-    if (!editing) return;
+    if (!editing || card?.quiet) return;
     line.current?.focus();
     line.current?.setSelectionRange(opening.current.start, opening.current.end);
-  }, [editing]);
+  }, [editing, card?.quiet]);
 
   // A pick removes the menu item that had focus: focus goes back to the field that opened the menu
   // (or the editor itself), so ⌘Enter and Esc keep working.
@@ -410,8 +413,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       return reread({...set, ...unpicked, text: cut.text, plain: retyped(one.plain, one.text, cut.text)}, cut.text);
     }));
   };
+  // Alfred's change marks what he changed with his glyph, as the email marks what it gave.
+  const markLabel = open.change ? 'Alfred\'s change' : 'From the email';
   const mark = (...fields: Marked[]) => (fields.some(field => draft.fromEmail.includes(field))
-    ? <span className="srcm" role="img" aria-label="From the email" data-tip="From the email"><Icon name="mail" size={14} /></span> : null);
+    ? <span className="srcm" role="img" aria-label={markLabel} data-tip={markLabel}><Icon name={open.change ? 'auto_awesome' : 'mail'} size={14} /></span> : null);
   // The email's title is the line's, so its mark sits at the line's trailing edge.
   const titleMark = mark('title');
   // An edited item's Title is its line, and so is a new item's: its title words
@@ -552,7 +557,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // pressed without leaving the field still makes it.
   const [cardProblem, setCardProblem] = useState<string | null>(null);
   const submit = () => {
-    if (card) {
+    if (card && !editing) {
       if (card.pending || card.filling) return;
       const problem = draft.kind === 'event' && draft.undated ? 'Pick a day first' : projectProblem ?? (draft.title.trim() ? null : 'Give it a title first');
       setCardProblem(problem);
@@ -560,11 +565,12 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       return;
     }
     if (editing && original) {
-      if (projectProblem) return;
+      if (projectProblem || card?.pending) return;
       const changes = changesOf(draft, original, timeZone);
       if (!Object.keys(changes).length) return onClose();
       if (editing.kind === 'event' && editing.recurring && !asking) {
-        setScope(choices[0]!.scope);
+        // Alfred's change keeps the scope he picked.
+        setScope(open.change && choices.some(choice => choice.scope === open.change!.scope) ? open.change.scope : choices[0]!.scope);
         setAsking(true);
         return;
       }
@@ -670,7 +676,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       starts_at: draft.start === null ? null : instantAt(draft.date, draft.start, timeZone),
       ends_at: draft.start === null ? null : instantAt(draft.date, draft.end ?? draft.start + DEFAULT_LENGTH, timeZone),
       startHour: draft.start === null ? null : Math.floor(draft.start / 60),
-    }, dayList.items)
+    }, editing ? dayList.items.filter(one => one.id !== editing.id) : dayList.items)
       : asEmailed ? proposal!.conflict : null;
 
   // The fields the prefill fills: a skeleton while it's on its way, then what it gave.
@@ -679,7 +685,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const title = editing ? `Edit ${noun}` : `New ${noun}`;
   const legends = (
     <>
-      {draft.fromEmail.length > 0 && <span className="legend"><Icon name="mail" size={14} /><span>From the email</span></span>}
+      {draft.fromEmail.length > 0 && <span className="legend"><Icon name={open.change ? 'auto_awesome' : 'mail'} size={14} /><span>{markLabel}</span></span>}
       {updating && <span className="legend"><Icon name="event" size={14} /><span>Already on {updating} (will update)</span></span>}
     </>
   );
@@ -749,7 +755,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   );
   const editor = (
     <form ref={form} tabIndex={-1} className={card ? `editor card prop${card.pending ? ' pending' : ''}${card.quiet ? ' in-answer' : ''}` : sheet ? 'editor ph-editor' : `rpane editor${handed ? ' handed' : ''}`}
-      aria-label={card ? (kind === 'event' ? 'Proposal: add to calendar' : 'Proposal: add as task') : title} onKeyDown={onKeyDown}
+      aria-label={card ? (editing ? `Proposal: change ${noun}` : kind === 'event' ? 'Proposal: add to calendar' : 'Proposal: add as task') : title} onKeyDown={onKeyDown}
       onSubmit={event => {
         event.preventDefault();
         submit();
@@ -759,6 +765,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           <span style={{color: colourVar(calendar?.colour ?? undefined)}}><Icon name={kind === 'event' ? 'event' : 'task_alt'} size={16} /></span>
           <span className="card-title">Proposal</span>
           {card.proposal.from_email.length > 0 && !filling && <span className="card-sub">· from this email</span>}
+          {editing && <span className="card-sub">· a change to {editing.title}</span>}
           {card.missed && <span className="card-miss" role="status" data-tip={card.missed.tip ?? undefined}><Icon name="error" size={16} />{card.missed.line}</span>}
         </div>
       ) : <div className="ed-head">

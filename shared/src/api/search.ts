@@ -16,9 +16,9 @@
 // sends it.
 import {z} from 'zod';
 import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_READS} from '../enums.ts';
-import type {CalendarMatchField, ItemKind, MatchField, SearchChipKind} from '../enums.ts';
+import type {CalendarMatchField, ItemKind, MatchField, RecurringScope, SearchChipKind} from '../enums.ts';
 import {id, instant, localDate} from './common.ts';
-import type {ItemOut} from './items.ts';
+import type {ItemChanges, ItemOut} from './items.ts';
 import type {Recipient} from '../message.ts';
 import type {MessageRowOut} from './mail.ts';
 
@@ -240,7 +240,9 @@ export type AskStep =
   | {tool: 'search_mail'; query: string}
   | {tool: 'get_email'; from: string}
   | {tool: 'list_items'}
-  | {tool: 'propose_item'; kind: 'event' | 'task'};
+  | {tool: 'search_calendar'; query: string}
+  | {tool: 'propose_item'; kind: 'event' | 'task'}
+  | {tool: 'propose_change'};
 
 export interface AskStepOut {
   step: AskStep | null;
@@ -259,9 +261,10 @@ export interface AnswerSourceOut {
 }
 
 /**
- * A calendar event or task an answer rests on, as list_items gave it: its row opens the item on the
- * calendar. `date` is its local day, `start` the instant it starts (or a task is due), null when
- * all-day or untimed. `occurrence_start` names a recurring item's occurrence.
+ * A calendar event or task an answer rests on, as list_items or search_calendar gave it: its row
+ * opens the item on the calendar. `date` is its local day (null for a task with no date), `start`
+ * the instant it starts (or a task is due), null when all-day or untimed. `occurrence_start` names
+ * a recurring item's occurrence.
  */
 export interface AnswerItemOut {
   key: string;
@@ -269,7 +272,7 @@ export interface AnswerItemOut {
   kind: ItemKind;
   calendar_id: number;
   title: string;
-  date: string;
+  date: string | null;
   start: string | null;
   all_day: boolean;
   occurrence_start: string | null;
@@ -312,17 +315,31 @@ export interface ProposalSourceOut {
 }
 
 /**
+ * Alfred's change to an existing event or task: the item (or a recurring event's occurrence) as it
+ * was when he proposed it, the fields he'd change as PATCH /api/items/:id takes them, and which of a
+ * recurring event's occurrences it changes. Nothing changes until the user presses Save.
+ */
+export interface ProposalChangeOut {
+  item: ItemOut;
+  changes: ItemChanges;
+  scope: RecurringScope;
+}
+
+/**
  * A pre-filled event or task the user reviews before anything is created (board 08). `conflict` is
  * "Free that evening" or "Overlaps Study group · 1h 30m" for an event with a date, null otherwise.
- * `source` is missing from an Alfred answer saved before proposals carried it.
+ * `message_id` is the email it came from, null for one Alfred made from the user's words. `source`
+ * is missing from an Alfred answer saved before proposals carried it. With `change`, it's a change to
+ * an existing item, and `item` is that item as the change leaves it.
  */
 export interface ProposalOut {
   kind: ItemKind;
-  message_id: number;
+  message_id: number | null;
   item: ProposalItemOut;
   from_email: ProposalField[];
   conflict: {free: boolean; label: string} | null;
   source?: ProposalSourceOut;
+  change?: ProposalChangeOut;
 }
 
 /** Bold runs in an answer ("By **Oct 31, 2026**, …"): UTF-16 offsets into `answer`, end exclusive. */

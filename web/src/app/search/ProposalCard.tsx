@@ -4,15 +4,16 @@
 // gave marked "from the email", and the conflict line, worked out again as the day and time change.
 // Nothing is created until the user presses Create, which sends the draft through the command layer.
 // The card waits at .5 until the provider confirms, and a failure stays in the card with the
-// provider's words.
+// provider's words. Alfred's change to an existing item is the editor on that item, his changes
+// filled in and marked: Save sends only what differs from the item, as Calendar's editor does.
 //
 // Opened from the reader, the model's prefill may be on its way (`fill`): the fields wait locked
 // under skeletons, then fill with its answer, or unlock as the rules filled them with a red line in
 // the head saying the prefill didn't come.
-import type {CalendarOut, CommandOut, ItemCreateInput, ProposalOut} from '@setpoint/shared';
+import type {CalendarOut, CommandOut, ItemChanges, ItemCreateInput, ItemOut, ProposalOut, RecurringScope} from '@setpoint/shared';
 import {useRef, useState} from 'react';
 import {refresh, useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, createSettled, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
+import {CALENDARS_PATH, createSettled, TODOIST_PROJECTS_PATH, updateSettled} from '../../api/items.ts';
 import {localDate} from '../../logic/format.ts';
 import {failedLine, prefillMissLine} from '../../logic/search.ts';
 import type {PrefillMiss} from '../../logic/search.ts';
@@ -46,29 +47,34 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
     else setClosed(true);
   };
 
-  async function create([input]: ItemCreateInput[]) {
-    if (!input || pending) return;
+  /** Create or Save through the command layer, waiting in the card until the provider confirms. */
+  async function send(command: () => Promise<CommandOut>, done: () => void = () => {}) {
+    if (pending) return;
     setPending(true);
     setFailed(null);
-    let command: CommandOut | null = null;
+    let settled: CommandOut | null = null;
     try {
-      command = await createSettled(input);
+      settled = await command();
     } catch (error) {
       setFailed((error as Error).message);
     }
     setPending(false);
-    if (!command) return;
-    if (command.state === 'failed') setFailed(failedLine(command.provider, command.provider_message));
+    if (!settled) return;
+    if (settled.state === 'failed') setFailed(failedLine(settled.provider, settled.provider_message));
     else {
-      if (input.create_project) void refresh(TODOIST_PROJECTS_PATH);
-      // The card closing is the answer: a create says nothing.
+      done();
+      // The card closing is the answer: a create or save says nothing.
       close();
     }
   }
+  const create = ([input]: ItemCreateInput[]) => input && send(() => createSettled(input), () => input.create_project && void refresh(TODOIST_PROJECTS_PATH));
+  const save = (item: ItemOut, changes: ItemChanges, scope: RecurringScope) =>
+    send(() => updateSettled(item.id, {changes, scope, occurrence_start: item.occurrence_start}));
+  const change = proposal.change;
 
   return (
-    <Editor open={{kind: proposal.kind, date: localDate(now, timeZone)}} calendars={calendars} today={localDate(now, timeZone)} timeZone={timeZone}
-      dayItems={NO_ITEMS} handed={false} onPreview={nothing} onCreate={inputs => void create(inputs)} onSave={nothing} onDelete={nothing} onClose={close}
+    <Editor open={{kind: proposal.kind, date: localDate(now, timeZone), ...(change ? {item: change.item, change} : {})}} calendars={calendars} today={localDate(now, timeZone)} timeZone={timeZone}
+      dayItems={NO_ITEMS} handed={false} onPreview={nothing} onCreate={inputs => void create(inputs)} onSave={(item, changes, scope) => void save(item, changes, scope)} onDelete={nothing} onClose={close}
       card={{proposal, pending, failed, quiet: inAnswer, form, filling: fill === 'waiting', missed: fill && fill !== 'waiting' ? prefillMissLine(fill) : null}} />
   );
 }

@@ -154,6 +154,10 @@ export const createSettled = (input: ItemCreateInput) => change(async () => unti
 export const updateItem = (id: number, input: {changes: ItemChanges; scope?: RecurringScope; occurrence_start?: string | null}) =>
   change(() => afterPending(() => sendJson<CommandOut>('PATCH', `/items/${id}`, input)));
 
+/** An edit, waited on until its provider settles it: Alfred's change saved from his card, which has nothing on the grid to fail in place. */
+export const updateSettled = (id: number, input: {changes: ItemChanges; scope?: RecurringScope; occurrence_start?: string | null}) =>
+  change(() => afterPending(async () => untilSettled(await sendJson<CommandOut>('PATCH', `/items/${id}`, input))));
+
 /** A delete. The server cancels a change still waiting on the item and deletes instead; one already on its way to the provider is waited for. */
 export const deleteItem = (id: number, input: {scope?: RecurringScope; occurrence_start?: string | null} = {}, {keepalive = false} = {}) =>
   change(() => afterPending(() => sendJson<CommandOut>('POST', `/items/${id}/delete`, input, {keepalive})));

@@ -1,5 +1,5 @@
-// Proposals from an email. Add to calendar, Add as task and Alfred's propose tool all build one
-// here. A proposal is the item POST /api/items would create, pre-filled. It marks the fields the
+// Proposals from an email or the user's words. Add to calendar, Add as task and Alfred's propose
+// tool all build one here. A proposal is the item POST /api/items would create, pre-filled. It marks the fields the
 // email gave and, for an event, carries the conflict line against that day's items. Nothing is
 // created: Create sends the item through the calendar's create command.
 //
@@ -12,7 +12,10 @@
 // end and place from the invite rather than its subject and text, because the file states them
 // exactly. The account's adapter reads the invite, so it's the one step here that can wait on a
 // provider. Whatever goes wrong there leaves the text's proposal.
-import type {ItemKind, ProposalField, ProposalOut} from '@setpoint/shared';
+//
+// Alfred also proposes a change to an existing item: the fields he'd change, as PATCH /api/items/:id
+// takes them, beside the item as it is and as the change leaves it. Nothing changes until Save.
+import type {ItemChanges, ItemKind, ItemOut, ProposalField, ProposalItemOut, ProposalOut, RecurringScope} from '@setpoint/shared';
 import {asc, eq} from 'drizzle-orm';
 import {readIcs} from '../domain/icsImport.ts';
 import {bodyOf} from '../db/bodies.ts';
@@ -21,7 +24,7 @@ import {conflictLine, dayAfter, fromEmail, proposalFields} from '../domain/propo
 import type {ProposalFields} from '../domain/proposal.ts';
 import {FILLER_WORDS} from '../domain/searchMatch.ts';
 import {wordsOf} from '../domain/searchChips.ts';
-import {localDay, localTime, zonedInstant} from '../domain/time.ts';
+import {addDays, daysBetween, localDay, localTime, zonedInstant} from '../domain/time.ts';
 import {invalid, notFound} from '../errors.ts';
 import {itemsInRange} from '../queries/items.ts';
 import {gmailUrl} from '../queries/mail.ts';
@@ -137,22 +140,37 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
     fields.end = null;
   }
   if (!fields.title.trim()) throw invalid('A proposal needs a title.');
-  // The invite's instants as they are (an event may end days later). The text's wall clock in the user's zone.
-  const startsAt = when ? when.starts_at : fields.date && fields.start ? zonedInstant(fields.date, fields.start, zone) : null;
-  let endsAt = when?.ends_at ?? (startsAt && fields.end ? zonedInstant(fields.date!, fields.end, zone) : startsAt ? new Date(Date.parse(startsAt) + HOUR).toISOString() : null);
-  // "11 PM – 1 AM" ends the next day.
-  if (startsAt && endsAt && endsAt <= startsAt) endsAt = new Date(Date.parse(endsAt) + 24 * HOUR).toISOString();
   // What the invite gave is the email's too.
   const marks = new Set([...fromEmail(email, fields, zone), ...invited]);
   const from_email = MARK_ORDER.filter(mark => marks.has(mark));
   // The description's "From:" line, linking to the email in Gmail (plain text for another provider's).
   const account = store.db.select({provider: t.accounts.provider, address: t.accounts.address}).from(t.accounts).where(eq(t.accounts.id, message.accountId)).get();
   const source = {subject: message.subject, url: account?.provider === 'gmail' ? gmailUrl(account.address, message.providerId) : null};
+  return {...proposalOf(store, kind, fields, message.accountId, when), message_id: messageId, from_email, source};
+}
+
+/**
+ * A proposal from the user's own words, Alfred's propose tool with no email: his title, day, times
+ * and place, none marked, the calendar or project picked from the title as an email's is.
+ */
+export function proposeFromWords(store: Store, kind: ItemKind, fields: ProposalFields): ProposalOut {
+  if (!fields.title.trim()) throw invalid('A proposal needs a title.');
+  return {...proposalOf(store, kind, fields, null, null), message_id: null, from_email: []};
+}
+
+/** The item a proposal's fields make, in its calendar or project, with an event's conflict line. */
+function proposalOf(store: Store, kind: ItemKind, fields: ProposalFields, accountId: number | null, when: Invite | null): Pick<ProposalOut, 'kind' | 'item' | 'conflict'> {
+  const zone = store.timeZone;
+  // The invite's instants as they are (an event may end days later). The text's wall clock in the user's zone.
+  const startsAt = when ? when.starts_at : fields.date && fields.start ? zonedInstant(fields.date, fields.start, zone) : null;
+  let endsAt = when?.ends_at ?? (startsAt && fields.end ? zonedInstant(fields.date!, fields.end, zone) : startsAt ? new Date(Date.parse(startsAt) + HOUR).toISOString() : null);
+  // "11 PM – 1 AM" ends the next day.
+  if (startsAt && endsAt && endsAt <= startsAt) endsAt = new Date(Date.parse(endsAt) + 24 * HOUR).toISOString();
 
   if (kind === 'task') {
     const {calendarId, project} = projectFor(store, fields.title);
     return {
-      kind, message_id: messageId, from_email, conflict: null, source,
+      kind, conflict: null,
       item: {
         kind, calendar_id: calendarId, title: fields.title, all_day: false, starts_at: null, ends_at: null, start_date: null, end_date: null,
         due_date: fields.date, due_at: startsAt, time_zone: zone, place: fields.place, project,
@@ -161,12 +179,73 @@ export function proposeFromMessage(store: Store, messageId: number, kind: ItemKi
   }
   const allDay = Boolean(fields.date && !startsAt);
   const item = {
-    kind, calendar_id: calendarFor(store, fields.title, message.accountId), title: fields.title, all_day: allDay,
+    kind, calendar_id: calendarFor(store, fields.title, accountId), title: fields.title, all_day: allDay,
     starts_at: startsAt, ends_at: endsAt, start_date: allDay ? fields.date : null, end_date: allDay ? when?.end_date ?? dayAfter(fields.date!) : null,
     due_date: null, due_at: null, time_zone: zone, place: fields.place, project: null,
   };
   const conflict = fields.date
     ? conflictLine({all_day: allDay, starts_at: startsAt, ends_at: endsAt, startHour: fields.start ? Number(fields.start.slice(0, 2)) : null}, itemsInRange(store, fields.date, dayAfter(fields.date)).items)
     : null;
-  return {kind, message_id: messageId, item, from_email, conflict, source};
+  return {kind, item, conflict};
+}
+
+/** What Alfred would change on an item: a new title, day, times or place. Times are local "HH:MM". */
+export interface ChangeEdits {
+  title?: string;
+  date?: string;
+  start?: string;
+  end?: string;
+  all_day?: boolean;
+  place?: string | null;
+}
+
+
+/**
+ * A change to an item (a recurring event's occurrence when `item` is one): only the fields that
+ * differ from it. A new day keeps the times, a new start keeps the length, and a task keeps its time
+ * on a new day. Null when nothing would change.
+ */
+export function proposeChange(store: Store, item: ItemOut, edits: ChangeEdits, scope: RecurringScope): ProposalOut | null {
+  const zone = store.timeZone;
+  const changes: ItemChanges = {};
+  if (edits.title !== undefined && edits.title.trim() && edits.title.trim() !== item.title) changes.title = edits.title.trim();
+  // A new place drops the old one's address.
+  if (edits.place !== undefined && (edits.place || null) !== item.place) Object.assign(changes, {place: edits.place || null}, item.address ? {address: null} : {});
+  const when = edits.date !== undefined || edits.start !== undefined || edits.end !== undefined || edits.all_day !== undefined;
+  if (when && item.kind === 'task') {
+    const date = edits.date ?? item.due_date;
+    if (!date) throw invalid('A task with no date needs a date for its time.');
+    const time = edits.start ?? (item.due_at ? localTime(item.due_at, zone) : null);
+    const dueAt = edits.all_day ? null : time ? zonedInstant(date, time, zone) : null;
+    if (date !== item.due_date) changes.due_date = date;
+    if (dueAt !== item.due_at) Object.assign(changes, {due_date: date, due_at: dueAt});
+  } else if (when) {
+    const wasTimed = !item.all_day && item.starts_at !== null && item.ends_at !== null;
+    const day = edits.date ?? (wasTimed ? localDay(item.starts_at!, zone) : item.start_date!);
+    if (edits.all_day || (!wasTimed && edits.start === undefined)) {
+      const span = !wasTimed && item.start_date && item.end_date && !edits.all_day ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
+      const next = {all_day: true, starts_at: null, ends_at: null, start_date: day, end_date: addDays(day, span)};
+      if (wasTimed || next.start_date !== item.start_date || next.end_date !== item.end_date) Object.assign(changes, next);
+    } else {
+      const length = wasTimed ? Math.round((Date.parse(item.ends_at!) - Date.parse(item.starts_at!)) / 60_000) : 60;
+      const start = edits.start ?? localTime(item.starts_at!, zone);
+      const startsAt = zonedInstant(day, start, zone);
+      let endsAt = edits.end ? zonedInstant(day, edits.end, zone) : new Date(Date.parse(startsAt) + length * 60_000).toISOString();
+      if (endsAt <= startsAt) endsAt = edits.end ? new Date(Date.parse(endsAt) + 24 * HOUR).toISOString() : endsAt;
+      if (!wasTimed || startsAt !== item.starts_at || endsAt !== item.ends_at) Object.assign(changes, {all_day: false, start_date: null, end_date: null, starts_at: startsAt, ends_at: endsAt});
+    }
+  }
+  if (!Object.keys(changes).length) return null;
+  const after = {...item, ...changes};
+  const proposed: ProposalItemOut = {
+    kind: item.kind, calendar_id: item.calendar_id, title: after.title, all_day: after.all_day, starts_at: after.starts_at, ends_at: after.ends_at,
+    start_date: after.start_date, end_date: after.end_date, due_date: after.due_date, due_at: after.due_at, time_zone: item.time_zone ?? zone, place: after.place, project: item.project,
+  };
+  // The conflict line on the day it lands, leaving the item itself out.
+  const day = item.kind === 'event' ? (after.all_day ? after.start_date : after.starts_at ? localDay(after.starts_at, zone) : null) : null;
+  const conflict = day
+    ? conflictLine({all_day: after.all_day, starts_at: after.starts_at, ends_at: after.ends_at, startHour: after.starts_at ? Number(localTime(after.starts_at, zone).slice(0, 2)) : null},
+      itemsInRange(store, day, dayAfter(day)).items.filter(other => other.id !== item.id))
+    : null;
+  return {kind: item.kind, message_id: null, item: proposed, from_email: [], conflict, change: {item, changes, scope: item.recurring && item.kind === 'event' ? scope : 'this'}};
 }

@@ -19,7 +19,7 @@ import {Fragment, useEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
 import {motion} from '../../tokens.ts';
 import {useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, completeItem, itemsPath} from '../../api/items.ts';
+import {CALENDARS_PATH, completeItem, itemPath, itemsPath} from '../../api/items.ts';
 import {AI_PATH} from '../../api/settings.ts';
 import {addDays, age, fullTimestamp} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
@@ -222,10 +222,12 @@ export const answerItemRoute = (item: AnswerItemOut): Route => ({page: 'calendar
  * day. A task completes here, and Edit and Open in Calendar go there. One that's gone says so.
  */
 function AnswerItemCard({turn, cited, timeZone, onClose}: {turn: number; cited: AnswerItemOut; timeZone: string; onClose: () => void}) {
-  const {data: day, error} = useResource<ItemsOut>(itemsPath(cited.date, addDays(cited.date, 1)));
+  // A task with no date is read by its id, as it has no day.
+  const {data: day, error} = useResource<ItemsOut>(cited.date ? itemsPath(cited.date, addDays(cited.date, 1)) : null);
+  const {data: undated, error: undatedError} = useResource<ItemOut>(cited.date ? null : itemPath(cited.id));
   const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
-  const item = day?.items.find(one => one.key === cited.key) ?? null;
-  const missing = Boolean(error) || (day !== undefined && !item);
+  const item = cited.date ? day?.items.find(one => one.key === cited.key) ?? null : undated ?? null;
+  const missing = Boolean(error ?? undatedError) || (cited.date ? day !== undefined && !item : false);
   useEffect(() => {
     if (!missing) return;
     showToast(`${cited.title} is no longer on your calendar`);

@@ -7,7 +7,8 @@
 // A recurring event is one row: its next occurrence, or its last once it has ended (within the date
 // chips, when there are any). An occurrence changed on its own gets its own row only when the change
 // is what matched, that is when it matches and its series doesn't. Search leaves out hidden
-// calendars, as the grid does.
+// calendars, as the grid does. Alfred's search also takes Todoist tasks with no date (`undated`),
+// which come after Upcoming and before Past, and never under a date chip.
 //
 // Pure. The caller reads the items and calendars and presents the hits.
 import type {CalendarMatchReasonOut, CalendarSearchChip} from '@setpoint/shared';
@@ -158,9 +159,16 @@ export interface CalendarHit<R extends SearchItem = SearchItem> {
   rule: string | null;
   reasons: CalendarMatchReasonOut[];
   highlights: {start: number; end: number}[];
+  // A task with no date: no day, no occurrence, and `day` and `from` empty.
+  undated: boolean;
 }
 
-/** The hits for chips and free text, Upcoming soonest first, then Past most recent first. */
+const isUndated = (row: SearchItem) => row.kind === 'task' && row.dueDate === null;
+
+/**
+ * The hits for chips and free text, Upcoming soonest first, then the undated tasks among `rows` (in
+ * title order), then Past most recent first. Rows hold undated tasks only when the caller wants them.
+ */
 export function searchItems<R extends SearchItem>(rows: R[], calendars: Map<number, string>, chips: CalendarSearchChip[], text: string, clock: Clock): CalendarHit<R>[] {
   const ladder = textLadder(text);
   if (!chips.length && !ladder.length) return [];
@@ -200,12 +208,19 @@ function collect<R extends SearchItem>(rows: R[], calendars: Map<number, string>
     const date: CalendarMatchReasonOut[] = ranges.length ? [{field: 'date', key: 'Date', value: dayLabel(occurrence.day, today), runs: []}] : [];
     hits.push({
       row: occurrence.row, occurrence: occurrence.occurrence, day: occurrence.day, from: occurrence.from, upcoming: occurrence.to > now, rule,
-      reasons: [...chip, ...date, ...text], highlights: mergeRuns(termRuns(occurrence.row.title, terms)),
+      reasons: [...chip, ...date, ...text], highlights: mergeRuns(termRuns(occurrence.row.title, terms)), undated: false,
     });
   };
 
+  const undated: CalendarHit<R>[] = [];
   for (const top of shown) {
     if (top.recurringItemId !== null || top.cancelled) continue;
+    if (isUndated(top)) {
+      // A date chip asks for a day, which an undated task hasn't.
+      const reasons = ranges.length ? null : matchOf(top);
+      if (reasons) undated.push({row: top, occurrence: null, day: '', from: '', upcoming: false, rule: null, reasons: [...reasons.chip, ...reasons.text], highlights: mergeRuns(termRuns(top.title, terms)), undated: true});
+      continue;
+    }
     const own = children.get(top.id) ?? [];
     const reasons = matchOf(top);
     if (reasons) {
@@ -224,5 +239,6 @@ function collect<R extends SearchItem>(rows: R[], calendars: Map<number, string>
   }
   const upcoming = hits.filter(hit => hit.upcoming).sort((a, b) => a.from.localeCompare(b.from) || a.row.title.localeCompare(b.row.title));
   const past = hits.filter(hit => !hit.upcoming).sort((a, b) => b.from.localeCompare(a.from) || a.row.title.localeCompare(b.row.title));
-  return [...upcoming, ...past];
+  undated.sort((a, b) => a.row.title.localeCompare(b.row.title));
+  return [...upcoming, ...undated, ...past];
 }

@@ -1,6 +1,6 @@
 // The calendar editor's drafts as pure rules (Editor.tsx draws them): a draft from a day, an item, an
 // email's proposal or an .ics event, the line read and retyped, and what Create or Save sends.
-import type {CalendarOut, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ProposalField, ProposalOut} from '@setpoint/shared';
+import type {CalendarOut, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ProposalChangeOut, ProposalField, ProposalOut} from '@setpoint/shared';
 import type {Slot} from '../app/calendar/Editor.tsx';
 import {editedWhen, extraDays, parseTitle, taskRepeat} from './compose.ts';
 import type {ParsedTitle, ReminderBase, ReminderRead} from './compose.ts';
@@ -159,6 +159,19 @@ export function fromIcs(event: IcsEventOut, timeZone: string): Draft {
     recurrence: event.recurrence.find(line => line.startsWith('RRULE:')) ?? null,
     manual: ['date', 'time', 'place', 'reminders', 'recurrence', ...(event.existing.length ? ['calendar' as const] : [])],
   };
+}
+
+/**
+ * Alfred's change as the editor's fields: the item with his changes applied, each changed field
+ * marked as his (the marks the email's fields use) until it's changed again.
+ */
+export function fromChange(change: ProposalChangeOut, timeZone: string): Draft {
+  const changed = Object.keys(change.changes);
+  const marks: Marked[] = [];
+  if (changed.includes('title')) marks.push('title');
+  if (changed.some(field => ['all_day', 'starts_at', 'ends_at', 'start_date', 'end_date', 'due_date', 'due_at'].includes(field))) marks.push('date', 'time');
+  if (changed.includes('place')) marks.push('place');
+  return {...fromItem({...change.item, ...change.changes} as ItemOut, timeZone), fromEmail: marks};
 }
 
 /** An item as the editor's fields. */

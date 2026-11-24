@@ -95,6 +95,22 @@ describe('searchItems: Upcoming soonest first, then Past most recent first', () 
     ]);
   });
 
+  test('tasks with no date, when the rows hold them: after Upcoming, before Past, in title order, never under a date chip', () => {
+    const rows = [
+      timed('2026-10-20', '10:00', '11:00', {title: 'Review B'}),
+      timed('2026-10-01', '10:00', '11:00', {title: 'Review A'}),
+      row({kind: 'task', calendarId: 4, title: 'Review taxes', dueDate: null}),
+      row({kind: 'task', calendarId: 4, title: 'Review budget', dueDate: null}),
+    ];
+    const groups = (text: string, chips: CalendarSearchChip[] = []) => searchItems(rows, calendars, chips, text, CLOCK)
+      .map(hit => `${hit.undated ? 'Undated' : hit.upcoming ? 'Upcoming' : 'Past'} ${hit.row.title}`);
+    expect(groups('review')).toEqual(['Upcoming Review B', 'Undated Review budget', 'Undated Review taxes', 'Past Review A']);
+    // Words only an undated task matches find it on the ladder's first step.
+    expect(groups('taxes')).toEqual(['Undated Review taxes']);
+    const october: CalendarSearchChip = {kind: 'date', from: '2026-10-01', to: '2026-11-01', label: 'Oct 2026'};
+    expect(groups('review', [october])).toEqual(['Upcoming Review B', 'Past Review A']);
+  });
+
   test('a recurring event is one row: its next occurrence, or its last once it has ended', () => {
     const gym = timed('2026-08-31', '07:00', '08:00', {title: 'Gym', recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR'});
     const summer = timed('2026-06-01', '07:00', '08:00', {title: 'Gym summer', recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20260831T235959Z'});
