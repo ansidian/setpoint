@@ -10,17 +10,19 @@
 // read) sits above what it's doing now, which shimmers. Two bars hold the answer's place, and the
 // follow-up field is dimmed until the answer is in. Then the trail folds away and the answer fades up.
 // A long list of sources shows its first five and Show all. Proposals in an answer show as the
-// proposal card. While the thread is read back after a reload, a skeleton holds its place and the
+// proposal chip, and a registered module's fixes (Jobs') one at a time, each a chip with its evidence emails. While the thread is read back after a reload, a skeleton holds its place and the
 // field is dimmed. In Alfred's window the header is the window's title: it folds the window to its
 // bar and back. On the phone an item's row opens its detail on the Agenda instead, and the follow-up
 // field takes the keys only when tapped, so no keyboard rises on its own. In the phone's sheet the
 // sheet's top bar is the card's header.
-import type {AccountOut, AiOut, AnswerApplicationOut, AnswerItemOut, CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
+import type {AccountOut, AiOut, AnswerApplicationOut, AnswerItemOut, AnswerSourceOut, CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';
 import type {ReactNode} from 'react';
 import {motion} from '../../tokens.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, completeItem, itemPath, itemsPath} from '../../api/items.ts';
+import {alfredFixActed} from '../../api/search.ts';
+import type {ShownFix} from '../../api/search.ts';
 import {AI_PATH} from '../../api/settings.ts';
 import {addDays, age, fullTimestamp} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
@@ -37,6 +39,7 @@ import {Bar, Sk} from '../states/Loading.tsx';
 import {ThreadSkeleton} from '../states/Skeletons.tsx';
 import {openSettings} from '../settings/store.ts';
 import {actedKey, markActed, useActed} from './acted.ts';
+import {FixSteps} from './FixSteps.tsx';
 import {ProposalChip} from './ProposalChip.tsx';
 import {Account} from './Search.tsx';
 import type {Alfred} from './state.ts';
@@ -66,6 +69,8 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
   const phone = usePhone();
   const openOnAgenda = onItem ?? (phone ? (item: AnswerItemOut) => navigate(answerItemRoute(item)) : null);
   const [draft, setDraft] = useState('');
+  // The fix on screen, the one last shown: a follow-up says it's the one meant.
+  const [viewing, setViewing] = useState<ShownFix | null>(null);
   // The turns whose every source shows.
   const [allSources, setAllSources] = useState<ReadonlySet<number>>(new Set());
   // The item whose card is open, by its turn and key.
@@ -108,6 +113,18 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
     const timer = window.setTimeout(() => setFolding(null), motion.medium);
     return () => window.clearTimeout(timer);
   }, [folding]);
+  // An email it rests on: opens in the reading pane.
+  const sourceRow = (source: AnswerSourceOut) => (
+    <button key={source.message_id} type="button" className={source.message_id === openId ? 'src open' : 'src'} data-id={source.message_id} onClick={() => onOpen(source.message_id)}>
+      <span className="line">
+        <span className="who">{source.organisation ?? source.from_name}</span>
+        <span className="grow ell">{source.subject}</span>
+        {source.pinned && <span className="pin" role="img" aria-label="Pinned" data-tip="Pinned"><Icon name="keep" size={16} /></span>}
+      </span>
+      <span className="ac" data-tip={accounts.get(source.account_id)?.label}><Account account={accounts.get(source.account_id)} /></span>
+      <span className="age num" data-tip={fullTimestamp(source.received_at, timeZone)}>{age(source.received_at, now, timeZone)}</span>
+    </button>
+  );
   const finished = (trail: AskStep[], current: AskStep | null) => (current ? trail.slice(0, -1) : trail);
   const noKey = ai && !ai.keys.anthropic ? 'Alfred needs an Anthropic key in Settings › AI.' : null;
   const loading = alfred.loading === true;
@@ -145,17 +162,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
             )}
             {(turn.sources.length > 0 || turn.items.length > 0 || turn.applications.length > 0) && (
               <div className="srcs">
-                {shownSources(turn.sources, allSources.has(turn.turn_id)).shown.map(source => (
-                  <button key={source.message_id} type="button" className={source.message_id === openId ? 'src open' : 'src'} data-id={source.message_id} onClick={() => onOpen(source.message_id)}>
-                    <span className="line">
-                      <span className="who">{source.organisation ?? source.from_name}</span>
-                      <span className="grow ell">{source.subject}</span>
-                      {source.pinned && <span className="pin" role="img" aria-label="Pinned" data-tip="Pinned"><Icon name="keep" size={16} /></span>}
-                    </span>
-                    <span className="ac" data-tip={accounts.get(source.account_id)?.label}><Account account={accounts.get(source.account_id)} /></span>
-                    <span className="age num" data-tip={fullTimestamp(source.received_at, timeZone)}>{age(source.received_at, now, timeZone)}</span>
-                  </button>
-                ))}
+                {shownSources(turn.sources, allSources.has(turn.turn_id)).shown.map(source => sourceRow(source))}
                 <MoreSources more={shownSources(turn.sources, allSources.has(turn.turn_id)).more} onToggle={() => setAllSources(current => {
                   const next = new Set(current);
                   if (!next.delete(turn.turn_id)) next.add(turn.turn_id);
@@ -181,6 +188,11 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
               <ProposalChip key={actedKey(turn_id, index)} proposal={proposal} now={now} timeZone={timeZone} phone={phone}
                 done={acted.has(actedKey(turn_id, index))} onActed={() => markActed(turn_id, index)} />
             ))}
+            {turn.fixes.length > 0 && (
+              <FixSteps fixes={turn.fixes} evidence={fix => (fix.evidence.length ? fix.evidence.map(source => sourceRow(source)) : null)}
+                onActed={(index, applied) => void alfredFixActed(turn.turn_id, index, applied).catch(() => {})}
+                onShown={index => setViewing({turn_id: turn.turn_id, index})} />
+            )}
           </Fragment>
         ))}
         {waiting !== null && (
@@ -208,7 +220,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, win
                 close();
               } else if (event.key === 'Enter' && !asking && !loading && draft.trim()) {
                 event.preventDefault();
-                alfred.ask(draft);
+                alfred.ask(draft, viewing);
                 setDraft('');
               }
             }} />

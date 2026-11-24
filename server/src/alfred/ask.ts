@@ -3,7 +3,8 @@
 // about this email" scopes a thread to one email. When the mail doesn't say, the answer is null and
 // `searched` says what Alfred searched ("Couldn't find that in your mail or calendar"). The events
 // and tasks an answer rests on are sources too, and the job applications while Jobs registers its
-// tools. Anything Alfred would create is a proposal.
+// tools. Anything Alfred would create is a proposal, and a fix a registered module offers (Jobs'
+// merge, assign, status…) is one too, applied only by the user through that module's route.
 //
 // Every model call goes in the AI usage ledger (purpose `alfred`). A failed call saves nothing: the
 // thread stays as it was before the question, so asking again works.
@@ -11,7 +12,7 @@
 // The tool loop has a step limit and one reminder when a turn ends without the expected tool call.
 // The provider and model are bound when the thread starts. A failure restores the transcript.
 // Threads end after four idle hours.
-import type {AnswerApplicationOut, AnswerItemOut, AnswerOut, AnswerSourceOut, AskContext, AskPage, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
+import type {AnswerApplicationOut, AnswerItemOut, AnswerOut, FixProposalOut, AnswerSourceOut, AskContext, AskPage, AskStep, ConversationOut, EmphasisOut, ProposalOut} from '@setpoint/shared';
 import {asc, eq, inArray, lt} from 'drizzle-orm';
 import {withBody} from '../db/bodies.ts';
 import * as t from '../db/schema.ts';
@@ -151,9 +152,10 @@ function sourcesOf(store: Store, ids: number[]): AnswerSourceOut[] {
 const endsAt = (touchedAt: string) => new Date(Date.parse(touchedAt) + THREAD_IDLE_MS).toISOString();
 
 function present(store: Store, conversationId: number, turn: Turn, touchedAt: string): AnswerOut {
+  const fixes: FixProposalOut[] = turn.fixes.map(({evidence_ids: evidence, ...fix}) => ({...fix, evidence: sourcesOf(store, evidence)}));
   return {
     conversation_id: conversationId, turn_id: turn.id, ends_at: endsAt(touchedAt), question: turn.question, answer: turn.answer, emphasis: turn.emphasis,
-    sources: sourcesOf(store, turn.sourceIds), items: turn.itemSources, applications: turn.applicationSources, searched: turn.searched, proposals: turn.proposals,
+    sources: sourcesOf(store, turn.sourceIds), items: turn.itemSources, applications: turn.applicationSources, searched: turn.searched, proposals: turn.proposals, fixes,
   };
 }
 
@@ -171,6 +173,17 @@ function replaceEarlier(store: Store, conversationId: number, turnId: number) {
     const proposals = turn.proposals.map(proposal => (proposal.acted ? proposal : {...proposal, replaced: true}));
     store.db.update(t.alfredTurns).set({proposals}).where(eq(t.alfredTurns.id, turn.id)).run();
   }
+}
+
+/**
+ * POST /api/alfred/acted with `fix`: an answer's fix was applied, so the next question says so, or
+ * undone, so it no longer is (and one already said is said again, undone).
+ */
+export function fixActed(store: Store, turnId: number, index: number, acted: boolean) {
+  const turn = store.db.select({fixes: t.alfredTurns.fixes}).from(t.alfredTurns).where(eq(t.alfredTurns.id, turnId)).get();
+  if (!turn?.fixes[index]) throw notFound('No such fix.');
+  const fixes = turn.fixes.map((fix, at) => (at === index ? {...fix, acted} : fix));
+  store.db.update(t.alfredTurns).set({fixes}).where(eq(t.alfredTurns.id, turnId)).run();
 }
 
 /**
@@ -231,7 +244,7 @@ function finalOf(input: Record<string, unknown> | null): Final {
 }
 
 /** POST /api/alfred/ask: a question, a follow-up in a thread, or one about an email. */
-export async function askAlfred(store: Store, input: {question: string; conversation_id?: number; message_id?: number; context?: AskContext; ask_id?: string}, options: AlfredOptions = {}): Promise<AnswerOut> {
+export async function askAlfred(store: Store, input: {question: string; conversation_id?: number; message_id?: number; context?: AskContext; fix?: {turn_id: number; index: number}; ask_id?: string}, options: AlfredOptions = {}): Promise<AnswerOut> {
   const now = isoNow(store);
   let thread: Conversation | null = null;
   if (input.conversation_id) {
@@ -265,14 +278,31 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   // so a change to one goes to the item now on the calendar.
   const noted = new Set(thread?.transcript.noted ?? []);
   const acted = earlier.flatMap(turn => turn.proposals.flatMap((proposal, index) => (proposal.acted && !noted.has(`${turn.id}:${index}`) ? [{key: `${turn.id}:${index}`, proposal}] : [])));
-  const actedLine = acted.map(({proposal}) => `The user ${proposal.change ? 'saved the proposed change to' : 'created the proposed'} ${proposal.kind} ${JSON.stringify(proposal.item.title)}.`).join(' ');
-  const firstText = thread ? (actedLine ? `${actedLine}\n\nThe user's question: ${input.question}` : input.question)
+  // Fixes applied since, keyed apart from the proposals ("fix:turn:index"). One undone after it was
+  // said is said as undone, and its key goes, so applying it again is said again. Fixes aren't
+  // replaced: each stands on its own.
+  const fixKey = (turnId: number, index: number) => `fix:${turnId}:${index}`;
+  const applied = earlier.flatMap(turn => turn.fixes.flatMap((fix, index) => (fix.acted && !noted.has(fixKey(turn.id, index)) ? [{key: fixKey(turn.id, index), fix}] : [])));
+  const undone = earlier.flatMap(turn => turn.fixes.flatMap((fix, index) => (!fix.acted && noted.has(fixKey(turn.id, index)) ? [{key: fixKey(turn.id, index), fix}] : [])));
+  const actedLine = [
+    ...acted.map(({proposal}) => `The user ${proposal.change ? 'saved the proposed change to' : 'created the proposed'} ${proposal.kind} ${JSON.stringify(proposal.item.title)}.`),
+    ...applied.map(({fix}) => `The user applied the proposed fix ${JSON.stringify(fix.line)}.`),
+    ...undone.map(({fix}) => `The user undid the fix ${JSON.stringify(fix.line)}.`),
+  ].join(' ');
+  // The fix on screen as a follow-up is asked: one of this thread's, in its own words.
+  const shownTurn = input.fix ? earlier.find(turn => turn.id === input.fix!.turn_id) : undefined;
+  const shownFix = shownTurn?.fixes[input.fix!.index];
+  const fixLine = shownTurn && shownFix
+    ? `The user is looking at your proposed fix ${input.fix!.index + 1} of ${shownTurn.fixes.length}, ${JSON.stringify(shownFix.line)}${shownFix.acted ? ', which they applied' : ''}, so "this" is that fix.`
+    : '';
+  const before = [actedLine, fixLine].filter(Boolean).join(' ');
+  const firstText = thread ? (before ? `${before}\n\nThe user's question: ${input.question}` : input.question)
     : scope !== null ? aboutEmail(store, scope, input.question)
       : input.context ? `${contextLine(store, input.context, registered)}\n\nThe user's question: ${input.question}` : input.question;
   items.push(...client.userTurn(firstText, thread?.transcript.pending ?? []));
 
   const context: ToolContext = {
-    store, read: [], searched: [], proposals: [], invites: new Map(), files: new Map(), documents: new Set(), items: new Map(), registered, applications: new Map(),
+    store, read: [], searched: [], proposals: [], invites: new Map(), files: new Map(), documents: new Set(), items: new Map(), registered, applications: new Map(), fixes: [],
     seen: new Set([...(thread?.transcript.seen ?? []), ...(scope !== null ? [scope] : [])]),
     questions: [...earlier.map(turn => turn.question), input.question],
   };
@@ -342,9 +372,12 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   // What it searched. For a question about one email that it couldn't answer without searching, that email.
   const searched = found || context.searched.length || scope === null ? context.searched : sourcesOf(store, [scope]).map(source => source.subject);
   const proposals: ProposalOut[] = context.proposals;
+  const fixes = context.fixes ?? [];
 
   return transaction(store, () => {
-    const transcript = {items, pending, seen: [...context.seen], noted: [...noted, ...acted.map(one => one.key)]};
+    const unsaid = new Set(undone.map(one => one.key));
+    const kept = [...noted].filter(key => !unsaid.has(key));
+    const transcript = {items, pending, seen: [...context.seen], noted: [...kept, ...acted.map(one => one.key), ...applied.map(one => one.key)]};
     let conversationId: number;
     if (thread) {
       conversationId = thread.id;
@@ -355,7 +388,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
     }
     const turn = store.db.insert(t.alfredTurns).values({
       conversationId, at: now, question: input.question, answer: found ? final.text : null, emphasis: found ? emphasisOf(final.text, final.emphasis) : [],
-      sourceIds, itemSources, applicationSources, searched, proposals,
+      sourceIds, itemSources, applicationSources, searched, proposals, fixes,
     }).returning().get();
     // A new proposal replaces the thread's earlier ones not yet created or saved. Read here, inside
     // the write, so a Create pressed while Alfred answered stands.

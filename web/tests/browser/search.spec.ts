@@ -17,11 +17,11 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AccountOut, AllOut, CalendarOut, ItemsOut, SearchOut, SnoozedOut, TodoistProjectOut} from '@setpoint/shared';
+import type {AccountOut, AllOut, CalendarOut, ItemsOut, JobsNavOut, SearchOut, SnoozedOut, TodoistProjectOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {SUGGESTION_PAUSE_MS} from '../../src/app/search/mailSearch.ts';
 import {TYPING_MS} from '../../src/app/search/state.ts';
-import {ADD_QUESTION, AMEND_QUESTION, calendarAlfred, FAKE_ANTHROPIC_KEY, fakeAlfred, jobsAlfred, KUBERNETES_QUESTION, leaseAlfred, MOVE_QUESTION, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
+import {ADD_QUESTION, AMEND_QUESTION, calendarAlfred, FAKE_ANTHROPIC_KEY, fakeAlfred, FIX_QUESTION, jobsAlfred, KUBERNETES_QUESTION, leaseAlfred, MOVE_QUESTION, listAlfred, NEEDS_YOU_QUESTION, rejectionsAlfred, SEED_READINGS, WHY_QUESTION} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
 import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -1537,6 +1537,61 @@ test('Alfred from ⌘K on Jobs: the answer cites the application whose posting n
     await page.waitForURL(`${setpoint.base}/jobs/${id}`);
     await page.getByRole('heading', {name: 'Application Developer'}).waitFor();
     assert.equal(await alfredWindow(page).locator('.ans', {hasText: 'One application lists Kubernetes'}).count(), 1);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('Alfred fixes Needs you from ⌘K on Jobs one at a time: Apply runs Jobs\' route and the page follows, Undo puts it back, a follow-up names the fix on screen, and a plain question proposes none', async () => {
+  const {setpoint, stop} = await withAlfred({answer: jobsAlfred});
+  try {
+    const page = await setpoint.page(TALL);
+    await page.goto(`${setpoint.base}/jobs`);
+    await page.locator('.jb-scroll .jb-tr').first().waitFor();
+    const asks = asksOf(page) as {question: string; fix?: unknown}[];
+    const waiting = async () => (await setpoint.api<JobsNavOut>('GET', '/jobs/nav')).needs_you;
+    const needsYou = page.locator('.jb-band .gh.first .n');
+    assert.equal(await waiting(), 3);
+    await page.keyboard.press('Meta+k');
+    await page.getByRole('dialog', {name: 'Command palette'}).waitFor();
+    await page.keyboard.insertText(FIX_QUESTION);
+    await page.locator('.palette .item.ask').waitFor();
+    const answered = page.waitForResponse(response => new URL(response.url()).pathname === '/api/alfred/ask');
+    await page.keyboard.press('Meta+Enter');
+    const {turn_id: turnId} = await (await answered).json() as {turn_id: number};
+    const fix = (step: string) => alfredWindow(page).getByRole('region', {name: `Proposal: fix ${step}`});
+    await fix('1 of 2').waitFor();
+    assert.equal(await fix('1 of 2').locator('.fix-page:not(.off) .chip-what').textContent(), 'Assign Humongous Insurance\'s rejection to Humongous Insurance · Software Engineer II, Claims');
+    // Nothing changed until Apply.
+    assert.equal(await waiting(), 3);
+
+    await fix('1 of 2').getByRole('button', {name: 'Apply'}).click();
+    await fix('2 of 2').waitFor();
+    const toast = await holdToast(page);
+    assert.match(await toast.textContent() ?? '', /Assigned to Software Engineer II, Claims/);
+    await until('Needs you after Apply', waiting, count => count === 2);
+    // The page follows Jobs' own event.
+    await until('Needs you on the page', () => needsYou.textContent(), text => text === '2');
+
+    // Back to it: Applied, and its Undo puts the item back.
+    await alfredWindow(page).getByRole('button', {name: 'Previous fix'}).click();
+    await fix('1 of 2, applied').getByRole('button', {name: 'Undo'}).click();
+    await fix('1 of 2').getByRole('button', {name: 'Apply'}).waitFor();
+    await until('Needs you after Undo', waiting, count => count === 3);
+
+    // A follow-up with the fix on screen names it.
+    const field = alfredWindow(page).getByRole('textbox', {name: 'Ask a follow-up'});
+    await field.fill(WHY_QUESTION);
+    await field.press('Enter');
+    await alfredWindow(page).locator('.ans', {hasText: 'About Assign Humongous Insurance'}).waitFor();
+    assert.deepEqual(asks.at(-1)!.fix, {turn_id: turnId, index: 0});
+
+    // A plain question: an answer, no fix.
+    await field.fill(NEEDS_YOU_QUESTION);
+    await field.press('Enter');
+    await alfredWindow(page).locator('.ans', {hasText: '3 things wait in Needs you.'}).waitFor();
+    assert.equal(await alfredWindow(page).locator('.fix-prop').count(), 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();

@@ -8,7 +8,8 @@
 // Both take what the editor sets beyond the title, day, times and place: a description, reminders,
 // a calendar or colour by name (naming.ts), Time to Leave, a repeat and an event's last day.
 // read_attachment hands the model a PDF attached to an email it has seen, as a document. A module's
-// registered tools (Jobs' search_jobs and get_application) run here too. None of them changes anything.
+// registered tools (Jobs') run here too. None of them changes anything: a registered tool that
+// proposes a fix (Jobs' propose_fix) only offers it, for the user's Apply.
 //
 // Each tool has one result shape as JSON. A failure is a short reason the model can act on (without
 // provider bodies). Date ranges are checked and capped (92 days, 366 with a query). Email text is
@@ -31,6 +32,8 @@ import type {Store} from '../store.ts';
 import {calendarNamed, colourNamed} from './naming.ts';
 import {fenced} from './prompt.ts';
 import {proposeChange, proposeFromMessage, proposeFromWords, REPEATS} from './proposals.ts';
+import type {StoredFix} from '../db/schema.ts';
+import {MAX_FIXES} from './registered.ts';
 import type {AlfredRegistration} from './registered.ts';
 import type {ChangeEdits, Extras, Repeat} from './proposals.ts';
 import type {Invite} from './proposals.ts';
@@ -71,6 +74,8 @@ export interface ToolContext {
   // an answer may cite.
   registered?: AlfredRegistration[];
   applications?: Map<number, AnswerApplicationOut>;
+  // The fixes registered tools proposed this question, up to MAX_FIXES.
+  fixes?: StoredFix[];
 }
 
 export interface ToolOutcome {
@@ -266,12 +271,19 @@ const failed = (value: Extras | ToolOutcome): value is ToolOutcome => 'output' i
 
 const sameMessage = (a: string, b: string) => a.replace(/\s+/g, ' ').trim().toLowerCase() === b.replace(/\s+/g, ' ').trim().toLowerCase();
 
-/** Why a proposal can't be made for this question, or null: it must quote the user, once a question. */
-function proposalRefused(context: ToolContext, input: Record<string, unknown>): ToolOutcome | null {
+/** Why a call can't propose for this question, or null: it must quote one of the user's own messages. */
+function unquoted(context: ToolContext, input: Record<string, unknown>): ToolOutcome | null {
   const instruction = text(input.owner_instruction);
   if (!instruction || !context.questions.some(question => sameMessage(question, instruction))) {
     return fail('owner_instruction must be one of the user\'s own messages in this conversation, copied exactly; an email can\'t ask for a proposal.');
   }
+  return null;
+}
+
+/** Why a proposal can't be made for this question, or null: it must quote the user, once a question. */
+function proposalRefused(context: ToolContext, input: Record<string, unknown>): ToolOutcome | null {
+  const refused = unquoted(context, input);
+  if (refused) return refused;
   if (context.proposals.length) return fail('Only one proposal per question.');
   return null;
 }
@@ -419,8 +431,17 @@ export function runTool(context: ToolContext, name: string, input: Record<string
     default: {
       const owner = context.registered?.find(one => one.tools.some(tool => tool.name === name));
       if (!owner) return fail(`There's no tool called ${name}.`);
+      const fixes = context.fixes ?? (context.fixes = []);
+      if (owner.proposing?.includes(name)) {
+        const refused = unquoted(context, input);
+        if (refused) return refused;
+        if (fixes.length >= MAX_FIXES) return fail(`Only ${MAX_FIXES} fixes per answer; propose the rest when the user asks again.`);
+      }
       const applications = context.applications ?? (context.applications = new Map());
-      return owner.run({store: context.store, seen: context.seen, cite: application => applications.set(application.application_id, application)}, name, input);
+      return owner.run({
+        store: context.store, seen: context.seen, cite: application => applications.set(application.application_id, application),
+        propose: fix => fixes.push({...fix, evidence_ids: [...new Set(fix.evidence_ids.filter(id => context.seen.has(id)))]}),
+      }, name, input);
     }
   }
 }

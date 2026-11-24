@@ -29,7 +29,7 @@ beforeEach(() => {
       const body = JSON.parse(String(init?.body)) as {question: string; context?: AskContext};
       asked.push(body);
       return json({conversation_id: 5, turn_id: asked.length, ends_at: new Date(Date.now() + 3_600_000).toISOString(), question: body.question, answer: 'Two lab reports this week.',
-        emphasis: [], sources: [], items: [], applications: [], searched: [], proposals: []} satisfies AnswerOut);
+        emphasis: [], sources: [], items: [], applications: [], searched: [], proposals: [], fixes: []} satisfies AnswerOut);
     }
     if (url.pathname.includes('/alfred/asks/')) return json({step: null});
     if (url.pathname.endsWith('/accounts')) return json([]);

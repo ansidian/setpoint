@@ -232,15 +232,45 @@ export function calendarAlfred(turn: AlfredTurn): Call {
 }
 
 export const KUBERNETES_QUESTION = 'which applications require Kubernetes?';
+export const FIX_QUESTION = 'sort out my Needs you';
+export const NEEDS_YOU_QUESTION = 'what\'s waiting in Needs you?';
+export const WHY_QUESTION = 'why this one?';
+
+type NeedsYouRow = {needs_you_id: number; kind: string; could_be?: {application_id: number; role: string}[]};
 
 /**
  * Jobs' Alfred: "which applications require Kubernetes?" searches the user's applications for
- * kubernetes, the seed's Woodgrove Bank posting naming it, and answers citing each one found.
+ * kubernetes, the seed's Woodgrove Bank posting naming it, and answers citing each one found. "sort
+ * out my Needs you" reads Needs you and proposes two fixes, one call each: the Humongous rejection
+ * assigned to the Claims application, and Wide World Importers' email tracked. "what's waiting in
+ * Needs you?" reads it and answers with no fix. "why this one?" answers about the fix on screen.
  * Anything else is board 07's.
  */
 export function jobsAlfred(turn: AlfredTurn): Call {
   const {question, results} = turn;
-  if (question.split('The user\'s question: ').at(-1)!.trim() !== KUBERNETES_QUESTION) return leaseAlfred(turn);
+  const asked = question.split('The user\'s question: ').at(-1)!.trim();
+  const listed = results.find(result => Array.isArray(result.needs_you)) as {needs_you: NeedsYouRow[]} | undefined;
+  if (asked === WHY_QUESTION) {
+    const fix = /looking at your proposed fix \d+ of \d+, "(.*?)"(, which they applied)?, so/.exec(question)?.[1];
+    return {name: 'answer', input: {found: true, text: fix ? `About ${fix}: its email names that role.` : 'Which fix?', source_ids: []}};
+  }
+  if (asked === FIX_QUESTION) {
+    if (!listed) return {name: 'list_needs_you', input: {}};
+    const ready = results.filter(result => result.ready === true).length;
+    const assign = listed.needs_you.find(item => item.kind === 'update_to_assign')!;
+    const track = listed.needs_you.find(item => item.kind === 'email_to_track')!;
+    const fixes = [
+      {action: 'assign', needs_you_id: assign.needs_you_id, application_id: assign.could_be!.find(row => row.role.includes('Claims'))!.application_id},
+      {action: 'track', needs_you_id: track.needs_you_id},
+    ];
+    if (ready < fixes.length) return {name: 'propose_fix', input: {owner_instruction: asked, ...fixes[ready]}};
+    return {name: 'answer', input: {found: true, text: 'Two fixes for Needs you, ready to apply.', source_ids: []}};
+  }
+  if (asked === NEEDS_YOU_QUESTION) {
+    if (!listed) return {name: 'list_needs_you', input: {}};
+    return {name: 'answer', input: {found: true, text: `${listed.needs_you.length} things wait in Needs you.`, source_ids: []}};
+  }
+  if (asked !== KUBERNETES_QUESTION) return leaseAlfred(turn);
   const found = results.find(result => Array.isArray(result.results) && !('searched' in result)) as {results: {application_id: number}[]} | undefined;
   if (!found) return {name: 'search_jobs', input: {query: 'kubernetes'}};
   return {name: 'answer', input: {found: true, text: 'One application lists Kubernetes, Woodgrove Bank\'s.', source_ids: [], application_ids: found.results.map(row => row.application_id)}};

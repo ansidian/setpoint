@@ -1,0 +1,1 @@
+ALTER TABLE `alfred_turns` ADD `fixes` text DEFAULT '[]' NOT NULL;

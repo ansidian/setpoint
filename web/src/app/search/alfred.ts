@@ -29,6 +29,7 @@ import {useLayoutEffect, useSyncExternalStore} from 'react';
 import {serverNow} from '../../api/auth.ts';
 import {ApiFailure} from '../../api/client.ts';
 import {alfredConversation, alfredStep, askAlfred as sendQuestion} from '../../api/search.ts';
+import type {ShownFix} from '../../api/search.ts';
 import {withStep} from '../../logic/search.ts';
 import {showToast} from '../toast.ts';
 import type {Alfred} from './state.ts';
@@ -211,7 +212,7 @@ function poll(askId: string) {
   }, STEP_POLL_MS);
 }
 
-function send(question: string, anew: boolean) {
+function send(question: string, anew: boolean, fix: ShownFix | null = null) {
   const asked = question.trim();
   if (!thread || !asked || thread.restoring || (thread.waiting !== null && !anew)) return;
   const id = counter;
@@ -222,7 +223,7 @@ function send(question: string, anew: boolean) {
   poll(askId);
   // A thread's first question carries what was on screen where it was asked.
   const context = conversation === null && origin.kind === 'page' ? origin.context : null;
-  sendQuestion(asked, {conversation, message: scopedEmail(origin), context, ask: askId}).then(answer => {
+  sendQuestion(asked, {conversation, message: scopedEmail(origin), context, fix, ask: askId}).then(answer => {
     if (id !== counter || !thread) return;
     stopPolling();
     remember(answer.conversation_id, origin);
@@ -249,8 +250,8 @@ export function startAlfred(origin: AlfredOrigin, question?: string) {
   if (question) send(question, true);
 }
 
-/** A follow-up in the open thread. */
-export const askAlfred = (question: string) => send(question, false);
+/** A follow-up in the open thread, with the fix on screen when one is. */
+export const askAlfred = (question: string, fix: ShownFix | null = null) => send(question, false, fix);
 
 /** Closes the open thread: × or Esc. */
 export function closeAlfred() {

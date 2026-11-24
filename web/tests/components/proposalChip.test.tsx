@@ -41,7 +41,7 @@ const DENTIST: ProposalOut = {
 let turns = 100;
 const answer = (proposal: ProposalOut, turnId = ++turns): AnswerOut => ({
   conversation_id: 1, turn_id: turnId, ends_at: SEED_NOW, question: 'Move gym to Thursday', answer: 'Ready for you to review.', emphasis: [],
-  sources: [], items: [], applications: [], searched: [], proposals: [proposal],
+  sources: [], items: [], applications: [], searched: [], proposals: [proposal], fixes: [],
 });
 const acted = (turnId = turns) => ({method: 'POST', path: '/alfred/acted', body: {turn_id: turnId, index: 0}});
 const alfredWith = (turns: AnswerOut[]): Alfred => ({open: true, turns, waiting: null, step: null, trail: [], error: null, failed: null, start: vi.fn(), ask: vi.fn(), close: vi.fn()});

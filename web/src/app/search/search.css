@@ -247,6 +247,24 @@ div.src.app:hover { background: var(--sub); }
 .chip-prop .failed-line { padding-left: 0; margin-top: 6px; }
 .chip-acts { display: flex; gap: 8px; margin-top: 12px; }
 .chip-prop.pending .card-b > :not(.chip-acts) { opacity: .5; }
+/* Fixes, one at a time (FixSteps.tsx): the chip's header counts "2 of 4", with a 6 px dot for
+   each step (still to do hollow, applied in good, skipped filled ink3, the one shown ringed in ink)
+   and ‹ › to look through them. Its line, its evidence emails as source rows, then Apply and Skip,
+   or an applied step's Applied (check in good) with Undo. */
+.fix-dots { display: inline-flex; align-items: center; gap: 5px; margin-right: 4px; }
+.fix-dots .dot { width: 6px; height: 6px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ink3); }
+.fix-dots .dot.applied { background: var(--good); box-shadow: none; }
+.fix-dots .dot.skipped { background: var(--ink3); box-shadow: none; opacity: .6; }
+.fix-dots .dot.here { outline: 1.5px solid var(--ink); outline-offset: 1.5px; }
+.fix-prop .fix-evidence { margin-top: 8px; }
+/* Every step in one cell, the chip as tall as the tallest; the steps not shown hold their place unseen. */
+.fix-prop .card-b.fix-stack { display: grid; }
+.fix-page { grid-area: 1 / 1; display: flex; flex-direction: column; gap: 2px; }
+.fix-page.off { visibility: hidden; }
+.fix-page .chip-acts { margin-top: auto; padding-top: 12px; }
+.fix-prop.applied .fix-page:not(.off) .chip-what { color: var(--ink2); }
+.fix-done { display: inline-flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 12.5px; }
+.fix-done .icon { color: var(--good); }
 .prop-foot { display: flex; align-items: center; gap: 8px; padding: 4px 0 0 30px; }
 .prop-foot .btn.quiet .kbd { margin-left: 4px; }
 .prop-foot .legend { display: inline-flex; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; }

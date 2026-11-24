@@ -2,7 +2,7 @@
 // because a search, an answer and a proposal belong to the screen that asked for them. Create is
 // the one change here. It is a command: pending until its provider confirms it, failed with the
 // provider's words.
-import type {AnswerOut, AskContext, AskStepOut, CalendarSearchChip, ConversationOut, CalendarSearchOut, ItemKind, ProposalOut, ProposalPrefillOut, SearchChip, SearchOut, SearchRead, SearchSent, SearchSuggestOut} from '@setpoint/shared';
+import type {AnswerOut, AskContext, AskStepOut, CalendarSearchChip, ConversationOut, CalendarSearchOut, ItemKind, ProposalOut, ProposalPrefillOut, SearchChip, SearchOut, SearchRead, SearchSent, SearchSuggestOut, FixProposalOut} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
 
 export const SETTINGS_PATH = '/settings';
@@ -53,8 +53,16 @@ export const searchOpened = (searchId: number, messageId: number, position: numb
   sendJson<void>('POST', '/search/opened', {search_id: searchId, message_id: messageId, position});
 
 /** A question. A follow-up names its conversation, and Ask about this email names the email. */
-export const askAlfred = (question: string, {conversation, message, context, ask}: {conversation?: number | null; message?: number | null; context?: AskContext | null; ask?: string} = {}) =>
-  sendJson<AnswerOut>('POST', '/alfred/ask', {question, ...(conversation ? {conversation_id: conversation} : {}), ...(message ? {message_id: message} : {}), ...(context ? {context} : {}), ...(ask ? {ask_id: ask} : {})});
+export const askAlfred = (question: string, {conversation, message, context, fix, ask}: {conversation?: number | null; message?: number | null; context?: AskContext | null; fix?: ShownFix | null; ask?: string} = {}) =>
+  sendJson<AnswerOut>('POST', '/alfred/ask', {
+    question, ...(conversation ? {conversation_id: conversation} : {}), ...(message ? {message_id: message} : {}), ...(context ? {context} : {}), ...(conversation && fix ? {fix} : {}), ...(ask ? {ask_id: ask} : {}),
+  });
+
+/** A thread's fix on screen, by its turn and place in it. */
+export interface ShownFix {
+  turn_id: number;
+  index: number;
+}
 
 /** A thread so far, read back after a reload, with whether the server has ended it. No model call. */
 export const alfredConversation = (id: number) => getJson<ConversationOut>(`/alfred/conversations/${id}`);
@@ -64,6 +72,23 @@ export const alfredStep = (ask: string) => getJson<AskStepOut>(`/alfred/asks/${a
 
 /** An answer's proposal was created or saved: a later one in the thread leaves it be. */
 export const alfredActed = (turnId: number, index: number) => sendJson<void>('POST', '/alfred/acted', {turn_id: turnId, index});
+
+/** An answer's fix was applied (or undone): the next question says so. */
+export const alfredFixActed = (turnId: number, index: number, acted: boolean) => sendJson<void>('POST', '/alfred/acted', {turn_id: turnId, index, fix: true, acted});
+
+/** What a fix's route answers: its Undo's token, when it has one. */
+export interface FixApplied {
+  undo?: number;
+}
+
+/** Apply: the fix's own route (a registered module's, such as Jobs' merge), as the proposal names it. */
+export const applyFix = (fix: FixProposalOut) => sendJson<FixApplied>('POST', fix.apply.path, fix.apply.body ?? undefined);
+
+/** The toast's Undo of an applied fix: its route with the token the apply answered. */
+export async function undoFix(fix: FixProposalOut, applied: FixApplied): Promise<void> {
+  if (!fix.undo || applied.undo === undefined) throw new Error('That can no longer be undone.');
+  await sendJson<unknown>('POST', fix.undo.replace('{undo}', String(applied.undo)));
+}
 
 /** Add to calendar / Add as task: the item pre-filled from the email, created by nothing. */
 export const proposeFromMessage = (messageId: number, kind: ItemKind) => sendJson<ProposalOut>('POST', '/proposals/from-message', {message_id: messageId, kind});

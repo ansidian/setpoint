@@ -14,7 +14,7 @@ import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
   NEWS_ADAPTERS, NEWS_SECTIONS, RULE_TRASH, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
-  DRAFT_KINDS, SEND_STATES, type AnswerApplicationOut, type AnswerItemOut, type DraftWriteState, type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
+  DRAFT_KINDS, SEND_STATES, type AnswerApplicationOut, type AnswerItemOut, type FixProposalOut, type DraftWriteState, type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
 import type {Block} from '@setpoint/shared/richText';
 import type {ArticleNotes, NoiseReason} from '../domain/newsSorting.ts';
@@ -992,6 +992,9 @@ export const alfredConversations = sqliteTable('alfred_conversations', {
   check('alfred_conversations_provider', sql`${table.provider} in (${quoted(AI_PROVIDERS)})`),
 ]);
 
+/** A fix as an answer keeps it: its evidence emails by id, shown as they are when read. */
+export type StoredFix = Omit<FixProposalOut, 'evidence'> & {evidence_ids: number[]};
+
 /** A question and Alfred's answer in a thread: the answer's text, sources and proposals, as shown. */
 export const alfredTurns = sqliteTable('alfred_turns', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -1008,6 +1011,8 @@ export const alfredTurns = sqliteTable('alfred_turns', {
   applicationSources: text('application_sources', {mode: 'json'}).$type<AnswerApplicationOut[]>().notNull().default(sql`'[]'`),
   searched: text('searched', {mode: 'json'}).$type<string[]>().notNull(),
   proposals: text('proposals', {mode: 'json'}).$type<ProposalOut[]>().notNull(),
+  // The fixes a registered module (Jobs) proposed, their evidence emails by id.
+  fixes: text('fixes', {mode: 'json'}).$type<StoredFix[]>().notNull().default(sql`'[]'`),
 }, table => [index('alfred_turns_conversation').on(table.conversationId)]);
 
 // ---- What the cutover import left ----

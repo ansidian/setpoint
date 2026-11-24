@@ -10,6 +10,7 @@ import type {AnswerOut, AskStep, CalendarSearchChip, CalendarSearchOut, Calendar
 import {useEffect, useRef, useState} from 'react';
 import {searchNews} from '../../api/news.ts';
 import {searchCalendar} from '../../api/search.ts';
+import type {ShownFix} from '../../api/search.ts';
 import {finishedWords, isSearching} from '../../logic/search.ts';
 
 export const TYPING_MS = 120;
@@ -194,6 +195,7 @@ export interface Alfred {
   failed: string | null;
   /** Opens the card, empty (Ask about this email) or with a first question. */
   start: (question?: string) => void;
-  ask: (question: string) => void;
+  // A follow-up, with the fix on screen when one is.
+  ask: (question: string, fix?: ShownFix | null) => void;
   close: () => void;
 }

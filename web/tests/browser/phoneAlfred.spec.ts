@@ -3,14 +3,15 @@
 // conversation waits as a pill above the tab bar, which opens it in the full-screen sheet; Back folds
 // it again and the pill's × closes it. His email rows open the phone's reader and his item rows the
 // item's detail on the Agenda. A reload brings the pill back, unless the server has ended the thread.
-// His proposal is a compact card that fits 375 px, whose Add opens the phone's editor sheet.
+// His proposal is a compact card that fits 375 px, whose Add opens the phone's editor sheet. His Jobs
+// fixes show one at a time in the sheet, inside the screen, and Apply works there too.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {ItemsOut} from '@setpoint/shared';
+import type {ItemsOut, JobsNavOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred} from './fakeAlfred.ts';
+import {FAKE_ANTHROPIC_KEY, fakeAlfred, FIX_QUESTION, jobsAlfred, leaseAlfred} from './fakeAlfred.ts';
 import type {AlfredTurn, Call} from './fakeAlfred.ts';
 import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import {box, inbox} from './phoneHelpers.ts';
@@ -29,6 +30,7 @@ const DENTIST_QUESTION = 'When is my dentist appointment?';
  */
 function phoneAlfred(turn: AlfredTurn): Call {
   if (turn.question === PROPOSE_QUESTION) return proposeAlfred(turn);
+  if (turn.question.includes(FIX_QUESTION)) return jobsAlfred(turn);
   if (!/dentist/i.test(turn.question)) return leaseAlfred(turn);
   const listed = turn.results.find(result => Array.isArray(result.items)) as {items: {key: string}[]} | undefined;
   if (!listed) return {name: 'list_items', input: {from: '2026-10-07', to: '2026-10-15', query: 'Dentist'}};
@@ -304,6 +306,27 @@ test('phone Alfred\'s proposal: a chip that fits 375 px, inline and in his sheet
     // Undo deletes it again.
     await toast.getByRole('button', {name: 'Undo'}).tap();
     await until('the event undone', made, list => list.length === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('phone Alfred: his Jobs fixes show one at a time in the sheet, inside the screen, and Apply runs there', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await inbox(setpoint);
+    const waiting = async () => (await setpoint.api<JobsNavOut>('GET', '/jobs/nav')).needs_you;
+    await page.getByRole('button', {name: 'Ask Alfred'}).tap();
+    await sheet(page).getByLabel('Ask a follow-up').fill(FIX_QUESTION);
+    await sheet(page).getByLabel('Ask a follow-up').press('Enter');
+    const fix = sheet(page).getByRole('region', {name: 'Proposal: fix 1 of 2'});
+    await fix.waitFor();
+    const fits = await rested(() => fix.evaluate(element => ({right: element.getBoundingClientRect().right, width: document.documentElement.clientWidth})));
+    assert.ok(fits.right <= fits.width, `the fix (to ${fits.right}) is inside the screen (${fits.width})`);
+    await fix.getByRole('button', {name: 'Apply'}).tap();
+    await sheet(page).getByRole('region', {name: 'Proposal: fix 2 of 2'}).waitFor();
+    await until('Needs you after Apply', waiting, count => count === 2);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();

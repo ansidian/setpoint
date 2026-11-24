@@ -23,7 +23,7 @@ const GYM = {key: '7@2026-10-08T14:00:00.000Z', id: 7, kind: 'event', calendar_i
 const turn = (fields: Partial<AnswerOut>): AnswerOut => ({
   conversation_id: 1, turn_id: 1, ends_at: SEED_NOW, question: 'When is dinner with Sam?', answer: 'Friday at 7:00 PM at Blue Door.', emphasis: [{start: 0, end: 6}],
   sources: [{message_id: 27, account_id: 1, subject: 'Dinner Friday?', organisation: null, from_name: 'Sam Lee', received_at: '2026-10-05T19:40:00Z', pinned: false}],
-  items: [DINNER], applications: [], searched: [], proposals: [], ...fields,
+  items: [DINNER], applications: [], searched: [], proposals: [], fixes: [], ...fields,
 });
 
 const alfredWith = (turns: AnswerOut[]): Alfred => ({

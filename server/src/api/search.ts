@@ -7,7 +7,7 @@ import {eq} from 'drizzle-orm';
 import {Hono} from 'hono';
 import type {Context} from 'hono';
 import {z} from 'zod';
-import {alfredStep, askAlfred, conversation, proposalActed} from '../alfred/ask.ts';
+import {alfredStep, askAlfred, conversation, fixActed, proposalActed} from '../alfred/ask.ts';
 import type {AlfredOptions} from '../alfred/ask.ts';
 import {prefillFromMessage} from '../alfred/prefill.ts';
 import type {PrefillOptions} from '../alfred/prefill.ts';
@@ -78,8 +78,9 @@ export function searchApi(store: Store, {engine, alfred, prefill, reading, provi
   api.get('/alfred/conversations/:id', c => c.json(conversation(store, id(c.req.param('id')))));
   api.get('/alfred/asks/:askId', c => c.json({step: alfredStep(store, c.req.param('askId'))}));
   api.post('/alfred/acted', async c => {
-    const {turn_id, index} = parse(alfredActedInput, await body(c));
-    proposalActed(store, turn_id, index);
+    const {turn_id, index, fix, acted} = parse(alfredActedInput, await body(c));
+    if (fix) fixActed(store, turn_id, index, acted);
+    else proposalActed(store, turn_id, index);
     return c.body(null, 204);
   });
   // The places events have used, before anything is typed. Before /api/places/:place_id.

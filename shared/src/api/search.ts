@@ -8,7 +8,7 @@
 //   POST /api/alfred/ask                    AskInput           AnswerOut
 //   GET  /api/alfred/conversations/:id                         ConversationOut (the thread so far)
 //   GET  /api/alfred/asks/:ask_id                              AskStepOut (what Alfred is doing for it)
-//   POST /api/alfred/acted                  AlfredActedInput   204 (a proposal's Create or Save went through)
+//   POST /api/alfred/acted                  AlfredActedInput   204 (a proposal's Create or Save went through, or a fix applied or undone)
 //   POST /api/proposals/from-message        ProposalInput      ProposalOut (Add to calendar / Add as task)
 //   POST /api/proposals/prefill             ProposalInput      ProposalPrefillOut (the same, filled by a model)
 //   POST /api/calendar/search               CalendarSearchInput CalendarSearchOut
@@ -225,13 +225,16 @@ export type AskContext = z.infer<typeof askContextSchema>;
 /**
  * Alfred: a question, a follow-up in the same conversation (`conversation_id`), or one scoped to an
  * open email (`message_id`, Ask about this email). A follow-up keeps its conversation's scope. A
- * thread's first question can carry what was on screen (`context`).
+ * thread's first question can carry what was on screen (`context`), and a follow-up the fix on
+ * screen (`fix`), so "this" is that fix.
  */
 export const askInput = z.strictObject({
   question: z.string().trim().min(1).max(2000),
   conversation_id: id.optional(),
   message_id: id.optional(),
   context: askContextSchema.optional(),
+  // A follow-up asked while one of the thread's fixes is on screen: that fix, by its turn and place.
+  fix: z.strictObject({turn_id: id, index: z.int().min(0).max(20)}).optional(),
   // The page's own id for this question, to ask what Alfred is doing while it waits.
   ask_id: z.string().regex(/^[A-Za-z0-9-]{8,64}$/).optional(),
 });
@@ -245,7 +248,10 @@ export type AskStep =
   | {tool: 'propose_item'; kind: 'event' | 'task'}
   | {tool: 'propose_change'}
   | {tool: 'search_jobs'; query: string | null}
-  | {tool: 'get_application'; company: string};
+  | {tool: 'get_application'; company: string}
+  | {tool: 'list_needs_you'}
+  | {tool: 'jobs_for_emails'}
+  | {tool: 'propose_fix'};
 
 export interface AskStepOut {
   step: AskStep | null;
@@ -403,6 +409,29 @@ export interface AnswerOut {
   // What it searched ("Northwind · Rejection · Mar 2026", "lease renewal"), said when it couldn't answer.
   searched: string[];
   proposals: ProposalOut[];
+  // Fixes a registered module proposed (Jobs', while it's on), after the proposals.
+  fixes: FixProposalOut[];
+}
+
+/**
+ * A fix to a registered module's records that Alfred proposes (a Jobs merge, a Needs you item
+ * assigned): its one line, the emails it rests on, and the module's own route that Apply posts, with
+ * the toast's words and Undo. The answer of `apply` carries `undo`, which fills `{undo}` in `undo`.
+ * Nothing changes until the user presses Apply. Alfred never applies one himself.
+ */
+export interface FixProposalOut {
+  // "Merge Woodgrove Bank · Developer into Woodgrove Bank · Application Developer".
+  line: string;
+  evidence: AnswerSourceOut[];
+  // The route under /api, posted as is.
+  apply: {path: string; body: Record<string, unknown> | null};
+  // The toast's Undo route, its `{undo}` the apply answer's `undo`; null for none.
+  undo: string | null;
+  // The toast's words: what it did ("Merged"), and what failed ("Failed to merge").
+  done: string;
+  failed: string;
+  // Applied (and not undone since), so the next question says so.
+  acted?: boolean;
 }
 
 /** GET /api/alfred/conversations/:id, the short thread so far, oldest turn first. */
@@ -415,8 +444,11 @@ export interface ConversationOut {
   turns: AnswerOut[];
 }
 
-/** POST /api/alfred/acted: an answer's proposal (by its turn and its place in it) was created or saved. */
-export const alfredActedInput = z.strictObject({turn_id: id, index: z.int().min(0).max(20)});
+/**
+ * POST /api/alfred/acted: an answer's proposal (by its turn and its place in it) was created or
+ * saved, or with `fix`, its fix was applied (`acted` true) or undone (false).
+ */
+export const alfredActedInput = z.strictObject({turn_id: id, index: z.int().min(0).max(20), fix: z.boolean().default(false), acted: z.boolean().default(true)});
 export type AlfredActedInput = z.infer<typeof alfredActedInput>;
 
 /** POST /api/proposals/from-message: Add to calendar / Add as task, pre-filled from the email. */

@@ -59,11 +59,12 @@ files marked *imports* import the folders.
 | `server/src/server.ts`, after `openDatabase` | `migrateJobs(sqlite)`: Jobs's tables, after the app's migrations |
 | `server/src/server.ts`, `createApp`'s `routes` | `routes: [jobsApi(store)]`: Jobs's routes under /api, behind the session |
 | `server/src/server.ts`, `createApp`'s `tokenRoutes` | `tokenRoutes: [jobsTokenApi(store)]`: the browser extension's POST /api/jobs/check, before the session, with Jobs's own token ([`token.ts`](token.ts)) |
-| `server/src/server.ts`, `createApp`'s `alfred.registered` | `registered: [jobsAlfred]`: Jobs's read-only tools for Alfred ([`alfred.ts`](alfred.ts)), offered only while Jobs is on |
-| `server/src/alfred/registered.ts`, `AlfredOptions.registered` in `ask.ts`, `alfredSystem`'s and `alfredTools`' `registered` in `prompt.ts`, and `runTool`'s registered tools in `tools.ts` | the generic hook the line above uses: a module's tools, the words the prompt adds for them, and the source kind they cite; with none registered, Alfred's prompt and tools are mail and calendar alone; it names no module, so it can stay |
-| `shared/src/api/search.ts`, `AnswerApplicationOut`, `AnswerOut.applications`, `AskStep`'s `search_jobs` and `get_application`, and `askContextSchema`'s `application_id` | an answer's applications, Alfred's steps while he reads them, and the application open on Jobs; they import nothing, and with Jobs removed answers carry none |
+| `server/src/server.ts`, `createApp`'s `alfred.registered` | `registered: [jobsAlfred]`: Jobs's tools for Alfred ([`alfred.ts`](alfred.ts)), reads and `propose_fix`, offered only while Jobs is on |
+| `server/src/alfred/registered.ts`, `AlfredOptions.registered` in `ask.ts`, `alfredSystem`'s and `alfredTools`' `registered` in `prompt.ts`, and `runTool`'s registered tools in `tools.ts` | the generic hook the line above uses: a module's tools, the words the prompt adds for them, the source kind they cite, and its `proposing` tools' fixes (quoting the user, `MAX_FIXES` an answer, the fix on screen named in a follow-up); with none registered, Alfred's prompt and tools are mail and calendar alone; it names no module, so it can stay |
+| `shared/src/api/search.ts`, `AnswerApplicationOut`, `AnswerOut.applications`, `AskStep`'s `search_jobs`, `get_application`, `list_needs_you`, `jobs_for_emails` and `propose_fix`, and `askContextSchema`'s `application_id` | an answer's applications, Alfred's steps while he reads them, and the application open on Jobs; they import nothing, and with Jobs removed answers carry none |
 | `server/src/db/schema.ts`, `alfred_turns.application_sources`, and `server/drizzle/0059_alfred_application_sources.sql` | each answer's applications, kept with it; with Jobs removed it stays empty, so it can stay |
 | `server/src/alfred/ask.ts`, `contextLine`'s job application line | names the application open on Jobs in a thread's first question; it imports nothing |
+| `shared/src/api/search.ts`, `FixProposalOut`, `AnswerOut.fixes`, `askInput`'s `fix` and `alfredActedInput`'s `fix` and `acted`; `server/src/db/schema.ts`, `alfred_turns.fixes`, and `server/drizzle/0060_alfred_fixes.sql`; `web/src/app/search/FixSteps.tsx`, its styles in `search.css`, and `applyFix`, `undoFix` and `alfredFixActed` in `web/src/api/search.ts` | a registered module's fixes in an answer, one at a time, each applied through the route it names (Jobs' corrections and Needs you's answers) with its toast and Undo; they name no module, and with Jobs removed answers carry none, so they can stay |
 | `web/src/app/search/AnswerCard.tsx`, `ApplicationRow` and `.src.app` in `search.css`, and the `search_jobs` and `get_application` lines of `web/src/logic/search.ts` | an answer's application rows (company · status, then the role), opening `/jobs/12` (on the phone they show but don't open), and the trail's lines; they import nothing, and with no applications draw nothing |
 | `server/src/cli.ts`, `jobs-token` and its lines in `USAGE` | issuing, rotating and revoking the extension's token |
 | `package.json`, `extension:build`, the `typecheck` script's `tsc -p extension/tsconfig.json` and `@types/chrome` | building the extension and typechecking it |
@@ -245,15 +246,26 @@ the lint rule still refuses an import of Jobs from triage.
 
 ## Alfred
 
-- **What:** [`alfred.ts`](alfred.ts) registers two read-only tools with Alfred, from `server.ts`,
-  offered only while Jobs is on (read on each question). With Jobs off, Alfred's prompt and tools are
-  as if Jobs weren't there.
+- **What:** [`alfred.ts`](alfred.ts) registers four read tools and `propose_fix` with Alfred, from
+  `server.ts`, offered only while Jobs is on (read on each question). With Jobs off, Alfred's prompt
+  and tools are as if Jobs weren't there.
 - **`search_jobs`:** Search's matching, with the posting's summary, must-haves, nice-to-haves, salary,
   location and workplace added to its text, then filtered by status (Ghosted as its own) and by words
   in an in-process application's step. With no words, it lists what the filters match. Up to 25.
 - **`get_application`:** an application's detail: the posting (its text capped at 12,000 characters),
   the timeline (each email still in the mail by its `message_id`, which Alfred may then read and cite),
   the open Needs you items at its company, and the applications to it before.
+- **`list_needs_you`:** Needs you as the page lists it (From history only when asked), each item's
+  id, kind, reason, email and `message_id`, an update to assign's applications at its company and a
+  JD to confirm's candidates. Up to 40.
+- **`jobs_for_emails`:** `jobsInMail` for emails the conversation has seen: the application each
+  belongs to, or null.
+- **`propose_fix`:** offers one of Needs you's answers or a correction (merge, assign, track, not a
+  job, move, not about this, status, pick a JD, not an application) for the user to apply. It changes
+  nothing. The model gives the action and ids; the line ("Merge Litware · QA Engineer (Platform) into
+  Litware · QA Engineer"), the route, the toast's words and Undo (`/jobs/undo/{undo}`) are Jobs' own,
+  checked as the route would check them. Alfred refuses it unless it quotes the user's own message,
+  and past five an answer. The page shows the fixes one at a time and Apply posts the route.
 - **Citing:** every application the tools gave can be one of the answer's sources: `{application_id,
   company, title, status}`, the status the word the row shows. Posting text and the lines taken from
   emails are fenced as `<job_content>`, untrusted.
