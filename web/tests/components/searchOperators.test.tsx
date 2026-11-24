@@ -1,6 +1,6 @@
 // Mail search's operators in the field (app/search/Search.tsx): each one the search reads is marked
 // whole, and after from:, to:, has: and is: a list offers what they take. ↓ and ↑ move it, Enter and
-// Tab pick, Esc closes it and leaves the search. Calendar's field has neither. The server is faked at
+// Tab pick, Esc closes it and leaves the search. On the phone a tap picks. Calendar's field has neither. The server is faked at
 // `fetch`, answering people for what's typed. How the marks look is by eye.
 import type {Recipient, SearchChip} from '@setpoint/shared';
 import {useState} from 'react';
@@ -176,6 +176,27 @@ test('a value-less from: is unmarked until a pick', async () => {
   await userEvent.keyboard('{Enter}');
   await expect.element(field()).toHaveValue('from:sam.ortiz@example.org ');
   expect(marks()).toEqual(['from:sam.ortiz@example.org']);
+});
+
+test('on the phone it marks and offers the same, and a tap picks', async () => {
+  people();
+  const {innerWidth: width, innerHeight: height} = window;
+  await page.viewport(375, 812);
+  try {
+    await render(<Field />);
+    await userEvent.click(field());
+    await userEvent.keyboard('is:unread from:');
+    await expect.poll(() => rows('People')).toHaveLength(3);
+    expect(marks()).toEqual(['is:unread']);
+    // The phone's field: its clear button where the desktop's Esc hint is.
+    await expect.element(page.getByRole('button', {name: 'Clear search'})).toBeVisible();
+    await userEvent.click(options('People').nth(1));
+    await expect.element(field()).toHaveValue('is:unread from:sam.lee@example.com ');
+    await expect.element(field()).toHaveFocus();
+    expect(marks()).toEqual(['is:unread', 'from:sam.lee@example.com']);
+  } finally {
+    await page.viewport(width, height);
+  }
 });
 
 test('Calendar\'s field shows no list and no marks', async () => {

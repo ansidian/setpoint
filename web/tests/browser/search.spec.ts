@@ -1105,6 +1105,31 @@ test('Gmail-style operators filter as they\'re typed and stay in the field, mark
   }
 });
 
+test('on the phone the field marks operators too: is:unread is marked and filters, and from:\'s list is tapped to pick a person', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const unread = (await setpoint.api<SearchOut>('POST', '/search', {text: 'is:unread', chips: []})).results.map(result => result.subject);
+    assert.ok(unread.length > 0);
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    const marks = () => page.locator('.search .q-marks .tok-q').allTextContents();
+    await field(page).tap();
+    await typeWords(page, setpoint, 'is:unread');
+    await until('the unread emails', () => titles(page), shown => shown.join() === unread.join());
+    assert.deepEqual(await marks(), ['is:unread']);
+    await field(page).fill('');
+    await page.keyboard.type('from:the');
+    const theo = page.getByRole('listbox', {name: 'People'}).getByRole('option', {name: /Theo Walsh/});
+    await theo.tap();
+    assert.equal(await field(page).inputValue(), 'from:theo.walsh@example.org ');
+    assert.deepEqual(await marks(), ['from:theo.walsh@example.org']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('search results show what was done to them: an opened one loses its dot, Done is marked, Trash takes it out until Undo', async () => {
   const setpoint = await startSetpoint();
   try {

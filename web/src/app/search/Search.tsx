@@ -6,7 +6,7 @@
 // mailSearch.ts's and state.ts's.
 import type {AccountOut, CalendarSearchChip, Recipient, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode} from 'react';
+import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode, RefObject} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Entry, Fold, FoldRules} from '../../logic/fold.ts';
 import {LEFT_OUT_KEY, MENTIONS_KEY} from '../../logic/inbox.ts';
@@ -119,6 +119,29 @@ function useOperatorList(on: boolean, text: string, caret: number | null) {
   };
 }
 
+/**
+ * On the phone the list under an operator ends above the keys: its height stops at the foot of what
+ * Safari shows (the visual viewport), and it scrolls within that, as the phone's sheet follows it.
+ */
+function useListAboveKeys(on: boolean, field: RefObject<HTMLLabelElement | null>) {
+  useLayoutEffect(() => {
+    const list = field.current?.querySelector<HTMLElement>(':scope > .places');
+    const viewport = window.visualViewport;
+    if (!on || !list || !viewport) return;
+    const fit = () => {
+      const room = viewport.offsetTop + viewport.height - list.getBoundingClientRect().top - 8;
+      list.style.maxHeight = `${Math.max(room, 0)}px`;
+    };
+    fit();
+    viewport.addEventListener('resize', fit);
+    viewport.addEventListener('scroll', fit);
+    return () => {
+      viewport.removeEventListener('resize', fit);
+      viewport.removeEventListener('scroll', fit);
+    };
+  }, [on, field]);
+}
+
 // The field on screen's select-all, for App's `/` and ⌘F.
 let selectWhole: (() => void) | null = null;
 
@@ -160,10 +183,10 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   const phone = usePhone();
   // While the field has focus, / types a slash and Esc is the way out, so the hint says Esc.
   const [focused, setFocused] = useState(false);
-  // The phone's web layout stays as it is: its field has no marks or list.
-  const marked = operators && !phone;
+  const marked = operators;
   const list = useOperatorList(marked && focused, search.text, caret);
   const listOpen = list.offers.length > 0;
+  useListAboveKeys(phone && listOpen, field);
   // After a pick the caret goes after the space it put in.
   const placeCaret = useRef<number | null>(null);
   useLayoutEffect(() => {

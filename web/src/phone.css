@@ -35,8 +35,14 @@
   /* A search's way out, where the Esc hint is on the desktop. */
   .hd > .search .search-clear { width: 32px; height: 32px; margin-right: -8px; border-radius: 999px; display: grid; place-items: center; flex: none; color: var(--ink3); }
   .hd > .search .search-clear:active { background: var(--sub2); color: var(--ink); }
-  .hd > .search input { font-size: 16px; }
+  /* The words and the mirror that marks their operators are 16 px together, so the marks stay on their letters. */
+  .hd > .search :is(input, .q-marks) { font-size: 16px; }
   .hd > .search input::placeholder { font-size: 13px; }
+  /* The list under an operator: rows to the thumb, as the title's menu, ending above the keys (Search.tsx). */
+  .hd > .search > .places { overflow-y: auto; overscroll-behavior: contain; }
+  .hd > .search .places .menu-i { height: 44px; font-size: 15px; color: var(--ink); }
+  .hd > .search .places .menu-i:has(.place-address) { height: 52px; }
+  .hd > .search .place-address { font-size: 13px; }
 
   /* ---------- The Inbox ---------- */
   /* At arm's length the list reads a step up from the desktop's, as the reader's body does:
