@@ -344,6 +344,8 @@
 
   /* An empty view's one action (Show All, Go to the Inbox, New message) is a button a thumb finds. */
   .view-empty .btn.sm { height: 40px; padding: 0 16px; font-size: 15px; }
+  /* Its key hint (New message's C) is the desktop's: a phone has no keys for it. */
+  .view-empty .kbd { display: none; }
 
   /* ---------- Signing in ---------- */
   /* About 18% from the top rather than near the middle, so the keyboard never covers Sign in. */
