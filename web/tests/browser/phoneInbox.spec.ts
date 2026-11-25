@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {InboxOut} from '@setpoint/shared';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
-import {counts, email, inbox} from './phoneHelpers.ts';
+import {counts, email, inbox, saveDraft} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -200,7 +200,7 @@ test('on the phone a row\'s reply mark and Draft tag sit on its sender\'s line, 
     await reply.locator('.cmp-from > button').waitFor();
     await page.keyboard.type('Thanks!');
     await until('the draft is kept', () => setpoint.api<{drafts: {snippet: string}[]}>('GET', '/mail/drafts'), out => out.drafts.some(one => one.snippet === 'Thanks!'));
-    await reply.getByRole('button', {name: 'Cancel'}).tap();
+    await saveDraft(reply);
     await page.locator('.ph-back').tap();
 
     for (const [row, mark] of [['.row:has(b[data-tip="Out for delivery"])', '.drafted'], ['.row:has(.replied)', '.replied']] as const) {

@@ -191,8 +191,9 @@
 .ph-sheet-body > .cmp-place .composer { flex: 1 1 auto; min-height: 0; scroll-padding-bottom: 60px; }
 .ph-sheet .composer :is(input, textarea, [contenteditable]) { font-size: 16px; }
 .ph-sheet .composer .desc-edit { line-height: 22px; }
-/* Its format row's buttons are finger-sized, 44 px each with 20 px glyphs. When they don't fit the
-   width the row scrolls sideways, Discard last; a link's address keeps the row's height. */
+/* Its format row's buttons are finger-sized, 44 px each with 20 px glyphs: eight of them, Discard
+   being Cancel's choice, so they fit the screen. Should they not, the row scrolls sideways; a link's
+   address keeps the row's height. */
 .ph-sheet .composer .desc-bar { min-height: 52px; gap: 0; padding: 4px 4px max(4px, env(safe-area-inset-bottom)); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .ph-sheet[data-keyboard] .composer .desc-bar { padding-bottom: 4px; }
 .ph-sheet .composer .desc-bar::-webkit-scrollbar { display: none; }

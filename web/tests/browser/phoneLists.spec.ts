@@ -8,7 +8,7 @@ import type {DraftOut, DraftsOut, SentOut, SnoozedOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, holdToast, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
-import {email, inbox, swipe} from './phoneHelpers.ts';
+import {email, inbox, saveDraft, swipe} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -139,7 +139,7 @@ test('on the phone a draft opens in the composer\'s sheet, Cancel keeps it and l
     const sheet = page.getByRole('dialog', {name: 'Reply'});
     await sheet.waitFor();
     await until('its address', async () => path(page.url()), at => at === `/drafts/${draft.id}`);
-    await sheet.getByRole('button', {name: 'Cancel'}).tap();
+    await saveDraft(sheet);
     await sheet.waitFor({state: 'detached'});
     await until('back on Drafts', async () => path(page.url()), at => at === '/drafts');
     // Back leaves Drafts for the Inbox, not the draft again.

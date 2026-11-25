@@ -22,6 +22,13 @@ export async function inbox(setpoint: Setpoint): Promise<Page> {
   return page;
 }
 
+/** Leaves the composer's `sheet` with Cancel, then Save draft in the question it asks, the draft kept. */
+export async function saveDraft(sheet: Locator) {
+  await sheet.getByRole('button', {name: 'Cancel'}).tap();
+  await sheet.page().getByRole('dialog', {name: 'Save this draft?'}).locator('.ph-bs-i', {hasText: 'Save draft'}).tap();
+  await sheet.waitFor({state: 'detached'});
+}
+
 export const box = async (page: Page, selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
 
 /**
