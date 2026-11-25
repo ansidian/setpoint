@@ -208,7 +208,9 @@ describe('routes', () => {
     ['/calendar/item/3', '?at=2026-10-07T21%3A30%3A00.000Z&view=week', {page: 'calendar', date: null, item: 3, at: '2026-10-07T21:30:00.000Z', view: 'week'}],
     ['/calendar/new', '?kind=task&view=week', {page: 'calendar', date: null, item: null, at: null, compose: {kind: 'task', message: null}, view: 'week'}],
     ['/calendar', '?view=nope', {page: 'calendar', date: null, item: null, at: null}],
-    ['/settings', '', {page: 'settings', section: 'accounts'}],
+    // Settings' own address is its index on the phone, Accounts on the desktop.
+    ['/settings', '', {page: 'settings', section: null}],
+    ['/settings/nope', '', {page: 'settings', section: null}],
     ['/settings/notifications', '', {page: 'settings', section: 'notifications'}],
     ['/calendar/new', '?kind=event&upcoming=4', {page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: 4}}],
     ['/news', '', {page: 'news', view: 'all', story: null, article: null}],

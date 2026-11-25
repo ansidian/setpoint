@@ -48,7 +48,7 @@ const TABS: {label: string; icon: IconName; on: IconName; page: Route['page']; t
  * The tab bar. The current tab shows in its filled glyph. The Inbox tab is badged with the attention
  * count while Attention waits and the Inbox isn't showing All or Attention (whose header has the pill), and the Agenda
  * tab with the overdue tasks' while any are and the Agenda isn't showing (its Overdue group lists
- * them). On Sent, Drafts and Snoozed the Inbox tab is lit, and a tap on it goes to the Inbox. A tap on the current tab takes its list back to the top, the agenda to today under its past
+ * them). On Sent, Drafts, Snoozed and Settings the Inbox tab is lit, and a tap on it goes to the Inbox. A tap on the current tab takes its list back to the top, the agenda to today under its past
  * week, as the page's inner scroller is out of reach of iOS's tap on the status bar. While the
  * Inbox's Select is on, its bar takes the tabs' place.
  */
@@ -63,8 +63,8 @@ export function PhoneTabs({route}: {route: Route}) {
   return (
     <nav data-theme="night" className="ph-tabs" aria-label="Pages">
       {TABS.map(tab => {
-        // Sent, Drafts and Snoozed are the Inbox's, from its title menu, as the desktop's rail lights Inbox on them.
-        const on = route.page === tab.page || (tab.page === 'inbox' && (route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed'));
+        // Sent, Drafts, Snoozed and Settings are the Inbox's, from its title menu, as the desktop's rail lights Inbox on its lists.
+        const on = route.page === tab.page || (tab.page === 'inbox' && (route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed' || route.page === 'settings'));
         return (
           <a key={tab.page} className={on ? 'ph-tab on' : 'ph-tab'} href={routePath(tab.to)} aria-current={on ? 'page' : undefined} onClick={event => {
             event.preventDefault();

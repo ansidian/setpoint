@@ -3,7 +3,8 @@
 // link an ntfy notification carries (`deepLinkPath`): an email, an event, one occurrence of a
 // recurring event, a task's day, and a Settings page. Sign-in's fields are 16 px, so iOS doesn't
 // zoom into them. The web manifest opens Setpoint standalone (News is phoneNews.spec.ts's).
-// Settings is a page: Notifications and Appearance, the others on the desktop, and Sign out.
+// Settings is a page: an index of Places, Notifications and Appearance, each under Back to it, the
+// others on the desktop and listing those, and Sign out.
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
@@ -103,7 +104,7 @@ test('every control a finger needs takes a 44 px tap, and none takes its neighbo
 
     await page.goto(`${setpoint.base}/settings/notifications`);
     await page.getByRole('switch', {name: 'FYI mail'}).waitFor();
-    await fingertips([page.getByRole('switch', {name: 'FYI mail'}), page.getByRole('button', {name: 'Set token'}), page.getByRole('button', {name: 'Event reminders'}),
+    await fingertips([page.locator('.hd .ph-back'), page.getByRole('switch', {name: 'FYI mail'}), page.getByRole('button', {name: 'Set token'}), page.getByRole('button', {name: 'Event reminders'}),
       page.getByRole('button', {name: 'Sign out'})]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -265,48 +266,56 @@ async function fakeNtfy() {
   return {url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, close: () => new Promise(resolve => server.close(resolve))};
 }
 
-test('phone Settings: Notifications and Appearance with the title menu between them and Inbox the way back, a switch saves, the theme switches; the other pages are on the desktop', async () => {
+test('phone Settings: an index of the phone\'s pages, each under Back to it; a switch saves, the theme switches; the other pages are on the desktop and list the phone\'s', async () => {
   const ntfy = await fakeNtfy();
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     await setpoint.api('PATCH', '/settings', {notifications: {ntfy_server: ntfy.url}});
     const page = await setpoint.page('iphone');
-    await page.goto(`${setpoint.base}/settings/notifications`);
-    // The desktop's Notifications page in the phone's column, the tab bar under it.
+    await page.goto(`${setpoint.base}/settings`);
+    // The index: the phone's three pages, the tab bar under them with the Inbox lit.
+    const pages = page.getByRole('navigation', {name: 'Settings pages'});
+    await pages.waitFor();
+    assert.equal(await page.locator('.hd .hd-title').textContent(), 'Settings');
+    assert.deepEqual(await pages.getByRole('link').allTextContents(), ['Places', 'Notifications', 'Appearance']);
+    assert.equal(await page.locator('.settings[role="dialog"]').count(), 0, 'no modal');
+    assert.equal(await page.locator('.ph-tabs a[aria-current="page"]', {hasText: 'Inbox'}).count(), 1, 'the Inbox tab is lit');
+    await fingertips([pages.getByRole('link', {name: 'Places'}), pages.getByRole('link', {name: 'Appearance'})]);
+
+    // Notifications: the desktop's page in the phone's column, where a switch saves.
+    await pages.getByRole('link', {name: 'Notifications'}).tap();
     const fyi = page.getByRole('switch', {name: 'FYI mail'});
     await fyi.waitFor();
-    assert.equal(await page.locator('.hd .ph-title-btn').textContent(), 'Notifications');
-    assert.equal(await page.locator('.settings[role="dialog"]').count(), 0, 'no modal');
-    assert.equal(await page.locator('.ph-tabs').count(), 1);
+    assert.equal(await page.locator('.hd .hd-title').textContent(), 'Notifications');
     const scroll = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
     assert.equal(scroll[0], scroll[1], 'nothing scrolls sideways');
-    // A switch saves.
     const was = (await setpoint.api<Settings>('GET', '/settings')).notifications.fyi_mail;
     await fyi.tap();
     await until('it saved', async () => (await setpoint.api<Settings>('GET', '/settings')).notifications.fyi_mail, on => on === !was);
     assert.equal(await fyi.getAttribute('aria-checked'), String(!was));
 
-    // The title menu goes to Appearance, where Night and Light switch the page.
-    await page.locator('.hd .ph-title-btn').tap();
-    assert.deepEqual(await page.getByRole('menu').getByRole('menuitemradio').allTextContents(), ['Places', 'Notifications', 'Appearance']);
-    await page.getByRole('menuitemradio', {name: 'Appearance'}).tap();
+    // Back is the index, and Appearance there is where Night and Light switch the page.
+    await page.locator('.hd .ph-back').tap();
+    await until('the index', () => page.evaluate(() => window.location.pathname), path => path === '/settings');
+    await pages.getByRole('link', {name: 'Appearance'}).tap();
+    await page.getByText('The Home Screen app keeps its own theme, apart from Safari’s.').waitFor();
     await page.getByRole('radio', {name: /Night/}).tap();
     await until('Night', () => page.evaluate(() => document.documentElement.dataset.theme), theme => theme === 'night');
     assert.equal(new URL(page.url()).pathname, '/settings/appearance');
     await page.getByRole('radio', {name: /Light/}).tap();
     await until('Light', () => page.evaluate(() => document.documentElement.dataset.theme), theme => theme === 'light');
 
-    // Each other page says it's on the desktop.
+    // Each other page says it's on the desktop, and lists the phone's pages.
     for (const [page_, label] of [['mail', 'Mail'], ['calendar', 'Calendar'], ['news', 'News'], ['jobs', 'Jobs'], ['ai', 'AI'], ['security', 'Security']] as const) {
       await page.goto(`${setpoint.base}/settings/${page_}`);
       await page.locator('.ph-set-away', {hasText: `${label} is on the desktop`}).waitFor();
-      assert.equal(await page.locator('.hd .ph-title-btn').textContent(), label);
+      assert.equal(await page.locator('.hd .hd-title').textContent(), label);
     }
+    await pages.getByRole('link', {name: 'Places'}).tap();
+    await until('Places', () => page.evaluate(() => window.location.pathname), path => path === '/settings/places');
 
-    // Inbox, after a divider, is the way back, from a page reached by a link too.
-    await page.locator('.hd .ph-title-btn').tap();
-    assert.deepEqual(await page.getByRole('menu').getByRole('menuitem').allTextContents(), ['Inbox']);
-    await page.getByRole('menu').getByRole('menuitem', {name: 'Inbox'}).tap();
+    // The Inbox tab is the way back.
+    await page.locator('.ph-tabs a', {hasText: 'Inbox'}).tap();
     await until('the Inbox', () => page.evaluate(() => window.location.pathname), path => path === '/inbox');
     await page.locator('.list .row').first().waitFor();
     assert.deepEqual(setpoint.pageErrors, []);

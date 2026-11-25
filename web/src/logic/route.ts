@@ -43,7 +43,7 @@ export type Route =
   | {page: 'snoozed'; open: number | null}
   | {page: 'scheduled'; open: number | null}
   | {page: 'calendar'; date: string | null; item: number | null; at: string | null; compose?: Compose; edit?: true; view?: CalendarMode}
-  | {page: 'settings'; section: SettingsPage}
+  | {page: 'settings'; section: SettingsPage | null}
   | {page: 'news'; view: NewsView; story: number | null; article: number | null}
   | {page: 'jobs'; open: number | null; posting?: true; q?: string; history?: true};
 
@@ -86,7 +86,7 @@ export function parseRoute(pathname: string, search = ''): Route {
   if (first === 'snoozed') return {page: 'snoozed', open: positive(second)};
   if (first === 'scheduled') return {page: 'scheduled', open: positive(second)};
   if (first === 'settings') {
-    return {page: 'settings', section: (SETTINGS_PAGES as readonly string[]).includes(second ?? '') ? second as SettingsPage : 'accounts'};
+    return {page: 'settings', section: (SETTINGS_PAGES as readonly string[]).includes(second ?? '') ? second as SettingsPage : null};
   }
   const asked = query.get('view');
   const view = asked !== 'all' && (INBOX_VIEWS as readonly string[]).includes(asked ?? '') ? {view: asked as InboxView} : {};
@@ -119,7 +119,7 @@ export function routePath(route: Route): string {
       return `${route.date ? `/calendar/${route.date}` : '/calendar'}${query(week)}`;
     }
     case 'settings':
-      return `/settings/${route.section}`;
+      return route.section ? `/settings/${route.section}` : '/settings';
     case 'jobs':
       if (route.history && !route.open) return '/jobs/from-history';
       return `/jobs${route.open ? `/${route.open}${route.posting ? '/posting' : ''}` : ''}${route.q?.trim() ? `?q=${encodeURIComponent(route.q.trim())}` : ''}`;
