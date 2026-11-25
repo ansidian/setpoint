@@ -64,6 +64,17 @@ const DRAFTS_DRAWING: Stroke[] = [
   {d: 'M81.3 88 L78 96 L86 92.7 Z', accent: true},
 ];
 
+// Snoozed's: an alarm clock at rest, its bells and feet, with a sleeper's z z over it in `violet`, snooze's colour.
+const SNOOZED_DRAWING: Stroke[] = [
+  {d: 'M80 32 a34 34 0 1 1 0 68 a34 34 0 1 1 0 -68 Z', solid: true},
+  {d: 'M80 48 V66 L92 74'},
+  {d: 'M47 40 a14 14 0 0 1 20 -16'},
+  {d: 'M93 24 a14 14 0 0 1 20 16'},
+  {d: 'M58 94 L50 104 M102 94 L110 104'},
+  {d: 'M118 14 H130 L118 26 H130', accent: true},
+  {d: 'M134 32 H142 L134 40 H142', accent: true},
+];
+
 function Art({strokes}: {strokes: Stroke[]}) {
   return (
     <svg className="ve-art" viewBox="0 0 160 120" aria-hidden="true">
@@ -116,6 +127,19 @@ export function DraftsEmptyView({onNew}: {onNew: () => void}) {
         <Art strokes={DRAFTS_DRAWING} />
         <p className="ve-head">No drafts</p>
         <button className="btn ghost sm" type="button" onClick={onNew}>New message<span className="kbd">C</span></button>
+      </div>
+    </div>
+  );
+}
+
+/** Snoozed with nothing waiting: "Nothing snoozed", with Go to the Inbox. */
+export function SnoozedEmptyView({onInbox}: {onInbox: () => void}) {
+  return (
+    <div className="view-empty">
+      <div className="ve-block snoozed">
+        <Art strokes={SNOOZED_DRAWING} />
+        <p className="ve-head">Nothing snoozed</p>
+        <button className="btn ghost sm" type="button" onClick={onInbox}>Go to the Inbox</button>
       </div>
     </div>
   );

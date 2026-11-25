@@ -37,6 +37,7 @@ import {echoKey, isTyping, keepTextUnselected, plainKey} from '../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
 import {startComposer} from './compose/composer.ts';
 import {openContextMenu} from './ContextMenu.tsx';
+import {SnoozedEmptyView} from './EmptyView.tsx';
 import {emailActions, snoozeItems} from './emailActions.ts';
 import {openSnooze} from './SnoozeMenu.tsx';
 import {useNow} from './clock.ts';
@@ -300,12 +301,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
         <section className="list snoozed-list" aria-label="Snoozed" onContextMenu={onContextMenu} onScroll={swipes.close} {...(phone ? swipes.handlers : {})}>
           <ScrollThumb />
           {!load.data ? (failed ? <LoadFailed what="Snoozed" loads={[load]} /> : <AllSkeleton />) : rows.length === 0 ? (
-            <div className="view-empty">
-              <div className="ve-block">
-                <p className="ve-head">Nothing snoozed</p>
-                <button className="btn ghost sm" type="button" onClick={() => navigate(toInbox())}>Go to the Inbox</button>
-              </div>
-            </div>
+            <SnoozedEmptyView onInbox={() => navigate(toInbox())} />
           ) : rows.map(row => {
             const account = accounts.get(row.account_id);
             const line = rowLine(row);
