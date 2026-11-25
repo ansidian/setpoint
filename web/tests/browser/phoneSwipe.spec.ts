@@ -65,6 +65,39 @@ test('on the phone a row swipes: right reads and unreads it, left rests on Pin, 
   }
 });
 
+test('on the phone a swipe\'s Pin and Unpin each say so, with Undo, as the row moves on or off the shelf', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await inbox(setpoint);
+    const id = await idFrom(setpoint, 'Woodgrove Bank');
+    const pinnedNow = async () => (await allRows(setpoint)).find(row => row.id === id)?.pinned;
+    await swipe(page.locator('.list .row:not(.shelf)', {hasText: 'Woodgrove Bank'}).first(), 300, 180);
+    await page.locator('.list .row .sw-b', {hasText: 'Pin'}).first().tap();
+    const toast = await holdToast(page);
+    assert.equal(await toast.textContent(), 'PinnedUndo');
+    await until('pinned', pinnedNow, pinned => pinned === true);
+    await toast.locator('button', {hasText: 'Undo'}).tap();
+    await until('Undo unpins it', pinnedNow, pinned => pinned === false);
+    await page.evaluate(() => document.documentElement.removeAttribute('data-hold-toast'));
+    await page.locator('.toast').waitFor({state: 'detached'});
+
+    // On the shelf, the swipe's Unpin says so too, and its Undo pins it again.
+    await setpoint.api('POST', `/mail/messages/${id}/pin`, {pinned: true});
+    const shelved = page.locator('.list .row.shelf', {hasText: 'Woodgrove Bank'});
+    await shelved.waitFor();
+    await swipe(shelved, 300, 180);
+    await shelved.locator('.sw-b', {hasText: 'Unpin'}).tap();
+    const again = await holdToast(page);
+    assert.equal(await again.textContent(), 'UnpinnedUndo');
+    await until('unpinned', pinnedNow, pinned => pinned === false);
+    await again.locator('button', {hasText: 'Undo'}).tap();
+    await until('Undo pins it again', pinnedNow, pinned => pinned === true);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('on the phone Select puts circles on the rows and the tab bar\'s place to Done, Pin, Read and Trash; a batch takes one toast whose Undo puts every email back', async () => {
   const setpoint = await startSetpoint();
   try {
@@ -91,8 +124,10 @@ test('on the phone Select puts circles on the rows and the tab bar\'s place to D
     await woodgrove.tap();
     await page.locator('.hd .hd-title', {hasText: '3 selected'}).waitFor();
 
-    // Pin ends the mode, as every batch does, and the three go on the shelf.
+    // Pin ends the mode, as every batch does, and the three go on the shelf, saying so.
     await bar.locator('button', {hasText: 'Pin'}).tap();
+    assert.equal(await (await holdToast(page)).textContent(), 'Pinned 3Undo');
+    await page.evaluate(() => document.documentElement.removeAttribute('data-hold-toast'));
     await page.locator('.ph-tabs').waitFor();
     assert.equal(await page.locator('.list .pick').count(), 0);
     await until('pinned', () => allRows(setpoint), rows => ids.every(id => rows.find(row => row.id === id)?.pinned));
