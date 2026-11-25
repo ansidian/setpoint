@@ -6,7 +6,7 @@
   .ph-sheet .ph-sheet-body:has(> .ph-editor, > .ph-import) { display: flex; flex-direction: column; overflow: hidden; }
   .ph-editor, .ph-import { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; outline: none; }
   .ph-editor .ed-head { height: 52px; padding: 0 12px 0 20px; }
-  .ph-editor .ed-scroll { padding-bottom: 24px; }
+  .ph-editor .ed-scroll { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
   .ph-sheet .kbd { display: none; }
 
   .ph-editor .field { height: 40px; }
@@ -65,7 +65,7 @@
   .ph-detail .card-acts .ibtn { width: 40px; height: 40px; }
   /* A toast (Saved, Completed, Reopened) rises under the open detail rather than over its actions:
      the card lifts clear of it while it shows. */
-  .main:has(.toast:not(.leaving)) .fd.ph-detail { bottom: calc(66px + max(6px, env(safe-area-inset-bottom)) + 66px); transition: bottom var(--dur-medium) var(--ease); }
+  .main:has(.toast:not(.leaving)) .fd.ph-detail { bottom: calc(var(--ph-bar) + env(safe-area-inset-bottom) + 24px + 40px + 12px); transition: bottom var(--dur-medium) var(--ease); }
   .ph-detail .fd-mark.check { width: 32px; height: 32px; margin: -6px 2px -6px -8px; display: grid; place-items: center; }
 
   /* An invitation's card in the reader: Add to calendar keeps its words, Download is its glyph

@@ -309,7 +309,7 @@ button.subtask.add:hover { color: var(--ink2); }
    disc on it. There are always six rows, so nothing under it moves. ‹ › slide the days in 8 px from
    the side they come from over 180 ms. */
 .mini > button { width: var(--miniDay); justify-self: center; }
-.mini > button:hover { background: var(--sub2); }
+@media (hover: hover) { .mini > button:hover { background: var(--sub2); } }
 .mini > .h { font-size: 11px; color: var(--ink3); height: 22px; }
 .mini > .o { color: var(--ink3); opacity: .6; }
 .mini > .t, .mini > .t:hover { background: var(--alert); color: var(--onAlert); font-weight: 600; }
@@ -391,7 +391,7 @@ button.subtask.add:hover { color: var(--ink2); }
 
 /* Which occurrences (boards 14 and 15b): `.ropt` rows with a radio. */
 .ropt { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 12px; border-radius: 10px; color: var(--ink2); text-align: left; }
-.ropt:hover { background: var(--sub); }
+@media (hover: hover) { .ropt:hover { background: var(--sub); } }
 .ropt.on { background: var(--sub2); color: var(--ink); }
 .rad { width: 16px; height: 16px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--ink3); flex: none; position: relative; }
 .ropt.on .rad { box-shadow: inset 0 0 0 1.5px var(--ink); }
@@ -514,7 +514,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .imp-row > .chk { margin-top: 3px; }
 .imp-row .title { display: block; font-weight: 500; }
 .imp-row .line { display: block; font-size: 12.5px; }
-.imp-row:enabled:hover { background: var(--sub); }
+@media (hover: hover) { .imp-row:enabled:hover { background: var(--sub); } }
 .imp-row:disabled { cursor: default; }
 .imp-item.off .title { color: var(--ink3); font-weight: 400; }
 .imp-all { align-items: center; padding-top: 6px; padding-bottom: 6px; }

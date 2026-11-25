@@ -363,6 +363,29 @@ test('the thread under the email: a line opens that email, whose Back goes back 
   }
 });
 
+test('an email opened from the list and closed with Back leaves no entry behind: the browser\'s Back then reopens nothing', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const opened = await page.evaluate(() => window.history.length);
+    for (const subject of ['Out for delivery', 'Arriving today']) {
+      await page.locator(`.row:has(b[data-tip^="${subject}"])`).first().tap();
+      await page.locator('.rd-subj', {hasText: subject}).waitFor();
+      await page.locator('.ph-back').tap();
+      await until('back on the list', () => page.evaluate(() => window.location.pathname), at => at === '/inbox');
+      await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    }
+    // The history holds the list once, with at most the last email ahead of it.
+    assert.ok(await page.evaluate(() => window.history.length) <= opened + 1);
+    // The system's Back (Safari's edge swipe) leaves the Inbox rather than reopening the last email.
+    await page.goBack();
+    assert.doesNotMatch(await page.evaluate(() => window.location.pathname), /^\/inbox\/\d+/);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('Snooze from More: Tomorrow puts the email off with Undo in the toast, and Pick a date… snoozes until the day and time picked', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

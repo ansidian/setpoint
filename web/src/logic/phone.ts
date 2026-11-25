@@ -15,6 +15,27 @@ export function phoneSlide(phone: boolean, from: number | null, to: number | nul
   return null;
 }
 
+/** How the phone's reader moves through the history (readerStep), and whether the list sits under the entry. */
+export interface ReaderStep {
+  how: 'push' | 'replace' | 'back';
+  overList: boolean;
+}
+
+/**
+ * How the phone's reader moves through the history, so the system's Back (Safari's edge swipe) is the
+ * app's Back. An email opened from the list is pushed over it, and its Back goes back to the list
+ * rather than pushing it again. Done or Trash moving on to the next email takes its place. A line of the
+ * thread is pushed over the email it was opened from, whose Back is the history's. A list reached
+ * otherwise (a deep link) is pushed; the desktop pushes as it did.
+ */
+export function readerStep(phone: boolean, from: number | null, to: number | null, moving: boolean, overList: boolean): ReaderStep {
+  if (!phone) return {how: 'push', overList: false};
+  if (to === null) return {how: overList ? 'back' : 'push', overList: false};
+  if (from === null) return {how: 'push', overList: true};
+  if (moving) return {how: 'replace', overList};
+  return {how: 'push', overList: false};
+}
+
 /** The days phoneAgenda draws unless told: today and the next 7. */
 export const AGENDA_DAYS = 8;
 

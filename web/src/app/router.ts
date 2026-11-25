@@ -52,9 +52,24 @@ function withView(route: Route): Route {
   }
 }
 
-export function navigate(route: Route, {replace = false} = {}) {
+/**
+ * `overList` marks the entry as one the app's Back leaves with the history's Back (logic/phone.ts's
+ * readerStep): the list it was opened from is the entry under it.
+ */
+export function navigate(route: Route, {replace = false, overList = false} = {}) {
   const path = routePath(withView(route));
   if (path === address()) return;
-  window.history[replace ? 'replaceState' : 'pushState'](null, '', path);
+  window.history[replace ? 'replaceState' : 'pushState'](overList ? {overList: true} : null, '', path);
   notify();
+}
+
+/** Whether the entry showing was marked by navigate's `overList`. */
+export const overList = () => (window.history.state as {overList?: unknown} | null)?.overList === true;
+
+/** The history's Back, as the browser's: settles once the route has followed it. */
+export function back(): Promise<void> {
+  return new Promise(resolve => {
+    window.addEventListener('popstate', () => resolve(), {once: true});
+    window.history.back();
+  });
 }

@@ -223,6 +223,52 @@ test('a short drag down settles the bottom sheet back, open, with nothing chosen
   expect(chosen).toEqual(['later']);
 });
 
+/** A bottom sheet with more choices than the screen holds. */
+async function openLongSheet() {
+  await page.viewport(390, 500);
+  await render(
+    <Opener>{close => (
+      <BottomSheet title="More" onClose={close}>
+        {Array.from({length: 14}, (_, index) => <SheetChoice key={index} icon="snooze" label={`Choice ${index + 1}`} onChoose={() => {}} />)}
+      </BottomSheet>
+    )}</Opener>,
+  );
+  await opener.click();
+  const sheet = page.getByRole('dialog', {name: 'More'});
+  await expect.element(sheet).toBeVisible();
+  const element = sheet.element() as HTMLElement;
+  expect(element.scrollHeight).toBeGreaterThan(element.clientHeight);
+  return element;
+}
+
+/** Whether a finger's vertical pan reaches `element`: nothing from it up to the sheet takes the touch for itself. */
+const pans = (element: HTMLElement, sheet: HTMLElement) => {
+  for (let at: HTMLElement | null = element; at; at = at === sheet ? null : at.parentElement) {
+    if (!['auto', 'pan-y', 'manipulation'].some(value => getComputedStyle(at!).touchAction.includes(value))) return false;
+  }
+  return true;
+};
+
+test('a bottom sheet whose choices overflow the screen scrolls under a finger, and its last choice can be reached', async () => {
+  const sheet = await openLongSheet();
+  const last = page.getByRole('button', {name: 'Choice 14'}).element() as HTMLElement;
+  expect(pans(last, sheet)).toBe(true);
+  sheet.scrollTop = sheet.scrollHeight;
+  // Where it rests, not where its slide is: the last choice inside the part of the sheet that shows.
+  expect(last.offsetTop + last.offsetHeight - sheet.scrollTop).toBeLessThanOrEqual(sheet.clientHeight);
+});
+
+test('scrolled down, a drag down on its choices scrolls rather than moving the sheet; its title still drags it closed', async () => {
+  const sheet = await openLongSheet();
+  sheet.scrollTop = 200;
+  drag(page.getByRole('button', {name: 'Choice 8'}).element() as HTMLElement, 140);
+  await expect.element(page.getByRole('dialog', {name: 'More'})).toBeVisible();
+  expect(sheet.style.transform).toBe('');
+  sheet.scrollTop = 0;
+  drag(sheet.querySelector<HTMLElement>('.ph-bs-title')!, 300);
+  await expect.element(page.getByRole('dialog', {name: 'More'})).not.toBeInTheDocument();
+});
+
 async function openTitleMenu() {
   const chosen: string[] = [];
   const under = vi.fn();

@@ -189,7 +189,7 @@ test('the tab bar: Inbox is badged with Attention\'s count on another page, foll
   }
 });
 
-test('the web manifest opens the Inbox standalone with the home screen icon', async () => {
+test('the web manifest opens the Inbox standalone, portrait, on the frame, with its home screen icons', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -197,10 +197,13 @@ test('the web manifest opens the Inbox standalone with the home screen icon', as
     const href = await page.locator('link[rel="manifest"]').getAttribute('href');
     const manifest = await page.request.get(`${setpoint.base}${href}`);
     assert.equal(manifest.headers()['content-type'], 'application/manifest+json');
-    const {display, start_url: start, icons} = await manifest.json() as {display: string; start_url: string; icons: {src: string; sizes: string}[]};
-    assert.deepEqual([display, start, icons.map(icon => icon.sizes)], ['standalone', '/inbox', ['180x180']]);
-    const icon = await page.request.get(`${setpoint.base}${icons[0]!.src}`);
-    assert.equal(icon.headers()['content-type'], 'image/png');
+    const {display, start_url: start, orientation, background_color: ground, icons} = await manifest.json() as {display: string; start_url: string; orientation: string; background_color: string; icons: {src: string; sizes: string; purpose?: string}[]};
+    assert.deepEqual([display, start, orientation, ground], ['standalone', '/inbox', 'portrait', '#0b0c0e']);
+    assert.deepEqual(icons.map(icon => `${icon.sizes}${icon.purpose ? ` ${icon.purpose}` : ''}`), ['180x180', '192x192', '512x512', '512x512 maskable']);
+    for (const {src} of icons) {
+      const icon = await page.request.get(`${setpoint.base}${src}`);
+      assert.equal(icon.headers()['content-type'], 'image/png', src);
+    }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

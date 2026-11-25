@@ -7,6 +7,7 @@ import type {ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {Icon} from '../../ui/Icon.tsx';
 import {useFocusReturn} from '../../ui/focusReturn.ts';
+import {keyboardUp} from './keyboard.ts';
 
 export interface SheetAction {
   label: string;
@@ -14,8 +15,6 @@ export interface SheetAction {
   disabled?: boolean;
 }
 
-/** Past this much of the screen covered, what covers it is the keyboard. */
-const KEYBOARD = 120;
 /** A field's first line, with its padding. */
 const LINE = 48;
 
@@ -33,7 +32,7 @@ function followViewport(element: HTMLElement, viewport: VisualViewport) {
     const shrank = viewport.height < element.offsetHeight;
     element.style.setProperty('--sheet-top', `${viewport.offsetTop}px`);
     element.style.setProperty('--sheet-height', `${viewport.height}px`);
-    element.toggleAttribute('data-keyboard', document.documentElement.clientHeight - viewport.height > KEYBOARD);
+    element.toggleAttribute('data-keyboard', keyboardUp(viewport));
     if (shrank) revealCaret(element);
   };
   follow();

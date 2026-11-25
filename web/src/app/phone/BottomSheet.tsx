@@ -2,7 +2,7 @@
 // times, the month picker). A tap outside, Esc or a drag down far enough (logic/sheet.ts) closes it;
 // a shorter drag settles it back. A choice runs and closes the sheet. It sits over the full-screen
 // sheet, under the toast.
-import {createContext, useContext, useEffect, useRef} from 'react';
+import {createContext, useContext, useEffect, useLayoutEffect, useRef} from 'react';
 import type {PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {dragCloses} from '../../logic/sheet.ts';
@@ -36,6 +36,19 @@ export function BottomSheet({title, onClose, children}: {title: string; onClose:
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  // Choices past the screen's height scroll under a finger (phone.css, data-scrolls): the grab and
+  // the title still drag the sheet, and its choices do once they're back at their top.
+  useLayoutEffect(() => {
+    const element = sheet.current;
+    if (!element) return;
+    const measure = () => element.toggleAttribute('data-scrolls', element.scrollHeight > element.clientHeight + 1);
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(element);
+    for (const child of element.children) watch.observe(child);
+    return () => watch.disconnect();
+  }, []);
+
   const follow = (by: number, settling: boolean) => {
     const element = sheet.current;
     if (!element) return;
@@ -45,6 +58,9 @@ export function BottomSheet({title, onClose, children}: {title: string; onClose:
   const down = (event: ReactPointerEvent) => {
     if (!event.isPrimary || event.button !== 0) return;
     dragged.current = false;
+    const element = sheet.current;
+    const onHandle = event.target instanceof Element && event.target.closest('.ph-bs-grab, .ph-bs-title');
+    if (element && !onHandle && element.scrollTop > 0) return;
     drag.current = {id: event.pointerId, from: event.clientY, by: 0, moved: false};
   };
   const move = (event: ReactPointerEvent) => {

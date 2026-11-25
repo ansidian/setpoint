@@ -395,5 +395,5 @@
   .settings.ph-set .ph-set-away { flex-direction: row; align-items: center; gap: 12px; padding: 16px 20px; color: var(--ink2); }
   .settings.ph-set .ph-set-away > .icon { color: var(--ink3); }
   .settings.ph-set .ph-set-away p { margin: 0; }
-  .settings.ph-set .ph-set-foot { padding: 8px 20px max(24px, env(safe-area-inset-bottom)); }
+  .settings.ph-set .ph-set-foot { padding: 8px 20px 24px; }
 }
