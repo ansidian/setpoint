@@ -23,6 +23,10 @@
      either (a drag down on a bottom sheet's title is a drag). Their fields and bodies still can. */
   .ph-sheet-top, .ph-bs { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .main { grid-template-rows: auto minmax(0, 1fr); }
+  /* With the keyboard up the shell ends above it, and the tab bar gives way (phone/keyboard.ts): the
+     lists end above the keys and a toast rises above them. */
+  .app { height: var(--vv-height, 100%); }
+  :root[data-keyboard] .ph-tabs { display: none; }
   /* The card reaches the screen's sides, its top corners rounded under the header, the tab bar under it. */
   .content { padding: 0; gap: 0; background: var(--card); border-radius: 10px 10px 0 0; overflow: hidden; }
   .content > :is(.list, .nw-list) { border-radius: 0; box-shadow: none; }

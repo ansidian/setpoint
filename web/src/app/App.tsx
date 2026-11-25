@@ -25,6 +25,7 @@ import {ContextMenu} from './ContextMenu.tsx';
 import {Palette} from './palette/Palette.tsx';
 import {isPhone, PhoneTabs, usePhone} from './Phone.tsx';
 import {PhoneSheets} from './phone/EditorSheet.tsx';
+import {usePhoneKeyboard} from './phone/keyboard.ts';
 import {currentRoute, navigate, useRoute} from './router.ts';
 import {selectSearch} from './search/Search.tsx';
 import {PhoneSettings} from './settings/PhoneSettings.tsx';
@@ -58,6 +59,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
   // From the moment the stream drops, before the pill: what would change something takes no pointer.
   const down = useDown();
   const phone = usePhone();
+  usePhoneKeyboard(phone);
   const rail = useRail();
 
   // Alfred's conversation from before a reload comes back (search/alfred.ts).
