@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
+import type {ItemsOut, MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {DONE_MOMENT_MS} from '../../src/logic/today.ts';
 import {layout} from '../../src/tokens.ts';
@@ -166,8 +166,14 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
       await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
       assert.equal((await box(page, '.pane:not(.idle)')).width, 680);
       assert.deepEqual(await rested(still), before, 'opening moves nothing');
-      // Every row keeps its account while the pane is open.
-      for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
+      // The Inbox's rows carry no account, their time on the row's right edge. The reader's band names it.
+      assert.equal(await page.locator('.list .row .ac').count(), 0);
+      // A row away from the pointer, whose time isn't Snooze's place under it.
+      const other = '.list .row:not(.open)';
+      const [rowBox, ageBox] = [await box(page, other), await box(page, `${other} .age`)];
+      assert.equal(Math.round(rowBox.x + rowBox.width - (ageBox.x + ageBox.width)), 16, 'the time ends at the row\'s padding');
+      assert.match((await page.locator('.rd-acct .name').textContent())!, /Business|Personal|Work|Jobs|iCloud/);
+      assert.equal(await page.locator('.rd-acct .state').textContent(), 'Inbox');
       const scroll = await page.evaluate(() => [document.documentElement.scrollHeight, document.documentElement.clientHeight, document.documentElement.scrollWidth, document.documentElement.clientWidth]);
       assert.deepEqual([scroll[0], scroll[2]], [scroll[1], scroll[3]]);
       // Focus on a control draws no ring.
@@ -194,7 +200,9 @@ test('the account filter\'s old address is the plain Inbox; 1 and 2 go to Inbox 
     await page.locator('.list .row').first().waitFor();
     assert.equal(new URL(page.url()).search, '');
     assert.equal(await page.locator('.hd-title').textContent(), 'Inbox');
-    assert.ok(new Set(await page.locator('.list .ac .label, .list .r1 .label').allTextContents()).size > 1, 'every account\'s mail');
+    const ids = await page.locator('.list .row[data-id]').evaluateAll(rows => rows.map(row => Number((row as HTMLElement).dataset.id)));
+    const shown = await Promise.all(ids.map(id => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`)));
+    assert.ok(new Set(shown.map(message => message.account_id)).size > 1, 'every account\'s mail');
     assert.equal(await page.locator('.sb .nav.on').textContent(), 'Inbox19');
     assert.equal(await page.title(), '(19) Inbox');
     await page.keyboard.press('2');

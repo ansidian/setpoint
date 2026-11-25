@@ -2,6 +2,7 @@
 // remote images load, the attachments' labels and previews, and the conversation list.
 import type {AttachmentOut, ConversationEmailOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
 import {clockTime, dayOf, daysBetween, localDate} from './format.ts';
+import {snoozedLine} from './snooze.ts';
 
 /**
  * The head's line after the sender's name: "organisation · via platform" in `ink2`. When the
@@ -28,6 +29,17 @@ export function readerActions(message: Pick<MessageOut, 'kind' | 'lane' | 'done'
     proposals: message.kind === 'security' || message.lane === 'noise' ? 'more' : 'buttons',
     ask: true,
   };
+}
+
+/**
+ * The reader's account band's right side, the email's state read from its row: "Sent" for mail the
+ * user sent, "Snoozed until Mon 9:00 AM" while snoozed, "Done" once Done, else "Inbox". A message has
+ * no mailbox field, so these are the only places it shows.
+ */
+export function mailboxState(row: Pick<MessageRowOut, 'sent_only' | 'snoozed_until' | 'done'>, now: number, timeZone: string): string {
+  if (row.sent_only) return 'Sent';
+  if (row.snoozed_until) return snoozedLine(row.snoozed_until, now, timeZone);
+  return row.done ? 'Done' : 'Inbox';
 }
 
 /**

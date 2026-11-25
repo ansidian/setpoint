@@ -1305,7 +1305,7 @@ test('Alfred\'s sources and the results: a long account label and an age with it
     await typeWords(page, setpoint, 'northwind rejection');
     // Ask Alfred is the list's first row, above the results line and the results (board 06), so it
     // doesn't wait at the foot of a long list.
-    const order = await page.locator('.search-list').evaluate(list => [...list.children].map(child => child.className.split(' ')[0]));
+    const order = await page.locator('.search-list').evaluate(list => [...list.children].filter(child => !child.classList.contains('scroll-strip')).map(child => child.className.split(' ')[0]));
     assert.deepEqual(order.slice(0, 3), ['ask', 'bar', 'arow'], `Ask Alfred leads: ${order.join(', ')}`);
     // The results: an age with its year on one line, inside the row.
     const results = await rested(() => rowEnds(page, '.arow.result', '.r1'));

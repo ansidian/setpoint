@@ -39,6 +39,17 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 
 /* Thin scrollbars, their thumb the theme's (DESIGN.md › Tokens). */
 * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+/* The mail lists draw their own thumb over the rows (ScrollThumb.tsx) where the pointer is fine, so
+   their rows and bands run to the card's edge. The phone keeps its native overlay scrollbar. */
+.scroll-strip { display: none; position: sticky; top: 0; height: 0; flex: none; z-index: 4; }
+.scroll-thumb { position: absolute; top: 0; right: 3px; width: 6px; border-radius: 999px; background: var(--scrollbar-thumb); touch-action: none; transition: width var(--dur-fast) var(--ease), right var(--dur-fast) var(--ease); }
+.scroll-thumb[hidden] { display: none; }
+.scroll-thumb:hover, .scroll-thumb:active { width: 8px; right: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .scroll-strip { display: block; }
+  .list:has(> .scroll-strip) { scrollbar-width: none; }
+  .list:has(> .scroll-strip)::-webkit-scrollbar { display: none; }
+}
 
 .num { font-variant-numeric: tabular-nums; }
 .mono { font-family: var(--mono); }
@@ -387,7 +398,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .code-line .copy { height: 22px; padding: 0 8px; font-size: 12px; }
 .code-line .sum { font-size: 12px; }
 .row .age { width: 64px; flex: none; text-align: right; color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
-/* The account: a colour dot and its label, on every row, never dropped. */
+/* The account: a colour dot and its label, on every list's rows but the Inbox's, where the reader's
+   band names it. */
 .row .ac { display: inline-flex; align-items: center; gap: 6px; flex: none; width: var(--ac-w, 76px); color: var(--ink3); font-size: 12px; white-space: nowrap; }
 .row .ac .label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .code { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: .06em; color: var(--ink); }
@@ -508,6 +520,17 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .code-card .expiry { color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
 .code-card .copy .icon { color: var(--ink2); }
 .rd-head { padding: 20px 28px 16px; display: flex; flex-direction: column; gap: 12px; flex: none; }
+/* The account band under the tools, outside the email's scroller so the scrollbar's gutter doesn't
+   cut it: a rounded tile 8 px in from the card's sides, the account's colour at 11% with a 22% ring,
+   so its ends are its own rather than meeting the card's edge. The account's icon and its name at
+   600 in its colour (in Light capped at `--tintL`, as coloured text on its own tint is on the
+   calendar), the address, and the email's state on the right, both `ink3`. */
+.rd-acct { display: flex; align-items: center; gap: 8px; flex: none; margin: 8px 8px 0; padding: 0 12px 0 20px; min-height: 36px; border-radius: 8px; font-size: 12.5px;
+  background: color-mix(in oklch, var(--c) 11%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--c) 22%, transparent); }
+.rd-acct .icon { flex: none; margin-right: -2px; color: oklch(from var(--c) min(l, var(--tintL)) c h); }
+.rd-acct .name { font-weight: 600; color: oklch(from var(--c) min(l, var(--tintL)) c h); white-space: nowrap; flex: none; }
+.rd-acct .addr { color: var(--ink3); font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-acct .state { margin-left: auto; padding-left: 12px; color: var(--ink3); font-size: 12px; white-space: nowrap; flex: none; }
 .rd-subj { font-size: 20px; line-height: 1.25; font-weight: 500; letter-spacing: -.01em; margin: 0; }
 .rd-sum { margin: -6px 0 0; color: var(--ink2); font-size: 14px; line-height: 1.45; max-width: 680px; }
 .rd-meta { display: flex; align-items: center; gap: 10px; color: var(--ink2); }
@@ -517,7 +540,6 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .rd-meta .rd-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: none; }
 .rd-meta .rd-right > div { display: flex; align-items: center; gap: 10px; }
 .rd-meta .trash-in { display: inline-flex; align-items: center; gap: 4px; color: var(--ink3); font-size: 12px; white-space: nowrap; }
-.rd-meta .account { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; flex: none; }
 .rd-meta .time { color: var(--ink3); font-size: 12.5px; font-variant-numeric: tabular-nums; flex: none; }
 .avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--sub2); color: var(--ink); display: grid; place-items: center; font-weight: 500; font-size: 13px; flex: none; }
 .rd-acts { display: flex; gap: 6px; flex-wrap: wrap; }

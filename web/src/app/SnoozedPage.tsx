@@ -56,6 +56,7 @@ import {slide} from './phone/slide.ts';
 import {SnoozeSheet} from './phone/SnoozeSheet.tsx';
 import {useSwipes} from './phone/swipe.tsx';
 import type {SwipeAct} from './phone/swipe.tsx';
+import {ScrollThumb} from './ScrollThumb.tsx';
 
 type SnoozedRoute = Extract<Route, {page: 'snoozed'}>;
 
@@ -297,6 +298,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
       </header>
       <div className="content" style={accountWidth}>
         <section className="list snoozed-list" aria-label="Snoozed" onContextMenu={onContextMenu} onScroll={swipes.close} {...(phone ? swipes.handlers : {})}>
+          <ScrollThumb />
           {!load.data ? (failed ? <LoadFailed what="Snoozed" loads={[load]} /> : <AllSkeleton />) : rows.length === 0 ? (
             <div className="view-empty">
               <div className="ve-block">

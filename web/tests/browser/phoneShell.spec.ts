@@ -75,11 +75,11 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     // The list, as on the desktop: Attention, the Pinned shelf, then the days, Today first.
     const headers = (await page.locator('.gh').allTextContents()).map(text => text.trim().split(/\s/)[0]!.toLowerCase());
     assert.deepEqual(headers.slice(0, 3), ['attention', 'pinned', 'today']);
-    // Every row keeps its account. The Pinned row's "Sep 30" stays on one line.
-    for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
+    // The Inbox's rows carry no account (the reader's band names it). The Pinned row's "Sep 30" stays on one line.
+    assert.equal(await page.locator('.list .row .ac').count(), 0);
     const age = await box(page, '.row.shelf .age');
     assert.ok(age.height < 20, `the age is one line (${age.height}px)`);
-    // Two lines a row: the sender, account and age, then the subject under the sender, both readable.
+    // Two lines a row: the sender and age, then the subject under the sender, both readable.
     const [from, subject] = [await box(page, '.row.shelf .from'), await box(page, '.row.shelf .subj')];
     assert.ok(subject.y >= from.y + from.height, 'the subject sits under the sender');
     assert.equal(await page.locator('.row.shelf .from').evaluate(text => text.scrollWidth <= text.clientWidth), true, '"Parkside Apartments" whole');

@@ -998,7 +998,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             empty={view !== 'all' && shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before)
               ? <EmptyView view={view} newest={(view === 'attention' ? allRows.find(row => row.lane === 'attention') : allRows[0])?.received_at ?? null} onAll={() => switchView('all')} /> : null}
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
-            loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={view === 'all' || view === 'attention' ? prompt : null}
+            loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton account={false} />) : null} account={false} prompt={view === 'all' || view === 'attention' ? prompt : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin} onSnooze={phone ? undefined : (id, until) => on.snooze([id], until)}
             selectionSnooze={selectionAnchor ? {key: selectionAnchor, pick: forSelection.snooze} : null}
             selecting={selecting} swipe={phone && !selecting ? {acts: (row, key) => {

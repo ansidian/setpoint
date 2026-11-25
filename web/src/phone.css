@@ -113,6 +113,8 @@
   .ph-top { height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 6px; }
   .btn.ph-back { height: 40px; padding: 0 10px 0 6px; color: var(--ink); }
   .rd-head { padding: 10px 20px 0; gap: 16px; }
+  .rd-acct { margin: 4px 12px 0; padding: 0 12px; }
+  .rd-acct + .rd-scroll .rd-head { padding-top: 16px; }
   .rd-subj { font-size: 21px; }
   .rd-sum { margin-top: -10px; font-size: 15px; }
   .rd-acts { display: none; }
@@ -125,9 +127,8 @@
   /* Sent mail names who it went to under the user's name, in the sender's line's place. */
   .rd-meta .who:has(.to.sent) > .ell > :not(.name) { display: none; }
   .rd-meta .to.sent { display: block; font-size: 12.5px; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .rd-meta .account { grid-column: 3; grid-row: 1; justify-self: end; }
-  .rd-meta .time { grid-column: 3; grid-row: 2; justify-self: end; }
-  /* The desktop's right column (account, time, a waiting trash) dissolves into this grid, and the
+  .rd-meta .time { grid-column: 3; grid-row: 1; justify-self: end; }
+  /* The desktop's right column (the time, a waiting trash) dissolves into this grid, and the
      trash stays off the phone as on its row. */
   .rd-meta .rd-right, .rd-meta .rd-right > div { display: contents; }
   .rd-meta .trash-in { display: none; }

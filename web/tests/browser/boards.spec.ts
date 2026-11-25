@@ -25,7 +25,7 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
   }
 });
 
-test('the Inbox\'s rows stop before the pane on every screen: the ages, the accounts\' column, the fold\'s chevron and a search\'s rows', async () => {
+test('the Inbox\'s rows stop before the pane on every screen: the ages in one column on the rows\' right edge, no account, the fold\'s chevron and a search\'s rows', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
@@ -38,7 +38,8 @@ test('the Inbox\'s rows stop before the pane on every screen: the ages, the acco
       const pane = await paneLeft(page);
       const ends = await rights(page, '.row .age, .nfold .chev .icon');
       assert.ok(before(ends, pane), `${width}: the rows end at ${ends.join(', ')}, the pane from ${pane}`);
-      assert.equal((await rights(page, '.row .ac')).length, 1, `${width}: the accounts in one column`);
+      assert.equal((await rights(page, '.row .age')).length, 1, `${width}: the ages in one column`);
+      assert.equal(await page.locator('.list.all .row .ac').count(), 0, `${width}: no account on the Inbox's rows`);
       await page.keyboard.press('/');
       await page.keyboard.type('northwind');
       await page.locator('.arow.result').first().waitFor();

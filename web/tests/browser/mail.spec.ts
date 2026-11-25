@@ -9,7 +9,7 @@ import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import {deepLinkPath} from '@setpoint/shared';
-import type {AllOut, InboxOut, ItemsOut, MailCountsOut, MessageOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AccountOut, AllOut, InboxOut, ItemsOut, MailCountsOut, MessageOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
@@ -1355,7 +1355,7 @@ test('the pattern prompt sits at the end of New\'s Attention; No answers it and 
     await prompt.waitFor();
     assert.equal(await prompt.locator('.grow').textContent(), 'You\'ve cleared 4 Northwind Engineering newsletters without opening them. Send these to FYI from now on?');
     // The last thing in Attention: after its last row, before the Pinned shelf.
-    const order = await page.locator('.list > *').evaluateAll(nodes => nodes.map(node => (node.classList.contains('prompt') ? 'prompt' : `${node.classList[0]}:${node.textContent!.trim().slice(0, 18)}`)));
+    const order = await page.locator('.list > :not(.scroll-strip)').evaluateAll(nodes => nodes.map(node => (node.classList.contains('prompt') ? 'prompt' : `${node.classList[0]}:${node.textContent!.trim().slice(0, 18)}`)));
     const at = order.indexOf('prompt');
     assert.match(order[at - 1]!, /^row:/);
     assert.match(order[at + 1]!, /^gh:Pinned/);
@@ -1407,8 +1407,11 @@ test('days first: Attention, the shelf, then the days, Today first; lanes, kinds
     // Read, it stays where it was in its day, and Unread's badge counts one less.
     await until('the row reads as read', () => coffee.first().getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
     await until('Unread counts one less', () => page.locator('.hd .ib-views .ubadge').textContent(), text => text === '18');
-    // The account stays on every row beside the reading pane.
-    assert.equal(await coffee.first().locator('.ac').isVisible(), true);
+    // The row carries no account. The reader's band names it, with its address and the email's state.
+    assert.equal(await coffee.first().locator('.ac').count(), 0);
+    const opened = await setpoint.api<MessageOut>('GET', `/mail/messages/${await coffee.first().getAttribute('data-id')}`);
+    const owner = (await setpoint.api<AccountOut[]>('GET', '/accounts')).find(account => account.id === opened.account_id)!;
+    assert.deepEqual(await page.locator('.rd-acct').evaluate(band => [...band.querySelectorAll('.name, .addr, .state')].map(each => each.textContent)), [owner.label, owner.address, 'Inbox']);
     // Trash takes the row out, and ⌘Z brings it back. The folds are by eye.
     await page.keyboard.press('Escape');
     const lease = page.locator('.list.all .row:has(b[data-tip="Lease renewal terms"])');

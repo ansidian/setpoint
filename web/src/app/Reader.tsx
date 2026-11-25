@@ -1,6 +1,6 @@
 // The reading pane: 680 px beside the list, there only while an email is open. It holds the tools
 // (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Reply R, Reply all A and Forward F, previous, next,
-// More), the head (the protected line, subject, sender, organisation and platform, account, time),
+// More), the head (the account band, the protected line, subject, sender, organisation and platform, time),
 // security mail's facts card, the actions, then the body: plain text, or HTML in a sandboxed frame
 // with the images-hidden bar, and the attachments. Add to calendar and Add as task open the proposal
 // card at the top (board 08). Ask about this email opens Alfred's card scoped to it, in its place
@@ -31,13 +31,15 @@ import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
 import {hasOthers} from '../logic/composer.ts';
 import {dayOf, fullTimestamp, localDate, readerTime, trashLeft} from '../logic/format.ts';
-import {factRows, fitTools, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
+import {factRows, fitTools, hasRemoteContent, mailboxState, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../logic/reader.ts';
 import {snoozeable, snoozedLine, snoozeWhen} from '../logic/snooze.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
 import {phraseRuns, PREFILL_WAIT_MS, segments} from '../logic/search.ts';
 import type {PrefillMiss} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
+import {ICONS} from '../ui/glyphs.ts';
+import type {IconName} from '../ui/glyphs.ts';
 import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
 import {CreatedItemCard} from './CreatedItem.tsx';
@@ -280,6 +282,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
           </span>
         )}
       </div>
+      <AccountBand listed={listed} accounts={accounts} now={now} timeZone={timeZone} />
       <Swap id={id} travel={travel}>
         {/* The head from the email's row at once. Only the body waits for the email. */}
         <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} />
@@ -338,9 +341,35 @@ export function EmailOnly({id, travel = null, accounts, now, timeZone}: {
   const load = {path: messagePath(id), ...useResource<MessageOut>(messagePath(id))};
   const message = load.data?.id === id ? load.data : undefined;
   return (
-    <Swap id={id} travel={travel}>
-      <Email key={id} listed={message} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={[]} />
-    </Swap>
+    <>
+      <AccountBand listed={message} accounts={accounts} now={now} timeZone={timeZone} />
+      <Swap id={id} travel={travel}>
+        <Email key={id} listed={message} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={[]} />
+      </Swap>
+    </>
+  );
+}
+
+/**
+ * The account band across the card under the tools, outside the email's scroller so it spans the
+ * card's whole width: the account's icon and name in its colour, its address (for sent mail, the
+ * account it was sent from), and the email's state on the right. The list's Inbox rows don't name
+ * the account, so this is where it shows. Until the email's row is known it holds its place, empty.
+ */
+function AccountBand({listed, accounts, now, timeZone}: {listed: MessageRowOut | undefined; accounts: Map<number, AccountOut>; now: number; timeZone: string}) {
+  const account = listed ? accounts.get(listed.account_id) : undefined;
+  const icon = account && account.icon in ICONS ? (account.icon as IconName) : 'mail';
+  return (
+    <div className="rd-acct" style={dotStyle(account?.colour)}>
+      {account && listed && (
+        <>
+          <Icon name={icon} size={16} />
+          <span className="name">{account.label}</span>
+          <span className="addr selectable">{account.address}</span>
+          <span className="state">{mailboxState(listed, now, timeZone)}</span>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -636,12 +665,11 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
             ? sentTo && <span data-tip={sentTo.tip ?? undefined} data-tip-quick>{recipientText(sentTo).replace(/^To /, 'to ')}</span>
             : <span data-tip={account?.address} data-tip-quick>to you</span>}</div>
         </div>
-        {/* The account and time, and under them a waiting trash in words, as the row shows it: reading
+        {/* The time, and under it a waiting trash in words, as the row shows it: reading
             doesn't spare it, pinning does. A code's own trash names its expiry
             rather than a second countdown beside the code card's. */}
         <div className="rd-right">
           <div>
-            <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
             <span className="time" data-tip={fullTimestamp(listed.received_at, timeZone)} data-tip-quick>{readerTime(listed.received_at, now, timeZone)}</span>
           </div>
           {listed.trash_due_at && !listed.pinned && (

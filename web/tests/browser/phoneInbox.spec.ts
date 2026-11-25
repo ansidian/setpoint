@@ -33,10 +33,11 @@ test('on the phone a Done row\'s tag covers neither its sender, its account nor 
     const row = page.locator('.list.all .row.done', {hasText: 'Northwind'});
     await row.locator('.tag').waitFor();
     const boxOf = async (selector: string) => (await rested(() => row.locator(selector).boundingBox()))!;
-    const [from, tag, account, line] = await Promise.all([boxOf('.from'), boxOf('.tag'), boxOf('.ac'), boxOf('.subj')]);
+    const [from, tag, age, line] = await Promise.all([boxOf('.from'), boxOf('.tag'), boxOf('.age'), boxOf('.subj')]);
     assert.ok(tag.y + tag.height <= line.y, `tag bottom ${tag.y + tag.height}, summary top ${line.y}`);
-    // After the sender and before the account, overlapping neither.
-    assert.ok(from.x + from.width <= tag.x && tag.x + tag.width <= account.x, `sender ${from.x}–${from.x + from.width}, tag ${tag.x}–${tag.x + tag.width}, account ${account.x}`);
+    // After the sender and before the age, overlapping neither. The Inbox's rows carry no account.
+    assert.equal(await row.locator('.ac').count(), 0);
+    assert.ok(from.x + from.width <= tag.x && tag.x + tag.width <= age.x, `sender ${from.x}–${from.x + from.width}, tag ${tag.x}–${tag.x + tag.width}, age ${age.x}`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -203,9 +204,9 @@ test('on the phone a row\'s reply mark and Draft tag sit on its sender\'s line, 
       const at = page.locator(`.list ${row}`).first();
       await at.locator(mark).waitFor();
       const boxOf = async (selector: string) => (await rested(() => at.locator(selector).boundingBox()))!;
-      const [from, marks, account, line] = await Promise.all([boxOf('.from'), boxOf('.marks'), boxOf('.ac'), boxOf('.subj')]);
+      const [from, marks, age, line] = await Promise.all([boxOf('.from'), boxOf('.marks'), boxOf('.age'), boxOf('.subj')]);
       assert.ok(marks.y + marks.height <= line.y, `${mark}: marks bottom ${marks.y + marks.height}, subject top ${line.y}`);
-      assert.ok(from.x + from.width <= marks.x && marks.x + marks.width <= account.x, `${mark}: sender ${from.x}–${from.x + from.width}, marks ${marks.x}–${marks.x + marks.width}, account ${account.x}`);
+      assert.ok(from.x + from.width <= marks.x && marks.x + marks.width <= age.x, `${mark}: sender ${from.x}–${from.x + from.width}, marks ${marks.x}–${marks.x + marks.width}, age ${age.x}`);
     }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

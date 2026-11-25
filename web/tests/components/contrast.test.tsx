@@ -2,10 +2,11 @@
 // gives it, or on its own wash, in Night and in Light. The sweep's axe sees the pages at rest only,
 // so these states are checked here, at WCAG's 4.5:1 for text under 18.66 px bold. Jobs's are in
 // jobs.test.tsx.
-import type {ReactNode} from 'react';
+import type {CSSProperties, ReactNode} from 'react';
 import {afterAll, afterEach, expect, test} from 'vitest';
 import {render} from 'vitest-browser-react';
 import '../../src/app/news/news.css';
+import {COLOURS} from '@setpoint/shared';
 import {applyTheme} from '../../src/tokens.ts';
 import {contrastOf, still} from './contrast.ts';
 
@@ -59,6 +60,14 @@ const CASES: {name: string; node: ReactNode}[] = [
   {name: 'FYI\'s band\'s header', node: onBand('color-mix(in srgb, var(--accent) var(--fyiBand), var(--card))', 'var(--fyiBandInk)')},
   {name: 'Attention\'s band\'s header', node: onBand('color-mix(in srgb, var(--caution) var(--attBand), var(--card))', 'var(--caution)')},
   {name: 'today\'s band\'s header', node: onBand('color-mix(in srgb, var(--accent) var(--attBand), var(--card))', 'color-mix(in oklch, var(--accent), var(--ink) 15%)')},
+  // The reader's account band on the card, for each swatch an account can take (not `caution` or
+  // `alert`): the name in its colour, capped at `--tintL` in Light, and the address in `ink3`.
+  ...COLOURS.filter(colour => colour !== 'caution' && colour !== 'alert').flatMap(colour => (['name', 'addr'] as const).map(part => ({
+    name: `the account band's ${part === 'name' ? 'name' : 'address'} in ${colour}`,
+    node: on('card', null, <div className="rd-acct" style={{'--c': `var(--${colour})`} as CSSProperties}>
+      <span className="name" data-text={part === 'name' || undefined}>Business</span><span className="addr" data-text={part === 'addr' || undefined}>user@example.com</span>
+    </div>),
+  }))),
 ];
 
 test.each(CASES)('$name reads at 4.5:1 in Night and in Light', async ({node}) => {

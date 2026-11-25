@@ -114,9 +114,9 @@ test('37c: Applied before on the Contoso Pharmaceuticals match email, on its Noi
     assert.equal(await badge.textContent(), 'Applied Sep 16 · Rejected Oct 5');
     assert.equal(await badge.getAttribute('data-tip'), 'Open Jobs searched for Contoso Pharmaceuticals');
     assert.equal(await row.getAttribute('class'), 'row noise');
-    // After the subject, before the account.
-    const [subject, at, account] = await rested(() => Promise.all([row.locator('.subj'), badge, row.locator('.ac')].map(each => each.boundingBox())));
-    assert.ok(subject!.x + subject!.width <= at!.x && at!.x + at!.width <= account!.x);
+    // After the subject, before the age (the Inbox's rows carry no account).
+    const [subject, at, age] = await rested(() => Promise.all([row.locator('.subj'), badge, row.locator('.age')].map(each => each.boundingBox())));
+    assert.ok(subject!.x + subject!.width <= at!.x && at!.x + at!.width <= age!.x);
     // One request answered the rows the list first drew, not one per row. Opening the day's Noise
     // asked about its one row alone. (The page taking focus refreshes what it shows, the same request again.)
     const sets = [...new Set(asked)];

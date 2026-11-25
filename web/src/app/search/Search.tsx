@@ -26,6 +26,7 @@ import type {Search} from './mailSearch.ts';
 import type {SearchFieldState} from './state.ts';
 import {SentFrom} from '../SentFrom.tsx';
 import './search.css';
+import {ScrollThumb} from '../ScrollThumb.tsx';
 
 const CHIP_KEYS: Record<SearchChip['kind'] | CalendarSearchChip['kind'], string> = {organisation: 'Org', type: 'Type', date: 'Date', account: 'Account', kind: 'Kind', calendar: 'Calendar'};
 // A mail chip typed after "!" or "-" leaves its matches out: "Not Type Confirmation".
@@ -404,6 +405,7 @@ export function SearchResults(props: ResultsProps) {
   // refinement on its way dims what it replaces, once it's taken a moment.
   return (
     <section className={search.pending ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
+      <ScrollThumb />
       {card}
       {/* Ask Alfred leads the results, where the Answer card stands once asked (board 06). */}
       {out && !card && props.onAsk && (

@@ -1,10 +1,10 @@
 // The reader's rules as tables: the sender's
 // line, the actions offered, the facts card, which remote images load, attachments and CSV, how
 // the tools give way when they don't fit, and the conversation's timeline.
-import type {ConversationEmailOut, MessageOut, RemoteContentOut} from '@setpoint/shared';
+import type {ConversationEmailOut, MessageOut, MessageRowOut, RemoteContentOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attachmentLabel, attachmentType, conversationLines, factRows, fileSize, fitTools, hasRemoteContent, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, whenLabel} from '../src/logic/reader.ts';
+import {attachmentLabel, attachmentType, conversationLines, factRows, fileSize, fitTools, hasRemoteContent, mailboxState, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, whenLabel} from '../src/logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../src/logic/reader.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -66,6 +66,19 @@ describe('readerSummary', () => {
     ['an empty one', {summary: '', fact: null}, null],
     ['security mail: its facts card says it', {summary: 'New sign-in · MacBook Pro · Los Angeles', fact: 'New sign-in · MacBook Pro · Los Angeles'}, null],
   ] as const)('%s', (_name, row, expected) => expect(readerSummary(row)).toBe(expected));
+});
+
+describe('the account band\'s state', () => {
+  type Row = Pick<MessageRowOut, 'sent_only' | 'snoozed_until' | 'done'>;
+  const row = (fields: Partial<Row>): Row => ({done: false, ...fields});
+  test.each([
+    ['received mail', row({}), 'Inbox'],
+    ['Done', row({done: true}), 'Done'],
+    ['snoozed', row({snoozed_until: '2026-10-12T16:00:00Z'}), 'Snoozed until Mon 9:00 AM'],
+    ['snoozed after Done', row({snoozed_until: '2026-10-12T16:00:00Z', done: true}), 'Snoozed until Mon 9:00 AM'],
+    ['sent', row({sent_only: true}), 'Sent'],
+    ['sent, with a snooze on it', row({sent_only: true, snoozed_until: '2026-10-12T16:00:00Z'}), 'Sent'],
+  ] as const)('%s', (_name, listed, expected) => expect(mailboxState(listed, now, zone)).toBe(expected));
 });
 
 describe('readerActions', () => {

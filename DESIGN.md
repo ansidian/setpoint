@@ -115,6 +115,11 @@ account names). The UI says "Done", never "handled".
   a solid `accent` pill at the start of its format row. The identity swatches show only as dots, chip
   tints and bars, never as control fills, and the AI has no hue of its own.
 - **Accounts** (`--a-*`): Business `warm`, Personal `cool`, Work `comf`, Jobs `violet`, iCloud `ink2`.
+  An account shows as a dot and its label on Sent's, Drafts', Scheduled's, Snoozed's, search's and
+  Alfred's rows, and in the reader's account band under the tools: a rounded tile 8 px in from the
+  card's sides, its colour at 11% with a 22% ring, the account's own icon (outline) and its name at
+  600 in its colour (in Light capped at `--tintL`), its address and the email's state ("Inbox",
+  "Done", "Snoozed until Mon 9:00 AM", "Sent") in `ink3`. The Inbox's rows don't show the account.
   **Calendars** (`--c-*`): Personal `cool`, Classes `cyan`, Jobs `violet`. Both pick from nine of
   the 11 swatches in Settings, not `caution` or `alert`; one picked before still shows.
 - **Mixes** of a hue are `color-mix(in oklch, <colour> N%, transparent)` unless a base is named: tags
@@ -141,7 +146,9 @@ account names). The UI says "Done", never "handled".
   on it changes nothing. In Night its quiet text (`ink3`) and a read row's sender and subject take
   `ink2`, 5.6:1 on the tint. The day pane's upcoming event, selected, keeps its rounded tile in its
   own colour (16%) and takes the shadow alone.
-- **Scrollbars:** thin and dark (Light thumb `rgba(20,35,55,.22)`).
+- **Scrollbars:** thin and dark (Light thumb `rgba(20,35,55,.22)`). The mail lists draw their own
+  6 px thumb over the rows' right end, so rows and bands run to the card's edge; the phone keeps its
+  native overlay scrollbar.
 - **Light's neutrals** (edges, hairlines, fills, stripes, the calendar's weekends and outside days,
   the scrollbar) are slate alphas, `rgba(20,35,55,…)`, as its inks are slate.
 

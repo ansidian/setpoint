@@ -228,11 +228,11 @@ test('the reader draws the email\'s head from its row at once, and only its body
     await page.locator('.list .row').first().waitFor();
     let release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
     await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
-    // At once, though the email itself is held: its subject, sender, account and time, and its actions.
+    // At once, though the email itself is held: its account band, subject, sender and time, and its actions.
     const head = page.locator('.pane .rd-head');
     await head.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
     assert.equal(await head.locator('.name').textContent(), 'Google');
-    assert.equal(await head.locator('.account').textContent(), 'Personal');
+    assert.equal(await page.locator('.pane .rd-acct .name').textContent(), 'Personal');
     assert.equal(await head.locator('.rd-acts .btn', {hasText: 'Ask about this email'}).count(), 1);
     await shown(page, 'body');
     assert.equal(await page.locator('.pane .mailtext').count(), 0);

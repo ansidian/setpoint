@@ -18,7 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AccountOut, AiOut, CalendarOut, MessageOut, NewsSourcesOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AccountOut, AiOut, AllOut, CalendarOut, MessageOut, NewsSourcesOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {choose, cleanUp, rested, startSetpoint, test, until} from './harness.ts';
@@ -276,7 +276,14 @@ test('Accounts: colour, rename and order save; Connect Gmail says Google isn\'t 
     await business.locator('.sw').first().click();
     await page.locator('.settings .swatches .sw[aria-label="cyan"]').click();
     await settled('Business is cyan', accounts, list => list.find(account => account.label === 'Business')?.colour === 'cyan');
-    assert.equal(await rested(() => page.locator('.list .ac', {hasText: 'Business'}).first().locator('.dot').evaluate(dot => getComputedStyle(dot).getPropertyValue('--c').trim())), 'oklch(0.86 0.11 182)', 'the Inbox\'s rows follow (cyan)');
+    // A Business email's account band follows (the Inbox's rows carry no account).
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const businessId = (await accounts()).find(account => account.label === 'Business')!.id;
+    const email = all.days.flatMap(day => day.rows).find(row => row.account_id === businessId)!.id;
+    const reader = await setpoint.page('target');
+    await reader.goto(`${setpoint.base}/inbox/${email}`);
+    assert.equal(await rested(() => reader.locator('.rd-acct').evaluate(band => getComputedStyle(band).getPropertyValue('--c').trim())), 'oklch(0.86 0.11 182)', 'the reader\'s band follows (cyan)');
+    await reader.close();
 
     await business.getByRole('button', {name: 'Business options'}).click();
     await page.getByRole('menuitem', {name: 'Rename'}).click();

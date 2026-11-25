@@ -30,6 +30,7 @@ import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
 import {AllSkeleton} from '../states/Skeletons.tsx';
 import {cancelScheduled} from './composer.ts';
 import {DraftCard, subjectOf, toLine} from './DraftsPage.tsx';
+import {ScrollThumb} from '../ScrollThumb.tsx';
 
 type ScheduledRoute = Extract<Route, {page: 'scheduled'}>;
 
@@ -118,6 +119,7 @@ export function ScheduledPage({route}: {route: ScheduledRoute}) {
       </header>
       <div className="content" style={accountWidth}>
         <section className="list scheduled-list" aria-label="Scheduled" onContextMenu={onContextMenu}>
+          <ScrollThumb />
           {!load.data ? (failed ? <LoadFailed what="Scheduled" loads={[load]} /> : <AllSkeleton />) : rows.length === 0 ? (
             <div className="view-empty">
               <div className="ve-block">

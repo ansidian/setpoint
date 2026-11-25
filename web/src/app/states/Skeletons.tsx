@@ -21,21 +21,21 @@ function Header({index, first, w}: {index: number; first: boolean; w?: number}) 
   return <div className={first ? 'sk-gh first' : 'sk-gh'}><Bar w={w ?? at(LABEL, index)} h={8} /></div>;
 }
 
-/** A mail row (.row): the sender, the subject, the account and the age. */
-function Row({index, all = false}: {index: number; all?: boolean}) {
+/** A mail row (.row): the sender, the subject, the account (not on the Inbox's) and the age. */
+function Row({index, all = false, account = true}: {index: number; all?: boolean; account?: boolean}) {
   return (
     <div className="sk-row">
       <span className="ud" />
       <span className="from"><Bar w={at(FROM, index)} /></span>
       <span className="subj"><Bar w={share(at(SUBJECT, index))} /></span>
-      <span className="ac"><Dot size={7} /><Bar w={46} /></span>
+      {account && <span className="ac"><Dot size={7} /><Bar w={46} /></span>}
       <span className="age"><Bar w={all ? 44 : 24} /></span>
     </div>
   );
 }
 
-/** The Inbox's list loading: a day under its heading, its lanes' labels and rows. `more` is the next page's. */
-export function AllSkeleton({more = false, first = !more}: {more?: boolean; first?: boolean}) {
+/** The Inbox's list loading (Sent's and the rest's too, with the account column): a day under its heading, its lanes' labels and rows. `more` is the next page's. */
+export function AllSkeleton({more = false, first = !more, account = true}: {more?: boolean; first?: boolean; account?: boolean}) {
   const days = more ? [[3]] : [[2, 5], [6]];
   const rows = numbered(days.flat());
   const laneAt = (day: number, lane: number) => days.slice(0, day).flat().length + lane;
@@ -49,7 +49,7 @@ export function AllSkeleton({more = false, first = !more}: {more?: boolean; firs
             return (
               <div key={lane}>
                 <div className="sk-lh"><Bar w={lane ? 30 : 64} h={8} /></div>
-                {numbers.map(row => <Row key={row} index={row} all />)}
+                {numbers.map(row => <Row key={row} index={row} all account={account} />)}
               </div>
             );
           })}

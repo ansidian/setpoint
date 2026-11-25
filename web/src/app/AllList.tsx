@@ -9,7 +9,8 @@
 // logic/all.ts, and the actions are the page's. A trashed row folds out and Undo folds it back in
 // (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles quiet with a Done
 // tag. Each row has mail's slot after its subject (slots.tsx), which another module may fill.
-// Sent draws its days here too, each row naming who it went to (`from`), with no slot.
+// Sent draws its days here too, each row naming who it went to (`from`), with no slot. Its rows
+// name their account; the Inbox's don't, as the reader's band names it.
 // On the phone its rows swipe (phone/swipe.tsx) as the page says, and Select's mode puts a circle
 // before each one.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
@@ -36,6 +37,7 @@ import {useSwipes} from './phone/swipe.tsx';
 import type {SwipeAct, SwipeActs} from './phone/swipe.tsx';
 import {TriageNote, useHealthBars} from './states/States.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
+import {ScrollThumb} from './ScrollThumb.tsx';
 
 /** A band over one of the list's parts above the days: Attention or the Pinned shelf. */
 type Band = 'attention' | 'pinned';
@@ -67,7 +69,7 @@ const NO_ROWS: MessageRowOut[] = [];
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
 export function AllList({attention, days, shelf, lanes = true, fill = false, empty = null, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
-  label = 'Inbox', from, slot = true, swipe = null, selecting = false, focusable = false, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, selectionSnooze, onAnswer, onCodeCopied}: {
+  label = 'Inbox', from, slot = true, account = true, swipe = null, selecting = false, focusable = false, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onSnooze, selectionSnooze, onAnswer, onCodeCopied}: {
   // Attention's rows, every Attention email not yet Done.
   attention: MessageRowOut[];
   days: DayView[];
@@ -100,6 +102,8 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   // What a row shows in the sender's place (Sent's "To Sam Ortiz"), and whether mail's slot shows.
   from?: (row: MessageRowOut) => ReactNode;
   slot?: boolean;
+  // Whether each row names its account. The Inbox's don't: the reader's band names it there.
+  account?: boolean;
   // On the phone, what each row's swipes offer and what picking one does (phone/swipe.tsx). None while selecting.
   swipe?: {acts: (row: MessageRowOut, key: string) => SwipeActs; run: (row: MessageRowOut, act: SwipeAct) => void} | null;
   // A list whose rows hold nothing to focus (Sent's on the phone) takes the focus itself, so a keyboard can scroll it.
@@ -194,6 +198,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   const [snoozing, setSnoozing] = useState<string | null>(null);
   return (
     <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait', selecting && 'selecting'].filter(Boolean).join(' ')} aria-label={label} tabIndex={focusable ? 0 : undefined} onScroll={onScroll} {...(swipe ? swipes.handlers : {})}>
+      <ScrollThumb />
       {bars}
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key), item.kind === 'row' && item.shelf);
@@ -247,7 +252,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         if (item.kind === 'prompt') return <Prompt key={key} prompt={item.prompt} onAnswer={onAnswer} leaving={leaving} fold={ref} />;
         const {row} = item;
         const line = allRowLine(row);
-        const account = accounts.get(row.account_id);
+        const rowAccount = accounts.get(row.account_id);
         const tick = ticked.has(row.id);
         // Attention's dot and ring are `caution`, and Noise recedes, wherever they are.
         const classes = ['row', item.shelf && 'shelf', row.lane === 'attention' && 'att', row.lane === 'noise' && 'noise', row.unread && 'unread', row.done && 'done', tick && 'ticked', !leaving && cursor === key && 'cur', !leaving && openId === row.id && 'open', !leaving && selected.has(row.id) && 'sel', showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`, snoozing === key && 'menu-open']
@@ -278,7 +283,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
                 {line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}
               </span>
             )}
-            {/* A rule's waiting trash, auto_delete and "4 h" before the account. A live code keeps its own countdown. */}
+            {/* A rule's waiting trash, auto_delete and "4 h" before the account and time. A live code keeps its own countdown. */}
             {row.trash_due_at && !row.pinned && !(row.code && !codeExpired(row, now)) && (
               <span className="trash-in num" data-tip={`Trash in ${trashLeft(row.trash_due_at, now)}`} aria-label={`Trash in ${trashLeft(row.trash_due_at, now)}`}>
                 <Icon name="auto_delete" size={14} />{trashLeft(row.trash_due_at, now)}
@@ -296,7 +301,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
             )}
             {slot && afterSubject(row)}
             {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
-            <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
+            {account && <span className="ac"><span className="dot sm" style={dotStyle(rowAccount?.colour)} /><span className="label">{rowAccount?.label}</span></span>}
             <span className="age" data-tip={fullTimestamp(row.received_at, timeZone)}>{rowWhen(row, item.aged, now, timeZone)}</span>
             {/* Under the pointer Snooze takes the age's place, and on the Pinned shelf Unpin with it (board 10). */}
             {!leaving && ((onSnooze && snoozeable(row)) || item.shelf) && (
@@ -313,7 +318,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         );
       })}
       {loading ?? (!shown.length && empty)}
-      {more && <AllSkeleton more />}
+      {more && <AllSkeleton more account={account} />}
     </section>
   );
 }

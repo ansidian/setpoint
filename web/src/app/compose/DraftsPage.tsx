@@ -58,6 +58,7 @@ import {AllSkeleton, BodySkeleton} from '../states/Skeletons.tsx';
 import {ComposerPlace} from './Composer.tsx';
 import {closeComposer, discardDrafts, newMessage, openDraft, popOutDrafts, useOpenComposer} from './composer.ts';
 import type {OpenComposer} from './composer.ts';
+import {ScrollThumb} from '../ScrollThumb.tsx';
 
 type DraftsRoute = Extract<Route, {page: 'drafts'}>;
 
@@ -270,6 +271,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
       </header>
       <div className="content" style={accountWidth} onContextMenu={onContextMenu}>
         <section className="list drafts-list" aria-label="Drafts" onScroll={swipes.close} {...(phone ? swipes.handlers : {})}>
+          <ScrollThumb />
           {!load.data ? (failed ? <LoadFailed what="Drafts" loads={[load]} /> : <AllSkeleton />) : rows.length === 0 ? (
             <DraftsEmptyView onNew={() => newMessage()} />
           ) : rows.map(row => {
