@@ -109,9 +109,9 @@
   .row .from, .list.all .row .from { grid-area: from; width: auto; margin-left: 8px; }
   .row .marks { grid-area: mk; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; white-space: nowrap; font-size: 13px; }
   /* The summary in the subject's place wraps to a second line rather than being cut at ~45
-     characters, and Attention's does the same. */
+     characters, and Attention's and search's subjects and lines do the same. */
   .row .subj { grid-area: subj; margin-left: 8px; }
-  .row .subj:not(.code-line), .arow .l3 { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+  .row .subj:not(.code-line), .arow :is(.l2, .l3) { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
   .row .ac { grid-area: ac; width: auto; margin-left: 8px; }
   /* A Done row's tag gets its own cell on the sender's line, before the account. It's a state, not a
      button: the check in `good` and Done in `ink3`, with no pill around them, so only what takes a
