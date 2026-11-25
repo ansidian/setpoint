@@ -167,7 +167,9 @@ Mono for codes, ntfy topics and identifiers. Bundled, never loaded from the netw
 | Segmented control, reader tools, small buttons, summaries in Attention, the sidebar's rows under Inbox | 12.5 |
 | Ages, counts, account labels, calendar chips | 12 (chips 500) |
 | A band's header: days, weekday names, the day pane's, News's and Jobs's sections | 12 / 600, sentence case |
+| The Inbox's lane labels, in the lane's ink | 12 / 600, sentence case |
 | The Inbox's kind labels (a hairline after them to the list's edge) | 12 / 500, sentence case |
+| Noise's folded line, in `ink3` with no rule above it | 12 / 400, sentence case |
 | Other group headers and section labels | 11.5 / uppercase / .08em |
 | Keyboard hints | 11 / 500 |
 | Verification codes | Geist Mono 13 / 500 / .06em |

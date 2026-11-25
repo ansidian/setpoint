@@ -224,7 +224,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         if (item.kind === 'lane') {
           // An Attention lane whose mail is all Done drops its count rather than reading 0.
           return (
-            <div key={key} ref={ref} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
+            <div key={key} ref={ref} data-lane={item.lane} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
               {item.label}{item.count > 0 && <> <span className="n"><Count value={item.count} /></span></>}
               {item.note && <TriageNote />}
             </div>

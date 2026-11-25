@@ -652,12 +652,22 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 /* All (board 05): the Pinned shelf, day headings, lane labels under them, the kind where an
    FYI run starts, each day's Noise folded to one line, clock times. Only the headings are bands. */
 .gh .date { font-weight: 400; font-size: 12px; }
-.lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 16px 3px 24px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
-.lh .n, .nfold .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
+/* Each lane reads as its own by its label's ink, sentence case as the bands are: Attention
+   `caution`, FYI the FYI band's blue, Unsorted the band's ink. It takes no glyph, so it isn't read as
+   one more kind. Noise's folded line recedes: regular weight, its count too in `ink3`,
+   with no rule above it. */
+.lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 16px 3px 24px; font-size: 12px; font-weight: 600; color: var(--bandInk); }
+.lh .n, .nfold .n { font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink2); }
+.lh[data-lane=fyi] { color: var(--fyiBandInk); }
 .lh.att, .lh.att .n { color: var(--caution); }
-.nfold { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
-.nfold .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.nfold .chev { margin-left: auto; }
+.nfold { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; font-size: 12px; color: var(--ink3); }
+.nfold .n { color: var(--ink3); }
+.nfold .preview { font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.nfold .chev { margin-left: auto; order: 2; }
+/* Open, its rows under it name their senders, so the preview gives way to a kind's hairline: from
+   the count to the chevron, through the label's middle. */
+.nfold:not(.collapsed) .preview { display: none; }
+.nfold:not(.collapsed)::after { content: ""; order: 1; flex: 1 1 auto; height: 1px; margin-left: 6px; background: var(--hair); }
 .nfold.cur { background: var(--sub2); }
 .list.all .row .from { width: clamp(112px, 24%, 200px); }
 .list.all .row .age { width: 72px; }
