@@ -237,3 +237,21 @@ test('phone search takes sent mail in: the user\'s reply reads To its recipient 
     await setpoint.stop();
   }
 });
+
+test('on the phone the reader\'s account band names the email\'s state only when it isn\'t the Inbox, which Back already says', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox/${await email(setpoint, 'Arriving today')}`);
+    await page.locator('.rd-acct .name').waitFor();
+    assert.equal(await page.locator('.rd-acct .state').count(), 0);
+    const done = await email(setpoint, 'Interview availability');
+    await setpoint.api('POST', `/mail/messages/${done}/done`, {done: true});
+    await page.goto(`${setpoint.base}/inbox/${done}`);
+    await page.locator('.rd-acct .name').waitFor();
+    assert.equal(await page.locator('.rd-acct .state').textContent(), 'Done');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
