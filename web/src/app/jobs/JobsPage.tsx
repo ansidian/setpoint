@@ -433,7 +433,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
 
   return (
     <>
-      <header className="hd jb-hd">
+      <header data-theme="night" className="hd jb-hd">
         <h1 className="hd-title" key={searching ? 'search' : 'jobs'}>{searching ? 'Search' : 'Jobs'}</h1>
         {!searching && page?.enabled && <StatusFilter counts={page.counts} value={filter} onChange={setFilter} />}
         <span className="grow" />

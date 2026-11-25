@@ -288,7 +288,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
       {/* The actions share the bar evenly, drawn once the email's row is known, so none moves in or
           along when the email arrives. Until then the bar stays empty. Done leads, the phone's main job on Attention mail (phone/ReaderBar.tsx). */}
       {phone && (
-        <div className="ph-acts">
+        <div data-theme="night" className="ph-acts">
           {listed && (
             <ReaderBar email={{doneable: !!doneable, replyAll, markedUnread, sent: sentMail, snoozeable: snoozes,
               snoozed: phoneSnoozed ? {until: snoozedUntil!, when: snoozeWhen(snoozedUntil!, now, timeZone)} : null}} on={{

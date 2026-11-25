@@ -1162,7 +1162,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
 
   return (
     <>
-      <header className="hd">
+      <header data-theme="night" className="hd">
         <h1 className="hd-title cal-title num" key={titleKey} data-dir={titleMove.dir} data-view={mode}>
           {searching ? 'Search' : title}
           {!searching && allHidden && <span className="cal-hidden ink3" role="img" aria-label="Every calendar is hidden" data-tip="Every calendar is hidden"><Icon name="visibility_off" size={16} /></span>}

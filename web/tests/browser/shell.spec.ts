@@ -9,6 +9,7 @@ import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {DONE_MOMENT_MS} from '../../src/logic/today.ts';
+import {layout} from '../../src/tokens.ts';
 import {cleanUp, describe, drawn, drawnTwice, holdToast, pagePx, pauseClock, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
@@ -156,7 +157,8 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
       assert.equal((await box(page, '.hd')).height, 56);
       // Nothing open: the empty pane is there all the same, so nothing moves as an email opens or closes.
       assert.equal((await box(page, '.pane.idle')).width, 680);
-      assert.equal((await box(page, '.list')).width, pagePx(SIZES.target.width) - 248 - 680);
+      // The list, between the frame's edges and the pane, with a card gap on each side.
+      assert.equal((await box(page, '.list')).width, pagePx(SIZES.target.width) - 248 - 680 - 3 * layout.cardGap);
       const row = page.locator('.list .row:has(b[data-tip^="Final exam schedule"])');
       const still = () => Promise.all(['.hd .search', '.list'].map(selector => box(page, selector)).concat(row.boundingBox().then(rect => rect!)));
       const before = await rested(still);

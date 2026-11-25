@@ -261,7 +261,7 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
 
   return (
     <>
-      <header className="hd">
+      <header data-theme="night" className="hd">
         {phone && <Mark />}
         {phone ? <TitleMenu title={mailTitle(PHONE_MENU)} rows={menuRows} /> : <h1 className="hd-title">Drafts</h1>}
         <span className="grow" />

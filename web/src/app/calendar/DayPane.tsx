@@ -182,7 +182,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
       {/* The day's USPS mail, over the footer. */}
       <MailStrip date={date} />
 
-      <div className="rp-foot">
+      <div data-theme="night" className="rp-foot">
         <Icon name="keyboard" size={16} />
         <span className="hint">New event</span><span className="kbd">C</span>
         <span className="hint second">New task</span><span className="kbd">D</span>

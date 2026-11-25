@@ -37,7 +37,7 @@ export const useSelectBar = () => useSyncExternalStore(subscribe, () => current)
 export function SelectBar({bar}: {bar: SelectBarModel}) {
   const none = bar.count === 0;
   return (
-    <nav className="ph-acts ph-selbar" aria-label="Selected emails">
+    <nav data-theme="night" className="ph-acts ph-selbar" aria-label="Selected emails">
       <button className="ph-done" type="button" disabled={none || !bar.done} onClick={bar.on.done}><Icon name="check" size={20} />Done</button>
       <button type="button" disabled={none} onClick={bar.on.pin}><Icon name={bar.pin ? 'keep' : 'keep_off'} size={20} />{bar.pin ? 'Pin' : 'Unpin'}</button>
       <button type="button" disabled={none} onClick={bar.on.read}><Icon name={bar.read ? 'mark_email_read' : 'mark_email_unread'} size={20} />{bar.read ? 'Read' : 'Unread'}</button>

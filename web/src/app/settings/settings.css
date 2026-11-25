@@ -1,7 +1,10 @@
 /* Settings (boards 17, 18a, 18b): the export's .scrim, .modal, .set-* and
    .switch, and the boards' own rules, all scoped to the modal. */
 .settings-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; }
-.settings { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--settingsWidth); height: var(--settingsHeight); max-width: calc(100% - 32px); max-height: calc(100% - 32px); display: flex; background: var(--modal); border-radius: var(--r-modal); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-modal); overflow: hidden; z-index: 31; }
+.settings { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--settingsWidth); height: var(--settingsHeight); max-width: calc(100% - 32px); max-height: calc(100% - 32px); display: flex; background: var(--frame); border-radius: var(--r-modal); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-modal); overflow: hidden; z-index: 31; }
+/* The modal is the frame, its nav drawn on it as the sidebar is (Night in Light), its page a card
+   8 px in, its corners concentric with the modal's. */
+.settings:not(.ph-set) > .set-main { margin: 8px 8px 8px 0; background: var(--card); border-radius: calc(var(--r-modal) - 8px); box-shadow: inset 0 0 0 1px var(--cardRing), inset 0 1px 0 var(--cardTop); }
 /* It rises 8 px and settles over 260 ms as its scrim fades in, and closes at once (DESIGN.md › Motion).
    It rises without scaling: once a big panel has scaled in, Chromium keeps drawing its text half a
    pixel off where it rests. A page switch fades its content up 4 px over 120 ms: each page mounts its
@@ -12,7 +15,7 @@
 .settings .set-main > :not(.set-x) { animation: set-page-in var(--dur-fast) var(--ease); }
 @keyframes set-page-in { from { opacity: 0; transform: translateY(4px); } }
 
-.settings .set-nav { width: var(--settingsNav); flex: none; border-right: 1px solid var(--hair); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--panel); }
+.settings .set-nav { width: var(--settingsNav); flex: none; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--frame); }
 .settings .set-navtitle { height: 36px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 .settings .set-nav .nav { width: 100%; text-align: left; }
 /* A page under keyboard focus takes hover's `sub`. The current one keeps its raised chip. */
@@ -31,8 +34,8 @@
    the × stays where it was: `.settings` has a transform, so `fixed` places it on the modal. The
    head stops 1 px short of the modal's right edge, its corner concentric with the modal's, so it never
    covers the modal's ring. */
-.settings .set-head { position: sticky; top: -19px; z-index: 3; height: 59px; display: flex; align-items: center; gap: 8px; margin: -19px -27px 14px -32px; padding: 19px 67px 0 32px; flex: none; background: var(--modal);
-  border-top-right-radius: calc(var(--r-modal) - 1px); }
+.settings .set-head { position: sticky; top: -19px; z-index: 3; height: 59px; display: flex; align-items: center; gap: 8px; margin: -19px -27px 14px -32px; padding: 19px 67px 0 32px; flex: none; background: var(--card);
+  border-top-right-radius: calc(var(--r-modal) - 9px); }
 /* The head fades up with its page (above) and draws its hairline as the page scrolls. */
 .settings .set-main > .set-head { animation: set-page-in var(--dur-fast) var(--ease), set-head-edge linear both; animation-timeline: auto, --setmain; animation-range: normal, 0 24px; }
 @keyframes set-head-edge { to { box-shadow: 0 1px 0 var(--hair); } }
@@ -41,7 +44,7 @@
 /* A section's label stays under the title while its rows scroll by (News's 62 sources). Its right side
    takes the rows' 16 px, so what it holds there (ntfy's state, Mail's count and Filter, AI's total)
    ends on the controls under it. A quiet button there lands its words on that edge. */
-.settings .set-label { position: sticky; top: 40px; z-index: 1; background: var(--modal); height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
+.settings .set-label { position: sticky; top: 40px; z-index: 1; background: var(--card); height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
 .settings .set-label .r { margin-left: auto; display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
 .settings .set-label .r > .btn.quiet:last-child { margin-right: -10px; }
 /* AI's month total takes the costs' look under it, `ink` 13 px at 500. */
@@ -301,7 +304,7 @@
   .settings .handle:hover { color: var(--ink); }
   .settings .fld:not(:focus):hover, :is(.settings, .cal-import) .select:not(:focus-visible):hover, .settings .mini-field:not(:focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
   .settings .switch:not(.on):enabled:hover::after { background: var(--ink); }
-  .settings .switch.on:enabled:hover { background: color-mix(in oklch, var(--switchOn) 86%, var(--modal)); }
+  .settings .switch.on:enabled:hover { background: color-mix(in oklch, var(--switchOn) 86%, var(--card)); }
 }
 
 /* Appearance: the chosen theme's row is filled as the nav's current page is, its icon tile inverted and
@@ -349,6 +352,9 @@
   .settings .set-row > :is(.val, .amount) { line-height: 17px; }
   /* Accounts' two Connect buttons fit the head beside its title and ×, without their + glyphs. */
   .settings .set-head .btn.sm { padding-inline: 6px; }
+  /* A URL's field gives way inside the narrower card rather than running past its group. */
+  .settings .fld-at:has(> .fld.url) { flex: 0 1 300px; min-width: 0; }
+  .settings .fld-at > .fld.url { width: 100%; }
   .settings .set-head .btn.sm > .icon { display: none; }
   /* An account's row has room for its state's glyph only. Its words are in its tip. */
   .settings .set-row:has(> .handle) > .state > .ell { display: none; }
@@ -358,7 +364,7 @@
 @media (max-width: 639px) {
   /* The modal's box gives way to the page's column; its pages keep their groups and rows. */
   .settings.ph-set { position: static; inset: auto; transform: none; width: auto; height: auto; max-width: none; max-height: none; display: flex; flex-direction: column;
-    overflow-y: auto; background: var(--page); border-radius: 0; box-shadow: none; animation: none; z-index: auto; }
+    overflow-y: auto; background: var(--card); border-radius: 10px 10px 0 0; box-shadow: none; animation: none; z-index: auto; }
   /* The header's title menu names the page: no head of its own, and no ×. */
   .settings.ph-set .set-main { flex: none; overflow: visible; padding: 4px 12px 16px; animation: none; }
   .settings.ph-set .set-main > :not(.set-x) { animation: none; }

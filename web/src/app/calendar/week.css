@@ -9,7 +9,7 @@
 .wk-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; position: relative; overscroll-behavior-x: none; }
 .wk-scroll::-webkit-scrollbar { display: none; }
 .wk-grid { position: relative; }
-.wk-top { position: sticky; top: 0; z-index: 4; background: var(--page); }
+.wk-top { position: sticky; top: 0; z-index: 4; background: var(--card); }
 .wk-row { display: flex; }
 .wk-gut-cell { width: var(--weekGutter); flex: none; }
 .wk-days { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); position: relative; }

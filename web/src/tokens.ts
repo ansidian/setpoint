@@ -13,15 +13,21 @@ export const colour = {
   // The dark frame around the content cards: the sidebar, each page's header row and the key hints.
   frame: '#050506',
   panel: '#0b0c0e',
-  card: '#0c0d0f',
-  cardOn: '#131417',
+  // The content card on the frame (the mail list, the reader, the grids, the right panes), and its
+  // ring and 1 px top highlight: hairlines, not shadows.
+  card: '#131417',
+  cardRing: 'rgba(255,255,255,.07)',
+  cardTop: 'rgba(255,255,255,.05)',
+  // A surface on a card (the code and facts cards, attachments, Alfred's answer, a focused field): a step up.
+  cardOn: '#1a1b1f',
   // The toast: a step above `cardOn`, so it lifts off whatever page it's over.
   toast: '#1b1c20',
   chip: '#0f1013',
   modal: '#0c0d0f',
   ink: '#ecebe7',
   ink2: '#a3a4a8',
-  ink3: '#8b8d92',
+  // On the card's cursor and open row (`sub2`, `sub3` over `card`) it still reads 4.5:1.
+  ink3: '#999ba0',
   onInk: '#050506',
   onAccent: '#050506',
   onAlert: '#1a0806',
@@ -68,7 +74,9 @@ export const colour = {
   switchKnobOn: 'var(--ink)',
   // The month's weekends and the days outside the shown month, and the week's weekend columns.
   dayOff: 'rgba(255,255,255,.02)',
-  dayOut: 'rgba(255,255,255,.035)',
+  dayOut: '#0e0f11',
+  // Today's cell on the month grid: a faint lift.
+  dayToday: 'rgba(255,255,255,.035)',
   // The line's reminder phrase: a hue of its own, so it doesn't read as moving the item.
   remind: 'oklch(0.8 0.11 345)',
   // Jobs's In process: a cobalt of its own, deeper than `accent` so it never reads as the open row's bar.
@@ -96,6 +104,8 @@ export const lightColour: Record<ColourToken, string> = {
   frame: '#0b0c0e',
   panel: '#f1f1ee',
   card: '#ffffff',
+  cardRing: 'transparent',
+  cardTop: 'transparent',
   cardOn: '#ffffff',
   toast: '#ffffff',
   chip: '#ffffff',
@@ -137,8 +147,9 @@ export const lightColour: Record<ColourToken, string> = {
   sunGlyph: 'oklch(0.58 0.14 78)',
   switchOn: 'var(--good)',
   switchKnobOn: 'var(--onInk)',
-  dayOff: 'rgba(20,35,55,.028)',
-  dayOut: 'rgba(20,35,55,.048)',
+  dayOff: 'rgba(20,35,55,.022)',
+  dayOut: '#f4f6f9',
+  dayToday: 'color-mix(in oklch, var(--accent) 5%, transparent)',
   remind: 'oklch(0.55 0.14 345)',
   inProcess: 'oklch(0.5 0.16 258)',
   kindDeliveries: 'oklch(0.55 0.13 70)',
@@ -180,18 +191,16 @@ export const evland = {night: 34, light: 26} as const;
  * Night's aren't capped.
  */
 export const tintL = {night: 1, light: 0.43} as const;
-/** Attention's band: `caution` mixed into its `panel` at this share. 8% reads salmon in Light. */
-export const attTint = {night: 8, light: 6} as const;
 /**
- * The bands on a card: Attention's is `caution` and FYI's `accent`, mixed into the card at these
- * shares (`--attBand`, `--fyiBand`). FYI's band text is `--fyiBandInk`.
+ * The bands on a card: Attention's is `caution`, today's `accent` and FYI's `accent`, mixed into the
+ * card at these shares (`--attBand`, `--fyiBand`). FYI's band text is `--fyiBandInk`.
  */
 export const attBand = {night: 12, light: 10} as const;
 export const fyiBand = {night: 6, light: 7} as const;
 export const fyiBandInk = {night: 'var(--accent)', light: 'oklch(0.47 0.12 235)'} as const;
 /** The Inbox's empty pane's glow: the mark's colours mixed in at this share at its heart. Light's darker colours need more to show on its page. */
 export const paneGlow = {night: 10, light: 18} as const;
-/** FYI's cell in that pane's strip: `cool` mixed into `panel` at this share, faint enough not to read as `accent`. */
+/** FYI's cell in that pane's strip: `cool` mixed into `cardOn` at this share, faint enough not to read as `accent`. */
 export const fyiWash = {night: 4, light: 9} as const;
 /**
  * Small coloured text keeps this share of its colour, the rest `ink`: Light's green, blue,
@@ -399,6 +408,8 @@ export const layout = {
   header: 56,
   readingPane: 680,
   rightPane: 400,
+  // The gap between the content cards and between them and the frame's edges.
+  cardGap: 8,
   // 360, wider than board 12a's 280, so a long title wraps to fewer lines.
   floatingDetail: 360,
   monthRow: 176,
@@ -498,7 +509,6 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--evland'] = `${light ? evland.light : evland.night}%`;
   vars['--scrollbar-thumb'] = light ? scrollbar.lightThumb : scrollbar.thumb;
   vars['--tintL'] = String(light ? tintL.light : tintL.night);
-  vars['--attTint'] = `${light ? attTint.light : attTint.night}%`;
   vars['--paneGlow'] = `${light ? paneGlow.light : paneGlow.night}%`;
   vars['--fyiWash'] = `${light ? fyiWash.light : fyiWash.night}%`;
   vars['--attBand'] = `${light ? attBand.light : attBand.night}%`;

@@ -25,14 +25,14 @@ function draw() {
   const theme = resolveTheme(choice, dark.matches);
   if (root.dataset.theme === theme) return;
   applyTheme(root, theme);
-  // Safari tints its own bars to the page: the drawn theme's, which may not be the system's.
+  // Safari tints its own bars to the frame: the drawn theme's, which may not be the system's.
   let tint = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   if (!tint) {
     tint = document.createElement('meta');
     tint.name = 'theme-color';
     document.head.append(tint);
   }
-  tint.content = (theme === 'light' ? lightColour : colour).page;
+  tint.content = (theme === 'light' ? lightColour : colour).frame;
 }
 
 /** Draws the page in this browser's theme now and follows changes from then on. */

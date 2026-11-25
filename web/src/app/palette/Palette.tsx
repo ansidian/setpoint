@@ -192,9 +192,9 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
       <div className="palette-scrim" onPointerDown={onClose} />
       <div className="palette" role="dialog" aria-label="Command palette" onKeyDown={onKeyDown}>
         {offer.context && (
-          <div className="ctx"><span className="tag"><span className="dot sm" style={dotStyle(offer.context.colour)} /><span className="ell">{offer.context.label}</span></span></div>
+          <div data-theme="night" className="ctx"><span className="tag"><span className="dot sm" style={dotStyle(offer.context.colour)} /><span className="ell">{offer.context.label}</span></span></div>
         )}
-        <div className="cmdk-in">
+        <div data-theme="night" className="cmdk-in">
           <Icon name="search" size={20} />
           <input ref={input} className="grow" value={query} placeholder="Type a command…" aria-label="Type a command" spellCheck={false}
             onChange={event => {

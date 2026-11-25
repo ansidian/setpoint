@@ -26,7 +26,8 @@
 /* Back from Week, the month settles out around the selected week's row. */
 .cal-month[data-enter="out"] { animation: cal-zoom-out var(--dur-medium) var(--ease); transform-origin: 50% var(--zoom-y); }
 @keyframes cal-zoom-out { from { opacity: 0; transform: scale(1.015); } }
-.cal-dow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); height: var(--weekdayRow); align-items: center; border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
+/* The weekday header is the card's band, held while the grid scrolls under it. */
+.cal-dow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); height: var(--weekdayRow); align-items: center; background: var(--band); font-size: 12px; font-weight: 600; color: var(--bandInk); flex: none; }
 .cal-dow > span { padding-left: 12px; }
 /* Infinite vertical scroll through months, with no scrollbar taking a column's width. */
 .cal-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; position: relative; }
@@ -41,6 +42,7 @@
 .cell { transition: background-color var(--dur-medium) var(--ease); }
 .cell.weekend { background: var(--dayOff); }
 .cell.out { background: var(--dayOut); }
+.cell.today { background: var(--dayToday); }
 /* Today keeps its disc's own ink outside the month too. */
 .cell.out .dn:not(.today) { color: var(--ink3); }
 .cell.sel { background: var(--sub); }
@@ -161,7 +163,7 @@
 .daypop .tk { --tk-pad: 9px; padding: 0 8px 0 9px; }
 
 /* ---------- The right pane (400 px) ---------- */
-.rpane { width: var(--rightPane); flex: none; border-left: 1px solid var(--hair); min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.rpane { width: var(--rightPane); flex: none; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .rp-head { display: flex; align-items: center; gap: 10px; padding: 18px 16px 4px 20px; flex: none; }
 .rp-date { font-size: 15px; font-weight: 500; }
 .rp-sub { font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
@@ -176,7 +178,8 @@
 @keyframes day-in-next { from { opacity: 0; transform: translateX(6px); } }
 @keyframes day-in-prev { from { opacity: 0; transform: translateX(-6px); } }
 @keyframes day-head-in { from { opacity: 0; } }
-.ag-day { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 18px 20px 8px; }
+/* The day pane's sections (Events, Tasks, a search's days) are the card's bands. */
+.ag-day { display: flex; align-items: center; height: 28px; margin: 12px 0 4px; padding: 0 20px; background: var(--band); font-size: 12px; font-weight: 600; color: var(--bandInk); }
 .ag-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 20px; }
 .ag-item:hover { background: var(--sub); }
 .ag-item.sel { background: var(--sub2); }
@@ -281,6 +284,13 @@ button.subtask.add:hover { color: var(--ink2); }
 /* Every calendar off, a glyph after the header's title says the view is filtered. */
 .cal-hidden { display: inline-flex; vertical-align: -2px; margin-left: 6px; }
 .rp-foot { margin-top: auto; padding: 12px 16px 16px 20px; border-top: 1px solid var(--hair); display: flex; gap: 8px; align-items: center; color: var(--ink3); flex: none; }
+/* On a desktop the day pane's keys sit on the frame under its card: the card is drawn short of them. */
+/* In the compact tier, where the pane lies over the grid, they're a strip of frame at its foot. */
+.rpane > .rp-foot:not(.imp-foot) { height: 36px; padding: 0 20px; border-top: 0; background: var(--frame); }
+@media (min-width: 1100px) {
+  .content > .rpane:has(> .rp-foot:not(.imp-foot)) { position: relative; background: none; box-shadow: none; overflow: visible; margin-bottom: -8px; }
+  .content > .rpane:has(> .rp-foot:not(.imp-foot))::before { content: ""; position: absolute; inset: 0 0 36px; z-index: -1; border-radius: 10px; background: var(--card); box-shadow: inset 0 0 0 1px var(--cardRing), inset 0 1px 0 var(--cardTop); }
+}
 .rp-foot .hint { font-size: 12px; }
 .rp-foot .hint.second { margin-left: 6px; }
 
@@ -394,7 +404,7 @@ button.subtask.add:hover { color: var(--ink2); }
 .scope-acts .btn.quiet .kbd { margin-left: 4px; }
 
 /* A change that failed, in place (board 19b). */
-.failed-card { position: absolute; width: 312px; z-index: 5; background: var(--card); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
+.failed-card { position: absolute; width: 312px; z-index: 5; background: var(--cardOn); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
 .failed-card .card-h { display: flex; align-items: center; gap: 10px; padding: 14px 14px 0 16px; }
 .failed-card .failed-mark { color: var(--alert); display: grid; }
 .failed-title { color: var(--alert); font-weight: 500; }
@@ -433,7 +443,8 @@ button.subtask.add:hover { color: var(--ink2); }
    it (motion.ts). */
 @media (min-width: 640px) and (max-width: 1099px) {
   .cal-content { flex-direction: column; }
-  .cal-content > .rpane { position: absolute; top: 0; right: 0; bottom: 0; z-index: 4; background: var(--page); border-left: 1px solid var(--edgeOn); box-shadow: var(--shadow-pop); }
+  .cal-content > .cal-health { flex: none; background: var(--card); border-radius: 10px; overflow: hidden; }
+  .cal-content > .rpane { position: absolute; top: 0; right: 8px; bottom: 8px; z-index: 4; box-shadow: inset 0 0 0 1px var(--cardRing), inset 0 1px 0 var(--cardTop), var(--shadow-pop); }
   /* It comes in 24 px from the right over 180 ms. An editor the card hands over keeps its own entrance. */
   .cal-content > .rpane:not(.handed) { animation: rpane-over var(--dur-medium) var(--ease); }
   .cal-content .fd { z-index: 5; }

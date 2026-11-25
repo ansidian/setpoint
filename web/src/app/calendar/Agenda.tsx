@@ -243,7 +243,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
 
   return (
     <>
-      <header className="hd">
+      <header data-theme="night" className="hd">
         <Mark />
         <h1 className="hd-title">Agenda</h1>
         <span className="grow" />

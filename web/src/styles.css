@@ -51,8 +51,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .icon, .mark { flex: none; display: block; }
 
 /* ---------- The shell ---------- */
-.app { position: relative; height: 100%; display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); overflow: hidden; }
-.sb { background: var(--panel); border-right: 1px solid var(--edge); display: flex; flex-direction: column; padding: 12px 10px 12px; gap: 2px; min-height: 0; overflow: hidden; }
+.app { position: relative; height: 100%; background: var(--frame); display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); overflow: hidden; }
+.sb { background: var(--frame); display: flex; flex-direction: column; padding: 12px 10px 12px; gap: 2px; min-height: 0; overflow: hidden; }
 .sb-top { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 10px; margin-bottom: 8px; }
 .sb-name { font-size: 14px; font-weight: 600; letter-spacing: -.01em; flex: 1; }
 .sb-top .mark { width: 18px; height: 18px; }
@@ -217,7 +217,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 }
 
 .main { display: grid; grid-template-rows: var(--header) minmax(0, 1fr); min-width: 0; min-height: 0; position: relative; }
-.hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
+.hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; min-width: 0; }
 /* Each page's title is its heading one (axe's page-has-heading-one), drawn as before. */
 .hd-title { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap; }
 .seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: var(--sub); height: 28px; flex: none; position: relative; }
@@ -257,38 +257,51 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ibtn { width: 30px; height: 30px; border-radius: 999px; display: inline-grid; place-items: center; color: var(--ink2); flex: none; }
 @media (hover: hover) { .ibtn:hover { background: var(--sub2); color: var(--ink); } }
 .ibtn:disabled { opacity: .4; background: none; color: var(--ink2); }
-.content { display: flex; min-height: 0; min-width: 0; position: relative; }
+.content { display: flex; gap: var(--cardGap); padding: 0 var(--cardGap) var(--cardGap); min-height: 0; min-width: 0; position: relative; }
 .list { flex: 1 1 auto; min-width: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; }
-.pane { width: var(--readingPane); flex: none; border-left: 1px solid var(--hair); min-height: 0; display: flex; flex-direction: column; overflow: hidden; container: pane / inline-size; }
+.pane { width: var(--readingPane); flex: none; min-height: 0; display: flex; flex-direction: column; overflow: hidden; container: pane / inline-size; }
+
+/* ---------- The frame and its cards ---------- */
+/* The frame (`frame`, drawn as Night in Light: the sidebar and each header are `data-theme="night"`)
+   holds the sidebar, the header rows and the key hints. Content sits on cards 8 px in from it and
+   from each other, radius 10: `card`, with Night's `cardRing` and 1 px `cardTop` highlight. A pane's
+   children take its corners, as its drag edge draws past its side. */
+.content > :is(.list, .pane, .cal-month, .cal-week, .rpane, .nw-list, .jb-col), .card-surface { isolation: isolate; background: var(--card); border-radius: 10px; box-shadow: inset 0 0 0 1px var(--cardRing), inset 0 1px 0 var(--cardTop); }
+.content > .pane > :not(.pane-edge) { border-radius: inherit; }
+/* The key hints sit on the frame under their pane's card (the empty pane's, the day pane's), in a
+   36 px strip. */
+.content > .pane.idle { background: none; box-shadow: none; margin-bottom: -8px; }
+.content > .pane.idle > .pane-empty { background-color: var(--card); box-shadow: inset 0 0 0 1px var(--cardRing), inset 0 1px 0 var(--cardTop); }
+.pane.idle > .pane-keys { min-height: 36px; padding: 8px 12px; flex: none; align-content: center; color: var(--ink3); background: var(--frame); border-radius: 0; }
+.content > :is(.cal-month, .cal-week, .nw-list, .jb-col) { overflow: hidden; }
 
 /* ---------- The list ---------- */
-.gh { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
-.gh .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
+.gh { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; background: var(--band); font-size: 12px; font-weight: 600; color: var(--bandInk); }
+.gh .n { font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink2); }
 .gh .chev { margin-left: auto; color: var(--ink3); }
-.gh .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.gh .preview { font-weight: 400; color: var(--ink3); font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* A group opens and closes like a drawer: its one chevron turns to point right while it's
    collapsed, over 120 ms, its rows fold (app/fold.ts), and a collapsed group's preview fades in. */
 :is(.gh, .nfold) .chev .icon { transition: transform var(--dur-fast) var(--ease); }
 :is(.gh, .nfold).collapsed .chev .icon { transform: rotate(-90deg); }
 .gh .preview { animation: fade-in var(--dur-fast) var(--ease); }
 @keyframes fade-in { from { opacity: 0; } }
-/* Attention is the loudest block: its band takes `caution` into its panel, its label and count
-   `caution` over a 20% caution line. Its unread dots are `caution`, and a row read but not Done keeps
+/* Attention is the loudest block: its band takes `caution` into the card, its label and count
+   `caution`. Its unread dots are `caution`, and a row read but not Done keeps
    a 6 px caution ring, as it's still counted in the pill. */
-.gh.att { background: color-mix(in srgb, var(--caution) var(--attTint), var(--panel)); color: var(--caution); border-bottom-color: color-mix(in srgb, var(--caution) 20%, transparent); }
+.gh.att { background: color-mix(in srgb, var(--caution) var(--attBand), var(--card)); color: var(--caution); }
 .gh.att .n { color: var(--caution); }
-.gh.first { border-top: 0; }
 /* Group headers and All's day headings stay at the top while their rows scroll under them, each next
    one sliding over the last. The keyboard's cursor never parks a row under one. In All the
    day outranks the lanes: its name `ink2`, its date `ink3`. */
 .list .gh { position: sticky; top: 0; z-index: 2; }
 .list { scroll-padding-top: 30px; }
-.list.all .gh.day { color: var(--ink2); }
+.list.all .gh.day { color: var(--bandInk); }
 .list.all .gh.day .date { color: var(--ink3); }
-/* Today's heading is lit in `accent`, "you are here": its name 500 on a tint at Attention's strength, a 20% line
-   under it, its date as every day's. The name takes 15% `ink`: plain `accent` is 4.0:1 on the
+/* Today's heading is lit in `accent`, "you are here": its name on a tint at Attention's strength,
+   its date as every day's. The name takes 15% `ink`: plain `accent` is 4.0:1 on the
    tint in Light, under axe's 4.5. */
-.list .gh.day.today { color: color-mix(in oklch, var(--accent), var(--ink) 15%); font-weight: 500; background: color-mix(in srgb, var(--accent) var(--attTint), var(--panel)); border-bottom-color: color-mix(in srgb, var(--accent) 20%, transparent); }
+.list .gh.day.today { color: color-mix(in oklch, var(--accent), var(--ink) 15%); background: color-mix(in srgb, var(--accent) var(--attBand), var(--card)); }
 .list .gh.day.today .date { font-weight: 400; }
 /* A day with unread mail says how many after its date: "· 3 new" in the date's case and
    `ink3`, the count `ink2`, as a band's. */
@@ -298,7 +311,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* Each group's glyph before its label: shape alone, in the header's ink3. Attention's flag in caution, as its count. */
 .gh .gi { display: grid; color: var(--ink3); }
 .gh.att .gi { color: var(--caution); }
-/* A band's own hover and cursor: `sub` and `sub2` laid over its panel, as a row's lie over the
+/* A band's own hover and cursor: `sub` and `sub2` laid over it, as a row's lie over the
    page, drawn as an inset fill so they fade over 120 ms as every fill does. */
 .gh { box-shadow: inset 0 0 0 100vmax transparent; }
 .gh.collapsed.cur { box-shadow: inset 0 0 0 100vmax var(--sub2); }
@@ -394,9 +407,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .arow.unread .l2 { color: var(--ink); }
 .arow .l3 { grid-column: 2 / 4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
 .arow.protected .l2 { color: var(--alert); font-weight: 500; }
-.tag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); font-size: 11.5px; color: var(--ink2); white-space: nowrap; flex: none; }
-.tag.alert { color: var(--alert); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent); background: color-mix(in oklch, var(--alert) 10%, var(--chip)); }
-.tag.caution { color: var(--caution); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--caution) 35%, transparent); background: color-mix(in oklch, var(--caution) 12%, var(--chip)); }
+.tag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edge); font-size: 11.5px; color: var(--ink2); white-space: nowrap; flex: none; }
+.tag.alert { color: var(--alert); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent); background: color-mix(in oklch, var(--alert) 10%, var(--cardOn)); }
+.tag.caution { color: var(--caution); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--caution) 35%, transparent); background: color-mix(in oklch, var(--caution) 12%, var(--cardOn)); }
 /* A change waiting for its provider (DESIGN.md › Interaction rules). */
 .row.pending, .arow.pending { opacity: .5; }
 /* An empty Inbox view: its own line drawing, 160 to 260 px as the list widens, in strokes the
@@ -408,7 +421,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ve-block { grid-row: 2; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .ve-art { width: clamp(160px, 34cqi, 260px); height: auto; margin-bottom: 12px; overflow: visible; }
 .ve-art path { fill: none; stroke: var(--ink3); stroke-width: 1.8; stroke-width: calc(1.8 * 160px / clamp(160px, 34cqi, 260px)); stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: ve-draw 280ms var(--ease) backwards; }
-.ve-art path.solid { fill: var(--page); }
+.ve-art path.solid { fill: var(--card); }
 .ve-block.unread .ve-art .accent { stroke: var(--good); }
 .ve-block.attention .ve-art .accent { stroke: var(--caution); }
 .ve-block.fyi .ve-art .accent { stroke: var(--cool); }
@@ -468,7 +481,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* A verification code lifted into the reader: a 56 px card as the facts card's, the code in
    Geist Mono 22 / 500 / .12em, Copy, and its countdown at the right in `ink3` 12.5. Expired, the code
    steps back to `ink3`. */
-.code-card { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 12px 0 18px; background: var(--card); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn); flex: none; }
+.code-card { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 12px 0 18px; background: var(--cardOn); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn); flex: none; }
 .code-card .code { font-size: 22px; font-weight: 500; letter-spacing: .12em; }
 .code-card.expired .code { color: var(--ink3); }
 .code-card .expiry { color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
@@ -584,7 +597,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .unpin { height: 22px; display: inline-flex; align-items: center; gap: 4px; padding: 0 8px 0 6px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12px; flex: none; }
 @media (hover: hover) { .unpin:hover { background: var(--sub3); } }
 /* The pattern prompt at the end of Attention (board 09). */
-.prompt { margin: 6px 16px 10px 24px; padding: 10px 10px 10px 14px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edgeOn); display: flex; align-items: center; gap: 12px; color: var(--ink); flex: none; }
+.prompt { margin: 6px 16px 10px 24px; padding: 10px 10px 10px 14px; border-radius: var(--r-card); background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn); display: flex; align-items: center; gap: 12px; color: var(--ink); flex: none; }
 .prompt .prompt-icon { color: var(--ink3); }
 .code-line .copy .icon { color: var(--ink2); }
 /* Copied confirms in `good` for its 1.5 s: a 14% `good` fill, words and glyph `good`, under
@@ -594,7 +607,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .row .code-line .sum.soon, .code-card .expiry.soon { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); }
 /* All (board 05): the Pinned shelf, day headings, lane labels under them, the kind where an
    FYI run starts, each day's Noise folded to one line, clock times. Only the headings are bands. */
-.gh .date { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.gh .date { font-weight: 400; font-size: 12px; }
 .lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 16px 3px 24px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 .lh .n, .nfold .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
 .lh.att, .lh.att .n { color: var(--caution); }
@@ -699,6 +712,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .pane { position: relative; max-width: calc(100% - 420px); }
 /* With nothing open: the page's content, and its keys pinned to the bottom. */
 .pane-empty { flex: 1 1 auto; display: flex; flex-direction: column; gap: 16px; padding: 24px 28px 20px; color: var(--ink3); min-height: 0; }
+.pane-foot:empty { display: none; }
 .pane-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pane-foot p { margin: 0; }
 /* The foot's facts line, led by the pane's trouble when there is some: one `warning` chip in
@@ -726,7 +740,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 /* The Inbox's: how the mail day is going, one block centred across the pane and a third of the way
    down it. Trouble comes first, in `caution` with its fix. Then the mark. Then what needs the user
    as a `caution` band like Attention's (`flag`, its overdue at full strength), or All caught up as a
-   `good` one (`task_alt`). Then today's strip: three cells on `panel` in a `hair` box, each number
+   `good` one (`task_alt`). Then today's strip: three cells on `cardOn` in a `hair` box, each number
    over its glyph and label at 12 `ink3`, a zero in `ink3`. Done above 0 is tinted `good` with its
    number in `good`, and FYI above 0 has a faint `cool` wash. The quiet facts sit in the foot over
    the keys, at 12 `ink3`. */
@@ -736,28 +750,28 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .mail-day::after { content: ""; flex: 2 1 0; }
 .mail-day p { margin: 0; }
 .md-need { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 999px; font-size: 15px; font-weight: 500;
-  color: var(--caution); background: color-mix(in srgb, var(--caution) var(--attTint), var(--page)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--caution) 24%, transparent); }
+  color: var(--caution); background: color-mix(in srgb, var(--caution) var(--attBand), var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--caution) 24%, transparent); }
 .md-need .md-overdue { font-weight: 600; }
-.md-need.caught { color: color-mix(in oklch, var(--good) var(--textTint), var(--ink)); background: color-mix(in srgb, var(--good) 9%, var(--page)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 24%, transparent); }
-.md-today { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(100%, 420px); margin: 0; border: 1px solid var(--hair); border-radius: 12px; background: var(--panel); overflow: hidden; }
+.md-need.caught { color: color-mix(in oklch, var(--good) var(--textTint), var(--ink)); background: color-mix(in srgb, var(--good) 9%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 24%, transparent); }
+.md-today { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(100%, 420px); margin: 0; border: 1px solid var(--hair); border-radius: 12px; background: var(--cardOn); overflow: hidden; }
 .md-tile { display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; padding: 16px 8px 14px; }
 .md-tile + .md-tile { border-left: 1px solid var(--hair); }
 .md-tile > dd { margin: 0; color: var(--ink); font-size: 24px; font-weight: 500; line-height: 1; }
 .md-tile > dt { display: inline-flex; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; }
 .md-tile > dd { transition: color var(--dur-medium) var(--ease); }
 .md-tile:not(.lit) > dd { color: var(--ink3); }
-.md-tile.done.lit { background: color-mix(in srgb, var(--good) 5%, var(--panel)); }
+.md-tile.done.lit { background: color-mix(in srgb, var(--good) 5%, var(--cardOn)); }
 .md-tile.done.lit > dd, .md-tile.done.lit > dt > .icon { color: var(--good); }
 /* FYI's wash is `cool` at 4% (9% in Light) with its glyph in `cool`, the number in `ink`: too faint to read as
    `accent`'s "you are here" (an exception to one job per colour). */
-.md-tile.fyi.lit { background: color-mix(in srgb, var(--cool) var(--fyiWash), var(--panel)); }
+.md-tile.fyi.lit { background: color-mix(in srgb, var(--cool) var(--fyiWash), var(--cardOn)); }
 .md-tile.fyi.lit > dt > .icon { color: var(--cool); }
 .md-kept { color: var(--ink3); font-size: 12px; }
 /* A neutral band over a boxed list of rows, News's recap and Jobs's recent movement. */
 .nd-recap { width: min(100%, 460px); display: flex; flex-direction: column; align-items: center; gap: 12px; flex: none; }
-.md-need.nd-away { color: var(--ink); background: color-mix(in srgb, var(--sub) 70%, var(--page)); box-shadow: inset 0 0 0 1px var(--hair); }
+.md-need.nd-away { color: var(--bandInk); background: var(--band); box-shadow: none; }
 .md-need.nd-away > .icon { color: var(--ink3); }
-.nd-list { list-style: none; margin: 0; padding: 0; width: 100%; border: 1px solid var(--hair); border-radius: 12px; background: var(--panel); overflow: hidden; text-align: left; }
+.nd-list { list-style: none; margin: 0; padding: 0; width: 100%; border: 1px solid var(--hair); border-radius: 12px; background: var(--cardOn); overflow: hidden; text-align: left; }
 .nd-list > li + li { border-top: 1px solid var(--hair); }
 /* The pane's left edge resizes it, and shows it can: a 10 px strip
    straddling the border (placed from inside it, and the pane draws past its left side for it, as its
@@ -767,9 +781,9 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
    from .7 to full size. Dragging or focused, they stay. A double-click puts the pane back to 680.
    News's story pane shares it. */
 .pane:has(> .pane-edge) { overflow: visible; }
-.pane-edge { position: absolute; left: -6px; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 3; touch-action: none; outline: none; }
-.pane-edge::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
-.pane-edge .grip { position: absolute; left: 1px; top: 50%; width: 10px; height: 30px; margin-top: -15px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1.5px var(--accent);
+.pane-edge { position: absolute; left: -9px; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 3; touch-action: none; outline: none; }
+.pane-edge::before { content: ""; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+.pane-edge .grip { position: absolute; left: 0; top: 50%; width: 10px; height: 30px; margin-top: -15px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1.5px var(--accent);
   color: var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none;
   opacity: 0; transform: scale(.7); transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .pane-edge .grip > i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
@@ -788,7 +802,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .sel-more { color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
 .sel-stack { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0 20px 20px; }
 .sel-strip { --depth: 1; position: relative; display: flex; align-items: flex-start; gap: 4px; height: 40px; margin: 0 calc(var(--depth) * 10px) -10px; padding: 0 4px 0 0;
-  border-radius: 12px 12px 0 0; background: color-mix(in srgb, var(--cardOn) calc(100% - var(--depth) * 14%), var(--panel)); box-shadow: inset 0 0 0 1px var(--edgeOn); flex: none; }
+  border-radius: 12px 12px 0 0; background: color-mix(in srgb, var(--cardOn) calc(100% - var(--depth) * 14%), var(--card)); box-shadow: inset 0 0 0 1px var(--edgeOn); flex: none; }
 .sel-front-it { flex: 1; min-width: 0; height: 30px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 12px 0 0 0; color: var(--ink3); text-align: left; font-size: 12.5px; }
 @media (hover: hover) { .sel-front-it:hover { color: var(--ink); } }
 .sel-front-it .from { max-width: 40%; flex: none; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -799,7 +813,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .sel-card > .rd-head .rd-subj { padding-right: 28px; }
 .sel-card > .rd-body { flex: none; }
 /* The security facts card (board 03). */
-.facts-card { background: var(--card); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.facts-card { background: var(--cardOn); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn); }
 .facts-card.alert { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 30%, var(--edgeOn)); }
 .facts { display: grid; grid-template-columns: 112px minmax(0, 1fr); row-gap: 9px; column-gap: 12px; margin: 0; padding: 14px 16px; }
 .facts dt { color: var(--ink3); font-size: 12.5px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
@@ -831,7 +845,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .mailframe-box.measuring .mailframe { opacity: 0; }
 /* Attachments: 44 px cards, radius 14, 280 wide or wider to show the whole name (board 10). */
 .attachments { display: flex; flex-wrap: wrap; gap: 8px; }
-.attach { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px 0 7px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); width: max-content; min-width: var(--attachment); max-width: 100%; text-align: left; flex: none; --t: var(--ink2); --t-mix: 14%; }
+.attach { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px 0 7px; border-radius: var(--r-card); background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edge); width: max-content; min-width: var(--attachment); max-width: 100%; text-align: left; flex: none; --t: var(--ink2); --t-mix: 14%; }
 @media (hover: hover) { .attach:hover { box-shadow: inset 0 0 0 1px var(--edgeHover); } }
 /* The type's tile: 30 px, concentric in the card, its colour by type. 12 px before the name. */
 .attach .type { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; margin-right: 2px; color: var(--t); background: color-mix(in oklch, var(--t) var(--t-mix), transparent); transition: background-color var(--dur-fast) var(--ease); }
@@ -954,7 +968,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
   /* An attachment under the pointer: its tile deepens, its eye turns ink, and in Night the card lifts to cardOn (Light stays white). */
   .attach:hover { --t-mix: 22%; }
   .attach:hover .look { color: var(--ink); }
-  [data-theme="night"] .attach:hover { background: var(--cardOn); }
+  [data-theme="night"] .attach:hover { background: var(--band); }
   .menu-i:not(:disabled):hover { background: var(--sub2); color: var(--ink); }
   .menu-i:not(:disabled):hover .icon { color: var(--ink); }
   /* A destructive item (the editor's More › Delete) turns `alert` under the pointer. */
@@ -972,7 +986,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .sb.rail .nav { position: relative; width: 40px; height: 40px; padding: 0; justify-content: center; flex: none; }
 .sb.rail .nav > .grow, .sb.rail .nav > .cnt, .sb.rail .nav > .kbd { display: none; }
 /* The unread badge, at 16 px on Inbox's icon. */
-.sb.rail .nav > .ubadge { position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10.5px; box-shadow: 0 0 0 2px var(--panel); }
+.sb.rail .nav > .ubadge { position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10.5px; box-shadow: 0 0 0 2px var(--frame); }
 /* The next-up slot (TodayBlock.tsx): 18 px under the icons, a 40 px clock over its countdown in
    `ink2` 11 / 500, warming as the Today block's "in 12m" does. */
 .sb.rail .today.next-up { margin-top: 18px; }
@@ -989,9 +1003,9 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
    reading pane's edge, at rest it's only the border. Under the pointer, after 80 ms, a 2 px `accent`
    line lies over it, and a pill at its middle (14 × 30, an `accent` ring, the chevron the way it
    goes) fades up and swells from .7. Beside the sidebar, as it clips. */
-.sb-edge { position: absolute; top: 0; bottom: 0; left: calc(var(--sidebar) - 6px); width: 10px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 6; outline: none; }
-.app.rail .sb-edge { left: calc(var(--rail) - 6px); }
-.app.rail .sb.peek ~ .sb-edge { left: calc(var(--sidebar) - 6px); z-index: 8; }
+.sb-edge { position: absolute; top: 0; bottom: 0; left: calc(var(--sidebar) - 1px); width: 10px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 6; outline: none; }
+.app.rail .sb-edge { left: calc(var(--rail) - 1px); }
+.app.rail .sb.peek ~ .sb-edge { left: calc(var(--sidebar) - 1px); z-index: 8; }
 .sb-edge::before { content: ""; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
 .sb-edge .grip { position: absolute; left: -2px; top: 50%; width: 14px; height: 30px; margin-top: -15px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1.5px var(--accent);
   color: var(--accent); display: grid; place-items: center; pointer-events: none; opacity: 0; transform: scale(.7); transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
@@ -1015,7 +1029,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
   .hd > .mark-all > :is(.lbl, .kbd) { display: none; }
   .palette { max-width: calc(100% - 32px); }
 
-  .content > .pane { position: absolute; inset: 0; width: auto; max-width: none; z-index: 4; background: var(--page); border-left: 0; }
+  .content > .pane { position: absolute; inset: 0 8px 8px; width: auto; max-width: none; z-index: 4; }
   .pane > .pane-edge { display: none; }
   .ibtn.pane-open[aria-pressed="true"] { background: var(--sub2); color: var(--ink); }
   .rd-tools .rd-back { display: inline-grid; }

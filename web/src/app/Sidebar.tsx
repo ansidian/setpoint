@@ -144,7 +144,7 @@ export function Sidebar({route}: {route: Route}) {
 
   return (
     <>
-      <aside className={['sb', rail && 'rail', peek && 'peek'].filter(Boolean).join(' ')} onPointerOver={onPointerOver} onPointerLeave={onPointerLeave}>
+      <aside data-theme="night" className={['sb', rail && 'rail', peek && 'peek'].filter(Boolean).join(' ')} onPointerOver={onPointerOver} onPointerLeave={onPointerLeave}>
         <div className="sb-top">
           <Mark />
           {!rail && <span className="sb-name">Setpoint</span>}

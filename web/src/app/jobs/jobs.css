@@ -5,7 +5,7 @@
 .sb .nav.jobs > .cnt { color: var(--ink2); }
 /* The rail: the count as a 16 px badge placed as the Inbox's, but neutral (32b). */
 .sb.rail .nav.jobs > .cnt { display: grid; place-items: center; position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
-  background: var(--sub4); color: var(--ink); font-size: 10.5px; font-weight: 600; box-shadow: 0 0 0 2px var(--panel); }
+  background: var(--sub4); color: var(--ink); font-size: 10.5px; font-weight: 600; box-shadow: 0 0 0 2px var(--frame); }
 
 /* ---------- Header: the two numbers and search ---------- */
 .jb-hd .hd-title { animation: jb-fade var(--dur-fast) var(--ease); }
@@ -107,7 +107,7 @@
 .jb-hist-wrap.open { grid-template-rows: 1fr; }
 .jb-hist-wrap > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .jb-hist { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; column-gap: 10px; align-items: center; height: 36px; padding: 0 16px 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2);
-  font-size: 12.5px; flex: none; background: color-mix(in srgb, var(--panel) 50%, transparent); transition: background-color var(--dur-fast) var(--ease); }
+  font-size: 12.5px; flex: none; background: var(--sub); transition: background-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-hist:hover { background: var(--sub); } }
 .jb-hist > .icon { color: var(--ink3); }
 .jb-hist .what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -154,9 +154,8 @@
 .jb-tbl.measuring .jb-tr > span { width: max-content; }
 .jb-tbl.measuring .jb-tr .st-t { flex: none; display: block; overflow: visible; white-space: nowrap; }
 .jb-th, .jb-tr { display: grid; grid-template-columns: var(--cols); column-gap: var(--gap); align-items: center; padding: 0 16px 0 12px; flex: none; }
-.jb-th { height: 30px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3);
+.jb-th { height: 30px; background: var(--band); font-size: 12px; font-weight: 600; color: var(--bandInk);
   position: sticky; top: 0; z-index: 2; }
-.jb-th.first { border-top: 0; }
 .jb-th .h { display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 6px; margin-left: -6px; border-radius: 6px; justify-self: start; white-space: nowrap; text-transform: inherit; letter-spacing: inherit; color: inherit; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-th .h:hover { background: var(--sub); color: var(--ink2); } }
 .jb-th .h:active { background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
@@ -345,8 +344,8 @@
 .jb-paste .jb-hint { margin: 0 0 0 4px; }
 /* Unfolded in place (33): the row becomes the section's sticky head, the text unfolding under it. */
 .jb-fullhead { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px; border-radius: 12px; color: var(--ink2); flex: none;
-  /* sub2 laid on the page, so the text scrolling under the sticky head doesn't show through. */
-  background: linear-gradient(var(--sub2), var(--sub2)), var(--page);
+  /* sub2 laid on the card, so the text scrolling under the sticky head doesn't show through. */
+  background: linear-gradient(var(--sub2), var(--sub2)), var(--card);
   position: sticky; top: 0; z-index: 2; cursor: default; }
 .jb-fullhead > .icon { color: var(--ink3); }
 .jb-fullhead .t { color: var(--ink); font-weight: 500; white-space: nowrap; flex: none; }
@@ -395,8 +394,8 @@
 .jb-ev.first .node::before { top: 50%; }
 .jb-ev.last .node::before { bottom: 50%; }
 .jb-ev.first.last .node::before { display: none; }
-.jb-ev .node i { position: relative; width: 7px; height: 7px; border-radius: 999px; background: var(--ink2); box-shadow: 0 0 0 3px var(--page); }
-.jb-ev.quiet .node i { width: 5px; height: 5px; background: var(--page); box-shadow: inset 0 0 0 1.2px var(--ink3), 0 0 0 3px var(--page); }
+.jb-ev .node i { position: relative; width: 7px; height: 7px; border-radius: 999px; background: var(--ink2); box-shadow: 0 0 0 3px var(--card); }
+.jb-ev.quiet .node i { width: 5px; height: 5px; background: var(--card); box-shadow: inset 0 0 0 1.2px var(--ink3), 0 0 0 3px var(--card); }
 .jb-ev.proc .node i { background: var(--inProcess); }
 .jb-ev .t { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .jb-ev .t .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -563,7 +562,7 @@
    The divider is a 6 px hatched band, `ink3` stripes on `panel`. A row's hover, cursor and open fills are flat colours on the `sub` ramp, so a flat band read as part of a highlighted row beside it, and a pattern can't. */
 .jb-pin-h { height: 28px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 16px; border-bottom: 1px solid var(--hair); color: var(--ink3); font-size: 12px; font-weight: 500; }
 .jb-pin-h > .icon { color: var(--sun); }
-.jb-pin-end { height: 6px; flex: none; background: var(--panel) repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink3) 35%, transparent) 0 1px, transparent 1px 4px); border-bottom: 1px solid var(--hair); }
+.jb-pin-end { height: 6px; flex: none; background: var(--card) repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink3) 35%, transparent) 0 1px, transparent 1px 4px); border-bottom: 1px solid var(--hair); }
 /* A shelf row's Unpin takes its end under the pointer (the Inbox's, board 10). */
 .jb-tr > .hact { position: absolute; right: 12px; top: 6px; display: none; overflow: visible; }
 /* It is wider than JD's column and the gap before it, so under the pointer Status ends short of it, its note's ellipsis coming earlier, rather than running under it. */

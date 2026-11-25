@@ -112,7 +112,7 @@ function TroubleChip({trouble}: {trouble: PaneTrouble[]}) {
   );
 }
 
-/** The empty pane: what the page puts in it, and its foot (any trouble's chip and a quiet line, then the keys) pinned to the bottom. */
+/** The empty pane: what the page puts in it and its foot (any trouble's chip and a quiet line) pinned to the bottom of its card, then the keys under the card. */
 export function EmptyPane({label, keys, foot, trouble = [], children}: {label: string; keys: PaneKey[]; foot?: ReactNode; trouble?: PaneTrouble[]; children: ReactNode}) {
   const width = useReadingPaneWidth();
   return (
@@ -122,13 +122,14 @@ export function EmptyPane({label, keys, foot, trouble = [], children}: {label: s
         {children}
         <footer className="pane-foot">
           {(foot || trouble.length > 0) && <div className="pane-facts">{trouble.length > 0 && <TroubleChip trouble={trouble} />}{foot}</div>}
-          <ul className="pane-keys">
-          {keys.map(key => (
-            <li key={key.does}>{key.keys.map(one => <span key={one} className="kbd">{one}</span>)}<span>{key.does}</span></li>
-          ))}
-          </ul>
         </footer>
       </div>
+      {/* The keys sit on the frame under the pane's card. */}
+      <ul data-theme="night" className="pane-keys">
+      {keys.map(key => (
+        <li key={key.does}>{key.keys.map(one => <span key={one} className="kbd">{one}</span>)}<span>{key.does}</span></li>
+      ))}
+      </ul>
     </section>
   );
 }

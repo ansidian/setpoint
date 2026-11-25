@@ -95,7 +95,7 @@ function Open({page}: {page: SettingsPage}) {
     <>
       <div className="settings-scrim" onPointerDown={closeSettings} />
       <div className="settings" ref={modal} role="dialog" aria-modal="true" aria-label="Settings" tabIndex={-1} onKeyDown={onKeyDown}>
-        <nav className="set-nav" aria-label="Settings pages" onKeyDown={onNavKey}>
+        <nav data-theme="night" className="set-nav" aria-label="Settings pages" onKeyDown={onNavKey}>
           <div className="set-navtitle">Settings</div>
           {SETTINGS_GROUPS.flatMap((group, at) => group.map((name, index) => (
             <button key={name} type="button" className={['nav', name === page && 'on', at > 0 && index === 0 && 'gap'].filter(Boolean).join(' ')} aria-current={name === page ? 'page' : undefined} onClick={() => openSettings(name)}>

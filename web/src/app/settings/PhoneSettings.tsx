@@ -20,7 +20,7 @@ export function PhoneSettings({page}: {page: SettingsPage}) {
   const {label, icon} = SETTINGS_NAV[page];
   return (
     <>
-      <header className="hd">
+      <header data-theme="night" className="hd">
         <Mark />
         <TitleMenu title={label} rows={[...ON_THE_PHONE.map(one => ({
           label: SETTINGS_NAV[one].label,

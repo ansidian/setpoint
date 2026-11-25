@@ -51,14 +51,15 @@ account names). The UI says "Done", never "handled".
 | --- | --- | --- | --- |
 | `page` | `#050506` | `#f6f6f4` | app background |
 | `frame` | `#050506` | `#0b0c0e` | the dark frame around the content cards: the sidebar, each page's header row, the key hints; in Light drawn as Night in full |
-| `panel` | `#0b0c0e` | `#f1f1ee` | Settings nav, the phone's bars |
-| `card` | `#0c0d0f` | `#ffffff` | floating detail, prompt, attachments; in Light the content cards, the proposal and Answer card |
-| `cardOn` | `#131417` | `#ffffff` | focused search and fields, drag tip, News's pill, the phone's toast; in Night the content cards, the proposal and Answer card |
+| `panel` | `#0b0c0e` | `#f1f1ee` | not drawn since the frame and cards took its places; Light's frame is Night's `panel` |
+| `card` | `#131417` | `#ffffff` | the content cards on the frame: the mail lists and reader, the grids, the right panes, Settings' page, ⌘K's list, the phone's content |
+| `cardRing` / `cardTop` | `rgba(255,255,255,.07)` / `.05` | `transparent` / `transparent` | a content card's ring / its 1 px top highlight: hairlines, not shadows |
+| `cardOn` | `#1a1b1f` | `#ffffff` | a surface on a card, a step up: the code and facts cards, attachments, the prompt, tags, the proposal and Answer card, the floating detail, focused search and fields, the drag tip, the phone's toast |
 | `band` / `bandInk` | `#1c1d22` / `#dcdbd7` | `#eef2f7` / `#24324a` | a header band on a card (days, Calendar's weekdays, the day pane's and News's sections, Jobs's headers) / its text |
-| `toast` | `#1b1c20` | `#ffffff` | the toast, a step above `cardOn` |
-| `chip` | `#0f1013` | `#ffffff` | inputs, tags |
-| `modal` | `#0c0d0f` | `#ffffff` | Settings, popovers, ⌘K |
-| `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#8b8d92` | `#1b2430` / `#465263` / `#566271` | primary / secondary / tertiary text and icons; Light's are slate, everywhere |
+| `toast` | `#1b1c20` | `#ffffff` | the toast |
+| `chip` | `#0f1013` | `#ffffff` | inputs |
+| `modal` | `#0c0d0f` | `#ffffff` | popovers and menus |
+| `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#999ba0` | `#1b2430` / `#465263` / `#566271` | primary / secondary / tertiary text and icons; Light's are slate, everywhere |
 | `onInk` | `#050506` | `#ffffff` | text on `ink`, on the unread badge, the phone's attention pill and solid calendar chips |
 | `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(20,35,55,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
 | `hair` | `rgba(255,255,255,.07)` | `rgba(20,35,55,.08)` | dividers, grid lines |
@@ -83,7 +84,7 @@ account names). The UI says "Done", never "handled".
 | `edgeFocus` | `rgba(255,255,255,.2)` | `rgba(20,35,55,.3)` | a focused field's border |
 | `mailEdge` | `transparent` | `rgba(20,35,55,.1)` | the HTML email frame's ring |
 | `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(20,35,55,.10)` | the current page in a nav: its fill / its inset hairline |
-| `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(20,35,55,.028)` / `.048` | the calendar's weekends / days outside the shown month |
+| `dayOff` / `dayOut` / `dayToday` | `rgba(255,255,255,.02)` / `#0e0f11` / `rgba(255,255,255,.035)` | `rgba(20,35,55,.022)` / `#f4f6f9` / `accent` 5% | the calendar's weekends / days outside the shown month / today's cell |
 | `remind` | `oklch(0.8 0.11 345)` | `oklch(0.55 0.14 345)` | the editor's line: a reminder phrase's mark, and the Reminders row's glyph it filled |
 | `inProcess` | `oklch(0.7 0.15 258)` | `oklch(0.5 0.16 258)` | Jobs's In process: its mark, its label and its events' node |
 | `kindDeliveries` | `oklch(0.78 0.12 70)` | `oklch(0.55 0.13 70)` | the Deliveries kind's glyph in the Inbox |
@@ -96,7 +97,10 @@ account names). The UI says "Done", never "handled".
 | `kindNoise` | `oklch(0.74 0.05 250)` | `oklch(0.55 0.06 250)` | the glyph on each day's folded Noise line, a muted slate |
 
 - **Frame and cards:** the frame holds the sidebar, each page's header row and the key hints; the
-  content sits on cards inside it. In Light the frame is drawn as Night in full (inks, hues, fills,
+  content sits on `card`s inside it, radius 10, 8 px from the frame's edges and from each other (on
+  the phone, one card flush to the sides with its top corners rounded). The drag edges sit in the
+  gaps. The key hints are a strip of frame under their pane's card, and go with it when an email
+  opens. Settings is the frame with its page a card; ⌘K's field is on the frame, its list a card. In Light the frame is drawn as Night in full (inks, hues, fills,
   fields), since Light's hues don't hold on near-black: an element marked `data-theme="night"`
   takes Night's variables, keeping its own theme's `frame`. A rule meant for one theme alone is
   written so it doesn't match inside that scope (`tokens.ts › nightScope`).
@@ -113,12 +117,11 @@ account names). The UI says "Done", never "handled".
   **Calendars** (`--c-*`): Personal `cool`, Classes `cyan`, Jobs `violet`. Both pick from nine of
   the 11 swatches in Settings, not `caution` or `alert`; one picked before still shows.
 - **Mixes** of a hue are `color-mix(in oklch, <colour> N%, transparent)` unless a base is named: tags
-  (`alert` 10% on `chip` with a 40% edge; `caution` 12% with a 35% edge), the needs-reconnect bar
-  (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 14%),
+  (`alert` 10% on `cardOn` with a 40% edge; `caution` 12% with a 35% edge), the needs-reconnect bar
+  (`caution` 9% on the card, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 14%),
   deepening under the pointer by `--evhover` (Night 18%, Light 14%) laid over it in the chip's own
   colour, and by 28% while pressed; as a change lands it starts at `--evland` (Night 34%, Light
-  26%) and settles back; Attention's band (`caution` 8% on `panel` in srgb, Light
-  6%); on a card, Attention's band (`caution` 12% on the card in srgb, Light 10%) and FYI's
+  26%) and settles back; Attention's band and today's header (`caution`, `accent`, 12% on the card in srgb, Light 10%) and FYI's
   (`accent` 6%, Light 7%, its text `accent`, Light `oklch(0.47 0.12 235)`). A neutral (an ink or a surface) mixes in `srgb` or is an alpha token, never in oklch, which
   tints it.
 - **Theme numbers:** on the calendar, coloured text on its own tint caps its lightness at `--tintL`

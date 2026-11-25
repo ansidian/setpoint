@@ -947,13 +947,13 @@ export function InboxPage({route}: {route: InboxRoute}) {
     <>
       {selecting ? (
         // Select's header: Cancel, how many are selected, and Select all or Deselect all.
-        <header className="hd ph-selecting">
+        <header data-theme="night" className="hd ph-selecting">
           <button className="btn quiet ph-text" type="button" onClick={endSelecting}>Cancel</button>
           <h1 className="hd-title">{selected.length ? `${selected.length} selected` : 'Select emails'}</h1>
           <button className="btn quiet ph-text" type="button" disabled={!stops.some(stop => stop.kind === 'row')}
             onClick={() => (allPicked ? clearSelection() : selectAll())}>{allPicked ? 'Deselect all' : 'Select all'}</button>
         </header>
-      ) : <header className="hd">
+      ) : <header data-theme="night" className="hd">
         {phone && <Mark />}
         {phone && !searching ? <TitleMenu title={mailTitle(menuPlace)} rows={menuRows} /> : <h1 className="hd-title">{searching ? 'Search' : 'Inbox'}</h1>}
         {/* One count on the phone: Attention's, on All and Attention. On the other views the Inbox tab has it. */}

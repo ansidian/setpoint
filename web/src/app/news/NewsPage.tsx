@@ -424,7 +424,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
 
   return (
     <>
-      <header className="hd">
+      <header data-theme="night" className="hd">
         {phone && <Mark />}
         {phone && !searching
           ? <TitleMenu title={view === 'all' ? 'News' : SECTION_LABELS[view]} rows={VIEW_SEGMENTS.map(segment => ({label: segment.label, checked: segment.value === view, onChoose: () => switchTo(segment.value)}))} />

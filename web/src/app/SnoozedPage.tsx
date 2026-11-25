@@ -290,7 +290,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   });
   return (
     <>
-      <header className="hd">
+      <header data-theme="night" className="hd">
         {phone && <Mark />}
         {phone ? <TitleMenu title={mailTitle(PHONE_MENU)} rows={menuRows} /> : <h1 className="hd-title">Snoozed</h1>}
         <span className="grow" />

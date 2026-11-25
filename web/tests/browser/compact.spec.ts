@@ -89,7 +89,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; at 11
     await wide.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await wide.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const [list, pane] = [(await rested(() => wide.locator('section.list').boundingBox()))!, (await rested(() => wide.locator('section.pane:not(.idle)').boundingBox()))!];
-    assert.equal(pane.x, list.x + list.width, 'beside the list');
+    assert.equal(pane.x, list.x + list.width + layout.cardGap, 'beside the list');
     assert.equal(await wide.locator('.rd-tools .rd-back').isVisible(), false);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -144,7 +144,7 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       await page.locator('.cal-month .cell').first().waitFor();
       const grid = async () => (await rested(() => page.locator('section.cal-month').boundingBox()))!;
       // The grid takes the width. The day's pane isn't drawn, and its health line sits atop the grid.
-      assert.equal((await grid()).width, width - layout.rail, `${width}: the grid`);
+      assert.equal((await grid()).width, width - layout.rail - 2 * layout.cardGap, `${width}: the grid`);
       assert.equal(await page.locator('.rpane').count(), 0);
       assert.match((await page.locator('.cal-health .rp-health').textContent())!, /^Todoist as of /);
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: Calendar's header`);
@@ -153,13 +153,13 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       await page.keyboard.press('c');
       const editor = page.locator('.rpane.editor');
       await editor.waitFor();
-      await until('the grid keeps the width', async () => (await page.locator('section.cal-month').boundingBox())!.width, grid => grid === width - layout.rail);
+      await until('the grid keeps the width', async () => (await page.locator('section.cal-month').boundingBox())!.width, grid => grid === width - layout.rail - 2 * layout.cardGap);
       await page.keyboard.press('Escape');
       await until('Esc closes the editor', () => editor.count(), count => count === 0);
       // Search too.
       await page.keyboard.press('/');
       await page.locator('.rpane.cal-search').waitFor();
-      await until('the grid keeps the width', async () => (await page.locator('section.cal-month').boundingBox())!.width, grid => grid === width - layout.rail);
+      await until('the grid keeps the width', async () => (await page.locator('section.cal-month').boundingBox())!.width, grid => grid === width - layout.rail - 2 * layout.cardGap);
       await page.keyboard.press('Escape');
       await until('Esc closes the search', () => page.locator('.rpane').count(), count => count === 0);
       await page.keyboard.press('w');

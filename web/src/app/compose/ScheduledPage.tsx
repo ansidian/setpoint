@@ -112,7 +112,7 @@ export function ScheduledPage({route}: {route: ScheduledRoute}) {
 
   return (
     <>
-      <header className="hd">
+      <header data-theme="night" className="hd">
         <h1 className="hd-title">Scheduled</h1>
         <span className="grow" />
       </header>

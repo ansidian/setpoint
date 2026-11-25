@@ -8,13 +8,16 @@
      the home indicator by their insets. */
   .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; padding-top: env(safe-area-inset-top); }
   .main { grid-template-rows: auto minmax(0, 1fr); }
+  /* The card reaches the screen's sides, its top corners rounded under the header, the tab bar under it. */
+  .content { padding: 0; gap: 0; background: var(--card); border-radius: 10px 10px 0 0; overflow: hidden; }
+  .content > :is(.list, .nw-list) { border-radius: 0; box-shadow: none; }
   /* The tab bar ends at the home indicator's inset, not a guess at it. */
-  .ph-tabs { min-height: 54px; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  .ph-tabs { min-height: 54px; background: var(--frame); display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   .ph-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; color: var(--ink3); }
   .ph-tab.on { color: var(--ink); }
   /* The header's attention pill, shrunk onto the Inbox tab while another page shows. */
   .ph-badge { position: absolute; top: 8px; left: calc(50% + 6px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--caution); color: var(--onInk);
-    box-shadow: 0 0 0 2px var(--panel); font-size: 10.5px; font-weight: 600; line-height: 16px; text-align: center; }
+    box-shadow: 0 0 0 2px var(--frame); font-size: 10.5px; font-weight: 600; line-height: 16px; text-align: center; }
   /* The toast is at the bottom, as on the desktop. It rises 8 px from the tab bar as it
      comes, and sinks 4 px as it goes. */
   .toast { animation: ph-toast-in var(--dur-medium) var(--ease); }
@@ -105,7 +108,7 @@
   .arow .l1 .via { display: none; }
 
   /* ---------- The reader: the whole screen, Back and Pin at the top, its actions at the bottom ---------- */
-  .pane { position: fixed; inset: 0; width: auto; max-width: none; border-left: 0; background: var(--page); z-index: 6; padding-top: env(safe-area-inset-top); }
+  .content > .pane, .pane { position: fixed; inset: 0; width: auto; max-width: none; border-radius: 0; background: var(--card); box-shadow: none; z-index: 6; padding-top: env(safe-area-inset-top); }
   .pane > .rd-tools { display: none; }
   .ph-top { height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 6px; }
   .btn.ph-back { height: 40px; padding: 0 10px 0 6px; color: var(--ink); }
@@ -136,7 +139,7 @@
   .mailtext { font-size: 15px; }
   /* The actions share the width, three of them. Done leads, with its label `ink` 500 and its
      check `good`, the done glyph's own colour. */
-  .ph-acts { min-height: 58px; flex: none; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px 8px max(6px, env(safe-area-inset-bottom)); }
+  .ph-acts { min-height: 58px; flex: none; background: var(--frame); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px 8px max(6px, env(safe-area-inset-bottom)); }
   .ph-acts > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 14px; color: var(--ink2); font-size: 11.5px; }
   .ph-acts .icon { color: var(--ink); }
   .ph-acts > .ph-done { color: var(--ink); font-weight: 500; }
@@ -167,7 +170,7 @@
   /* ---------- The agenda ---------- */
   .ph-agenda { flex: 1 1 auto; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; }
   /* A day's head stays in view while its items scroll under it. */
-  .ph-agenda .pday { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 20px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); white-space: nowrap; }
+  .ph-agenda .pday { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 20px; font-size: 12px; font-weight: 600; color: var(--bandInk); flex: none; background: var(--band); white-space: nowrap; }
   .ph-agenda .pday.first { border-top: 0; }
   /* "Today" in `ink` 500, then its date as every day's. */
   .ph-agenda .pday .pd-today { color: var(--ink); font-weight: 500; }
@@ -200,7 +203,7 @@
   .ph-agenda .ph-now .line { height: 1px; flex: 1; background: var(--alert); opacity: .7; }
   .ph-agenda .pitem.done .ell { color: var(--ink3); text-decoration: line-through; }
   /* Its skeleton: .pday's band and .pitem's rows. */
-  .sk-pday { height: 30px; flex: none; display: flex; align-items: center; padding: 0 20px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+  .sk-pday { height: 30px; flex: none; display: flex; align-items: center; padding: 0 20px; background: var(--band); }
   .sk-pday.first { border-top: 0; }
   .sk-pitem { height: 42px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 20px; }
   .sk-pitem > .when { width: 96px; flex: none; }
@@ -220,12 +223,12 @@
      slides up from the bottom edge over 260 ms, the modal timing, and closes at once. It covers the
      part of the screen the user sees, which the keyboard shortens (Sheet.tsx sets the top and
      height), so its bar stays at the top and its foot just above the keys. */
-  .ph-sheet { position: fixed; left: 0; right: 0; top: var(--sheet-top, 0); height: var(--sheet-height, 100%); z-index: 30; display: flex; flex-direction: column; background: var(--page); padding-top: env(safe-area-inset-top); outline: none;
+  .ph-sheet { position: fixed; left: 0; right: 0; top: var(--sheet-top, 0); height: var(--sheet-height, 100%); z-index: 30; display: flex; flex-direction: column; background: var(--card); padding-top: env(safe-area-inset-top); outline: none;
     animation: ph-sheet-in var(--dur-slow) var(--ease); }
   @keyframes ph-sheet-in { from { transform: translateY(100%); } }
   /* Around it, a screen's height above and below, the page's own ground: the page under it never
      shows, and Safari tints the status bar from what's there. Behind the sheet's own parts. */
-  .ph-sheet-ground { position: absolute; left: 0; right: 0; top: -100lvh; bottom: -100lvh; z-index: -1; background: var(--page); }
+  .ph-sheet-ground { position: absolute; left: 0; right: 0; top: -100lvh; bottom: -100lvh; z-index: -1; background: var(--card); }
   /* Its top bar: Cancel or Back at the start, the title in the middle, the action at the end. */
   .ph-sheet-top { height: 48px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 6px; border-bottom: 1px solid var(--hair); }
   .ph-sheet-top > .ph-sheet-lead { justify-self: start; height: 40px; color: var(--ink); font-size: 15px; font-weight: 400; }

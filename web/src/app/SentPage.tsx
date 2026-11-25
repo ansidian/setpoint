@@ -461,7 +461,7 @@ export function SentPage({route}: {route: SentRoute}) {
 
   return (
     <>
-      <header className="hd">
+      <header data-theme="night" className="hd">
         {phone && <Mark />}
         {phone && !searching ? <TitleMenu title={mailTitle(PHONE_MENU)} rows={menuRows} /> : <h1 className="hd-title">{searching ? 'Search' : 'Sent'}</h1>}
         {!phone && !searching && accountList.length > 0 && (

@@ -61,7 +61,7 @@ export function PhoneTabs({route}: {route: Route}) {
   const select = useSelectBar();
   if (select && route.page === 'inbox') return <SelectBar bar={select} />;
   return (
-    <nav className="ph-tabs" aria-label="Pages">
+    <nav data-theme="night" className="ph-tabs" aria-label="Pages">
       {TABS.map(tab => {
         // Sent, Drafts and Snoozed are the Inbox's, from its title menu, as the desktop's rail lights Inbox on them.
         const on = route.page === tab.page || (tab.page === 'inbox' && (route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed'));

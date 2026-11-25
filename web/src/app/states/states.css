@@ -16,7 +16,7 @@
 .progress::before { right: 0; background: var(--sub2); }
 .progress::after { width: var(--done, 0%); background: var(--ink3); border-radius: 0 2px 2px 0; transition: width var(--dur-slow) var(--ease); }
 .list > .hbar { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px 0 24px; font-size: 13px; }
-.list > .hbar.caution { min-height: 40px; color: var(--caution); background: color-mix(in oklch, var(--caution) 9%, var(--page)); border-bottom: 1px solid color-mix(in oklch, var(--caution) 22%, transparent); }
+.list > .hbar.caution { min-height: 40px; color: var(--caution); background: color-mix(in oklch, var(--caution) 9%, var(--card)); border-bottom: 1px solid color-mix(in oklch, var(--caution) 22%, transparent); }
 .list > .hbar.caution .act { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; }
 .list > .hbar.caution .act:hover { background: var(--sub); }
 .list > .hbar.muted { min-height: 32px; color: var(--ink3); font-size: 12.5px; }
