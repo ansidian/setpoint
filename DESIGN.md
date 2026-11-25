@@ -338,6 +338,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   line ends in an ellipsis, a failure wraps to two lines, and its action keeps its size. Send joins it: the server holds a sent email 6 seconds, and the toast reads
   "Sending" with Undo, which opens the composer again as it was.
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
+- **Tap size:** on the phone every control takes a tap at least 44 px across (`--ph-tap`). Where its
+  look stays smaller, its hit area grows around it, never over a neighbour's.
 - **Right-click** opens an item's actions at the pointer; selected text, links and fields keep the
   browser's menu.
 - **Mail in the sidebar:** Inbox is mail's row, with the unread count. Sent and Drafts sit under it as
