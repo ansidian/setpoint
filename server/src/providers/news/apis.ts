@@ -1,5 +1,5 @@
 // News's API sources. The hazards' official data comes from sources that are each asked about the
-// home location in Settings › Calendar: NWS alerts for its zones, found from the point, and USGS,
+// home location in Settings › Places: NWS alerts for its zones, found from the point, and USGS,
 // Cal Fire and AirNow within their radius. Hacker News comes through Algolia, over its points. A
 // hazard source isn't ready, so isn't read, until the home location is set. AirNow's is its free
 // hourly reporting-area file, which needs no key (its observations web service was retired on
@@ -24,7 +24,7 @@ function base(source: NewsSourceRow): string {
 
 /** The home point, which a ready hazard source always has. */
 function home(context: NewsFetchContext) {
-  if (!context.home) throw new ProviderError('permanent', 'Set Home in Settings › Calendar for the hazards near it.');
+  if (!context.home) throw new ProviderError('permanent', 'Set Home in Settings › Places for the hazards near it.');
   return {lat: context.home.lat, lng: context.home.lng};
 }
 

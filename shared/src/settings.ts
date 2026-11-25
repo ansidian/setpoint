@@ -3,13 +3,14 @@
 // fills anything missing from these defaults, so a new setting needs no migration. Secrets (AI keys, the Places key, ntfy's token) aren't settings: they
 // are write-only (see SECRET_NAMES). Appearance is per browser, so it isn't here either.
 import {z} from 'zod';
+import {savedPlacesSchema} from './places.ts';
 
 const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'A 24-hour time such as 09:00');
 
 /** How long a verification code's row stays in the Inbox after the email arrives (Settings › Mail). */
 export const CODE_EXPIRY_PRESETS = [5, 10, 15, 30, 60] as const;
 
-/** Home, for Time to Leave's routes (Settings › Calendar). */
+/** Home, for Time to Leave's routes and the forecast: the first saved place (Settings › Places). */
 export const homeSchema = z.strictObject({
   label: z.string().min(1).max(80),
   address: z.string().min(1).max(300),
@@ -51,6 +52,10 @@ export const settingsSchema = z.strictObject({
     weather: z.boolean(),
     home: homeSchema.nullable(),
   }),
+  // The saved places after Home (Settings › Places), shown by name.
+  places: z.strictObject({
+    saved: savedPlacesSchema,
+  }),
   todoist: z.strictObject({
     // A project's name, where a task with none goes. Null is Todoist's Inbox.
     default_project: z.string().min(1).nullable(),
@@ -86,6 +91,7 @@ export const DEFAULT_SETTINGS: Settings = {
     reconnect_alerts: true,
   },
   calendar: {weather: true, home: null},
+  places: {saved: []},
   todoist: {default_project: null},
   ai: {triage_model: null, triage_strong_model: null, alfred_model: null, history_model: null},
   news: {monthly_cap_usd: 40},
@@ -99,6 +105,7 @@ export const settingsPatchInput = z.strictObject({
   time_to_leave: shape.time_to_leave.partial().optional(),
   notifications: shape.notifications.partial().optional(),
   calendar: shape.calendar.partial().optional(),
+  places: shape.places.partial().optional(),
   todoist: shape.todoist.partial().optional(),
   ai: shape.ai.partial().optional(),
   news: shape.news.partial().optional(),

@@ -27,7 +27,7 @@ import {itemDetail, itemsInRange} from '../queries/items.ts';
 import {conversationOf} from '../queries/thread.ts';
 import {searchCalendar} from '../search/calendar.ts';
 import {searchMail} from '../search/search.ts';
-import {getSettings} from '../settings.ts';
+import {getSettings, placeOrSaved} from '../settings.ts';
 import type {Store} from '../store.ts';
 import {calendarNamed, colourNamed} from './naming.ts';
 import {fenced} from './prompt.ts';
@@ -303,26 +303,28 @@ function proposeTool(context: ToolContext, input: Record<string, unknown>): Tool
   if ((start && !TIME.test(start)) || (end && !TIME.test(end))) return fail('Times must be 24-hour HH:MM.');
   if (end && !start) return fail('An end time needs a start time.');
   if (text(input.end_date) && start && !end) return fail('An event over several days with a start_time needs its end_time on end_date.');
+  // A place that names a saved one is its address.
+  const place = placeOrSaved(context.store, text(input.place));
   // From an email, its day, time and place may come from it; the extras are checked against what it gives.
   const fromEmail = messageId === null ? null : proposeFromMessage(context.store, messageId, kind as ItemKind, {
     ...(text(input.title) ? {title: text(input.title)} : {}),
     ...(date ? {date} : {}),
     ...(start ? {start, end: end || null} : {}),
-    ...(text(input.place) ? {place: text(input.place)} : {}),
+    ...(place ? {place: place} : {}),
   }, context.invites?.get(messageId) ?? null);
   if (messageId === null && !text(input.title)) return fail('title is required for a proposal from the user\'s words.');
   const day = fromEmail ? fromEmail.item.start_date ?? fromEmail.item.due_date ?? (fromEmail.item.starts_at ? localDay(fromEmail.item.starts_at, context.store.timeZone) : null) : date || null;
   const extras = extrasOf(context, input, kind as ItemKind, {
-    timed: fromEmail ? Boolean(fromEmail.item.starts_at) : Boolean(start), placed: fromEmail ? Boolean(fromEmail.item.place) : Boolean(text(input.place)), date: day,
+    timed: fromEmail ? Boolean(fromEmail.item.starts_at) : Boolean(start), placed: fromEmail ? Boolean(fromEmail.item.place) : Boolean(place), date: day,
   });
   if (failed(extras)) return extras;
   const proposal = messageId === null
-    ? proposeFromWords(context.store, kind as ItemKind, {title: text(input.title), date: date || null, start: start || null, end: start ? end || null : null, place: text(input.place) || null}, extras)
+    ? proposeFromWords(context.store, kind as ItemKind, {title: text(input.title), date: date || null, start: start || null, end: start ? end || null : null, place: place || null}, extras)
     : proposeFromMessage(context.store, messageId, kind as ItemKind, {
       ...(text(input.title) ? {title: text(input.title)} : {}),
       ...(date ? {date} : {}),
       ...(start ? {start, end: end || null} : {}),
-      ...(text(input.place) ? {place: text(input.place)} : {}),
+      ...(place ? {place: place} : {}),
     }, context.invites?.get(messageId) ?? null, extras);
   context.proposals.push(proposal);
   return ok({ready: true, title: proposal.item.title, conflict: proposal.conflict?.label ?? null});
@@ -362,7 +364,8 @@ function proposeChangeTool(context: ToolContext, input: Record<string, unknown>)
   const end = text(input.end_time);
   if (date && (!DATE.test(date) || Number.isNaN(Date.parse(date)))) return fail('date must be YYYY-MM-DD.');
   if ((start && !TIME.test(start)) || (end && !TIME.test(end))) return fail('Times must be 24-hour HH:MM.');
-  const place = typeof input.place === 'string' ? input.place.trim() || null : item.place;
+  const given = typeof input.place === 'string' ? placeOrSaved(context.store, input.place.trim()) || null : undefined;
+  const place = given === undefined ? item.place : given;
   const accountId = context.store.db.select({accountId: t.calendars.accountId}).from(t.calendars).where(eq(t.calendars.id, item.calendar_id)).get()?.accountId ?? null;
   const day = date || (item.starts_at ? localDay(item.starts_at, context.store.timeZone) : item.start_date ?? item.due_date);
   const extras = extrasOf(context, input, item.kind, {accountId, timed: input.all_day === true ? false : Boolean(start || (!item.all_day && item.starts_at)), placed: Boolean(place), date: day});
@@ -372,7 +375,7 @@ function proposeChangeTool(context: ToolContext, input: Record<string, unknown>)
     ...(text(input.title) ? {title: text(input.title)} : {}),
     ...(date ? {date} : {}), ...(start ? {start} : {}), ...(end ? {end} : {}),
     ...(input.all_day === true ? {all_day: true} : {}),
-    ...(typeof input.place === 'string' ? {place: input.place.trim() || null} : {}),
+    ...(given !== undefined ? {place: given} : {}),
     ...extras,
   };
   if (!Object.keys(edits).length) return fail('Say what changes: title, date, start_time, end_time, all_day, place, description, reminders, leave_reminder, calendar, colour or repeat.');

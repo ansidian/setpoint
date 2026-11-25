@@ -13,12 +13,12 @@
 // following or All events in place of the footer before it saves. Alfred's change to an item opens
 // it so, his changes filled in and marked as his, the scope he picked chosen. Nothing is created or
 // changed until ⌘Enter.
-import type {CalendarOut, Colour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ItemsOut, PlaceSuggestionOut, ProposalChangeOut, ProposalOut, RecentPlaceOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
-import {isFree, proposalConflict, TODOIST_COLOURS} from '@setpoint/shared';
+import type {CalendarOut, Colour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ItemsOut, PlaceSuggestionOut, ProposalChangeOut, ProposalOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
+import {allSavedPlaces, isFree, proposalConflict, savedPlaceFor, TODOIST_COLOURS} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject} from 'react';
 import {useResource} from '../../api/client.ts';
-import {itemsPath, placeSuggestions, proposalFrom, RECENT_PLACES_PATH, SETTINGS_PATH, TODOIST_LABELS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
+import {itemsPath, placeSuggestions, proposalFrom, SETTINGS_PATH, TODOIST_LABELS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {newsProposal} from '../../api/news.ts';
 import {findPlace} from '../../api/settings.ts';
 import {calendarLabel, dayTitle, timeRange} from '../../logic/calendar.ts';
@@ -36,13 +36,14 @@ import type {Draft, Manual} from '../../logic/editorDraft.ts';
 import {addDays, clockTime, instantAt} from '../../logic/format.ts';
 import {calendarMoveChoices, DEFAULT_SCOPE, scopeChoices} from '../../logic/scope.ts';
 import {lineOffsets, rowReminders, taskTimeMinutes} from '../../logic/reminders.ts';
-import {projectChoice, projectMenu, rankMatches} from '../../logic/search.ts';
+import {placeChoices, projectChoice, projectMenu, rankMatches} from '../../logic/search.ts';
+import type {PlaceChoice} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {PlaceList} from '../../ui/PlaceList.tsx';
 import {useMirror} from '../../ui/useMirror.ts';
 import {Segmented} from '../../ui/Segmented.tsx';
-import {placeMenu, useMenuRef} from '../../ui/popover.ts';
+import {placeMenu, useMenuRef, useOutsideClick} from '../../ui/popover.ts';
 import {colourVar, useAccounts} from '../accounts.ts';
 import {LineReference} from './LineReference.tsx';
 import {CalendarName, DateField, NativeField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
@@ -233,10 +234,12 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const [scope, setScope] = useState<RecurringScope>(open.change?.scope ?? DEFAULT_SCOPE);
   const [menu, setMenu] = useState<'calendar' | 'repeat' | 'reminder' | 'labels' | 'more' | null>(null);
   const menuRef = useMenuRef(menu, () => setMenu(null));
-  const [places, setPlaces] = useState<{query: string; list: PlaceSuggestionOut[]; cur: number} | null>(null);
-  // The Place field was focused, so it offers the recent places. And the recent list's cursor, or Esc.
+  // Google's suggestions for the place typed, for the query they answer.
+  const [found, setFound] = useState<{query: string; list: PlaceSuggestionOut[]} | null>(null);
+  // The Place field was focused, so it offers the saved places. And the place menu's cursor, or
+  // whether Esc or a click outside closed it, for the list it was on.
   const [placeAsked, setPlaceAsked] = useState(false);
-  const [recentMenu, setRecentMenu] = useState<{query: string; cur: number; closed: boolean} | null>(null);
+  const [placeCursor, setPlaceCursor] = useState<{key: string; cur: number; closed: boolean} | null>(null);
   // The line's #project menu: its cursor, and whether Esc closed it, for the project typed.
   const [lineMenu, setLineMenu] = useState<{query: string; cur: number; closed: boolean} | null>(null);
   const [sessionToken, setSessionToken] = useState(() => uuid());
@@ -298,28 +301,30 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   }, [filled, draft.date, editing, timeZone, todoist, defaultProject, onPreview]);
   useEffect(() => () => onPreview([], null), [onPreview]);
 
-  // Places for the place as it's typed (in the line or the field), until one is picked. A link has none.
-  // The place a proposal came with isn't searched until it's changed.
-  const placeQuery = draft.kind === 'event' && draft.address === null && !PLACE_URL.test(draft.place.trim()) && draft.place.trim() !== draft.base.place.trim() ? draft.place.trim() : '';
+  // Home and the other saved places: a place that names one takes its address, as if picked.
+  const saved = useMemo(() => allSavedPlaces(settings?.calendar.home ?? null, settings?.places.saved ?? []), [settings]);
+  // An edited event's own place, unchanged, stays as it is, though it reads like a saved place's name.
+  const savedMatch = draft.kind === 'event' && draft.address === null && draft.place.trim() !== (original?.place ?? '') ? savedPlaceFor(draft.place, saved) : null;
+  // Places for the place as it's typed (in the line or the field), until one is picked or it names a
+  // saved place. A link has none. The place a proposal came with isn't searched until it's changed.
+  const placeQuery = draft.kind === 'event' && draft.address === null && !savedMatch && !PLACE_URL.test(draft.place.trim()) && draft.place.trim() !== draft.base.place.trim() ? draft.place.trim() : '';
   useEffect(() => {
     if (placeQuery.length < 2) return;
     let live = true;
     const timer = setTimeout(() => {
       void placeSuggestions(placeQuery, sessionToken).then(list => {
-        if (live) setPlaces({query: placeQuery, list, cur: 0});
-      }).catch(() => live && setPlaces(null));
+        if (live) setFound({query: placeQuery, list});
+      }).catch(() => live && setFound(null));
     }, 120);
     return () => {
       live = false;
       clearTimeout(timer);
     };
   }, [placeQuery, sessionToken]);
-  // Open until one is picked, the place changes, or Esc (not on blur: a click elsewhere in the editor would land on a moved target).
-  const placesOpen = !!places && places.query === placeQuery && places.list.length > 0;
 
   // An edited item's line names only the calendars it can move to.
-  const parsed = useMemo(() => readLine(raw, raw.text, today, calendarChoices, projectNames, original, taskTime),
-    [raw, today, calendarChoices, projectNames, original, taskTime]);
+  const parsed = useMemo(() => readLine(raw, raw.text, today, calendarChoices, projectNames, original, taskTime, saved),
+    [raw, today, calendarChoices, projectNames, original, taskTime, saved]);
   // A #project (a task) or #calendar (an event) typed in the line shows its field's menu until
   // one is picked, the line has none, or Esc.
   const hashMark = parsed.marks.find(mark => draft.text[mark.start] === '#');
@@ -342,17 +347,19 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const lineCount = projectLine.length + calendarLine.length;
   const lineCur = Math.min(lineMenu?.query === lineQuery ? lineMenu.cur : 0, lineCount - 1);
   const lineOpen = lineCount > 0 && !(lineMenu?.query === lineQuery && lineMenu.closed);
-  // Before Places can search (two letters), the places events have used: under a lone "@" (or
-  // "@" and a letter) ending the line, or once the Place field is focused with less than that in it.
-  // Like Places' list, it stays until a pick, Esc or Tab, not on blur.
-  const {data: recent} = useResource<RecentPlaceOut[]>(draft.kind === 'event' ? RECENT_PLACES_PATH : null);
+  // The place's one menu. Before Places can search (two letters), the saved places: under a lone
+  // "@" (or "@" and a letter) ending the line, or once the Place field is focused with less than
+  // that in it; none saved, none shown. From two letters, the saved ones that match, then Places'.
+  // It stays until a pick, Esc, Tab, or a click or tap outside it, not on blur (a click elsewhere in
+  // the editor would land on a moved target).
   const atToken = draft.kind === 'event' && !parsed.marks.some(mark => mark.kind === 'place') ? bare('@') : null;
-  const recentQuery = atToken ? atToken.query : placeAsked && draft.kind === 'event' && draft.address === null && draft.place.trim().length < 2 ? draft.place.trim() : null;
-  const recentList: PlaceSuggestionOut[] = recentQuery === null ? [] : rankMatches(recentQuery, recent ?? [], one => one.name).map(one => ({place_id: '', name: one.name, address: one.address ?? ''}));
-  const recentCur = Math.min(recentMenu?.query === recentQuery ? recentMenu.cur : 0, recentList.length - 1);
-  const recentOpen = recentList.length > 0 && !(recentMenu?.query === recentQuery && recentMenu.closed);
-  // The place's one menu: the recent places, or Places' suggestions for what's typed.
-  const placeMenuShown = recentOpen ? {list: recentList, cur: recentCur, query: recentQuery!} : placesOpen ? {list: places.list, cur: places.cur, query: placeQuery} : null;
+  const shortQuery = atToken ? atToken.query : placeAsked && draft.kind === 'event' && draft.address === null && !savedMatch && draft.place.trim().length < 2 ? draft.place.trim() : null;
+  const placeList = draft.kind === 'event' ? placeChoices(shortQuery, placeQuery, saved, found) : null;
+  const placeCur = placeList ? Math.max(0, Math.min(placeCursor?.key === placeList.key ? placeCursor.cur : 0, placeList.list.length - 1)) : 0;
+  const placeMenuShown = placeList && placeList.list.length > 0 && !(placeCursor?.key === placeList.key && placeCursor.closed) ? {...placeList, cur: placeCur} : null;
+  const closePlaceMenu = () => placeMenuShown && setPlaceCursor({key: placeMenuShown.key, cur: placeMenuShown.cur, closed: true});
+  const placeMenuBox = useRef<HTMLDivElement>(null);
+  useOutsideClick(placeMenuBox, !!placeMenuShown, () => setPlaceCursor(now => (placeMenuShown ? {key: placeMenuShown.key, cur: now?.cur ?? 0, closed: true} : now)));
   // An unknown project not picked as new isn't sent: Create waits, and the line under Project says why.
   const projectChosen = draft.kind === 'task' && projects && draft.project !== original?.project ? projectChoice(draft.project ?? '', projects, draft.newProject) : null;
   // The line's #project in its project's colour, as the Project field's dot.
@@ -406,7 +413,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     // A row's change deletes its field's phrase from the line. The other fields that phrase set
     // ("fri 7-9pm" with a day picked) keep their values, as if set in their rows too.
     const fields = manual.filter((field): field is LineField => (LINE_FIELDS as readonly string[]).includes(field));
-    const read = (text: string) => readLine({...raw, plain: retyped(raw.plain, raw.text, text)}, text, today, calendarChoices, projectNames, original, taskTime);
+    const read = (text: string) => readLine({...raw, plain: retyped(raw.plain, raw.text, text)}, text, today, calendarChoices, projectNames, original, taskTime, saved);
     const typing = document.activeElement === line.current ? line.current?.selectionStart ?? null : null;
     const dropped = fields.length ? dropPhrases(raw.text, read, fields, typing) : null;
     const cut = dropped && dropped.text !== raw.text ? dropped : null;
@@ -432,7 +439,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // An edited item's Title is its line, and so is a new item's: its title words
   // changed lose the email's mark.
   const reread = (one: Draft, text: string) => {
-    const next = original ? retypeEdit(one, text, original, today, calendarChoices, projectNames, taskTime) : retype(one, text, today, google, projectNames, taskTime);
+    const next = original ? retypeEdit(one, text, original, today, calendarChoices, projectNames, taskTime, saved) : retype(one, text, today, google, projectNames, taskTime, saved);
     // What the line changed loses the email's mark, as a field changed by hand does.
     const edited: Marked[] = [];
     if (next.title !== one.title) edited.push('title');
@@ -502,29 +509,33 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       completeLine(lineMark!, name, {calendarId: id, pickedCalendar: name});
     }
   };
-  const pick = (place: PlaceSuggestionOut) => {
+  const pick = (place: PlaceChoice) => {
     const placeMark = parsed.marks.find(mark => mark.kind === 'place') ?? (atToken ? {start: atToken.start, end: draft.text.length, kind: 'place' as const} : undefined);
+    setPlaceAsked(false);
+    setPlaceCursor(null);
+    // A saved place is its name, and takes its address as one typed does (only the address goes on the event).
+    if (place.saved) {
+      if (placeMark) completeLine(placeMark, place.name, {place: place.name, address: null, picked: place.name});
+      else change({place: place.name, address: null, picked: null});
+      return;
+    }
     const chosen = {place: place.name, address: place.address || ''};
     if (placeMark) completeLine(placeMark, place.name, {...chosen, picked: place.name});
     else change({...chosen, picked: null});
-    setPlaces(null);
-    setPlaceAsked(false);
-    // A recent place comes with its address, and isn't Google's.
-    if (!place.place_id) return;
     // Place Details for the pick ends Google's session (so the next place typed starts a new one),
     // and has the address in full where the suggestion's didn't.
     const id = draft.id;
     setSessionToken(uuid());
-    void findPlace(place.place_id, sessionToken).then(found => {
-      if (!found.address) return;
-      setDrafts(list => list.map(one => (one.id === id && one.place === chosen.place && one.address === chosen.address ? {...one, address: found.address} : one)));
+    void findPlace(place.place_id, sessionToken).then(details => {
+      if (!details.address) return;
+      setDrafts(list => list.map(one => (one.id === id && one.place === chosen.place && one.address === chosen.address ? {...one, address: details.address} : one)));
     }).catch(() => {});
   };
 
   const switchKind = (next: ItemKind) => {
     if (next === kind || editing) return;
     setKind(next);
-    setDrafts(list => list.map(one => retype({...emptyDraft(next, one.day), id: one.id, plain: one.plain}, one.text, today, google, projectNames, taskTime)));
+    setDrafts(list => list.map(one => retype({...emptyDraft(next, one.day), id: one.id, plain: one.plain}, one.text, today, google, projectNames, taskTime, saved)));
   };
 
   const addAnother = () => {
@@ -554,11 +565,11 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     }
   }
 
-  const dirty = editing && original ? Object.keys(changesOf(draft, original, timeZone)).length > 0 : draftStarted(drafts) || drafts.some(one => !isEmpty(one.description));
+  const dirty = editing && original ? Object.keys(changesOf(draft, original, timeZone, saved)).length > 0 : draftStarted(drafts) || drafts.some(one => !isEmpty(one.description));
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
 
   const inputs = filled.map(one => {
-    const input = createInput({...one, reminders: remindersOf(drafts.find(own => own.id === one.id)!, taskTime, timeZone)}, timeZone, todoist);
+    const input = createInput({...one, reminders: remindersOf(drafts.find(own => own.id === one.id)!, taskTime, timeZone)}, timeZone, todoist, saved);
     if (input?.kind !== 'task') return input;
     // A task's project by Todoist's own name, made only when New project was picked.
     const chosen = projectChoice(one.project ?? '', projects ?? [], one.newProject);
@@ -578,7 +589,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     }
     if (editing && original) {
       if (projectProblem || card?.pending) return;
-      const changes = changesOf(draft, original, timeZone);
+      const changes = changesOf(draft, original, timeZone, saved);
       if (!Object.keys(changes).length) return onClose();
       if (editing.kind === 'event' && editing.recurring && !asking) {
         // Alfred's change keeps the scope he picked.
@@ -609,27 +620,19 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       event.preventDefault();
       event.stopPropagation();
       if (menu) setMenu(null);
-      else if (recentOpen) setRecentMenu({query: recentQuery!, cur: recentCur, closed: true});
-      else if (placesOpen) setPlaces(null);
+      else if (placeMenuShown) closePlaceMenu();
       else if (lineOpen) setLineMenu({query: lineQuery!, cur: lineCur, closed: true});
       else (onEscape ?? onClose)();
-    } else if (recentOpen && atToken === null && recentQuery === '' && accepts(event)) {
+    } else if (placeMenuShown && atToken === null && shortQuery === '' && accepts(event)) {
       // Tab through an empty Place field goes on without picking a place it was never asked for.
       setPlaceAsked(false);
-    } else if (recentOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+    } else if (placeMenuShown && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
       event.preventDefault();
-      setRecentMenu({query: recentQuery!, cur: stepCursor(event.key, recentCur, recentList.length)!, closed: false});
-    } else if (recentOpen && (event.key === 'Enter' || accepts(event))) {
-      if (event.key === 'Enter' || event.target === line.current) event.preventDefault();
-      pick(recentList[recentCur]!);
-    } else if (placesOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-      event.preventDefault();
-      const delta = event.key === 'ArrowDown' ? 1 : -1;
-      setPlaces({...places, cur: (places.cur + delta + places.list.length) % places.list.length});
-    } else if (placesOpen && (event.key === 'Enter' || accepts(event))) {
+      setPlaceCursor({key: placeMenuShown.key, cur: stepCursor(event.key, placeMenuShown.cur, placeMenuShown.list.length)!, closed: false});
+    } else if (placeMenuShown && (event.key === 'Enter' || accepts(event))) {
       // Tab picks as Enter does. From the Place field it goes on to the next field.
       if (event.key === 'Enter' || event.target === line.current) event.preventDefault();
-      pick(places.list[places.cur]!);
+      pick(placeMenuShown.list[placeMenuShown.cur]!);
     } else if (lineOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
       event.preventDefault();
       setLineMenu({query: lineQuery!, cur: stepCursor(event.key, lineCur, lineCount)!, closed: false});
@@ -652,10 +655,12 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     project: fromLine('project', 'project') ? 'from-proj' : undefined,
     reminder: fromLine('reminder', 'reminders') ? 'from-remind' : undefined,
   };
-  const liveMark = placesOpen ? parsed.marks.find(one => one.kind === 'place')?.start ?? null : lineOpen ? lineMark?.start ?? null : null;
+  const liveMark = placeMenuShown && shortQuery === null ? parsed.marks.find(one => one.kind === 'place')?.start ?? null : lineOpen ? lineMark?.start ?? null : null;
   // A field changed by another's change flashes: the Date when the End runs into the next day, the address a picked place fills in.
   const flashDate = useFlash(lastDay, draft.date);
-  const flashAddress = useFlash(draft.address ?? '', '');
+  // A saved place's address shows as a picked one's does.
+  const shownAddress = draft.address ?? savedMatch?.address ?? null;
+  const flashAddress = useFlash(shownAddress ?? '', '');
   const laterDays = draft.end !== null ? extraDays(draft.start, draft.end, 1) : 0;
   const unpicked = (todoistLabels ?? []).filter(label => !draft.labels.includes(label.name));
   // A recurring event moving to another calendar goes as a series (Google can't move one occurrence).
@@ -918,7 +923,11 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             <>
               <Icon name="location_on" size={17} className={`g-place ${echo.place ?? ''}`} />
               <label className={`field${placeMenuShown ? ' focus' : ''}${sk}`}>
-                <input className="grow" aria-label="Place" placeholder="Add place" value={draft.place} onFocus={() => setPlaceAsked(true)}
+                <input className="grow" aria-label="Place" placeholder="Add place" value={draft.place} onFocus={() => {
+                  // A list closed under the line's "@" opens afresh here.
+                  setPlaceCursor(null);
+                  setPlaceAsked(true);
+                }}
                   onChange={event => change({place: event.target.value, address: null, picked: null}, ['place'])} />
                 {mark('place')}
                 {draft.place && (
@@ -927,16 +936,16 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                   </button>
                 )}
               </label>
-              {draft.address && (
+              {shownAddress && (
                 <>
                   <span />
-                  <span className={`ell ink3 place-address${flashAddress ? ' flash' : ''}`}>{draft.address}</span>
+                  <span className={`ell ink3 place-address${flashAddress ? ' flash' : ''}`}>{shownAddress}</span>
                 </>
               )}
               {placeMenuShown && (
                 <>
                   <span />
-                  <PlaceList places={placeMenuShown.list} cur={placeMenuShown.cur} query={placeMenuShown.query} keyOf={place => place.place_id || place.name} onPick={pick} />
+                  <PlaceList ref={placeMenuBox} places={placeMenuShown.list} cur={placeMenuShown.cur} query={placeMenuShown.query} keyOf={place => place.place_id || `saved:${place.name}`} onPick={pick} />
                 </>
               )}
             </>

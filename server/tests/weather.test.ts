@@ -75,7 +75,7 @@ describe('weather', () => {
     // New credentials check at once (the API's PUT does the same).
     engine.checkNow(source.id);
     await run();
-    expect(health()).toMatchObject({state: 'failing', reason: 'Set Home in Settings › Calendar for the forecast.'});
+    expect(health()).toMatchObject({state: 'failing', reason: 'Set Home in Settings › Places for the forecast.'});
     updateSettings(w.store, {calendar: {weather: false}});
     w.advance(31 * 60_000);
     await run();

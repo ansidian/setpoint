@@ -2,6 +2,7 @@
 // clips or scrolls it (Settings' page, the editor's pane) and there's more room above.
 // It lines up with its anchor's right edge when it would run past the right (the End list).
 import {useCallback, useEffect, useRef} from 'react';
+import type {RefObject} from 'react';
 import {opensUp} from '../logic/contextMenu.ts';
 
 /** The area `element` can show in: its clipping ancestors' and the viewport's. */
@@ -65,4 +66,35 @@ export function useMenuRef(open: unknown, close: () => void): (menu: HTMLElement
     menu.current = element;
     placeMenu(element);
   }, []);
+}
+
+/**
+ * Calls `close` on a click or a tap outside `box` while `open`, never on a blur. It waits for the
+ * click, not the press, so what was pressed gets it before `box` goes and moves what's under it,
+ * and it counts only a click whose press came while `box` was open, so the click that opens it
+ * (focusing a field) doesn't close it again.
+ */
+export function useOutsideClick(box: RefObject<HTMLElement | null>, open: boolean, close: () => void) {
+  const latest = useRef(close);
+  useEffect(() => {
+    latest.current = close;
+  });
+  useEffect(() => {
+    if (!open) return;
+    let pressed = false;
+    const outside = (event: Event) => !!box.current && !box.current.contains(event.target as Node);
+    const press = (event: PointerEvent) => {
+      pressed = outside(event);
+    };
+    const away = (event: MouseEvent) => {
+      if (pressed && outside(event)) latest.current();
+      pressed = false;
+    };
+    document.addEventListener('pointerdown', press);
+    document.addEventListener('click', away);
+    return () => {
+      document.removeEventListener('pointerdown', press);
+      document.removeEventListener('click', away);
+    };
+  }, [box, open]);
 }

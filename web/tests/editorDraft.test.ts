@@ -76,3 +76,24 @@ describe('fromChange: each field he changes is marked, and Save sends it', () =>
     expect(changesOf(draft, fromItem(dinner, zone), zone)).toMatchObject(changes);
   });
 });
+
+describe('a saved place puts only its address on the event', () => {
+  const saved = [{name: 'Home', address: '845 Example St, Los Angeles'}, {name: 'Work', address: '1 Main St, Los Angeles'}];
+  const draft = (place: string, address: string | null = null) => ({...emptyDraft('event', '2026-10-07'), calendarId: 3, title: 'Lunch', place, address});
+  test.each<[string, string, string | null, {place: string | null; address: string | null}]>([
+    ['its name, in any case', 'work', null, {place: '1 Main St, Los Angeles', address: '1 Main St, Los Angeles'}],
+    ['Home', 'Home', null, {place: '845 Example St, Los Angeles', address: '845 Example St, Los Angeles'}],
+    ['a Google pick of the same name keeps Google\'s address', 'Work', '9 Elm St', {place: 'Work', address: '9 Elm St'}],
+    ['a place no saved one is called', 'Blue Door', null, {place: 'Blue Door', address: null}],
+  ])('%s', (_, place, address, out) => expect(createInput(draft(place, address), zone, 9, saved)).toMatchObject(out));
+
+  test('the line reads the saved name', () => {
+    expect(retype(draft(''), 'Lunch @work fri', '2026-10-07', [], [], 9 * 60, saved)).toMatchObject({title: 'Lunch', place: 'Work', address: null});
+  });
+
+  test('an edit takes the address only when the place changes', () => {
+    const before = {...draft('Work'), title: 'Standup'};
+    expect(changesOf({...before, title: 'Standup moved'}, before, zone, saved)).not.toHaveProperty('place');
+    expect(changesOf({...before, place: 'Home'}, before, zone, saved)).toMatchObject({place: '845 Example St, Los Angeles', address: '845 Example St, Los Angeles'});
+  });
+});

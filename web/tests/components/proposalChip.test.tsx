@@ -9,7 +9,7 @@
 // his. A later answer's proposal replaces an earlier one not acted on. The server is faked at
 // fetch: the calendars, the days' items and the commands.
 import type {AnswerOut, CalendarOut, ItemOut, ProposalOut} from '@setpoint/shared';
-import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
+import {DEFAULT_SETTINGS, SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
@@ -60,8 +60,8 @@ beforeEach(() => {
     }
     if (url.pathname.endsWith('/calendars')) return json(CALENDARS);
     if (url.pathname.endsWith('/items')) return json({from: url.searchParams.get('from'), to: url.searchParams.get('to'), items: url.searchParams.get('from') === '2026-10-09' ? [gym] : []});
-    if (url.pathname.endsWith('/settings')) return json({reminders: {event_minutes_before: null, task_time: null}, time_to_leave: {enabled: true, buffer_minutes: 5}, todoist: {default_project: null}});
-    // Settings › AI's keys. Every other list (recent places, accounts) is empty.
+    if (url.pathname.endsWith('/settings')) return json({...DEFAULT_SETTINGS, reminders: {event_minutes_before: null, task_time: null}, time_to_leave: {enabled: true, buffer_minutes: 5}, todoist: {default_project: null}});
+    // Settings › AI's keys. Every other list (accounts) is empty.
     if (url.pathname.endsWith('/ai')) return json({keys: {anthropic: true}});
     return json([]);
   });

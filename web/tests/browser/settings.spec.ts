@@ -108,13 +108,13 @@ test('board 30a: Settings › News, after Calendar, its warning glyph while FOX 
     await openAt(page, setpoint.base, 'news');
     const fox = page.locator('.settings .news-src', {hasText: 'FOX 11'});
     await fox.waitFor();
-    // The nav's three groups: Accounts · Mail, Calendar, News, Jobs (its page is
+    // The nav's three groups: Accounts · Mail, Calendar, Places, News, Jobs (its page is
     // jobsStates.spec.ts's) · Notifications, AI, Appearance, Security, a gap before each group's first.
-    assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Mail', 'Calendar', 'News', 'Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Sign out']);
+    assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Mail', 'Calendar', 'Places', 'News', 'Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Sign out']);
     assert.deepEqual(await page.locator('.settings .set-nav .nav.gap').allTextContents(), ['Mail', 'Notifications']);
     // ↑ ↓ walk the nav in its order, wrapping at the ends, all the way round to News.
     await page.locator('.settings .set-nav .nav.on').focus();
-    for (const [key, next] of [...['Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Accounts', 'Mail', 'Calendar', 'News'].map(name => ['ArrowDown', name]), ['ArrowUp', 'Calendar'], ['ArrowDown', 'News']]) {
+    for (const [key, next] of [...['Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Accounts', 'Mail', 'Calendar', 'Places', 'News'].map(name => ['ArrowDown', name]), ['ArrowUp', 'Places'], ['ArrowDown', 'News']]) {
       await page.keyboard.press(key!);
       await page.locator('.settings .set-nav .nav.on', {hasText: new RegExp(`^${next}$`)}).waitFor();
     }
@@ -691,17 +691,16 @@ test('Send test: it shows it\'s sending, a failure says so in words, a test that
   }
 });
 
-test('Calendar and Appearance: a calendar unlisted, Home set with its coordinates, Time to Leave waiting for Home then on with its buffer, Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
+test('Calendar, Places and Appearance: a calendar unlisted, Time to Leave pointing to Places for Home, Home set with its coordinates, a place added, a clash refused, renamed and removed, Time to Leave on with its buffer, Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'calendar');
     const settings = () => setpoint.api<Settings>('GET', '/settings');
-    // Every group has its label.
+    // Every group has its label. Home is Places', and Todoist's projects and default project are a section.
     await page.getByRole('switch', {name: 'Show Classes'}).waitFor();
-    // Time to Leave's group is here, under Home, and Todoist's projects and default project are a section.
-    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Home', 'Time to Leave', 'Todoist', 'Weather and places']);
-    // Without Home, Time to Leave can't work: off and disabled, saying what's missing.
+    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Time to Leave', 'Todoist', 'Weather']);
+    // Without Home, Time to Leave can't work: off and disabled, saying what's missing and where it's set.
     const leave = page.getByRole('switch', {name: 'Time to Leave'});
     const leaveRow = page.locator('.settings .set-row', {has: leave});
     assert.deepEqual([await leave.isDisabled(), await leave.getAttribute('aria-checked')], [true, 'false']);
@@ -710,12 +709,40 @@ test('Calendar and Appearance: a calendar unlisted, Home set with its coordinate
     await page.getByRole('switch', {name: 'Show Classes'}).click();
     await settled('Classes hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Classes')?.listed === false);
 
+    // Places: Home first, then Add place, then the Maps key last.
+    await leaveRow.getByRole('button', {name: 'Set Home in Places'}).click();
+    await page.locator('.settings .set-title', {hasText: 'Places'}).waitFor();
+    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Places', 'Google Maps']);
     await page.getByRole('button', {name: 'Set Home'}).click();
     await page.locator('.settings input[aria-label="Home"]').fill('blue door');
     await page.locator('.settings button.set-row', {hasText: 'Blue Door Bistro'}).click();
     const home = await settled('Home', settings, value => value.calendar.home !== null);
     assert.deepEqual(home.calendar.home, {label: 'Home', address: '845 Example St, Los Angeles', lat: 34.1478, lng: -118.1445});
     await page.locator('.settings .set-row', {hasText: '845 Example St, Los Angeles'}).waitFor();
+
+    // A place added: its name, then a pick. "home" is Home's, so it's refused with a line.
+    await page.getByRole('button', {name: 'Add place'}).click();
+    await page.locator('.settings input[aria-label="Name"]').fill('home');
+    await page.locator('.settings input[aria-label="Address"]').fill('blue door');
+    await page.locator('.settings button.set-row', {hasText: 'Blue Door Coffee'}).click();
+    await page.locator('.settings [role="alert"]', {hasText: 'Home is already a saved place'}).waitFor();
+    await page.locator('.settings input[aria-label="Name"]').fill('Work');
+    await page.locator('.settings button.set-row', {hasText: 'Blue Door Coffee'}).click();
+    await settled('Work saved', settings, value => value.places.saved.length === 1);
+    const work = page.locator('.settings [data-place="Work"]');
+    await work.waitFor();
+    // Edit renames it in place; Remove takes it off.
+    await work.getByRole('button', {name: 'Edit'}).click();
+    await page.locator('.settings input[aria-label="Name"]').fill('Office');
+    await page.locator('.settings input[aria-label="Name"]').press('Enter');
+    const kept = (await settings()).places.saved[0]!.address;
+    const renamed = await settled('renamed', settings, value => value.places.saved[0]?.name === 'Office');
+    assert.equal(renamed.places.saved[0]!.address, kept);
+    await page.locator('.settings [data-place="Office"]').getByRole('button', {name: 'Remove'}).click();
+    await settled('removed', settings, value => value.places.saved.length === 0);
+    await page.locator('.settings [data-place]').first().waitFor({state: 'detached'});
+    await page.locator('.settings .set-nav .nav', {hasText: 'Calendar'}).click();
+
     // With Home, Time to Leave says where it leaves from and shows on, as it's kept. It turns off and
     // back on, and the buffer steps by 5 min.
     await leaveRow.locator('.s', {hasText: /^Live routes from Home$/}).waitFor();

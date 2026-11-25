@@ -69,7 +69,7 @@ export function weatherAdapter(options: WeatherOptions = {}): SourceAdapter {
     const settings = getSettings(store).calendar;
     if (!settings.weather) return;
     if (!key) throw new ProviderError('auth', 'Weather needs a Pirate Weather key.');
-    if (!settings.home) throw new ProviderError('permanent', 'Set Home in Settings › Calendar for the forecast.');
+    if (!settings.home) throw new ProviderError('permanent', 'Set Home in Settings › Places for the forecast.');
     const url = `${(options.baseUrl ?? PIRATE_WEATHER_API).replace(/\/+$/, '')}/forecast/${encodeURIComponent(key)}/${encodeURIComponent(`${settings.home.lat},${settings.home.lng}`)}?exclude=minutely,hourly,alerts,flags&units=us`;
     let forecast: Forecast;
     try {

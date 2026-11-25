@@ -1,25 +1,22 @@
 // Settings › Calendar (not drawn): which calendars show and each Google calendar's colour (written
-// to Google), and Home for Time to Leave and the forecast (a place, with its coordinates). Then Time
-// to Leave's switch and Buffer, under Home since it leaves from there. Then Todoist's projects with
-// their colours (written to Todoist) and the default project for a task with none. Settings has no
-// Todoist page: its connection is Accounts › Sources' row. Then weather on or off, the forecast's
-// Pirate Weather key (the weather source's credential) and the Google Maps key that Places and Time
-// to Leave's routes use, both write-only. The page scrolls.
-import type {CalendarOut, PlaceSuggestionOut, SecretOut, Settings, SourceOut, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
+// to Google). Then Time to Leave's switch and Buffer; it leaves from Home, which is Settings ›
+// Places'. Then Todoist's projects with their colours (written to Todoist) and the default project
+// for a task with none. Settings has no Todoist page: its connection is Accounts › Sources' row.
+// Then weather on or off and the forecast's Pirate Weather key (the weather source's credential),
+// write-only. The page scrolls.
+import type {CalendarOut, Settings, SourceOut, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
 import {SWATCH_COLOURS, TODOIST_COLOURS, TODOIST_COLOUR_NAMES} from '@setpoint/shared';
-import {useState} from 'react';
 import type {CSSProperties} from 'react';
 import {useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, placeSuggestions, setCalendarColour, setCalendarListed, setProjectColour, settleCalendarColour, settleProjectColour, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
-import {findPlace, patchSettings, SECRETS_PATH, setSourceKey, SOURCES_PATH} from '../../api/settings.ts';
+import {CALENDARS_PATH, setCalendarColour, setCalendarListed, setProjectColour, settleCalendarColour, settleProjectColour, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
+import {patchSettings, setSourceKey, SOURCES_PATH} from '../../api/settings.ts';
 import {todoistConnected} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
 import {Line, Menu, Page, Row, Section, Select, SkeletonRows, Stepper, Switch, useAttempt} from './parts.tsx';
-import {KeyRow, SecretRow} from './Ai.tsx';
+import {KeyRow} from './Ai.tsx';
 import {openSettings} from './store.ts';
 import {refusalWords, withCode} from '../../logic/providerWords.ts';
-import {uuid} from '../uuid.ts';
 
 const INBOX = '';
 const BUFFER_STEP = 5;
@@ -28,8 +25,6 @@ export function CalendarPage() {
   const calendars = calendarsLoad.data;
   const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
   const settings = settingsLoad.data;
-  const secretsLoad = {path: SECRETS_PATH, ...useResource<SecretOut[]>(SECRETS_PATH)};
-  const secrets = secretsLoad.data;
   const sourcesLoad = {path: SOURCES_PATH, ...useResource<SourceOut[]>(SOURCES_PATH)};
   const sources = sourcesLoad.data;
   const weather = sources?.find(source => source.provider === 'weather');
@@ -38,11 +33,9 @@ export function CalendarPage() {
   const save = useAttempt();
   const saveProject = useAttempt();
   const saveLeave = useAttempt();
-  const [editingHome, setEditingHome] = useState(false);
-  const home = settings?.calendar.home ?? null;
 
   return (
-    <Page title="Calendar" loads={[calendarsLoad, settingsLoad, secretsLoad, sourcesLoad, projectsLoad]}>
+    <Page title="Calendar" loads={[calendarsLoad, settingsLoad, sourcesLoad, projectsLoad]}>
       <Section label="Calendars">
         {!calendars ? <SkeletonRows count={4} one /> : (
           <div className="set-group">
@@ -51,17 +44,6 @@ export function CalendarPage() {
             ))}
           </div>
         )}
-      </Section>
-
-      <Section label="Home">
-        {/* "Not set" only once it's known. */}
-        {!settings && !editingHome ? <SkeletonRows count={1} /> : <div className="set-group">
-          {editingHome ? <HomeSearch onDone={() => setEditingHome(false)} /> : (
-            <Row title={home ? home.label : 'Not set'} sub={home ? home.address : 'Time to Leave and the forecast start from Home'}>
-              <button className="btn out sm" type="button" onClick={() => setEditingHome(true)}>{home ? 'Change' : 'Set Home'}</button>
-            </Row>
-          )}
-        </div>}
       </Section>
 
       <Section label="Time to Leave">
@@ -95,8 +77,8 @@ export function CalendarPage() {
         <Line text={saveProject.line?.text ?? null} tone={saveProject.line?.tone} />
       </Section>
 
-      <Section label="Weather and places">
-        {!settings || !sources || !secrets ? <SkeletonRows count={3} /> : <div className="set-group">
+      <Section label="Weather">
+        {!settings || !sources ? <SkeletonRows count={2} /> : <div className="set-group">
           <Row title="Weather" sub="The forecast on each day, from Home">
             <Switch on={settings.calendar.weather} label="Weather" onChange={on => void save.attempt(() => patchSettings({calendar: {weather: on}}))} />
           </Row>
@@ -104,7 +86,6 @@ export function CalendarPage() {
             <KeyRow id="weather" title="Pirate Weather key" set={weather.has_credentials} disabled={weather.dev} save={key => setSourceKey(weather.id, key)}
               sub={weather.dev ? 'The forecast · invented in dev runs' : `The forecast · ${weather.has_credentials ? 'Set' : 'Not set'}`} />
           )}
-          <SecretRow name="places_api_key" title="Google Maps key" sub="Places and Time to Leave's routes" secrets={secrets} />
         </div>}
         <Line text={save.line?.text ?? null} tone={save.line?.tone} />
       </Section>
@@ -114,7 +95,7 @@ export function CalendarPage() {
 
 /**
  * Time to Leave (moved from Notifications): its switch, which needs Home and says so without
- * one, and the buffer, in 5 min steps from 0 to 120. It leaves from Home, the group above.
+ * one, pointing to Places where it's set, and the buffer, in 5 min steps from 0 to 120.
  */
 function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Parameters<typeof patchSettings>[0]) => void}) {
   const leave = settings.time_to_leave;
@@ -122,6 +103,7 @@ function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Pa
   return (
     <div className="set-group">
       <Row title="Time to Leave" sub={home ? `Live routes from ${home.label}` : 'Set Home first'}>
+        {!home && <button className="btn out sm" type="button" onClick={() => openSettings('places')}>Set Home in Places</button>}
         <Switch on={leave.enabled && !!home} disabled={!home} label="Time to Leave" onChange={on => change({time_to_leave: {enabled: on}})} />
       </Row>
       <Row title="Buffer" kind="ctl">
@@ -221,40 +203,5 @@ function ProjectRow({project}: {project: TodoistProjectOut}) {
         </>
       )}
     </div>
-  );
-}
-
-/** Home: type a place, pick a suggestion. Its coordinates come with it. */
-function HomeSearch({onDone}: {onDone: () => void}) {
-  const [session] = useState(() => uuid());
-  const [found, setFound] = useState<PlaceSuggestionOut[]>([]);
-  const ask = useAttempt();
-  const pick = useAttempt();
-  return (
-    <>
-      <div className="set-row ctl form">
-        <Icon name="location_on" size={16} />
-        <input className="fld grow" placeholder="Search for Home" aria-label="Home" autoFocus onChange={event => {
-          const query = event.target.value.trim();
-          if (!query) return setFound([]);
-          void ask.attempt(() => placeSuggestions(query, session)).then(list => list && setFound(list));
-        }} onKeyDown={event => {
-          if (event.key !== 'Escape') return;
-          event.stopPropagation();
-          onDone();
-        }} />
-        <button className="btn quiet sm" type="button" onClick={onDone}>Cancel</button>
-      </div>
-      {found.map(place => (
-        <button key={place.place_id} type="button" className="set-row one" style={{width: '100%', textAlign: 'left'}} onClick={() => void pick.attempt(async () => {
-          const chosen = await findPlace(place.place_id, session);
-          await patchSettings({calendar: {home: {label: 'Home', address: chosen.address || chosen.name, lat: chosen.lat, lng: chosen.lng}}});
-          return true;
-        }).then(done => done && onDone())}>
-          <div className="lines grow"><span className="t">{place.name}</span><span className="s">{place.address}</span></div>
-        </button>
-      ))}
-      {(ask.line || pick.line) && <div className="set-row one"><span className="s" style={{color: 'var(--alert)'}} role="alert">{(pick.line ?? ask.line)!.text}</span></div>}
-    </>
   );
 }

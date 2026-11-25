@@ -59,6 +59,13 @@
 .settings .set-row:last-child { border-bottom: 0; }
 .settings .set-row.one { min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
 .settings .set-row.ctl { min-height: 48px; padding-top: 7px; padding-bottom: 7px; }
+/* Places: Add place is a row to press, and its Name field sits before the address search. */
+.settings button.set-row.add-place { width: 100%; text-align: left; color: var(--ink2); }
+.settings .set-row .place-name-field { width: 160px; flex: none; }
+/* The address search's pin sits inside its field, so it reads as the field's and not a separator. */
+.settings .fld-pin { position: relative; display: flex; min-width: 0; }
+.settings .fld-pin > .fld { flex: 1; padding-left: 32px; }
+.settings .fld-pin > svg { position: absolute; left: 10px; top: 50%; margin-top: -8px; color: var(--ink3); pointer-events: none; }
 /* A row ending in presets (Mail's Code expiry) keeps its words whole: where the modal is too narrow for
    both, the presets drop under them rather than squeezing the title onto two lines. */
 .settings .set-row:has(> .seg) { flex-wrap: wrap; row-gap: 8px; }
@@ -363,6 +370,11 @@
   .settings.ph-set .set-main { flex: none; overflow: visible; padding: 4px 12px 16px; animation: none; }
   .settings.ph-set .set-main > :not(.set-x) { animation: none; }
   .settings.ph-set .set-head, .settings.ph-set .set-x { display: none; }
+  /* A saved place's buttons go under its name and address, and the Name field over its search. */
+  .settings.ph-set .set-row[data-place] { flex-wrap: wrap; row-gap: 4px; }
+  .settings.ph-set .set-row[data-place] > .lines { flex-basis: 100%; }
+  .settings.ph-set .set-row:has(> .place-name-field) { flex-wrap: wrap; row-gap: 8px; }
+  .settings.ph-set .set-row > .place-name-field { width: 100%; }
   .settings.ph-set .set-label { position: static; background: none; padding: 0 8px; flex-wrap: wrap; height: auto; min-height: 30px; }
   .settings.ph-set .set-row { min-height: 52px; flex-wrap: wrap; }
   /* Fields at 16 px, so iOS doesn't zoom into them, and a long one takes its row's width. */

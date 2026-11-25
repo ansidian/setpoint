@@ -21,7 +21,7 @@ import {localDay, localTime} from '../domain/time.ts';
 import {notFound, SetpointError} from '../errors.ts';
 import {AI_ENDPOINTS, anthropicConversation} from '../providers/ai/index.ts';
 import type {AiEndpoints, ConverseTurn, ToolResult} from '../providers/ai/index.ts';
-import {getSettings} from '../settings.ts';
+import {getSettings, savedPlaces} from '../settings.ts';
 import {isoNow, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import type {SyncEngine} from '../sync/engine.ts';
@@ -306,7 +306,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
     seen: new Set([...(thread?.transcript.seen ?? []), ...(scope !== null ? [scope] : [])]),
     questions: [...earlier.map(turn => turn.question), input.question],
   };
-  const system = alfredSystem(localDay(now, store.timeZone), store.timeZone, registered);
+  const system = alfredSystem(localDay(now, store.timeZone), store.timeZone, registered, savedPlaces(store));
   const tools = alfredTools(registered);
 
   let final: Final | null = null;

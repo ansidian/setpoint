@@ -136,6 +136,21 @@ describe('places (@ starts a place, up to the next phrase)', () => {
     expect(parsed).toMatchObject({title, place});
     expect(parsed.marks.map(mark => `${mark.kind}:${text.slice(mark.start, mark.end)}`)).toEqual(marks);
   });
+  // A saved place's name ends the place, as a project's does, in the name's own case.
+  test.each([
+    ['Lunch @Work fri', 'Lunch', 'Work', ['place:@Work', 'when:fri']],
+    ['Lunch @work bring wine', 'Lunch bring wine', 'Work', ['place:@work']],
+    ['Trip @Cabin at Tahoe sat', 'Trip', 'Cabin at Tahoe', ['place:@Cabin at Tahoe', 'when:sat']],
+    ['Dinner @Friend\'s House bring wine', 'Dinner bring wine', 'Friend\'s House', ['place:@Friend\'s House']],
+    ['Dinner @Friend\'s House, bring wine', 'Dinner bring wine', 'Friend\'s House', ['place:@Friend\'s House,']],
+    // Only a whole name: one it only starts like runs on as before.
+    ['Fix @Workshop door', 'Fix', 'Workshop door', ['place:@Workshop door']],
+    ['Coffee @Blue Door', 'Coffee', 'Blue Door', ['place:@Blue Door']],
+  ])('%s, with saved places', (text, title, place, marks) => {
+    const parsed = parseTitle(text, TODAY, CALENDARS, null, null, null, null, ['Work', 'Cabin at Tahoe', 'Friend\'s House', 'Home']);
+    expect(parsed).toMatchObject({title, place});
+    expect(parsed.marks.map(mark => `${mark.kind}:${text.slice(mark.start, mark.end)}`)).toEqual(marks);
+  });
 });
 
 describe('a task\'s #project', () => {
