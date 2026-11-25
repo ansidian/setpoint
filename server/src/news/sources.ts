@@ -1,6 +1,6 @@
 // News's sources. The built-in list here holds only what isn't local (national outlets, first-party
-// newsrooms, the tech press, the labs' pages, Hacker News, and the hazard APIs, which read the home
-// location in Settings › Calendar). The local list (the area's stations, a crime wire, Google News
+// newsrooms, the tech press, the labs' pages, Hacker News, and the hazard APIs, which read Home
+// in Settings › Places). The local list (the area's stations, a crime wire, Google News
 // search for the area) names the user's city. So it lives in the data directory, never in this public
 // repository: news-local-sources.json there. It's first copied from the uncommitted
 // server/news/local-sources.json when there is one (server/news/local-sources.example.json shows the

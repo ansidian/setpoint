@@ -77,9 +77,10 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.getByRole('button', {name: 'Add reminder'}).click();
     await page.getByRole('menuitem', {name: 'Time to Leave 5 min buffer'}).click();
     await page.locator('.editor .qchip.ttl', {hasText: 'Time to Leave'}).waitFor();
+    // Those clicks outside the place's suggestions closed them, without picking one.
+    assert.equal(await page.locator('.places').count(), 0);
     await line.click();
     await page.keyboard.press('End');
-    await page.locator('.places .menu-i.cur', {hasText: 'Blue Door'}).waitFor();
     await page.getByRole('button', {name: 'Create 2 events'}).waitFor();
 
     // ⌘Enter creates both. They wait for the provider in place, then settle.
@@ -757,7 +758,7 @@ test('a task\'s lone # shows every project before anything is typed; a pick goes
   }
 });
 
-test('an event\'s lone # shows every calendar, and a lone @ or an empty Place the places events have used', async () => {
+test('an event\'s lone # shows every calendar, and a lone @ or an empty Place the saved places; "@work" takes Work\'s address alone, and the menu closes on a click outside it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -775,27 +776,59 @@ test('an event\'s lone # shows every calendar, and a lone @ or an empty Place th
     await page.keyboard.press('Space');
     await until('the menu closes', () => calendars.count(), count => count === 0);
 
-    // "@": the places events have used, the latest first. A letter narrows them, and Enter takes one with its address.
+    // With nothing saved, "@" opens nothing: the places past events used aren't offered.
+    const places = page.getByRole('listbox', {name: 'Places'});
     await event.fill('');
     await event.pressSequentially('Lunch @');
-    const places = page.getByRole('listbox', {name: 'Places'});
-    await until('the recent places', () => places.locator('.place-name').allTextContents(), list => list.join() === 'University Student Union,Blue Door,Smile Dental');
-    await page.keyboard.type('b');
-    await until('narrowed to Blue Door', () => places.locator('.place-name').allTextContents(), list => list.join() === 'Blue Door');
+    await setpoint.idle();
+    assert.equal(await places.count(), 0);
+    await page.keyboard.press('Escape');
+    await page.locator('.editor').waitFor({state: 'detached'});
+
+    await setpoint.api('PATCH', '/settings', {
+      calendar: {home: {label: 'Home', address: '845 Example St, Los Angeles', lat: 34.1478, lng: -118.1445}},
+      places: {saved: [{name: 'Work', address: '1200 Market Ave, Los Angeles'}, {name: 'Friend\'s House', address: '9 Oak Ave, Pasadena'}]},
+    });
+    await page.reload();
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    await event.waitFor();
+
+    // "@": the saved places, Home first, each marked as saved. A letter narrows them, and Enter takes one.
+    await event.pressSequentially('Lunch @');
+    await until('the saved places', () => places.locator('.place-name').allTextContents(), list => list.join() === 'Home,Friend\'s House,Work');
+    assert.equal(await places.locator('.place-saved').count(), 3);
+    // A click outside it closes it, the editor staying.
+    await page.locator('.editor .eg').first().click({position: {x: 2, y: 2}});
+    await until('the list goes', () => places.count(), count => count === 0);
+    await event.focus();
+    await page.keyboard.press('End');
+    await page.keyboard.type('w');
+    await until('narrowed to Work', () => places.locator('.place-name').allTextContents(), list => list.join() === 'Work');
     await page.keyboard.press('Enter');
-    await until('Blue Door in the line', () => event.inputValue(), text => text === 'Lunch @Blue Door ');
-    assert.equal(await page.getByLabel('Place', {exact: true}).inputValue(), 'Blue Door');
-    await page.locator('.editor .place-address', {hasText: '2118 Sunset Blvd'}).waitFor();
+    await until('Work in the line', () => event.inputValue(), text => text === 'Lunch @Work ');
+    assert.equal(await page.getByLabel('Place', {exact: true}).inputValue(), 'Work');
+    await page.locator('.editor .place-address', {hasText: '1200 Market Ave, Los Angeles'}).waitFor();
     assert.equal(await places.count(), 0);
 
-    // The Place field, emptied and focused, offers them too. Tab through it goes on without picking.
+    // The Place field, emptied and clicked, offers them too, the click that opens them not closing
+    // them. Tab through it goes on without picking.
     await page.getByRole('button', {name: 'Clear place'}).click();
     await event.fill('Lunch');
-    await page.getByLabel('Place', {exact: true}).focus();
-    await until('the recent places under Place', () => places.locator('.place-name').count(), count => count === 3);
+    await page.getByLabel('Place', {exact: true}).click();
+    await until('the saved places under Place', () => places.locator('.place-name').count(), count => count === 3);
     await page.keyboard.press('Tab');
     await until('the list goes', () => places.count(), count => count === 0);
     assert.equal(await page.getByLabel('Place', {exact: true}).inputValue(), '');
+
+    // Typed in any case, a saved place's name takes its address, and only the address goes on the event.
+    await event.fill('Lunch @work fri noon');
+    await page.locator('.editor .place-address', {hasText: '1200 Market Ave, Los Angeles'}).waitFor();
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    assert.deepEqual((await day(setpoint, '2026-10-09')).filter(item => item.title === 'Lunch').map(item => [item.place, item.address]),
+      [['1200 Market Ave, Los Angeles', '1200 Market Ave, Los Angeles']]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1772,6 +1805,7 @@ test('a title that already ends in "@" and a letter opens with no menu; only an 
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
+    await setpoint.api('PATCH', '/settings', {places: {saved: [{name: 'Blue Door', address: '2118 Sunset Blvd'}]}});
     await openCalendar(page, setpoint.base);
     const title = page.locator('.editor input[aria-label="Title"]');
     const places = page.getByRole('listbox', {name: 'Places'});
@@ -1780,7 +1814,7 @@ test('a title that already ends in "@" and a letter opens with no menu; only an 
     await page.locator('.fd').waitFor();
     await page.keyboard.press('e');
     await title.waitFor();
-    // Selected on opening: typing replaces it, and its "@B" is the edit's, so the recent places show.
+    // Selected on opening: typing replaces it, and its "@B" is the edit's, so the saved places starting with it show.
     await page.keyboard.type('Ask @B');
     await places.waitFor();
     await page.keyboard.press('Escape');

@@ -105,8 +105,8 @@ async function fullAddress(options: PlacesOptions, key: string, placeId: string,
 }
 
 /**
- * One place's name, address and coordinates (Place Details, Places API (New)), for Home in
- * Settings › Calendar. The session token closes the autocomplete session it came from. Throws a
+ * One place's name, address and coordinates (Place Details, Places API (New)), for Home and the saved places in
+ * Settings › Places. The session token closes the autocomplete session it came from. Throws a
  * ProviderError with Google's words.
  */
 export async function placeDetails(options: PlacesOptions, key: string, placeId: string, sessionToken: string | null, signal?: AbortSignal): Promise<PlaceOut> {

@@ -16,7 +16,6 @@ import * as t from '../db/schema.ts';
 import {invalid, parse, SetpointError} from '../errors.ts';
 import {devPlace, devPlaces} from '../providers/dev/index.ts';
 import {placeDetails, placeSuggestions} from '../providers/gcal/places.ts';
-import {recentPlaceList} from '../queries/items.ts';
 import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
 import {SearchReader} from '../search/reading.ts';
 import type {SearchReaderOptions} from '../search/reading.ts';
@@ -83,14 +82,12 @@ export function searchApi(store: Store, {engine, alfred, prefill, reading, provi
     else proposalActed(store, turn_id, index);
     return c.body(null, 204);
   });
-  // The places events have used, before anything is typed. Before /api/places/:place_id.
-  api.get('/places/recent', c => c.json(recentPlaceList(store)));
   api.get('/places', async c => {
     const input = parse(placesInput, c.req.query());
     const key = readSecret(store, 'places_api_key');
     // The seed's dev runs suggest invented places instead (never Google's).
     if (!key && !production && store.db.select({id: t.sources.id}).from(t.sources).where(eq(t.sources.dev, true)).get()) return c.json(devPlaces(input.query));
-    if (!key) throw new SetpointError('places_not_configured', 'Add a Google Maps key in Settings › Calendar for place suggestions.', 503);
+    if (!key) throw new SetpointError('places_not_configured', 'Add a Google Maps key in Settings › Places for place suggestions.', 503);
     try {
       return c.json(await placeSuggestions(providers.places ?? {}, key, input.query, input.session_token, getSettings(store).calendar.home));
     } catch (error) {
@@ -99,7 +96,7 @@ export function searchApi(store: Store, {engine, alfred, prefill, reading, provi
     }
   });
 
-  // One place with its coordinates, for Home in Settings › Calendar, and the dev runs'
+  // One place with its coordinates, for Home in Settings › Places, and the dev runs'
   // invented places likewise.
   api.get('/places/:place_id', async c => {
     const input = parse(placeInput, c.req.query());
@@ -110,7 +107,7 @@ export function searchApi(store: Store, {engine, alfred, prefill, reading, provi
       if (!place) throw new SetpointError('not_found', 'No such place.', 404);
       return c.json(place);
     }
-    if (!key) throw new SetpointError('places_not_configured', 'Add a Google Maps key in Settings › Calendar for place suggestions.', 503);
+    if (!key) throw new SetpointError('places_not_configured', 'Add a Google Maps key in Settings › Places for place suggestions.', 503);
     try {
       return c.json(await placeDetails(providers.places ?? {}, key, placeId, input.session_token ?? null));
     } catch (error) {

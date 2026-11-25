@@ -136,6 +136,7 @@
 :is(.editor, .prop) .place-name { color: var(--ink); }
 :is(.editor, .prop) .place-name b { font-weight: 600; }
 :is(.editor, .prop) .place-address { font-size: 12px; }
+:is(.editor, .prop) .place-saved { font-size: 12px; flex: none; }
 /* A picked place's address, under the Place field. Why a project can't be sent. */
 .editor .eg > .place-address, .editor .eg > .field-note { padding: 0 10px; margin-top: -4px; font-size: 12px; }
 

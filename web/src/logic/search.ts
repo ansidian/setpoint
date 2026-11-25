@@ -2,7 +2,7 @@
 // asks, the results line, each reason's parts, the highlighted runs, what the reader highlights,
 // and how a proposal's time reads.
 import {parseOperators, searchTokens} from '@setpoint/shared';
-import type {AnswerItemOut, AnswerOut, AskContext, CalendarOut, Colour, ItemOut, ProposalItemOut, ProposalOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerItemOut, AnswerOut, AskContext, CalendarOut, PlaceSuggestionOut, SavedPlace, Colour, ItemOut, ProposalItemOut, ProposalOut, AskStep, ProposalPrefillFailure, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {clockTime, localDate} from './format.ts';
@@ -607,4 +607,21 @@ function standing(turns: AnswerOut[], at: number, acted: ReadonlySet<string>): S
     if (proposal.replaced || proposal.acted || (later && !acted.has(key))) return [];
     return [{turn_id: turn.turn_id, index, proposal}];
   });
+}
+
+/** A row of the place menu: Google's suggestion, or a saved place (`saved`, with no place id). */
+export type PlaceChoice = PlaceSuggestionOut & {saved?: true};
+
+/**
+ * The place menu. Before two letters (`short`: under a lone "@", or "@" and a letter, or an
+ * empty-ish Place field) it's the saved places that hold what's typed, all of them for nothing.
+ * From two letters (`query`) it's those that match first, marked as saved, then Google's
+ * suggestions once they're for this query (`found`). Null when nothing asks for it. `key` tells one
+ * list from another, for its cursor and whether it was closed.
+ */
+export function placeChoices(short: string | null, query: string, saved: readonly SavedPlace[], found: {query: string; list: PlaceSuggestionOut[]} | null): {key: string; query: string; list: PlaceChoice[]} | null {
+  const mine = (text: string): PlaceChoice[] => rankMatches(text, [...saved], one => one.name).map(one => ({place_id: '', name: one.name, address: one.address, saved: true}));
+  if (short !== null) return {key: `saved:${short}`, query: short, list: mine(short)};
+  if (query.length < 2) return null;
+  return {key: `search:${query}`, query, list: [...mine(query), ...(found?.query === query ? found.list : [])]};
 }

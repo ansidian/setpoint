@@ -1772,21 +1772,24 @@ test('Alfred about one email: its first line reads "Reading this email…", and 
   }
 });
 
-test('the proposal card\'s Place, emptied, offers the places events have used; a letter narrows them, Enter takes one, Esc closes only the list', async () => {
+test('the proposal card\'s Place, emptied, offers the saved places; a letter narrows them, Enter takes one, Esc closes only the list', async () => {
   const setpoint = await startSetpoint();
   try {
+    await setpoint.api('PATCH', '/settings', {places: {saved: [
+      {name: 'Smile Dental', address: '1420 Elm St'}, {name: 'University Student Union', address: '1 Campus Dr'}, {name: 'Blue Door', address: '2118 Sunset Blvd'},
+    ]}});
     const page = await load(setpoint);
     await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     const card = page.locator('.pane .prop:not([aria-hidden])');
     const place = card.locator('input[aria-label="Place"]');
     await place.waitFor();
-    // Its own place from the email offers nothing. Emptied, the field shows the recent places.
+    // Its own place from the email offers nothing. Emptied, the field shows the saved places.
     await place.focus();
     const places = card.getByRole('listbox', {name: 'Places'});
     assert.equal(await places.count(), 0);
     await place.fill('');
-    await until('the recent places', () => places.locator('.place-name').allTextContents(), list => list.join() === 'University Student Union,Blue Door,Smile Dental');
+    await until('the saved places', () => places.locator('.place-name').allTextContents(), list => list.join() === 'Blue Door,Smile Dental,University Student Union');
     // Esc closes the list, not the card.
     await page.keyboard.press('Escape');
     await until('the list goes', () => places.count(), count => count === 0);

@@ -152,7 +152,7 @@ export const DEV_PLACES: PlaceSuggestionOut[] = [
   {place_id: 'dev-student-union', name: 'University Student Union', address: ''},
 ];
 
-// Invented coordinates for the invented places (for Home in Settings › Calendar), around Los Angeles.
+// Invented coordinates for the invented places (for Home in Settings › Places), around Los Angeles.
 const DEV_LOCATIONS: Record<string, [number, number]> = {
   'dev-blue-door': [34.0901, -118.2768], 'dev-blue-door-bistro': [34.1478, -118.1445], 'dev-blue-door-coffee': [34.1425, -118.2551],
   'dev-smile-dental': [34.0736, -118.2400], 'dev-student-union': [34.0689, -118.4452],

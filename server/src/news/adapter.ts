@@ -18,7 +18,7 @@ export type NewsArticleRow = typeof t.newsArticles.$inferSelect;
 export interface NewsFetchContext {
   store: Store;
   source: NewsSourceRow;
-  // Settings › Calendar's home location: the NWS zone and the hazard APIs' distances come from it.
+  // Settings › Places' Home: the NWS zone and the hazard APIs' distances come from it.
   // Null until it's set, when a hazard adapter isn't ready (it has nothing to ask about).
   home: Home | null;
   // The honest, named User-Agent every request sends.

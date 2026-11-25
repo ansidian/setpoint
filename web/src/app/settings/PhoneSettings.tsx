@@ -1,5 +1,5 @@
-// Settings on the phone: a page at /settings/<page>, not the desktop's modal. Notifications and
-// Appearance are the desktop's own pages, in the phone's column; the header's title is a menu between
+// Settings on the phone: a page at /settings/<page>, not the desktop's modal. Places, Notifications
+// and Appearance are the desktop's own pages, in the phone's column; the header's title is a menu between
 // them, with Inbox after a divider, the way back as the Inbox's menu has Settings. Each of the other pages (Accounts, Mail, Calendar, News, Jobs, AI, Security) says it's on the
 // desktop, so a reconnect alert's link, a notification's or Alfred's "Settings › AI" always lands on a
 // page. Sign out is at the foot of each, asking once in the toast. Security stays on the desktop:
@@ -12,9 +12,10 @@ import {navigate} from '../router.ts';
 import {askSignOut} from '../signOut.ts';
 import {AppearancePage} from './Appearance.tsx';
 import {NotificationsPage} from './Notifications.tsx';
+import {PlacesPage} from './Places.tsx';
 import './settings.css';
 
-const ON_THE_PHONE = ['notifications', 'appearance'] as const satisfies readonly SettingsPage[];
+const ON_THE_PHONE = ['places', 'notifications', 'appearance'] as const satisfies readonly SettingsPage[];
 
 export function PhoneSettings({page}: {page: SettingsPage}) {
   const {label, icon} = SETTINGS_NAV[page];
@@ -29,7 +30,7 @@ export function PhoneSettings({page}: {page: SettingsPage}) {
         })), 'divider', {label: 'Inbox', command: true, onChoose: () => navigate({page: 'inbox', open: null})}]} />
       </header>
       <div className="content settings ph-set">
-        {page === 'notifications' ? <NotificationsPage /> : page === 'appearance' ? <AppearancePage /> : (
+        {page === 'places' ? <PlacesPage /> : page === 'notifications' ? <NotificationsPage /> : page === 'appearance' ? <AppearancePage /> : (
           <section className="set-main ph-set-away" aria-label={label}>
             <Icon name={icon} size={20} />
             <p>{label} is on the desktop</p>

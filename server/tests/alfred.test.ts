@@ -9,7 +9,7 @@ import {calendarSearchInput, searchInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {alfredStep} from '../src/alfred/ask.ts';
-import {fenced} from '../src/alfred/prompt.ts';
+import {alfredSystem, fenced} from '../src/alfred/prompt.ts';
 import {calendarNamed, colourNamed} from '../src/alfred/naming.ts';
 import {runTool} from '../src/alfred/tools.ts';
 import * as t from '../src/db/schema.ts';
@@ -360,6 +360,31 @@ describe('Alfred and the calendar', () => {
     })]);
     expect(context.proposals[0]!.source).toBeUndefined();
     expect(context.proposals[0]!.change).toBeUndefined();
+  });
+
+  test('a place Alfred proposes that names a saved place, in any case, is its address alone', () => {
+    const w = world({seed: true});
+    updateSettings(w.store, {calendar: {home: {label: 'Home', address: '845 Example St, Los Angeles', lat: 34.1478, lng: -118.1445}}, places: {saved: [{name: 'Work', address: '1 Main St, Los Angeles'}]}});
+    const question = 'lunch at work tuesday at noon';
+    const context = toolContext(w, [question]);
+    runTool(context, 'propose_item', {owner_instruction: question, kind: 'event', title: 'Lunch', date: '2026-10-13', start_time: '12:00', place: 'work'});
+    expect(context.proposals[0]!.item.place).toBe('1 Main St, Los Angeles');
+    // A change to a saved place, and a place none is called, as given.
+    const move = 'move dinner home';
+    const changing = toolContext(w, [move]);
+    const dinner = w.store.db.select().from(t.items).where(eq(t.items.title, 'Dinner with Sam')).get()!;
+    runTool(changing, 'propose_change', {owner_instruction: move, key: String(dinner.id), place: 'Home'});
+    expect(changing.proposals[0]!.change!.changes).toMatchObject({place: '845 Example St, Los Angeles'});
+    const other = 'coffee at blue door';
+    const plain = toolContext(w, [other]);
+    runTool(plain, 'propose_item', {owner_instruction: other, kind: 'event', title: 'Coffee', date: '2026-10-13', start_time: '09:00', place: 'Blue Door'});
+    expect(plain.proposals[0]!.item.place).toBe('Blue Door');
+  });
+
+  test('Alfred is given the saved places, Home first', () => {
+    expect(alfredSystem('2026-10-07', 'America/Los_Angeles', [], [{name: 'Home', address: '845 Example St'}, {name: 'Work', address: '1 Main St'}]))
+      .toContain('Saved places: Home (845 Example St); Work (1 Main St).');
+    expect(alfredSystem('2026-10-07', 'America/Los_Angeles')).not.toContain('Saved places');
   });
 
   test('propose_change on a recurring event\'s occurrence changes that occurrence alone, keeping its length, the item unchanged until Save', () => {

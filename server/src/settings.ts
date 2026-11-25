@@ -1,6 +1,6 @@
 // Typed settings over one row per section, with `@setpoint/shared`'s defaults for anything unset.
-import {DEFAULT_SETTINGS, SETTINGS_SECTIONS, settingsSchema} from '@setpoint/shared';
-import type {Settings, SettingsPatch} from '@setpoint/shared';
+import {allSavedPlaces, DEFAULT_SETTINGS, savedPlaceFor, SETTINGS_SECTIONS, settingsSchema} from '@setpoint/shared';
+import type {SavedPlace, Settings, SettingsPatch} from '@setpoint/shared';
 import * as t from './db/schema.ts';
 import {parse} from './errors.ts';
 import {isoNow, transaction} from './store.ts';
@@ -18,6 +18,17 @@ export function getSettings(store: Store): Settings {
     const one = settingsSchema.shape[section].safeParse(merged[section]);
     return [section, one.success ? one.data : DEFAULT_SETTINGS[section]];
   })) as Settings;
+}
+
+/** Home, then the other saved places (Settings › Places). */
+export function savedPlaces(store: Store): SavedPlace[] {
+  const settings = getSettings(store);
+  return allSavedPlaces(settings.calendar.home, settings.places.saved);
+}
+
+/** A place's text, or the address alone of the saved place it names (any case). */
+export function placeOrSaved(store: Store, place: string): string {
+  return savedPlaceFor(place, savedPlaces(store))?.address ?? place;
 }
 
 export function updateSettings(store: Store, patch: SettingsPatch): Settings {

@@ -1,6 +1,7 @@
 // The calendar editor's drafts as pure rules (Editor.tsx draws them): a draft from a day, an item, an
 // email's proposal or an .ics event, the line read and retyped, and what Create or Save sends.
-import type {CalendarOut, EventColour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ProposalChangeOut, ProposalField, ProposalOut} from '@setpoint/shared';
+import {savedPlaceFor} from '@setpoint/shared';
+import type {CalendarOut, EventColour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, ProposalChangeOut, ProposalField, ProposalOut, SavedPlace} from '@setpoint/shared';
 import type {Slot} from '../app/calendar/Editor.tsx';
 import {editedWhen, extraDays, parseTitle, taskRepeat} from './compose.ts';
 import type {ParsedTitle, ReminderBase, ReminderRead} from './compose.ts';
@@ -245,10 +246,10 @@ const lineHash = (draft: Draft, projects: string[], calendars: CalendarOut[]) =>
  * A draft's line as parsed. An edited item's (`original`) reads only what the edit typed.
  * Its plain phrases are hidden from the parser and come back as title words.
  */
-export function readLine(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], original: Draft | null, taskTime: number): ParsedTitle {
+export function readLine(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], original: Draft | null, taskTime: number, places: readonly SavedPlace[] = []): ParsedTitle {
   const hidden = masked(text, draft.plain);
   const parsed = parseTitle(hidden.text, today, calendars.map(calendar => calendar.name), draft.picked, lineHash(draft, projects, calendars),
-    original ? {before: original.title, day: original.date} : null, reminderBase(draft, original, taskTime));
+    original ? {before: original.title, day: original.date} : null, reminderBase(draft, original, taskTime), places.map(place => place.name));
   if (!hidden.words.length) return parsed;
   const back = (value: string | null) => (value === null ? null : unmasked(value, hidden.words));
   return {...parsed, title: unmasked(parsed.title, hidden.words), place: back(parsed.place), calendar: back(parsed.calendar), project: back(parsed.project)};
@@ -260,9 +261,9 @@ export function readLine(draft: Draft, text: string, today: string, calendars: C
  * their rows stay until a phrase for one is typed. A time typed after the date was set by hand keeps the days picked. A reminder phrase
  * typed adds to the item's reminders.
  */
-export function retypeEdit(draft: Draft, text: string, original: Draft, today: string, calendars: CalendarOut[], projects: string[], taskTime: number): Draft {
+export function retypeEdit(draft: Draft, text: string, original: Draft, today: string, calendars: CalendarOut[], projects: string[], taskTime: number, places: readonly SavedPlace[] = []): Draft {
   const plain = retyped(draft.plain, draft.text, text);
-  const parsed = readLine({...draft, plain}, text, today, calendars, projects, original, taskTime);
+  const parsed = readLine({...draft, plain}, text, today, calendars, projects, original, taskTime, places);
   // A phrase typed for a field set in its row takes it back.
   const manual = keptPicks(draft.manual, parsed);
   const next = {...draft, text, plain, title: parsed.title, manual};
@@ -291,9 +292,9 @@ export function retypeEdit(draft: Draft, text: string, original: Draft, today: s
 }
 
 /** The line typed into a draft: its title words are the title, and its phrases fill the fields not set by hand. */
-export function retype(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], taskTime: number): Draft {
+export function retype(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], taskTime: number, places: readonly SavedPlace[] = []): Draft {
   const plain = retyped(draft.plain, draft.text, text);
-  const parsed = readLine({...draft, plain}, text, today, calendars, projects, null, taskTime);
+  const parsed = readLine({...draft, plain}, text, today, calendars, projects, null, taskTime, places);
   // A phrase typed for a field set in its row takes it back.
   const manual = keptPicks(draft.manual, parsed);
   const next = {...draft, text, plain, title: parsed.title, manual};
@@ -354,7 +355,18 @@ export function retype(draft: Draft, text: string, today: string, calendars: Cal
 }
 
 /** What creating a draft sends. */
-export function createInput(draft: Draft, timeZone: string, todoist: number | null): ItemCreateInput | null {
+/**
+ * The place and address an event goes out with. A place no Places pick gave an address that names a
+ * saved place ("Work", "home") is that place's address alone, copied now: the name isn't kept.
+ */
+export function placeOut(draft: Pick<Draft, 'place' | 'address'>, places: readonly SavedPlace[]): {place: string | null; address: string | null} {
+  const place = draft.place.trim();
+  const saved = draft.address === null ? savedPlaceFor(place, places) : null;
+  if (saved) return {place: saved.address, address: saved.address};
+  return {place: place || null, address: place ? draft.address : null};
+}
+
+export function createInput(draft: Draft, timeZone: string, todoist: number | null, places: readonly SavedPlace[] = []): ItemCreateInput | null {
   // Reminders left at Settings' default are left out, so the server applies it.
   if (!draft.title.trim()) return null;
   if (draft.kind === 'task') {
@@ -374,7 +386,7 @@ export function createInput(draft: Draft, timeZone: string, todoist: number | nu
     : {all_day: false, starts_at: instantAt(draft.date, draft.start, timeZone), ends_at: instantAt(draft.date, draft.end ?? draft.start + DEFAULT_LENGTH, timeZone), start_date: null, end_date: null};
   return {
     kind: 'event', calendar_id: draft.calendarId, title: draft.title.trim(), ...when, due_date: null, due_at: null, time_zone: timeZone,
-    recurrence: draft.recurrence, place: draft.place.trim() || null, address: draft.place.trim() ? draft.address : null, attendees: [],
+    recurrence: draft.recurrence, ...placeOut(draft, places), attendees: [],
     ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: draft.leaveReminder, project: null, colour: draft.colour, labels: [], repeat: null, description: writeDescription('html', draft.description),
   };
 }
@@ -382,7 +394,7 @@ export function createInput(draft: Draft, timeZone: string, todoist: number | nu
 const sameList = (a: number[], b: number[]) => a.length === b.length && a.every((value, index) => value === b[index]);
 
 /** What saving an edited draft changes, against the item it came from. */
-export function changesOf(draft: Draft, original: Draft, timeZone: string): ItemChanges {
+export function changesOf(draft: Draft, original: Draft, timeZone: string, places: readonly SavedPlace[] = []): ItemChanges {
   const changes: ItemChanges = {};
   if (draft.title.trim() !== original.title) changes.title = draft.title.trim();
   const undating = draft.kind === 'task' && draft.undated && !original.undated;
@@ -396,10 +408,7 @@ export function changesOf(draft: Draft, original: Draft, timeZone: string): Item
       Object.assign(changes, {all_day: false, start_date: null, end_date: null, starts_at: instantAt(draft.date, draft.start, timeZone), ends_at: instantAt(draft.date, draft.end ?? draft.start + DEFAULT_LENGTH, timeZone)});
     }
   }
-  if (draft.place.trim() !== original.place || draft.address !== original.address) {
-    changes.place = draft.place.trim() || null;
-    changes.address = draft.place.trim() ? draft.address : null;
-  }
+  if (draft.place.trim() !== original.place || draft.address !== original.address) Object.assign(changes, placeOut(draft, places));
   if (draft.reminders && !sameList(draft.reminders, original.reminders ?? [])) changes.reminders = draft.reminders;
   if (draft.leaveReminder !== original.leaveReminder) changes.leave_reminder = draft.leaveReminder;
   if (draft.recurrence !== original.recurrence) changes.recurrence = draft.recurrence;

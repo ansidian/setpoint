@@ -240,7 +240,7 @@ test('phone Settings: Notifications and Appearance with the title menu between t
 
     // The title menu goes to Appearance, where Night and Light switch the page.
     await page.locator('.hd .ph-title-btn').tap();
-    assert.deepEqual(await page.getByRole('menu').getByRole('menuitemradio').allTextContents(), ['Notifications', 'Appearance']);
+    assert.deepEqual(await page.getByRole('menu').getByRole('menuitemradio').allTextContents(), ['Places', 'Notifications', 'Appearance']);
     await page.getByRole('menuitemradio', {name: 'Appearance'}).tap();
     await page.getByRole('radio', {name: /Night/}).tap();
     await until('Night', () => page.evaluate(() => document.documentElement.dataset.theme), theme => theme === 'night');

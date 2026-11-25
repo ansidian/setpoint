@@ -4,6 +4,7 @@ export * from './quoting.ts';
 export * from './inbox.ts';
 export * from './seed.ts';
 export * from './settings.ts';
+export * from './places.ts';
 export * from './link.ts';
 export * from './freeBusy.ts';
 export * from './api/common.ts';

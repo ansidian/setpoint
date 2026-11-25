@@ -43,7 +43,8 @@
 //   item's day. Without a repeat before them they stay words, and "for 2 days" is a length.
 // - "@Blue Door": a place, up to the next time, day, repeat or calendar (two letters at least), or
 //   just its picked text once a Places suggestion was picked for it, a link up to the next space,
-//   or up to a comma, which goes with it.
+//   the longest saved place's name it starts with (any case, in the name's), or up to a comma,
+//   which goes with it.
 // - "#Home": a task's project, when the projects are given: the longest project name it starts with
 //   (any case), else up to the next phrase as a place does; a pick or a comma ends it too.
 // - "#school": an event's calendar, when the calendars are given: the longest text a calendar's name
@@ -665,10 +666,12 @@ export function typedSpan(before: string, after: string): {start: number; end: n
  *
  * `remind` is what the item's reminders count from when the line names no day or time. With none,
  * reminder phrases stay words.
+ *
+ * `places` are the saved places' names, where an "@" place stops.
  */
 export function parseTitle(text: string, today: string, calendars: string[] = [], picked: string | null = null,
   hash: {kind: 'project' | 'calendar'; names: string[]; picked: string | null} | null = null,
-  edit: {before: string; day: string} | null = null, remind: ReminderBase | null = null): ParsedTitle {
+  edit: {before: string; day: string} | null = null, remind: ReminderBase | null = null, places: readonly string[] = []): ParsedTitle {
   const state = fresh(hash?.kind !== 'project', remind);
   // Reminders before the days and times, so "remind sun 8pm" doesn't move the item.
   const phrases = [...calendarMatchers(calendars), ...REMINDERS, ...REPEATS, ...ENDINGS, ...TIMES, LENGTH, SPAN, ...DATES];
@@ -691,8 +694,9 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
       while (next < words.length && !phraseStarts(line, words[next]!, phrases, today, !!hash, state.event)) next += 1;
       const stopsAtPick = pick !== null && line.startsWith(pick, from) && ends(from + pick.length);
       const url = place ? PLACE_URL.exec(line.slice(from)) : null;
-      // A project stops at the longest name it starts with.
-      const known = hash?.kind !== 'project' ? undefined : hash.names.filter(name => lower(line.slice(from, from + name.length)) === lower(name) && ends(from + name.length))
+      // A project, or a saved place, stops at the longest name it starts with.
+      const names = place ? places : hash?.kind === 'project' ? hash.names : [];
+      const known = names.filter(name => lower(line.slice(from, from + name.length)) === lower(name) && ends(from + name.length))
         .sort((a, b) => b.length - a.length)[0];
       // A calendar is the longest text, ending a word, that a calendar's name starts with.
       let prefix = from;
@@ -707,7 +711,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
       if (comma >= 0) end = from + comma;
       const value = line.slice(from, end).trim();
       if (value.length >= (place ? 2 : 1)) {
-        if (place) state.place = value;
+        if (place) state.place = known && !stopsAtPick && end === from + known.length ? known : value;
         else if (hash!.kind === 'project') state.project = known && !stopsAtPick && end === from + known.length ? known : value;
         else state.calendar = stopsAtPick ? value : hash!.names.find(name => lower(name) === lower(value)) ?? hash!.names.find(name => lower(name).startsWith(lower(value)))!;
         // A comma right after it goes with it, out of the title.
