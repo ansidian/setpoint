@@ -42,6 +42,13 @@ const CASES: {name: string; node: ReactNode}[] = [
   {name: 'ink3 on a cursor row', node: on('card', 'sub2', <span className="ink3" data-text>8:15 PM</span>)},
   {name: 'ink3 on an open row', node: onLift(<span className="ink3" data-text>8:15 PM</span>)},
   {name: 'Draft on an open row', node: onLift(<div className="row"><span className="drafted" data-text>Draft</span></div>)},
+  // A read row's sender and subject, and a Noise row's, on the card's cursor row and lifted.
+  {name: 'a read sender on a cursor row', node: on('card', 'sub2', <div className="row"><span className="from" data-text>Woodgrove Bank</span></div>)},
+  {name: 'a read subject on a cursor row', node: on('card', 'sub2', <div className="row"><span className="subj"><b data-text>Checking ending in 1234</b></span></div>)},
+  {name: 'a read subject on an open row', node: on('card', null, <div className="row open"><span className="subj"><b data-text>Checking ending in 1234</b></span></div>)},
+  {name: 'an unread Noise subject on a cursor row', node: on('card', 'sub2', <div className="row noise unread"><span className="subj"><b data-text>Ends Sunday</b></span></div>)},
+  {name: 'a read Noise sender on a cursor row', node: on('card', 'sub2', <div className="row noise"><span className="from" data-text>Tailspin Toys</span></div>)},
+  {name: 'a read Noise subject on an open row', node: on('card', null, <div className="row noise open"><span className="subj"><b data-text>Ends Sunday</b></span></div>)},
   {name: 'the frame\'s Reconnect, hovered', node: inFrame('sub2', <span className="acct"><span className="reconnect" data-text>Reconnect</span></span>)},
   {name: 'the frame\'s soon, hovered', node: inFrame('sub2', <span className="today-row"><span className="in soon" data-text>in 5 min</span></span>)},
   {name: 'the frame\'s now, hovered', node: inFrame('sub2', <span className="today-row"><span className="in now" data-text>now</span></span>)},

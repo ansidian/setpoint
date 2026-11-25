@@ -60,6 +60,7 @@ account names). The UI says "Done", never "handled".
 | `chip` | `#0f1013` | `#ffffff` | inputs |
 | `modal` | `#0c0d0f` | `#ffffff` | popovers and menus |
 | `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#999ba0` | `#1b2430` / `#465263` / `#566271` | primary / secondary / tertiary text and icons; Light's are slate, everywhere |
+| `inkUnread` / `inkRead` / `inkReadSubj` / `inkNoise` | `#f5f4f0` / `#9c9ea3` / `#8e9095` / `#8e9095` | `#1b2430` / `#465263` / `#465263` / `#566271` | a mail row's unread sender and subject, its read sender, its read subject, a read Noise row's sender and subject (Glyphs › Unread) |
 | `onInk` | `#050506` | `#ffffff` | text on `ink`, on the unread badge, the phone's attention pill and solid calendar chips |
 | `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(20,35,55,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
 | `hair` | `rgba(255,255,255,.07)` | `rgba(20,35,55,.08)` | dividers, grid lines |
@@ -280,8 +281,12 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   there only for the landing.
 - **Unread:** a 6 px `ink` dot in a 12 px gutter at the row's start (Attention's `caution`, and a
   read Attention row not yet Done keeps a 6 px `caution` ring); unread sender and subject are
-  `ink` at 500, read are `ink2` at 400. A Noise row recedes: unread, `ink2` at 400 with an `ink3` dot;
-  read, `ink3`.
+  `inkUnread` at 500, read are at 400, the sender `inkRead` and the subject `inkReadSubj`. In Light
+  these are `ink` and `ink2`. In Night unread is near-white `#f5f4f0` and read steps down to grey,
+  the sender `#9c9ea3` and the subject `#8e9095` (4.5:1 on the cursor row), so unread no longer
+  shows by its dot alone; on a lifted row read takes `ink2`. A Noise row recedes: unread, read's inks
+  at 400 with an `ink3` dot; read, `inkNoise` for sender and subject (Light `ink3`, Night the read
+  subject's grey, as no dimmer grey reads 4.5:1 on the cursor row).
 - **The mark** is **Day stack**: three calendar chips stacked, `cool` on top,
   `caution` lifted and tilted −6° in the middle, a shorter `violet` below. A bare 18 px glyph before
   the name, no tile, in the theme's tokens; they are the brand's and stay put when an account or

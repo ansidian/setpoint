@@ -325,10 +325,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ud::before { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 :is(.arow, .row).att.unread .ud::before { background: var(--caution); }
 :is(.arow, .row).att:not(.unread) .ud::before { box-shadow: inset 0 0 0 1.5px var(--caution); }
-/* Noise recedes: an unread Noise row's sender and subject `ink2` at 400 and its dot `ink3`. A read one's `ink3`. */
-.row.noise.unread .from, .row.noise.unread .subj b { color: var(--ink2); font-weight: 400; }
+/* Noise recedes: an unread Noise row reads as a read one, at 400 with an `ink3` dot. A read one's
+   sender and subject are `inkNoise`. */
+.row.noise.unread .from { color: var(--inkRead); font-weight: 400; }
+.row.noise.unread .subj b { color: var(--inkReadSubj); font-weight: 400; }
 .row.noise.unread .ud::before { background: var(--ink3); }
-.row.noise:not(.unread) .from, .row.noise:not(.unread) .subj b { color: var(--ink3); }
+.row.noise:not(.unread) .from, .row.noise:not(.unread) .subj b { color: var(--inkNoise); }
 /* A row (or header, or the prompt) leaving folds away under app/fold.ts's motion, out of the pointer's way. */
 .list .leaving { overflow: hidden; pointer-events: none; }
 /* Before it folds, a row Done or Trash took plays a 120 ms beat: Done tints it `good` (14%,
@@ -368,9 +370,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .from.to .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .from.to .more { font-size: 12px; }
 .from.to.unknown .who { color: var(--ink3); }
+/* Read and unread (DESIGN.md › Glyphs › Unread): the sender and subject in the theme's read and
+   unread inks. In Night, read steps down to grey and unread is near-white; Light's are `ink2` and `ink`. */
 .row .subj .sum { color: var(--ink3); }
-.row.unread .from, .row.unread .subj b { color: var(--ink); font-weight: 500; }
-.row .subj b { font-weight: 400; color: var(--ink2); }
+.row .from, .arow .from { color: var(--inkRead); }
+.row.unread .from, .row.unread .subj b { color: var(--inkUnread); font-weight: 500; }
+.row .subj b { font-weight: 400; color: var(--inkReadSubj); }
 .row .subj.code-line { display: flex; align-items: center; gap: 10px; }
 /* The reply mark on an email the user answered, in `ink3`. */
 .row .replied { flex: none; display: inline-flex; color: var(--ink3); }
@@ -403,7 +408,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* In Night, a lifted row's quiet text (`ink3`) and its read sender and subject take `ink2`, 5.6:1 on
    the tint. */
 [data-theme="night"] :is(.row, .arow):is(.open, .sel), [data-theme="night"] .ag-item.sel { --ink3: var(--ink2); }
-[data-theme="night"] :is(.row, .arow):is(.open, .sel):not(.unread) :is(.from, .subj b) { color: var(--ink2); }
+[data-theme="night"] :is(.row, .arow):is(.open, .sel) { --inkRead: var(--ink2); --inkReadSubj: var(--ink2); --inkNoise: var(--ink2); }
 /* A band right after a lifted row would cover its shadow, so it draws the shadow's lower half in
    its own top, over its fill, cursor and hover; not while it's stuck at the list's top, with the
    row scrolled away under it. The list keeps 6 px under its last row for the shadow. */
@@ -416,11 +421,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .arow .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
 .arow .l1 .from { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .arow .l1 .via { color: var(--ink3); font-size: 12px; white-space: nowrap; }
-.arow.unread .from { color: var(--ink); font-weight: 500; }
+.arow.unread .from { color: var(--inkUnread); font-weight: 500; }
 .arow .r1 { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12px; height: 18px; justify-content: flex-end; white-space: nowrap; }
 .arow .r1 .age { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.arow .l2 { grid-column: 2 / 4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink2); }
-.arow.unread .l2 { color: var(--ink); }
+.arow .l2 { grid-column: 2 / 4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--inkReadSubj); }
+.arow.unread .l2 { color: var(--inkUnread); }
 .arow .l3 { grid-column: 2 / 4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
 .arow.protected .l2 { color: var(--alert); font-weight: 500; }
 .tag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edge); font-size: 11.5px; color: var(--ink2); white-space: nowrap; flex: none; }

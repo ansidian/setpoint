@@ -28,6 +28,13 @@ export const colour = {
   ink2: '#a3a4a8',
   // On the card's cursor and open row (`sub2`, `sub3` over `card`) it still reads 4.5:1.
   ink3: '#999ba0',
+  // A mail row's sender and subject: unread near-white, read stepping down to grey (sender, then
+  // subject). The subject reads 4.5:1 on the card's cursor row (`sub2`). A read Noise row takes the
+  // subject's grey for both, the quietest grey that still reads there.
+  inkUnread: '#f5f4f0',
+  inkRead: '#9c9ea3',
+  inkReadSubj: '#8e9095',
+  inkNoise: '#8e9095',
   onInk: '#050506',
   onAccent: '#050506',
   onAlert: '#1a0806',
@@ -113,6 +120,11 @@ export const lightColour: Record<ColourToken, string> = {
   ink: '#1b2430',
   ink2: '#465263',
   ink3: '#566271',
+  // Light's rows keep `ink` unread, `ink2` read and `ink3` for a read Noise row.
+  inkUnread: '#1b2430',
+  inkRead: '#465263',
+  inkReadSubj: '#465263',
+  inkNoise: '#566271',
   onInk: '#ffffff',
   onAccent: '#ffffff',
   onAlert: '#ffffff',
