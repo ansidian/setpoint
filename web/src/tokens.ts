@@ -1,8 +1,8 @@
-// Setpoint's design tokens, defined once for Night and Light. They mirror DESIGN.md › Tokens and
-// design-export/styles/setpoint.css, so change the two together. Nothing checks they agree.
+// Setpoint's design tokens, defined once for Night and Light. DESIGN.md › Tokens records them, so
+// change the two together. Nothing checks they agree. design-export keeps the boards' original values.
 // applyTokens() publishes the theme-free ones as CSS custom properties (`--r-card`, `--dur-fast`,
-// `--sidebar`, `--a-business`…), and applyTheme() a theme's colours, shadows and tints, under the
-// export's names (`--page`, `--shadow-pop`, `--evtint`).
+// `--sidebar`, `--a-business`…) and the Night scope's rule, and applyTheme() a theme's colours,
+// shadows and tints, under the export's names (`--page`, `--shadow-pop`, `--evtint`).
 import type {Colour} from '@setpoint/shared';
 
 export type Theme = 'night' | 'light';
@@ -10,6 +10,8 @@ export type Theme = 'night' | 'light';
 /** Night. Keys are DESIGN.md's token names. `panel`, `ink3` and `cyan` depart from the export's. */
 export const colour = {
   page: '#050506',
+  // The dark frame around the content cards: the sidebar, each page's header row and the key hints.
+  frame: '#050506',
   panel: '#0b0c0e',
   card: '#0c0d0f',
   cardOn: '#131417',
@@ -34,6 +36,11 @@ export const colour = {
   sub4: 'rgba(255,255,255,.17)',
   stripe: 'rgba(255,255,255,.045)',
   scrim: 'rgba(0,0,0,.72)',
+  // A header band on a card (days, weekdays, the day pane's and News's sections) and its text.
+  band: '#1c1d22',
+  bandInk: '#dcdbd7',
+  // The line between a card's rows.
+  rowLine: 'rgba(255,255,255,.03)',
   caution: 'oklch(0.75 0.16 40)',
   alert: 'oklch(0.72 0.17 25)',
   warm: 'oklch(0.8 0.11 55)',
@@ -81,33 +88,37 @@ export const colour = {
 export type ColourToken = keyof typeof colour;
 
 /**
- * Light, with `page` #f6f6f4, a deeper `ink2`, a white `cardOn`, a greener `cyan` and a stronger
- * calendar tint than the export's.
+ * Light, with `page` #f6f6f4, slate inks, a white `cardOn`, a greener `cyan` and a stronger
+ * calendar tint than the export's. Its frame is Night's `panel`, and is drawn as Night (nightScope).
  */
 export const lightColour: Record<ColourToken, string> = {
   page: '#f6f6f4',
+  frame: '#0b0c0e',
   panel: '#f1f1ee',
   card: '#ffffff',
   cardOn: '#ffffff',
   toast: '#ffffff',
   chip: '#ffffff',
   modal: '#ffffff',
-  ink: '#1d1e21',
-  ink2: '#4b4d52',
-  ink3: '#606267',
+  ink: '#1b2430',
+  ink2: '#465263',
+  ink3: '#566271',
   onInk: '#ffffff',
   onAccent: '#ffffff',
   onAlert: '#ffffff',
-  edge: 'rgba(29,30,33,.1)',
-  edgeOn: 'rgba(29,30,33,.17)',
-  edgeHover: 'rgba(29,30,33,.22)',
-  hair: 'rgba(29,30,33,.08)',
-  sub: 'rgba(29,30,33,.04)',
-  sub2: 'rgba(29,30,33,.07)',
-  sub3: 'rgba(29,30,33,.11)',
-  sub4: 'rgba(29,30,33,.15)',
-  stripe: 'rgba(29,30,33,.05)',
+  edge: 'rgba(20,35,55,.1)',
+  edgeOn: 'rgba(20,35,55,.17)',
+  edgeHover: 'rgba(20,35,55,.22)',
+  hair: 'rgba(20,35,55,.08)',
+  sub: 'rgba(20,35,55,.04)',
+  sub2: 'rgba(20,35,55,.07)',
+  sub3: 'rgba(20,35,55,.11)',
+  sub4: 'rgba(20,35,55,.15)',
+  stripe: 'rgba(20,35,55,.05)',
   scrim: 'rgba(20,26,32,.35)',
+  band: '#eef2f7',
+  bandInk: '#24324a',
+  rowLine: 'rgba(20,35,55,.05)',
   caution: 'oklch(0.535 0.16 40)',
   alert: 'oklch(0.535 0.185 25)',
   warm: 'oklch(0.54 0.12 55)',
@@ -119,15 +130,15 @@ export const lightColour: Record<ColourToken, string> = {
   cyan: 'oklch(0.58 0.1 182)',
   accent: 'oklch(0.54 0.12 235)',
   navOn: '#ffffff',
-  navOnEdge: 'rgba(29,30,33,.10)',
-  mailEdge: 'rgba(29,30,33,.1)',
+  navOnEdge: 'rgba(20,35,55,.10)',
+  mailEdge: 'rgba(20,35,55,.1)',
   hl: 'oklch(0.92 0.12 96)',
-  edgeFocus: 'rgba(29,30,33,.3)',
+  edgeFocus: 'rgba(20,35,55,.3)',
   sunGlyph: 'oklch(0.58 0.14 78)',
   switchOn: 'var(--good)',
   switchKnobOn: 'var(--onInk)',
-  dayOff: 'rgba(29,30,33,.028)',
-  dayOut: 'rgba(29,30,33,.048)',
+  dayOff: 'rgba(20,35,55,.028)',
+  dayOut: 'rgba(20,35,55,.048)',
   remind: 'oklch(0.55 0.14 345)',
   inProcess: 'oklch(0.5 0.16 258)',
   kindDeliveries: 'oklch(0.55 0.13 70)',
@@ -171,6 +182,13 @@ export const evland = {night: 34, light: 26} as const;
 export const tintL = {night: 1, light: 0.43} as const;
 /** Attention's band: `caution` mixed into its `panel` at this share. 8% reads salmon in Light. */
 export const attTint = {night: 8, light: 6} as const;
+/**
+ * The bands on a card: Attention's is `caution` and FYI's `accent`, mixed into the card at these
+ * shares (`--attBand`, `--fyiBand`). FYI's band text is `--fyiBandInk`.
+ */
+export const attBand = {night: 12, light: 10} as const;
+export const fyiBand = {night: 6, light: 7} as const;
+export const fyiBandInk = {night: 'var(--accent)', light: 'oklch(0.47 0.12 235)'} as const;
 /** The Inbox's empty pane's glow: the mark's colours mixed in at this share at its heart. Light's darker colours need more to show on its page. */
 export const paneGlow = {night: 10, light: 18} as const;
 /** FYI's cell in that pane's strip: `cool` mixed into `panel` at this share, faint enough not to read as `accent`. */
@@ -181,7 +199,7 @@ export const fyiWash = {night: 4, light: 9} as const;
  * there they lean toward `ink`. Night keeps all of it. `washTint` is for text on its own colour's wash (Copied).
  */
 export const textTint = {night: 100, light: 80} as const;
-export const washTint = {night: 100, light: 70} as const;
+export const washTint = {night: 100, light: 65} as const;
 /** The HTML email frame's brightness: Night takes the glare off its white, Light leaves it. */
 export const mailDim = {night: 0.95, light: 1} as const;
 /**
@@ -192,7 +210,7 @@ export const mailDim = {night: 0.95, light: 1} as const;
 export const ringL = {night: {min: 0.72, max: 1}, light: {min: 0, max: 0.55}} as const;
 
 /** The thin dark scrollbar (mantel's). */
-export const scrollbar = {size: 10, thumb: 'rgba(255,255,255,.16)', lightThumb: 'rgba(29,30,33,.22)', inset: 3} as const;
+export const scrollbar = {size: 10, thumb: 'rgba(255,255,255,.16)', lightThumb: 'rgba(20,35,55,.22)', inset: 3} as const;
 
 export const font = {
   sans: "'Geist Variable', system-ui, sans-serif",
@@ -483,6 +501,9 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--attTint'] = `${light ? attTint.light : attTint.night}%`;
   vars['--paneGlow'] = `${light ? paneGlow.light : paneGlow.night}%`;
   vars['--fyiWash'] = `${light ? fyiWash.light : fyiWash.night}%`;
+  vars['--attBand'] = `${light ? attBand.light : attBand.night}%`;
+  vars['--fyiBand'] = `${light ? fyiBand.light : fyiBand.night}%`;
+  vars['--fyiBandInk'] = light ? fyiBandInk.light : fyiBandInk.night;
   vars['--textTint'] = `${light ? textTint.light : textTint.night}%`;
   vars['--washTint'] = `${light ? washTint.light : washTint.night}%`;
   vars['--mailDim'] = String(light ? mailDim.light : mailDim.night);
@@ -491,8 +512,32 @@ export function themeVariables(theme: Theme): Record<string, string> {
   return vars;
 }
 
+/**
+ * The Night scope: an element marked `data-theme="night"` draws its subtree as Night in full, inks,
+ * hues, fills and fields, whatever the page's theme (Light's frame). `--frame` is left out, so the
+ * frame keeps its own theme's colour. The theme-free variables that point at theme ones (accounts,
+ * calendars, skeletons) are declared again, since root's resolve to its own theme's. A rule keyed
+ * on the page's theme matches inside the scope too, so one meant for Light alone says
+ * `[data-theme="light"] .x:not([data-theme="night"] *)`, and one for Night `[data-theme="night"] .x`.
+ */
+export function nightScope(): string {
+  const all = cssVariables();
+  const pointing = Object.entries(all).filter(([, value]) => value.startsWith('var(--'));
+  const vars = [...Object.entries(themeVariables('night')).filter(([name]) => name !== '--frame'), ...pointing];
+  const body = vars.map(([name, value]) => `${name}: ${value};`).join(' ');
+  return `[data-theme="night"]:not(:root) { ${body} color: var(--ink); color-scheme: dark; }`;
+}
+
 export function applyTokens(root: HTMLElement) {
   for (const [name, value] of Object.entries(cssVariables())) root.style.setProperty(name, value);
+  const doc = root.ownerDocument;
+  let rule = doc.head.querySelector<HTMLStyleElement>('style[data-night-scope]');
+  if (!rule) {
+    rule = doc.createElement('style');
+    rule.dataset.nightScope = '';
+    doc.head.append(rule);
+  }
+  rule.textContent = nightScope();
 }
 
 /** Draws the page in a theme: its tokens, and the browser's own controls to match. */

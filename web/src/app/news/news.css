@@ -93,7 +93,7 @@
    box holds a skeleton's fill, breathing (`sub2`, Light `sub3` to show on the page), and the image fades
    in over it. A hairline edge keeps a white image off the Light page. */
 .nw-ph { display: block; position: relative; overflow: hidden; flex: none; background: var(--skel); animation: sk-breathe var(--skel-breathe) var(--skel-ease) var(--skel-delay) infinite; }
-:root[data-theme="light"] .nw-ph { background: var(--skel-on-sub); }
+[data-theme="light"] .nw-ph:not([data-theme="night"] *) { background: var(--skel-on-sub); }
 .nw-ph.done { background: none; animation: none; }
 .nw-img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; opacity: 0; transition: opacity var(--dur-medium) var(--ease); outline: 1px solid var(--edge); outline-offset: -1px; }
 .nw-img.in { opacity: 1; }
@@ -238,7 +238,7 @@
 /* An article reads at a reader app's size, about 79 characters a line in the 600 px column, and in Night a
    touch softer than ink, so a long read doesn't glare. */
 .ar-text { color: var(--ink); font-size: 16px; line-height: 1.65; letter-spacing: -.003em; max-width: 600px; user-select: text; -webkit-user-select: text; }
-:root[data-theme="night"] .ar-text { color: color-mix(in oklch, var(--ink) 90%, var(--ink2)); }
+[data-theme="night"] .ar-text { color: color-mix(in oklch, var(--ink) 90%, var(--ink2)); }
 .ar-text p { margin: 0 0 16px; }
 .ar-note { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--sub); color: var(--ink2); font-size: 12.5px; max-width: 600px; box-sizing: border-box; }
 .ar-note > .icon { color: var(--ink3); }

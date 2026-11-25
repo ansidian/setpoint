@@ -322,7 +322,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
    Light 12%) and its dot gives way to a 14 px check in `good`. Trash tints it `alert` 8% with a 14 px
    bin in `alert`. The tint is the row's own 120 ms fill change. The glyph grows in from .6. */
 :is(.row, .arow).beat-done { background: color-mix(in oklch, var(--good) 14%, transparent); }
-:root[data-theme="light"] :is(.row, .arow).beat-done { background: color-mix(in oklch, var(--good) 12%, transparent); }
+[data-theme="light"] :is(.row, .arow).beat-done:not([data-theme="night"] *) { background: color-mix(in oklch, var(--good) 12%, transparent); }
 :is(.row, .arow).beat-trash { background: color-mix(in oklch, var(--alert) 8%, transparent); }
 :is(.row, .arow).beat-snooze { background: color-mix(in oklch, var(--violet) 10%, transparent); }
 :is(.beat-done, .beat-trash, .beat-snooze) .ud { position: relative; }
@@ -904,7 +904,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 /* A little more of the brand: the mark at 24, the name 15 / 600. */
 .sign-in .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; padding-left: 2px; }
 /* In Night the modal shadow drew a faint box on the near-black page. Deeper, it reads as depth. Light keeps the modal's. */
-:root[data-theme="night"] .sign-in { box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+[data-theme="night"] .sign-in { box-shadow: 0 30px 80px rgba(0,0,0,.6); }
 /* Signed in, the card scales to .98 and fades over 180 ms while the app fades in under it (Root.tsx). */
 .sign-in-page.leaving { position: fixed; inset: 0; z-index: 60; background: transparent; pointer-events: none; }
 .sign-in-page.leaving .sign-in { animation: sign-in-out var(--dur-medium) var(--ease) forwards; }
@@ -954,7 +954,7 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
   /* An attachment under the pointer: its tile deepens, its eye turns ink, and in Night the card lifts to cardOn (Light stays white). */
   .attach:hover { --t-mix: 22%; }
   .attach:hover .look { color: var(--ink); }
-  :root[data-theme="night"] .attach:hover { background: var(--cardOn); }
+  [data-theme="night"] .attach:hover { background: var(--cardOn); }
   .menu-i:not(:disabled):hover { background: var(--sub2); color: var(--ink); }
   .menu-i:not(:disabled):hover .icon { color: var(--ink); }
   /* A destructive item (the editor's More › Delete) turns `alert` under the pointer. */

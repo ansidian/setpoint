@@ -17,6 +17,15 @@ const on = (base: string, state: string | null, child: ReactNode) => (
   <div style={{background: `var(--${base})`, padding: 4}}><div style={state ? {background: `var(--${state})`} : undefined}>{child}</div></div>
 );
 
+// The frame: drawn as Night in full inside Light, on its own theme's `frame`.
+const inFrame = (state: string | null, child: ReactNode) => (
+  <div data-theme="night" style={{background: 'var(--frame)', padding: 4}}><div style={state ? {background: `var(--${state})`} : undefined}>{child}</div></div>
+);
+// A band on a content card (`cardOn` is Night's card and Light's white), and its text.
+const onBand = (band: string, ink: string) => (
+  <div style={{background: 'var(--cardOn)', padding: 4}}><div style={{background: band}}><span style={{color: ink, fontSize: 12, fontWeight: 600}} data-text>Today · Wed, Oct 7</span></div></div>
+);
+
 const CASES: {name: string; node: ReactNode}[] = [
   {name: 'News\'s Updated on a cursor row', node: on('page', 'sub2', <span className="nw-meta"><span className="upd" data-text>Updated 8:40 AM</span></span>)},
   {name: 'News\'s pill\'s Updated', node: on('page', null, <span className="nw-pill"><span className="upd" data-text>Updated</span></span>)},
@@ -29,6 +38,12 @@ const CASES: {name: string; node: ReactNode}[] = [
   {name: 'the sidebar\'s now, hovered', node: on('panel', 'sub2', <span className="today-row"><span className="in now" data-text>now</span></span>)},
   // The red unread badge on its own fill, and Attention's count on its segment's thumb.
   {name: 'the unread badge', node: on('panel', null, <span className="ubadge num" data-text>13</span>)},
+  {name: 'the frame\'s Reconnect, hovered', node: inFrame('sub2', <span className="acct"><span className="reconnect" data-text>Reconnect</span></span>)},
+  {name: 'the frame\'s soon, hovered', node: inFrame('sub2', <span className="today-row"><span className="in soon" data-text>in 5 min</span></span>)},
+  {name: 'the frame\'s now, hovered', node: inFrame('sub2', <span className="today-row"><span className="in now" data-text>now</span></span>)},
+  {name: 'the unread badge in the frame', node: inFrame(null, <span className="ubadge num" data-text>13</span>)},
+  {name: 'a band\'s header', node: onBand('var(--band)', 'var(--bandInk)')},
+  {name: 'FYI\'s band\'s header', node: onBand('color-mix(in srgb, var(--accent) var(--fyiBand), var(--cardOn))', 'var(--fyiBandInk)')},
   {name: 'Attention\'s count on its segment, on', node: on('page', 'sub3', <span className="seg ib-views"><button type="button" className="on"><span className="n" data-text>3</span></button></span>)},
 ];
 

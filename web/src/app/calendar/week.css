@@ -112,7 +112,7 @@
 @keyframes wb-lift-in { from { box-shadow: inset 3px 0 0 var(--c, var(--cool)), 0 0 0 transparent; } }
 /* The day a move would land on takes the item's colour, as a month's day does. */
 .cal-week { --droptint: 9%; --dropedge: 55%; }
-:root[data-theme="light"] .cal-week { --droptint: 7%; --dropedge: 50%; }
+[data-theme="light"] .cal-week:not([data-theme="night"] *) { --droptint: 7%; --dropedge: 50%; }
 .wk-col.drop { background: color-mix(in oklch, var(--dc) var(--droptint), transparent); box-shadow: inset 0 0 0 1.5px color-mix(in oklch, var(--dc) var(--dropedge), transparent); }
 .wb.cont-t { border-top-left-radius: 0; border-top-right-radius: 0; }
 .wb.cont-b { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }

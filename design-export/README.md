@@ -12,9 +12,9 @@ local: the fonts are bundled, nothing loads from the network.
 | Path | What it is |
 | --- | --- |
 | `boards/*.html` | One standalone page per board, at its exact size. The markup is the design. |
-| `styles/setpoint.css` | **The source of truth** for tokens and components. `.sp` is Night, `.sp.light` is Light, `.sp.app` is the 1677 × 1050 shell. |
+| `styles/setpoint.css` | The boards' tokens and components, as exported. `.sp` is Night, `.sp.light` is Light, `.sp.app` is the 1677 × 1050 shell. The app's tokens have moved on since: they live in `web/src/tokens.ts` and DESIGN.md, and this file isn't updated. |
 | `styles/fonts.css`, `styles/fonts/` | Geist and Geist Mono (variable, OFL), and Material Symbols Rounded subset to the icons used (Apache-2.0). |
-| `tokens/setpoint-tokens.json` | The tokens parsed from `setpoint.css`, per theme, plus type and layout constants. |
+| `tokens/setpoint-tokens.json` | The tokens parsed from `setpoint.css`, per theme, plus type and layout constants, as exported. |
 | `tokens/mantel-tokens.json` | mantel's design-system tokens as installed on the canvas (Night values match Setpoint's). |
 | `glyphs/icons/*.svg`, `glyphs/icons.json` | Every Material Symbols icon the boards use, as SVG paths: Rounded, wght 300, FILL 0, GRAD 0, opsz 24, `viewBox="0 -960 960 960"`. `-fill` files are the FILL 1 uses. |
 | `glyphs/marks/*.svg` | The five mark options from board 24. `1-set-point.svg` is the stand-in in the sidebar (bare 18 px, `ink`). |

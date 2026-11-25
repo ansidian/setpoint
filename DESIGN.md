@@ -5,10 +5,10 @@ copy. They are small and global on purpose. How a page behaves lives in its test
 
 ## How to use this file
 
-- **Values:** [`design-export/styles/setpoint.css`](design-export/styles/setpoint.css) is the source
-  of truth for tokens and component values, and `design-export/tokens/setpoint-tokens.json` is the
-  same data parsed. The build defines tokens once in `web/src/tokens.ts`, mirroring that file and
-  the tables below; a unit test compares them.
+- **Values:** `web/src/tokens.ts` defines every token once, and the tables below record them.
+  Nothing checks that they agree, so change them together. What checks colours is the contrast
+  test (4.5:1 for small text in both themes) and the browser sweep's axe check.
+  `design-export/` keeps the values the boards were drawn with and isn't updated.
 - **Behaviour:** the tests own it. Timing constants here are read by the tests from the token module.
 - **Boards:** `design-export/` is the original visual reference. Where it and the app differ, the
   app and its tests win.
@@ -50,18 +50,21 @@ account names). The UI says "Done", never "handled".
 | Token | Night | Light | Use |
 | --- | --- | --- | --- |
 | `page` | `#050506` | `#f6f6f4` | app background |
-| `panel` | `#0b0c0e` | `#f1f1ee` | sidebar, group headers, Settings nav |
-| `card` | `#0c0d0f` | `#ffffff` | floating detail, prompt, attachments; in Light the proposal and Answer card |
-| `cardOn` | `#131417` | `#ffffff` | focused search and fields, drag tip, News's pill, the phone's toast; in Night the proposal and Answer card |
+| `frame` | `#050506` | `#0b0c0e` | the dark frame around the content cards: the sidebar, each page's header row, the key hints; in Light drawn as Night in full |
+| `panel` | `#0b0c0e` | `#f1f1ee` | Settings nav, the phone's bars |
+| `card` | `#0c0d0f` | `#ffffff` | floating detail, prompt, attachments; in Light the content cards, the proposal and Answer card |
+| `cardOn` | `#131417` | `#ffffff` | focused search and fields, drag tip, News's pill, the phone's toast; in Night the content cards, the proposal and Answer card |
+| `band` / `bandInk` | `#1c1d22` / `#dcdbd7` | `#eef2f7` / `#24324a` | a header band on a card (days, Calendar's weekdays, the day pane's and News's sections, Jobs's headers) / its text |
 | `toast` | `#1b1c20` | `#ffffff` | the toast, a step above `cardOn` |
 | `chip` | `#0f1013` | `#ffffff` | inputs, tags |
 | `modal` | `#0c0d0f` | `#ffffff` | Settings, popovers, ⌘K |
-| `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#8b8d92` | `#1d1e21` / `#4b4d52` / `#606267` | primary / secondary / tertiary text and icons |
+| `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#8b8d92` | `#1b2430` / `#465263` / `#566271` | primary / secondary / tertiary text and icons; Light's are slate, everywhere |
 | `onInk` | `#050506` | `#ffffff` | text on `ink`, on the unread badge, the phone's attention pill and solid calendar chips |
-| `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(29,30,33,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
-| `hair` | `rgba(255,255,255,.07)` | `rgba(29,30,33,.08)` | dividers, row lines, grid lines |
-| `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(29,30,33,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor, open row, selection / tracks, segmented "on", a press / a ghost button pressed |
-| `stripe` | `rgba(255,255,255,.045)` | `rgba(29,30,33,.05)` | hatching (drag ghosts, hidden images) |
+| `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(20,35,55,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
+| `hair` | `rgba(255,255,255,.07)` | `rgba(20,35,55,.08)` | dividers, grid lines |
+| `rowLine` | `rgba(255,255,255,.03)` | `rgba(20,35,55,.05)` | the line between a card's rows |
+| `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(20,35,55,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor, open row, selection / tracks, segmented "on", a press / a ghost button pressed |
+| `stripe` | `rgba(255,255,255,.045)` | `rgba(20,35,55,.05)` | hatching (drag ghosts, hidden images) |
 | `scrim` | `rgba(0,0,0,.72)` | `rgba(20,26,32,.35)` | behind Settings and ⌘K |
 | `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | Attention's count, the phone's attention pill, needs-reconnect bar, failing lines, an overdue task |
 | `alert` | `oklch(0.72 0.17 25)` | `oklch(0.535 0.185 25)` | protected mail, failed changes, offline pill, destructive actions, now-line, Jobs's Rejected mark |
@@ -77,10 +80,10 @@ account names). The UI says "Done", never "handled".
 | `sunGlyph` | `var(--sun)` | `oklch(0.58 0.14 78)` | the forecast's sun on the grids and the right pane, Jobs's Ghosted ring |
 | `switchOn` / `switchKnobOn` | `color-mix(in oklch, var(--good) 58%, var(--modal))` / `var(--ink)` | `var(--good)` / `var(--onInk)` | a switch that's on: its track / its knob |
 | `hl` | `color-mix(in oklch, var(--sun) 26%, transparent)` | `oklch(0.92 0.12 96)` | search's match highlight |
-| `edgeFocus` | `rgba(255,255,255,.2)` | `rgba(29,30,33,.3)` | a focused field's border |
-| `mailEdge` | `transparent` | `rgba(29,30,33,.1)` | the HTML email frame's ring |
-| `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(29,30,33,.10)` | the current page in a nav: its fill / its inset hairline |
-| `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
+| `edgeFocus` | `rgba(255,255,255,.2)` | `rgba(20,35,55,.3)` | a focused field's border |
+| `mailEdge` | `transparent` | `rgba(20,35,55,.1)` | the HTML email frame's ring |
+| `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(20,35,55,.10)` | the current page in a nav: its fill / its inset hairline |
+| `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(20,35,55,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 | `remind` | `oklch(0.8 0.11 345)` | `oklch(0.55 0.14 345)` | the editor's line: a reminder phrase's mark, and the Reminders row's glyph it filled |
 | `inProcess` | `oklch(0.7 0.15 258)` | `oklch(0.5 0.16 258)` | Jobs's In process: its mark, its label and its events' node |
 | `kindDeliveries` | `oklch(0.78 0.12 70)` | `oklch(0.55 0.13 70)` | the Deliveries kind's glyph in the Inbox |
@@ -92,6 +95,11 @@ account names). The UI says "Done", never "handled".
 | `kindOther` | `oklch(0.74 0.05 65)` | `oklch(0.55 0.06 65)` | the Other kind's glyph in the Inbox, a muted taupe |
 | `kindNoise` | `oklch(0.74 0.05 250)` | `oklch(0.55 0.06 250)` | the glyph on each day's folded Noise line, a muted slate |
 
+- **Frame and cards:** the frame holds the sidebar, each page's header row and the key hints; the
+  content sits on cards inside it. In Light the frame is drawn as Night in full (inks, hues, fills,
+  fields), since Light's hues don't hold on near-black: an element marked `data-theme="night"`
+  takes Night's variables, keeping its own theme's `frame`. A rule meant for one theme alone is
+  written so it doesn't match inside that scope (`tokens.ts › nightScope`).
 - **Roles**: each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
   it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count,
@@ -110,7 +118,8 @@ account names). The UI says "Done", never "handled".
   deepening under the pointer by `--evhover` (Night 18%, Light 14%) laid over it in the chip's own
   colour, and by 28% while pressed; as a change lands it starts at `--evland` (Night 34%, Light
   26%) and settles back; Attention's band (`caution` 8% on `panel` in srgb, Light
-  6%). A neutral (an ink or a surface) mixes in `srgb` or is an alpha token, never in oklch, which
+  6%); on a card, Attention's band (`caution` 12% on the card in srgb, Light 10%) and FYI's
+  (`accent` 6%, Light 7%, its text `accent`, Light `oklch(0.47 0.12 235)`). A neutral (an ink or a surface) mixes in `srgb` or is an alpha token, never in oklch, which
   tints it.
 - **Theme numbers:** on the calendar, coloured text on its own tint caps its lightness at `--tintL`
   (Night 1, Light .43), keeping its hue and chroma; the email frame's brightness `--mailDim`
@@ -119,7 +128,9 @@ account names). The UI says "Done", never "handled".
 - **Shadows:** popovers and the floating detail `0 18px 50px rgba(0,0,0,.4)` (Light
   `rgba(15,20,28,.14)`); modals `0 30px 80px rgba(0,0,0,.35)` (Light `.18`); pills and toasts
   `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows only on overlays.
-- **Scrollbars:** thin and dark (Light thumb `rgba(29,30,33,.22)`).
+- **Scrollbars:** thin and dark (Light thumb `rgba(20,35,55,.22)`).
+- **Light's neutrals** (edges, hairlines, fills, stripes, the calendar's weekends and outside days,
+  the scrollbar) are slate alphas, `rgba(20,35,55,…)`, as its inks are slate.
 
 ### Type
 
@@ -135,7 +146,8 @@ Mono for codes, ntfy topics and identifiers. Bundled, never loaded from the netw
 | Rows, nav, menus, buttons, facts | 13 (unread sender and subject 500) |
 | Segmented control, reader tools, small buttons, summaries in Attention, the sidebar's rows under Inbox | 12.5 |
 | Ages, counts, account labels, calendar chips | 12 (chips 500) |
-| Group headers, section labels, weekday names | 11.5 / uppercase / .08em |
+| A band's header: days, weekday names, the day pane's, News's and Jobs's sections | 12 / 600, sentence case |
+| Other group headers and section labels | 11.5 / uppercase / .08em |
 | Keyboard hints | 11 / 500 |
 | Verification codes | Geist Mono 13 / 500 / .06em |
 | The reader's code card | Geist Mono 22 / 500 / .12em |

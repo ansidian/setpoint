@@ -8,7 +8,7 @@
    buttons and their menu are at the end. */
 .overdue { position: fixed; inset: 0; z-index: 34; cursor: default; outline: none; color: var(--ink); }
 .overdue-veil { position: absolute; inset: 0; background: color-mix(in srgb, var(--page) 88%, transparent); animation: fade-in var(--ov-veilIn) var(--ease) both; }
-:root[data-theme="light"] .overdue-veil { background: color-mix(in srgb, var(--page) 90%, transparent); }
+[data-theme="light"] .overdue-veil:not([data-theme="night"] *) { background: color-mix(in srgb, var(--page) 90%, transparent); }
 .overdue-place { position: absolute; inset: 0; display: grid; place-items: center; padding: 48px 32px; }
 .overdue-stack { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 820px; max-width: 100%; text-align: center;
   transition: transform var(--dur-fast) var(--ease); }

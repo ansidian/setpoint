@@ -163,7 +163,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 /* The answer's key fact points at its evidence: underlined in the yellow the email marks it
    with (`sun` at 70% in Night, Light's `hl`), 2 px and 3 px under. */
 .ans b { text-decoration: underline; text-decoration-color: color-mix(in oklch, var(--sun) 70%, transparent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-:root[data-theme="light"] .ans b { text-decoration-color: var(--hl); }
+[data-theme="light"] .ans b:not([data-theme="night"] *) { text-decoration-color: var(--hl); }
 .ans-none { display: flex; flex-direction: column; gap: 2px; }
 .ans-none .ans { color: var(--ink2); }
 .ans-none .searched { color: var(--ink3); font-size: 12.5px; }
