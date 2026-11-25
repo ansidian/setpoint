@@ -7,7 +7,8 @@ import type {MessageRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {InboxGroupOut} from '@setpoint/shared';
-import {allRowLine, attentionRows, dayHeading, dayStops, dayView, groupByDay, heldUnread, kindGroup, kindLabel, nextUnread, sameHold, viewList} from '../src/logic/all.ts';
+import {allRowLine, attentionRows, dayHeading, dayStops, dayView, groupByDay, heldUnread, kindGroup, kindLabel, laneNamed, nextUnread, sameHold, viewList} from '../src/logic/all.ts';
+import type {AllLane} from '../src/logic/all.ts';
 import type {Stop} from '../src/logic/inbox.ts';
 
 let nextId = 100;
@@ -124,6 +125,20 @@ describe('dayView', () => {
     expect(dayStops([dayView({date: '2026-10-07', rows: [hub]}, false)], [receipt, lease]).map(stop => [stop.key, stop.kind === 'row' && stop.group])).toEqual([
       [`pinned:${receipt.id}`, 'pinned'], [`pinned:${lease.id}`, 'pinned'], [`all:${hub.id}`, 'all'],
     ]);
+  });
+});
+
+describe('laneNamed: which of a day\'s lanes get their label', () => {
+  test.each<[string, AllLane[], boolean, AllLane[]]>([
+    ['the desktop names every lane', ['fyi'], false, ['fyi']],
+    ['the desktop names FYI under Attention', ['attention', 'fyi'], false, ['attention', 'fyi']],
+    ['on the phone, a day of FYI alone drops its label', ['fyi'], true, []],
+    ['on the phone, FYI under Attention keeps its label', ['attention', 'fyi'], true, ['attention', 'fyi']],
+    ['on the phone, Attention alone keeps its label', ['attention'], true, ['attention']],
+    ['on the phone, FYI under Unsorted keeps its label', ['unsorted', 'fyi'], true, ['unsorted', 'fyi']],
+    ['on the phone, Unsorted alone keeps its label', ['unsorted'], true, ['unsorted']],
+  ])('%s', (_, lanes, phone, named) => {
+    expect(lanes.filter(lane => laneNamed(lane, lanes, phone))).toEqual(named);
   });
 });
 
