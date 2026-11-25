@@ -272,6 +272,9 @@
     padding: 0 8px max(12px, env(safe-area-inset-bottom)); border-radius: var(--r-popover) var(--r-popover) 0 0; background: var(--modal); box-shadow: inset 0 1px 0 var(--edgeOn), var(--shadow-pop);
     touch-action: none; outline: none; animation: ph-bs-in var(--dur-slow) var(--ease); }
   @keyframes ph-bs-in { from { transform: translateY(100%); } }
+  /* Choices past the screen's height scroll under a finger; the grab and the title still drag it. */
+  .ph-bs[data-scrolls] { touch-action: pan-y; }
+  .ph-bs[data-scrolls] :is(.ph-bs-grab, .ph-bs-title) { touch-action: none; }
   .ph-bs-grab { width: 36px; height: 5px; flex: none; margin: 6px auto 0; border-radius: 999px; background: var(--sub3); }
   .ph-bs-title { margin: 0; padding: 10px 12px 6px; font-size: 13px; font-weight: 500; color: var(--ink3); }
   /* Its choices: 48 px rows, radius 10, `ink` with an 18 px `ink2` glyph and what they say on the right in `ink3`. */
