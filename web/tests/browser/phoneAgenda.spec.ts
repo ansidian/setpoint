@@ -14,7 +14,7 @@ import type {Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
-import {instantScrolls, scrollsAsked, swipe} from './phoneHelpers.ts';
+import {fingertips, instantScrolls, scrollsAsked, swipe} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -152,6 +152,34 @@ async function openDetail(page: Page, title: string) {
   await todays(page, title).first().tap();
   await page.locator('.ph-detail .fd-title', {hasText: title}).waitFor();
 }
+
+test('every control a finger needs takes a 44 px tap, and none takes its neighbour\'s: the header, a detail and the editor', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await agenda(setpoint);
+    await fingertips([page.locator('.hd .ph-month-btn'), page.getByRole('button', {name: 'Search'}), page.getByRole('button', {name: 'New event'})]);
+    await page.locator('.pitem', {hasText: 'Pay rent'}).tap();
+    await page.locator('.ph-detail .fd-title', {hasText: 'Pay rent'}).waitFor();
+    await fingertips([page.locator('.ph-detail .fd-mark.check'), page.locator('.ph-detail button[aria-label="Close"]'), ...await page.locator('.ph-detail .card-acts button').all()]);
+    await page.locator('.ph-detail button[aria-label="Close"]').tap();
+    await until('the detail closes', () => page.locator('.ph-detail').count(), count => count === 0);
+
+    await page.getByRole('button', {name: 'New event'}).tap();
+    const sheet = page.getByRole('dialog', {name: 'New event'});
+    await sheet.waitFor();
+    await sheet.getByPlaceholder('Add place').fill('Library');
+    await sheet.getByRole('button', {name: 'Add reminder'}).tap();
+    await sheet.locator('.menu-i').nth(2).tap();
+    await until('two reminders', () => sheet.locator('.qchip .x').count(), count => count === 2);
+    // The Event and Task switch, each reminder's × (never the next chip's), Add reminder, Clear place and the line's ?.
+    await fingertips([sheet.getByRole('button', {name: 'Cancel'}), sheet.getByRole('button', {name: 'Create'}), ...await sheet.locator('.seg > *').all(),
+      ...await sheet.locator('.qchip .x').all(), sheet.getByRole('button', {name: 'Add reminder'}), sheet.getByRole('button', {name: 'Clear place'}),
+      sheet.getByRole('button', {name: 'What the line reads'})]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
 
 test('+ opens the editor sheet on the day in view, and Create adds the event there', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});

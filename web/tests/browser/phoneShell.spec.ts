@@ -8,11 +8,11 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 import {after} from 'node:test';
-import type {ItemsOut, Settings} from '@setpoint/shared';
+import type {AllOut, ItemsOut, Settings} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
-import {box, counts, email, inbox, instantScrolls, scrollsAsked} from './phoneHelpers.ts';
+import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
+import {box, counts, email, fingertips, inbox, instantScrolls, scrollsAsked} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -57,9 +57,54 @@ test('signing in on the phone: every field\'s text is 16 px, so iOS doesn\'t zoo
     await page.reload();
     await page.getByLabel('Password').waitFor();
     assert.deepEqual(await rested(() => sizes()), [['Password', '16px']]);
+    // A thumb's sizes: the field, Sign in under it and the recovery code's way in under that.
+    await fingertips([page.getByLabel('Password'), page.getByRole('button', {name: 'Sign in'}), page.getByRole('button', {name: 'Use a recovery code'})]);
     await page.getByRole('button', {name: 'Use a recovery code'}).click();
     await page.getByLabel('Recovery code').waitFor();
     assert.deepEqual(await rested(() => sizes()), [['Recovery code', '16px'], ['New password', '16px']]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('every control a finger needs takes a 44 px tap, and none takes its neighbour\'s: the Inbox, the reader, compose, the toast and Settings', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    await page.locator('.list .nfold').first().waitFor();
+    await fingertips([page.locator('.hd .ph-title-btn'), page.getByRole('button', {name: 'Select'}), page.getByRole('button', {name: 'New message'}),
+      page.locator('.list .nfold').first(), page.locator('.list .code-line .copy').first()]);
+    await page.locator('.hd > .search input').fill('tailspin');
+    await fingertips([page.getByRole('button', {name: 'Clear search'})]);
+
+    // The reader's You replied, then Trash's Undo.
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const cabin = all.days.flatMap(day => day.rows).filter(row => row.from_name === 'Theo Walsh' && row.subject.endsWith('Cabin weekend in November'))
+      .sort((one, other) => other.received_at.localeCompare(one.received_at))[0]!.id;
+    await page.goto(`${setpoint.base}/inbox/${cabin}`);
+    await fingertips([page.locator('.rd-head .rd-replied'), page.locator('.ph-back'), page.getByRole('button', {name: 'Pin'})]);
+    await page.locator('.ph-acts button', {hasText: 'Reply'}).tap();
+    const reply = page.getByRole('dialog', {name: 'Reply'});
+    await reply.locator('.cmp-from > button').waitFor();
+    // Reply's bar and header: Cancel, Send, the reply's kind, From, Cc Bcc, a recipient's ×, and the quote's fold.
+    await fingertips([reply.getByRole('button', {name: 'Cancel'}), reply.getByRole('button', {name: 'Send'}), reply.locator('.cmp-copies'),
+      reply.locator('.cmp-from > .btn'), reply.locator('.cmp-chip-x').first(), reply.locator('.cmp-fold')]);
+    await reply.getByRole('button', {name: 'Cancel'}).tap();
+    await reply.waitFor({state: 'detached'});
+    await page.locator('.ph-acts button', {hasText: 'Trash'}).tap();
+    const toast = await holdToast(page);
+    const undo = toast.getByRole('button', {name: 'Undo'});
+    // Once the reader's slide back to the list is over, the page takes taps again.
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    await until('the toast takes taps', () => undo.evaluate(button => { const box = button.getBoundingClientRect(); return button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)); }), takes => takes);
+    await fingertips([undo]);
+    await toast.getByRole('button', {name: 'Undo'}).tap();
+
+    await page.goto(`${setpoint.base}/settings/notifications`);
+    await page.getByRole('switch', {name: 'FYI mail'}).waitFor();
+    await fingertips([page.getByRole('switch', {name: 'FYI mail'}), page.getByRole('button', {name: 'Set token'}), page.getByRole('button', {name: 'Event reminders'}),
+      page.getByRole('button', {name: 'Sign out'})]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

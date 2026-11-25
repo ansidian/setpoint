@@ -14,6 +14,14 @@
   .ph-editor input, .ph-editor textarea, .ph-editor select, .ph-editor [contenteditable], .ph-editor .field,
   .ph-editor .nl-marks { font-size: 16px; }
   .ph-editor .menu-i { min-height: 40px; font-size: 15px; }
+  /* Its small controls big enough to see under a finger (their taps grow to a fingertip, phone.css):
+     the Event and Task switch, a reminder's chip and ×, Add reminder, the end time's ×, Clear place
+     and the line's ?. */
+  .ph-editor .seg { height: 36px; }
+  .ph-editor .seg > * { height: 32px; padding: 0 14px; font-size: 14px; }
+  .ph-editor :is(.ibtn.sm, .lr-q) { width: 32px; height: 32px; }
+  .ph-editor .qchip { height: 32px; gap: 2px; padding: 0 2px 0 10px; font-size: 13px; }
+  .ph-editor .qchip .x { width: 28px; height: 28px; }
 
   /* The day and times are iOS's own pickers, in rows as its Calendar has them: Starts and Ends (a
      task's Due), each a day and a time, lined up in columns. A field shows its value as the
@@ -56,16 +64,19 @@
   .ph-import .ph-import-count { padding: 10px 20px 0; }
   .ph-import .rp-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   .ph-import .imp-row { min-height: 44px; }
+  .ph-import .select { height: 40px; font-size: 16px; }
   .ph-import .imp-foot { padding: 12px 20px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--hair); }
 
   /* The detail's actions: Edit, then the task's Complete and Delete, sized for a finger. */
   .ph-detail .card-acts { display: flex; padding: 8px 12px 12px; }
   .ph-detail .card-acts .kbd { display: none; }
-  .ph-detail .card-acts .btn { height: 40px; padding: 0 14px; font-size: 15px; }
-  .ph-detail .card-acts .ibtn { width: 40px; height: 40px; }
+  .ph-detail .card-acts .btn { height: var(--ph-tap); padding: 0 14px; font-size: 15px; }
+  .ph-detail .card-acts .ibtn { width: var(--ph-tap); height: var(--ph-tap); }
+  /* Its × is as big as the actions, its glyph where the 26 px one had it. */
+  .ph-detail .card-h .ibtn { width: 40px; height: 40px; margin: -7px -7px -7px 0; }
   /* A toast (Saved, Completed, Reopened) rises under the open detail rather than over its actions:
      the card lifts clear of it while it shows. */
-  .main:has(.toast:not(.leaving)) .fd.ph-detail { bottom: calc(var(--ph-bar) + env(safe-area-inset-bottom) + 24px + 40px + 12px); transition: bottom var(--dur-medium) var(--ease); }
+  .main:has(.toast:not(.leaving)) .fd.ph-detail { bottom: calc(var(--ph-bar) + env(safe-area-inset-bottom) + 24px + var(--ph-tap) + 12px); transition: bottom var(--dur-medium) var(--ease); }
   .ph-detail .fd-mark.check { width: 32px; height: 32px; margin: -6px 2px -6px -8px; display: grid; place-items: center; }
 
   /* An invitation's card in the reader: Add to calendar keeps its words, Download is its glyph
