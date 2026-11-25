@@ -664,8 +664,10 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .list.all .row .hact { min-width: 72px; }
 .list.all .row .subj .alertsubj { color: var(--alert); font-weight: 500; }
 .list.all .row .subj .code { font-size: 13px; }
-/* The kind is a subheading over its run, as the row has no room for its column. */
-.list.all .kh { display: flex; height: 24px; flex: none; align-items: flex-end; gap: 6px; padding: 0 16px 4px 24px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+/* The kind is a subheading over its run, as the row has no room for its column: its glyph and
+   label in sentence case, then a hairline through the label's middle to the list's edge. */
+.list.all .kh { display: flex; height: 26px; flex: none; align-items: flex-end; gap: 6px; padding: 0 16px 4px 24px; color: var(--ink3); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.list.all .kh::after { content: ""; flex: 1 1 auto; height: 1px; margin: 0 0 6px 6px; background: var(--hair); }
 /* Destructive actions turn `alert` under the pointer and affirming ones `good`, both neutral at rest
   : the floating detail's Delete, the editor's More › Delete, and the phone's card's Complete. */
 .ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
