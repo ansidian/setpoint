@@ -325,7 +325,7 @@ test('phone Settings: an index of the phone\'s pages, each under Back to it; a s
   }
 });
 
-test('phone Settings: opening Settings from the app lands on its page, as Alfred\'s Settings › AI with no key does', async () => {
+test('phone Settings: with no Anthropic key Alfred says to add it in Settings › AI on the desktop, with no link to a page the phone hasn\'t', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -333,10 +333,9 @@ test('phone Settings: opening Settings from the app lands on its page, as Alfred
     await page.keyboard.type('lease renewal');
     await page.locator('.search-list .result').first().waitFor();
     await page.locator('.search-list .ask').tap();
-    // With no Anthropic key the card says so, and its link opens Settings › AI: on the desktop.
-    await page.locator('.search-list .answer .failed-line', {hasText: 'Settings › AI'}).getByRole('button', {name: 'Settings › AI'}).tap();
-    await page.locator('.ph-set-away', {hasText: 'AI is on the desktop'}).waitFor();
-    assert.equal(new URL(page.url()).pathname, '/settings/ai');
+    const line = page.locator('.search-list .answer .failed-line', {hasText: 'Alfred needs an Anthropic key in Settings › AI on the desktop.'});
+    await line.waitFor();
+    assert.equal(await line.getByRole('button').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
