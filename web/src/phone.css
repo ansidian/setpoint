@@ -113,8 +113,11 @@
   .row .subj { grid-area: subj; margin-left: 8px; }
   .row .subj:not(.code-line), .arow .l3 { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
   .row .ac { grid-area: ac; width: auto; margin-left: 8px; }
-  /* A Done row's tag gets its own cell on the sender's line, before the account. */
-  .list.all .row .tag { grid-area: tag; margin: 0 0 0 8px; }
+  /* A Done row's tag gets its own cell on the sender's line, before the account. It's a state, not a
+     button: the check in `good` and Done in `ink3`, with no pill around them, so only what takes a
+     tap is drawn as one. */
+  .list.all .row .tag { grid-area: tag; margin: 0 0 0 8px; height: auto; padding: 0; gap: 3px; background: none; box-shadow: none; color: var(--ink3); font-size: 13px; }
+  .list.all .row .tag .icon { color: var(--good); }
   /* Dates never wrap: the age takes the room it needs. */
   .row .age, .list.all .row .age { grid-area: age; width: auto; min-width: 36px; white-space: nowrap; margin-left: 8px; }
   /* … and an Attention row's age hugs its account, as board 21 draws it. */
