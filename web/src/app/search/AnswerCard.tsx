@@ -316,10 +316,12 @@ function Bold({text}: {text: Parameters<typeof answerSegments>[0]}) {
   return <>{answerSegments(text).map((part, index) => (part.mark ? <b key={index}>{part.text}</b> : <Fragment key={index}>{part.text}</Fragment>))}</>;
 }
 
-/** A line with "Settings › AI" in it, that part a link to Settings › AI. */
+/** A line with "Settings › AI" in it, that part a link to Settings › AI. The phone sets the key only on the desktop, so there it says so, with no link. */
 export function SettingsLink({text}: {text: string}) {
+  const phone = usePhone();
   const [before, ...after] = text.split('Settings › AI');
   if (!after.length) return <>{text}</>;
+  if (phone) return <>{text.replace('Settings › AI', 'Settings › AI on the desktop')}</>;
   return <>{before}<button type="button" className="lnk" onClick={() => openSettings('ai')}>Settings › AI</button>{after.join('Settings › AI')}</>;
 }
 

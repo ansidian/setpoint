@@ -10,7 +10,7 @@ import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
-import {AnswerCard} from '../../src/app/search/AnswerCard.tsx';
+import {AnswerCard, SettingsLink} from '../../src/app/search/AnswerCard.tsx';
 import type {Alfred} from '../../src/app/search/state.ts';
 import {dismissToast} from '../../src/app/toast.ts';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
@@ -142,6 +142,21 @@ test('on the phone, which has no Jobs, an application\'s row shows but doesn\'t 
     await card([turn({sources: [], items: [], applications: [WOODGROVE]})]);
     await expect.element(page.getByText('Application Developer')).toBeVisible();
     expect(page.getByRole('button', {name: /Woodgrove Bank/}).elements()).toEqual([]);
+  } finally {
+    await page.viewport(1280, 800);
+  }
+});
+
+test('"Settings › AI" is a link to that page; on the phone, which sets the key only on the desktop, it says so and is no link', async () => {
+  const words = 'Alfred needs an Anthropic key in Settings › AI.';
+  const shown = await render(<p><SettingsLink text={words} /></p>);
+  await expect.element(page.getByRole('button', {name: 'Settings › AI'})).toBeVisible();
+  await shown.unmount();
+  await page.viewport(375, 812);
+  try {
+    await render(<p><SettingsLink text={words} /></p>);
+    await expect.element(page.getByText('Alfred needs an Anthropic key in Settings › AI on the desktop.')).toBeVisible();
+    expect(page.getByRole('button').elements()).toEqual([]);
   } finally {
     await page.viewport(1280, 800);
   }

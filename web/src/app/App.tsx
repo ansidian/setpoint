@@ -67,8 +67,8 @@ export function App({arrive = false}: {arrive?: boolean}) {
     restoreAlfred();
   }, []);
 
-  // An address for a Settings page opens the modal over the Inbox, and the address becomes the Inbox's.
-  const settingsLink = route.page === 'settings' && !phone ? route.section : null;
+  // An address for a Settings page opens the modal over the Inbox (Settings' own on Accounts), and the address becomes the Inbox's.
+  const settingsLink = route.page === 'settings' && !phone ? route.section ?? 'accounts' : null;
   useEffect(() => {
     if (!settingsLink) return;
     // Back from Google's or Todoist's consent: say how it went.

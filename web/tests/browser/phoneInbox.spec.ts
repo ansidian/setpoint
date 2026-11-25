@@ -143,7 +143,7 @@ test('phone search: no Mark all as read meanwhile, Back to Search from a result,
   }
 });
 
-test('the title\'s menu switches the views, Unread and Attention with their counts, and the Inbox tab goes back to All; Sent follows them, and Settings opens its page', async () => {
+test('the title\'s menu switches the views, Unread and Attention with their counts, and the Inbox tab goes back to All; Sent follows them, and Settings opens its index, the Inbox tab lit', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -179,7 +179,9 @@ test('the title\'s menu switches the views, Unread and Attention with their coun
 
     await title.tap();
     await page.getByRole('menu', {name: 'Inbox'}).getByRole('menuitem', {name: 'Settings'}).tap();
-    await until('Settings', () => page.evaluate(() => window.location.pathname), path => path === '/settings/notifications');
+    await until('Settings', () => page.evaluate(() => window.location.pathname), path => path === '/settings');
+    await page.locator('.ph-set-pages').waitFor();
+    assert.equal(await page.locator('.ph-tabs a[aria-current="page"]', {hasText: 'Inbox'}).count(), 1, 'the Inbox tab is lit');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

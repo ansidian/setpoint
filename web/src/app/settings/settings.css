@@ -377,7 +377,10 @@
   /* The modal's box gives way to the page's column; its pages keep their groups and rows. */
   .settings.ph-set { position: static; inset: auto; transform: none; width: auto; height: auto; max-width: none; max-height: none; display: flex; flex-direction: column;
     overflow-y: auto; background: var(--card); border-radius: 10px 10px 0 0; box-shadow: none; animation: none; z-index: auto; }
-  /* The header's title menu names the page: no head of its own, and no ×. */
+  /* The header names the page, under Back to the index (centred, as iOS has it): no head of its own, and no ×. */
+  .hd.ph-set-hd { display: grid; grid-template-columns: 1fr auto 1fr; padding-left: 6px; }
+  .hd.ph-set-hd > .ph-back { justify-self: start; }
+  .hd.ph-set-hd > .hd-title { min-width: 0; text-align: center; }
   .settings.ph-set .set-main { flex: none; overflow: visible; padding: 4px 12px 16px; animation: none; }
   .settings.ph-set .set-main > :not(.set-x) { animation: none; }
   .settings.ph-set .set-head, .settings.ph-set .set-x { display: none; }
@@ -391,11 +394,16 @@
   /* Fields at 16 px, so iOS doesn't zoom into them, and a long one takes its row's width. */
   .settings.ph-set .fld { height: 40px; font-size: 16px; width: 100%; }
   .settings.ph-set .fld-at { flex: 1 1 100%; }
+  /* The index's rows, and under a page that's on the desktop: a row each, its chevron in `ink3`. */
+  .settings.ph-set .ph-set-pages > .set-row { color: var(--ink); text-decoration: none; }
+  .settings.ph-set .ph-set-pages > .set-row > .icon { color: var(--ink3); }
+  .settings.ph-set .set-main > .ph-set-pages:first-child { margin-top: 12px; }
   /* A page that's on the desktop says so in one line, its glyph in `ink3` 12 px before the words. */
-  .settings.ph-set .ph-set-away { flex-direction: row; align-items: center; gap: 12px; padding: 16px 20px; color: var(--ink2); }
+  .settings.ph-set .ph-set-away { display: flex; align-items: center; gap: 12px; padding: 16px 8px; color: var(--ink2); }
   .settings.ph-set .ph-set-away > .icon { color: var(--ink3); }
   .settings.ph-set .ph-set-away p { margin: 0; }
   .settings.ph-set .ph-set-foot { padding: 8px 20px 24px; }
+  .settings.ph-set .line { padding: 8px 8px 0; }
   /* Its controls at a thumb's size beside the 15 px text: buttons and selects 40 px, the select's
      choices the title menu's 44 px rows, and a switch's tap a fingertip across (phone.css). */
   .settings.ph-set :is(.btn, .select) { height: 40px; font-size: 15px; }

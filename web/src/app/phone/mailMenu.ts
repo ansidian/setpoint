@@ -1,6 +1,6 @@
 // The phone's mail title menu, the same on the Inbox, Sent, Drafts and Snoozed (logic/mailMenu.ts
 // has its rows), with the sidebar's counts. A view goes to the Inbox in it, or switches the Inbox's
-// own; Settings opens Settings › Notifications.
+// own; Settings opens Settings' index.
 import type {DraftsOut, MailCountsOut, SnoozedOut} from '@setpoint/shared';
 import {useResource} from '../../api/client.ts';
 import {DRAFTS_PATH} from '../../api/drafts.ts';
@@ -11,7 +11,6 @@ import type {InboxView} from '../../logic/route.ts';
 import {scheduledAt} from '../../logic/selection.ts';
 import {useNow} from '../clock.ts';
 import {navigate} from '../router.ts';
-import {openSettings} from '../settings/store.ts';
 import type {TitleMenuRow} from './TitleMenu.tsx';
 
 /** Where the menu is open, and on the Inbox its own counts and switch. */
@@ -35,7 +34,7 @@ export function useMailMenu(place: MailPlace): TitleMenuRow[] {
     label, ...(count !== undefined ? {count} : {}),
     ...(go.page === 'settings' ? {command: true} : {checked}),
     onChoose: () => {
-      if (go.page === 'settings') openSettings('notifications');
+      if (go.page === 'settings') navigate({page: 'settings', section: null});
       else if (go.page === 'inbox') {
         if (place.page === 'inbox') place.onView(go.view);
         else navigate({page: 'inbox', open: null, ...(go.view === 'all' ? {} : {view: go.view})});
