@@ -70,8 +70,10 @@ const CASES: {name: string; node: ReactNode}[] = [
   }))),
 ];
 
+// Each case draws its state itself. The pointer is the page's, left wherever another file's test put
+// it, so the case takes no pointer: a row under it would add its hover over the state drawn.
 test.each(CASES)('$name reads at 4.5:1 in Night and in Light', async ({node}) => {
-  await render(<>{node}</>);
+  await render(<div style={{pointerEvents: 'none'}}>{node}</div>);
   const text = document.querySelector<HTMLElement>('[data-text]')!;
   for (const theme of ['night', 'light'] as const) {
     applyTheme(document.documentElement, theme);
