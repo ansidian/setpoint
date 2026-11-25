@@ -5,7 +5,8 @@
   .hd > .ph-month-btn { height: 36px; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px 0 10px; border-radius: 999px; color: var(--ink2); font-size: 14px; font-weight: 500; white-space: nowrap; }
   .hd > .ph-month-btn .icon { color: var(--ink3); }
   .hd > .ph-month-btn:active, .hd > .ph-find.on { background: var(--sub2); }
-  .hd > .ph-find { margin-right: -6px; }
+  /* Search is +'s size beside it, its on circle the month pill's height or more. */
+  .hd > .ph-find { width: 40px; height: 40px; margin-right: -4px; }
 
   /* Under the results, the agenda waits where it was scrolled to. */
   .ph-agenda[hidden] { display: none; }

@@ -201,3 +201,10 @@
 .ph-sheet .composer .desc-bar.linking { gap: 8px; padding-left: 16px; }
 .ph-sheet .composer .desc-bar.linking input { height: 44px; font-size: 16px; }
 .ph-sheet .composer .desc-bar.linking .btn { height: 36px; flex: none; }
+/* On the phone the header's rows are a fingertip tall over their hairline, and a recipient's chip is big enough for its ×
+   to be a target (its tap grows from phone.css's rule, toward the chip, never into the next one). */
+.ph-sheet .composer .cmp-row { min-height: calc(var(--ph-tap) + 1px); }
+.ph-sheet .composer .cmp-recipients { gap: 6px; }
+.ph-sheet .composer .cmp-chip { height: 32px; padding: 0 2px 0 12px; font-size: 14px; }
+.ph-sheet .composer .cmp-chip-x { width: 28px; height: 28px; }
+.ph-sheet .composer .cmp-typing > input { height: 32px; }

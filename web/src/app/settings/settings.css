@@ -396,4 +396,8 @@
   .settings.ph-set .ph-set-away > .icon { color: var(--ink3); }
   .settings.ph-set .ph-set-away p { margin: 0; }
   .settings.ph-set .ph-set-foot { padding: 8px 20px 24px; }
+  /* Its controls at a thumb's size beside the 15 px text: buttons and selects 40 px, the select's
+     choices the title menu's 44 px rows, and a switch's tap a fingertip across (phone.css). */
+  .settings.ph-set :is(.btn, .select) { height: 40px; font-size: 15px; }
+  .settings.ph-set .menu-i { height: var(--ph-tap); font-size: 15px; }
 }

@@ -10,7 +10,24 @@
      and Select's bars are all this tall above the inset, so swapping them moves nothing, and what sits
      above them (the detail card, a toast's lift) is placed from it. On the root, so the sheets
      (portaled into body) read it too. */
-  :root { --ph-bar: 56px; }
+  :root { --ph-bar: 56px; --ph-tap: 44px; }
+  /* A fingertip's target: every control takes a tap at least --ph-tap across, centred on it. One drawn
+     smaller keeps its look and grows its hit area with an unseen ::before; one already that size is
+     unchanged. A control whose neighbour sits right beside it (a chip's ×) grows toward its own chip
+     instead, so it never takes a tap meant for the next one. The position is relative only where no
+     rule places the control otherwise. */
+  :where(.toast.ph .btn, .ph-sheet-top > :is(.ph-sheet-lead, .ph-sheet-act), .ph-icon, .ph-text, .btn.ph-back,
+    .hd > :is(.ph-find, .ph-new, .ph-month-btn), .hd > .search .search-clear, .code-line .copy, .rd-replied,
+    .view-empty .btn, .ph-sheet .composer :is(.btn.sm, .ibtn.sm, .cmp-fold), .ph-detail :is(.fd-mark.check, .card-h .ibtn),
+    .ph-editor :is(.ibtn.sm, .lr-q, .seg > *), .ph-import .select, .nw-recap-done, .nw-up .btn, .nw-state .btn, .alf-pill-x,
+    .settings.ph-set :is(.switch, .btn, .select)),
+  :where(.composer .cmp-chip-x, .editor .qchip .x) { position: relative; }
+  :is(.toast.ph .btn, .ph-sheet-top > :is(.ph-sheet-lead, .ph-sheet-act), .ph-icon, .ph-text, .btn.ph-back,
+    .hd > :is(.ph-find, .ph-new, .ph-month-btn), .hd > .search .search-clear, .code-line .copy, .rd-replied,
+    .view-empty .btn, .ph-sheet .composer :is(.btn.sm, .ibtn.sm, .cmp-fold), .ph-detail :is(.fd-mark.check, .card-h .ibtn),
+    .ph-editor :is(.ibtn.sm, .lr-q, .seg > *), .ph-import .select, .nw-recap-done, .nw-up .btn, .nw-state .btn, .alf-pill-x,
+    .settings.ph-set :is(.switch, .btn, .select))::before { content: ""; position: absolute; inset: min(0px, (100% - var(--ph-tap)) / 2); }
+  :is(.composer .cmp-chip-x, .editor .qchip .x)::before { content: ""; position: absolute; inset: min(0px, (100% - var(--ph-tap)) / 2) 0 min(0px, (100% - var(--ph-tap)) / 2) min(0px, 100% - var(--ph-tap)); }
   /* The canvas is the frame, near-black in both themes: what iOS draws the status bar on, and what a
      rubber-band pull shows above the header or under the tab bar. The page itself never moves; each
      scroller keeps its own bounce. */
@@ -43,6 +60,9 @@
   .toast.leaving { animation: ph-toast-out var(--dur-fast) var(--ease) forwards; }
   @keyframes ph-toast-in { from { transform: translate(-50%, 8px); opacity: 0; } }
   @keyframes ph-toast-out { to { transform: translate(-50%, 4px); opacity: 0; } }
+  /* A fingertip tall, so its action (Undo) takes a tap the toast's whole height. */
+  .toast.ph { height: var(--ph-tap); }
+  .toast.ph.failed { min-height: var(--ph-tap); }
 
   /* The top: the mark, the page's name and what's on the right, 48 px. On the Inbox, the search sits under it. */
   .hd { height: auto; min-height: 48px; flex-wrap: wrap; column-gap: 10px; row-gap: 0; padding: 0 12px 0 20px; border-bottom: 0; }
@@ -76,6 +96,8 @@
   .arow .l3 { font-size: 13.5px; }
   .gh { height: 30px; font-size: 12px; padding: 0 16px 0 20px; }
   .gh .preview { display: none; }
+  /* A day's folded Noise opens on a tap: a fingertip tall, between its rows and the next day. */
+  .nfold { height: var(--ph-tap); }
   /* Two lines a row, as Attention's: the sender, its marks (replied, snoozed, Draft), a Done row's
      tag, the account and age, then the subject under the sender, so neither is cut to a few
      characters. Each cell keeps 8 px before it as a margin, so a row without marks or a tag has no
@@ -105,7 +127,7 @@
   .sk-row > .ac { grid-area: ac; width: auto; }
   .sk-row > .age, .list.all .sk-row > .age { grid-area: age; width: auto; min-width: 36px; }
   .sk-arow { padding: 8px 16px 9px 8px; }
-  .row .subj.code-line { gap: 6px; }
+  .row .subj.code-line { gap: 6px; overflow: visible; }
   .code-line .copy { height: 30px; gap: 4px; font-size: 13px; padding: 0 10px; }
   .code-line .sum { display: none; }
   /* As a code's countdown, a rule's "Trash in 3 h" stays off the phone's row. */
@@ -261,7 +283,7 @@
   .ph-sheet-top > .ph-sheet-lead { justify-self: start; height: 40px; color: var(--ink); font-size: 15px; font-weight: 400; }
   .ph-sheet-top > .ph-back { padding: 0 10px 0 6px; }
   .ph-sheet-title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; text-align: center; }
-  .ph-sheet-top > .ph-sheet-act { grid-column: 3; justify-self: end; height: 32px; font-size: 14px; }
+  .ph-sheet-top > .ph-sheet-act { grid-column: 3; justify-self: end; height: 36px; padding: 0 16px; font-size: 15px; }
   .ph-sheet-act:disabled { opacity: .5; }
   .ph-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
   .ph-sheet[data-keyboard] .ph-sheet-body { padding-bottom: 0; }
@@ -299,8 +321,8 @@
      44 px rows, a count in `ink3` and the check for the current row. A tap outside lands on nothing. */
   .hd > .ph-title { position: relative; min-width: 0; }
   .ph-title-h { margin: 0; font: inherit; letter-spacing: inherit; }
-  .ph-title-btn { display: inline-flex; align-items: center; gap: 2px; margin-left: -6px; padding: 0 4px 0 6px; border-radius: var(--r-row); font: inherit; color: var(--ink); line-height: 36px; }
-  .ph-title-btn .icon { color: var(--ink3); flex: none; transition: transform var(--dur-medium) var(--ease); }
+  .ph-title-btn { display: inline-flex; align-items: center; gap: 2px; margin-left: -6px; padding: 0 4px 0 6px; border-radius: var(--r-row); font: inherit; color: var(--ink); line-height: var(--ph-tap); }
+  .ph-title-btn .icon { color: var(--ink2); flex: none; transition: transform var(--dur-medium) var(--ease); }
   .ph-title-btn[aria-expanded="true"] .icon { transform: rotate(180deg); }
   .ph-title-btn:active { background: var(--sub2); }
   .ph-title-catch { position: fixed; inset: 0; z-index: 24; }
@@ -314,6 +336,9 @@
   .ph-settings { flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px 20px; color: var(--ink2); }
   .ph-settings p { margin: 0; }
 
+  /* An empty view's one action (Show All, Go to the Inbox, New message) is a button a thumb finds. */
+  .view-empty .btn.sm { height: 40px; padding: 0 16px; font-size: 15px; }
+
   /* ---------- Signing in ---------- */
   /* About 18% from the top rather than near the middle, so the keyboard never covers Sign in. */
   .sign-in { width: calc(100% - 32px); top: 18vh; }
@@ -325,4 +350,11 @@
   /* 16 px, so iOS doesn't zoom the page into a field it focuses (as search's). Placeholders as they were. */
   .sign-in .input { font-size: 16px; }
   .sign-in .input::placeholder { font-size: 13.5px; }
+  /* A thumb's sizes: the field, then Sign in across the card under it, then the recovery code's way
+     in under that. On the phone the card lifts a little, without the modal's spread under it. */
+  .sign-in-page .sign-in { box-shadow: var(--shadow-pill); }
+  .sign-in .input { height: var(--ph-tap); }
+  .sign-in-foot { flex-direction: column; gap: 4px; }
+  .sign-in-foot .btn { height: var(--ph-tap); justify-content: center; font-size: 15px; }
+  .sign-in-foot .btn.quiet { margin: 0; }
 }

@@ -1,6 +1,7 @@
 // What the phone's specs share (phoneShell, phoneInbox, phoneReader, phoneAgenda, phoneSwipe,
 // phoneLists): the seed's counts and emails, the Inbox at 390 × 844 (board 21), an element's box once
 // it rests, and a finger's swipe.
+import assert from 'node:assert/strict';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {rested} from './harness.ts';
@@ -58,3 +59,27 @@ export async function instantScrolls(page: Page) {
 
 /** The behaviours asked of `scrollTo` since the page loaded, in order (instantScrolls). */
 export const scrollsAsked = (page: Page) => page.evaluate(() => (window as unknown as {scrollsAsked: string[]}).scrollsAsked);
+
+/**
+ * Each of `controls` takes a fingertip's tap: taps along a line through its centre land on it over at
+ * least 44 px across and 44 px up and down (centred on it or not), and nothing else takes a tap on its
+ * own drawn box, so a neighbour's grown hit area never covers it. Fails naming the control and how
+ * far its tap reaches.
+ */
+export async function fingertips(controls: Locator[]) {
+  for (const control of controls) {
+    await control.scrollIntoViewIfNeeded();
+    const missed = await control.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const x = box.left + box.width / 2, y = box.top + box.height / 2;
+      const owns = (px: number, py: number) => { const hit = document.elementFromPoint(px, py); return !!hit && element.contains(hit); };
+      // The first whole pixel from the centre, in each direction, that a tap misses.
+      const reach = (dx: number, dy: number) => { let step = 1; while (step < 60 && owns(x + dx * step, y + dy * step)) step++; return step; };
+      const across = reach(-1, 0) + reach(1, 0) - 1, down = reach(0, -1) + reach(0, 1) - 1;
+      const own: [number, number][] = [[box.left + 2, y], [box.right - 2, y], [x, box.top + 2], [x, box.bottom - 2]];
+      const covered = own.some(([px, py]) => !owns(px, py));
+      return across < 44 || down < 44 || covered ? `${across} × ${down}${covered ? ', its own box covered' : ''}` : null;
+    });
+    assert.equal(missed, null, `${await control.evaluate(element => element.getAttribute('aria-label') || element.textContent?.trim())} takes a tap ${missed}`);
+  }
+}
