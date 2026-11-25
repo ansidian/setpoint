@@ -3,8 +3,9 @@
 .settings-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; }
 .settings { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--settingsWidth); height: var(--settingsHeight); max-width: calc(100% - 32px); max-height: calc(100% - 32px); display: flex; background: var(--frame); border-radius: var(--r-modal); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-modal); overflow: hidden; z-index: 31; }
 /* The modal is the frame, its nav drawn on it as the sidebar is (Night in Light), its page a card
-   8 px in, its corners concentric with the modal's. */
-.settings:not(.ph-set) > .set-main { margin: 8px 8px 8px 0; background: var(--card); border-radius: calc(var(--r-modal) - 8px); box-shadow: inset 0 0 0 1px var(--cardRing), inset 0 1px 0 var(--cardTop); }
+   8 px in, its corners concentric with the modal's. The modal's ring is its one edge: the card is
+   told from the frame by its fill alone, with no ring of its own inside the modal's. */
+.settings:not(.ph-set) > .set-main { margin: 8px 8px 8px 0; background: var(--card); border-radius: calc(var(--r-modal) - 8px); }
 /* It rises 8 px and settles over 260 ms as its scrim fades in, and closes at once (DESIGN.md › Motion).
    It rises without scaling: once a big panel has scaled in, Chromium keeps drawing its text half a
    pixel off where it rests. A page switch fades its content up 4 px over 120 ms: each page mounts its
@@ -15,7 +16,8 @@
 .settings .set-main > :not(.set-x) { animation: set-page-in var(--dur-fast) var(--ease); }
 @keyframes set-page-in { from { opacity: 0; transform: translateY(4px); } }
 
-.settings .set-nav { width: var(--settingsNav); flex: none; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--frame); }
+/* The nav is the modal's own frame, unpainted, so the modal's ring runs on round it. */
+.settings .set-nav { width: var(--settingsNav); flex: none; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; }
 .settings .set-navtitle { height: 36px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 .settings .set-nav .nav { width: 100%; text-align: left; }
 /* A page under keyboard focus takes hover's `sub`. The current one keeps its raised chip. */
@@ -38,6 +40,9 @@
   border-top-right-radius: calc(var(--r-modal) - 9px); }
 /* The head fades up with its page (above) and draws its hairline as the page scrolls. */
 .settings .set-main > .set-head { animation: set-page-in var(--dur-fast) var(--ease), set-head-edge linear both; animation-timeline: auto, --setmain; animation-range: normal, 0 24px; }
+/* The thumb's strip spans the page's padding, from the scrollport's top, so the thumb runs down the
+   card's right edge as a mail list's does. */
+.settings .set-main > .scroll-strip { margin: -19px -28px 19px -32px; }
 @keyframes set-head-edge { to { box-shadow: 0 1px 0 var(--hair); } }
 .settings .set-title { font-size: 18px; font-weight: 500; letter-spacing: -.01em; margin: 0; }
 .settings .set-x { position: fixed; top: 24px; right: 20px; z-index: 4; }

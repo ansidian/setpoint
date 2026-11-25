@@ -101,7 +101,7 @@ account names). The UI says "Done", never "handled".
   content sits on `card`s inside it, radius 10, 8 px from the frame's edges and from each other (on
   the phone, one card flush to the sides with its top corners rounded). The drag edges sit in the
   gaps. The key hints are a strip of frame under their pane's card, and go with it when an email
-  opens. Settings is the frame with its page a card; ⌘K's field is on the frame, its list a card. In Light the frame is drawn as Night in full (inks, hues, fills,
+  opens. Settings is the frame with its page a card, told from it by its fill, the modal's ring its one edge; ⌘K's field is on the frame, its list a card. In Light the frame is drawn as Night in full (inks, hues, fills,
   fields), since Light's hues don't hold on near-black: an element marked `data-theme="night"`
   takes Night's variables, keeping its own theme's `frame`. A rule meant for one theme alone is
   written so it doesn't match inside that scope (`tokens.ts › nightScope`).
@@ -146,9 +146,9 @@ account names). The UI says "Done", never "handled".
   on it changes nothing. In Night its quiet text (`ink3`) and a read row's sender and subject take
   `ink2`, 5.6:1 on the tint. The day pane's upcoming event, selected, keeps its rounded tile in its
   own colour (16%) and takes the shadow alone.
-- **Scrollbars:** thin and dark (Light thumb `rgba(20,35,55,.22)`). The mail lists draw their own
-  6 px thumb over the rows' right end, so rows and bands run to the card's edge; the phone keeps its
-  native overlay scrollbar.
+- **Scrollbars:** thin and dark (Light thumb `rgba(20,35,55,.22)`). The mail lists and Settings' page
+  draw their own 6 px thumb over their content's right end, so rows and bands run to the card's edge
+  and no scrollbar is cut by its corners; the phone keeps its native overlay scrollbar.
 - **Light's neutrals** (edges, hairlines, fills, stripes, the calendar's weekends and outside days,
   the scrollbar) are slate alphas, `rgba(20,35,55,…)`, as its inks are slate.
 

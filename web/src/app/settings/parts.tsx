@@ -8,6 +8,7 @@ import type {HealthKind} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {placeMenu} from '../../ui/popover.ts';
 import {dotStyle} from '../accounts.ts';
+import {ScrollThumb} from '../ScrollThumb.tsx';
 import {Bar, LoadFailed, Sk, useLoadFailed} from '../states/Loading.tsx';
 import type {Load} from '../states/Loading.tsx';
 import {closeSettings} from './store.ts';
@@ -22,6 +23,7 @@ export function Page({title, note, actions, loads = [], children}: {title: strin
   return (
     <section className="set-main" aria-label={title}>
       <button className="ibtn set-x" type="button" aria-label="Close settings" onClick={closeSettings}><Icon name="close" /></button>
+      <ScrollThumb />
       <div className="set-head">
         <h2 className="set-title">{title}</h2>
         {note && <span className="head-note after num">{note}</span>}

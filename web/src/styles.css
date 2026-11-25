@@ -39,16 +39,17 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 
 /* Thin scrollbars, their thumb the theme's (DESIGN.md › Tokens). */
 * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
-/* The mail lists draw their own thumb over the rows (ScrollThumb.tsx) where the pointer is fine, so
-   their rows and bands run to the card's edge. The phone keeps its native overlay scrollbar. */
+/* The mail lists and Settings' page draw their own thumb over their content (ScrollThumb.tsx) where
+   the pointer is fine, so their rows and bands run to the card's edge and no scrollbar is cut by its
+   corners. The phone keeps its native overlay scrollbar. */
 .scroll-strip { display: none; position: sticky; top: 0; height: 0; flex: none; z-index: 4; }
 .scroll-thumb { position: absolute; top: 0; right: 3px; width: 6px; border-radius: 999px; background: var(--scrollbar-thumb); touch-action: none; transition: width var(--dur-fast) var(--ease), right var(--dur-fast) var(--ease); }
 .scroll-thumb[hidden] { display: none; }
 .scroll-thumb:hover, .scroll-thumb:active { width: 8px; right: 2px; }
 @media (hover: hover) and (pointer: fine) {
   .scroll-strip { display: block; }
-  .list:has(> .scroll-strip) { scrollbar-width: none; }
-  .list:has(> .scroll-strip)::-webkit-scrollbar { display: none; }
+  :is(.list, .set-main):has(> .scroll-strip) { scrollbar-width: none; }
+  :is(.list, .set-main):has(> .scroll-strip)::-webkit-scrollbar { display: none; }
 }
 
 .num { font-variant-numeric: tabular-nums; }
