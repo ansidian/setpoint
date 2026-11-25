@@ -11,6 +11,7 @@ import {render} from 'vitest-browser-react';
 import {clearCache} from '../../src/api/client.ts';
 import {Palette} from '../../src/app/palette/Palette.tsx';
 import {useCommands} from '../../src/app/palette/commands.ts';
+import {showSelectBar} from '../../src/app/phone/selectBar.tsx';
 import {PhoneAlfred} from '../../src/app/search/PhoneAlfred.tsx';
 import {alfredThread, resetAlfred, startAlfred} from '../../src/app/search/alfred.ts';
 import type {Route} from '../../src/logic/route.ts';
@@ -37,6 +38,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  showSelectBar(null);
   resetAlfred();
   clearCache();
   vi.restoreAllMocks();
@@ -128,4 +130,20 @@ test('the phone: with a conversation, the pill in the button\'s place', async ()
   await render(<div className="main" style={{position: 'relative', height: 844}}><PhoneAlfred route={INBOX} /></div>);
   await expect.element(page.getByRole('button', {name: 'Open Alfred'})).toBeVisible();
   expect(page.getByRole('button', {name: 'Ask Alfred'}).query()).toBeNull();
+});
+
+// Where neither the round button nor the pill shows: while Select's bar has the tabs' place, and on Settings.
+const NOOP = () => {};
+const SELECT = {count: 1, done: true, pin: true, read: true, on: {done: NOOP, pin: NOOP, read: NOOP, trash: NOOP}};
+test.for([
+  {where: 'during Select', route: INBOX, select: true},
+  {where: 'on Settings', route: {page: 'settings', section: 'notifications'} as Route, select: false},
+])('the phone: neither the button nor the pill shows $where', async ({route, select}) => {
+  await page.viewport(390, 844);
+  if (select) showSelectBar(SELECT);
+  await render(<div className="main" style={{position: 'relative', height: 844}}><PhoneAlfred route={route} /></div>);
+  expect(page.getByRole('button', {name: 'Ask Alfred'}).query()).toBeNull();
+  startAlfred({kind: 'page', context: {page: route.page}}, 'rent');
+  await expect.poll(() => alfredThread()?.turns.length).toBe(1);
+  expect(page.getByRole('button', {name: 'Open Alfred'}).query()).toBeNull();
 });

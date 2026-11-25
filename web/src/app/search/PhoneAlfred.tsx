@@ -7,7 +7,8 @@
 // Back folds the sheet to the pill again, and the pill's × closes the conversation for good. An
 // email's row opens it in the phone's reader and an item's row its detail on the Agenda, folding the
 // sheet to the pill on the way. The pill keeps out of the reader's and the detail's way: it shows
-// only over a page with its tab bar.
+// only over a page with its tab bar. Neither shows while Select's bar has the tabs' place, or on
+// Settings, whose switches sit at the right where they'd be.
 import {useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {openMessage} from '../../api/mail.ts';
@@ -16,6 +17,7 @@ import {Icon} from '../../ui/Icon.tsx';
 import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {Sheet} from '../phone/Sheet.tsx';
+import {useSelectBar} from '../phone/selectBar.tsx';
 import {navigate} from '../router.ts';
 import {toastFailure} from '../toast.ts';
 import {pageContext} from '../../logic/search.ts';
@@ -33,6 +35,7 @@ export function PhoneAlfred({route}: {route: Route}) {
   const {byId: accounts} = useAccounts();
   const claimed = useAlfredClaimed();
   const [open, setOpen] = useState(false);
+  const selecting = useSelectBar() !== null && route.page === 'inbox';
   // Shown inline again, or closed: the next time it's away from search it starts as the pill.
   if (open && !windowed) setOpen(false);
   // Shown inline (Inbox search), the thread is there, not here.
@@ -59,8 +62,10 @@ export function PhoneAlfred({route}: {route: Route}) {
       </Sheet>
     );
   }
-  // Over the reader or an item's detail the tab bar is out of sight, and so is the pill.
-  const covered = ((route.page === 'inbox' || route.page === 'sent' || route.page === 'snoozed') && route.open !== null) || (route.page === 'calendar' && route.item !== null);
+  // Over the reader or an item's detail the tab bar is out of sight, and so is the pill; while
+  // picking emails or changing settings it's an unrelated action over their rows.
+  const covered = ((route.page === 'inbox' || route.page === 'sent' || route.page === 'snoozed') && route.open !== null) || (route.page === 'calendar' && route.item !== null)
+    || selecting || route.page === 'settings';
   if (covered) return null;
   if (!thread) {
     return (
