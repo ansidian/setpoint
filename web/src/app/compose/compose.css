@@ -63,7 +63,7 @@
 .composer .cmp-recipients { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px 0; cursor: text; }
 .composer .cmp-chip { height: 24px; display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; max-width: 100%; }
 .composer .cmp-chip-x { width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 999px; color: var(--ink3); }
-.composer .cmp-chip-x:hover { background: var(--sub3); color: var(--ink); }
+@media (hover: hover) { .composer .cmp-chip-x:hover { background: var(--sub3); color: var(--ink); } }
 .composer .cmp-typing { min-width: 120px; }
 .composer .cmp-typing > input { width: 100%; height: 26px; outline: none; color: var(--ink); }
 .composer .cmp-typing > input.invalid { color: var(--alert); }
@@ -137,7 +137,8 @@
 /* The reply's quote, folded behind "…"; opened, it can be trimmed. */
 .composer .cmp-quote { padding: 0 20px 12px; flex: none; }
 .composer .cmp-fold { height: 18px; width: 30px; display: inline-grid; place-items: center; border-radius: 999px; background: var(--sub2); color: var(--ink2); }
-.composer .cmp-fold:hover, .composer .cmp-fold[aria-expanded="true"] { background: var(--sub3); color: var(--ink); }
+.composer .cmp-fold[aria-expanded="true"] { background: var(--sub3); color: var(--ink); }
+@media (hover: hover) { .composer .cmp-fold:hover { background: var(--sub3); color: var(--ink); } }
 .composer .cmp-quote-line { margin-top: 10px; color: var(--ink3); }
 .composer .cmp-quote-text { margin-top: 6px; padding-left: 10px; box-shadow: inset 2px 0 0 var(--sub3); color: var(--ink2); outline: none; white-space: pre-wrap; }
 
