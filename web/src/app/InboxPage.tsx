@@ -54,7 +54,7 @@ import {leftOutSection, readerMarks, resultSections} from '../logic/search.ts';
 import {
   codeExpired, inSight, keepCursor, letGo, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
 } from '../logic/inbox.ts';
-import {phoneSlide} from '../logic/phone.ts';
+import {phoneSlide, readerStep} from '../logic/phone.ts';
 import {readerActions} from '../logic/reader.ts';
 import {snoozeable, snoozedLine} from '../logic/snooze.ts';
 import {broughtForward, counted, dropped, inListOrder, NO_SELECTION, ranged, selectedAll, selectionOffers, stacked, toggled} from '../logic/selection.ts';
@@ -95,7 +95,7 @@ import {InboxDay, PANE_PATHS} from './InboxDay.tsx';
 import type {Travel} from './Reader.tsx';
 import {useCommands} from './palette/commands.ts';
 import type {Command} from './palette/commands.ts';
-import {navigate} from './router.ts';
+import {back as historyBack, navigate, overList} from './router.ts';
 import {AnswerCard} from './search/AnswerCard.tsx';
 import {SearchField, SearchResults} from './search/Search.tsx';
 import {LoadFailed, useAfter, useArrival, useLoadFailed} from './states/Loading.tsx';
@@ -151,12 +151,13 @@ let slides = 0;
  * root). Only the app's own opens and closes slide. The browser's Back (popstate) doesn't, as Safari's
  * edge swipe animates it already. Without the API it's the cut it was. phoneSlide owns which way.
  */
-function slide(direction: 'in' | 'back' | null, update: () => void) {
-  if (!direction || !('startViewTransition' in document)) return update();
+function slide(direction: 'in' | 'back' | null, update: () => void | Promise<void>) {
+  if (!direction || !('startViewTransition' in document)) return void update();
   const root = document.documentElement;
   const token = ++slides;
   root.dataset.slide = direction;
-  void document.startViewTransition(() => flushSync(update)).finished.finally(() => {
+  // An update that waits (the history's Back) ends the old view once the route has followed it.
+  void document.startViewTransition(() => flushSync(update)?.then(() => flushSync(() => {}))).finished.finally(() => {
     if (token === slides) delete root.dataset.slide;
   });
 }
@@ -358,7 +359,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       search.mark(id, {unread: false});
     }
     // On the phone the reader slides in over the list. The desktop's sits beside it.
-    slide(phoneSlide(phone, open, id), () => go({open: id}));
+    const step = readerStep(phone, open, id, travel !== null, overList());
+    slide(phoneSlide(phone, open, id), () => navigate({...route, open: id}, {replace: step.how === 'replace', overList: step.overList}));
     void openMessage(id).catch(toastFailure('Failed to mark read'));
   }
 
@@ -409,7 +411,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   /** Closes the reader: on the phone it slides back off the list (Back, Done, Trash). */
   function close() {
-    slide(phoneSlide(phone, open, null), () => go({open: null}));
+    const step = readerStep(phone, open, null, false, overList());
+    slide(phoneSlide(phone, open, null), () => step.how === 'back' ? historyBack() : go({open: null}));
   }
 
   /** Another email from the open one's thread, its reply line or its Answer card. On the phone Back comes back here. */

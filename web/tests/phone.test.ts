@@ -5,7 +5,7 @@ import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {itemsByDay} from '../src/logic/calendar.ts';
-import {agendaAnchor, agendaChunks, agendaMonth, agendaNowAt, loadsOn, overdueFor, phoneAgenda, phoneSlide, snoozeEnd} from '../src/logic/phone.ts';
+import {agendaAnchor, agendaChunks, agendaMonth, agendaNowAt, loadsOn, overdueFor, phoneAgenda, phoneSlide, readerStep, snoozeEnd} from '../src/logic/phone.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -186,3 +186,16 @@ describe('the agenda past its first days', () => {
 
 // One email to another doesn't slide on the phone, after an Undo too.
 test('the phone\'s reader doesn\'t slide from one email to another', () => expect(phoneSlide(true, 4, 5)).toBe(null));
+
+// The phone's reader and the history: the system's Back is the app's Back.
+test.each([
+  ['an email opened from the list is pushed over it', true, null, 4, false, false, {how: 'push', overList: true}],
+  ['its Back is the history\'s', true, 4, null, false, true, {how: 'back', overList: false}],
+  ['Done or Trash moving on takes its place, over the list still', true, 4, 5, true, true, {how: 'replace', overList: true}],
+  ['a thread line is pushed over the email', true, 4, 5, false, true, {how: 'push', overList: false}],
+  ['Back from a deep link pushes the list', true, 4, null, false, false, {how: 'push', overList: false}],
+  ['the desktop pushes', false, null, 4, false, false, {how: 'push', overList: false}],
+  ['the desktop\'s close pushes too', false, 4, null, false, true, {how: 'push', overList: false}],
+] as const)('the reader\'s history step: %s', (_name, phone, from, to, moving, over, expected) => {
+  expect(readerStep(phone, from, to, moving, over)).toEqual(expected);
+});
