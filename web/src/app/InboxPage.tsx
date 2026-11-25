@@ -898,6 +898,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const listArrived = useArrival(ready);
   // The days' next page on its way, as the list nears its end.
   const allMore = allPages.length > 1 && allPages.at(-1) === undefined;
+  // The view has nothing in it, and nothing more to come: its empty state shows, and there's nothing to Select.
+  const emptied = Boolean(shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before));
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Failed to unpin'));
 
@@ -980,7 +982,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
           <>
             {/* Not while searching: it would read the hidden Inbox's mail, not the results. */}
             {!searching && markable && <button className="ibtn ph-icon" type="button" aria-label={markScope} onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
-            {!searching && <button className="btn quiet ph-text" type="button" onClick={() => setSelectMode(true)}>Select</button>}
+            {/* Not on a view with nothing in it: there'd be no row to pick. */}
+            {!searching && !emptied && <button className="btn quiet ph-text" type="button" onClick={() => setSelectMode(true)}>Select</button>}
             <button className="ibtn ph-icon" type="button" aria-label="New message" onClick={() => newMessage()}><Icon name="edit" size={20} /></button>
           </>
         )}
@@ -998,7 +1001,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           // Until both answers are in, its skeleton, or why they didn't come. Rows not
           // shown before don't fold in then. A view starts afresh, at its top.
           <AllList key={view} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
-            empty={view !== 'all' && shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before)
+            empty={view !== 'all' && emptied
               ? <EmptyView view={view} newest={(view === 'attention' ? allRows.find(row => row.lane === 'attention') : allRows[0])?.received_at ?? null} onAll={() => switchView('all')} /> : null}
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton account={false} />) : null} account={false} prompt={view === 'all' || view === 'attention' ? prompt : null}

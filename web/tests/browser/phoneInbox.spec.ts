@@ -2,6 +2,7 @@
 // the views menu under its title, and plain search, which takes sent mail in.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
+import type {InboxOut} from '@setpoint/shared';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import {counts, email, inbox} from './phoneHelpers.ts';
 
@@ -232,6 +233,30 @@ test('phone search takes sent mail in: the user\'s reply reads To its recipient 
     assert.equal(await page.locator('.ph-top button[aria-label="Pin"]').count(), 0);
     await page.locator('.ph-acts button', {hasText: 'More'}).tap();
     assert.deepEqual(await page.locator('.ph-bs .ph-bs-i').allTextContents(), ['Forward', 'Add to calendar', 'Add as task']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('on the phone a view with nothing in it offers no Select', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const select = page.locator('.hd .ph-text', {hasText: 'Select'});
+    await select.waitFor();
+    // Every Attention email Done: Attention says so, with no Select over it.
+    const {groups} = await setpoint.api<InboxOut>('GET', '/mail/inbox');
+    const needing = groups.flatMap(group => group.rows).filter(row => row.lane === 'attention' && !row.done);
+    for (const row of needing) await setpoint.api('POST', `/mail/messages/${row.id}/done`, {done: true});
+    await page.locator('.ph-title-btn').tap();
+    await page.getByRole('menu').getByRole('menuitemradio', {name: /^Attention/}).tap();
+    await page.locator('.view-empty', {hasText: 'Nothing needs you'}).waitFor();
+    assert.equal(await select.count(), 0);
+    // Back on All, there's something to select.
+    await page.locator('.ph-title-btn').tap();
+    await page.getByRole('menu').getByRole('menuitemradio', {name: /^All/}).tap();
+    await select.waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
