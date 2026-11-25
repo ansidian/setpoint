@@ -16,7 +16,7 @@
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, UIEvent} from 'react';
-import {allRowLine, dayHeading, listKey, noiseKey} from '../logic/all.ts';
+import {allRowLine, dayHeading, laneNamed, listKey, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
 import {age, clockTime, codeGroups, dayOf, fullTimestamp, localDate, trashLeft} from '../logic/format.ts';
@@ -33,6 +33,7 @@ import {useRowSlot} from './slots.tsx';
 import {SnoozeMenu} from './SnoozeMenu.tsx';
 import type {Beat} from './fold.ts';
 import {Count} from './Count.tsx';
+import {usePhone} from './Phone.tsx';
 import {useSwipes} from './phone/swipe.tsx';
 import type {SwipeAct, SwipeActs} from './phone/swipe.tsx';
 import {TriageNote, useHealthBars} from './states/States.tsx';
@@ -134,6 +135,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
   useLayoutEffect(() => {
     if (fill && section.current && nearEnd(section.current)) onNearEnd();
   });
+  const phone = usePhone();
   const entries = useMemo(() => {
     const rowEntry = (row: MessageRowOut, group: InboxGroup | null, part: 'attention' | 'all', aged: boolean, noise: string | null = null): Entry<Part> =>
       ({key: listKey(part, row.id), id: row.id, item: {kind: 'row', row, group, shelf: false, aged, noise}});
@@ -145,7 +147,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
       return [
         ...day.lanes.flatMap(lane => [
           // Attention counts what still needs the user, as Attention's segment does.
-          ...(lanes ? [{key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', date: day.date, lane: lane.lane, label: lane.label,
+          ...(lanes && laneNamed(lane.lane, day.lanes.map(one => one.lane), phone) ? [{key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', date: day.date, lane: lane.lane, label: lane.label,
             count: lane.lane === 'attention' ? lane.rows.filter(({row}) => !row.done).length : lane.rows.length, note: lane.lane === 'unsorted' && day.date === noted}} satisfies Entry<Part>] : []),
           ...lane.rows.flatMap(({row, kind}) => [
             ...(kind ? [{key: `kind:${day.date}:${kind}`, id: null, item: {kind: 'kh', group: kind}} satisfies Entry<Part>] : []),
@@ -171,7 +173,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
       ] : []),
       ...days.flatMap((day): Entry<Part>[] => [{key: `day:${day.date}`, id: null, item: {kind: 'day', date: day.date}}, ...dayParts(day)]),
     ];
-  }, [attention, days, shelf, lanes, prompt, today]);
+  }, [attention, days, shelf, lanes, prompt, today, phone]);
   const shown = useFold(entries, RULES, FOLD_HOLD_MS);
   // Each row by its key, for its swipes.
   const rowsByKey = useMemo(() => new Map(entries.flatMap(entry => (entry.item.kind === 'row' ? [[entry.key, entry.item.row] as const] : []))), [entries]);

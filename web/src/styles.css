@@ -467,6 +467,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ve-block.fyi .ve-art .accent { stroke: var(--cool); }
 .ve-block.sent .ve-art .accent { stroke: var(--c, var(--ink3)); }
 .ve-block.drafts .ve-art .accent { stroke: var(--accent); }
+.ve-block.snoozed .ve-art .accent { stroke: var(--violet); }
 @keyframes ve-draw { from { stroke-dashoffset: 1; } }
 @media (prefers-reduced-motion: reduce) { .ve-art path { animation: none; } }
 .ve-head { margin: 0; color: var(--ink); font-size: 15px; font-weight: 500; }

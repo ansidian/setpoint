@@ -67,6 +67,14 @@ export interface LaneView {
   rows: {row: MessageRowOut; kind: InboxGroup | null}[];
 }
 
+/**
+ * Whether a day's `lane` gets its label among the day's `lanes`. On the phone a day of FYI alone
+ * drops "FYI n": it only parts FYI from the lanes over it, and the day band and kind labels already
+ * head its rows. Attention and Unsorted always keep theirs.
+ */
+export const laneNamed = (lane: AllLane, lanes: AllLane[], phone: boolean): boolean =>
+  !phone || lane !== 'fyi' || lanes.some(other => other === 'attention' || other === 'unsorted');
+
 export interface DayView {
   date: string;
   lanes: LaneView[];

@@ -353,12 +353,16 @@ export function EmailOnly({id, travel = null, accounts, now, timeZone}: {
 /**
  * The account band across the card under the tools, outside the email's scroller so it spans the
  * card's whole width: the account's icon and name in its colour, its address (for sent mail, the
- * account it was sent from), and the email's state on the right. The list's Inbox rows don't name
+ * account it was sent from), and the email's state on the right (on the phone, only when it isn't the Inbox). The list's Inbox rows don't name
  * the account, so this is where it shows. Until the email's row is known it holds its place, empty.
  */
 function AccountBand({listed, accounts, now, timeZone}: {listed: MessageRowOut | undefined; accounts: Map<number, AccountOut>; now: number; timeZone: string}) {
+  const phone = usePhone();
   const account = listed ? accounts.get(listed.account_id) : undefined;
   const icon = account && account.icon in ICONS ? (account.icon as IconName) : 'mail';
+  // On the phone, Back already says Inbox over it: the band names the state only when it's another.
+  const state = listed ? mailboxState(listed, now, timeZone) : null;
+  const named = phone && state === 'Inbox' ? null : state;
   return (
     <div className="rd-acct" style={dotStyle(account?.colour)}>
       {account && listed && (
@@ -366,7 +370,7 @@ function AccountBand({listed, accounts, now, timeZone}: {listed: MessageRowOut |
           <Icon name={icon} size={16} />
           <span className="name">{account.label}</span>
           <span className="addr selectable">{account.address}</span>
-          <span className="state">{mailboxState(listed, now, timeZone)}</span>
+          {named && <span className="state">{named}</span>}
         </>
       )}
     </div>

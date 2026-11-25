@@ -571,9 +571,32 @@ export function applyTokens(root: HTMLElement) {
   rule.textContent = nightScope();
 }
 
+/** The phone's menus that open from a Night header: the title menu and search's suggestion list. */
+const PAGE_MENUS = '.ph-title-pop, .hd > .search > .places';
+
+/**
+ * The page's scope for the phone's menus: one that opens from a Night header draws in the page's own
+ * theme, as the bottom sheets do, so in Light it's light under the dark header. The theme-free
+ * variables that point at theme ones are declared again, as the Night scope's are.
+ */
+export function pageScope(theme: Theme): string {
+  const pointing = Object.entries(cssVariables()).filter(([, value]) => value.startsWith('var(--'));
+  const vars = [...Object.entries(themeVariables(theme)), ...pointing];
+  const body = vars.map(([name, value]) => `${name}: ${value};`).join(' ');
+  return `@media (max-width: 639px) { [data-theme="night"] :is(${PAGE_MENUS}) { ${body} color: var(--ink); color-scheme: ${theme === 'light' ? 'light' : 'dark'}; } }`;
+}
+
 /** Draws the page in a theme: its tokens, and the browser's own controls to match. */
 export function applyTheme(root: HTMLElement, theme: Theme) {
   for (const [name, value] of Object.entries(themeVariables(theme))) root.style.setProperty(name, value);
   root.style.colorScheme = theme === 'light' ? 'light' : 'dark';
   root.dataset.theme = theme;
+  const doc = root.ownerDocument;
+  let rule = doc.head.querySelector<HTMLStyleElement>('style[data-page-scope]');
+  if (!rule) {
+    rule = doc.createElement('style');
+    rule.dataset.pageScope = '';
+    doc.head.append(rule);
+  }
+  rule.textContent = pageScope(theme);
 }

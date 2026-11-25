@@ -26,8 +26,9 @@
 // It is mounted once, by ComposerRoot, into the host element its places take in turn (place.ts):
 // the reader under its email, a new message's pane, Drafts' pane and the floating window. On the
 // phone its place is a full-screen sheet (phone/Sheet.tsx) it puts up itself: the sheet's title
-// names the kind, its bar has Cancel (Esc: the draft kept) and Send (Send anyway when it asks
-// first), and the format row has no Send of its own, Send later or Pop out.
+// names the kind, its bar has Cancel (a bottom sheet of Save draft and Discard; Esc: the draft kept)
+// and Send (Send anyway when it asks first), and the format row has no Send of its own, Send later,
+// Pop out or Discard.
 import type {AccountOut, DraftOut, DraftsOut, DraftUpdateInput, FromOut, MessageOut, Recipient} from '@setpoint/shared';
 import {isEmpty, plainText, sameDescription} from '@setpoint/shared/richText';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
@@ -60,6 +61,7 @@ import {Bar, Dot, Sk} from '../states/Loading.tsx';
 import {SnoozeMenu} from '../SnoozeMenu.tsx';
 import {useHelpMeWrite, WriteButton, WriteLine} from './WriteLine.tsx';
 import {usePhone} from '../Phone.tsx';
+import {BottomSheet, SheetChoice} from '../phone/BottomSheet.tsx';
 import {Sheet} from '../phone/Sheet.tsx';
 import './compose.css';
 
@@ -115,6 +117,8 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   // A reply's or forward's subject shows as a field once the reply-type menu's Edit subject asks.
   // After it, the reply-type menu is gone.
   const [subjectShown, setSubjectShown] = useState(kind === 'new' || open.subjectEdited);
+  // On the phone, Cancel's question (Save draft or Discard) is up.
+  const [leaving, setLeaving] = useState(false);
   const subjectField = useRef<HTMLInputElement>(null);
   const saveError = useSaveError(draft?.id ?? null);
   const body = useRef<HTMLDivElement>(null);
@@ -434,9 +438,12 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
             }} />
             <span className="cmp-bar-slot"><WriteButton help={help} /></span>
             <span className="grow" />
-            <button className="ibtn sm danger" type="button" aria-label="Discard" data-tip="Discard" onMouseDown={event => event.preventDefault()} onClick={() => draft && discard({...draft, ...latest.current})}>
-              <Icon name="delete" size={17} />
-            </button>
+            {/* On the phone Discard is Cancel's choice, so the format row fits the screen. */}
+            {!sheet && (
+              <button className="ibtn sm danger" type="button" aria-label="Discard" data-tip="Discard" onMouseDown={event => event.preventDefault()} onClick={() => draft && discard({...draft, ...latest.current})}>
+                <Icon name="delete" size={17} />
+              </button>
+            )}
           </>
         )} />
     </section>
@@ -446,10 +453,18 @@ function Fields({draft, open, from, message, accounts, timeZone}: {
   return (
     <>
       {composer}
-      <Sheet title={kind === 'new' ? 'New message' : KIND_NAMES[kind]} onClose={() => closeComposerAt(open.key)}
+      {/* Cancel asks, as iOS Mail does: Save draft keeps it, Discard takes it with Undo. Esc keeps it, or
+          closes the question while it's up. */}
+      <Sheet title={kind === 'new' ? 'New message' : KIND_NAMES[kind]} onClose={() => (leaving ? setLeaving(false) : closeComposerAt(open.key))} onCancel={() => setLeaving(true)}
         action={{label: warning ? 'Send anyway' : 'Send', onClick: sendNow, disabled: waiting}}>
         <ComposerPlace composerKey={open.key} />
       </Sheet>
+      {leaving && (
+        <BottomSheet title="Save this draft?" onClose={() => setLeaving(false)}>
+          <SheetChoice icon="edit_note" label="Save draft" onChoose={() => closeComposerAt(open.key)} />
+          <SheetChoice icon="delete" tone="alert" label="Discard" onChoose={() => draft && discard({...draft, ...latest.current})} />
+        </BottomSheet>
+      )}
     </>
   );
 }

@@ -540,25 +540,27 @@ export function InboxPage({route}: {route: InboxRoute}) {
         return () => unsnooze(one);
       }, n => counted(n, 'Failed to snooze', m => `Failed to snooze ${m}`), n => counted(n, 'Failed to unsnooze', m => `Failed to unsnooze ${m}`));
     },
-    // Pin, or Unpin when every one is pinned already.
-    pin: (ids: number[]) => {
+    // Pin, or Unpin when every one is pinned already. `fromList`: picked on the phone's list (a swipe, Select).
+    pin: (ids: number[], fromList = false) => {
       // Sent mail and snoozed mail have no Pin.
       const rows = ids.flatMap(id => rowOf(id) ?? []).filter(row => !row.sent_only && !row.snoozed_until);
       const pinning = rows.some(row => !row.pinned);
       const changing = rows.filter(row => row.pinned !== pinning).map(row => row.id);
-      // Out of the shelf's sight, a pin says where it went, with Undo.
-      const unseen = pinning && !phone && !shelfInView();
+      // Out of the shelf's sight, a pin says where it went, with Undo. From the phone's list the row
+      // moves away from under the thumb either way, so a pin or unpin there always says so.
+      const says = (phone && fromList) || (pinning && !phone && !shelfInView());
       void changeEach(changing, id => setPinned(id, pinning)).then(outcomes => {
         const refused = refusals(changing, outcomes);
         if (refused.length) toastFailure(pinning ? counted(refused.length, 'Failed to pin', n => `Failed to pin ${n}`) : counted(refused.length, 'Failed to unpin', n => `Failed to unpin ${n}`))(refused[0]!.error);
-        // Only those still pinned once the last P is in: a pin taken back before it was answered says nothing.
-        const pinned = changing.filter((_, at) => {
+        // Only those still as asked once the last P is in: a pin taken back before it was answered says nothing.
+        const moved = changing.filter((_, at) => {
           const outcome = outcomes[at]!;
-          return outcome.status === 'fulfilled' && outcome.value.pinned;
+          return outcome.status === 'fulfilled' && outcome.value.pinned === pinning;
         });
-        if (unseen && pinned.length) {
-          showToast(counted(pinned.length, 'Pinned', n => `Pinned ${n}`), {label: 'Undo', run: () => void changeEach(pinned, id => setPinned(id, false)).then(results => {
-            if (results.some(result => result.status === 'rejected')) toastFailure('Failed to unpin')(results.find(result => result.status === 'rejected')!.reason);
+        if (says && moved.length) {
+          const line = pinning ? counted(moved.length, 'Pinned', n => `Pinned ${n}`) : counted(moved.length, 'Unpinned', n => `Unpinned ${n}`);
+          showToast(line, {label: 'Undo', run: () => void changeEach(moved, id => setPinned(id, !pinning)).then(results => {
+            if (results.some(result => result.status === 'rejected')) toastFailure(pinning ? 'Failed to unpin' : 'Failed to pin')(results.find(result => result.status === 'rejected')!.reason);
           })});
         }
       });
@@ -766,13 +768,13 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // Every row the list holds is selected: Select all turns to Deselect all.
   const allPicked = selecting && stops.some(stop => stop.kind === 'row') && stops.every(stop => stop.kind !== 'row' || selected.includes(stop.id));
   // A row's swipe, picked: read and unread change in place with nothing to say, as swiping back undoes
-  // them; Trash and Done leave with their toast and Undo; Pin and Unpin move it on or off the shelf.
+  // them; Trash and Done leave with their toast and Undo; Pin and Unpin move it on or off the shelf, with theirs.
   const swipeRun = (id: number, act: RowSwipe) => {
     if (act === 'read') on.read([id]);
     else if (act === 'unread') on.markUnread([id]);
     else if (act === 'trash') on.trash([id]);
     else if (act === 'done') on.done([id]);
-    else on.pin([id]);
+    else on.pin([id], true);
   };
 
   // Select's bar in the tab bar's place, while its mode is on, its words following what's selected.
@@ -791,7 +793,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         endSelecting();
       },
       pin: () => {
-        on.pin(selected);
+        on.pin(selected, true);
         endSelecting();
       },
       read: () => {
@@ -898,6 +900,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const listArrived = useArrival(ready);
   // The days' next page on its way, as the list nears its end.
   const allMore = allPages.length > 1 && allPages.at(-1) === undefined;
+  // The view has nothing in it, and nothing more to come: its empty state shows, and there's nothing to Select.
+  const emptied = Boolean(shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before));
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Failed to unpin'));
 
@@ -980,7 +984,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
           <>
             {/* Not while searching: it would read the hidden Inbox's mail, not the results. */}
             {!searching && markable && <button className="ibtn ph-icon" type="button" aria-label={markScope} onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
-            {!searching && <button className="btn quiet ph-text" type="button" onClick={() => setSelectMode(true)}>Select</button>}
+            {/* Not on a view with nothing in it: there'd be no row to pick. */}
+            {!searching && !emptied && <button className="btn quiet ph-text" type="button" onClick={() => setSelectMode(true)}>Select</button>}
             <button className="ibtn ph-icon" type="button" aria-label="New message" onClick={() => newMessage()}><Icon name="edit" size={20} /></button>
           </>
         )}
@@ -998,7 +1003,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           // Until both answers are in, its skeleton, or why they didn't come. Rows not
           // shown before don't fold in then. A view starts afresh, at its top.
           <AllList key={view} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
-            empty={view !== 'all' && shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before)
+            empty={view !== 'all' && emptied
               ? <EmptyView view={view} newest={(view === 'attention' ? allRows.find(row => row.lane === 'attention') : allRows[0])?.received_at ?? null} onAll={() => switchView('all')} /> : null}
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton account={false} />) : null} account={false} prompt={view === 'all' || view === 'attention' ? prompt : null}

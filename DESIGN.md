@@ -104,7 +104,9 @@ account names). The UI says "Done", never "handled".
   opens. Settings is the frame with its page a card, told from it by its fill, the modal's ring its one edge; ⌘K's field is on the frame, its list a card. In Light the frame is drawn as Night in full (inks, hues, fills,
   fields), since Light's hues don't hold on near-black: an element marked `data-theme="night"`
   takes Night's variables, keeping its own theme's `frame`. A rule meant for one theme alone is
-  written so it doesn't match inside that scope (`tokens.ts › nightScope`).
+  written so it doesn't match inside that scope (`tokens.ts › nightScope`). On the phone every menu
+  follows the page's theme, as the bottom sheets do: the title menu and search's suggestions open
+  from the Night header but draw in the page's own theme, light in Light (`tokens.ts › pageScope`).
 - **Roles**: each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
   it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count,

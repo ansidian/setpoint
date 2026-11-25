@@ -13,7 +13,7 @@ import type {AllOut, ItemsOut, Settings} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
-import {box, counts, email, fingertips, inbox, instantScrolls, scrollsAsked} from './phoneHelpers.ts';
+import {box, counts, email, fingertips, inbox, instantScrolls, saveDraft, scrollsAsked} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -91,7 +91,7 @@ test('every control a finger needs takes a 44 px tap, and none takes its neighbo
     // Reply's bar and header: Cancel, Send, the reply's kind, From, Cc Bcc, a recipient's ×, and the quote's fold.
     await fingertips([reply.getByRole('button', {name: 'Cancel'}), reply.getByRole('button', {name: 'Send'}), reply.locator('.cmp-copies'),
       reply.locator('.cmp-from > .btn'), reply.locator('.cmp-chip-x').first(), reply.locator('.cmp-fold')]);
-    await reply.getByRole('button', {name: 'Cancel'}).tap();
+    await saveDraft(reply);
     await reply.waitFor({state: 'detached'});
     await page.locator('.ph-acts button', {hasText: 'Trash'}).tap();
     const toast = await holdToast(page);

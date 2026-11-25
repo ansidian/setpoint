@@ -15,7 +15,7 @@ import type {AllOut, DraftOut, DraftsOut, InboxOut, ItemsOut, MessageOut} from '
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
-import {counts, email, inbox} from './phoneHelpers.ts';
+import {counts, email, fingertips, inbox, saveDraft} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -173,7 +173,7 @@ test('Reply in the bar writes in the composer\'s sheet, Send in its bar holding 
     await toast.locator('button', {hasText: 'Undo'}).tap();
     await reply.getByRole('textbox', {name: 'Message'}).filter({hasText: 'Friday works.'}).waitFor();
     await until('the send is taken back', () => drafts(setpoint), found => found[0]?.send_state === null);
-    await reply.getByRole('button', {name: 'Cancel'}).tap();
+    await saveDraft(reply);
     await reply.waitFor({state: 'detached'});
     await page.evaluate(() => document.documentElement.removeAttribute('data-hold-toast'));
 
@@ -238,7 +238,7 @@ test('New message in the Inbox\'s header writes to someone with a subject, and S
   }
 });
 
-test('a reply started on the phone and left with Cancel is kept, and the desktop opens it again on its email', async () => {
+test('on the phone compose\'s format bar fits the screen with no Discard, and Cancel asks: Save draft keeps the reply for the desktop to open on its email, Discard takes a draft with Undo', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await reading(setpoint, 'Dinner Friday?');
@@ -246,13 +246,44 @@ test('a reply started on the phone and left with Cancel is kept, and the desktop
     const reply = sheet(page, 'Reply');
     await reply.locator('.cmp-from > button').waitFor();
     await page.keyboard.type('Count me in.');
+    // The format bar's buttons all fit across the screen, each a fingertip's, and Discard isn't one.
+    const buttons = await reply.locator('.desc-bar button').all();
+    assert.equal(await reply.locator('.desc-bar').getByRole('button', {name: 'Discard'}).count(), 0);
+    const width = page.viewportSize()!.width;
+    for (const button of buttons) {
+      const box = (await rested(() => button.boundingBox()))!;
+      assert.ok(box.x >= 0 && box.x + box.width <= width, `${await button.getAttribute('aria-label')}: ${box.x}–${box.x + box.width} of ${width}`);
+    }
+    await fingertips(buttons);
+
+    // Cancel asks; Save draft leaves with the reply kept as typed.
     await reply.getByRole('button', {name: 'Cancel'}).tap();
+    const asks = sheet(page, 'Save this draft?');
+    assert.deepEqual(await asks.locator('.ph-bs-i').allTextContents(), ['Save draft', 'Discard']);
+    await asks.locator('.ph-bs-i', {hasText: 'Save draft'}).tap();
     await reply.waitFor({state: 'detached'});
     await until('it is kept as typed', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'Count me in.');
 
     const desk = await setpoint.page('target');
     await desk.goto(page.url());
     await desk.locator('.pane .composer').getByRole('textbox', {name: 'Message'}).filter({hasText: 'Count me in.'}).waitFor();
+
+    // A new message left with Discard goes, and Undo brings it back.
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.hd button[aria-label="New message"]').tap();
+    const write = sheet(page, 'New message');
+    await write.locator('.cmp-from > button').waitFor();
+    await write.getByRole('textbox', {name: 'Message'}).tap();
+    await page.keyboard.type('Never mind.');
+    await until('the new one is kept', () => drafts(setpoint), found => found.some(one => one.snippet === 'Never mind.'));
+    await write.getByRole('button', {name: 'Cancel'}).tap();
+    await sheet(page, 'Save this draft?').locator('.ph-bs-i', {hasText: 'Discard'}).tap();
+    const toast = await holdToast(page);
+    assert.equal(await toast.textContent(), 'Draft discardedUndo');
+    await write.waitFor({state: 'detached'});
+    await until('it goes', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'Count me in.');
+    await toast.locator('button', {hasText: 'Undo'}).tap();
+    await until('Undo brings it back', () => drafts(setpoint), found => found.some(one => one.snippet === 'Never mind.'));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

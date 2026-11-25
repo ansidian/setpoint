@@ -2,8 +2,9 @@
 // the views menu under its title, and plain search, which takes sent mail in.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
+import type {InboxOut} from '@setpoint/shared';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
-import {counts, email, inbox} from './phoneHelpers.ts';
+import {counts, email, inbox, saveDraft} from './phoneHelpers.ts';
 
 after(cleanUp);
 
@@ -199,7 +200,7 @@ test('on the phone a row\'s reply mark and Draft tag sit on its sender\'s line, 
     await reply.locator('.cmp-from > button').waitFor();
     await page.keyboard.type('Thanks!');
     await until('the draft is kept', () => setpoint.api<{drafts: {snippet: string}[]}>('GET', '/mail/drafts'), out => out.drafts.some(one => one.snippet === 'Thanks!'));
-    await reply.getByRole('button', {name: 'Cancel'}).tap();
+    await saveDraft(reply);
     await page.locator('.ph-back').tap();
 
     for (const [row, mark] of [['.row:has(b[data-tip="Out for delivery"])', '.drafted'], ['.row:has(.replied)', '.replied']] as const) {
@@ -232,6 +233,48 @@ test('phone search takes sent mail in: the user\'s reply reads To its recipient 
     assert.equal(await page.locator('.ph-top button[aria-label="Pin"]').count(), 0);
     await page.locator('.ph-acts button', {hasText: 'More'}).tap();
     assert.deepEqual(await page.locator('.ph-bs .ph-bs-i').allTextContents(), ['Forward', 'Add to calendar', 'Add as task']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('on the phone a view with nothing in it offers no Select', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const select = page.locator('.hd .ph-text', {hasText: 'Select'});
+    await select.waitFor();
+    // Every Attention email Done: Attention says so, with no Select over it.
+    const {groups} = await setpoint.api<InboxOut>('GET', '/mail/inbox');
+    const needing = groups.flatMap(group => group.rows).filter(row => row.lane === 'attention' && !row.done);
+    for (const row of needing) await setpoint.api('POST', `/mail/messages/${row.id}/done`, {done: true});
+    await page.locator('.ph-title-btn').tap();
+    await page.getByRole('menu').getByRole('menuitemradio', {name: /^Attention/}).tap();
+    await page.locator('.view-empty', {hasText: 'Nothing needs you'}).waitFor();
+    assert.equal(await select.count(), 0);
+    // Back on All, there's something to select.
+    await page.locator('.ph-title-btn').tap();
+    await page.getByRole('menu').getByRole('menuitemradio', {name: /^All/}).tap();
+    await select.waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('on the phone the reader\'s account band names the email\'s state only when it isn\'t the Inbox, which Back already says', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox/${await email(setpoint, 'Arriving today')}`);
+    await page.locator('.rd-acct .name').waitFor();
+    assert.equal(await page.locator('.rd-acct .state').count(), 0);
+    const done = await email(setpoint, 'Interview availability');
+    await setpoint.api('POST', `/mail/messages/${done}/done`, {done: true});
+    await page.goto(`${setpoint.base}/inbox/${done}`);
+    await page.locator('.rd-acct .name').waitFor();
+    assert.equal(await page.locator('.rd-acct .state').textContent(), 'Done');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

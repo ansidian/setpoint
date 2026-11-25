@@ -94,7 +94,9 @@
   .row .ac, .row .age, .arow .r1, .arow .r1 .age, .arow .why { font-size: 13px; }
   .arow .ud, .arow .l1, .arow .r1 { height: 20px; }
   .arow .l3 { font-size: 13.5px; }
-  .gh { height: 30px; font-size: 12px; padding: 0 16px 0 20px; }
+  /* One text edge down the list, 24 px in: the day bands, the lane and kind labels, Noise's fold and the
+     rows' words (their unread dot sits in the gutter before it). */
+  .gh { height: 30px; font-size: 12px; padding: 0 16px 0 24px; }
   .gh .preview { display: none; }
   /* A day's folded Noise opens on a tap: a fingertip tall, between its rows and the next day. */
   .nfold { height: var(--ph-tap); }
@@ -102,37 +104,41 @@
      tag, the account and age, then the subject under the sender, so neither is cut to a few
      characters. Each cell keeps 8 px before it as a margin, so a row without marks or a tag has no
      gap where they'd be. */
-  .row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto auto auto; grid-template-areas: "ud from mk tag ac age" ". subj subj subj subj subj"; align-items: center; height: auto; min-height: 62px; padding: 8px 16px 8px 8px; column-gap: 0; row-gap: 3px; }
+  .row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto auto auto; grid-template-areas: "ud from mk tag ac age" ". subj subj subj subj subj"; align-items: center; height: auto; min-height: 62px; padding: 8px 16px 8px 4px; column-gap: 0; row-gap: 3px; }
   .row .ud { grid-area: ud; }
   .row .from, .list.all .row .from { grid-area: from; width: auto; margin-left: 8px; }
   .row .marks { grid-area: mk; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; white-space: nowrap; font-size: 13px; }
   /* The summary in the subject's place wraps to a second line rather than being cut at ~45
-     characters, and Attention's does the same. */
+     characters, and Attention's and search's subjects and lines do the same. */
   .row .subj { grid-area: subj; margin-left: 8px; }
-  .row .subj:not(.code-line), .arow .l3 { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+  .row .subj:not(.code-line), .arow :is(.l2, .l3) { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
   .row .ac { grid-area: ac; width: auto; margin-left: 8px; }
-  /* A Done row's tag gets its own cell on the sender's line, before the account. */
-  .list.all .row .tag { grid-area: tag; margin: 0 0 0 8px; }
+  /* A Done row's tag gets its own cell on the sender's line, before the account. It's a state, not a
+     button: the check in `good` and Done in `ink3`, with no pill around them, so only what takes a
+     tap is drawn as one. */
+  .list.all .row .tag { grid-area: tag; margin: 0 0 0 8px; height: auto; padding: 0; gap: 3px; background: none; box-shadow: none; color: var(--ink3); font-size: 13px; }
+  .list.all .row .tag .icon { color: var(--good); }
   /* Dates never wrap: the age takes the room it needs. */
   .row .age, .list.all .row .age { grid-area: age; width: auto; min-width: 36px; white-space: nowrap; margin-left: 8px; }
   /* … and an Attention row's age hugs its account, as board 21 draws it. */
   .arow .r1 .age { width: auto; min-width: 0; white-space: nowrap; }
   /* The skeleton's rows (loading.css) take the same two lines and padding. */
-  .sk-gh { height: 28px; padding: 0 16px 0 20px; }
-  .sk-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; grid-template-areas: "ud from ac age" ". subj subj subj"; align-items: center; height: auto; min-height: 56px; padding: 8px 16px 8px 8px; column-gap: 8px; row-gap: 2px; }
+  .sk-gh { height: 28px; padding: 0 16px 0 24px; }
+  .sk-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; grid-template-areas: "ud from ac age" ". subj subj subj"; align-items: center; height: auto; min-height: 56px; padding: 8px 16px 8px 4px; column-gap: 8px; row-gap: 2px; }
   .sk-row > .ud { grid-area: ud; }
   .sk-row > .from, .list.all .sk-row > .from { grid-area: from; width: auto; }
   .sk-row > .subj { grid-area: subj; }
   .sk-row > .from, .sk-row > .subj { display: flex; align-items: center; font-size: 13px; line-height: 1.35; height: 1.35em; }
   .sk-row > .ac { grid-area: ac; width: auto; }
   .sk-row > .age, .list.all .sk-row > .age { grid-area: age; width: auto; min-width: 36px; }
-  .sk-arow { padding: 8px 16px 9px 8px; }
+  .sk-arow { padding: 8px 16px 9px 2px; }
   .row .subj.code-line { gap: 6px; overflow: visible; }
   .code-line .copy { height: 30px; gap: 4px; font-size: 13px; padding: 0 10px; }
   .code-line .sum { display: none; }
   /* As a code's countdown, a rule's "Trash in 3 h" stays off the phone's row. */
   .row .trash-in { display: none; }
-  .arow { padding: 8px 16px 9px 8px; }
+  /* Its words on the list's edge too: its columns are 10 px apart, the rows' 8. */
+  .arow { padding: 8px 16px 9px 2px; }
   /* Taps, not a pointer or keys: no keyboard cursor stays behind on a row (hover fills only answer a
      pointer that hovers, styles.css). */
   .row.cur:not(.open), .arow.cur:not(.open) { background: none; }
@@ -338,6 +344,8 @@
 
   /* An empty view's one action (Show All, Go to the Inbox, New message) is a button a thumb finds. */
   .view-empty .btn.sm { height: 40px; padding: 0 16px; font-size: 15px; }
+  /* Its key hint (New message's C) is the desktop's: a phone has no keys for it. */
+  .view-empty .kbd { display: none; }
 
   /* ---------- Signing in ---------- */
   /* About 18% from the top rather than near the middle, so the keyboard never covers Sign in. */

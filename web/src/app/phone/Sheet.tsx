@@ -65,11 +65,13 @@ function revealCaret(element: HTMLElement) {
 
 /**
  * A full-screen sheet. `back` names where it goes back to ("Inbox") and shows Back in Cancel's place,
- * for a sheet pushed from another. `action` is the top bar's one solid button (Send, Save).
+ * for a sheet pushed from another. `action` is the top bar's one solid button (Send, Save). `onCancel`,
+ * when given, is Cancel's own tap (the composer asks what to do with its draft); Esc still closes.
  */
-export function Sheet({title, onClose, back, action, children}: {
+export function Sheet({title, onClose, onCancel, back, action, children}: {
   title: string;
   onClose: () => void;
+  onCancel?: () => void;
   back?: string;
   action?: SheetAction;
   children?: ReactNode;
@@ -106,7 +108,7 @@ export function Sheet({title, onClose, back, action, children}: {
       <div className="ph-sheet-ground" aria-hidden="true" />
       <header className="ph-sheet-top">
         {back === undefined
-          ? <button className="btn quiet ph-sheet-lead" type="button" onClick={onClose}>Cancel</button>
+          ? <button className="btn quiet ph-sheet-lead" type="button" onClick={onCancel ?? onClose}>Cancel</button>
           : <button className="btn quiet ph-sheet-lead ph-back" type="button" onClick={onClose}><Icon name="chevron_left" size={20} />{back}</button>}
         <h2 className="ph-sheet-title ell">{title}</h2>
         {action && <button className="btn ph-sheet-act" type="button" disabled={action.disabled} onClick={action.onClick}>{action.label}</button>}

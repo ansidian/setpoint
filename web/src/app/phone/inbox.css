@@ -42,6 +42,6 @@
   .row .pick { grid-area: pk; align-self: center; display: grid; place-items: center; color: var(--ink3); }
   .row.sel .pick { color: var(--accent); }
   .list.all.selecting .row.sel { background: var(--sub); }
-  .ph-selbar > button:disabled { color: var(--ink3); }
-  .ph-selbar > button:disabled .icon { color: var(--ink3); }
+  /* What doesn't apply to the selection fades whole, its glyph and word together, as the sheet's Send does. */
+  .ph-selbar > button:disabled { opacity: .4; }
 }

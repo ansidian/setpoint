@@ -191,8 +191,9 @@
 .ph-sheet-body > .cmp-place .composer { flex: 1 1 auto; min-height: 0; scroll-padding-bottom: 60px; }
 .ph-sheet .composer :is(input, textarea, [contenteditable]) { font-size: 16px; }
 .ph-sheet .composer .desc-edit { line-height: 22px; }
-/* Its format row's buttons are finger-sized, 44 px each with 20 px glyphs. When they don't fit the
-   width the row scrolls sideways, Discard last; a link's address keeps the row's height. */
+/* Its format row's buttons are finger-sized, 44 px each with 20 px glyphs: eight of them, Discard
+   being Cancel's choice, so they fit the screen. Should they not, the row scrolls sideways; a link's
+   address keeps the row's height. */
 .ph-sheet .composer .desc-bar { min-height: 52px; gap: 0; padding: 4px 4px max(4px, env(safe-area-inset-bottom)); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .ph-sheet[data-keyboard] .composer .desc-bar { padding-bottom: 4px; }
 .ph-sheet .composer .desc-bar::-webkit-scrollbar { display: none; }
@@ -208,3 +209,9 @@
 .ph-sheet .composer .cmp-chip { height: 32px; padding: 0 2px 0 12px; font-size: 14px; }
 .ph-sheet .composer .cmp-chip-x { width: 28px; height: 28px; }
 .ph-sheet .composer .cmp-typing > input { height: 32px; }
+/* What's being typed takes the room left beside the chips (120 px at least, else the next line), and
+   To and Cc Bcc sit level with the first line of chips, however many lines they wrap to. */
+.ph-sheet .composer .cmp-typing { flex-basis: 120px; }
+.ph-sheet .composer .cmp-row:has(> .cmp-recipients) { align-items: flex-start; }
+.ph-sheet .composer .cmp-row:has(> .cmp-recipients) > .cmp-label { line-height: 42px; }
+.ph-sheet .composer .cmp-row:has(> .cmp-recipients) > .cmp-copies { margin-top: 8px; }
