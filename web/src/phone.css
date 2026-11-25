@@ -6,13 +6,28 @@
   /* ---------- The shell: one column, the tab bar at the bottom ---------- */
   /* The page reaches the screen's edges (viewport-fit=cover) and keeps clear of the status bar and
      the home indicator by their insets. */
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; padding-top: env(safe-area-inset-top); }
+  /* The bottom bars' own height, the home indicator's inset outside it: the tab bar and the reader's
+     and Select's bars are all this tall above the inset, so swapping them moves nothing, and what sits
+     above them (the detail card, a toast's lift) is placed from it. On the root, so the sheets
+     (portaled into body) read it too. */
+  :root { --ph-bar: 56px; }
+  /* The canvas is the frame, near-black in both themes: what iOS draws the status bar on, and what a
+     rubber-band pull shows above the header or under the tab bar. The page itself never moves; each
+     scroller keeps its own bounce. */
+  html, body { background: var(--frame, #0b0c0e); overscroll-behavior: none; }
+  :is(.list, .ph-agenda, .rd-scroll, .nw-list, .ph-sheet-body, .set-main) { overscroll-behavior-y: contain; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+  /* A long press on a tab, an agenda line or a picture opens no link preview; the links stay links. */
+  .app :is(a, img), .ph-sheet img { -webkit-touch-callout: none; }
+  /* The sheets render outside .app: their bars, titles and choices can't be selected by a long press
+     either (a drag down on a bottom sheet's title is a drag). Their fields and bodies still can. */
+  .ph-sheet-top, .ph-bs { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .main { grid-template-rows: auto minmax(0, 1fr); }
   /* The card reaches the screen's sides, its top corners rounded under the header, the tab bar under it. */
   .content { padding: 0; gap: 0; background: var(--card); border-radius: 10px 10px 0 0; overflow: hidden; }
   .content > :is(.list, .nw-list) { border-radius: 0; box-shadow: none; }
-  /* The tab bar ends at the home indicator's inset, not a guess at it. */
-  .ph-tabs { min-height: 54px; background: var(--frame); display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  /* The tab bar: its own height, then the home indicator's inset under it. */
+  .ph-tabs { height: calc(var(--ph-bar) + env(safe-area-inset-bottom)); background: var(--frame); display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: env(safe-area-inset-bottom); }
   .ph-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; color: var(--ink3); }
   .ph-tab.on { color: var(--ink); }
   /* The header's attention pill, shrunk onto the Inbox tab while another page shows. */
@@ -108,7 +123,10 @@
   .arow .l1 .via { display: none; }
 
   /* ---------- The reader: the whole screen, Back and Pin at the top, its actions at the bottom ---------- */
-  .content > .pane, .pane { position: fixed; inset: 0; width: auto; max-width: none; border-radius: 0; background: var(--card); box-shadow: none; z-index: 6; padding-top: env(safe-area-inset-top); }
+  /* The status bar sits on the frame here too, as over the lists: the reader is a card on the frame,
+     its top corners rounded under the inset (its ::after, behind its parts). */
+  .content > .pane, .pane { position: fixed; inset: 0; width: auto; max-width: none; border-radius: 0; background: var(--frame); box-shadow: none; z-index: 6; padding-top: env(safe-area-inset-top); }
+  .pane::after { content: ""; position: absolute; inset: env(safe-area-inset-top) 0 0; z-index: -1; border-radius: 10px 10px 0 0; background: var(--card); pointer-events: none; }
   .pane > .rd-tools { display: none; }
   .ph-top { height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 6px; }
   .btn.ph-back { height: 40px; padding: 0 10px 0 6px; color: var(--ink); }
@@ -140,7 +158,8 @@
   .mailtext { font-size: 15px; }
   /* The actions share the width, three of them. Done leads, with its label `ink` 500 and its
      check `good`, the done glyph's own colour. */
-  .ph-acts { min-height: 58px; flex: none; background: var(--frame); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px 8px max(6px, env(safe-area-inset-bottom)); }
+  /* The tab bar's height, so Select taking its place moves nothing; each button's press fill is 46 px. */
+  .ph-acts { height: calc(var(--ph-bar) + env(safe-area-inset-bottom)); flex: none; background: var(--frame); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 5px 8px calc(5px + env(safe-area-inset-bottom)); }
   .ph-acts > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 14px; color: var(--ink2); font-size: 11.5px; }
   .ph-acts .icon { color: var(--ink); }
   .ph-acts > .ph-done { color: var(--ink); font-weight: 500; }
@@ -215,7 +234,7 @@
   @keyframes ph-fade { from { opacity: 0; } }
   @keyframes ph-rise { from { transform: translateY(24px); opacity: 0; } }
   /* 12 px above the tab bar, whatever its inset. */
-  .fd.ph-detail { position: fixed; left: 12px; right: 12px; top: auto; bottom: calc(66px + max(6px, env(safe-area-inset-bottom))); width: auto; z-index: 6; will-change: auto; animation: ph-rise var(--dur-medium) var(--ease); }
+  .fd.ph-detail { position: fixed; left: 12px; right: 12px; top: auto; bottom: calc(var(--ph-bar) + env(safe-area-inset-bottom) + 12px); width: auto; z-index: 6; will-change: auto; animation: ph-rise var(--dur-medium) var(--ease); }
   /* Its first line where it sat when the header centred one line in 48 px. A wrapped title grows down from there. */
   .ph-detail .card-h { min-height: 48px; padding-top: 14px; }
 
@@ -224,12 +243,15 @@
      slides up from the bottom edge over 260 ms, the modal timing, and closes at once. It covers the
      part of the screen the user sees, which the keyboard shortens (Sheet.tsx sets the top and
      height), so its bar stays at the top and its foot just above the keys. */
-  .ph-sheet { position: fixed; left: 0; right: 0; top: var(--sheet-top, 0); height: var(--sheet-height, 100%); z-index: 30; display: flex; flex-direction: column; background: var(--card); padding-top: env(safe-area-inset-top); outline: none;
+  .ph-sheet { position: fixed; left: 0; right: 0; top: var(--sheet-top, 0); height: var(--sheet-height, 100%); z-index: 30; display: flex; flex-direction: column; background: var(--frame); padding-top: env(safe-area-inset-top); outline: none;
     animation: ph-sheet-in var(--dur-slow) var(--ease); }
   @keyframes ph-sheet-in { from { transform: translateY(100%); } }
   /* Around it, a screen's height above and below, the page's own ground: the page under it never
-     shows, and Safari tints the status bar from what's there. Behind the sheet's own parts. */
-  .ph-sheet-ground { position: absolute; left: 0; right: 0; top: -100lvh; bottom: -100lvh; z-index: -1; background: var(--card); }
+     shows. Above the sheet it is the frame, as under the status bar; below (under the keys) the card.
+     The sheet itself is a card on the frame, its top corners rounded under the inset, as the reader.
+     Behind the sheet's own parts. */
+  .ph-sheet-ground { position: absolute; left: 0; right: 0; top: -100lvh; bottom: -100lvh; z-index: -1; background: linear-gradient(var(--frame) calc(100% - 100lvh), var(--card) 0); }
+  .ph-sheet::after { content: ""; position: absolute; inset: env(safe-area-inset-top) 0 0; z-index: -1; border-radius: 10px 10px 0 0; background: var(--card); pointer-events: none; }
   /* Its top bar: Cancel or Back at the start, the title in the middle, the action at the end. */
   .ph-sheet-top { height: 48px; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 12px 0 6px; border-bottom: 1px solid var(--hair); }
   .ph-sheet-top > .ph-sheet-lead { justify-self: start; height: 40px; color: var(--ink); font-size: 15px; font-weight: 400; }
@@ -239,6 +261,9 @@
   .ph-sheet-act:disabled { opacity: .5; }
   .ph-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); }
   .ph-sheet[data-keyboard] .ph-sheet-body { padding-bottom: 0; }
+  /* A sheet whose content draws its own foot (compose's format row, the editor's scope prompt, the
+     import's foot) takes the inset there, once. */
+  .ph-sheet-body:has(> .cmp-place, > .ph-editor, > .ph-import) { padding-bottom: 0; }
 
   /* The bottom sheet: `modal`, its top corners a popover's 18, rising from the bottom edge over 260 ms
      as its scrim fades in. It follows a drag down and settles back over 180 ms. */
@@ -287,6 +312,9 @@
   .sign-in { width: calc(100% - 32px); top: 18vh; }
   /* The mark that stands where the card's top sits while Setpoint can't be reached follows it. */
   .boot-at { top: 18vh; }
+  /* Starting, unreachable and signing in fill the screen with the page's ground: the status bar keeps
+     the frame above it, as everywhere else. */
+  :is(.boot, .sign-in-page) { background: linear-gradient(var(--frame) env(safe-area-inset-top), var(--page) 0); }
   /* 16 px, so iOS doesn't zoom the page into a field it focuses (as search's). Placeholders as they were. */
   .sign-in .input { font-size: 16px; }
   .sign-in .input::placeholder { font-size: 13.5px; }

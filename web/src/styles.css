@@ -13,6 +13,9 @@
 html, body, #root { height: 100%; margin: 0; }
 /* A tap shows as the press each control draws (DESIGN.md › Motion), not the browser's own box. */
 html { -webkit-tap-highlight-color: transparent; }
+/* The canvas (what a rubber-band pull or the first paint shows) is the page's ground; the frame's
+   near-black until the tokens are drawn, as index.html paints it. The phone's is the frame (phone.css). */
+html { background: var(--page, #0b0c0e); }
 :root { --zoom: 1; zoom: var(--zoom); }
 /* A MacBook at its default size reads a little larger, a wide screen larger still. */
 @media (min-width: 1440px) { :root { --zoom: 1.075; } }
@@ -63,7 +66,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .icon, .mark { flex: none; display: block; }
 
 /* ---------- The shell ---------- */
-.app { position: relative; height: 100%; background: var(--frame); display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); overflow: hidden; }
+.app { position: relative; height: 100%; background: var(--frame); display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); overflow: hidden;
+  /* Clear of a phone's camera housing and home indicator turned on its side (viewport-fit=cover);
+     zero everywhere else. The phone's own layout keeps its top and bottom (phone.css). */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 .sb { background: var(--frame); display: flex; flex-direction: column; padding: 12px 10px 12px; gap: 2px; min-height: 0; overflow: hidden; }
 .sb-top { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 10px; margin-bottom: 8px; }
 .sb-name { font-size: 14px; font-weight: 600; letter-spacing: -.01em; flex: 1; }
@@ -680,8 +686,10 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .list.all .kh::after { content: ""; flex: 1 1 auto; height: 1px; margin: 0 0 6px 6px; background: var(--hair); }
 /* Destructive actions turn `alert` under the pointer and affirming ones `good`, both neutral at rest
   : the floating detail's Delete, the editor's More › Delete, and the phone's card's Complete. */
-.ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
-.ibtn.affirm:hover { background: color-mix(in oklch, var(--good) 16%, transparent); color: var(--good); }
+@media (hover: hover) {
+  .ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
+  .ibtn.affirm:hover { background: color-mix(in oklch, var(--good) 16%, transparent); color: var(--good); }
+}
 /* The app's one toast: a 40 px pill at the bottom centre of the main area, 24 px up, as on the
    phone, covering no header control, and above Settings (30–31). */
 .toast { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); min-height: 40px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 7px 0 9px; border-radius: 999px; background: var(--toast); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); white-space: nowrap; z-index: 35;
