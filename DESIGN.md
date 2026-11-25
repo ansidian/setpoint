@@ -64,14 +64,14 @@ account names). The UI says "Done", never "handled".
 | `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(20,35,55,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
 | `hair` | `rgba(255,255,255,.07)` | `rgba(20,35,55,.08)` | dividers, grid lines |
 | `rowLine` | `rgba(255,255,255,.03)` | `rgba(20,35,55,.05)` | the line between a card's rows |
-| `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(20,35,55,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor, open row, selection / tracks, segmented "on", a press / a ghost button pressed |
+| `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(20,35,55,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor / tracks, segmented "on", a press / a ghost button pressed |
 | `stripe` | `rgba(255,255,255,.045)` | `rgba(20,35,55,.05)` | hatching (drag ghosts, hidden images) |
 | `scrim` | `rgba(0,0,0,.72)` | `rgba(20,26,32,.35)` | behind Settings and ⌘K |
 | `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | Attention's count, the phone's attention pill, needs-reconnect bar, failing lines, an overdue task |
 | `alert` | `oklch(0.72 0.17 25)` | `oklch(0.535 0.185 25)` | protected mail, failed changes, offline pill, destructive actions, now-line, Jobs's Rejected mark |
 | `warm` | `oklch(0.8 0.11 55)` | `oklch(0.54 0.12 55)` | Business |
 | `cool` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | Personal (account and calendar), rain |
-| `accent` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | "you are here": the open email's bar, the current page's icon, today's month boundary, a date range, selected search chips, News's updates |
+| `accent` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | "you are here": the selected item's tint and edge, the current page's icon, today's month boundary, a date range, selected search chips, News's updates |
 | `comf` | `oklch(0.8 0.11 165)` | `oklch(0.54 0.1 165)` | Work |
 | `good` | `oklch(0.8 0.13 150)` | `oklch(0.53 0.13 150)` | done or healthy: the done glyph, the reader's Done check |
 | `sun` | `oklch(0.86 0.16 92)` | `oklch(0.63 0.125 92)` | sun, Night's search highlight (26% mix) |
@@ -130,7 +130,16 @@ account names). The UI says "Done", never "handled".
   (Night .72–1, Light 0–.55), keeping Todoist's hue and chroma.
 - **Shadows:** popovers and the floating detail `0 18px 50px rgba(0,0,0,.4)` (Light
   `rgba(15,20,28,.14)`); modals `0 30px 80px rgba(0,0,0,.35)` (Light `.18`); pills and toasts
-  `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows only on overlays.
+  `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows on overlays and on the selected item.
+- **The selected item lifts** (the open email, selected emails, a selected day-pane item), as
+  Gmail's selected row does: full width and square, `accent` mixed into the card (`--liftTint`,
+  Night 14%, Light 12%), a 3 px `accent` edge on its left, and `--shadow-lift` just below it,
+  `0 1px 2px` plus `0 2px 5px -1px` in black `.75` / `.5` (Light slate `rgba(20,35,55,.28)` /
+  `.14`). It sits over the rows after it and under the sticky bands; a band right after it draws
+  the shadow's lower half inside its own top, except while stuck. The keyboard's cursor or a press
+  on it changes nothing. In Night its quiet text (`ink3`) and a read row's sender and subject take
+  `ink2`, 5.6:1 on the tint. The day pane's upcoming event, selected, keeps its rounded tile in its
+  own colour (16%) and takes the shadow alone.
 - **Scrollbars:** thin and dark (Light thumb `rgba(20,35,55,.22)`).
 - **Light's neutrals** (edges, hairlines, fills, stripes, the calendar's weekends and outside days,
   the scrollbar) are slate alphas, `rgba(20,35,55,…)`, as its inks are slate.

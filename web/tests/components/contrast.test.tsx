@@ -17,6 +17,11 @@ const on = (base: string, state: string | null, child: ReactNode) => (
   <div style={{background: `var(--${base})`, padding: 4}}><div style={state ? {background: `var(--${state})`} : undefined}>{child}</div></div>
 );
 
+// The open or selected row, lifted: `accent` mixed into the card.
+const onLift = (child: ReactNode) => (
+  <div style={{background: 'color-mix(in srgb, var(--accent) var(--liftTint), var(--card))', padding: 4}}>{child}</div>
+);
+
 // The frame: drawn as Night in full inside Light, on its own theme's `frame`.
 const inFrame = (state: string | null, child: ReactNode) => (
   <div data-theme="night" style={{background: 'var(--frame)', padding: 4}}><div style={state ? {background: `var(--${state})`} : undefined}>{child}</div></div>
@@ -29,13 +34,14 @@ const onBand = (band: string, ink: string) => (
 const CASES: {name: string; node: ReactNode}[] = [
   {name: 'News\'s Updated on a cursor row', node: on('card', 'sub2', <span className="nw-meta"><span className="upd" data-text>Updated 8:40 AM</span></span>)},
   {name: 'News\'s pill\'s Updated', node: on('card', null, <span className="nw-pill"><span className="upd" data-text>Updated</span></span>)},
-  {name: 'a code\'s countdown on an open row', node: on('card', 'sub3', <div className="row"><span className="code-line"><span className="sum soon" data-text>Expires in 42 sec</span></span></div>)},
+  {name: 'a code\'s countdown on an open row', node: onLift(<div className="row"><span className="code-line"><span className="sum soon" data-text>Expires in 42 sec</span></span></div>)},
   {name: 'All caught up', node: on('card', null, <p className="md-need caught" data-text>All caught up</p>)},
-  {name: 'Copied on an open row', node: on('card', 'sub3', <span className="code-line"><button type="button" className="btn ghost sm copy copied" data-text>Copied</button></span>)},
+  {name: 'Copied on an open row', node: onLift(<span className="code-line"><button type="button" className="btn ghost sm copy copied" data-text>Copied</button></span>)},
   {name: 'the trouble chip, open', node: on('card', null, <button type="button" className="pt-chip" aria-expanded="true" data-text>2</button>)},
-  // `ink3` on the card's cursor and open row.
+  // `ink3` on the card's cursor row and on the lifted open row, and a draft's mark there.
   {name: 'ink3 on a cursor row', node: on('card', 'sub2', <span className="ink3" data-text>8:15 PM</span>)},
-  {name: 'ink3 on an open row', node: on('card', 'sub3', <span className="ink3" data-text>8:15 PM</span>)},
+  {name: 'ink3 on an open row', node: onLift(<span className="ink3" data-text>8:15 PM</span>)},
+  {name: 'Draft on an open row', node: onLift(<div className="row"><span className="drafted" data-text>Draft</span></div>)},
   {name: 'the frame\'s Reconnect, hovered', node: inFrame('sub2', <span className="acct"><span className="reconnect" data-text>Reconnect</span></span>)},
   {name: 'the frame\'s soon, hovered', node: inFrame('sub2', <span className="today-row"><span className="in soon" data-text>in 5 min</span></span>)},
   {name: 'the frame\'s now, hovered', node: inFrame('sub2', <span className="today-row"><span className="in now" data-text>now</span></span>)},

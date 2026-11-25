@@ -95,8 +95,8 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     assert.deepEqual(await selectedRows(page), [first!.id, second!.id, third!.id]);
     assert.equal(await pane(page).locator('.sel-head .rd-subj').textContent(), '3 emails selected');
     assert.equal(await page.evaluate(() => getSelection()?.toString() ?? ''), '', 'the ⇧-click selected no text');
-    // A selected row is drawn as the open one is: `sub3` and the accent bar.
-    await until('drawn selected', () => row(page, second!.id).evaluate(element => getComputedStyle(element).boxShadow), shadow => /2px 0px 0px 0px inset/.test(shadow));
+    // A selected row is drawn as the open one is: lifted, with the 3 px accent edge.
+    await until('drawn selected', () => row(page, second!.id).evaluate(element => getComputedStyle(element).boxShadow), shadow => /3px 0px 0px 0px inset/.test(shadow));
 
     // × takes one out; ⌘-click on a selected row does too.
     await pane(page).locator(`.sel-stack > [data-id="${second!.id}"] > .sel-drop`).click();

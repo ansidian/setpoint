@@ -390,12 +390,28 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .arow:last-child { border-bottom: 0; }
 @media (hover: hover) { .arow:hover { background: var(--sub); } }
 .arow.cur { background: var(--sub2); }
-/* The open email: `sub3`, stronger than the cursor's `sub2`, with a 2 px `accent` bar that ties
-   it to the reading pane and fades in with the row's 120 ms box-shadow. A press is the rows' shared
-   `sub3` at --dur-press (below). */
-.row.open, .arow.open { background: var(--sub3); box-shadow: inset 2px 0 0 var(--accent); }
-/* A selected email is drawn as the open one is. */
-.row.sel, .arow.sel { background: var(--sub3); box-shadow: inset 2px 0 0 var(--accent); }
+/* The open email lifts, as Gmail's selected row does: full width and square, `accent` mixed into
+   the card (`--liftTint`, Light 12%, Night 14%), a 3 px `accent` edge that ties it to the reading
+   pane, and the short `lift` shadow just below it, fading in with the row's 120 ms box-shadow. A
+   selected email is drawn the same, so a run of them lifts as one block, its shadow under the last.
+   It sits over the rows after it (z 1) and under the sticky bands (z 2). The keyboard's cursor on it
+   changes nothing: with the pane open, J and K move both, and the lift already says where they are. */
+:is(.row, .arow):is(.open, .sel) { z-index: 1; background: color-mix(in srgb, var(--accent) var(--liftTint), var(--card)); box-shadow: inset 3px 0 0 var(--accent), var(--shadow-lift); }
+/* A row holding an open menu (its snooze menu) rises over the lifted rows and the bands, whose z
+   would otherwise cover it. */
+:is(.row, .arow, .ag-item):has(.pop) { z-index: 3; }
+/* In Night, a lifted row's quiet text (`ink3`) and its read sender and subject take `ink2`, 5.6:1 on
+   the tint. */
+[data-theme="night"] :is(.row, .arow):is(.open, .sel), [data-theme="night"] .ag-item.sel { --ink3: var(--ink2); }
+[data-theme="night"] :is(.row, .arow):is(.open, .sel):not(.unread) :is(.from, .subj b) { color: var(--ink2); }
+/* A band right after a lifted row would cover its shadow, so it draws the shadow's lower half in
+   its own top, over its fill, cursor and hover; not while it's stuck at the list's top, with the
+   row scrolled away under it. The list keeps 6 px under its last row for the shadow. */
+.list .gh { container-type: scroll-state; }
+/* Drawn from its first child, since a stuck query reaches the band's descendants, not the band. */
+:is(.row, .arow):is(.open, .sel) + .gh > :first-child::before { content: ""; position: absolute; inset: 0; box-shadow: var(--shadow-liftUnder); pointer-events: none; }
+@container scroll-state(stuck: top) { .gh > :first-child::before { display: none; } }
+.list { padding-bottom: 6px; }
 .arow .ud { grid-row: 1; height: 18px; }
 .arow .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
 .arow .l1 .from { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1081,6 +1097,8 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .btn.out:not(:disabled):is(:active, [data-echo]) { background: var(--sub2); }
 :is(.btn.quiet:not(:disabled), .rd-tools .tool, .seg > :not(.on), .imgbar .lnk, .hbar .act):is(:active, [data-echo]) { background: var(--sub3); color: var(--ink); }
 :is(.row, .arow, .nav, .today-row, .ag-item, .nw-row, .nw-lead, .calrow, .menu-i, .palette .item):is(:active, [data-echo]) { background: var(--sub3); transition-duration: var(--dur-press); }
+/* A press on a lifted row keeps its tint. */
+:is(.row, .arow):is(.open, .sel):is(:active, [data-echo]) { background: color-mix(in srgb, var(--accent) var(--liftTint), var(--card)); }
 /* Trash presses in its own `alert`, 20%. */
 .rd-tools .tool.trash:is(:active, [data-echo]) { background: color-mix(in oklch, var(--alert) 20%, transparent); color: var(--alert); }
 

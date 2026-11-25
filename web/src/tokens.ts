@@ -162,18 +162,26 @@ export const lightColour: Record<ColourToken, string> = {
   kindNoise: 'oklch(0.55 0.06 250)',
 };
 
-/** Overlay shadows. Shadows only on overlays. */
+/** Shadows: on overlays, and `lift` on the selected item (the open or selected email, a selected day-pane item). */
 export const shadow = {
   pop: '0 18px 50px rgba(0,0,0,.4)',
   modal: '0 30px 80px rgba(0,0,0,.35)',
   pill: '0 10px 30px rgba(0,0,0,.3)',
+  lift: '0 1px 2px rgba(0,0,0,.75), 0 2px 5px -1px rgba(0,0,0,.5)',
+  // `lift`'s lower half drawn inside the top of what follows, where that covers it (a band).
+  liftUnder: 'inset 0 2px 2px -1px rgba(0,0,0,.75), inset 0 3px 5px -2px rgba(0,0,0,.5)',
 } as const;
 
 export const lightShadow: Record<keyof typeof shadow, string> = {
   pop: '0 18px 50px rgba(15,20,28,.14)',
   modal: '0 30px 80px rgba(15,20,28,.18)',
   pill: '0 10px 30px rgba(15,20,28,.14)',
+  lift: '0 1px 2px rgba(20,35,55,.28), 0 2px 5px -1px rgba(20,35,55,.14)',
+  liftUnder: 'inset 0 2px 2px -1px rgba(20,35,55,.28), inset 0 3px 5px -2px rgba(20,35,55,.14)',
 };
+
+/** The selected item's tint: `accent` mixed into the card (`--liftTint`). */
+export const liftTint = {night: 14, light: 12} as const;
 
 /** The sample's accounts (`--a-*`) and calendars (`--c-*`). Settings lets each pick a swatch. */
 export const accountColour = {business: 'warm', personal: 'cool', work: 'comf', jobs: 'violet', icloud: 'ink2'} as const satisfies Record<string, Colour>;
@@ -512,6 +520,7 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--paneGlow'] = `${light ? paneGlow.light : paneGlow.night}%`;
   vars['--fyiWash'] = `${light ? fyiWash.light : fyiWash.night}%`;
   vars['--attBand'] = `${light ? attBand.light : attBand.night}%`;
+  vars['--liftTint'] = `${light ? liftTint.light : liftTint.night}%`;
   vars['--fyiBand'] = `${light ? fyiBand.light : fyiBand.night}%`;
   vars['--fyiBandInk'] = light ? fyiBandInk.light : fyiBandInk.night;
   vars['--textTint'] = `${light ? textTint.light : textTint.night}%`;

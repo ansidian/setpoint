@@ -182,7 +182,9 @@
 .ag-day { display: flex; align-items: center; height: 28px; margin: 12px 0 4px; padding: 0 20px; background: var(--band); font-size: 12px; font-weight: 600; color: var(--bandInk); }
 .ag-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 20px; }
 .ag-item:hover { background: var(--sub); }
-.ag-item.sel { background: var(--sub2); }
+/* A selected item lifts as the open email does (styles.css): the tint, the 3 px `accent` edge and
+   the `lift` shadow, over the items after it. */
+.ag-item.sel { position: relative; z-index: 1; background: color-mix(in srgb, var(--accent) var(--liftTint), var(--card)); box-shadow: inset 3px 0 0 var(--accent), var(--shadow-lift); }
 /* A past event turns grey, as on the grid: its time and title `ink3`, its bar at 45%. */
 .ag-item.past .when, .ag-item.past .title { color: var(--ink3); }
 .ag-item.past .cbar { background: color-mix(in oklch, var(--c) 45%, transparent); }
@@ -247,7 +249,9 @@ button.subtask.add:hover { color: var(--ink2); }
    keeps the rows' 20 px inset. Under way, its bar fills as it goes, the rest at 30%. */
 .ag-item.next { margin: 2px 8px; padding: 8px 12px; border-radius: 10px; background: color-mix(in oklch, var(--c) 9%, transparent); }
 .ag-item.next:hover { background: color-mix(in oklch, var(--c) 14%, transparent); }
-.ag-item.next.sel { background: color-mix(in oklch, var(--c) 16%, transparent); }
+/* The upcoming event selected keeps its rounded tile in its own colour, at 16%, and lifts with the
+   `lift` shadow alone: its bar already marks it, so no `accent` edge. */
+.ag-item.next.sel { background: color-mix(in oklch, var(--c) 16%, var(--card)); box-shadow: var(--shadow-lift); }
 .ag-item.next .when { color: var(--ink); }
 .ag-item.next .in { color: oklch(from var(--c) min(l, var(--tintL)) c h); font-weight: 500; font-size: 12.5px; }
 .ag-item.ongoing .cbar { background: linear-gradient(var(--c) 0 calc(var(--gone) * 100%), color-mix(in oklch, var(--c) 30%, transparent) calc(var(--gone) * 100%) 100%); }
@@ -481,6 +485,7 @@ button.subtask.add:hover { color: var(--ink2); }
 
 /* ---------- Every control answers the pointer ---------- */
 .more, .tk, .calrow, .mini > button, .ag-item, .ropt, .ag-empty button, .cs-more { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), filter var(--dur-medium) var(--ease); }
+.ag-item { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), filter var(--dur-medium) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 /* Items and cells are controls: the arrow, never the text cursor. */
 .ev, .tk, .cell, .wb { cursor: default; }
 /* A chip keeps its own fill (its selection turns solid on the glide's schedule), so the pointer's
