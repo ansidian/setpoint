@@ -148,6 +148,10 @@ export type AiProvider = (typeof AI_PROVIDERS)[number];
 export const AI_PURPOSES = ['triage', 'alfred', 'news_articles', 'news_grouping', 'news_stories', 'news_ranking', 'jobs_emails', 'jobs_finding_jds', 'jobs_reading_jds', 'search_terms', 'search_reading', 'mail_drafts', 'mail_conversations'] as const;
 export type AiPurpose = (typeof AI_PURPOSES)[number];
 
+/** Why a conversation's summary wasn't written (api/mail.ts, ConversationSummaryOut). */
+export const SUMMARY_FAILURE_CAUSES = ['down', 'limited', 'refused', 'unreachable', 'unusable', 'budget', 'triage_down'] as const;
+export type SummaryFailureCause = (typeof SUMMARY_FAILURE_CAUSES)[number];
+
 /**
  * Instance secrets, write-only through the API (Settings › AI, Calendar, Notifications). AirNow's key
  * is no longer read: News's air quality comes from AirNow's keyless file. It

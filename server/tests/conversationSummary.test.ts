@@ -1,16 +1,18 @@
 // A conversation's own summary, for the reader's head: when one is due (a table), and as triage
 // writes it through the fake Anthropic after the conversation's second email, stale after a third
-// until it's written again, and nothing stored when the call fails.
+// until it's written again; what the reader's head shows (a table: fresh, pending, fallback and why);
+// and a failed call's cause kept beside the summary, for the newest email.
 import {and, eq} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
 import * as t from '../src/db/schema.ts';
-import {summaryState} from '../src/domain/conversationSummary.ts';
-import type {SummaryEmail} from '../src/domain/conversationSummary.ts';
+import {failureOf, headSummary, PENDING_MS, summaryState} from '../src/domain/conversationSummary.ts';
+import type {StoredSummary, SummaryEmail} from '../src/domain/conversationSummary.ts';
 import {conversationDetail} from '../src/queries/mail.ts';
 import {setSecret} from '../src/secrets/store.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
 import {CONVERSATION_MODEL} from '../src/triage/conversation.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
+import {liveEvents} from './helpers.ts';
 import type {FakeAnswer, FakeRequest} from './fakeModels.ts';
 import {triageWorld} from './triageWorld.ts';
 
@@ -34,6 +36,38 @@ describe('when a conversation\'s summary is due', () => {
     ['a USPS digest doesn\'t count, nor wait', [email(1), email(2), email(3, {uspsDigest: true, sorted: false, summary: null})], 2, 'fresh'],
     ['the newest trashed: the stored one covers an email gone', [email(1), email(2), email(3, {trashed: true})], 3, 'due'],
   ] as const)('%s', (_name, emails, covered, expected) => expect(summaryState([...emails], covered)).toBe(expected));
+});
+
+describe('what the reader\'s head shows', () => {
+  const now = '2026-10-07T16:12:00.000Z';
+  const ago = (ms: number) => new Date(Date.parse(now) - ms).toISOString();
+  const email = (id: number, fields: Partial<SummaryEmail> = {}): SummaryEmail => ({
+    id, receivedAt: `2026-10-0${id}T10:00:00.000Z`, received: true, sorted: true, trashed: false, uspsDigest: false, summary: `Email ${id}`, triagedAt: ago(60 * 60_000), ...fields,
+  });
+  const written = (coveredId: number, failure: StoredSummary['failure'] = null): StoredSummary => ({summary: 'The conversation', coveredId, failure});
+  const failedFor = (messageId: number, status: number | null): StoredSummary => ({summary: null, coveredId: null, failure: {messageId, ...failureOf(status)}});
+  const fallback = (failure: {cause: string; status: number | null} | null) => ({state: 'fallback', text: 'Email 3', email_id: 3, failure});
+  const healthy = {triageDown: false, budgetSpent: false, now};
+  const three = (fields: Partial<SummaryEmail> = {}) => [email(1), email(2), email(3, fields)];
+  test.each([
+    ['one email: none (its row\'s summary stands)', [email(1)], null, healthy, null],
+    ['the summary covers the newest: fresh', three(), written(3), healthy, {state: 'fresh', text: 'The conversation'}],
+    ['fresh, even with triage down', three(), written(3), {...healthy, triageDown: true}, {state: 'fresh', text: 'The conversation'}],
+    ['the newest just triaged: pending', three({triagedAt: ago(60_000)}), written(2), healthy, {state: 'pending'}],
+    ['the newest just triaged, none written yet: pending', three({triagedAt: ago(60_000)}), null, healthy, {state: 'pending'}],
+    ['an Unsorted email waiting: pending', [...three(), email(4, {sorted: false, summary: null, triagedAt: null})], written(3), healthy, {state: 'pending'}],
+    ['its call refused (429): the newest email\'s, and why', three({triagedAt: ago(60_000)}), {...written(2), failure: {messageId: 3, ...failureOf(429)}}, healthy, fallback({cause: 'limited', status: 429})],
+    ['its call failed (529): down', three({triagedAt: ago(60_000)}), failedFor(3, 529), healthy, fallback({cause: 'down', status: 529})],
+    ['its call refused (401)', three({triagedAt: ago(60_000)}), failedFor(3, 401), healthy, fallback({cause: 'refused', status: 401})],
+    ['no answer', three({triagedAt: ago(60_000)}), failedFor(3, null), healthy, fallback({cause: 'unreachable', status: null})],
+    ['an older email\'s failure doesn\'t count: pending', three({triagedAt: ago(60_000)}), failedFor(2, 429), healthy, {state: 'pending'}],
+    ['triage down: the newest email\'s, triage down', three({triagedAt: ago(60_000)}), written(2), {...healthy, triageDown: true}, fallback({cause: 'triage_down', status: null})],
+    ['triage down with an Unsorted email waiting', [...three(), email(4, {sorted: false, summary: null, triagedAt: null})], written(3), {...healthy, triageDown: true}, fallback({cause: 'triage_down', status: null})],
+    ['the budget spent', three({triagedAt: ago(60_000)}), written(2), {...healthy, budgetSpent: true}, fallback({cause: 'budget', status: null})],
+    ['no rewrite coming (triaged long ago, from before summaries): the newest email\'s, no why', three(), null, healthy, fallback(null)],
+    ['pending no longer than the bound', three({triagedAt: ago(PENDING_MS)}), written(2), healthy, fallback(null)],
+    ['sorted before triage kept when: no why', three({triagedAt: null}), written(2), healthy, fallback(null)],
+  ] as const)('%s', (_name, emails, stored, conditions, expected) => expect(headSummary([...emails], stored, conditions)).toEqual(expected));
 });
 
 describe('triage writes a conversation\'s summary', () => {
@@ -83,41 +117,76 @@ describe('triage writes a conversation\'s summary', () => {
       '2026-10-02T10:00:00.000Z · Theo Walsh · About $140 each for two nights',
     ].join('\n'));
     expect(stored()).toMatchObject({summary: 'Cabin Nov 13: Theo asks if you want in', messageId: second});
-    expect(conversationDetail(world.store, first).summary).toBe('Cabin Nov 13: Theo asks if you want in');
+    expect(conversationDetail(world.store, first).summary).toEqual({state: 'fresh', text: 'Cabin Nov 13: Theo asks if you want in'});
+    // The open conversation hears of it, under any of its emails.
+    expect(liveEvents(world).at(-1)).toMatchObject({type: 'mail', conversations: [first, second]});
     // In the ledger as its own purpose, on Haiku, against the newest email it covers.
     expect(ledger().map(entry => ({model: entry.model, messageId: entry.messageId}))).toEqual([{model: 'claude-haiku-5-5', messageId: second}]);
 
-    // A third email: stale (the head shows its row's summary) until the next one is written.
+    // A third email: being written again (the head's skeleton) while it waits in Unsorted, until it's written.
     const third = upsertMessages(world.store, world.accountId('Personal'), [world.fetched({threadId: 'thread-cabin', subject: 'Re: Cabin weekend', receivedAt: '2026-10-03T10:00:00.000Z'})], {backfill: false}).inserted[0]!;
-    expect(conversationDetail(world.store, third).summary).toBeNull();
+    expect(conversationDetail(world.store, third).summary).toEqual({state: 'pending'});
     await world.drain();
     expect(conversations).toHaveLength(2);
     expect(stored()!.messageId).toBe(third);
-    expect(conversationDetail(world.store, third).summary).toBe('Cabin Nov 13: Theo asks if you want in');
+    expect(conversationDetail(world.store, third).summary).toEqual({state: 'fresh', text: 'Cabin Nov 13: Theo asks if you want in'});
   });
 
-  test('a failed call stores nothing, leaves triage healthy and the email sorted', async () => {
+  test('a refused call keeps why for the newest email, leaves triage healthy and the email sorted; the head shows that email\'s summary', async () => {
     const {world, deliver, conversations, stored, ledger, answerWith} = await setup();
-    answerWith(() => 'server_error');
-    deliver('Cabin weekend', 'Cabin at Lake Wenatchee Nov 13: want in?', '2026-10-01T10:00:00.000Z');
+    answerWith(() => ({status: 429}));
+    const first = deliver('Cabin weekend', 'Cabin at Lake Wenatchee Nov 13: want in?', '2026-10-01T10:00:00.000Z');
     const second = deliver('Re: Cabin weekend', 'About $140 each for two nights', '2026-10-02T10:00:00.000Z');
     await world.drain();
     expect(conversations.length).toBeGreaterThan(0);
-    expect(stored()).toBeUndefined();
+    expect(stored()).toMatchObject({summary: null, messageId: null, failedMessageId: second, failureCause: 'limited', failureStatus: 429});
     expect(ledger()).toEqual([]);
-    expect(conversationDetail(world.store, second).summary).toBeNull();
+    expect(conversationDetail(world.store, first).summary).toEqual({state: 'fallback', text: 'About $140 each for two nights', email_id: second, failure: {cause: 'limited', status: 429}});
+    expect(liveEvents(world).at(-1)).toMatchObject({type: 'mail', conversations: [first, second]});
     expect(world.message(second).lane).toBe('fyi');
     expect(world.status().state).toBe('healthy');
+
+    // The next email's call answers: written, the failure cleared.
+    answerWith(() => ({tool: {summary: 'Cabin Nov 13, $140 each'}}));
+    deliver('Re: Cabin weekend', 'Bring a cooler', '2026-10-03T10:00:00.000Z');
+    await world.drain();
+    expect(stored()).toMatchObject({summary: 'Cabin Nov 13, $140 each', failedMessageId: null, failureCause: null, failureStatus: null});
   });
 
-  test('an answer without the tool stores nothing, its call still in the ledger', async () => {
+  test('a failure keeps the summary there was', async () => {
+    const {world, deliver, stored, answerWith} = await setup();
+    deliver('Cabin weekend', 'Cabin at Lake Wenatchee Nov 13: want in?', '2026-10-01T10:00:00.000Z');
+    const second = deliver('Re: Cabin weekend', 'About $140 each for two nights', '2026-10-02T10:00:00.000Z');
+    await world.drain();
+    answerWith(() => 'overloaded');
+    const third = deliver('Re: Cabin weekend', 'Bring a cooler', '2026-10-03T10:00:00.000Z');
+    await world.drain();
+    expect(stored()).toMatchObject({summary: 'Cabin Nov 13: Theo asks if you want in', messageId: second, failedMessageId: third, failureCause: 'down', failureStatus: 529});
+    expect(conversationDetail(world.store, third).summary).toMatchObject({state: 'fallback', email_id: third, failure: {cause: 'down', status: 529}});
+  });
+
+  test('an answer without the tool is unusable, its call still in the ledger', async () => {
     const {world, deliver, stored, ledger, answerWith} = await setup();
     answerWith(() => 'no_tool');
     deliver('Cabin weekend', 'Cabin at Lake Wenatchee Nov 13: want in?', '2026-10-01T10:00:00.000Z');
     const second = deliver('Re: Cabin weekend', 'About $140 each for two nights', '2026-10-02T10:00:00.000Z');
     await world.drain();
-    expect(stored()).toBeUndefined();
+    expect(stored()).toMatchObject({summary: null, failedMessageId: second, failureCause: 'unusable', failureStatus: null});
     expect(ledger()).toHaveLength(1);
-    expect(conversationDetail(world.store, second).summary).toBeNull();
+    expect(conversationDetail(world.store, second).summary).toMatchObject({state: 'fallback', failure: {cause: 'unusable', status: null}});
+  });
+
+  test('while the call is out the head is pending; with no rewrite coming it gives way to the newest email\'s summary', async () => {
+    const {world, deliver, stored} = await setup();
+    const first = deliver('Cabin weekend', 'Cabin at Lake Wenatchee Nov 13: want in?', '2026-10-01T10:00:00.000Z');
+    await world.drain();
+    // Sorted now, the call not made (as if Setpoint stopped mid-call): pending for a while, then not.
+    world.store.db.update(t.messages).set({lane: 'fyi', summary: 'About $140 each', triagedAt: world.store.now().toISOString()})
+      .where(eq(t.messages.id, deliver('Re: Cabin weekend', 'About $140 each', '2026-10-02T10:00:00.000Z'))).run();
+    world.store.db.delete(t.jobs).run();
+    expect(stored()).toBeUndefined();
+    expect(conversationDetail(world.store, first).summary).toEqual({state: 'pending'});
+    world.advance(PENDING_MS);
+    expect(conversationDetail(world.store, first).summary).toMatchObject({state: 'fallback', text: 'About $140 each', failure: null});
   });
 });

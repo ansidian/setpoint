@@ -369,6 +369,30 @@ async function cabin(setpoint: Setpoint) {
   return {newest: theo[0]!.id, oct1: theo.find(row => row.received_at.startsWith('2026-10-02') || row.received_at.startsWith('2026-10-01'))!.id};
 }
 
+test('on the phone a conversation whose summary was refused shows its newest email\'s summary, and a tap on the caution glyph says why; a tap elsewhere puts it away', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen', fixtures: ['summary-states']});
+  try {
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const sale = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Dana Reyes')!;
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox/${sale.id}`);
+    const tile = page.locator('.rd-head .rd-sumtile');
+    await tile.locator('.rd-sum', {hasText: 'Garage sale moves to Sunday Oct 11 for rain, same time'}).waitFor();
+    assert.equal(await tile.locator('.rd-sumtile-hd .scope').textContent(), 'Dana’s email, Oct 6, 2:14 PM');
+    const glyph = tile.getByRole('button', {name: 'Conversation summary failed'});
+    assert.equal(await glyph.getAttribute('aria-expanded'), 'false');
+    await glyph.tap();
+    await tile.getByRole('tooltip').waitFor();
+    assert.equal(await tile.getByRole('tooltip').textContent(), 'Claude is limiting requests (429), so all 4 emails weren’t summed up. This is Dana’s latest email on its own.');
+    assert.equal(await glyph.getAttribute('aria-expanded'), 'true');
+    await page.locator('.rd-subj').tap();
+    await until('the tip put away', () => tile.getByRole('tooltip').count(), shown => shown === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('on the phone the reader stacks the conversation: a line expands where it is, an email\'s ••• answers that email in a sheet, and the foot replies to the newest', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -381,8 +405,11 @@ test('on the phone the reader stacks the conversation: a line expands where it i
     const wide = await rested(() => page.locator('.cv > [data-email], .cv-foot').evaluateAll((all, edge) => all.filter(node => node.getBoundingClientRect().right > edge + 1).map(node => node.textContent), width));
     assert.deepEqual(wide, []);
     assert.equal(await page.locator('.ph-back').textContent(), 'Inbox');
-    // Its head sums up the whole conversation.
-    assert.equal(await page.locator('.rd-head .rd-sum').textContent(), (await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${newest}`)).summary);
+    // Its head sums up the whole conversation: a header row with the mark, "Summary" and its scope, the words under it.
+    const conversation = await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${newest}`);
+    const tile = page.locator('.rd-head .rd-sumtile');
+    assert.equal(await tile.locator('.rd-sum').textContent(), conversation.summary?.state === 'fresh' ? conversation.summary.text : null);
+    assert.equal(await tile.locator('.rd-sumtile-hd').textContent(), `SummaryAll ${conversation.emails.length} emails`);
 
     // Oct 1's line expands in place, with no new address.
     await page.locator(`.cv-line[data-email="${oct1}"]`).tap();

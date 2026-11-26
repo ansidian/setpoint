@@ -10,7 +10,7 @@ import {openDatabase} from '../../db/open.ts';
 import type {OpenDatabase} from '../../db/open.ts';
 import {busySaturday} from './busySaturday.ts';
 import {failedChange, noDinner} from './calendarChanges.ts';
-import {codeExpiring, coffeeHtml, gmailHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, positionedHtml, stitchedHtml, viewportHtml} from './mailBoards.ts';
+import {codeExpiring, coffeeHtml, gmailHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, positionedHtml, stitchedHtml, summaryRewrite, summaryStates, viewportHtml} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
 import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, staleIcloud, stalePersonal, staleTodoist, todoistOff, triageDown} from './states.ts';
 import {freeReview} from './freeReview.ts';
@@ -39,6 +39,9 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'gmail-html': {board: 'mail checks', apply: gmailHtml},
   // Not a board: the mail checks size the frame to an email held out of the page's flow.
   'positioned-html': {board: 'mail checks', apply: positionedHtml},
+  // Not a board: the reader head's summary tile, being written and refused.
+  'summary-states': {board: 'mail checks', apply: summaryStates},
+  'summary-rewrite': {board: 'mail checks', apply: summaryRewrite},
   // Not a board: the floating detail's place line with a link in it.
   'link-places': {board: 'detail checks', apply: linkPlaces},
   // Not a board: a free event during the CS 101 final's proposed evening.

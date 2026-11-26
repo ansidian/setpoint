@@ -1,10 +1,10 @@
 // The reader's rules as tables: the sender's
 // line, the actions offered, the facts card, which remote images load, attachments and CSV, how
 // the tools give way when they don't fit.
-import type {MessageOut, MessageRowOut, RemoteContentOut} from '@setpoint/shared';
+import type {MessageOut, MessageRowOut, RemoteContentOut, SummaryFailureCause} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attachmentLabel, attachmentType, factRows, fileSize, fitTools, hasRemoteContent, mailboxState, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, whenLabel} from '../src/logic/reader.ts';
+import {attachmentLabel, attachmentType, factRows, fileSize, fitTools, hasRemoteContent, mailboxState, paneWidth, paneWidths, parseCsv, previewKind, readerActions, readerSummary, remoteImages, screenKey, senderLine, summaryTile, whenLabel} from '../src/logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../src/logic/reader.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -66,6 +66,64 @@ describe('readerSummary', () => {
     ['an empty one', {summary: '', fact: null}, null],
     ['security mail: its facts card says it', {summary: 'New sign-in · MacBook Pro · Los Angeles', fact: 'New sign-in · MacBook Pro · Los Angeles'}, null],
   ] as const)('%s', (_name, row, expected) => expect(readerSummary(row)).toBe(expected));
+});
+
+describe('the summary tile', () => {
+  // The seed's clock: Wed, Oct 7, 2026, 9:12 AM Pacific.
+  const now = Date.parse('2026-10-07T16:12:00.000Z');
+  const zone = 'America/Los_Angeles';
+  const people = [{name: 'Theo Walsh', address: 'theo@example.org', me: false}, {name: 'me', address: 'me@example.com', me: true}];
+  const row = {summary: 'Asks you to bring games', fact: null, thread: {count: 3, ids: [1, 2, 3], people}};
+  const lone = {summary: 'Pick a slot this week', fact: null};
+  const email = (id: number, from_name: string, from_address: string, received_at: string, organisation: string | null = null) => ({id, from_name, from_address, organisation, received_at});
+  const emails = [email(1, 'Theo Walsh', 'theo@example.org', '2026-10-03T03:45:00.000Z'), email(2, 'me', 'me@example.com', '2026-10-04T15:30:00.000Z'), email(3, 'Theo Walsh', 'theo@example.org', '2026-10-07T15:02:00.000Z')];
+  const failed = (cause: SummaryFailureCause, status: number | null = null) => ({summary: {state: 'fallback' as const, text: 'Asks you to bring games', email_id: 3, failure: {cause, status}}, emails});
+  const tail = ', so all 3 emails weren’t summed up. This is Theo’s latest email on its own.';
+  test.each([
+    ['a conversation loading: a bar, all its emails', row, undefined,
+      {text: null, scope: 'Summary of all 3 emails', phoneScope: 'All 3 emails', tip: null}],
+    ['one email: its own summary, this email', lone, undefined,
+      {text: 'Pick a slot this week', scope: 'Summary of this email', phoneScope: 'This email', tip: null}],
+    ['one email without a summary: no tile', {summary: null, fact: null}, undefined, null],
+    ['security mail: its facts card says it, no tile', {summary: 'New sign-in', fact: 'New sign-in'}, undefined, null],
+    ['the conversation\'s own summary', row, {summary: {state: 'fresh' as const, text: 'Cabin Nov 13, $140 each'}, emails},
+      {text: 'Cabin Nov 13, $140 each', scope: 'Summary of all 3 emails', phoneScope: 'All 3 emails', tip: null}],
+    ['being written again: a bar', row, {summary: {state: 'pending' as const}, emails},
+      {text: null, scope: 'Summary of all 3 emails', phoneScope: 'All 3 emails', tip: null}],
+    ['none to write (fewer than two summed up): the row\'s, this email', row, {summary: null, emails},
+      {text: 'Asks you to bring games', scope: 'Summary of this email', phoneScope: 'This email', tip: null}],
+    ['never written (from before summaries): the newest email\'s, no why', row, {summary: {state: 'fallback' as const, text: 'Asks you to bring games', email_id: 3, failure: null}, emails},
+      {text: 'Asks you to bring games', scope: 'Summary of Theo’s email, 8:02 AM', phoneScope: 'Theo’s email, 8:02 AM', tip: null}],
+    ['refused (429): the newest email\'s, and why', row, failed('limited', 429),
+      {text: 'Asks you to bring games', scope: 'Summary of Theo’s email, 8:02 AM', phoneScope: 'Theo’s email, 8:02 AM', tip: `Claude is limiting requests (429)${tail}`}],
+    ['an older newest email: its day too', row, {...failed('limited', 429), summary: {...failed('limited', 429).summary, email_id: 1}},
+      {text: 'Asks you to bring games', scope: 'Summary of Theo’s email, Oct 2, 8:45 PM', phoneScope: 'Theo’s email, Oct 2, 8:45 PM', tip: 'Claude is limiting requests (429), so all 3 emails weren’t summed up. This is Theo’s latest email on its own.'}],
+    ['the user\'s own email: yours', row, {...failed('down', 503), summary: {...failed('down', 503).summary, email_id: 2}},
+      {text: 'Asks you to bring games', scope: 'Summary of your email, Oct 4, 8:30 AM', phoneScope: 'Your email, Oct 4, 8:30 AM', tip: 'Claude is down (503), so all 3 emails weren’t summed up. This is your latest email on its own.'}],
+  ] as const)('%s', (_name, shown, conversation, expected) => expect(summaryTile(shown, conversation, now, zone)).toEqual(expected));
+
+  test.each([
+    ['down (529)', 'down', 529, 'Claude is down (529, overloaded)'],
+    ['down (500)', 'down', 500, 'Claude is down (500)'],
+    ['limited', 'limited', 429, 'Claude is limiting requests (429)'],
+    ['refused', 'refused', 401, 'Claude is refusing Setpoint (401)'],
+    ['no answer', 'unreachable', null, 'Claude can’t be reached'],
+    ['an answer without one', 'unusable', null, 'Claude’s answer had no summary'],
+    ['the budget spent', 'budget', null, 'This month’s AI budget is spent'],
+    ['triage down', 'triage_down', null, 'Triage is down'],
+  ] as const)('the tip by cause: %s', (_name, cause, status, clause) => {
+    expect(summaryTile(row, failed(cause, status), now, zone)?.tip).toBe(`${clause}${tail}`);
+  });
+
+  test('two emails are both', () => {
+    expect(summaryTile(row, {summary: {state: 'pending'}, emails: emails.slice(0, 2)}, now, zone)).toMatchObject({scope: 'Summary of both emails', phoneScope: 'Both emails'});
+    expect(summaryTile(row, {...failed('limited', 429), emails: [emails[0]!, emails[2]!]}, now, zone)?.tip).toBe('Claude is limiting requests (429), so both emails weren’t summed up. This is Theo’s latest email on its own.');
+  });
+
+  test('a company\'s email is named by its organisation', () => {
+    const company = [email(1, 'Contoso Billing', 'bill@contoso.example', '2026-10-07T15:02:00.000Z', 'Contoso Insurance'), email(2, 'Contoso Billing', 'bill@contoso.example', '2026-10-07T15:10:00.000Z', 'Contoso Insurance')];
+    expect(summaryTile(row, {summary: {state: 'fallback', text: 'Bill due', email_id: 2, failure: null}, emails: company}, now, zone)?.scope).toBe('Summary of Contoso Insurance’s email, 8:10 AM');
+  });
 });
 
 describe('the account band\'s state', () => {

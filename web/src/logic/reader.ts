@@ -1,7 +1,7 @@
 // The reader's rules: who it's from, which actions it offers, the security facts card, whether
 // remote images load, and the attachments' labels and previews.
-import type {AttachmentOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
-import {clockTime, daysBetween, localDate} from './format.ts';
+import type {AttachmentOut, ConversationSummaryOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts, SummaryFailureCause} from '@setpoint/shared';
+import {clockTime, daysBetween, localDate, readerTime} from './format.ts';
 import {snoozedLine} from './snooze.ts';
 
 /**
@@ -49,13 +49,69 @@ export function mailboxState(row: Pick<MessageRowOut, 'sent_only' | 'snoozed_unt
 export const readerSummary = (row: Pick<MessageRowOut, 'summary' | 'fact'>): string | null => (row.fact ? null : row.summary || null);
 
 /**
- * The line under a conversation's subject in the reader: the conversation's own summary once it's in,
- * else its row's. Until the conversation loads, a row of two or more emails holds the line's place
- * (`'loading'`), so it doesn't change from one to the other in view.
+ * The reader's summary tile, under a conversation's subject: the words, null for a skeleton bar
+ * where they go, and what it sums up, as the desktop says it under the words ("Summary of all 4
+ * emails") and the phone in its header ("All 4 emails"). `tip` says why, beside the caution glyph,
+ * when the conversation's summary couldn't be written and the newest email's own stands in.
  */
-export function headSummary(row: Pick<MessageRowOut, 'summary' | 'fact' | 'thread'>, conversation: {summary: string | null} | undefined): string | null | 'loading' {
-  if (conversation) return conversation.summary ?? readerSummary(row);
-  return (row.thread?.count ?? 1) >= 2 ? 'loading' : readerSummary(row);
+export interface SummaryTile {
+  text: string | null;
+  scope: string;
+  phoneScope: string;
+  tip: string | null;
+}
+
+type TileRow = Pick<MessageRowOut, 'summary' | 'fact' | 'thread'>;
+type TileEmail = Pick<MessageRowOut, 'id' | 'from_name' | 'from_address' | 'organisation' | 'received_at'>;
+
+// Why the summary wasn't written, as DESIGN.md › Copy words a provider's trouble.
+const CAUSES: Record<SummaryFailureCause, (status: number | null) => string> = {
+  down: status => (status === null ? 'Claude is down' : `Claude is down (${status === 529 ? '529, overloaded' : status})`),
+  limited: status => `Claude is limiting requests (${status ?? 429})`,
+  refused: status => (status === null ? 'Claude is refusing Setpoint' : `Claude is refusing Setpoint (${status})`),
+  unreachable: () => 'Claude can’t be reached',
+  unusable: () => 'Claude’s answer had no summary',
+  budget: () => 'This month’s AI budget is spent',
+  triage_down: () => 'Triage is down',
+};
+
+/** Whose an email is, for its scope: "Theo's", "Contoso Insurance's", or "your" for the user's own. */
+function whose(email: TileEmail, people: readonly {address: string; me: boolean}[]): string {
+  if (people.some(person => person.me && person.address.toLowerCase() === email.from_address.toLowerCase())) return 'your';
+  const name = email.organisation || email.from_name.trim().split(/\s+/)[0] || email.from_address.split('@')[0]!;
+  return `${name}’s`;
+}
+
+/** "both emails", "all 4 emails". */
+const emailsWord = (count: number) => (count === 2 ? 'both emails' : `all ${count} emails`);
+
+const capital = (words: string) => `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+
+/**
+ * The tile for a conversation's head, from its row at once and its conversation once it's in. Null
+ * when there's nothing to sum up with (no summary, or security mail, whose facts card says it).
+ * Until the conversation loads, a row of two or more emails holds the tile with a skeleton, so the
+ * words don't change in view.
+ */
+export function summaryTile(row: TileRow, conversation: {summary: ConversationSummaryOut | null; emails: TileEmail[]} | undefined, now: number, timeZone: string): SummaryTile | null {
+  const all = (count: number, text: string | null): SummaryTile => ({text, scope: `Summary of ${emailsWord(count)}`, phoneScope: capital(emailsWord(count)), tip: null});
+  const own = (): SummaryTile | null => {
+    const text = readerSummary(row);
+    return text ? {text, scope: 'Summary of this email', phoneScope: 'This email', tip: null} : null;
+  };
+  if (!conversation) return (row.thread?.count ?? 1) >= 2 ? all(row.thread!.count, null) : own();
+  const {summary, emails} = conversation;
+  if (!summary) return own();
+  if (summary.state === 'fresh') return all(emails.length, summary.text);
+  if (summary.state === 'pending') return all(emails.length, null);
+  const email = emails.find(one => one.id === summary.email_id);
+  if (!email) return own();
+  const who = whose(email, row.thread?.people ?? []);
+  const scope = `${who} email, ${readerTime(email.received_at, now, timeZone)}`;
+  const tip = summary.failure
+    ? `${CAUSES[summary.failure.cause](summary.failure.status)}, so ${emailsWord(emails.length)} weren’t summed up. This is ${who} latest email on its own.`
+    : null;
+  return {text: summary.text, scope: `Summary of ${scope}`, phoneScope: capital(scope), tip};
 }
 
 /** "Today, 8:52 AM", "Yesterday, 6:41 PM", "Mon, Oct 5, 10:05 AM", with the year once it isn't this year's. */
