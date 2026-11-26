@@ -17,6 +17,7 @@ import {conversationPeople, expandedEmails, repliedLast, replyOf} from '../src/d
 import type {ConversationEmail, ThreadEmail} from '../src/domain/thread.ts';
 import {allMail, conversationDetail, inbox, mailCounts, messageDetail, messageRows, sentMail, snoozedMail} from '../src/queries/mail.ts';
 import {haStatus} from '../src/queries/status.ts';
+import {conversationOf} from '../src/queries/thread.ts';
 import {answerSearch, searchMail} from '../src/search/search.ts';
 import {createDraft, updateDraft} from '../src/sending/drafts.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
@@ -58,16 +59,17 @@ const idOf = (w: World, subject: string, from?: string) =>
 const theo = (w: World) => w.store.db.select().from(t.messages).where(eq(t.messages.threadId, 'seed-thread-cabin')).orderBy(t.messages.receivedAt).all();
 
 describe('the seed\'s conversation with Theo', () => {
-  test('each of Theo\'s emails says when the user replied, in All, search and the reader, and the reader lists the rest oldest first', () => {
+  test('each of Theo\'s emails says when the user replied, in All, search and the reader, and its thread lists the rest oldest first', () => {
     const w = world({seed: true});
     const thread = theo(w);
     expect(thread.map(row => row.sent)).toEqual([false, true, false, true, false, true, false, true]);
     const [first, reply] = thread;
 
     const detail = messageDetail(w.store, first!.id);
-    expect(detail).toMatchObject({replied_at: reply!.receivedAt, reply_id: reply!.id});
-    expect(detail.conversation!.map(other => [other.id, other.sent, other.from_name])).toEqual(thread.slice(1).map(row => [row.id, row.sent, row.fromName]));
-    expect(detail.conversation![0]).toMatchObject({received_at: reply!.receivedAt, subject: 'Re: Cabin weekend in November', excerpt: 'I\'m in. What\'s the cost per person, roughly?'});
+    expect(detail).toMatchObject({replied_at: reply!.receivedAt});
+    const others = conversationOf(w.store, first!);
+    expect(others.map(other => [other.id, other.sent, other.from_name])).toEqual(thread.slice(1).map(row => [row.id, row.sent, row.fromName]));
+    expect(others[0]).toMatchObject({received_at: reply!.receivedAt, subject: 'Re: Cabin weekend in November', excerpt: 'I\'m in. What\'s the cost per person, roughly?'});
 
     // All lists the conversation once, as Theo's newest email, with the reply mark at the user's last
     // reply, its newest email. No other row of All carries one.
@@ -83,8 +85,7 @@ describe('the seed\'s conversation with Theo', () => {
     // A sent email has no reply of its own, and lists the rest of the thread too.
     const sentDetail = messageDetail(w.store, reply!.id);
     expect(sentDetail.replied_at).toBeUndefined();
-    expect(sentDetail.reply_id).toBeUndefined();
-    expect(sentDetail.conversation!.map(other => other.id)).toEqual(thread.filter(row => row.id !== reply!.id).map(row => row.id));
+    expect(conversationOf(w.store, reply!).map(other => other.id)).toEqual(thread.filter(row => row.id !== reply!.id).map(row => row.id));
   });
 
   test('a trashed reply no longer counts, and trashed mail leaves the conversation', () => {
@@ -93,13 +94,14 @@ describe('the seed\'s conversation with Theo', () => {
     trashMessage(w.store, reply!.id, true);
     const detail = messageDetail(w.store, first!.id);
     expect(detail.replied_at).toBeUndefined();
-    expect(detail.conversation!.map(other => other.id)).not.toContain(reply!.id);
-    expect(detail.conversation).toHaveLength(6);
+    const others = conversationOf(w.store, first!);
+    expect(others.map(other => other.id)).not.toContain(reply!.id);
+    expect(others).toHaveLength(6);
   });
 
   test('an email alone has an empty conversation, and the Inbox\'s rows carry no reply mark the seed doesn\'t have', () => {
     const w = world({seed: true});
-    expect(messageDetail(w.store, idOf(w, 'Dinner Friday?')[0]!.id).conversation).toEqual([]);
+    expect(conversationOf(w.store, idOf(w, 'Dinner Friday?')[0]!)).toEqual([]);
     expect(inbox(w.store).groups.flatMap(group => group.rows).some(row => row.replied_at)).toBe(false);
   });
 });
@@ -118,7 +120,7 @@ describe('threads in the record', () => {
     upsertMessages(w.store, personal!, [fetched('g1', 'gthread', 0, headers(null))]);
     upsertMessages(w.store, work!, [fetched('g2', 'gthread', 5, {...SENT, ...headers('<g1@example.org>')})]);
     const id = idOf(w, 'g1')[0]!.id;
-    expect(messageDetail(w.store, id)).toMatchObject({conversation: []});
+    expect(conversationOf(w.store, idOf(w, 'g1')[0]!)).toEqual([]);
     expect(messageDetail(w.store, id).replied_at).toBeUndefined();
   });
 
@@ -130,11 +132,11 @@ describe('threads in the record', () => {
     ]);
     const [n1, n2, n3, n4, n5] = ['n1', 'n2', 'n3', 'n4', 'n5'].map(subject => idOf(w, subject)[0]!);
     for (const row of [n1, n2, n3, n4, n5]) expect(row!.inReplyTo).toBeNull();
-    expect(messageDetail(w.store, n1!.id)).toMatchObject({reply_id: n2!.id, replied_at: n2!.receivedAt});
+    expect(messageDetail(w.store, n1!.id)).toMatchObject({replied_at: n2!.receivedAt});
     // n3 has n4 after it before the user wrote again, so the order rule gives the reply to n4 alone.
     expect(messageDetail(w.store, n3!.id).replied_at).toBeUndefined();
-    expect(messageDetail(w.store, n4!.id)).toMatchObject({reply_id: n5!.id});
-    expect(messageDetail(w.store, n4!.id).conversation!.map(other => [other.subject, other.sent])).toEqual([['n1', false], ['n2', true], ['n3', false], ['n5', true]]);
+    expect(messageDetail(w.store, n4!.id)).toMatchObject({replied_at: n5!.receivedAt});
+    expect(conversationOf(w.store, n4!).map(other => [other.subject, other.sent])).toEqual([['n1', false], ['n2', true], ['n3', false], ['n5', true]]);
   });
 
   test('a reply that arrives names the email it answers in its live event, so an open reader shows the line', () => {
@@ -449,7 +451,7 @@ describe('the reader\'s conversation', () => {
     expect(out.emails.map(email => [email.id, email.expanded, email.excerpt])).toEqual([
       [d1.id, true, 'Which shelf?'], [d2.id, true, 'The oak one.'], [d3.id, true, 'Great, ordering it.'],
     ]);
-    expect(out.emails.every(email => email.conversation === undefined && email.body_text !== undefined)).toBe(true);
+    expect(out.emails.every(email => email.body_text !== undefined)).toBe(true);
     expect(out.row).toMatchObject({id: d2.id, unread: true, draft: true, thread: {ids}});
   });
 

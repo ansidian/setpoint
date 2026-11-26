@@ -228,19 +228,6 @@ export interface RemoteContentOut {
   reason: RemoteContentReason;
 }
 
-/** Another email of an open email's thread, in the reader's conversation list. */
-export interface ConversationEmailOut {
-  id: number;
-  from_name: string;
-  from_address: string;
-  // The user sent it: the line reads "You".
-  sent: boolean;
-  received_at: string;
-  subject: string;
-  // Its first words.
-  excerpt: string;
-}
-
 /** An email in the reading pane. */
 export interface MessageOut extends MessageRowOut {
   thread_id: string;
@@ -262,14 +249,9 @@ export interface MessageOut extends MessageRowOut {
   // The References header's Message-IDs in order, oldest first, and In-Reply-To's.
   references?: string[];
   in_reply_to?: string | null;
-  // The email the user sent in reply to it (with `replied_at`), left out while they haven't.
-  reply_id?: number;
   // The sender's unsubscribe page (an https address from List-Unsubscribe), left out when it had
   // none.
   unsubscribe_url?: string;
-  // The other emails of its thread in its account, received and sent, oldest first, trashed mail left
-  // out. Empty when it is alone.
-  conversation?: ConversationEmailOut[];
 }
 
 export const readInput = z.strictObject({unread: z.boolean()});

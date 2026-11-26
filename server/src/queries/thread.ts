@@ -1,6 +1,5 @@
 // An email's conversation: the emails of its thread in the same account, received and sent, oldest
 // first, and the reply the user sent to it (src/domain/thread.ts). Trashed mail is left out.
-import type {ConversationEmailOut} from '@setpoint/shared';
 import {and, asc, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {conversationKey} from '../domain/inbox.ts';
@@ -81,8 +80,21 @@ export function repliesOf(store: Store, rows: (Threaded & ThreadEmail)[]): Map<n
   return replies;
 }
 
+/** Another email of an email's thread, as Alfred reads it. */
+export interface ThreadMate {
+  id: number;
+  from_name: string;
+  from_address: string;
+  // The user sent it.
+  sent: boolean;
+  received_at: string;
+  subject: string;
+  // Its first words.
+  excerpt: string;
+}
+
 /** The other emails of an email's thread, oldest first, trashed mail left out. */
-export function conversationOf(store: Store, row: Threaded): ConversationEmailOut[] {
+export function conversationOf(store: Store, row: Threaded): ThreadMate[] {
   return store.db.select({
     id: t.messages.id, fromName: t.messages.fromName, fromAddress: t.messages.fromAddress, sent: t.messages.sent, receivedAt: t.messages.receivedAt,
     subject: t.messages.subject, snippet: t.messages.snippet,

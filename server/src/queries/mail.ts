@@ -18,7 +18,7 @@ import {notFound} from '../errors.ts';
 import {backfillProgress, readBackfill} from '../sync/cursors.ts';
 import {isoNow} from '../store.ts';
 import {draftAnswering, draftedMessages} from '../sending/drafts.ts';
-import {conversationOf, membersOf, repliesOf} from './thread.ts';
+import {membersOf, repliesOf} from './thread.ts';
 import type {Member} from './thread.ts';
 import type {Store} from '../store.ts';
 
@@ -330,11 +330,8 @@ function isTrusted(store: Store, domain: string): boolean {
   return isTrustedDomain(new Set(store.db.select({domain: t.trustedDomains.domain}).from(t.trustedDomains).all().map(row => row.domain)), domain);
 }
 
-/**
- * One email for the reading pane. Reading it doesn't mark it read. Opening does (POST …/open). In a
- * conversation's reader it leaves out the list of its conversation's other emails.
- */
-export function messageDetail(store: Store, messageId: number, {conversation = true}: {conversation?: boolean} = {}): MessageOut {
+/** One email for the reading pane. Reading it doesn't mark it read. Opening does (POST …/open). */
+export function messageDetail(store: Store, messageId: number): MessageOut {
   const found = store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
   if (!found) throw notFound('No such email.');
   const row = withBody(store.db, found);
@@ -345,7 +342,6 @@ export function messageDetail(store: Store, messageId: number, {conversation = t
   const trusted = isTrusted(store, domain);
   const replies = repliesOf(store, [row]);
   const drafted = draftedMessages(store);
-  const reply = replies.get(row.id);
   return {
     ...presentRow({...row, command, held: command?.state === 'failed', attachmentCount: attachments.length}, replies, drafted),
     thread_id: row.threadId,
@@ -359,10 +355,8 @@ export function messageDetail(store: Store, messageId: number, {conversation = t
     ...(row.toRecipients === null ? {} : {
       to: row.toRecipients, cc: row.ccRecipients ?? [], reply_to: row.replyTo ?? [], references: row.referenceIds ?? [], in_reply_to: row.inReplyTo,
     }),
-    ...(reply ? {reply_id: reply.id} : {}),
     // Mail the user sent to others is never theirs to unsubscribe from.
     ...(row.listUnsubscribe && row.received ? {unsubscribe_url: row.listUnsubscribe} : {}),
-    ...(conversation ? {conversation: conversationOf(store, row)} : {}),
   };
 }
 
@@ -381,7 +375,7 @@ export function conversationDetail(store: Store, messageId: number, unreadBefore
     .filter(email => !email.trashedAt || email.id === opened.id);
   const expanded = expandedEmails(emails.map(email => ({id: email.id, unread: unreadBefore ? unreadBefore.has(email.id) : email.unread})), opened.id);
   const details = emails.map(email => {
-    const detail = messageDetail(store, email.id, {conversation: false});
+    const detail = messageDetail(store, email.id);
     return {...detail, expanded: expanded.has(email.id), excerpt: email.snippet, quoted_history: detail.body_html !== null && withoutQuotedHistory(detail.body_html) !== null};
   });
   return {

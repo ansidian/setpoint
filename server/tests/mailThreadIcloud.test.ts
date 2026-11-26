@@ -8,6 +8,7 @@ import {describe, expect, onTestFinished, test, vi} from 'vitest';
 import {snoozeMessage} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {allMail, messageDetail} from '../src/queries/mail.ts';
+import {conversationOf} from '../src/queries/thread.ts';
 import {ICloudAdapter, icloudConnector} from '../src/providers/icloud/index.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
 import {Adapters} from '../src/sync/registry.ts';
@@ -77,12 +78,11 @@ describe('iCloud: threads', () => {
     // The ids compare as stored: the reply's In-Reply-To is the email's Message-ID, character for character.
     const s1 = w.store.db.select().from(t.messages).where(eq(t.messages.subject, 'Re: Lunch?')).get()!;
     expect(s1.inReplyTo).toBe(w.store.db.select().from(t.messages).where(eq(t.messages.subject, 'Lunch?')).get()!.rfc822Id);
-    // Each received email has its own reply, and the reader lists the other three.
+    // Each received email has its own reply, and its thread lists the other three.
     const row = (subject: string) => w.store.db.select().from(t.messages).where(eq(t.messages.subject, subject)).get()!;
-    expect(messageDetail(w.store, row('Lunch?').id)).toMatchObject({reply_id: s1.id});
-    const second = messageDetail(w.store, row('Re: Lunch? (2)').id);
-    expect(second.reply_id).toBe(row('Re: Lunch? (3)').id);
-    expect(second.conversation!.map(other => [other.subject, other.sent])).toEqual([['Lunch?', false], ['Re: Lunch?', true], ['Re: Lunch? (3)', true]]);
+    expect(messageDetail(w.store, row('Lunch?').id)).toMatchObject({replied_at: s1.receivedAt});
+    expect(messageDetail(w.store, row('Re: Lunch? (2)').id).replied_at).toBe(row('Re: Lunch? (3)').receivedAt);
+    expect(conversationOf(w.store, row('Re: Lunch? (2)')).map(other => [other.subject, other.sent])).toEqual([['Lunch?', false], ['Re: Lunch?', true], ['Re: Lunch? (3)', true]]);
     // All lists the conversation once, as Sam's newest email, with the user's reply as its newest.
     const rows = allMail(w.store, {limit: 500}).days.flatMap(day => day.rows);
     expect(rows.map(one => [one.subject, one.thread!.count, one.thread!.people.map(person => person.name), one.replied_at])).toEqual([
