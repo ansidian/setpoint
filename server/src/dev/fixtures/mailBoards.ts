@@ -19,6 +19,13 @@
 //                   the page's flow, so nothing in the flow is as tall as the email
 //   last-year       search checks: a Northwind rejection from Dec 20, 2025, so a row's age carries its
 //                   year ("Dec 20, 2025"), the longest it gets
+//   summary-states  mail checks: the reader head's summary tile while a conversation's summary is
+//                   being written (Mira's book club, its newest email triaged a minute before the
+//                   seed's moment) and once its call was refused (Dana's garage sale, a 429), both
+//                   unread in FYI on Personal
+//   summary-rewrite mail checks: a fifth email from Theo in the cabin conversation, still Unsorted,
+//                   for triage to sort once the check sets the key, and its conversation's summary
+//                   to be written again
 import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import type {Db, OpenDatabase} from '../../db/open.ts';
@@ -288,5 +295,54 @@ export function lastYear({db}: OpenDatabase) {
     bodyText: 'Thank you for applying to Northwind. We\'ve filled the Support Engineer role, and we\'ll keep your profile on file.',
     searchBody: searchBody('Thank you for applying to Northwind. We\'ve filled the Support Engineer role, and we\'ll keep your profile on file.'),
     receivedAt: zoned('2025-12-20', '11:05'), unread: false, lane: 'fyi', kind: 'career', type: 'rejection',
+  });
+}
+
+export function summaryStates({db}: OpenDatabase) {
+  const personal = db.select().from(t.accounts).where(eq(t.accounts.label, 'Personal')).get();
+  if (!personal) throw new Error('The summary-states fixture needs the seed\'s Personal account: run `npm run seed` first.');
+  const me = {name: 'User', address: personal.address};
+  const thread = (key: string, from: {name: string; address: string}, subject: string, emails: {at: [string, string]; sent?: boolean; body: string; summary?: string; triagedAt?: string}[]) => {
+    const ids: number[] = [];
+    emails.forEach((email, at) => {
+      const sender = email.sent ? me : from;
+      const receivedAt = zoned(...email.at);
+      ids.push(insertMessage(db, {
+        accountId: personal.id, providerId: `fixture-${key}-${at + 1}`, threadId: `fixture-${key}-thread`, rfc822Id: `<${key}-${at + 1}@example.org>`,
+        fromName: sender.name, fromAddress: sender.address, subject: at === 0 ? subject : `Re: ${subject}`, snippet: email.body, bodyText: email.body,
+        searchBody: searchBody(email.body), receivedAt, unread: !email.sent && at === emails.length - 1, sent: !!email.sent, received: !email.sent,
+        ...(email.sent ? {lane: null} : {lane: 'fyi', kind: 'people', summary: email.summary ?? null, triagedAt: email.triagedAt ?? receivedAt} as const),
+      }));
+    });
+    return ids;
+  };
+  // Being written: the newest email was sorted a minute ago and its conversation's call is still out.
+  thread('book-club', {name: 'Mira Okafor', address: 'mira@example.org'}, 'Book club in November', [
+    {at: ['2026-10-05', '19:40'], body: 'Book club is back! November pick is The Left Hand of Darkness. Hosting at mine on the 21st?', summary: 'November pick is The Left Hand of Darkness; hosting at Mira\'s on the 21st'},
+    {at: ['2026-10-07', '09:11'], body: 'Small change: we\'ll meet at 7 instead of 6:30, and bring a snack if you can.', summary: 'Book club moves to 7 PM; bring a snack',
+      triagedAt: new Date(Date.parse(SEED_NOW) - 60_000).toISOString()},
+  ]);
+  // Refused: the call for the newest email was rate limited (429); the summary there was covers the one before.
+  const sale = thread('garage-sale', {name: 'Dana Reyes', address: 'dana@example.org'}, 'Garage sale on Saturday', [
+    {at: ['2026-10-03', '10:05'], body: 'We\'re doing a block garage sale Saturday the 10th, 8 to noon. Want a table?', summary: 'Block garage sale Sat Oct 10, 8 AM to noon: want a table?'},
+    {at: ['2026-10-03', '12:30'], sent: true, body: 'Yes please, I\'ll bring the bikes and some books.'},
+    {at: ['2026-10-04', '09:15'], body: 'Great, you\'re at table 4 by the driveway. Tables are $10, cash.', summary: 'You\'re at table 4; tables are $10 cash'},
+    {at: ['2026-10-06', '14:14'], body: 'Forecast says rain, so we\'re moving it to Sunday the 11th, same time.', summary: 'Garage sale moves to Sunday Oct 11 for rain, same time'},
+  ]);
+  db.insert(t.conversationSummaries).values({
+    accountId: personal.id, threadId: 'fixture-garage-sale-thread', summary: 'Garage sale Sat Oct 10, 8 to noon: you\'re at table 4 with bikes and books, $10 cash',
+    messageId: sale[2]!, at: zoned('2026-10-04', '09:16'), failedMessageId: sale[3]!, failureCause: 'limited', failureStatus: 429,
+  }).run();
+}
+
+/** Theo's newest cabin email, waiting in Unsorted (the seed's cabin conversation, src/dev/sample.ts). */
+export function summaryRewrite({db}: OpenDatabase) {
+  const personal = db.select().from(t.accounts).where(eq(t.accounts.label, 'Personal')).get();
+  if (!personal) throw new Error('The summary-rewrite fixture needs the seed\'s Personal account: run `npm run seed` first.');
+  const body = 'Change of plan: the cabin wants a $50 cleaning deposit each, so bring cash on Friday.';
+  insertMessage(db, {
+    accountId: personal.id, providerId: 'fixture-cabin-rewrite', threadId: 'seed-thread-cabin', rfc822Id: '<cabin-9@example.org>',
+    fromName: 'Theo Walsh', fromAddress: 'theo.walsh@example.org', subject: 'Re: Cabin weekend in November', snippet: body, bodyText: body, searchBody: searchBody(body),
+    receivedAt: new Date(Date.parse(SEED_NOW) - 2 * 60_000).toISOString(), unread: true, sent: false, received: true, lane: null,
   });
 }

@@ -32,7 +32,7 @@
 //   POST /api/mail/conversations/:id/trash     ConversationChangeOut, the user's sent replies included
 //   POST /api/mail/conversations/undo          ConversationUndo   ConversationChangeOut (puts each email back)
 import {z} from 'zod';
-import type {InboxGroup, Kind, Lane, MessageType} from '../enums.ts';
+import type {InboxGroup, Kind, Lane, MessageType, SummaryFailureCause} from '../enums.ts';
 import type {Recipient, SecurityFacts} from '../message.ts';
 import {id, instant} from './common.ts';
 import type {CommandOut} from './common.ts';
@@ -289,10 +289,25 @@ export interface MailConversationOut {
   emails: ConversationMessageOut[];
   // The draft that answers one of its emails (the newest), as a "Draft" line at its foot. Null with none.
   draft: {id: number; message_id: number} | null;
-  // One line summing up a conversation of two or more emails, for the reader's head in place of its
-  // row's summary. Null for one email, while none is written, or once a newer email has come in.
-  summary: string | null;
+  // What the reader's head sums up a conversation of two or more emails with. Null when there's
+  // none to write (one email, or fewer than two that triage summed up): its row's summary stands.
+  summary: ConversationSummaryOut | null;
 }
+
+/**
+ * A conversation's summary in the reader's head. `fresh`: its own summary covers the newest email.
+ * `pending`: it's being written again (the newest email was just triaged, or one is still Unsorted),
+ * shown as a skeleton. `fallback`: it won't be written for now, so the newest summed-up email's own
+ * summary (`email_id`) stands in, with why when a call failed or triage can't call (`failure`); a
+ * conversation never written (from before summaries) has none.
+ */
+export type ConversationSummaryOut =
+  | {state: 'fresh'; text: string}
+  | {state: 'pending'}
+  // `failure.cause`: Claude is down (a 5xx), limiting requests (429), refusing Setpoint (another
+  // status), can't be reached (no answer), answered without a summary (`unusable`), the AI budget is
+  // spent, or triage is down. `status` is the HTTP status, when there was one.
+  | {state: 'fallback'; text: string; email_id: number; failure: {cause: SummaryFailureCause; status: number | null} | null};
 
 /**
  * What puts each email of a conversation back as it was before a change: its own fields (Done, pin,

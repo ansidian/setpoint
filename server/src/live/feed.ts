@@ -21,7 +21,8 @@ const union = (a: number[], b: number[]) => [...new Set([...a, ...b])].sort((x, 
 function merge(a: LiveEvent, b: LiveEvent): LiveEvent {
   if (a.type === 'mail' && b.type === 'mail') {
     const drafts = a.drafts || b.drafts ? {drafts: union(a.drafts ?? [], b.drafts ?? [])} : {};
-    return {type: 'mail', messages: union(a.messages, b.messages), accounts: union(a.accounts, b.accounts), commands: union(a.commands, b.commands), ...drafts};
+    const conversations = a.conversations || b.conversations ? {conversations: union(a.conversations ?? [], b.conversations ?? [])} : {};
+    return {type: 'mail', messages: union(a.messages, b.messages), accounts: union(a.accounts, b.accounts), commands: union(a.commands, b.commands), ...drafts, ...conversations};
   }
   if (a.type === 'items' && b.type === 'items') return {type: 'items', items: union(a.items, b.items), calendars: union(a.calendars, b.calendars), commands: union(a.commands, b.commands)};
   if (a.type === 'health' && b.type === 'health') return {type: 'health', sources: union(a.sources, b.sources)};

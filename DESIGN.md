@@ -305,7 +305,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   calendar is recoloured. Never show it beside the pending spinner.
 - **Alfred's mark** is `auto_awesome` filled with a gradient from `cool` to `violet` (bottom left to
   top right), two of Day stack's colours, wherever Alfred shows: Ask Alfred, the Answer card's header,
-  Ask about this email in the reader and ⌘K, and help me write in the composer. Nothing else about the AI takes a hue.
+  Ask about this email in the reader and ⌘K, help me write in the composer, and the summary tile in the reader's head
+  (a conversation's or one email's summary, written by a model). Nothing else about the AI takes a hue.
 - **Favicon:** `favicon.svg` (the mark on a 32 px `card` tile, radius 7, with an `edgeOn`
   border, in Night's colours), 16 and 32 px PNGs (the 16 px one redrawn on its pixel grid: the middle
   chip level, set apart by the wider gap above it) and a 180 px square `apple-touch-icon`, which the web

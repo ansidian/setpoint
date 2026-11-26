@@ -4,7 +4,10 @@
 // invented readings of the seed's mail (`SEED_READINGS`), and a proposal's prefill with invented
 // fields for the seed's mail (`SEED_PREFILLS`). Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a
 // dev run accepts. With the key set, triage and the history pass ask it too. The fake tells them
-// it's overloaded, so they change nothing. No check reaches a real model provider.
+// it's overloaded, so they change nothing, unless a check gives it `triage`: then triage sorts each
+// email it asks about into FYI with that email's summary, and a conversation's summary answers as
+// `conversation` says (written, held until let go, or refused with a status). No check reaches a
+// real model provider.
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 
@@ -41,6 +44,13 @@ export interface FakePrefill {
   task?: Record<string, unknown>;
   held?: boolean;
   fails?: boolean;
+}
+
+/** How the fake writes a conversation's summary: its words, held until the check lets it go (`release`), or refused with `status`. */
+export interface FakeConversation {
+  summary?: string;
+  held?: boolean;
+  status?: number;
 }
 
 /** Prefills of the seed's mail, by subject. Any other email's is its subject as the title, and nothing else. */
@@ -82,8 +92,11 @@ export const SEED_READINGS: Record<string, FakeReading> = {
  * works, or the field while a reading comes, for as long as it needs rather than inside a window of
  * time. `release()` lets one go: the one held longest, or, with none held yet, the next to come.
  */
-export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = false, readings = SEED_READINGS, prefills = SEED_PREFILLS, prefillDelayMs = 0, writer}: {
+export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = false, readings = SEED_READINGS, prefills = SEED_PREFILLS, prefillDelayMs = 0, writer, triage, conversation = {}}: {
   held?: boolean;
+  // Triage's summary of the email it's asked about, by subject. Without it, triage is told it's overloaded.
+  triage?: Record<string, string>;
+  conversation?: FakeConversation;
   readings?: Record<string, FakeReading>;
   prefills?: Record<string, FakePrefill>;
   // A dev run's pause before each prefill answers, as a model's (checks hold instead).
@@ -130,6 +143,16 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = fal
           go();
         } else holding.push(go);
       };
+      if (triage && body.tools?.some(tool => tool.name === 'submit_email_triage')) {
+        const subject = /^Subject: (.*)$/m.exec(blocks(body.messages[0]!.content).map(block => block.text).join(''))?.[1] ?? '';
+        return called({name: 'submit_email_triage', input: {
+          lane: 'fyi', kind: 'people', organisation: null, via: null, type: null, key_date: null, summary: triage[subject] ?? null, security: null, protected_class: null, confidence: 0.95,
+        }}, false);
+      }
+      if (body.tools?.some(tool => tool.name === 'submit_conversation_summary')) {
+        if (conversation.status) return send(conversation.status, {type: 'error', error: {type: 'rate_limit_error', message: 'Rate limited'}});
+        return called({name: 'submit_conversation_summary', input: {summary: conversation.summary ?? 'The whole conversation'}}, conversation.held ?? false);
+      }
       if (body.tools?.some(tool => tool.name === 'submit_reading')) {
         const search = /^Search: (.*)$/m.exec(blocks(body.messages[0]!.content).map(block => block.text).join(''))?.[1] ?? '';
         read.push(search);

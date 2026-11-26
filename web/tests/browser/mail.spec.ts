@@ -13,6 +13,8 @@ import type {AccountOut, AllOut, InboxOut, ItemsOut, MailConversationOut, MailCo
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
+import {FAKE_ANTHROPIC_KEY, fakeAlfred} from './fakeAlfred.ts';
+import type {FakeConversation} from './fakeAlfred.ts';
 import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -1718,26 +1720,84 @@ test('a conversation: its row names everyone with its count; the reader stacks i
   }
 });
 
-test('a conversation\'s head says what the whole conversation is about; a one-email conversation\'s head keeps its email\'s summary', async () => {
+test('a conversation\'s head sums it up in a tile for all its emails; a one-email conversation\'s tile sums up this email', async () => {
   const setpoint = await startSetpoint();
   try {
     const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
     const rows = all.days.flatMap(day => day.rows);
     const cabin = rows.find(row => row.from_name === 'Theo Walsh')!;
     const conversation = await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${cabin.id}`);
-    assert.ok(conversation.summary);
+    assert.equal(conversation.summary?.state, 'fresh');
     const page = await load(setpoint, `/inbox/${cabin.id}`);
     await page.locator('.cv > [data-email]').first().waitFor();
-    assert.equal(await page.locator('.rd-head .rd-sum').textContent(), conversation.summary);
+    const tile = page.locator('.rd-head .rd-sumtile');
+    assert.equal(await tile.locator('.rd-sum').textContent(), conversation.summary?.state === 'fresh' ? conversation.summary.text : null);
+    assert.equal(await tile.locator('.scope').textContent(), `Summary of all ${conversation.emails.length} emails`);
 
     const single = rows.find(row => (row.thread?.count ?? 1) === 1 && row.summary && !row.fact)!;
     assert.equal((await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${single.id}`)).summary, null);
     await page.goto(`${setpoint.base}/inbox/${single.id}`);
     await page.locator(`.cv > [data-email="${single.id}"]`).waitFor();
-    assert.equal(await page.locator('.rd-head .rd-sum').textContent(), single.summary);
+    assert.equal(await tile.locator('.rd-sum').textContent(), single.summary);
+    assert.equal(await tile.locator('.scope').textContent(), 'Summary of this email');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
+  }
+});
+
+// Theo's newest cabin email, waiting in Unsorted (the summary-rewrite fixture).
+const SUMMARY_REWRITE_SUBJECT = 'Re: Cabin weekend in November';
+
+/** The seed's cabin conversation with Theo's newest email in Unsorted, triaged by the fake once the key is set. */
+async function cabinRewrite(conversation: FakeConversation) {
+  const fake = await fakeAlfred(() => ({name: 'answer', input: {}}), {triage: {[SUMMARY_REWRITE_SUBJECT]: 'Wants a $50 cleaning deposit each, in cash Friday'}, conversation});
+  const setpoint = await startSetpoint({clock: 'frozen', fixtures: ['summary-rewrite'], env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
+    await fake.close();
+    throw error;
+  });
+  const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+  const cabin = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Theo Walsh')!;
+  return {fake, setpoint, cabin, stop: async () => {
+    await setpoint.stop();
+    await fake.close();
+  }};
+}
+
+test('while a conversation\'s summary is being written its tile holds a bar where the words go, then the words once the model answers', async () => {
+  const {fake, setpoint, cabin, stop} = await cabinRewrite({held: true, summary: 'Cabin Nov 13: $140 each plus a $50 cleaning deposit in cash Friday'});
+  try {
+    // The key set, triage sorts Theo's newest email and the summary's call is held.
+    await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
+    await until('the call held', async () => (await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${cabin.id}`)).emails.at(-1)!.lane, lane => lane === 'fyi');
+    const page = await load(setpoint, `/inbox/${cabin.id}`);
+    await page.locator('.cv > [data-email]').first().waitFor();
+    const tile = page.locator('.rd-head .rd-sumtile');
+    // The tile keeps its mark and scope, a bar where the words go.
+    await tile.locator('[data-skeleton="summary"]').waitFor();
+    assert.equal(await tile.locator('.scope').textContent(), 'Summary of all 9 emails');
+    fake.release();
+    await tile.locator('.rd-sum', {hasText: 'Cabin Nov 13: $140 each plus a $50 cleaning deposit in cash Friday'}).waitFor();
+    assert.equal(await tile.locator('[data-skeleton="summary"]').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('when a conversation\'s summary is refused (429), its tile shows the newest email\'s summary, says whose, and its caution glyph names the 429', async () => {
+  const {setpoint, cabin, stop} = await cabinRewrite({status: 429});
+  try {
+    const page = await load(setpoint, `/inbox/${cabin.id}`);
+    await page.locator('.cv > [data-email]').first().waitFor();
+    await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
+    const tile = page.locator('.rd-head .rd-sumtile');
+    await tile.locator('.rd-sum', {hasText: 'Wants a $50 cleaning deposit each, in cash Friday'}).waitFor();
+    assert.equal(await tile.locator('.scope').textContent(), 'Summary of Theo’s email, 9:10 AM');
+    assert.equal(await tile.locator('.warn').getAttribute('data-tip'), 'Claude is limiting requests (429), so all 9 emails weren’t summed up. This is Theo’s latest email on its own.');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
   }
 });
 

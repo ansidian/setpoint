@@ -12,7 +12,7 @@ import {sql} from 'drizzle-orm';
 import {blob, check, index, integer, real, sqliteTable, text, uniqueIndex, type AnySQLiteColumn} from 'drizzle-orm/sqlite-core';
 import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
-  COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
+  COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES, SUMMARY_FAILURE_CAUSES,
   NEWS_ADAPTERS, NEWS_SECTIONS, RULE_TRASH, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
   DRAFT_KINDS, SEND_STATES, type AnswerApplicationOut, type AnswerItemOut, type FixProposalOut, type DraftWriteState, type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type Recipient, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
@@ -217,14 +217,22 @@ export const messageBodies = sqliteTable('message_bodies', {
  * A conversation's own summary, for the reader's head: one row per conversation of two or more
  * emails triage summed up, and the newest email it covers (src/domain/conversationSummary.ts says
  * when it's stale). It goes with that email, and is written again after the next one is triaged.
+ * Beside it, the last call that failed: the newest email it was for, its cause and its HTTP status,
+ * so the head can say why. Each is null until there is one; a write clears the failure.
  */
 export const conversationSummaries = sqliteTable('conversation_summaries', {
   accountId: integer('account_id').notNull().references(() => accounts.id, {onDelete: 'cascade'}),
   threadId: text('thread_id').notNull(),
-  summary: text('summary').notNull(),
-  messageId: integer('message_id').notNull().references(() => messages.id, {onDelete: 'cascade'}),
+  summary: text('summary'),
+  messageId: integer('message_id').references(() => messages.id, {onDelete: 'cascade'}),
   at: text('at').notNull(),
-}, table => [uniqueIndex('conversation_summaries_thread').on(table.accountId, table.threadId)]);
+  failedMessageId: integer('failed_message_id').references(() => messages.id, {onDelete: 'set null'}),
+  failureCause: text('failure_cause', {enum: SUMMARY_FAILURE_CAUSES}),
+  failureStatus: integer('failure_status'),
+}, table => [
+  uniqueIndex('conversation_summaries_thread').on(table.accountId, table.threadId),
+  check('conversation_summaries_cause', sql`${table.failureCause} is null or ${table.failureCause} in (${quoted(SUMMARY_FAILURE_CAUSES)})`),
+]);
 
 /** An email's attachment, previewed in the reader (PDF, image, CSV). */
 export const attachments = sqliteTable('attachments', {

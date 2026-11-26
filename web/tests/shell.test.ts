@@ -297,12 +297,14 @@ test.each([
 });
 
 describe('live events refresh only what they name', () => {
-  const mounted = ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/messages/7', '/accounts', '/items?from=2026-10-07&to=2026-10-09', '/mail/inboxes', '/calendars', '/todoist/projects', '/mail/mailpieces?day=2026-10-07', '/mail/drafts', '/mail/drafts/3', '/mail/drafts/9'];
+  const mounted = ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/messages/7', '/accounts', '/items?from=2026-10-07&to=2026-10-09', '/mail/inboxes', '/calendars', '/todoist/projects', '/mail/mailpieces?day=2026-10-07', '/mail/drafts', '/mail/drafts/3', '/mail/drafts/9', '/mail/conversations/7'];
   test.each([
     ['mail: the lists, Sent included, the counts, the emails named and the rail\'s USPS mail', {type: 'mail', messages: [5], accounts: [4], commands: []},
       ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/mailpieces?day=2026-10-07']],
     ['a draft\'s start, discard, or a save that makes it written or empty again: Drafts and the draft too, with the lists whose rows say "Draft"', {type: 'mail', messages: [5], accounts: [4], commands: [], drafts: [3]},
       ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/mailpieces?day=2026-10-07', '/mail/drafts', '/mail/drafts/3']],
+    ['a conversation\'s summary written or failed: the conversation open at any of its emails too', {type: 'mail', messages: [5], accounts: [], commands: [], conversations: [5, 6, 7]},
+      ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/messages/5', '/mail/mailpieces?day=2026-10-07', '/mail/conversations/7']],
     ['a draft named alone (a save, or a new message\'s draft, which no row shows): Drafts and the draft only', {type: 'mail', messages: [], accounts: [4], commands: [], drafts: [9]}, ['/mail/drafts', '/mail/drafts/9']],
     ['mail naming no email and no draft (triage\'s state, an account\'s addresses): the lists still', {type: 'mail', messages: [], accounts: [4], commands: []},
       ['/mail/inbox', '/mail/counts', '/mail/sent?limit=100&account_id=2', '/mail/mailpieces?day=2026-10-07']],
