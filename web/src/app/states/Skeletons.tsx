@@ -155,6 +155,8 @@ function Lead({index}: {index: number}) {
         <Bar w={index ? '56%' : '62%'} h={12} />
         <Bar w={index ? '38%' : '44%'} h={12} />
         <Bar w={index ? '48%' : '52%'} />
+        {/* The summary's second line, which only the phone's taller lead shows (loading.css). */}
+        <span className="sm2"><Bar w={index ? '40%' : '36%'} /></span>
         <span className="foot"><Bar w={90} /></span>
       </div>
     </div>

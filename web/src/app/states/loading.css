@@ -96,6 +96,7 @@
 .sk-nw-lead .sk-img { width: 232px; height: 130px; border-radius: 12px; background: var(--sk-fill); }
 .sk-nw-lead .txt { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding-top: 4px; }
 .sk-nw-lead .txt .foot { margin-top: auto; padding-bottom: 3px; }
+.sk-nw-lead .txt .sm2 { display: none; }
 .sk-nw-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 72px; column-gap: 12px; align-items: center; padding: 9px 16px 9px 12px; border-bottom: 1px solid var(--hair); flex: none; }
 .sk-nw-row .txt { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .sk-nw-row .side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -107,6 +108,25 @@
 @container (max-width: 599px) {
   .sk-nw-lead { grid-template-columns: 12px 160px minmax(0, 1fr); }
   .sk-nw-lead .sk-img { width: 160px; height: 90px; }
+}
+/* The phone's lead and row (news.css's phone block): the lead's image across the column over its text,
+   a row's headline over its meta with the thumbnail at the right. */
+@media (max-width: 639px) {
+  .sk-nw-sec { height: 30px; padding: 0 16px 0 20px; }
+  .sk-nw-lead { grid-template-columns: 12px minmax(0, 1fr); grid-template-areas: "img img" "nd txt"; row-gap: 12px; column-gap: 8px; padding: 12px 16px 14px 8px; }
+  .sk-nw-lead > .sk-img { grid-area: img; width: auto; height: auto; aspect-ratio: 16 / 9; margin-left: 12px; }
+  /* Each bar centred in its line's height: the headline's 23 px lines, the summary's two 20 px ones, the meta's 18. */
+  .sk-nw-lead > .txt { grid-area: txt; gap: 0; padding-top: 0; }
+  .sk-nw-lead > .txt > .sk-bar:nth-child(-n + 2) { margin: 5.7px 0; }
+  .sk-nw-lead > .txt > .sk-bar:nth-child(3) { margin: 12px 0 6px; }
+  .sk-nw-lead > .txt > .sm2 { display: block; padding: 6px 0; }
+  .sk-nw-lead .txt .foot { margin-top: 6px; padding: 5px 0 0; }
+  .sk-nw-row { grid-template-columns: 12px minmax(0, 1fr) 76px; grid-template-areas: "nd txt img" "nd side img"; align-items: start; column-gap: 8px; row-gap: 4px; padding: 10px 16px 10px 8px; min-height: 68px; }
+  .sk-nw-row > .txt { grid-area: txt; gap: 0; }
+  .sk-nw-row > .txt > .sk-bar { margin: 5px 0; }
+  .sk-nw-row > .txt > .sk-bar + .sk-bar { margin: 6px 0 5px; }
+  .sk-nw-row > .side { grid-area: side; flex-direction: row; align-items: center; height: 18px; }
+  .sk-nw-row > .sk-thumb { grid-area: img; justify-self: end; }
 }
 .sk-story { display: flex; flex-direction: column; gap: 18px; max-width: 600px; }
 .sk-story .sk-sum { display: flex; flex-direction: column; gap: 11px; padding-top: 4px; }
