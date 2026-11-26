@@ -1,5 +1,6 @@
 // The reader's conversation, stacked oldest first under its head, as Gmail stacks one. The
-// first email, the newest, any unread one and the one it was opened at open expanded. The rest show
+// first email, the newest and any unread one open expanded, and so does the one it was opened at when
+// it was opened from elsewhere than its row in a list (search, Alfred, a link). The rest show
 // collapsed, every one of them: the sender's avatar and name, a paperclip and when, and its first words
 // under them. A click on one expands it. What's expanded is decided once per opening, from the answer to the
 // open (which judges unread on the state before it read them), and held here: a later load doesn't

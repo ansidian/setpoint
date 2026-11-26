@@ -78,9 +78,9 @@ export function repliedLast(emails: ConversationEmail[]): ConversationEmail | nu
 
 /**
  * The emails the reader opens expanded: the first, the newest, every unread one, and the one it was
- * opened at. The rest are one line each.
+ * opened at (`openedId`), which is null when it was opened from its row in a list. The rest are one line each.
  */
-export function expandedEmails(emails: Pick<ConversationEmail, 'id' | 'unread'>[], openedId: number): Set<number> {
+export function expandedEmails(emails: Pick<ConversationEmail, 'id' | 'unread'>[], openedId: number | null): Set<number> {
   const expanded = new Set<number>();
   emails.forEach((email, at) => {
     if (at === 0 || at === emails.length - 1 || email.unread || email.id === openedId) expanded.add(email.id);

@@ -238,9 +238,10 @@ describe('who\'s in a conversation, its reply mark and what the reader expands',
     ['only the user\'s mail', [me(1), me(2)], null],
   ])('reply mark: %s', (_, emails, reply) => expect(repliedLast(emails)?.id ?? null).toBe(reply));
 
-  test.each<[string, {id: number; unread: boolean}[], number, number[]]>([
+  test.each<[string, {id: number; unread: boolean}[], number | null, number[]]>([
     ['first, newest and unread', [1, 2, 3, 4, 5].map(id => ({id, unread: id === 3})), 1, [1, 3, 5]],
     ['and the one it was opened at', [1, 2, 3, 4, 5].map(id => ({id, unread: false})), 2, [1, 2, 5]],
+    ['opened from its row: only first, newest and unread', [1, 2, 3, 4].map(id => ({id, unread: false})), null, [1, 4]],
     ['an email alone', [{id: 1, unread: false}], 1, [1]],
   ])('expanded: %s', (_, emails, opened, expanded) => expect([...expandedEmails(emails, opened)].sort()).toEqual(expanded));
 });
@@ -448,8 +449,9 @@ describe('the reader\'s conversation', () => {
     updateDraft(w.store, draft.id, {body: [{type: 'paragraph', runs: [{text: 'Thanks!', marks: [], href: null}]}]});
     const out = conversationDetail(w.store, d2.id);
     expect(out).toMatchObject({thread_id: 'dthread', subject: 'Shelf plans', opened_id: d2.id, draft: {id: draft.id, message_id: d3.id}});
+    // A load expands what any opening would: the email it names only as an opening from elsewhere does.
     expect(out.emails.map(email => [email.id, email.expanded, email.excerpt])).toEqual([
-      [d1.id, true, 'Which shelf?'], [d2.id, true, 'The oak one.'], [d3.id, true, 'Great, ordering it.'],
+      [d1.id, true, 'Which shelf?'], [d2.id, false, 'The oak one.'], [d3.id, true, 'Great, ordering it.'],
     ]);
     expect(out.emails.every(email => email.body_text !== undefined)).toBe(true);
     expect(out.row).toMatchObject({id: d2.id, unread: true, draft: true, thread: {ids}});
@@ -470,6 +472,21 @@ describe('the reader\'s conversation', () => {
     // Read again, it expands only the first and the newest.
     expect((await api.send('GET', `/api/mail/conversations/${d1.id}`)).body.emails.map((email: {expanded: boolean}) => email.expanded)).toEqual([true, false, false, true]);
     expect(openConversation(w.store, d1.id).size).toBe(0);
+  });
+
+  test('opened from a list, the email its row named expands only if it\'s the first, the newest or unread; opened from elsewhere, it expands', async () => {
+    const w = world({seed: true});
+    const {d1, d2, d3, personal} = dominic(w);
+    // The user's reply is the newest email, so the row names Dominic's follow-up.
+    upsertMessages(w.store, personal, [fetched('d4', 'dthread', 15, {...SENT, subject: 'Re: Shelf plans'})]);
+    const d4 = w.store.db.select().from(t.messages).where(eq(t.messages.providerId, 'd4')).get()!;
+    w.store.db.update(t.messages).set({unread: false}).where(inArray(t.messages.id, [d1.id, d3.id])).run();
+    const api = await signedIn(w);
+    const expanded = (out: {body: {emails: {id: number; expanded: boolean}[]}}) => out.body.emails.map(email => [email.id, email.expanded]);
+    expect(expanded(await api.send('POST', `/api/mail/conversations/${d3.id}/open`, {body: {listed: true}})))
+      .toEqual([[d1.id, true], [d2.id, false], [d3.id, false], [d4.id, true]]);
+    expect(expanded(await api.send('POST', `/api/mail/conversations/${d3.id}/open`)))
+      .toEqual([[d1.id, true], [d2.id, false], [d3.id, true], [d4.id, true]]);
   });
 
   test('opening leaves an email whose own change still waits as it is, and opens the rest', async () => {

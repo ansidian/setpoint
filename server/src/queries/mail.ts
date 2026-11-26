@@ -362,18 +362,23 @@ export function messageDetail(store: Store, messageId: number): MessageOut {
 
 /**
  * A conversation for the reader, opened at one of its emails: its emails oldest first, trashed mail
- * left out (the one it was opened at aside), each with whether it opens expanded, judged by which
- * were unread before this opening (`unreadBefore`, else as they are now). Its row, for its tools, and
- * the draft that answers one of its emails.
+ * left out (the one it was opened at aside), each with whether it opens expanded. An opening judges
+ * unread by the emails that were unread before it read them (`unreadBefore`), and expands the email
+ * it was opened at unless it was opened from its row in a list (`listed`). A load judges unread as
+ * it is now and never expands the opened email for being opened, so it can't show one expanded that
+ * the opening then folds. Its row, for its tools, and the draft that answers one of its emails.
  */
-export function conversationDetail(store: Store, messageId: number, unreadBefore?: Set<number>): MailConversationOut {
+export function conversationDetail(store: Store, messageId: number, opening?: {unreadBefore: Set<number>; listed: boolean}): MailConversationOut {
   const opened = store.db.select({id: t.messages.id, accountId: t.messages.accountId, threadId: t.messages.threadId}).from(t.messages).where(eq(t.messages.id, messageId)).get();
   if (!opened) throw notFound('No such email.');
   const emails = store.db.select({id: t.messages.id, unread: t.messages.unread, trashedAt: t.messages.trashedAt, snippet: t.messages.snippet}).from(t.messages)
     .where(and(eq(t.messages.accountId, opened.accountId), eq(t.messages.threadId, opened.threadId)))
     .orderBy(asc(t.messages.receivedAt), asc(t.messages.id)).all()
     .filter(email => !email.trashedAt || email.id === opened.id);
-  const expanded = expandedEmails(emails.map(email => ({id: email.id, unread: unreadBefore ? unreadBefore.has(email.id) : email.unread})), opened.id);
+  const expanded = expandedEmails(
+    emails.map(email => ({id: email.id, unread: opening ? opening.unreadBefore.has(email.id) : email.unread})),
+    opening && !opening.listed ? opened.id : null,
+  );
   const details = emails.map(email => {
     const detail = messageDetail(store, email.id);
     return {...detail, expanded: expanded.has(email.id), excerpt: email.snippet, quoted_history: detail.body_html !== null && withoutQuotedHistory(detail.body_html) !== null};

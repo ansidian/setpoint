@@ -348,9 +348,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   /**
    * Opens an email. `travel` is the way the user stepped to it (J, K, the arrows, Done or Trash moving
-   * on), so the reader's swap comes from that side. A click has none.
+   * on), so the reader's swap comes from that side. A click has none. From the list (`listed`, and not
+   * a search's results) the email its row names doesn't expand for being opened.
    */
-  function openEmail(id: number, key?: string, travel: Travel | null = null) {
+  function openEmail(id: number, key?: string, travel: Travel | null = null, listed = true) {
     if (selected.length) clearSelection();
     if (trail.length) setTrail([]);
     setTravelled(travel ? {id, travel} : null);
@@ -364,7 +365,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     // On the phone the reader slides in over the list. The desktop's sits beside it.
     const step = readerStep(phone, open, id, travel !== null, overList());
     slide(phoneSlide(phone, open, id), () => navigate({...route, open: id}, {replace: step.how === 'replace', overList: step.overList}));
-    void openMessage(id).catch(toastFailure('Failed to mark read'));
+    void openMessage(id, {listed: listed && !searching}).catch(toastFailure('Failed to mark read'));
   }
 
   /**
@@ -421,7 +422,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   /** Another email from the open one's thread, its reply line or its Answer card. On the phone Back comes back here. */
   function openFromReader(id: number) {
     const from = open;
-    openEmail(id);
+    openEmail(id, undefined, null, false);
     if (phone && from !== null && from !== id) setTrail([...trail, from]);
   }
 
@@ -1004,7 +1005,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
         ) : searching && !firstWait ? (
           <SearchResults search={search} sections={sections} cursor={cursor} openId={listedOpen} selected={selectedSet} accounts={accounts} now={now} timeZone={zone}
-            card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}
+            card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id, undefined, null, false)} /> : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onAsk={askAlfred} />
         ) : (
           // Until both answers are in, its skeleton, or why they didn't come. Rows not

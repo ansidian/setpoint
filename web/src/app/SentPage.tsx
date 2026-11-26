@@ -198,7 +198,7 @@ export function SentPage({route}: {route: SentRoute}) {
     navigate({page: 'sent', open: null, ...(next === ALL ? {} : {account: next})});
   }
 
-  function openEmail(id: number, key?: string, travel: Travel | null = null) {
+  function openEmail(id: number, key?: string, travel: Travel | null = null, listed = true) {
     if (selected.length) clearSelection();
     setTravelled(travel ? {id, travel} : null);
     const stop = (key ? stops.find(item => item.key === key) : null) ?? stopOf(stops, id);
@@ -206,7 +206,7 @@ export function SentPage({route}: {route: SentRoute}) {
     lastOpened = id;
     if (searching) search.opened(id);
     slide(phoneSlide(phone, open, id), () => go({open: id}));
-    void openMessage(id).catch(toastFailure('Failed to mark read'));
+    void openMessage(id, {listed: listed && !searching}).catch(toastFailure('Failed to mark read'));
   }
 
   /**
@@ -238,7 +238,7 @@ export function SentPage({route}: {route: SentRoute}) {
   const openFromReader = (id: number, sent?: boolean) => {
     if (sent === false) return navigate({page: 'inbox', open: id});
     const from = open;
-    openEmail(id);
+    openEmail(id, undefined, null, false);
     if (phone && from !== null && from !== id) setTrail([...trail, from]);
   };
 

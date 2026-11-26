@@ -18,7 +18,7 @@
 // list with Back to Snoozed, its More holding Snoozed with the return, whose sheet does the same.
 // Done, Trash and Unsnooze there go back to the list, where the toast is.
 import type {ConversationChangeOut, ItemKind, MessageRowOut, RuleOut, Settings, SnoozedOut} from '@setpoint/shared';
-import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {getJson, prefetch, useResource} from '../api/client.ts';
@@ -89,7 +89,12 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   const [trail, setTrail] = useState<number[]>([]);
   if (trail.length && (open === null || open === trail.at(-1))) setTrail(open === null ? [] : trail.slice(0, -1));
   // On the phone the reader slides in over the list and back off it.
-  const go = (id: number | null) => slide(phoneSlide(phone, open, id), () => navigate({page: 'snoozed', open: id}));
+  // An email opened from the list (`listed`): its row's email expands only as any other does.
+  const listedOpen = useRef<number | null>(null);
+  const go = (id: number | null, listed = true) => {
+    listedOpen.current = listed ? id : null;
+    slide(phoneSlide(phone, open, id), () => navigate({page: 'snoozed', open: id}));
+  };
   const neighbour = (id: number, delta: 1 | -1) => {
     const index = rows.findIndex(row => row.id === id);
     return index < 0 ? null : rows[index + delta]?.id ?? null;
@@ -99,7 +104,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
 
   useEffect(() => {
-    if (open !== null) void openMessage(open).catch(toastFailure('Failed to mark read'));
+    if (open !== null) void openMessage(open, {listed: listedOpen.current === open}).catch(toastFailure('Failed to mark read'));
   }, [open]);
   const subject = open !== null ? listed(open)?.subject ?? null : null;
   useEffect(() => {
@@ -331,7 +336,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
         {open !== null && (
           <Reader id={open} row={openRow} accounts={accounts} now={now} timeZone={zone} back={trail.length ? 'Back' : 'Snoozed'}
             canStep={{previous: neighbour(open, -1) !== null, next: neighbour(open, 1) !== null}} onOpen={id => {
-              go(id);
+              go(id, false);
               if (phone && id !== open) setTrail([...trail, open]);
             }}
             actions={{

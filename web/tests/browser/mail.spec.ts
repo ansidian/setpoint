@@ -1700,6 +1700,21 @@ test('a conversation: its row names everyone with its count; the reader stacks i
   }
 });
 
+test('opened from its row, a conversation whose newest email is the user\'s reply expands only its first and newest, not the email the row names', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const latest = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Theo Walsh')!;
+    const page = await load(setpoint);
+    await page.locator(`.list .row[data-id="${latest.id}"]`).click();
+    const shape = () => page.locator('.cv > [data-email]').evaluateAll(found => found.map(one => (one.classList.contains('cv-mail') ? 'E' : 'c')).join(''));
+    await until('the stack', shape, shown => shown === 'EccccccE');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('opened at an earlier email (a citation, a link), the conversation has it expanded, and the list marks its row', async () => {
   const setpoint = await startSetpoint();
   try {

@@ -2,7 +2,7 @@
 // scans, read, Done, pin, snooze and trash, a conversation and the same changes to all of it, drafts and sending with their files, and trusted
 // domains. Mounted under /api behind the session (app.ts), with triage's (triage.ts) right after.
 import {
-  allInput, conversationUndoSchema, sentInput, doneInput, inboxInput, mailpiecesInput, markAllReadInput, pinInput, readInput, snoozeInput, trustedDomainInput, gmailLinkInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput, sendInput,
+  allInput, conversationUndoSchema, sentInput, doneInput, inboxInput, mailpiecesInput, markAllReadInput, openInput, pinInput, readInput, snoozeInput, trustedDomainInput, gmailLinkInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput, sendInput,
 } from '@setpoint/shared';
 import type {ConversationChangeOut, MarkAllReadOut} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -157,9 +157,11 @@ export function mailApi(store: Store, {engine, drafting, draftFiles}: MailApiOpt
   const changed = (change: ConversationChange): ConversationChangeOut => ({commands: change.commands.map(presentCommand), undo: change.undo});
   api.get('/mail/conversations/:id', c => c.json(conversationDetail(store, id(c.req.param('id')))));
   api.post('/mail/conversations/undo', async c => c.json(changed(undoConversation(store, parse(conversationUndoSchema, await body(c))))));
-  api.post('/mail/conversations/:id/open', c => {
+  api.post('/mail/conversations/:id/open', async c => {
     const messageId = id(c.req.param('id'));
-    return c.json(conversationDetail(store, messageId, openConversation(store, messageId)));
+    // An opening sent with no body is one from elsewhere than a list.
+    const {listed = false} = (await c.req.text()) ? parse(openInput, await body(c)) : {};
+    return c.json(conversationDetail(store, messageId, {unreadBefore: openConversation(store, messageId), listed}));
   });
   api.post('/mail/conversations/:id/read', async c => c.json(changed(setConversationRead(store, id(c.req.param('id')), parse(readInput, await body(c)).unread))));
   api.post('/mail/conversations/:id/done', async c => c.json(changed(setConversationDone(store, id(c.req.param('id')), parse(doneInput, await body(c)).done))));

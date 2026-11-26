@@ -257,11 +257,17 @@ export interface MessageOut extends MessageRowOut {
 export const readInput = z.strictObject({unread: z.boolean()});
 export const doneInput = z.strictObject({done: z.boolean()});
 export const pinInput = z.strictObject({pinned: z.boolean()});
+/**
+ * Opening a conversation: `listed` when it's opened from its row in a list, where the email the row
+ * names expands only as any other does. Left out, the email it's opened at expands too.
+ */
+export const openInput = z.strictObject({listed: z.boolean().optional()});
 /** Snooze until an instant in the future. */
 export const snoozeInput = z.strictObject({until: z.iso.datetime({offset: true})});
 /** A conversation's email in the reader: as any email's, with what its one collapsed line shows. */
 export interface ConversationMessageOut extends MessageOut {
-  // Opens expanded: the first, the newest, any unread (before this opening read it) and the one it was opened at.
+  // Opens expanded: the first, the newest, any unread (before this opening read it) and, when it was
+  // opened from elsewhere than its row in a list, the one it was opened at.
   expanded: boolean;
   // Its first words, for its line while collapsed.
   excerpt: string;
@@ -276,7 +282,7 @@ export interface MailConversationOut {
   thread_id: string;
   // Its first email's subject.
   subject: string;
-  // The email it was opened at: expanded, and the one to bring into view.
+  // The email it was opened at: the one to bring into view, and expanded when opened from elsewhere than a list.
   opened_id: number;
   // Its row, for the conversation's tools (pinned, done, snoozed, unread).
   row: MessageRowOut;

@@ -208,9 +208,10 @@ export const openingOf = (id: number): MailConversationOut | undefined => opened
 /**
  * Opens email `id`'s conversation (a click or Enter): every unread email of it turns read, and the
  * unread counts drop at once. The answer is the conversation as it opened, which emails expanded
- * included (judged on the read state from before), so the reader takes it from here.
+ * included (judged on the read state from before), so the reader takes it from here. `listed` when
+ * it's opened from its row in a list: the email the row names then expands only as any other does.
  */
-export function openMessage(id: number): Promise<MailConversationOut> {
+export function openMessage(id: number, {listed = false}: {listed?: boolean} = {}): Promise<MailConversationOut> {
   // This opening's answer is the one that judges which emails open expanded.
   opened.delete(id);
   const found = cachedRow(id);
@@ -221,7 +222,7 @@ export function openMessage(id: number): Promise<MailConversationOut> {
   }
   const mark = edit(id);
   return change(async () => {
-    const conversation = await sendJson<MailConversationOut>('POST', `${conversationPath(id)}/open`);
+    const conversation = await sendJson<MailConversationOut>('POST', `${conversationPath(id)}/open`, listed ? {listed} : undefined);
     opened.set(id, conversation);
     if (edits.get(id) === mark) {
       setCached(conversationPath(id), conversation);
