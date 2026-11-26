@@ -11,6 +11,7 @@ import {withBody} from '../db/bodies.ts';
 import {attentionEmails, conversationKey, emailCounts, inboxCounts, inboxGroups, mailDay, nextInboxChange} from '../domain/inbox.ts';
 import type {Conversation, ConversationCandidate} from '../domain/inbox.ts';
 import {conversationPeople, expandedEmails, repliedLast} from '../domain/thread.ts';
+import {withoutQuotedHistory} from '../domain/quotedHistory.ts';
 import {isTrustedDomain, trustDomainOf, remoteContent} from '../domain/remoteContent.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
@@ -379,7 +380,10 @@ export function conversationDetail(store: Store, messageId: number, unreadBefore
     .orderBy(asc(t.messages.receivedAt), asc(t.messages.id)).all()
     .filter(email => !email.trashedAt || email.id === opened.id);
   const expanded = expandedEmails(emails.map(email => ({id: email.id, unread: unreadBefore ? unreadBefore.has(email.id) : email.unread})), opened.id);
-  const details = emails.map(email => ({...messageDetail(store, email.id, {conversation: false}), expanded: expanded.has(email.id), excerpt: email.snippet}));
+  const details = emails.map(email => {
+    const detail = messageDetail(store, email.id, {conversation: false});
+    return {...detail, expanded: expanded.has(email.id), excerpt: email.snippet, quoted_history: detail.body_html !== null && withoutQuotedHistory(detail.body_html) !== null};
+  });
   return {
     account_id: opened.accountId, thread_id: opened.threadId, subject: details[0]!.subject, opened_id: opened.id,
     row: messageRows(store, [opened.id], {time: 'received', replyMark: true}).get(opened.id)!.out,

@@ -283,6 +283,9 @@ export interface ConversationMessageOut extends MessageOut {
   expanded: boolean;
   // Its first words, for its line while collapsed.
   excerpt: string;
+  // Its HTML body ends in quoted history, which the body page leaves out with ?quoted=fold and the
+  // reader shows again behind •••. False for plain text, whose history the web finds itself.
+  quoted_history: boolean;
 }
 
 /** A conversation in the reader: its emails oldest first, trashed ones left out (but the one it was opened at). */

@@ -6,6 +6,7 @@ import {and, eq} from 'drizzle-orm';
 import {mailSourceId} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
 import {emailPage, emailPolicy, safeEmail} from '../domain/emailHtml.ts';
+import {withoutQuotedHistory} from '../domain/quotedHistory.ts';
 import {notFound} from '../errors.ts';
 import type {Store} from '../store.ts';
 import type {SyncEngine} from '../sync/engine.ts';
@@ -20,11 +21,13 @@ export interface BodyPage {
 /**
  * The body page, with images when `images` says so, or, when it's null, when the rule allows them.
  */
-export function messageBody(store: Store, messageId: number, images: boolean | null): BodyPage {
+export function messageBody(store: Store, messageId: number, images: boolean | null, fold = false): BodyPage {
   const message = messageDetail(store, messageId);
   if (!message.body_html) throw notFound('That email has no HTML body.');
   const load = images ?? message.remote_content.load;
-  return {html: emailPage(safeEmail(message.body_html, load)), policy: emailPolicy(load), load};
+  // Folded, the email without its quoted history, or in full when it has none.
+  const html = fold ? withoutQuotedHistory(message.body_html) ?? message.body_html : message.body_html;
+  return {html: emailPage(safeEmail(html, load)), policy: emailPolicy(load), load};
 }
 
 /** Types the browser may show as themselves (the previews'). Anything else downloads as bytes. */

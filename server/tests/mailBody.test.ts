@@ -69,6 +69,21 @@ describe('GET /api/mail/messages/:id/body', () => {
     expect((await api.send('POST', '/api/auth/sign-out')).headers.get('clear-site-data')).toBe('"cache"');
   });
 
+  test('?quoted=fold leaves a reply\'s quoted history out, which the conversation says it has; an email with none shows in full', async () => {
+    const {w, api, id} = await coffee();
+    const reply = '<div dir="ltr">Thursday works.</div><div class="gmail_quote"><div class="gmail_attr">On Mon, Oct 6, 2026 at 9:14 AM Dominic Reyes wrote:</div><blockquote class="gmail_quote">Does Thursday suit?</blockquote></div>';
+    w.store.db.update(t.messageBodies).set({bodyHtml: reply}).where(eq(t.messageBodies.messageId, id)).run();
+    const folded = await api.send('GET', `/api/mail/messages/${id}/body?images=hide&quoted=fold`);
+    expect(folded.body).toContain('Thursday works.');
+    expect(folded.body).not.toContain('Does Thursday suit?');
+    expect((await api.send('GET', `/api/mail/messages/${id}/body?images=hide`)).body).toContain('Does Thursday suit?');
+    const conversation = await api.send('GET', `/api/mail/conversations/${id}`);
+    expect(conversation.body.emails.find((email: {id: number}) => email.id === id).quoted_history).toBe(true);
+    w.store.db.update(t.messageBodies).set({bodyHtml: '<p>Thursday works.</p>'}).where(eq(t.messageBodies.messageId, id)).run();
+    expect((await api.send('GET', `/api/mail/messages/${id}/body?images=hide&quoted=fold`)).body).toContain('Thursday works.');
+    expect((await api.send('GET', `/api/mail/conversations/${id}`)).body.emails.find((email: {id: number}) => email.id === id).quoted_history).toBe(false);
+  });
+
   test('plain-text email has no body page; signed out is refused', async () => {
     const {w, api, id} = await coffee();
     expect((await api.send('GET', `/api/mail/messages/${idOf(w, 'Interview availability for Software Engineer I')}/body`)).status).toBe(404);
