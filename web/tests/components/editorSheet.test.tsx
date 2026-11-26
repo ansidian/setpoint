@@ -329,7 +329,7 @@ test('Add another is the desktop\'s: the phone\'s sheet makes one item at a time
   await expect.element(page.getByRole('button', {name: 'Add another'})).toBeVisible();
 });
 
-test('every menu in the sheet fits the screen: the calendar, the repeat, a reminder\'s, a task\'s project and labels', async () => {
+test('every menu in the sheet fits the screen: the calendar, the colour, the repeat, a reminder\'s, a task\'s project and labels', async () => {
   server();
   setCached('/todoist/projects', [{id: 'p1', name: 'Home', colour: 'berry_red', inbox: false, command: null}, {id: 'p2', name: 'Inbox', colour: 'grey', inbox: true, command: null}]);
   setCached('/todoist/labels', [{id: 'l1', name: 'errand', colour: 'grey'}]);
@@ -343,7 +343,7 @@ test('every menu in the sheet fits the screen: the calendar, the repeat, a remin
   };
   openEditorSheet({kind: 'event', date: '2026-10-09'});
   await expect.element(sheet('New event')).toBeVisible();
-  for (const name of ['Calendar', 'Repeat', 'Add reminder']) {
+  for (const name of ['Calendar', 'Colour', 'Repeat', 'Add reminder']) {
     await userEvent.click(sheet('New event').getByRole('button', {name, exact: true}));
     await fits(name);
   }
@@ -354,6 +354,59 @@ test('every menu in the sheet fits the screen: the calendar, the repeat, a remin
   await fits('Project');
   await userEvent.click(sheet('New task').getByRole('button', {name: 'Add label', exact: true}));
   await fits('Add label');
+});
+
+/** The Colour button's dot, as the colour it's drawn in. */
+const colourDot = () => sheetButton('Colour').element().querySelector<HTMLElement>('.dot')!.style.getPropertyValue('--c');
+const sheetButton = (name: string) => page.getByRole('button', {name, exact: true});
+
+test('an event\'s Colour button shows its calendar\'s colour until a swatch is picked, and Create sends the pick', async () => {
+  const sent = server();
+  setCached(CALENDARS_PATH, [...CALENDARS, {...CALENDARS[0]!, id: 2, name: 'Work', colour: 'good', position: 2}]);
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await expect.element(sheet('New event')).toBeVisible();
+  expect(colourDot()).toBe('var(--cool)');
+  // Another calendar, and the dot follows it while the event has no colour of its own.
+  await userEvent.click(sheetButton('Calendar'));
+  await userEvent.click(page.getByRole('menuitemradio', {name: 'Work'}));
+  await expect.poll(colourDot).toBe('var(--good)');
+  await userEvent.click(sheetButton('Colour'));
+  await userEvent.click(page.getByRole('radio', {name: 'sun'}));
+  await expect.element(page.getByRole('radiogroup', {name: 'Colour'})).not.toBeInTheDocument();
+  await expect.poll(colourDot).toBe('var(--sun)');
+  // Its own colour stays when the calendar changes again.
+  await userEvent.click(sheetButton('Calendar'));
+  await userEvent.click(page.getByRole('menuitemradio', {name: 'Personal'}));
+  await expect.poll(colourDot).toBe('var(--sun)');
+  await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch with Ana 12-1pm');
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Create'}));
+  await expect.poll(() => sent.map(one => one.at)).toEqual(['POST /api/items']);
+  expect(sent[0]!.body).toMatchObject({calendar_id: 1, colour: 'sun'});
+});
+
+test('an event with its own colour shows it on the button, and picking its calendar\'s colour saves it with none', async () => {
+  const sent = server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-07', item: event({colour: 'warm'})});
+  await expect.element(sheet('Edit event')).toBeVisible();
+  expect(colourDot()).toBe('var(--warm)');
+  await expect.element(page.getByText('Its own colour')).not.toBeInTheDocument();
+  await userEvent.click(sheetButton('Colour'));
+  await expect.element(page.getByRole('radio', {name: 'warm'})).toHaveAttribute('aria-checked', 'true');
+  await userEvent.click(page.getByRole('radio', {name: 'Personal\'s colour'}));
+  await expect.poll(colourDot).toBe('var(--cool)');
+  await userEvent.click(sheet('Edit event').getByRole('button', {name: 'Save'}));
+  await expect.poll(() => sent.map(one => one.at)).toEqual(['PATCH /api/items/4']);
+  expect(sent[0]!.body).toMatchObject({changes: {colour: null}});
+});
+
+test('a task has no Colour button, its Project field the row', async () => {
+  server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'task', date: '2026-10-09'});
+  await expect.element(page.getByLabelText('Project', {exact: true})).toBeVisible();
+  expect(document.querySelector('.ph-editor [aria-label="Colour"]')).toBeNull();
 });
 
 test('a repeating task\'s completion sends its occurrence\'s day, and its Undo reopens the done occurrence it made', async () => {

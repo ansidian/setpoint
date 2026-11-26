@@ -256,5 +256,10 @@
 .editor .desc-field.marked { position: relative; }
 .editor .desc-field.marked > .desc-edit { padding-right: 32px; }
 .editor .desc-field.marked > .srcm { position: absolute; top: 9px; right: 10px; }
-/* An event's own colour takes the glyph column as its swatch. */
-.editor .eg .g-colour { display: flex; justify-content: center; }
+/* The Calendar field and the event's colour share a row, the colour's button at its end. */
+.editor .cal-row { display: flex; gap: 8px; min-width: 0; }
+.editor .cal-row > .menu-host:first-child { flex: 1 1 auto; }
+.editor .cal-row > .menu-host:last-child { flex: none; }
+.editor .colour-btn { gap: 6px; padding-right: 8px; }
+.editor .colour-pop { min-width: 0; padding: 0; }
+.editor .colour-pop .fd-swatches { --card: var(--modal); width: 196px; padding: 10px; }

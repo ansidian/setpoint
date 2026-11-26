@@ -46,6 +46,7 @@ import {Segmented} from '../../ui/Segmented.tsx';
 import {placeMenu, useMenuRef, useOutsideClick} from '../../ui/popover.ts';
 import {colourVar, useAccounts} from '../accounts.ts';
 import {LineReference} from './LineReference.tsx';
+import {ColourPanel} from './detail/DetailContent.tsx';
 import {CalendarName, DateField, NativeField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
 import {DescriptionField} from './DescriptionField.tsx';
 import {RemindersRow} from './Reminders.tsx';
@@ -53,6 +54,7 @@ import {ScopePrompt} from './ScopePrompt.tsx';
 import {BottomSheet, SheetChoice} from '../phone/BottomSheet.tsx';
 import {Sheet} from '../phone/Sheet.tsx';
 import {uuid} from '../uuid.ts';
+import './detail/detail.css';
 import './editor.css';
 
 /** What the editor opens on: New C or D on a day, Edit (E) on an item, or an email's proposal. */
@@ -90,7 +92,7 @@ export interface KeptDrafts {
 }
 
 /** The button that opens each of the editor's menus, by its label. */
-const MENU_OPENERS = {calendar: 'Calendar', repeat: 'Repeat', reminder: 'Add reminder', labels: 'Add label', more: 'More'} as const;
+const MENU_OPENERS = {calendar: 'Calendar', colour: 'Colour', repeat: 'Repeat', reminder: 'Add reminder', labels: 'Add label', more: 'More'} as const;
 
 // The "from the email" fields (editorDraft.ts), a type beside the Marked component below.
 type Marked = import('../../logic/editorDraft.ts').Marked;
@@ -235,7 +237,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // The phone sheet's Cancel on a draft with changes, asking whether to discard them.
   const [discarding, setDiscarding] = useState(false);
   const [scope, setScope] = useState<RecurringScope>(open.change?.scope ?? DEFAULT_SCOPE);
-  const [menu, setMenu] = useState<'calendar' | 'repeat' | 'reminder' | 'labels' | 'more' | null>(null);
+  const [menu, setMenu] = useState<'calendar' | 'colour' | 'repeat' | 'reminder' | 'labels' | 'more' | null>(null);
   const menuRef = useMenuRef(menu, () => setMenu(null));
   // Google's suggestions for the place typed, for the query they answer.
   const [found, setFound] = useState<{query: string; list: PlaceSuggestionOut[]} | null>(null);
@@ -977,51 +979,58 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           {kind === 'event' ? (
             <>
               <Icon name="calendar_today" size={17} className={`g-cal ${echo.calendar ?? ''}`} style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
-              <span className="menu-host">
-                <button type="button" className={`field${sk}`} aria-label="Calendar" aria-expanded={menu === 'calendar'}
-                  onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
-                  <span className="dot sm" style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
-                  <span className="grow left">{calendar ? calendarName(calendar) : 'Calendar'}</span>
-                  {mark('calendar')}
-                  <span className="ink3"><Icon name="expand_more" size={16} /></span>
-                </button>
-                {lineOpen && menu !== 'calendar' && (
-                  <div ref={placeMenu} className="pop menu" role="listbox" aria-label="Calendars">
-                    {calendarLine.map((one, index) => (
-                      <div key={one.id} role="option" aria-selected={index === lineCur} className={`menu-i${index === lineCur ? ' cur' : ''}`}
-                        onMouseDown={event => event.preventDefault()} onClick={() => pickLine(index)}>
-                        <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{calendarName(one)}
-                        {index === lineCur && <span className="kbd">↵</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {menu === 'calendar' && (
-                  <div ref={menuRef} className="pop menu" role="menu">
-                    {calendarChoices.map(one => (
-                      <button key={one.id} type="button" role="menuitemradio" aria-checked={one.id === draft.calendarId} className="menu-i" onClick={() => {
-                        change({calendarId: one.id}, ['calendar']);
-                        setMenu(null);
-                      }}>
-                        <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{calendarName(one)}
-                        {one.id === draft.calendarId && <Icon name="check" size={16} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </span>
-              {/* An event's own colour, Alfred's or kept from the item: shown with its ×, picked on the floating detail. */}
-              {draft.colour && (
-                <>
-                  <span className="g-colour"><span className="dot" style={{'--c': colourVar(draft.colour)} as CSSProperties} /></span>
-                  <span className="prow" aria-label="Colour">
-                    <span className="qchip">Its own colour
-                      <button type="button" className="x" aria-label="Use the calendar's colour" onClick={() => change({colour: null})}><Icon name="close" size={14} /></button>
-                    </span>
+              {/* The calendar takes the row, the event's colour a button at its end. */}
+              <span className="cal-row">
+                <span className="menu-host">
+                  <button type="button" className={`field${sk}`} aria-label="Calendar" aria-expanded={menu === 'calendar'}
+                    onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
+                    <span className="dot sm" style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
+                    <span className="grow left">{calendar ? calendarName(calendar) : 'Calendar'}</span>
+                    {mark('calendar')}
+                    <span className="ink3"><Icon name="expand_more" size={16} /></span>
+                  </button>
+                  {lineOpen && menu !== 'calendar' && (
+                    <div ref={placeMenu} className="pop menu" role="listbox" aria-label="Calendars">
+                      {calendarLine.map((one, index) => (
+                        <div key={one.id} role="option" aria-selected={index === lineCur} className={`menu-i${index === lineCur ? ' cur' : ''}`}
+                          onMouseDown={event => event.preventDefault()} onClick={() => pickLine(index)}>
+                          <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{calendarName(one)}
+                          {index === lineCur && <span className="kbd">↵</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {menu === 'calendar' && (
+                    <div ref={menuRef} className="pop menu" role="menu">
+                      {calendarChoices.map(one => (
+                        <button key={one.id} type="button" role="menuitemradio" aria-checked={one.id === draft.calendarId} className="menu-i" onClick={() => {
+                          change({calendarId: one.id}, ['calendar']);
+                          setMenu(null);
+                        }}>
+                          <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{calendarName(one)}
+                          {one.id === draft.calendarId && <Icon name="check" size={16} />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </span>
+                <span className="menu-host">
+                  <button type="button" className={`field colour-btn${sk}`} aria-label="Colour" aria-expanded={menu === 'colour'}
+                    onClick={() => setMenu(menu === 'colour' ? null : 'colour')}>
+                    <span className="dot" style={{'--c': colourVar(draft.colour ?? calendar?.colour ?? undefined)} as CSSProperties} />
                     {mark('colour')}
-                  </span>
-                </>
-              )}
+                    <span className="ink3"><Icon name="expand_more" size={16} /></span>
+                  </button>
+                  {menu === 'colour' && (
+                    <div ref={menuRef} className="pop menu right colour-pop">
+                      <ColourPanel item={{colour: draft.colour}} calendar={calendar} onPick={colour => {
+                        change({colour});
+                        setMenu(null);
+                      }} />
+                    </div>
+                  )}
+                </span>
+              </span>
             </>
           ) : (
             <>

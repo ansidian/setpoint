@@ -1077,6 +1077,35 @@ test('a free event clashes with nothing in the conflict preview or the agenda: a
   }
 });
 
+test('an event\'s colour is picked from the button beside its Calendar, saved with it, and shown there when it opens again, with no "Its own colour" row', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    await page.getByLabel('Describe the event').pressSequentially('Call Sam fri 2-3pm');
+    await page.locator('.nl .tok-d', {hasText: 'fri 2-3pm'}).waitFor();
+    await page.locator('.editor').getByRole('button', {name: 'Colour', exact: true}).click();
+    await page.getByRole('radiogroup', {name: 'Colour'}).getByRole('radio', {name: 'sun'}).click();
+    await page.getByRole('radiogroup', {name: 'Colour'}).waitFor({state: 'detached'});
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const call = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Call Sam')!;
+    assert.equal(call.colour, 'sun');
+    await chip(page, '2026-10-09', 'Call Sam').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit event"]').waitFor();
+    assert.equal(await page.locator('.editor').getByText('Its own colour').count(), 0, 'no "Its own colour" row');
+    await page.locator('.editor').getByRole('button', {name: 'Colour', exact: true}).click();
+    assert.equal(await page.getByRole('radio', {name: 'sun'}).getAttribute('aria-checked'), 'true');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the line\'s "2pm no end" and "2pm to 2pm" pick No end in End, lit with the time; saved, it ends as it starts and opens as No end', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

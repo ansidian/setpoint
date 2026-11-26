@@ -235,7 +235,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
  * item's ticked. The card's Colour shows them under its actions, the right-click menu's in its place,
  * where a selection's have no calendar of their own and nothing ticked (`item` null).
  */
-export function ColourPanel({item, calendar, disabled = false, onPick}: {item: ItemOut | null; calendar: CalendarOut | undefined; disabled?: boolean; onPick: (colour: EventColour | null) => void}) {
+export function ColourPanel({item, calendar, disabled = false, onPick}: {item: Pick<ItemOut, 'colour'> | null; calendar: CalendarOut | undefined; disabled?: boolean; onPick: (colour: EventColour | null) => void}) {
   const own = item ? `${calendar?.name ?? 'Calendar'}'s colour` : 'Each one\'s calendar\'s colour';
   return (
     <div className="fd-swatches" role="radiogroup" aria-label="Colour">
