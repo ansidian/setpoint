@@ -29,7 +29,7 @@ import {RULES_PATH} from '../api/settings.ts';
 import {hasOthers} from '../logic/composer.ts';
 import {fullTimestamp, localDate, readerTime, trashLeft} from '../logic/format.ts';
 import {holds, replyTarget} from '../logic/conversation.ts';
-import {factRows, fitTools, mailboxState, READING_PANE, readerActions, readerSummary, senderLine} from '../logic/reader.ts';
+import {factRows, fitTools, mailboxState, READING_PANE, headSummary, readerActions, readerSummary, senderLine} from '../logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../logic/reader.ts';
 import {snoozeable, snoozedLine, snoozeWhen} from '../logic/snooze.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
@@ -57,7 +57,7 @@ import {AnswerCard} from './search/AnswerCard.tsx';
 import {ProposalCard} from './search/ProposalCard.tsx';
 import {LoadFailed, useArrival, useLoadFailed} from './states/Loading.tsx';
 import type {Load} from './states/Loading.tsx';
-import {BodySkeleton, HeadSkeleton} from './states/Skeletons.tsx';
+import {BodySkeleton, HeadSkeleton, SummarySkeleton} from './states/Skeletons.tsx';
 import {alfredOf, closeAlfred, startAlfred, useAlfredThread, useClaim} from './search/alfred.ts';
 import {SnoozeMenu} from './SnoozeMenu.tsx';
 import {showToast, toastFailure} from './toast.ts';
@@ -287,7 +287,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
       <Swap id={id} travel={travel} anchor={conversation ? conversation.opened_id : null}>
         {/* The head from the email's row at once. Only the body waits for the email. */}
         <CardPlace cards={cards} id={cardEmail} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
-        {listed ? <ConversationHead listed={listed} unsubscribe={message?.unsubscribe_url} cards={cardEmail === id ? cards : null} onCard={card => askOn(id, card)} unread={markedUnread} onCodeCopied={codeCopied} /> : <HeadSkeleton />}
+        {listed ? <ConversationHead listed={listed} conversation={conversation} unsubscribe={message?.unsubscribe_url} cards={cardEmail === id ? cards : null} onCard={card => askOn(id, card)} unread={markedUnread} onCodeCopied={codeCopied} /> : <HeadSkeleton />}
         {conversation
           ? <ConversationStack conversation={conversation} accounts={accounts} now={now} timeZone={timeZone} marks={marks} from={from} composer={composer} onCard={askOn} />
           : <ConversationLoading load={conversationLoad} attachment={(listed?.attachment_count ?? 0) > 0} />}
@@ -564,11 +564,13 @@ function CardPlace({cards, id, accounts, now, timeZone, onOpen}: {
 }
 
 /**
- * The conversation's head: its subject, triage's summary of the email that placed
- * it, its code, mail's slot and the actions, which are that email's.
+ * The conversation's head: its subject, the conversation's own summary (else triage's summary of the
+ * email that placed it), its code, mail's slot and the actions, which are that email's.
  */
-function ConversationHead({listed, unsubscribe, cards, onCard, unread, onCodeCopied}: {
+function ConversationHead({listed, conversation, unsubscribe, cards, onCard, unread, onCodeCopied}: {
   listed: MessageRowOut;
+  // Its conversation once it's in, for the conversation's own summary.
+  conversation: MailConversationOut | undefined;
   unsubscribe: string | undefined;
   // The cards while they're about this email (else another email's More asked for one).
   cards: Cards | null;
@@ -577,7 +579,7 @@ function ConversationHead({listed, unsubscribe, cards, onCard, unread, onCodeCop
   unread: boolean;
   onCodeCopied: () => void;
 }) {
-  const summary = readerSummary(listed);
+  const summary = headSummary(listed, conversation);
   const held = (kind: ItemKind | 'ask') => (cards?.panel?.kind === kind ? 'btn ghost' : 'btn out');
   // Pressed again while its card is open, the card closes, as the one email's buttons do.
   const press = (kind: ItemKind | 'ask') => (cards ? (kind === 'ask' ? cards.ask() : cards.propose(kind)) : onCard(kind));
@@ -585,7 +587,7 @@ function ConversationHead({listed, unsubscribe, cards, onCard, unread, onCodeCop
     <div className="rd-head">
       {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected, always stays in Attention</div>}
       <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" role="img" aria-label="Unread" data-tip="Unread" />}{listed.subject}</h1>
-      {summary && <p className="rd-sum selectable">{summary}</p>}
+      {summary === 'loading' ? <SummarySkeleton /> : summary && <p className="rd-sum selectable">{summary}</p>}
       {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}
       <ReaderSlot row={listed} />
       <div className="rd-acts">

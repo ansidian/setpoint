@@ -381,6 +381,8 @@ test('on the phone the reader stacks the conversation: a line expands where it i
     const wide = await rested(() => page.locator('.cv > [data-email], .cv-foot').evaluateAll((all, edge) => all.filter(node => node.getBoundingClientRect().right > edge + 1).map(node => node.textContent), width));
     assert.deepEqual(wide, []);
     assert.equal(await page.locator('.ph-back').textContent(), 'Inbox');
+    // Its head sums up the whole conversation.
+    assert.equal(await page.locator('.rd-head .rd-sum').textContent(), (await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${newest}`)).summary);
 
     // Oct 1's line expands in place, with no new address.
     await page.locator(`.cv-line[data-email="${oct1}"]`).tap();

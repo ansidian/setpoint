@@ -18,6 +18,7 @@ import {notFound} from '../errors.ts';
 import {backfillProgress, readBackfill} from '../sync/cursors.ts';
 import {isoNow} from '../store.ts';
 import {draftAnswering, draftedMessages} from '../sending/drafts.ts';
+import {conversationSummary} from '../triage/conversation.ts';
 import {membersOf, repliesOf} from './thread.ts';
 import type {Member} from './thread.ts';
 import type {Store} from '../store.ts';
@@ -366,7 +367,8 @@ export function messageDetail(store: Store, messageId: number): MessageOut {
  * unread by the emails that were unread before it read them (`unreadBefore`), and expands the email
  * it was opened at unless it was opened from its row in a list (`listed`). A load judges unread as
  * it is now and never expands the opened email for being opened, so it can't show one expanded that
- * the opening then folds. Its row, for its tools, and the draft that answers one of its emails.
+ * the opening then folds. Its row, for its tools, the draft that answers one of its emails, and its
+ * own summary while it's fresh.
  */
 export function conversationDetail(store: Store, messageId: number, opening?: {unreadBefore: Set<number>; listed: boolean}): MailConversationOut {
   const opened = store.db.select({id: t.messages.id, accountId: t.messages.accountId, threadId: t.messages.threadId}).from(t.messages).where(eq(t.messages.id, messageId)).get();
@@ -387,6 +389,7 @@ export function conversationDetail(store: Store, messageId: number, opening?: {u
     account_id: opened.accountId, thread_id: opened.threadId, subject: details[0]!.subject, opened_id: opened.id,
     row: messageRows(store, [opened.id], {time: 'received', replyMark: true}).get(opened.id)!.out,
     emails: details, draft: draftAnswering(store, emails.map(email => email.id)),
+    summary: conversationSummary(store, opened.accountId, opened.threadId),
   };
 }
 

@@ -3,7 +3,8 @@
 // with its tokens and cost, and to triage's health. A refusal fails the job by the one retry policy
 // and the email waits in Unsorted. Every few minutes, and as soon as triage recovers or its keys or
 // models change, Unsorted mail is queued again. New Attention and FYI mail is sent by ntfy once
-// sorted, each lane as Settings › Notifications allows.
+// sorted, each lane as Settings › Notifications allows. Then its conversation's summary is written
+// when one is due (src/triage/conversation.ts).
 import type {AiModelChoiceOut, AiPurpose} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -19,6 +20,7 @@ import type {JobWorker} from '../sync/engine.ts';
 import {asProviderError, ProviderError} from '../sync/errors.ts';
 import {failJob, finishJob} from '../sync/jobs.ts';
 import type {Job} from '../sync/jobs.ts';
+import {writeConversationSummary} from './conversation.ts';
 import {recordTriageFailure, recordTriageSuccess} from './health.ts';
 import {applyOutcome, hurryTriage, resortUnsorted, triageEmailOf} from './intake.ts';
 import {aiKeys, anthropicKey, chooseTriageModels} from './models.ts';
@@ -50,7 +52,7 @@ export interface TriageWorkerOptions {
 const MAIL_NOTIFY_WITHIN_MS = 60 * 60_000;
 
 /** Writes a model call to the AI usage ledger: what it was for, its tokens and its cost. */
-export function recordUsage(store: Store, answer: ModelAnswer, messageId: number | null, purpose: Extract<AiPurpose, 'triage' | 'search_terms' | 'search_reading'> = 'triage') {
+export function recordUsage(store: Store, answer: ModelAnswer, messageId: number | null, purpose: Extract<AiPurpose, 'triage' | 'search_terms' | 'search_reading' | 'mail_conversations'> = 'triage') {
   store.db.insert(t.aiUsage).values({
     at: isoNow(store), provider: answer.provider, model: answer.model, purpose, messageId,
     inputTokens: answer.usage.inputTokens, outputTokens: answer.usage.outputTokens, cachedTokens: answer.usage.cachedTokens,
@@ -190,6 +192,8 @@ export class TriageWorker implements JobWorker {
       console.error(`After sorting email ${message.id}`, error);
     }
     await this.notifyMail(message.id);
+    // Its conversation's summary, once the email's own work is done. It never fails the email's triage.
+    await writeConversationSummary(store, message.id, {endpoints: this.endpoints, timeoutMs: this.timeoutMs}, signal);
   }
 
   /**

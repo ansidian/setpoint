@@ -67,6 +67,7 @@
 .sk-head > .subj { height: 25px; display: flex; align-items: center; }
 .sk-head > .meta { height: 32px; display: flex; align-items: center; gap: 10px; }
 .sk-head .sk-avatar { width: 32px; height: 32px; }
+.sk-rd-sum { margin: -6px 0 0; height: 20.3px; max-width: 680px; display: flex; align-items: center; }
 .sk-preview { flex: 1 1 auto; display: flex; padding: 16px; }
 .sk-preview .sk-img { flex: 1 1 auto; border-radius: var(--r-bar); background: var(--sk-fill); }
 .sk-body { display: flex; flex-direction: column; gap: 12px; max-width: 600px; padding-top: 6px; }

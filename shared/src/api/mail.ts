@@ -289,6 +289,9 @@ export interface MailConversationOut {
   emails: ConversationMessageOut[];
   // The draft that answers one of its emails (the newest), as a "Draft" line at its foot. Null with none.
   draft: {id: number; message_id: number} | null;
+  // One line summing up a conversation of two or more emails, for the reader's head in place of its
+  // row's summary. Null for one email, while none is written, or once a newer email has come in.
+  summary: string | null;
 }
 
 /**

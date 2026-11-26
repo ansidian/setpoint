@@ -48,6 +48,16 @@ export function mailboxState(row: Pick<MessageRowOut, 'sent_only' | 'snoozed_unt
  */
 export const readerSummary = (row: Pick<MessageRowOut, 'summary' | 'fact'>): string | null => (row.fact ? null : row.summary || null);
 
+/**
+ * The line under a conversation's subject in the reader: the conversation's own summary once it's in,
+ * else its row's. Until the conversation loads, a row of two or more emails holds the line's place
+ * (`'loading'`), so it doesn't change from one to the other in view.
+ */
+export function headSummary(row: Pick<MessageRowOut, 'summary' | 'fact' | 'thread'>, conversation: {summary: string | null} | undefined): string | null | 'loading' {
+  if (conversation) return conversation.summary ?? readerSummary(row);
+  return (row.thread?.count ?? 1) >= 2 ? 'loading' : readerSummary(row);
+}
+
 /** "Today, 8:52 AM", "Yesterday, 6:41 PM", "Mon, Oct 5, 10:05 AM", with the year once it isn't this year's. */
 export function whenLabel(at: string, now: number, timeZone: string): string {
   const day = localDate(at, timeZone);

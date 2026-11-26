@@ -213,6 +213,19 @@ export const messageBodies = sqliteTable('message_bodies', {
   bodyHtml: text('body_html'),
 });
 
+/**
+ * A conversation's own summary, for the reader's head: one row per conversation of two or more
+ * emails triage summed up, and the newest email it covers (src/domain/conversationSummary.ts says
+ * when it's stale). It goes with that email, and is written again after the next one is triaged.
+ */
+export const conversationSummaries = sqliteTable('conversation_summaries', {
+  accountId: integer('account_id').notNull().references(() => accounts.id, {onDelete: 'cascade'}),
+  threadId: text('thread_id').notNull(),
+  summary: text('summary').notNull(),
+  messageId: integer('message_id').notNull().references(() => messages.id, {onDelete: 'cascade'}),
+  at: text('at').notNull(),
+}, table => [uniqueIndex('conversation_summaries_thread').on(table.accountId, table.threadId)]);
+
 /** An email's attachment, previewed in the reader (PDF, image, CSV). */
 export const attachments = sqliteTable('attachments', {
   id: integer('id').primaryKey({autoIncrement: true}),

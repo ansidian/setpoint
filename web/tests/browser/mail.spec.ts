@@ -1718,6 +1718,29 @@ test('a conversation: its row names everyone with its count; the reader stacks i
   }
 });
 
+test('a conversation\'s head says what the whole conversation is about; a one-email conversation\'s head keeps its email\'s summary', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const rows = all.days.flatMap(day => day.rows);
+    const cabin = rows.find(row => row.from_name === 'Theo Walsh')!;
+    const conversation = await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${cabin.id}`);
+    assert.ok(conversation.summary);
+    const page = await load(setpoint, `/inbox/${cabin.id}`);
+    await page.locator('.cv > [data-email]').first().waitFor();
+    assert.equal(await page.locator('.rd-head .rd-sum').textContent(), conversation.summary);
+
+    const single = rows.find(row => (row.thread?.count ?? 1) === 1 && row.summary && !row.fact)!;
+    assert.equal((await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${single.id}`)).summary, null);
+    await page.goto(`${setpoint.base}/inbox/${single.id}`);
+    await page.locator(`.cv > [data-email="${single.id}"]`).waitFor();
+    assert.equal(await page.locator('.rd-head .rd-sum').textContent(), single.summary);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('opened from its row, a conversation whose newest email is the user\'s reply expands only its first and newest, not the email the row names', async () => {
   const setpoint = await startSetpoint();
   try {
