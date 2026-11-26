@@ -1,5 +1,6 @@
 // The phone reader's bottom bar: Done on Attention mail not yet Done, else Trash, then Reply and
-// More. More opens a bottom sheet of the rest, one row each: Reply all (when the email has others to
+// More, which act on the whole conversation; Reply, Reply all and Forward answer its newest email
+// someone else sent, as the stack's foot does. More opens a bottom sheet of the rest, one row each: Reply all (when the email has others to
 // reply to), Forward, Snooze (received mail not snoozed) or Snoozed with its return (a snoozed email,
 // whose sheet changes the time or ends it), Add to calendar, Add as task, Trash (when
 // Done leads), and Mark read or Mark unread (not on sent mail). Open in Gmail stays on the desktop:
@@ -67,6 +68,43 @@ export function moreRows(email: ReaderBarEmail, on: ReaderBarActions, openSnooze
       : {icon: 'mark_email_unread', tone: 'accent', label: 'Mark unread', run: on.toggleRead}),
   ];
   return rows.filter(row => row !== false);
+}
+
+/** What one email of the conversation offers in its own ••• sheet, as the reader knows it. */
+export interface EmailSheetActions {
+  reply: () => void;
+  // Only when the email has others to reply to.
+  replyAll: (() => void) | null;
+  forward: () => void;
+  addEvent: () => void;
+  addTask: () => void;
+}
+
+/** An expanded email's own sheet, in its order: Reply, Reply all, Forward, Add to calendar, Add as task. */
+export function emailRows(on: EmailSheetActions): MoreRow[] {
+  const rows: (MoreRow | false)[] = [
+    {icon: 'reply', tone: 'ink3', label: 'Reply', run: on.reply},
+    !!on.replyAll && {icon: 'reply_all', tone: 'ink3', label: 'Reply all', run: on.replyAll},
+    {icon: 'forward', tone: 'ink3', label: 'Forward', run: on.forward},
+    {icon: 'event', tone: 'ink3', label: 'Add to calendar', run: on.addEvent},
+    {icon: 'task_alt', tone: 'ink3', label: 'Add as task', run: on.addTask},
+  ];
+  return rows.filter(row => row !== false);
+}
+
+/** An expanded email's ••• on the phone, and its sheet while it's open, titled with who sent it. */
+export function EmailSheetButton({from, on}: {from: string; on: EmailSheetActions}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="ibtn ph-icon" type="button" aria-label="More" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}><Icon name="more_horiz" size={20} /></button>
+      {open && (
+        <BottomSheet title={from} onClose={() => setOpen(false)}>
+          {emailRows(on).map(row => <SheetChoice key={row.label} icon={row.icon} tone={row.tone} label={row.label} onChoose={row.run} />)}
+        </BottomSheet>
+      )}
+    </>
+  );
 }
 
 /** The bar's three actions, and More's sheet or Snooze's while one is open. */

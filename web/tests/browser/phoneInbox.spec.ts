@@ -217,18 +217,16 @@ test('on the phone a row\'s reply mark and Draft tag sit on its sender\'s line, 
   }
 });
 
-test('phone search takes sent mail in: the user\'s reply reads To its recipient and opens with no Pin, Snooze or read state', async () => {
+test('phone search takes sent mail in: a conversation only the user wrote reads To its recipient and opens with no Pin, Snooze or read state', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
     await page.locator('.search input').tap();
-    await page.keyboard.type('cabin');
-    const sent = page.locator('.search-list .result', {hasText: /^To\s*Theo Walsh/}).first();
+    await page.keyboard.type('order');
+    const sent = page.locator('.search-list .result', {hasText: /^To\s*Contoso Coffee/}).first();
     await sent.waitFor();
-    // Theo's own emails, which the user answered, carry the reply mark.
-    await page.locator('.search-list .result', {hasText: 'Theo Walsh'}).locator('.replied').first().waitFor();
     await sent.tap();
-    await page.locator('.rd-subj', {hasText: 'Cabin weekend in November'}).waitFor();
+    await page.locator('.rd-subj', {hasText: 'Order 4417 arrived damaged'}).waitFor();
     await until('its bar', () => page.locator('.ph-acts > button').allTextContents(), shown => shown.join() === 'Trash,Reply,More');
     assert.equal(await page.locator('.ph-top button[aria-label="Pin"]').count(), 0);
     await page.locator('.ph-acts button', {hasText: 'More'}).tap();

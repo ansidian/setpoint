@@ -11,10 +11,10 @@
 // Reading it here doesn't mark it read. Opening it (InboxPage) does. The head has mail's slot above
 // the actions (slots.tsx), which another module may fill.
 //
-// On the phone (board 21) it covers the page and reads one email: Back and Pin at the top, the email
-// full width with its head (sender, "You replied"), its body and its thread under it, and Done (on
-// Attention mail) or Trash, Reply and More at the bottom (phone/ReaderBar.tsx), More holding Snooze,
-// Add to calendar and Add as task among the rest.
+// On the phone (board 21) it covers the page and reads the same conversation: Back and Pin at the
+// top, the head and the stack full width, and Done (on Attention mail) or Trash, Reply and More at
+// the bottom (phone/ReaderBar.tsx), which act on the whole conversation, More holding Snooze, Add to
+// calendar and Add as task among the rest.
 //
 // EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
 // body, with no tools, actions, slot or commands of its own.
@@ -27,8 +27,8 @@ import {conversationPath, markRead, markUnread, messagePath} from '../api/mail.t
 import {prefillFromMessage, proposeFromMessage} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {hasOthers} from '../logic/composer.ts';
-import {dayOf, fullTimestamp, localDate, readerTime, trashLeft} from '../logic/format.ts';
-import {holds} from '../logic/conversation.ts';
+import {fullTimestamp, localDate, readerTime, trashLeft} from '../logic/format.ts';
+import {holds, replyTarget} from '../logic/conversation.ts';
 import {factRows, fitTools, mailboxState, READING_PANE, readerActions, readerSummary, senderLine} from '../logic/reader.ts';
 import type {ToolsNeed, ToolsSize} from '../logic/reader.ts';
 import {snoozeable, snoozedLine, snoozeWhen} from '../logic/snooze.ts';
@@ -43,8 +43,7 @@ import {CreatedItemCard} from './CreatedItem.tsx';
 import {CodeCard} from './Code.tsx';
 import {ReaderBar} from './phone/ReaderBar.tsx';
 import {openEditorSheet} from './phone/EditorSheet.tsx';
-import {answerKey, showEmail, startComposer, useOpenComposer} from './compose/composer.ts';
-import {Conversation} from './Conversation.tsx';
+import {answerKey, showEmail, useOpenComposer} from './compose/composer.ts';
 import {Body, ConversationStack, MoreMenu} from './ConversationStack.tsx';
 import {copyText, openContextMenu} from './ContextMenu.tsx';
 import {emailActions} from './emailActions.ts';
@@ -137,12 +136,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
 }) {
   const width = useReadingPaneWidth();
   const phone = usePhone();
-  // The phone reads one email. The desktop reads its conversation, stacked (ConversationStack.tsx):
-  // its tools act on all of it, and its emails are the email's own.
-  const messageLoad = {path: messagePath(id), ...useResource<MessageOut>(phone ? messagePath(id) : null)};
-  const conversationLoad = {path: conversationPath(id), ...useResource<MailConversationOut>(phone ? null : conversationPath(id))};
+  // The reader reads the email's conversation, stacked (ConversationStack.tsx): its tools act on all
+  // of it, and its emails are the email's own.
+  const conversationLoad = {path: conversationPath(id), ...useResource<MailConversationOut>(conversationPath(id))};
   const conversation = conversationLoad.data?.emails.some(email => email.id === id) ? conversationLoad.data : undefined;
-  const message = phone ? (messageLoad.data?.id === id ? messageLoad.data : undefined) : conversation?.emails.find(email => email.id === id);
+  const message = conversation?.emails.find(email => email.id === id);
   // The email of the conversation the cards (a proposal, Alfred) are about: the one opened, else
   // the one whose More asked for a card.
   const [carded, setCarded] = useState<{id: number; email: number} | null>(null);
@@ -155,8 +153,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // The More menu, open for this email. It shows only on Security and Noise mail, where it holds the
   // proposals.
   const [moreFor, setMoreFor] = useState<number | null>(null);
-  // Done only on Attention mail not yet Done. On the desktop the tools are the conversation's, from its row.
-  const listed = phone ? message ?? (row?.id === id ? row : undefined) : conversation?.row ?? (row && holds(row, id) ? row : undefined);
+  // Done only on Attention mail not yet Done. The tools are the conversation's, from its row.
+  const listed = conversation?.row ?? (row && holds(row, id) ? row : undefined);
   const moreItems = listed && readerActions(listed).proposals === 'more';
   const unsubscribeUrl = message?.unsubscribe_url;
   // Sent mail, mail to yourself opened from Sent included, has no Done.
@@ -188,7 +186,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   useEffect(() => {
     if (!phone && answering !== null) showEmail(answering, drafts?.drafts);
   }, [answering, drafts, phone]);
-  const replyAll = message ? hasOthers(message, from) : false;
+  // Reply, Reply all and Forward on the whole conversation (R, A, F, the phone's bar) answer its
+  // newest email someone else sent, as the foot's Reply does.
+  const target = conversation ? replyTarget(conversation.emails) : null;
+  const answered = conversation?.emails.find(email => email.id === target);
+  const replyAll = answered ? hasOthers(answered, from) : false;
   // Whether the tools' words fit (useToolsFit), for this set of tools.
   const {bar: toolsBar, size} = useToolsFit([doneable, isDone, sentMail, pinned, canSnooze, snoozedUntil, gmail, phone, replyAll, listed?.unread].join(), width);
   // A tool's tip, while its words are hidden.
@@ -206,12 +208,12 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
   // the email stays unread. It draws from the email's row too, as the tools do, so it's there at
   // once. It is the same list as the row's right-click menu and More (emailActions.ts).
-  const handlers = {...actions, propose: cards.propose, ask: cards.ask, snoozeMenu: canSnooze || snoozedMenu, ...(phone ? {} : {
+  const handlers = {...actions, propose: cards.propose, ask: cards.ask, snoozeMenu: canSnooze || snoozedMenu,
     // As R, A and F: the conversation's newest email someone else sent.
     reply: () => answerKey(id, 'reply'),
     ...(replyAll ? {replyAll: () => answerKey(id, 'reply_all')} : {}),
     forward: () => answerKey(id, 'forward'),
-  }), ...(unsubscribeUrl ? {unsubscribe: () => openUnsubscribe(unsubscribeUrl)} : {})};
+    ...(unsubscribeUrl ? {unsubscribe: () => openUnsubscribe(unsubscribeUrl)} : {})};
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
   const offered = listed ? emailActions(listed, gmail, handlers, 'palette', rules, sentMail) : [];
   useCommands(() => (listed ? {
@@ -284,15 +286,11 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
       <AccountBand listed={listed} accounts={accounts} now={now} timeZone={timeZone} />
       <Swap id={id} travel={travel} anchor={conversation ? conversation.opened_id : null}>
         {/* The head from the email's row at once. Only the body waits for the email. */}
-        {phone ? <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} /> : (
-          <>
-            <CardPlace cards={cards} id={cardEmail} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
-            {listed ? <ConversationHead listed={listed} unsubscribe={message?.unsubscribe_url} cards={cardEmail === id ? cards : null} onCard={card => askOn(id, card)} onCodeCopied={codeCopied} /> : <HeadSkeleton />}
-            {conversation
-              ? <ConversationStack conversation={conversation} accounts={accounts} now={now} timeZone={timeZone} marks={marks} from={from} composer={composer} onCard={askOn} />
-              : <ConversationLoading load={conversationLoad} attachment={(listed?.attachment_count ?? 0) > 0} />}
-          </>
-        )}
+        <CardPlace cards={cards} id={cardEmail} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
+        {listed ? <ConversationHead listed={listed} unsubscribe={message?.unsubscribe_url} cards={cardEmail === id ? cards : null} onCard={card => askOn(id, card)} unread={markedUnread} onCodeCopied={codeCopied} /> : <HeadSkeleton />}
+        {conversation
+          ? <ConversationStack conversation={conversation} accounts={accounts} now={now} timeZone={timeZone} marks={marks} from={from} composer={composer} onCard={askOn} />
+          : <ConversationLoading load={conversationLoad} attachment={(listed?.attachment_count ?? 0) > 0} />}
       </Swap>
       {/* The actions share the bar evenly, drawn once the email's row is known, so none moves in or
           along when the email arrives. Until then the bar stays empty. Done leads, the phone's main job on Attention mail (phone/ReaderBar.tsx). */}
@@ -304,9 +302,9 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
               done: actions.done, trash: actions.trash, toggleRead, snooze: until => actions.snooze?.(until), unsnooze: () => actions.unsnooze?.(),
               addEvent: () => openEditorSheet({kind: 'event', date: localDate(now, timeZone), message: id}),
               addTask: () => openEditorSheet({kind: 'task', date: localDate(now, timeZone), message: id}),
-              reply: () => startComposer({kind: 'reply', message_id: id}),
-              replyAll: () => startComposer({kind: 'reply_all', message_id: id}),
-              forward: () => startComposer({kind: 'forward', message_id: id}),
+              reply: () => answerKey(id, 'reply'),
+              replyAll: () => answerKey(id, 'reply_all'),
+              forward: () => answerKey(id, 'forward'),
             }} />
           )}
         </div>
@@ -566,15 +564,17 @@ function CardPlace({cards, id, accounts, now, timeZone, onOpen}: {
 }
 
 /**
- * The conversation's head on the desktop: its subject, triage's summary of the email that placed
+ * The conversation's head: its subject, triage's summary of the email that placed
  * it, its code, mail's slot and the actions, which are that email's.
  */
-function ConversationHead({listed, unsubscribe, cards, onCard, onCodeCopied}: {
+function ConversationHead({listed, unsubscribe, cards, onCard, unread, onCodeCopied}: {
   listed: MessageRowOut;
   unsubscribe: string | undefined;
   // The cards while they're about this email (else another email's More asked for one).
   cards: Cards | null;
   onCard: (card: ItemKind | 'ask') => void;
+  // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
+  unread: boolean;
   onCodeCopied: () => void;
 }) {
   const summary = readerSummary(listed);
@@ -584,7 +584,7 @@ function ConversationHead({listed, unsubscribe, cards, onCard, onCodeCopied}: {
   return (
     <div className="rd-head">
       {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected, always stays in Attention</div>}
-      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{listed.subject}</h1>
+      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" role="img" aria-label="Unread" data-tip="Unread" />}{listed.subject}</h1>
       {summary && <p className="rd-sum selectable">{summary}</p>}
       {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}
       <ReaderSlot row={listed} />
@@ -608,38 +608,12 @@ function ConversationLoading({load, attachment}: {load: Load; attachment: boolea
   return <div className="rd-body">{failed ? <LoadFailed what="this conversation" loads={[load]} /> : <BodySkeleton attachment={attachment} />}</div>;
 }
 
-/** The open email: its card, and the email under it. */
-function Message({id, listed, message, load, accounts, now, timeZone, marks, onOpen, cards, unread, onCodeCopied}: {
-  id: number;
-  listed: MessageRowOut | undefined;
-  message: MessageOut | undefined;
-  load: Load;
-  accounts: Map<number, AccountOut>;
-  now: number;
-  timeZone: string;
-  marks: string[];
-  onOpen: (id: number, sent?: boolean) => void;
-  cards: Cards;
-  // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
-  unread: boolean;
-  // Its code copied, which reads it.
-  onCodeCopied: () => void;
-}) {
-  return (
-    <>
-      <CardPlace cards={cards} id={id} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
-      <Email listed={listed} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={marks} cards={cards} unread={unread} onCodeCopied={onCodeCopied} onOpen={onOpen} />
-    </>
-  );
-}
-
 /**
- * The email: its head and its body. The head draws from the email's row (`listed`) until the email
- * itself is in, so it's there at once. The body waits: a skeleton meanwhile (with an attachment's
- * card when it has one), or why it couldn't load. With no `cards`, it's the email alone: no slot
- * and no actions.
+ * The email alone: its head and its body. The head draws from the email's row (`listed`) until the
+ * email itself is in, so it's there at once. The body waits: a skeleton meanwhile (with an
+ * attachment's card when it has one), or why it couldn't load. No slot, actions or tools.
  */
-function Email({listed, message, load, accounts, now, timeZone, marks, cards, unread = false, onCodeCopied, onOpen}: {
+function Email({listed, message, load, accounts, now, timeZone, marks}: {
   listed: MessageRowOut | undefined;
   message: MessageOut | undefined;
   load: Load;
@@ -647,45 +621,28 @@ function Email({listed, message, load, accounts, now, timeZone, marks, cards, un
   now: number;
   timeZone: string;
   marks: string[];
-  cards?: Cards;
-  unread?: boolean;
-  onCodeCopied?: () => void;
-  // Opens another email of its conversation. Without it, as on another page's pane, there is no
-  // "You replied" line and no conversation list.
-  onOpen?: (id: number, sent?: boolean) => void;
 }) {
   const failed = useLoadFailed([load]);
   const arrived = useArrival(message !== undefined);
-  const conversation = cards && onOpen ? onOpen : undefined;
   return (
     <>
-      {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} cards={cards} unread={unread} onCodeCopied={onCodeCopied} onOpen={conversation} /> : <HeadSkeleton />}
+      {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} /> : <HeadSkeleton />}
       {message ? <Body message={message} marks={marks} arrived={arrived} /> : (
         <div className="rd-body">{failed ? <LoadFailed what="this email" loads={[load]} /> : <BodySkeleton attachment={(listed?.attachment_count ?? 0) > 0} />}</div>
       )}
-      {message && conversation && <Conversation key={message.id} message={message} timeZone={timeZone} onOpen={conversation} />}
     </>
   );
 }
 
 /** The head: from the row while the email loads, then from the email (its domain, its security facts). */
-function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCopied, onOpen}: {
+function Head({listed, message, accounts, now, timeZone}: {
   listed: MessageRowOut;
   message: MessageOut | undefined;
   accounts: Map<number, AccountOut>;
   now: number;
   timeZone: string;
-  cards: Cards | undefined;
-  // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
-  unread: boolean;
-  onCodeCopied: (() => void) | undefined;
-  // Opens the reply from the "You replied" line, which shows only with it.
-  onOpen: ((id: number, sent?: boolean) => void) | undefined;
 }) {
   const account = accounts.get(listed.account_id);
-  // The line draws from the row at once. A click opens the reply once the email names it.
-  const replied = message ? message.replied_at : listed.replied_at;
-  const replyId = message?.reply_id;
   const colour = colourVar(account?.colour);
   const who = listed.organisation ?? listed.from_name;
   const line = senderLine(message ?? listed);
@@ -695,7 +652,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
   return (
     <div className="rd-head">
       {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected, always stays in Attention</div>}
-      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" role="img" aria-label="Unread" data-tip="Unread" />}{listed.subject}</h1>
+      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{listed.subject}</h1>
       {/* Triage's summary, which the list shows in the subject's place, kept here once it's open. */}
       {summary && <p className="rd-sum selectable">{summary}</p>}
       <div className="rd-meta">
@@ -724,14 +681,8 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           )}
         </div>
       </div>
-      {replied && onOpen && (
-        <button className="rd-replied" type="button" disabled={replyId === undefined} data-tip={fullTimestamp(replied, timeZone)} data-tip-quick
-          onClick={() => replyId !== undefined && onOpen(replyId, true)}>
-          <Icon name="reply" size={16} />You replied {dayOf(replied, now, timeZone)}
-        </button>
-      )}
       {/* A verification code lifted out of the body, with Copy and its countdown, from the row at once. */}
-      {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}
+      {listed.code && <CodeCard code={listed.code} />}
       {message?.security && (
         <div className={message.protected || message.security.unfamiliar ? 'facts-card alert' : 'facts-card'}>
           <dl className="facts">
@@ -744,39 +695,12 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           </dl>
         </div>
       )}
-      {cards && (
-        <>
-          <ReaderSlot row={listed} />
-          <Actions listed={listed} cards={cards} unsubscribe={message?.unsubscribe_url} />
-        </>
-      )}
     </div>
   );
 }
 
 /** The sender's unsubscribe page, in a new tab that can't reach back to Setpoint. */
 const openUnsubscribe = (url: string) => void window.open(url, '_blank', 'noopener,noreferrer');
-
-/**
- * The actions under the head: the proposals where they're buttons, Ask about this email, and
- * Unsubscribe when the email has its sender's unsubscribe page.
- */
-function Actions({listed, cards, unsubscribe}: {listed: MessageRowOut; cards: Cards; unsubscribe: string | undefined}) {
-  const {panel} = cards;
-  const held = (kind: Exclude<Panel, null>['kind']) => (panel?.kind === kind ? 'btn ghost' : 'btn out');
-  return (
-    <div className="rd-acts">
-      {readerActions(listed).proposals === 'buttons' && (
-        <>
-          <button className={held('event')} type="button" onClick={() => cards.propose('event')}><Icon name="event" size={17} />Add to calendar</button>
-          <button className={held('task')} type="button" onClick={() => cards.propose('task')}><Icon name="task_alt" size={17} />Add as task</button>
-        </>
-      )}
-      <button className={held('ask')} type="button" onClick={cards.ask}><Icon name="auto_awesome" size={17} alfred />Ask about this email</button>
-      {unsubscribe && <button className="btn out" type="button" onClick={() => openUnsubscribe(unsubscribe)}><Icon name="unsubscribe" size={17} />Unsubscribe</button>}
-    </div>
-  );
-}
 
 /**
  * The pane's left edge, dragged (or ← → when focused) to make it wider or narrower, and double-clicked

@@ -1,11 +1,12 @@
 // The phone reader's bottom bar (app/phone/ReaderBar.tsx) at 390 × 844: Done or Trash, Reply and
 // More, and More's rows for each kind of email, as a table, with each row's glyph and its colour.
-// Open in Gmail is never one of them. A row runs its action and closes the sheet. The reader's journeys through them are phoneReader.spec.ts's.
+// Open in Gmail is never one of them. A row runs its action and closes the sheet. An expanded
+// email's own ••• sheet (EmailSheetButton) lists what answers or makes from that one email. The reader's journeys through them are phoneReader.spec.ts's.
 import {beforeEach, expect, test, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
-import {moreRows, ReaderBar} from '../../src/app/phone/ReaderBar.tsx';
-import type {ReaderBarActions, ReaderBarEmail} from '../../src/app/phone/ReaderBar.tsx';
+import {emailRows, EmailSheetButton, moreRows, ReaderBar} from '../../src/app/phone/ReaderBar.tsx';
+import type {EmailSheetActions, ReaderBarActions, ReaderBarEmail} from '../../src/app/phone/ReaderBar.tsx';
 
 beforeEach(async () => {
   await page.viewport(390, 844);
@@ -102,4 +103,26 @@ test('a snoozed email\'s Snoozed row opens its sheet under its return, a time th
   await page.getByRole('dialog', {name: /^Snoozed until /}).getByRole('button', {name: /^Tomorrow/}).click();
   expect(on.snooze).toHaveBeenCalledOnce();
   expect(on.unsnooze).toHaveBeenCalledOnce();
+});
+
+const emailActions = (replyAll: boolean): EmailSheetActions => ({
+  reply: vi.fn(), replyAll: replyAll ? vi.fn() : null, forward: vi.fn(), addEvent: vi.fn(), addTask: vi.fn(),
+});
+
+test.each([
+  ['an email with others to reply to', true, ['Reply', 'Reply all', 'Forward', ...MAKE]],
+  ['an email to the user alone', false, ['Reply', 'Forward', ...MAKE]],
+])('an email\'s own sheet: %s', (_, replyAll, rows) => {
+  expect(emailRows(emailActions(replyAll)).map(row => row.label)).toEqual(rows);
+});
+
+test('an email\'s ••• opens its sheet under who sent it, and a row runs its action and closes it', async () => {
+  const on = emailActions(true);
+  await render(<EmailSheetButton from="Theo Walsh" on={on} />);
+  await page.getByRole('button', {name: 'More'}).click();
+  const sheet = page.getByRole('dialog', {name: 'Theo Walsh'});
+  await expect.element(sheet).toBeVisible();
+  await sheet.getByRole('button', {name: 'Forward'}).click();
+  expect(on.forward).toHaveBeenCalledOnce();
+  await expect.element(sheet).not.toBeInTheDocument();
 });

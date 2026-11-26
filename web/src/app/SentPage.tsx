@@ -453,7 +453,7 @@ export function SentPage({route}: {route: SentRoute}) {
   const empty = ready && !days.length && !more && !pages.at(-1)?.next_before;
   // A conversation others wrote in names them, as the Inbox's rows do; mail only the user sent names who it went to.
   const from = (row: MessageRowOut) => {
-    if (!phone && (row.thread?.people.length ?? 0) > 1) return <ConversationFrom row={row} lone={row.from_name} />;
+    if ((row.thread?.people.length ?? 0) > 1) return <ConversationFrom row={row} lone={row.from_name} />;
     const sent = sentRows.get(row.id);
     return <SentFrom to={sent?.to} cc={sent?.cc} />;
   };

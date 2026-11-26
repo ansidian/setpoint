@@ -17,13 +17,13 @@
      instead, so it never takes a tap meant for the next one. The position is relative only where no
      rule places the control otherwise. */
   :where(.toast.ph .btn, .ph-sheet-top > :is(.ph-sheet-lead, .ph-sheet-act), .ph-icon, .ph-text, .btn.ph-back,
-    .hd > :is(.ph-find, .ph-new, .ph-month-btn), .hd > .search .search-clear, .code-line .copy, .rd-replied,
+    .hd > :is(.ph-find, .ph-new, .ph-month-btn), .hd > .search .search-clear, .code-line .copy, .quoted > .btn,
     .view-empty .btn, .ph-sheet .composer :is(.btn.sm, .ibtn.sm, .cmp-fold), .ph-detail :is(.fd-mark.check, .card-h .ibtn),
     .ph-editor :is(.ibtn.sm, .lr-q, .seg > *), .ph-import .select, .nw-recap-done, .nw-up .btn, .nw-state .btn, .alf-pill-x,
     .settings.ph-set :is(.switch, .btn, .select)),
   :where(.composer .cmp-chip-x, .editor .qchip .x) { position: relative; }
   :is(.toast.ph .btn, .ph-sheet-top > :is(.ph-sheet-lead, .ph-sheet-act), .ph-icon, .ph-text, .btn.ph-back,
-    .hd > :is(.ph-find, .ph-new, .ph-month-btn), .hd > .search .search-clear, .code-line .copy, .rd-replied,
+    .hd > :is(.ph-find, .ph-new, .ph-month-btn), .hd > .search .search-clear, .code-line .copy, .quoted > .btn,
     .view-empty .btn, .ph-sheet .composer :is(.btn.sm, .ibtn.sm, .cmp-fold), .ph-detail :is(.fd-mark.check, .card-h .ibtn),
     .ph-editor :is(.ibtn.sm, .lr-q, .seg > *), .ph-import .select, .nw-recap-done, .nw-up .btn, .nw-state .btn, .alf-pill-x,
     .settings.ph-set :is(.switch, .btn, .select))::before { content: ""; position: absolute; inset: min(0px, (100% - var(--ph-tap)) / 2); }
@@ -187,6 +187,14 @@
   .rd-meta .rd-right, .rd-meta .rd-right > div { display: contents; }
   .rd-meta .trash-in { display: none; }
   .rd-body { padding: 16px 20px 20px; }
+  /* The stacked conversation keeps the phone's 20 px sides. An expanded email's ••• is a fourth
+     column beside its time, a fingertip's size, spanning the head's two lines. */
+  .cv-mail .cv-head, .cv-line, .cv-foot { padding-left: 20px; padding-right: 20px; }
+  .cv-mail .cv-head { grid-template-columns: 32px minmax(0, 1fr) auto auto; }
+  .cv-mail .cv-tools { grid-column: 4; grid-row: 1 / 3; margin: -6px -10px -6px 2px; }
+  .cv-mail .rd-body { padding-top: 12px; }
+  .cv-reply { height: 48px; font-size: 15px; }
+  .cv-draft { height: 44px; }
   /* The phone's email keeps the screen's whole width, with no room around it. */
   .mailframe-box { padding: 0; }
   .mailframe { border-radius: var(--r-card); }

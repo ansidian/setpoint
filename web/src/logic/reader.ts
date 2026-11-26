@@ -1,7 +1,7 @@
 // The reader's rules: who it's from, which actions it offers, the security facts card, whether
-// remote images load, the attachments' labels and previews, and the conversation list.
-import type {AttachmentOut, ConversationEmailOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
-import {clockTime, dayOf, daysBetween, localDate} from './format.ts';
+// remote images load, and the attachments' labels and previews.
+import type {AttachmentOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
+import {clockTime, daysBetween, localDate} from './format.ts';
 import {snoozedLine} from './snooze.ts';
 
 /**
@@ -224,68 +224,6 @@ export function paneWidths(stored: string | null, screen: string): Record<string
   if (typeof value === 'number') return {[screen]: paneWidth(value)};
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
   return Object.fromEntries(Object.entries(value).filter(([, width]) => typeof width === 'number').map(([key, width]) => [key, paneWidth(width as number)]));
-}
-
-/** Earlier emails shown before the rest fold behind one line, and never fewer than two folded. */
-export const CONVERSATION_SHOWN = 4;
-
-/** A row of the reader's conversation list. */
-export interface ConversationRow {
-  id: number;
-  // The email being read: marked, and no link.
-  current: boolean;
-  // The user sent it.
-  sent: boolean;
-  // When it came, exactly: its date, with the year when that isn't the read email's year, and its
-  // clock time.
-  day: string;
-  time: string;
-  received_at: string;
-  // "You" for the user, or the sender's name, with the address behind it.
-  who: string;
-  address: string | null;
-  // Its first words, or its subject when it has none; "This email" on the current row.
-  words: string;
-}
-
-export interface ConversationView {
-  heading: 'In this conversation';
-  // Every email of the conversation: the one being read and the folded ones too.
-  count: number;
-  // Hidden behind the fold line: the oldest.
-  folded: number;
-  // In time order, the email being read in its place.
-  rows: ConversationRow[];
-}
-
-type ConversationOf = Pick<MessageOut, 'id' | 'received_at' | 'from_name' | 'from_address' | 'conversation' | 'sent_only'>;
-
-/**
- * The reader's conversation list for an email, or null when it is alone in its thread: a timeline
- * of the thread, oldest first (equal times in id order), the email being read a row in its place.
- * A long run before it folds its oldest, keeping the nearest; the read email and what came after
- * always show.
- */
-export function conversationLines(message: ConversationOf, unfolded: boolean, timeZone: string): ConversationView | null {
-  const others = message.conversation ?? [];
-  if (!others.length) return null;
-  const before = (email: ConversationEmailOut) => email.received_at < message.received_at || (email.received_at === message.received_at && email.id < message.id);
-  const earlier = others.filter(before);
-  const later = others.filter(email => !before(email));
-  const fold = !unfolded && earlier.length > CONVERSATION_SHOWN + 1 ? earlier.length - CONVERSATION_SHOWN : 0;
-  const read = Date.parse(message.received_at);
-  // The date as the reader writes one, with the read email's year standing in for this year.
-  const when = (at: string) => ({day: dayOf(at, read, timeZone), time: clockTime(at, timeZone), received_at: at});
-  const row = (email: ConversationEmailOut): ConversationRow => ({
-    id: email.id, current: false, sent: email.sent, ...when(email.received_at),
-    who: email.sent ? 'You' : email.from_name, address: email.sent ? null : email.from_address, words: email.excerpt || email.subject,
-  });
-  const sent = message.sent_only === true;
-  const current: ConversationRow = {
-    id: message.id, current: true, sent, ...when(message.received_at),
-    who: sent ? 'You' : message.from_name, address: sent ? null : message.from_address, words: 'This email',
-  };
-  return {heading: 'In this conversation', count: others.length + 1, folded: fold, rows: [...earlier.slice(fold).map(row), current, ...later.map(row)]};
 }
 
 /** How much of the reader's tools shows: every word, Reply, Reply all and Forward as glyphs, or every tool as a glyph. */

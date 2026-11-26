@@ -79,12 +79,13 @@ test('every control a finger needs takes a 44 px tap, and none takes its neighbo
     await page.locator('.hd > .search input').fill('tailspin');
     await fingertips([page.getByRole('button', {name: 'Clear search'})]);
 
-    // The reader's You replied, then Trash's Undo.
+    // The reader's stack: a collapsed line, an email's ••• and the foot's Reply; then Trash's Undo.
     const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
     const cabin = all.days.flatMap(day => day.rows).filter(row => row.from_name === 'Theo Walsh' && row.subject.endsWith('Cabin weekend in November'))
       .sort((one, other) => other.received_at.localeCompare(one.received_at))[0]!.id;
     await page.goto(`${setpoint.base}/inbox/${cabin}`);
-    await fingertips([page.locator('.rd-head .rd-replied'), page.locator('.ph-back'), page.getByRole('button', {name: 'Pin'})]);
+    await fingertips([page.locator('.cv-line').first(), page.locator('.cv-mail.opened .cv-tools button'), page.locator('.cv-foot .cv-reply'),
+      page.locator('.ph-back'), page.getByRole('button', {name: 'Pin'})]);
     await page.locator('.ph-acts button', {hasText: 'Reply'}).tap();
     const reply = page.getByRole('dialog', {name: 'Reply'});
     await reply.locator('.cmp-from > button').waitFor();

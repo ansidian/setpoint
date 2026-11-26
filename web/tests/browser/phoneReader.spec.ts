@@ -366,30 +366,44 @@ async function cabin(setpoint: Setpoint) {
   return {newest: theo[0]!.id, oct1: theo.find(row => row.received_at.startsWith('2026-10-02') || row.received_at.startsWith('2026-10-01'))!.id};
 }
 
-test('the thread under the email: a line opens that email, whose Back goes back to it, and then to the Inbox', async () => {
+test('on the phone the reader stacks the conversation: a line expands where it is, an email\'s ••• answers that email in a sheet, and the foot replies to the newest', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const {newest, oct1} = await cabin(setpoint);
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/inbox/${newest}`);
-    const here = page.locator('.rd-conv-line.here');
-    await here.waitFor();
-    await page.locator('.rd-head .rd-replied', {hasText: 'You replied'}).waitFor();
-    // Every line wraps rather than being cut.
-    const cut = await page.locator('.rd-conv-line > span').evaluateAll(all => all.filter(node => node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
-    assert.deepEqual(cut, []);
+    await page.locator(`.cv-mail.opened[data-email="${newest}"]`).waitFor();
+    // Nothing runs past the screen's edge.
+    const width = page.viewportSize()!.width;
+    const wide = await rested(() => page.locator('.cv > [data-email], .cv-foot').evaluateAll((all, edge) => all.filter(node => node.getBoundingClientRect().right > edge + 1).map(node => node.textContent), width));
+    assert.deepEqual(wide, []);
     assert.equal(await page.locator('.ph-back').textContent(), 'Inbox');
 
-    await page.locator('.rd-conv-line', {hasText: 'Could you bring the board games'}).tap();
-    await until('Oct 1\'s email', () => page.evaluate(() => window.location.pathname), path => path === `/inbox/${oct1}`);
-    await here.filter({hasText: '5:30 PM'}).waitFor();
-    assert.equal(await page.locator('.ph-back').textContent(), 'Back');
+    // Oct 1's line expands in place, with no new address.
+    await page.locator(`.cv-line[data-email="${oct1}"]`).tap();
+    const oct1Mail = page.locator(`.cv-mail[data-email="${oct1}"]`);
+    await oct1Mail.waitFor();
+    assert.equal(await page.evaluate(() => window.location.pathname), `/inbox/${newest}`);
 
-    await page.locator('.ph-back').tap();
-    await until('back to the newest', () => page.evaluate(() => window.location.pathname), path => path === `/inbox/${newest}`);
-    await until('its Back is the Inbox\'s again', () => page.locator('.ph-back').textContent(), text => text === 'Inbox');
-    await page.locator('.ph-back').tap();
-    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    // Its ••• answers that email: the sheet is titled with who sent it, and Reply writes to Theo.
+    await oct1Mail.locator('.cv-tools button[aria-label="More"]').tap();
+    const tools = page.getByRole('dialog', {name: 'Theo Walsh'});
+    assert.deepEqual(await tools.locator('.ph-bs-i').allTextContents(), ['Reply', 'Forward', 'Add to calendar', 'Add as task']);
+    await tools.locator('.ph-bs-i', {hasText: 'Reply'}).tap();
+    const reply = page.getByRole('dialog', {name: 'Reply'});
+    await reply.locator('.cmp-from > button').waitFor();
+    await page.keyboard.type('Sure.');
+    await until('it answers Oct 1\'s email', () => drafts(setpoint), found => found.some(one => one.message_id === oct1 && one.snippet === 'Sure.'));
+    await reply.getByRole('button', {name: 'Cancel'}).tap();
+    await page.getByRole('dialog', {name: 'Save this draft?'}).locator('.ph-bs-i', {hasText: 'Discard'}).tap();
+    await reply.waitFor({state: 'detached'});
+
+    // The foot's Reply answers the newest email Theo sent, in the composer's own sheet.
+    await page.locator('.cv-foot .cv-reply', {hasText: 'Reply to Theo Walsh'}).tap();
+    await page.getByRole('dialog', {name: 'Reply'}).locator('.cmp-from > button').waitFor();
+    await page.keyboard.type('See you Friday.');
+    await until('it answers the newest', () => drafts(setpoint), found => found.some(one => one.message_id === newest && one.snippet === 'See you Friday.'));
+    assert.equal(await page.locator('.pane .composer').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

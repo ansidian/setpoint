@@ -295,9 +295,9 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
             {/* The marks: a paperclip when any email has a file, the reply mark when the user's reply is
                 the newest, a snooze's, and a draft's tag.
                 One box, so the phone's row gives them one place on the sender's line. */}
-            {(row.replied_at || row.snoozed_until || row.returned_at || row.draft || (!phone && row.attachment_count > 0)) && (
+            {(row.replied_at || row.snoozed_until || row.returned_at || row.draft || row.attachment_count > 0) && (
               <span className="marks">
-                {!phone && row.attachment_count > 0 && <AttachedMark />}
+                {row.attachment_count > 0 && <AttachedMark />}
                 {row.replied_at && <RepliedMark at={row.replied_at} now={now} timeZone={timeZone} />}
                 {row.snoozed_until && <SnoozedMark until={row.snoozed_until} now={now} timeZone={timeZone} />}
                 {row.returned_at && !row.snoozed_until && <ReturnedMark row={row} timeZone={timeZone} />}
@@ -333,10 +333,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
  * email count from two ("Dominic, me  4"). The names are cut before the count is.
  */
 export function ConversationFrom({row, lone}: {row: MessageRowOut; lone: string}) {
-  const phone = usePhone();
   const {names, count} = conversationNames(row, lone);
-  // The phone's rows keep their sender until its own slice.
-  if (phone) return <span className="from">{lone}</span>;
   if (count === null) return <span className="from">{names}</span>;
   return <span className="from conv"><span className="who">{names}</span><span className="cn num">{count}</span></span>;
 }

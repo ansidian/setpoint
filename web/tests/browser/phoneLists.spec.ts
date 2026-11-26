@@ -107,13 +107,14 @@ test('on the phone Sent\'s email opens with Back to Sent and who it went to, Tra
     await until('back on the list', async () => path(page.url()), at => at === '/sent');
     await hike.waitFor();
 
-    // A sent line of the thread opens over it with Back, which returns to it, then Back to Sent.
+    // A sent email of the conversation opens with the rest stacked over it; a line expands where it
+    // is, with no new address, and Back goes to Sent.
     await page.locator('.list .row', {hasText: 'Re: Cabin weekend in November'}).first().tap();
-    const first = await until('a cabin email', async () => path(page.url()), at => at.startsWith('/sent/'));
-    await page.locator('.rd-conv-line.you', {hasText: 'Games and a cooler'}).tap();
-    await until('the thread\'s email', async () => path(page.url()), at => at !== first);
-    await page.locator('.ph-top .ph-back', {hasText: /^Back$/}).tap();
-    await until('back to the first', async () => path(page.url()), at => at === first);
+    const first = await until('the cabin conversation', async () => path(page.url()), at => at.startsWith('/sent/'));
+    await page.locator('.cv-mail.opened', {hasText: '4 PM works.'}).waitFor();
+    await page.locator('.cv-line', {hasText: 'Games and a cooler, done'}).tap();
+    await page.locator('.cv-mail', {hasText: 'Games and a cooler, done'}).waitFor();
+    assert.equal(path(page.url()), first);
     await page.locator('.ph-top .ph-back', {hasText: 'Sent'}).tap();
     await until('back on the list', async () => path(page.url()), at => at === '/sent');
 

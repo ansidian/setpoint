@@ -396,12 +396,10 @@ export function canReplyAll(id: number): boolean | null {
 }
 
 /**
- * R, A or F on a conversation (open, or under the cursor): on the desktop they answer its newest
- * email someone else sent, as the stacked reader's foot does. The phone's reader shows one email,
- * which they answer.
+ * R, A or F on a conversation (open, or under the cursor), and the phone reader's bar: they answer
+ * its newest email someone else sent, as the stacked reader's foot does.
  */
 export function answerKey(id: number, kind: 'reply' | 'reply_all' | 'forward') {
-  if (isPhone()) return answerEmail(id, kind);
   void replyTargetOf(id).then(target => answerEmail(target, kind));
 }
 

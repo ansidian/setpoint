@@ -188,10 +188,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const inboxLoad = {path: INBOX_PATH, ...useResource<InboxOut>(INBOX_PATH)};
   const inbox = inboxLoad.data;
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
-  // The open email (the phone's reader), or on the desktop its conversation, whose row the tools act on.
-  const {data: openMessageData} = useResource<MessageOut>(route.open && phone ? messagePath(route.open) : null);
-  const {data: openConversation} = useResource<MailConversationOut>(route.open && !phone ? conversationPath(route.open) : null);
-  const openRow = phone ? openMessageData : openConversation?.emails.some(email => email.id === route.open) ? openConversation.row : undefined;
+  // The open email's conversation, whose row the tools act on.
+  const {data: openConversation} = useResource<MailConversationOut>(route.open ? conversationPath(route.open) : null);
+  const openRow = openConversation?.emails.some(email => email.id === route.open) ? openConversation.row : undefined;
   // Emails Trash took out here, hidden at once rather than when the server's list leaves them out.
   // Undo, or a refused Trash, lets one back.
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
@@ -432,7 +431,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     else close();
   }
 
-  // Whether a composer answers the open email, or on the desktop any email of its conversation.
+  // Whether a composer answers any email of the open conversation.
   const answersOpen = (messageId: number | null | undefined) => messageId === open || (!!messageId && !!openConversation?.emails.some(email => email.id === messageId));
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;
   // The open conversation's row in the list: the email opened, or the one that placed its row when it

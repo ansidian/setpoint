@@ -16,19 +16,6 @@
   .ph-preview > .preview-body { flex: 1 1 auto; }
   .ph-preview .preview-csv { font-size: 13px; }
 
-  /* The reader's thread on the phone: each line wraps rather than being cut, its day and time on
-     the first line with who sent it, its first words under them. */
-  .pane .rd-conv { display: flex; flex-direction: column; padding: 4px 20px 24px; }
-  .pane .rd-conv-line { display: grid; grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: "day time who" "words words words"; align-items: baseline;
-    height: auto; min-height: 44px; padding: 8px; column-gap: 8px; row-gap: 2px; }
-  .pane .rd-conv-line > span { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
-  .pane .rd-conv-line .day { grid-area: day; }
-  .pane .rd-conv-line .time { grid-area: time; margin-left: 0; text-align: left; }
-  .pane .rd-conv-line .who { grid-area: who; }
-  .pane .rd-conv-line .words { grid-area: words; font-size: 14px; }
-  .pane .rd-conv-line.more { display: flex; align-items: center; }
-  .pane .rd-conv-line.here::before { top: 12px; height: calc(100% - 24px); }
-
   /* Select: a text button in the header, Cancel, the count and Select all in its place while it's
      on, a circle before each row (ticked `accent` while it's selected), and the tab bar's place
      taken by Done, Pin, Read and Trash (phone/selectBar.tsx). */

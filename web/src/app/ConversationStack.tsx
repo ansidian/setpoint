@@ -1,4 +1,4 @@
-// The desktop reader's conversation, stacked oldest first under its head, as Gmail stacks one. The
+// The reader's conversation, stacked oldest first under its head, as Gmail stacks one. The
 // first email, the newest, any unread one and the one it was opened at open expanded. The rest show
 // collapsed, every one of them: the sender's avatar and name, a paperclip and when, and its first words
 // under them. A click on one expands it. What's expanded is decided once per opening, from the answer to the
@@ -11,7 +11,11 @@
 // when one is open on any of its emails, else a draft's "Draft" line and the Reply box, which answers
 // the newest email someone else sent.
 //
-// Body and MoreMenu are the reader's too (Reader.tsx), on the phone and on other pages' panes.
+// On the phone each expanded email has one ••• in place of its tools, a finger's size, opening a
+// bottom sheet of Reply, Reply all, Forward, Add to calendar and Add as task (phone/ReaderBar.tsx ›
+// emailRows). The composer is the phone's own sheet over the reader, so the foot never holds it.
+//
+// Body and MoreMenu are the reader's too (Reader.tsx), on other pages' panes.
 import type {AccountOut, FromOut, ItemKind, MailConversationOut, MessageOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';
 import type {MouseEvent} from 'react';
@@ -19,7 +23,7 @@ import {openingOf, trustDomain} from '../api/mail.ts';
 import {paragraphs} from '../logic/body.ts';
 import {hasOthers} from '../logic/composer.ts';
 import {replyTarget} from '../logic/conversation.ts';
-import {fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
+import {fullTimestamp, localDate, readerTime, trashLeft} from '../logic/format.ts';
 import {splitQuoted} from '../logic/quoted.ts';
 import {factRows, hasRemoteContent, remoteImages, senderLine} from '../logic/reader.ts';
 import {recipientLine, recipientText} from '../logic/sent.ts';
@@ -33,6 +37,9 @@ import type {OpenComposer} from './compose/composer.ts';
 import {copyText, openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
 import {MailFrame} from './MailFrame.tsx';
+import {openEditorSheet} from './phone/EditorSheet.tsx';
+import {EmailSheetButton} from './phone/ReaderBar.tsx';
+import {usePhone} from './Phone.tsx';
 import {QuotedHistory} from './QuotedHistory.tsx';
 import {Marked} from './search/Search.tsx';
 import {toastFailure} from './toast.ts';
@@ -52,6 +59,7 @@ export function ConversationStack({conversation, accounts, now, timeZone, marks,
   composer: OpenComposer | null;
   onCard: CardAsk;
 }) {
+  const phone = usePhone();
   const {emails} = conversation;
   // Each email's expanded state as this opening decided it, then as the user changed it. Until the
   // opening's answer is in, the emails show as the latest load has them.
@@ -74,7 +82,8 @@ export function ConversationStack({conversation, accounts, now, timeZone, marks,
           : <CollapsedEmail key={email.id} email={email} opened={opened} accounts={accounts} now={now} timeZone={timeZone} onExpand={() => toggle(email.id, true)} />;
       })}
       <div className="cv-foot">
-        {answering !== null ? <ComposerSlot open={composer} messageId={answering} /> : (
+        {/* On the phone the composer is in its own sheet, over the reader. */}
+        {answering !== null && !phone ? <ComposerSlot open={composer} messageId={answering} /> : (
           <>
             {conversation.draft && (
               <button type="button" className="cv-draft" onClick={() => openDraft(conversation.draft!.id)}>
@@ -83,7 +92,7 @@ export function ConversationStack({conversation, accounts, now, timeZone, marks,
             )}
             {answered && (
               <button type="button" className="cv-reply" data-hint="r" onClick={() => startComposer({kind: 'reply', message_id: answered.id})}>
-                <Icon name="reply" size={18} />{answered.sent_only ? 'Reply' : `Reply to ${answered.from_name}`}<span className="kbd">R</span>
+                <Icon name="reply" size={18} />{answered.sent_only ? 'Reply' : `Reply to ${answered.from_name}`}{!phone && <span className="kbd">R</span>}
               </button>
             )}
           </>
@@ -136,6 +145,7 @@ function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, onC
   onCollapse: () => void;
   onCard: CardAsk;
 }) {
+  const phone = usePhone();
   const [more, setMore] = useState(false);
   const account = accounts.get(email.account_id);
   const line = senderLine(email);
@@ -178,7 +188,17 @@ function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, onC
             </span>
           )}
         </div>
-        <div className="cv-tools">
+        {phone ? (
+          <div className="cv-tools">
+            <EmailSheetButton from={email.from_name} on={{
+              reply: () => startComposer({kind: 'reply', message_id: email.id}),
+              replyAll: replyAll ? () => startComposer({kind: 'reply_all', message_id: email.id}) : null,
+              forward: () => startComposer({kind: 'forward', message_id: email.id}),
+              addEvent: () => openEditorSheet({kind: 'event', date: localDate(now, timeZone), message: email.id}),
+              addTask: () => openEditorSheet({kind: 'task', date: localDate(now, timeZone), message: email.id}),
+            }} />
+          </div>
+        ) : <div className="cv-tools">
           <button className="ibtn sm" type="button" aria-label="Reply" data-tip="Reply" onClick={() => startComposer({kind: 'reply', message_id: email.id})}><Icon name="reply" size={18} /></button>
           {replyAll && <button className="ibtn sm" type="button" aria-label="Reply all" data-tip="Reply all" onClick={() => startComposer({kind: 'reply_all', message_id: email.id})}><Icon name="reply_all" size={18} /></button>}
           <button className="ibtn sm" type="button" aria-label="Forward" data-tip="Forward" onClick={() => startComposer({kind: 'forward', message_id: email.id})}><Icon name="forward" size={18} /></button>
@@ -186,7 +206,7 @@ function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, onC
             <button className="ibtn sm" type="button" aria-label="More" aria-expanded={more} onClick={() => setMore(!more)}><Icon name="more_horiz" size={18} /></button>
             {more && <MoreMenu actions={moreActions} onClose={() => setMore(false)} />}
           </span>
-        </div>
+        </div>}
       </div>
       {email.security && (
         <div className={email.protected || email.security.unfamiliar ? 'facts-card alert' : 'facts-card'}>
