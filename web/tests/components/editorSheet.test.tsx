@@ -324,7 +324,8 @@ test('a repeating event\'s Delete asks which of its events in the bottom sheet, 
   removeItem(GYM);
   const asking = page.getByRole('dialog', {name: 'Delete recurring event'});
   await expect.element(asking).toBeVisible();
-  await userEvent.click(asking.getByRole('button', {name: /^This and following/}));
+  expect([...asking.element().querySelectorAll('.ph-bs-i > .ell')].map(label => label.textContent)).toEqual(['Delete this event', 'Delete future events', 'Delete all events', 'Cancel']);
+  await userEvent.click(asking.getByRole('button', {name: /^Delete future events/}));
   await expect.element(asking).not.toBeInTheDocument();
   await expect.element(page.getByText('Deleted Gym')).toBeVisible();
   expect(sent).toEqual([]);
@@ -332,6 +333,17 @@ test('a repeating event\'s Delete asks which of its events in the bottom sheet, 
   dismissToast();
   await expect.poll(() => sent.map(one => one.at)).toEqual(['POST /api/items/1/delete']);
   expect(sent[0]!.body).toEqual({scope: 'following', occurrence_start: '2026-10-07T14:00:00.000Z'});
+});
+
+test('the repeating delete\'s Cancel keeps every event and sends nothing', async () => {
+  const sent = server();
+  await render(<><PhoneSheets /><ToastPill /></>);
+  removeItem(GYM);
+  const asking = page.getByRole('dialog', {name: 'Delete recurring event'});
+  await userEvent.click(asking.getByRole('button', {name: 'Cancel'}));
+  await expect.element(asking).not.toBeInTheDocument();
+  await expect.element(page.getByText('Deleted Gym')).not.toBeInTheDocument();
+  expect(sent).toEqual([]);
 });
 
 test('Undo on a delete keeps the item and sends nothing', async () => {

@@ -319,8 +319,8 @@ test('Delete waits out its toast: Undo keeps the item, and left alone it goes; a
     await page.locator('.ph-detail').getByRole('button', {name: 'Delete'}).tap();
     const asking = page.getByRole('dialog', {name: 'Delete recurring event'});
     await asking.waitFor();
-    assert.deepEqual(await asking.locator('.ph-bs-i > .ell').allTextContents(), ['This event', 'This and following', 'All events']);
-    await asking.getByRole('button', {name: /^All events/}).tap();
+    assert.deepEqual(await asking.locator('.ph-bs-i > .ell').allTextContents(), ['Delete this event', 'Delete future events', 'Delete all events', 'Cancel']);
+    await asking.getByRole('button', {name: /^Delete all events/}).tap();
     const held = await holdToast(page);
     await held.getByText('Deleted Gym').waitFor();
     await fridayGym.waitFor({state: 'detached'});
@@ -331,7 +331,7 @@ test('Delete waits out its toast: Undo keeps the item, and left alone it goes; a
     // This event takes today's alone, once its toast has gone.
     await openDetail(page, 'Gym');
     await page.locator('.ph-detail').getByRole('button', {name: 'Delete'}).tap();
-    await asking.getByRole('button', {name: /^This event/}).tap();
+    await asking.getByRole('button', {name: /^Delete this event/}).tap();
     await page.locator('.toast:not(.leaving)', {hasText: 'Deleted Gym'}).waitFor();
     await page.clock.runFor(UNDO_MS);
     await until('today\'s Gym deleted', () => titles(setpoint, '2026-10-07'), list => !list.includes('Gym'), 10_000);
