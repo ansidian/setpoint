@@ -1,8 +1,12 @@
 // One email's RFC 822 source, parsed for the message record. Gmail's `format=raw` and IMAP's
 // BODY[] go through the same parser (mailparser), so charsets, transfer encodings and HTML-only
 // mail decode the same way for both providers.
+import render from 'dom-serializer';
+import type {Element} from 'domhandler';
+import {findAll, removeElement} from 'domutils';
 import {convert} from 'html-to-text';
 import type {HtmlToTextOptions} from 'html-to-text';
+import {parseDocument} from 'htmlparser2';
 import {simpleParser} from 'mailparser';
 import type {ParsedMail, ParsedMailAddress, ParsedMailAddressEntry, ParsedMailAttachment} from 'mailparser';
 import type {Recipient} from '@setpoint/shared';
@@ -48,9 +52,9 @@ function isInline(attachment: ParsedMailAttachment): boolean {
 
 const squash = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-// mailparser's own conversion of HTML-only mail (its nesting limit), except that an image leaves
-// only its alt text. html-to-text's default writes its address too, and an embedded `data:` image's
-// address can fill the whole stored text.
+// mailparser's own conversion of HTML (its nesting limit), except that an image leaves only its
+// alt text and a table's rows and cells are lines of their own. html-to-text's default writes an
+// image's address too, and an embedded `data:` image's address can fill the whole stored text.
 const HTML_TEXT_OPTIONS: HtmlToTextOptions = {
   limits: {maxDepth: 1000},
   formatters: {
@@ -59,13 +63,38 @@ const HTML_TEXT_OPTIONS: HtmlToTextOptions = {
       if (alt) builder.addInline(alt, {noWordTransform: true});
     },
   },
-  selectors: [{selector: 'img', format: 'imageAlt'}],
+  // Most email lays out with tables, whose cells html-to-text would run together ("LogoHi there,").
+  selectors: [{selector: 'img', format: 'imageAlt'}, ...['tr', 'td', 'th'].map(selector => ({selector, format: 'block'}))],
 };
 
-/** The text of an HTML-only email. Empty when its HTML can't be converted, as mailparser leaves it. */
+/** An inline style's declarations, each name and value lowercased, `!important` and spaces dropped. */
+function declarations(style: string): Map<string, string> {
+  return new Map(style.split(';').flatMap(rule => {
+    const at = rule.indexOf(':');
+    return at < 0 ? [] : [[rule.slice(0, at).trim().toLowerCase(), rule.slice(at + 1).replace(/!important/i, '').replace(/\s+/g, '').toLowerCase()] as const];
+  }));
+}
+
+// Whether the reader hides an element: a preheader, a tracking note, the filler after a preheader.
+// Only inline styles count (a stylesheet's classes aren't resolved), and font-size:0 doesn't, as
+// layouts set it on the cells that hold their columns.
+function hidden(element: Element): boolean {
+  if (element.attribs.hidden !== undefined) return true;
+  const style = declarations(element.attribs.style ?? '');
+  const zero = (value: string | undefined) => value !== undefined && /^(?:0+\.?0*|\.0+)(?:px|em|%)?$/.test(value);
+  return style.get('display') === 'none' || style.get('visibility') === 'hidden' || style.get('mso-hide') === 'all'
+    || zero(style.get('opacity')) || (zero(style.get('max-height')) && style.get('overflow') === 'hidden');
+}
+
+// Characters that show nothing, which senders repeat after a preheader to fill a list's preview.
+const INVISIBLE = /\u034f|[\u00ad\u180e\u200b-\u200d\u2060\ufeff]/g;
+
+/** The text an email's HTML shows, hidden elements left out. Empty when it can't be converted. */
 function htmlText(html: string): string {
   try {
-    return convert(html, HTML_TEXT_OPTIONS).trim();
+    const document = parseDocument(html);
+    for (const element of findAll(hidden, document.children)) removeElement(element);
+    return convert(render(document), HTML_TEXT_OPTIONS).replace(INVISIBLE, '').replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
   } catch {
     return '';
   }
@@ -159,13 +188,20 @@ export async function attachmentFromSource(source: Buffer, id: string): Promise<
   };
 }
 
+// A multipart/alternative part anywhere in the source: its text and HTML say the same thing twice.
+const ALTERNATIVE = /^content-type:\s*multipart\/alternative/im;
+
 export async function parseEmail(source: Buffer): Promise<ParsedEmail> {
   const parsed = await parsedSource(source);
   const from = parsed.from?.value?.[0];
   const html = typeof parsed.html === 'string' && parsed.html ? parsed.html : null;
-  // mailparser leaves an HTML-only email's text empty (skipHtmlToText), so Setpoint makes it.
+  // The text is what the reader shows. Where the HTML is the text's alternative, that's the HTML,
+  // as a sender's text part can be another template's (an "autopay cancelled" text beside a
+  // "scheduled" HTML); the text part stands in when the HTML shows none. A text body with HTML
+  // beside it (a list's footer) keeps its text. mailparser makes none from HTML (skipHtmlToText).
   const parsedText = (parsed.text ?? '').trim();
-  const {text, snippet} = storedText(parsedText || !html ? parsedText : htmlText(html));
+  const fromHtml = html && (!parsedText || ALTERNATIVE.test(source.toString('latin1'))) ? htmlText(html) : '';
+  const {text, snippet} = storedText(fromHtml || parsedText);
   const headerFields = messageHeaders(parsed);
   const attachments = (parsed.attachments ?? []).flatMap((attachment, index) => isInline(attachment) ? [] : [{
     providerId: attachmentId(attachment, index),

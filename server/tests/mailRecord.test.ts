@@ -185,16 +185,47 @@ describe('MIME parsing', () => {
   test('multipart with HTML, an attachment and an inline image (kept in the HTML, not listed)', async () => {
     const email = await parseEmail(rawEmail({
       from: '"Whitfield, Dana" <dana@parksideapts.example.com>', subject: 'Lease renewal terms', date: '2026-09-30T17:00:00Z',
-      text: 'Renewal offered to Nov 30, 2026 =E2=80=94 sign by Oct 31.', html: '<p>Renewal offered</p><img src="cid:inline-1@mail.example.com">',
+      text: 'Renewal offered to Nov 30, 2026 =E2=80=94 sign by Oct 31.', html: '<p>Renewal offered to Nov 30, 2026 — sign by Oct 31.</p><img src="cid:inline-1@mail.example.com">',
       references: '<root@parksideapts.example.com> <second@parksideapts.example.com>',
       attachments: [{filename: 'Renewal agreement.pdf', contentType: 'application/pdf', content: '%PDF-1.4 fake'}, {filename: 'logo.png', contentType: 'image/png', content: 'png', inline: true}],
     }));
     expect(email).toMatchObject({
       fromName: 'Whitfield, Dana', fromAddress: 'dana@parksideapts.example.com', subject: 'Lease renewal terms',
-      text: 'Renewal offered to Nov 30, 2026 — sign by Oct 31.', html: '<p>Renewal offered</p><img src="data:image/png;base64,cG5n">',
+      text: 'Renewal offered to Nov 30, 2026 — sign by Oct 31.', html: '<p>Renewal offered to Nov 30, 2026 — sign by Oct 31.</p><img src="data:image/png;base64,cG5n">',
       threadRoot: '<root@parksideapts.example.com>', date: '2026-09-30T17:00:00.000Z',
       attachments: [{filename: 'Renewal agreement.pdf', mimeType: 'application/pdf', sizeBytes: 13}],
     });
+  });
+
+  test('an email with both parts is read from its HTML, as shown, when its text part says something else', async () => {
+    const hidden = 'display:none !important;visibility:hidden;mso-hide:all;font-size:1px;max-height:0px;opacity:0;overflow:hidden;';
+    const email = await parseEmail(rawEmail({
+      from: 'Contoso Bank <no-reply@contosobank.example>', subject: 'Your card autopay is scheduled for 12/05/2026', date: '2026-11-20T16:00:00Z',
+      text: 'You\'ve cancelled autopay for your Contoso Card. Future payments won\'t be made automatically.',
+      html: `<body><div style="${hidden}">We'll process your payment automatically.</div><div style="${hidden}">\u034f \u200c \ufeff \u034f \u200c \ufeff</div>`
+        + '<table><tr><td><img alt="Contoso Bank" src="https://contosobank.example/logo.png"></td></tr><tr><td>Hi Sam,</td></tr>'
+        + '<tr><td><p>Just a heads up that your card autopay is coming up on 12/05/2026.</p><p style="color: #1C1B1B">Pay from: Savings 4417</p></td></tr></table>'
+        + '<span style="max-height: 0; overflow: hidden">Secret tracking note</span><p hidden>Also hidden</p></body>',
+    }));
+    expect(email.text).toBe('Contoso Bank\n\nHi Sam,\n\nJust a heads up that your card autopay is coming up on 12/05/2026.\n\nPay from: Savings 4417');
+    expect(email.snippet).toBe('Contoso Bank Hi Sam, Just a heads up that your card autopay is coming up on 12/05/2026. Pay from: Savings 4417');
+  });
+
+  test('an email whose HTML shows no text is read from its text part', async () => {
+    const email = await parseEmail(rawEmail({
+      from: 'news@contosocoffee.example', subject: 'Roasts', date: '2026-10-07T15:00:00Z',
+      text: 'Ethiopia is back =E2=80=94 $18.', html: '<div style="display:none">Preheader</div><img src="https://contosocoffee.example/banner.png">',
+    }));
+    expect(email.text).toBe('Ethiopia is back — $18.');
+  });
+
+  test('a text body with an HTML part beside it, not its alternative, keeps its text', async () => {
+    const email = await parseEmail(Buffer.from([
+      'From: sam.ortiz@example.org', 'Subject: Notes', 'Date: Wed, 07 Oct 2026 15:00:00 +0000', 'MIME-Version: 1.0', 'Content-Type: multipart/mixed; boundary="m"', '',
+      '--m', 'Content-Type: text/plain; charset=utf-8', '', 'Here are the notes we agreed on.',
+      '--m', 'Content-Type: text/html; charset=utf-8', '', '<p>You get this as a member of the hiking list.</p>', '--m--', '',
+    ].join('\r\n')));
+    expect(email.text).toBe('Here are the notes we agreed on.');
   });
 
   test('an HTML-only email still gets body text for the index', async () => {

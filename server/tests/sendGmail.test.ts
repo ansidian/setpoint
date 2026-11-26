@@ -123,7 +123,7 @@ describe('Gmail: sending', () => {
       fromAddress: ADDRESS, subject: 'Re: Thursday', inReplyTo: '<thursday-1@example.org>', references: ['<root@example.org>', '<thursday-1@example.org>'],
       to: [{name: 'Sam Ortiz', address: 'sam.ortiz@example.org'}, {name: 'June Park', address: 'june.park@example.org'}], cc: [{name: 'Theo Walsh', address: 'theo@example.net'}],
     });
-    expect(parsed.text).toContain('Yes, see you there.\n\nOn Oct 7, 2026, Sam Ortiz wrote:\n> Are we on for Thursday?');
+    expect((await simpleParser(sent!.raw)).text).toContain('Yes, see you there.\n\nOn Oct 7, 2026, Sam Ortiz wrote:\n> Are we on for Thursday?');
     // Gmail takes Bcc from the headers.
     expect(sent!.raw.toString()).toContain('Bcc: hidden@example.org');
 

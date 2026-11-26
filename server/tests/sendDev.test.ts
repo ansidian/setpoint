@@ -53,7 +53,7 @@ test('a reply whose quote the user trimmed sends the trimmed quote', async () =>
   await sendDraft({kind: 'reply', message_id: THEO}, {body: paragraph('Count me in.'), quote: paragraph('Only this line')});
   const rows = (await api.send('GET', '/api/mail/sent')).body.days.flatMap((day: {rows: {id: number}[]}) => day.rows);
   const sent = (await api.send('GET', `/api/mail/messages/${rows[0]!.id}`)).body;
-  expect(sent.body_text).toMatch(/Count me in\.\n\nOn .+, Theo Walsh wrote:\n> Only this line$/);
+  expect(sent.body_text).toMatch(/Count me in\.\n\nOn .+, Theo Walsh wrote:\n\n> Only this line$/);
 });
 
 test('mail to refused.example fails in a provider\'s words and keeps the draft', async () => {

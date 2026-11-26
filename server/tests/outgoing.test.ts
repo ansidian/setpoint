@@ -36,9 +36,12 @@ describe('buildMessage: read back by the sync\'s parser', () => {
     ['a name with a line break stays one header', {to: [{name: 'Sam\r\nBcc: x@evil.example', address: 'sam.ortiz@example.org'}]}, {to: [{name: 'Sam Bcc: x@evil.example', address: 'sam.ortiz@example.org'}]}],
     ['the plain text and HTML', {text: 'Line one\nLine two — ok', html: '<p>Line <b>one</b></p>'}, {text: 'Line one\nLine two — ok', html: '<p>Line <b>one</b></p>'}],
   ])('%s', async (_name, fields, expected) => {
-    const parsed = await parseEmail(buildMessage(message(fields), {bcc: true}));
+    const raw = buildMessage(message(fields), {bcc: true});
+    const parsed = await parseEmail(raw);
+    // The text part as sent (the record reads an email with HTML from its HTML).
+    const text = ((await simpleParser(raw)).text ?? '').trim();
     const read = {fromName: parsed.fromName, fromAddress: parsed.fromAddress, to: parsed.to, cc: parsed.cc, subject: parsed.subject, rfc822Id: parsed.rfc822Id,
-      inReplyTo: parsed.inReplyTo, references: parsed.references, text: parsed.text.trim(), html: parsed.html};
+      inReplyTo: parsed.inReplyTo, references: parsed.references, text, html: parsed.html};
     expect(read).toMatchObject(expected);
   });
 
