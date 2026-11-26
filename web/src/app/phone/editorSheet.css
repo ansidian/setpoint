@@ -77,7 +77,11 @@
   /* A toast (Saved, Completed, Reopened) rises under the open detail rather than over its actions:
      the card lifts clear of it while it shows. */
   .main:has(.toast:not(.leaving)) .fd.ph-detail { bottom: calc(var(--ph-bar) + env(safe-area-inset-bottom) + 24px + var(--ph-tap) + 12px); transition: bottom var(--dur-medium) var(--ease); }
-  .ph-detail .fd-mark.check { width: 32px; height: 32px; margin: -6px 2px -6px -8px; display: grid; place-items: center; }
+  /* A task's ring keeps its 17 px column, so the title lines up with the lines under it. Its tap
+     reaches the card's edge and the title's start, over the title's done line (the shared hit area's centred one
+     would run into it). */
+  .fd.ph-detail .card-h .fd-mark.check { z-index: 1; }
+  .fd.ph-detail .card-h .fd-mark.check::before { inset: -9px -11px -9px -16px; }
 
   /* An invitation's card in the reader: Add to calendar keeps its words, Download is its glyph
      alone (named still), so the file's name has room. */
