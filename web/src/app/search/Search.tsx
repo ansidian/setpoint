@@ -19,7 +19,7 @@ import {keepTextUnselected} from '../../ui/keys.ts';
 import {PlaceList} from '../../ui/PlaceList.tsx';
 import {useMirror} from '../../ui/useMirror.ts';
 import {dotStyle} from '../accounts.ts';
-import {RepliedMark, SnoozedMark} from '../AllList.tsx';
+import {ConversationFrom, RepliedMark, SnoozedMark} from '../AllList.tsx';
 import {FOLD_HOLD_MS, foldDelays, foldRef, leaveCopy, useFold} from '../fold.ts';
 import {usePhone} from '../Phone.tsx';
 import type {Search} from './mailSearch.ts';
@@ -502,6 +502,7 @@ function Folding({line: lineKey, rows, open, toggle, words, ...props}: FoldingPr
 
 function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, onPoint, onOpen, fold = null, delay}: ResultsProps & {result: SearchResultOut; fold?: Fold; delay?: number}) {
   const key = resultKey(result.id);
+  const phone = usePhone();
   const reasons = shownReasons(result);
   const leaving = fold === 'out';
   const classes = ['arow', 'result', result.unread && 'unread', result.done && 'done', result.protected && 'protected', cursor === key && 'cur', openId === result.id && 'open', selected?.has(result.id) && 'sel', leaving && 'leaving'].filter(Boolean).join(' ');
@@ -511,7 +512,9 @@ function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, o
       <span className="ud" />
       <div className="l1">
         {/* Sent mail names who it went to, where received mail names its sender. */}
-        {'to' in result ? <SentFrom to={result.to} cc={result.cc} /> : <span className="from"><Marked parts={resultSender(result)} /></span>}
+        {/* A conversation names everyone in it, as the Inbox's rows do. */}
+        {!phone && (result.thread?.count ?? 1) > 1 && (result.thread?.people.length ?? 0) > 1 ? <ConversationFrom row={result} lone={result.from_name} />
+          : 'to' in result ? <SentFrom to={result.to} cc={result.cc} /> : <span className="from"><Marked parts={resultSender(result)} /></span>}
         {result.via && <span className="via">via {result.via}</span>}
         {result.replied_at && <RepliedMark at={result.replied_at} now={now} timeZone={timeZone} />}
         {result.pinned && <span className="pin"><Icon name="keep" size={16} /></span>}

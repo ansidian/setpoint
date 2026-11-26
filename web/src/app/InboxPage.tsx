@@ -37,19 +37,20 @@
 // row: a tap selects, Select all takes every row the list holds, and the tab bar gives way to Done,
 // Pin, Read and Trash for all of them, with one toast and one Undo. Each of them ends it, as do
 // Cancel, a view, a search or an email opening. No swipes meanwhile.
-import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut, Settings} from '@setpoint/shared';
+import type {AllOut, ConversationChangeOut, InboxGroupOut, MailConversationOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut, Settings} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {flushSync} from 'react-dom';
 import {serverNow, timeZone} from '../api/auth.ts';
-import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
+import {getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
 import {SETTINGS_PATH} from '../api/items.ts';
 import {
-  allPath, answerPrompt, changeEach, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, refusals, setDone, setPinned, snooze, trashMessage, unsnooze, untrashMessage,
+  allPath, answerPrompt, cachedEmail, changeEach, conversationPath, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, refusals, setDone, setPinned, snooze, trashMessage, undoChange, unsnooze,
 } from '../api/mail.ts';
 import type {SearchScope} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {attentionRows, dayStops, heldUnread, nextUnread, sameHold, unreadNotDone, viewList} from '../logic/all.ts';
+import {rowHolding} from '../logic/conversation.ts';
 import {leftOutSection, readerMarks, resultSections} from '../logic/search.ts';
 import {
   codeExpired, inSight, keepCursor, letGo, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
@@ -187,7 +188,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const inboxLoad = {path: INBOX_PATH, ...useResource<InboxOut>(INBOX_PATH)};
   const inbox = inboxLoad.data;
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
-  const {data: openMessageData} = useResource<MessageOut>(route.open ? messagePath(route.open) : null);
+  // The open email (the phone's reader), or on the desktop its conversation, whose row the tools act on.
+  const {data: openMessageData} = useResource<MessageOut>(route.open && phone ? messagePath(route.open) : null);
+  const {data: openConversation} = useResource<MailConversationOut>(route.open && !phone ? conversationPath(route.open) : null);
+  const openRow = phone ? openMessageData : openConversation?.emails.some(email => email.id === route.open) ? openConversation.row : undefined;
   // Emails Trash took out here, hidden at once rather than when the server's list leaves them out.
   // Undo, or a refused Trash, lets one back.
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
@@ -394,7 +398,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   /** Reply, Reply all or Forward on an email: it opens (if it isn't) with the composer under it. */
   function answerOn(id: number, key: string | null | undefined, kind: 'reply' | 'reply_all' | 'forward') {
-    if (id !== open) openEmail(id, key ?? undefined);
+    if (id !== listedOpen) openEmail(id, key ?? undefined);
     answerKey(id, kind);
   }
 
@@ -428,12 +432,19 @@ export function InboxPage({route}: {route: InboxRoute}) {
     else close();
   }
 
+  // Whether a composer answers the open email, or on the desktop any email of its conversation.
+  const answersOpen = (messageId: number | null | undefined) => messageId === open || (!!messageId && !!openConversation?.emails.some(email => email.id === messageId));
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;
-  // What H, E and P act on: the open email, else the row under the cursor.
-  const target = open ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
-  // An email's row, from the open email or the list it's in (the Inbox's, a day's, Unread's or search's).
-  const rowOf = (id: number): MessageRowOut | undefined => (openMessageData?.id === id ? openMessageData : undefined)
-    ?? latestRows.get(id) ?? unreadRows.get(id) ?? search.listed.filter(result => !trashing.has(result.id)).find(row => row.id === id);
+  // The open conversation's row in the list: the email opened, or the one that placed its row when it
+  // was opened at another (an Alfred citation, a notification).
+  const listedOpen = open === null ? null : latestRows.has(open) || unreadRows.has(open) || search.listed.some(row => row.id === open) ? open
+    : rowHolding([...latestRows.values(), ...search.listed], open)?.id ?? open;
+  // What H, E and P act on: the open conversation, else the row under the cursor.
+  const target = listedOpen ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
+  // A conversation's row, from the open one or the list it's in (the Inbox's, a day's, Unread's or search's).
+  const rowOf = (id: number): MessageRowOut | undefined => (openRow?.id === id ? openRow : undefined)
+    ?? latestRows.get(id) ?? unreadRows.get(id) ?? search.listed.filter(result => !trashing.has(result.id)).find(row => row.id === id)
+    ?? rowHolding(latestRows.values(), id);
   // The open email's subject, from its row until the email itself is in.
   const subject = open !== null ? rowOf(open)?.subject ?? null : null;
   useEffect(() => {
@@ -452,9 +463,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
    * later, puts them back where they were in the list, read or not, and an open email back in the
    * reader. `undo` puts one back on screen at once and gives what to send once its change is in.
    */
-  function leave(ids: number[], beat: Beat, change: (id: number) => Promise<unknown>, toast: string, undo: (id: number) => () => Promise<unknown>,
+  function leave(ids: number[], beat: Beat, change: (id: number) => Promise<ConversationChangeOut>, toast: string, undo: (id: number) => void,
     failed: (n: number) => string, undoFailed: (n: number) => string) {
-    const wasOpen = open !== null && ids.includes(open) ? open : null;
+    const wasOpen = listedOpen !== null && ids.includes(listedOpen) ? listedOpen : null;
     // Their rows beat before they fold: ticked off, or thrown away.
     for (const id of ids) beats.set(id, beat);
     const places = withHeld(groups ?? [], held).flatMap(group => group.rows.flatMap((row, index) => (ids.includes(row.id) ? [{group: group.group, index, row}] : [])));
@@ -472,7 +483,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       const refused = refusals(ids, outcomes);
       for (const {id} of refused) beats.delete(id);
       if (refused.length) toastFailure(failed(refused.length))(refused[0]!.error);
-      return ids.filter(id => !refused.some(one => one.id === id));
+      return outcomes.flatMap((outcome, at) => (outcome.status === 'fulfilled' ? [{id: ids[at]!, undo: outcome.value.undo}] : []));
     });
     let toastId = 0;
     const back = () => {
@@ -481,9 +492,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
       undos.splice(at, 1);
       dismissToast(toastId);
       for (const id of ids) beats.delete(id);
-      const sends = new Map(ids.map(id => [id, undo(id)]));
-      void sent.then(took => changeEach(took, id => sends.get(id)!()).then(outcomes => {
-        const refused = refusals(took, outcomes);
+      for (const id of ids) undo(id);
+      void sent.then(took => changeEach(took.map(one => one.id), id => undoChange(id, took.find(one => one.id === id)!.undo)).then(outcomes => {
+        const refused = refusals(took.map(one => one.id), outcomes);
         if (refused.length) toastFailure(undoFailed(refused.length))(refused[0]!.error);
       }));
       setKept(state => ({...state, held: [...state.held, ...places]}));
@@ -499,7 +510,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     done: (ids: number[]) => {
       const can = ids.filter(doneable);
       if (!can.length) return;
-      // Done ends a snooze (a snoozed email found by search), and its Undo snoozes it again.
+      // Done ends a snooze (a snoozed conversation found by search), and its Undo snoozes it again.
       const snoozed = new Map(can.flatMap(id => {
         const until = rowOf(id)?.snoozed_until;
         return until ? [[id, until] as const] : [];
@@ -510,7 +521,6 @@ export function InboxPage({route}: {route: InboxRoute}) {
       }, counted(can.length, 'Marked Done', n => `Marked ${n} Done`), one => {
         const until = snoozed.get(one);
         search.mark(one, {done: false, ...(until ? {snoozed_until: until} : {})});
-        return () => setDone(one, false).then(done => (until ? snooze(one, Date.parse(until)) : done));
       }, n => counted(n, 'Failed to mark Done', m => `Failed to mark ${m} Done`), n => counted(n, 'Failed to undo Done', m => `Failed to undo Done on ${m}`));
     },
     trash: (ids: number[]) => {
@@ -519,10 +529,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       leave(ids, 'trash', one => trashMessage(one).catch(error => {
         untrashing(one);
         throw error;
-      }), counted(ids.length, 'Moved to Trash', n => `Moved ${n} to Trash`), one => {
-        untrashing(one);
-        return () => untrashMessage(one);
-      }, n => counted(n, 'Failed to move to Trash', m => `Failed to move ${m} to Trash`), n => counted(n, 'Failed to bring back', m => `Failed to bring ${m} back`));
+      }), counted(ids.length, 'Moved to Trash', n => `Moved ${n} to Trash`), untrashing, n => counted(n, 'Failed to move to Trash', m => `Failed to move ${m} to Trash`), n => counted(n, 'Failed to bring back', m => `Failed to bring ${m} back`));
     },
     // Snooze until `until` (ms): out of the list until it returns, with Undo as Done's. Sent mail has none.
     snooze: (ids: number[], until: number) => {
@@ -535,10 +542,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       leave(can, 'snooze', one => {
         search.mark(one, {snoozed_until: at});
         return snooze(one, until);
-      }, snoozedLine(at, serverNow(), zone), one => {
-        search.mark(one, {snoozed_until: undefined});
-        return () => unsnooze(one);
-      }, n => counted(n, 'Failed to snooze', m => `Failed to snooze ${m}`), n => counted(n, 'Failed to unsnooze', m => `Failed to unsnooze ${m}`));
+      }, snoozedLine(at, serverNow(), zone), one => search.mark(one, {snoozed_until: undefined}), n => counted(n, 'Failed to snooze', m => `Failed to snooze ${m}`), n => counted(n, 'Failed to unsnooze', m => `Failed to unsnooze ${m}`));
     },
     // Pin, or Unpin when every one is pinned already. `fromList`: picked on the phone's list (a swipe, Select).
     pin: (ids: number[], fromList = false) => {
@@ -555,7 +559,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         // Only those still as asked once the last P is in: a pin taken back before it was answered says nothing.
         const moved = changing.filter((_, at) => {
           const outcome = outcomes[at]!;
-          return outcome.status === 'fulfilled' && outcome.value.pinned === pinning;
+          return outcome.status === 'fulfilled' && outcome.value === pinning;
         });
         if (says && moved.length) {
           const line = pinning ? counted(moved.length, 'Pinned', n => `Pinned ${n}`) : counted(moved.length, 'Unpinned', n => `Unpinned ${n}`);
@@ -567,7 +571,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     },
     // The email's Gmail link. The open one's is in. A row's comes with the email, asked for as its menu opened.
     openInGmail: (id: number) => {
-      const url = getCached<MessageOut>(messagePath(id))?.open_url;
+      const url = cachedEmail(id)?.open_url;
       if (url) window.open(url, '_blank', 'noopener');
       else if (id !== open) {
         const tab = window.open('about:blank', '_blank');
@@ -583,7 +587,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       // Sent mail has no read state to change.
       const unread = ids.filter(id => !rowOf(id)?.sent_only);
       if (!unread.length) return;
-      if (open !== null && unread.includes(open)) close();
+      if (listedOpen !== null && unread.includes(listedOpen)) close();
       void changeEach(unread, id => markUnread(id)).then(outcomes => {
         const refused = refusals(unread, outcomes);
         if (refused.length) toastFailure(counted(refused.length, 'Failed to mark unread', n => `Failed to mark ${n} unread`))(refused[0]!.error);
@@ -709,7 +713,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     },
     openInGmail: () => open !== null && on.openInGmail(open),
     step: (delta: 1 | -1) => {
-      const next = open ? neighbour(stops, open, delta) : null;
+      const next = listedOpen !== null ? neighbour(stops, listedOpen, delta) : null;
       if (next !== null) openEmail(next, undefined, delta > 0 ? 'next' : 'prev');
     },
     markUnread: () => (onSelection ? forSelection.markUnread() : target !== null && on.markUnread([target])),
@@ -868,7 +872,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, '1') && (searching || phone || view !== 'all')) run(() => navigate(toInbox()));
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
-        else if (open !== null && openComposer()?.messageId === open && !openComposer()?.floating) run(closeComposer);
+        else if (open !== null && answersOpen(openComposer()?.messageId) && !openComposer()?.floating) run(closeComposer);
         else if (writing) run(closeComposer);
         else if (open !== null) run(close);
         else if (pane.shown) run(pane.close);
@@ -926,7 +930,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     const provider = accounts.get(row.account_id)?.provider;
     const withCard = (card: ItemKind | 'ask') => {
       askCard(id, card);
-      if (id !== open) openEmail(id, key ?? undefined);
+      if (id !== listedOpen) openEmail(id, key ?? undefined);
     };
     const offered = emailActions(row, provider === undefined ? null : provider === 'gmail', {
       open: () => openEmail(id, key ?? undefined),
@@ -996,7 +1000,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {firstWait && waitedLong ? (
           <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
         ) : searching && !firstWait ? (
-          <SearchResults search={search} sections={sections} cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone}
+          <SearchResults search={search} sections={sections} cursor={cursor} openId={listedOpen} selected={selectedSet} accounts={accounts} now={now} timeZone={zone}
             card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onAsk={askAlfred} />
         ) : (
@@ -1005,7 +1009,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           <AllList key={view} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
             empty={view !== 'all' && emptied
               ? <EmptyView view={view} newest={(view === 'attention' ? allRows.find(row => row.lane === 'attention') : allRows[0])?.received_at ?? null} onAll={() => switchView('all')} /> : null}
-            cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
+            cursor={cursor} openId={listedOpen} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton account={false} />) : null} account={false} prompt={view === 'all' || view === 'attention' ? prompt : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin} onSnooze={phone ? undefined : (id, until) => on.snooze([id], until)}
             selectionSnooze={selectionAnchor ? {key: selectionAnchor, pick: forSelection.snooze} : null}
@@ -1023,7 +1027,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {open !== null && (
           <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={openFromReader} back={trail.length ? 'Back' : searching ? 'Search' : 'Inbox'}
             marks={searching ? readerMarks(open, search.listed, alfred.turns) : []}
-            canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
+            canStep={{previous: neighbour(stops, listedOpen ?? open, -1) !== null, next: neighbour(stops, listedOpen ?? open, 1) !== null}} />
         )}
         {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}
         {writing && <NewMessagePane open={writing} />}

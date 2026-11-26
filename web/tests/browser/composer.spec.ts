@@ -84,7 +84,7 @@ test('A answers everyone: the composer opens under the email, ⌘Enter sends beh
   try {
     const id = await idOf(setpoint, 'Dinner Friday?');
     const page = await openEmail(setpoint, id);
-    await page.locator('.rd-tools .tool', {hasText: 'Reply all'}).waitFor();
+    await page.locator('.cv-mail').last().getByRole('button', {name: 'Reply all', exact: true}).waitFor();
     await page.keyboard.press('a');
     await answered(page);
     assert.deepEqual(await chips(page, 'To'), ['Sam Lee', 'June Park']);
@@ -145,7 +145,7 @@ test('a draft outlives a reload: its row says "Draft", its composer opens again 
   try {
     const id = await idOf(setpoint, 'Dinner Friday?');
     const page = await openEmail(setpoint, id);
-    await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().click();
+    await page.locator('.cv-mail').last().getByRole('button', {name: 'Reply', exact: true}).click();
     await answered(page);
     assert.deepEqual(await chips(page, 'To'), ['Sam Lee']);
     await page.keyboard.type('Count me in.');
@@ -351,7 +351,7 @@ test('F forwards: the email in full under the body with its attachment as a chip
   try {
     const id = await idOf(setpoint, 'Lease renewal terms');
     const page = await openEmail(setpoint, id);
-    await page.locator('.rd-tools .tool', {hasText: 'Forward'}).waitFor();
+    await page.locator('.cv-mail').last().getByRole('button', {name: 'Forward', exact: true}).waitFor();
     await page.keyboard.press('f');
     await answered(page);
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'To');
@@ -384,7 +384,7 @@ test('a file attached by the attach button is a chip and kept on the server; pop
   try {
     const id = await idOf(setpoint, 'Dinner Friday?');
     const page = await openEmail(setpoint, id);
-    await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().waitFor();
+    await page.locator('.cv-mail').last().getByRole('button', {name: 'Reply', exact: true}).waitFor();
     await page.keyboard.press('r');
     await answered(page);
     await page.keyboard.type('The menu is attached.');
@@ -428,7 +428,7 @@ test('a reply popped out stays up while other mail and Calendar show, clear of t
     const dinner = await idOf(setpoint, 'Dinner Friday?');
     const lease = await idOf(setpoint, 'Lease renewal terms');
     const page = await openEmail(setpoint, dinner);
-    await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().click();
+    await page.locator('.cv-mail').last().getByRole('button', {name: 'Reply', exact: true}).click();
     await answered(page);
     await page.keyboard.type('Count me in.');
     await composer(page).getByRole('button', {name: 'Pop out'}).click();
@@ -607,7 +607,7 @@ test('a reply saying "attached" with nothing attached asks first, the word paint
   try {
     const id = await idOf(setpoint, 'Dinner Friday?');
     const page = await openEmail(setpoint, id);
-    await page.locator('.rd-tools .tool', {hasText: 'Reply'}).first().waitFor();
+    await page.locator('.cv-mail').last().getByRole('button', {name: 'Reply', exact: true}).waitFor();
     await page.keyboard.press('r');
     await answered(page);
     await page.keyboard.type('The menu is attached.');

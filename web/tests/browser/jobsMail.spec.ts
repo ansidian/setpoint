@@ -33,7 +33,7 @@ async function northwind(setpoint: Setpoint): Promise<number> {
 
 const pathOf = (page: Page) => Promise.resolve(new URL(page.url()).pathname + new URL(page.url()).search);
 
-test('37a, 37b: the Northwind email\'s JD chip under the sender\'s line, and its popover; Open in Jobs arrives with it open', async () => {
+test('37a, 37b: the Northwind email\'s JD chip under its subject, and its popover; Open in Jobs arrives with it open', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -42,9 +42,9 @@ test('37a, 37b: the Northwind email\'s JD chip under the sender\'s line, and its
     const chip = page.locator('.rd-head .jb-chip');
     await chip.waitFor();
     assert.equal(await chip.textContent(), 'Software Engineer I· Applied Oct 1 · In process');
-    // Under the sender's line, above the actions, at the head's left edge.
-    const [meta, box, actions] = await rested(() => Promise.all(['.rd-head .rd-meta', '.rd-head .jb-chip', '.rd-head .rd-acts'].map(selector => page.locator(selector).boundingBox())));
-    assert.ok(meta!.y + meta!.height <= box!.y && box!.y + box!.height <= actions!.y, 'between the sender\'s line and the actions');
+    // Under the conversation's subject, above the actions, at the head's left edge.
+    const [subject, box, actions] = await rested(() => Promise.all(['.rd-head .rd-subj', '.rd-head .jb-chip', '.rd-head .rd-acts'].map(selector => page.locator(selector).boundingBox())));
+    assert.ok(subject!.y + subject!.height <= box!.y && box!.y + box!.height <= actions!.y, 'between the subject and the actions');
     assert.equal(box!.x, actions!.x);
 
     await chip.click();

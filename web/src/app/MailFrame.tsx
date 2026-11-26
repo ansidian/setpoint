@@ -35,8 +35,8 @@ function pressedKey(sent: unknown): KeyboardEventInit | null {
   return {key, code, ...Object.fromEntries(KEY_FLAGS.map(flag => [flag, (sent as Record<string, unknown>)[flag] === true]))};
 }
 
-export function MailFrame({messageId, show, title}: {messageId: number; show: boolean; title: string}) {
-  const src = emailBodyPath(messageId, show);
+export function MailFrame({messageId, show, title, fold = false}: {messageId: number; show: boolean; title: string; fold?: boolean}) {
+  const src = emailBodyPath(messageId, show, fold);
   const frame = useRef<HTMLIFrameElement>(null);
   // The page the frame holds, for the height it says.
   const shown = useRef(src);

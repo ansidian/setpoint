@@ -30,8 +30,8 @@ import type {ItemKind, MessageRowOut, MessageOut, SentOut, SentRowOut} from '@se
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../api/auth.ts';
-import {getCached, getJson, prefetch, useResource, useResources} from '../api/client.ts';
-import {changeEach, messagePath, openMessage, refusals, sentPath, trashMessage, untrashMessage} from '../api/mail.ts';
+import {getJson, prefetch, useResource, useResources} from '../api/client.ts';
+import {cachedEmail, changeEach, messagePath, openMessage, refusals, sentPath, trashMessage, undoChange} from '../api/mail.ts';
 import type {SearchScope} from '../api/search.ts';
 import {dayStops} from '../logic/all.ts';
 import type {DayView} from '../logic/all.ts';
@@ -45,7 +45,7 @@ import {tabTitle} from '../logic/title.ts';
 import {skeleton} from '../tokens.ts';
 import {commandKey, echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle, useAccountColumn, useAccounts} from './accounts.ts';
-import {AllList} from './AllList.tsx';
+import {AllList, ConversationFrom} from './AllList.tsx';
 import {useNow} from './clock.ts';
 import {openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
@@ -257,7 +257,7 @@ export function SentPage({route}: {route: SentRoute}) {
     const row = sentRows.get(id);
     return row ? asSent(row) : search.listed.find(result => result.id === id);
   };
-  const subject = open !== null ? rowOf(open)?.subject ?? getCached<MessageOut>(messagePath(open))?.subject ?? null : null;
+  const subject = open !== null ? rowOf(open)?.subject ?? cachedEmail(open)?.subject ?? null : null;
   useEffect(() => {
     document.title = tabTitle({page: 'sent', subject});
   }, [subject]);
@@ -284,7 +284,7 @@ export function SentPage({route}: {route: SentRoute}) {
       for (const {id} of refused) beats.delete(id);
       untrashing(refused.map(one => one.id));
       if (refused.length) toastFailure(counted(refused.length, 'Failed to move to Trash', n => `Failed to move ${n} to Trash`))(refused[0]!.error);
-      return ids.filter(id => !refused.some(one => one.id === id));
+      return outcomes.flatMap((outcome, at) => (outcome.status === 'fulfilled' ? [{id: ids[at]!, undo: outcome.value.undo}] : []));
     });
     let toastId = 0;
     const back = () => {
@@ -294,8 +294,8 @@ export function SentPage({route}: {route: SentRoute}) {
       dismissToast(toastId);
       for (const id of ids) beats.delete(id);
       untrashing(ids);
-      void sent.then(took => changeEach(took, untrashMessage).then(outcomes => {
-        const refused = refusals(took, outcomes);
+      void sent.then(took => changeEach(took.map(one => one.id), id => undoChange(id, took.find(one => one.id === id)!.undo)).then(outcomes => {
+        const refused = refusals(took.map(one => one.id), outcomes);
         if (refused.length) toastFailure(counted(refused.length, 'Failed to bring back', n => `Failed to bring ${n} back`))(refused[0]!.error);
       }));
       if (wasOpen !== null) {
@@ -309,7 +309,7 @@ export function SentPage({route}: {route: SentRoute}) {
 
   // The email's Gmail link. The open one's is in. A row's comes with the email, asked for as its menu opened.
   function openInGmail(id: number) {
-    const url = getCached<MessageOut>(messagePath(id))?.open_url;
+    const url = cachedEmail(id)?.open_url;
     if (url) window.open(url, '_blank', 'noopener');
     else if (id !== open) {
       const tab = window.open('about:blank', '_blank');
@@ -451,7 +451,9 @@ export function SentPage({route}: {route: SentRoute}) {
   const more = pages.length > 1 && pages.at(-1) === undefined;
   const shownAccount = account ? accounts.get(account) ?? null : null;
   const empty = ready && !days.length && !more && !pages.at(-1)?.next_before;
+  // A conversation others wrote in names them, as the Inbox's rows do; mail only the user sent names who it went to.
   const from = (row: MessageRowOut) => {
+    if (!phone && (row.thread?.people.length ?? 0) > 1) return <ConversationFrom row={row} lone={row.from_name} />;
     const sent = sentRows.get(row.id);
     return <SentFrom to={sent?.to} cc={sent?.cc} />;
   };

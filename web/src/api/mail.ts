@@ -1,17 +1,22 @@
 // Mail's resources and changes (shared/src/api/mail.ts has the routes). Every change shows at once
-// on screen, counts included, then the server's answer takes over. The changes here are opening,
-// Done, Pin, Snooze and Unsnooze, Mark read or unread and Mark all as read. Trash is in the Inbox page. Read state, Trash
-// and Mark all as read are commands the provider confirms, by the live stream.
-import type {AllOut, CommandOut, InboxOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
+// on screen, counts included, then the server's answer takes over. A change acts on a whole
+// conversation (opening, Done, Pin, Snooze and Unsnooze, Mark read or unread, Trash), and its Undo
+// puts each email back. Read state, Trash and Mark all as read are commands the provider confirms,
+// by the live stream.
+import type {AllOut, ConversationChangeOut, ConversationUndo, InboxOut, MailConversationOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
+import {holds, replyTarget} from '../logic/conversation.ts';
 import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterSnooze, inboxAfterUnread, markAllReads} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
-import {afterPending, ApiFailure, cachedPaths, getCached, holdLoads, loadingOf, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
+import {afterPending, ApiFailure, cachedPaths, getCached, getJson, holdLoads, loadingOf, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
 
 export const INBOX_PATH = '/mail/inbox';
 export const COUNTS_PATH = '/mail/counts';
 // How the mail day is going: the Inbox's empty pane.
 export const DAY_PATH = '/mail/day';
 export const messagePath = (id: number) => `/mail/messages/${id}`;
+const CONVERSATIONS_PATH = '/mail/conversations';
+/** Email `id`'s conversation, as the reader shows it (any of its emails' ids names it). */
+export const conversationPath = (id: number) => `${CONVERSATIONS_PATH}/${id}`;
 /** Which email, if any, a description's Gmail link names. */
 export const gmailLinkPath = (account: string, id: string) => `/mail/gmail-link?account=${encodeURIComponent(account)}&id=${encodeURIComponent(id)}`;
 export const ACCOUNTS_PATH = '/accounts';
@@ -37,27 +42,48 @@ export const TRIAGE_PATH = '/mail/triage';
 /**
  * The email's HTML body as its own page, for the reader's sandboxed frame (its own policy). It has
  * its remote images or not, as the rule or Show has it. Either way is named, so the browser keeps it.
+ * Folded (`fold`), its quoted history is left out, for ••• to show again.
  */
-export const emailBodyPath = (id: number, images: boolean) => `/api/mail/messages/${id}/body?images=${images ? 'show' : 'hide'}`;
+export const emailBodyPath = (id: number, images: boolean, fold = false) => `/api/mail/messages/${id}/body?images=${images ? 'show' : 'hide'}${fold ? '&quoted=fold' : ''}`;
+
+/** Email `id` as last loaded: on its own (the phone's reader) or in a conversation the reader holds. */
+export function cachedEmail(id: number): MessageOut | undefined {
+  const own = getCached<MessageOut>(messagePath(id));
+  if (own) return own;
+  for (const path of cachedPaths(CONVERSATIONS_PATH)) {
+    const email = getCached<MailConversationOut>(path)?.emails.find(one => one.id === id);
+    if (email) return email;
+  }
+  return undefined;
+}
+
+/**
+ * What R (and the stacked reader's foot) answers on email `id`'s conversation: its newest email
+ * someone else sent, from the reader's copy or asked for now. Email `id` itself when it can't be read.
+ */
+export async function replyTargetOf(id: number): Promise<number> {
+  const conversation = getCached<MailConversationOut>(conversationPath(id)) ?? await getJson<MailConversationOut>(conversationPath(id)).catch(() => null);
+  return (conversation && replyTarget(conversation.emails)) ?? id;
+}
 
 const inboxPaths = () => cachedPaths('/mail/inbox');
 
-/** An email's row in the Inbox as last loaded, wherever it shows, and whether it's in Attention. */
+/** Email `id`'s conversation's row in the Inbox as last loaded, wherever it shows, and whether it's in Attention. */
 function cachedRow(id: number): {row: MessageRowOut; attention: boolean} | null {
   for (const path of inboxPaths()) {
     const inbox = getCached<InboxOut>(path);
     for (const group of inbox?.groups ?? []) {
-      const row = group.rows.find(item => item.id === id);
-      if (row) return {row, attention: inbox!.groups.some(other => other.group === 'attention' && other.rows.some(item => item.id === id))};
+      const row = group.rows.find(item => holds(item, id));
+      if (row) return {row, attention: inbox!.groups.some(other => other.group === 'attention' && other.rows.some(item => holds(item, id)))};
     }
   }
   return null;
 }
 
-/** An email's row in All as last loaded. */
+/** Email `id`'s conversation's row in All as last loaded. */
 function cachedAllRow(id: number): MessageRowOut | null {
   for (const path of cachedPaths('/mail/all')) {
-    const row = getCached<AllOut>(path)?.days.flatMap(day => day.rows).find(item => item.id === id);
+    const row = getCached<AllOut>(path)?.days.flatMap(day => day.rows).find(item => holds(item, id));
     if (row) return row;
   }
   return null;
@@ -76,34 +102,46 @@ function followInboxCounts() {
   if (all) setCached(COUNTS_PATH, all.counts);
 }
 
-// The latest change made here to each email. A change's answer is the email as the server had it
-// then. An answer that arrives after a later change's (P while the open is still on its way) would
-// put back what that change did. So it's left out, and the later one's answer, or its at-once
-// effect, stays.
+// The latest change made here to each conversation, by the id it was asked by. A change's answer
+// says what it sent, not the email as it is now, so the email and its conversation load again once
+// it's in. A load asked after a later change (P while the open is still on its way) would show what
+// that one did, so only the latest change's answer loads them again; the at-once effect stays meanwhile.
 const edits = new Map<number, number>();
 let edited = 0;
 
-/** Marks a change to the email. Its answer shows only if it's still the latest (`answered`). */
+/** Marks a change to the conversation. Its answer loads it again only if it's still the latest (`settled`). */
 function edit(id: number): number {
   edited += 1;
   edits.set(id, edited);
   return edited;
 }
 
-function answered(id: number, mark: number, message: MessageOut) {
-  if (edits.get(id) === mark) setCached(messagePath(id), message);
+/** The conversations the reader holds that email `id` is in: their paths. */
+const conversationsOf = (id: number) => cachedPaths(CONVERSATIONS_PATH).filter(path => getCached<MailConversationOut>(path)?.emails.some(email => email.id === id));
+
+function settled(id: number, mark: number) {
+  if (edits.get(id) !== mark) return;
+  refreshIfShown(messagePath(id));
+  for (const path of conversationsOf(id)) refreshIfShown(path);
 }
 
 /**
- * Changes the email as the reader has it, at once if it's loaded, else as its first load lands, since
- * that load's answer may be from before the change (P before the email is in); a change, as `edit`
- * marks it.
+ * Changes the conversation as the reader has it, at once if it's loaded: its row (the tools) and
+ * the phone's email. An email still loading takes the change as its load lands, since that answer
+ * may be from before it (P before the email is in). A change, as `edit` marks it.
  */
-function updateMessage(id: number, change: Partial<MessageOut>): number {
+function updateMessage(id: number, change: Partial<MessageRowOut>): number {
   const path = messagePath(id);
   const apply = () => updateCached<MessageOut>(path, message => ({...message, ...change}));
   if (getCached<MessageOut>(path)) apply();
   else void loadingOf(path)?.then(apply);
+  // The conversation's row and each of its emails, as the change applies to every one.
+  const changed = (one: string) => () => updateCached<MailConversationOut>(one, conversation => ({
+    ...conversation, row: {...conversation.row, ...change}, emails: conversation.emails.map(email => ({...email, ...change})),
+  }));
+  for (const one of conversationsOf(id)) changed(one)();
+  const own = conversationPath(id);
+  if (!getCached<MailConversationOut>(own)) void loadingOf(own)?.then(changed(own));
   return edit(id);
 }
 
@@ -121,11 +159,22 @@ async function change<T>(send: () => Promise<T>): Promise<T> {
   }
 }
 
+/** A change to email `id`'s whole conversation, by its route (`/done`, `/pin`…); loads it again once in. */
+function changeConversation(id: number, mark: number, route: string, input?: unknown): Promise<ConversationChangeOut> {
+  return change(async () => {
+    try {
+      return await afterPending(() => sendJson<ConversationChangeOut>('POST', `${conversationPath(id)}/${route}`, input));
+    } finally {
+      settled(id, mark);
+    }
+  });
+}
+
 /**
- * One change to several emails (a selection's). Each email gets its own command, as for one email,
- * and all are sent together. The lists' and counts' answers are held until the last is in, so one
+ * One change to several conversations (a selection's). Each gets its own change, as for one, and
+ * all are sent together. The lists' and counts' answers are held until the last is in, so one
  * landing between them doesn't bring back for a moment what the others did at once. A change to one
- * email goes as it always has. Each one's outcome.
+ * goes as it always has. Each one's outcome.
  */
 export async function changeEach<T>(ids: number[], change: (id: number) => Promise<T>): Promise<PromiseSettledResult<T>[]> {
   const release = ids.length > 1 ? holdLoads(MAIL_LOADS) : () => undefined;
@@ -136,59 +185,73 @@ export async function changeEach<T>(ids: number[], change: (id: number) => Promi
   }
 }
 
-/** The emails whose change the server refused, with why, from `changeEach`'s outcomes. */
+/** The conversations whose change the server refused, with why, from `changeEach`'s outcomes. */
 export function refusals(ids: number[], outcomes: PromiseSettledResult<unknown>[]): {id: number; error: unknown}[] {
   return outcomes.flatMap((outcome, at) => (outcome.status === 'rejected' ? [{id: ids[at]!, error: outcome.reason as unknown}] : []));
 }
 
-/** Opens an email (a click or Enter). An unread one turns read, and the unread counts drop at once. */
-export function openMessage(id: number): Promise<MessageOut> {
+// Each conversation's answer to its last opening, by the email it was opened at. Only it says which
+// emails open expanded (any unread before the opening read them). A load's answer judges by read
+// state as it is, so one served after the opening leaves the emails it read collapsed.
+const opened = new Map<number, MailConversationOut>();
+
+/** The answer to the latest opening at email `id`, once it's in (the stacked reader seeds from it). */
+export const openingOf = (id: number): MailConversationOut | undefined => opened.get(id);
+
+/**
+ * Opens email `id`'s conversation (a click or Enter): every unread email of it turns read, and the
+ * unread counts drop at once. The answer is the conversation as it opened, which emails expanded
+ * included (judged on the read state from before), so the reader takes it from here.
+ */
+export function openMessage(id: number): Promise<MailConversationOut> {
+  // This opening's answer is the one that judges which emails open expanded.
+  opened.delete(id);
   const found = cachedRow(id);
   if (found?.row.unread) {
     for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterOpen(inbox, id));
     updateCached<MailCountsOut>(COUNTS_PATH, counts => countsAfterOpen(counts, found.row));
+    updateAllRows(row => (holds(row, id) ? {...row, unread: false} : row));
   }
   const mark = edit(id);
   return change(async () => {
-    const message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/open`);
-    answered(id, mark, message);
-    return message;
+    const conversation = await sendJson<MailConversationOut>('POST', `${conversationPath(id)}/open`);
+    opened.set(id, conversation);
+    if (edits.get(id) === mark) {
+      setCached(conversationPath(id), conversation);
+      refreshIfShown(messagePath(id));
+    }
+    return conversation;
   });
 }
 
-/** Done (`H`): out of Attention at once, and the pill drops. */
-export function setDone(id: number, done = true): Promise<MessageOut> {
+/** Done (`H`) on the whole conversation: out of Attention at once, and the pill drops. */
+export function setDone(id: number, done = true): Promise<ConversationChangeOut> {
   const found = cachedRow(id);
   if (done && found) {
     for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterDone(inbox, id));
     updateCached<MailCountsOut>(COUNTS_PATH, counts => countsAfterDone(counts, found.row, found.attention));
   }
   // All keeps Done mail, so its row and the reader show the change at once.
-  updateAllRows(row => (row.id === id ? {...row, done} : row));
-  const mark = updateMessage(id, {done});
-  return change(async () => {
-    const message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/done`, {done});
-    answered(id, mark, message);
-    return message;
-  });
+  updateAllRows(row => (holds(row, id) ? {...row, done} : row));
+  return changeConversation(id, updateMessage(id, {done}), 'done', {done});
 }
 
-// Each email's pin changes go one at a time. Two sent together (P, then P again before the first
-// is answered) can reach the server in either order and leave it pinned while the screen says
+// Each conversation's pin changes go one at a time. Two sent together (P, then P again before the
+// first is answered) can reach the server in either order and leave it pinned while the screen says
 // unpinned. So a change made while one is on its way only updates what's wanted. That is sent once
 // the one in flight is answered, if it differs. The server keeps the last asked. The lists and the
 // email hold their answers meanwhile, so one landing between the two can't show the pin back.
-const pinning = new Map<number, {wanted: boolean; mark: number; done: Promise<MessageOut>}>();
+const pinning = new Map<number, {wanted: boolean; mark: number; done: Promise<boolean>}>();
 
 /**
- * Pin (`P`) puts it on the Pinned shelf, or takes it off, at once on screen. Every way to pin
- * comes here (the reader's P, the Pinned toast's Undo, the shelf's Unpin). It resolves with the
- * email as the server has it once the last change asked is in.
+ * Pin (`P`) puts the conversation on the Pinned shelf, or takes it off, at once on screen. Every way
+ * to pin comes here (the reader's P, the Pinned toast's Undo, the shelf's Unpin). It resolves with
+ * whether it's pinned on the server once the last change asked is in.
  */
-export function setPinned(id: number, pinned: boolean): Promise<MessageOut> {
+export function setPinned(id: number, pinned: boolean): Promise<boolean> {
   const fromAll = cachedAllRow(id);
   for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterPin(inbox, id, pinned, fromAll));
-  updateAllRows(row => (row.id === id ? {...row, pinned} : row));
+  updateAllRows(row => (holds(row, id) ? {...row, pinned} : row));
   const mark = updateMessage(id, {pinned});
   const queued = pinning.get(id);
   if (queued) {
@@ -196,21 +259,20 @@ export function setPinned(id: number, pinned: boolean): Promise<MessageOut> {
     queued.mark = mark;
     return queued.done;
   }
-  const state = {wanted: pinned, mark} as {wanted: boolean; mark: number; done: Promise<MessageOut>};
-  const release = holdLoads(['/mail/inbox', '/mail/all', messagePath(id)]);
+  const state = {wanted: pinned, mark} as {wanted: boolean; mark: number; done: Promise<boolean>};
+  const release = holdLoads(['/mail/inbox', '/mail/all', messagePath(id), ...conversationsOf(id)]);
   state.done = change(async () => {
     try {
       let sent: boolean;
-      let message: MessageOut;
       do {
         sent = state.wanted;
-        message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/pin`, {pinned: sent});
+        await afterPending(() => sendJson<ConversationChangeOut>('POST', `${conversationPath(id)}/pin`, {pinned: sent}));
       } while (state.wanted !== sent);
-      answered(id, state.mark, message);
-      return message;
+      return sent;
     } finally {
       pinning.delete(id);
       release();
+      settled(id, state.mark);
     }
   });
   pinning.set(id, state);
@@ -222,65 +284,57 @@ const unsnoozed = ({snoozed_until: _until, ...row}: MessageRowOut): MessageRowOu
 const unreturned = ({returned_at: _returned, ...row}: MessageRowOut): MessageRowOut => row;
 
 /**
- * Snooze until `until` (ms): out of the Inbox, its counts and the shelf at once, marked snoozed in
- * All and search, and first in Snoozed by its time. Its returned mark, if any, goes.
+ * Snooze the conversation until `until` (ms): out of the Inbox, its counts and the shelf at once,
+ * marked snoozed in All and search, and first in Snoozed by its time. Its returned mark, if any, goes.
  */
-export function snooze(id: number, until: number): Promise<MessageOut> {
+export function snooze(id: number, until: number): Promise<ConversationChangeOut> {
   const at = new Date(until).toISOString();
-  const row = cachedRow(id)?.row ?? cachedAllRow(id) ?? getCached<MessageOut>(messagePath(id)) ?? null;
+  const row = cachedRow(id)?.row ?? cachedAllRow(id) ?? getCached<SnoozedOut>(SNOOZED_PATH)?.rows.find(one => holds(one, id)) ?? null;
   for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterSnooze(inbox, id));
   followInboxCounts();
-  updateAllRows(one => (one.id === id ? {...unreturned(one), snoozed_until: at} : one));
+  updateAllRows(one => (holds(one, id) ? {...unreturned(one), snoozed_until: at} : one));
   if (row) {
-    updateCached<SnoozedOut>(SNOOZED_PATH, list => ({rows: [...list.rows.filter(one => one.id !== id), {...unreturned(row), snoozed_until: at}]
+    updateCached<SnoozedOut>(SNOOZED_PATH, list => ({rows: [...list.rows.filter(one => !holds(one, id)), {...unreturned(row), snoozed_until: at}]
       .sort((a, b) => a.snoozed_until!.localeCompare(b.snoozed_until!) || a.id - b.id)}));
   }
-  const mark = updateMessage(id, {snoozed_until: at, returned_at: undefined});
-  return change(async () => {
-    const message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/snooze`, {until: at});
-    answered(id, mark, message);
-    return message;
-  });
+  return changeConversation(id, updateMessage(id, {snoozed_until: at, returned_at: undefined}), 'snooze', {until: at});
 }
 
-/** Unsnooze (Snoozed's, the reader's, and Snooze's Undo): back in the Inbox as it was, once the server has it. */
-export function unsnooze(id: number): Promise<MessageOut> {
-  updateAllRows(one => (one.id === id ? unsnoozed(one) : one));
-  updateCached<SnoozedOut>(SNOOZED_PATH, list => ({rows: list.rows.filter(one => one.id !== id)}));
-  const mark = updateMessage(id, {snoozed_until: undefined});
-  return change(async () => {
-    const message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/unsnooze`);
-    answered(id, mark, message);
-    return message;
-  });
+/** Unsnooze (Snoozed's and the reader's): back in the Inbox as it was, once the server has it. */
+export function unsnooze(id: number): Promise<ConversationChangeOut> {
+  updateAllRows(one => (holds(one, id) ? unsnoozed(one) : one));
+  updateCached<SnoozedOut>(SNOOZED_PATH, list => ({rows: list.rows.filter(one => !holds(one, id))}));
+  return changeConversation(id, updateMessage(id, {snoozed_until: undefined}), 'unsnooze');
 }
 
-/** Mark unread (⌘K on an open email): a command the provider confirms. */
-export function markUnread(id: number): Promise<CommandOut> {
+/** Mark unread (⇧U, ⌘K): commands the provider confirms. */
+export function markUnread(id: number): Promise<ConversationChangeOut> {
   for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterUnread(inbox, id));
   followInboxCounts();
-  updateAllRows(row => (row.id === id ? {...row, unread: true} : row));
-  updateMessage(id, {unread: true});
-  return change(() => afterPending(() => sendJson<CommandOut>('POST', `/mail/messages/${id}/read`, {unread: true})));
+  updateAllRows(row => (holds(row, id) ? {...row, unread: true} : row));
+  return changeConversation(id, updateMessage(id, {unread: true}), 'read', {unread: true});
 }
 
-/** Mark read (the phone's reader, after Mark unread). */
-export function markRead(id: number): Promise<CommandOut> {
+/** Mark read (a copied code, the menu's Mark read, the phone's reader after Mark unread). */
+export function markRead(id: number): Promise<ConversationChangeOut> {
   const found = cachedRow(id);
   if (found?.row.unread) {
     for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterOpen(inbox, id));
     updateCached<MailCountsOut>(COUNTS_PATH, counts => countsAfterOpen(counts, found.row));
   }
-  updateAllRows(row => (row.id === id ? {...row, unread: false} : row));
-  updateMessage(id, {unread: false});
-  return change(() => afterPending(() => sendJson<CommandOut>('POST', `/mail/messages/${id}/read`, {unread: false})));
+  updateAllRows(row => (holds(row, id) ? {...row, unread: false} : row));
+  return changeConversation(id, updateMessage(id, {unread: false}), 'read', {unread: false});
 }
 
-/** Trash (`E`), to the provider's trash, with Undo for 6 seconds. */
-export const trashMessage = (id: number) => change(() => afterPending(() => sendJson<CommandOut>('POST', `/mail/messages/${id}/trash`)));
+/** Trash (`E`): every email of the conversation, the user's sent replies too, with Undo for 6 seconds. */
+export const trashMessage = (id: number) => changeConversation(id, edit(id), 'trash');
 
-/** Trash's Undo: back out of the provider's trash. */
-export const untrashMessage = (id: number) => change(() => afterPending(() => sendJson<CommandOut>('POST', `/mail/messages/${id}/untrash`)));
+/**
+ * A change's Undo: each email of the conversation back as it was before it (Done, pin, snooze,
+ * read state, out of the trash). `id` is the conversation's, to load it again.
+ */
+export const undoChange = (id: number, undo: ConversationUndo) =>
+  change(() => afterPending(() => sendJson<ConversationChangeOut>('POST', `${CONVERSATIONS_PATH}/undo`, undo)).finally(() => settled(id, edit(id))));
 
 /** "Always show from contosocoffee.example": remote content from this domain loads from now on. */
 export async function trustDomain(domain: string, messageId: number): Promise<TrustedDomainOut[]> {
@@ -288,6 +342,7 @@ export async function trustDomain(domain: string, messageId: number): Promise<Tr
     return await sendJson<TrustedDomainOut[]>('POST', '/mail/trusted-domains', {domain});
   } finally {
     refreshIfShown(messagePath(messageId));
+    for (const path of conversationsOf(messageId)) refreshIfShown(path);
   }
 }
 

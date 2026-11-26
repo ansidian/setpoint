@@ -17,6 +17,7 @@ import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, UIEvent} from 'react';
 import {allRowLine, dayHeading, laneNamed, listKey, noiseKey} from '../logic/all.ts';
+import {conversationNames} from '../logic/conversation.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
 import {age, clockTime, codeGroups, dayOf, fullTimestamp, localDate, trashLeft} from '../logic/format.ts';
@@ -274,7 +275,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
               </span>
             )}
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
-            {from ? from(row) : <span className="from">{line.from}</span>}
+            {from ? from(row) : <ConversationFrom row={row} lone={line.from} />}
             {/* A live code has Copy and its countdown wherever it is. Once it's expired, the code is inside the subject. */}
             {row.code && !codeExpired(row, now) ? <CodeLine code={row.code} onCopied={() => onCodeCopied?.(row.id)} /> : (
               <span className="subj">
@@ -291,10 +292,12 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
                 <Icon name="auto_delete" size={14} />{trashLeft(row.trash_due_at, now)}
               </span>
             )}
-            {/* The marks: the reply mark on an email the user answered, a snooze's, and a draft's tag.
+            {/* The marks: a paperclip when any email has a file, the reply mark when the user's reply is
+                the newest, a snooze's, and a draft's tag.
                 One box, so the phone's row gives them one place on the sender's line. */}
-            {(row.replied_at || row.snoozed_until || row.returned_at || row.draft) && (
+            {(row.replied_at || row.snoozed_until || row.returned_at || row.draft || (!phone && row.attachment_count > 0)) && (
               <span className="marks">
+                {!phone && row.attachment_count > 0 && <AttachedMark />}
                 {row.replied_at && <RepliedMark at={row.replied_at} now={now} timeZone={timeZone} />}
                 {row.snoozed_until && <SnoozedMark until={row.snoozed_until} now={now} timeZone={timeZone} />}
                 {row.returned_at && !row.snoozed_until && <ReturnedMark row={row} timeZone={timeZone} />}
@@ -323,6 +326,24 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
       {more && <AllSkeleton more account={account} />}
     </section>
   );
+}
+
+/**
+ * A conversation row's names in the sender's place: everyone in it, the user as "me", then its
+ * email count from two ("Dominic, me  4"). The names are cut before the count is.
+ */
+export function ConversationFrom({row, lone}: {row: MessageRowOut; lone: string}) {
+  const phone = usePhone();
+  const {names, count} = conversationNames(row, lone);
+  // The phone's rows keep their sender until its own slice.
+  if (phone) return <span className="from">{lone}</span>;
+  if (count === null) return <span className="from">{names}</span>;
+  return <span className="from conv"><span className="who">{names}</span><span className="cn num">{count}</span></span>;
+}
+
+/** A row with a file in any of its emails: a small paperclip. */
+export function AttachedMark() {
+  return <span className="attached" role="img" aria-label="Has attachments" data-tip="Has attachments"><Icon name="attach_file" size={14} /></span>;
 }
 
 /** A row's reply mark: the `reply` glyph, with when the user replied in its tip. */

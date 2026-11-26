@@ -67,7 +67,7 @@ import {useSyncExternalStore} from 'react';
 import {serverNow, timeZone} from '../../api/auth.ts';
 import {ApiFailure, getCached, getJson, refresh, setCached} from '../../api/client.ts';
 import {discardDraft, draftPath, DRAFTS_PATH, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
-import {messagePath} from '../../api/mail.ts';
+import {cachedEmail, messagePath, replyTargetOf} from '../../api/mail.ts';
 import {emptyDraft, fillAround, hasOthers, NO_VERSIONS, recordVersion} from '../../logic/composer.ts';
 import {broughtBackLine, counted, discardedLine, discardFailedLine, scheduledAt} from '../../logic/selection.ts';
 import {scheduledWhen} from '../../logic/snooze.ts';
@@ -224,7 +224,7 @@ function discardIfEmpty(draftId: number, {keepalive = false} = {}): boolean {
   const draft = getCached<DraftOut>(draftPath(draftId));
   if (!draft || uploadsOf(draftId).length) return false;
   const now = {...draft, ...owedOf(draftId)} as DraftOut;
-  const message = now.message_id === null ? undefined : getCached<MessageOut>(messagePath(now.message_id));
+  const message = now.message_id === null ? undefined : cachedEmail(now.message_id);
   if (!emptyDraft(now, message, getCached<FromOut>(FROM_PATH))) return false;
   forgetSaves(draftId);
   discarded.add(draftId);
@@ -390,13 +390,23 @@ export const useFills = (key: number) => useSyncExternalStore(subscribe, () => f
 
 /** Whether email `id` has anyone for Reply all, from the email and From as they've loaded, else null. */
 export function canReplyAll(id: number): boolean | null {
-  const message = getCached<MessageOut>(messagePath(id));
+  const message = cachedEmail(id);
   const from = getCached<FromOut>(FROM_PATH);
   return message && from ? hasOthers(message, from) : null;
 }
 
-/** R, A or F on an email (open, or under the cursor): Reply all only when it has others to reply to. */
+/**
+ * R, A or F on a conversation (open, or under the cursor): on the desktop they answer its newest
+ * email someone else sent, as the stacked reader's foot does. The phone's reader shows one email,
+ * which they answer.
+ */
 export function answerKey(id: number, kind: 'reply' | 'reply_all' | 'forward') {
+  if (isPhone()) return answerEmail(id, kind);
+  void replyTargetOf(id).then(target => answerEmail(target, kind));
+}
+
+/** R, A or F on one email: Reply all only when it has others to reply to. */
+function answerEmail(id: number, kind: 'reply' | 'reply_all' | 'forward') {
   if (kind !== 'reply_all') return startComposer({kind, message_id: id});
   const known = canReplyAll(id);
   if (known !== null) {

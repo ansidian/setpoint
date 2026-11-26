@@ -17,13 +17,13 @@
 // (phone/SnoozeSheet.tsx) for a new time or Unsnooze. Nothing selects. The reader slides in over the
 // list with Back to Snoozed, its More holding Snoozed with the return, whose sheet does the same.
 // Done, Trash and Unsnooze there go back to the list, where the toast is.
-import type {ItemKind, MessageRowOut, RuleOut, Settings, SnoozedOut} from '@setpoint/shared';
+import type {ConversationChangeOut, ItemKind, MessageRowOut, RuleOut, Settings, SnoozedOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {serverNow, timeZone} from '../api/auth.ts';
-import {getCached, getJson, prefetch, useResource} from '../api/client.ts';
+import {getJson, prefetch, useResource} from '../api/client.ts';
 import {SETTINGS_PATH} from '../api/items.ts';
-import {markRead, markUnread, messagePath, openMessage, setDone, snooze, SNOOZED_PATH, trashMessage, unsnooze, untrashMessage} from '../api/mail.ts';
+import {cachedEmail, markRead, markUnread, messagePath, openMessage, setDone, snooze, SNOOZED_PATH, trashMessage, undoChange, unsnooze} from '../api/mail.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import type {MessageOut} from '@setpoint/shared';
 import {fullTimestamp} from '../logic/format.ts';
@@ -41,7 +41,7 @@ import {SnoozedEmptyView} from './EmptyView.tsx';
 import {emailActions, snoozeItems} from './emailActions.ts';
 import {openSnooze} from './SnoozeMenu.tsx';
 import {useNow} from './clock.ts';
-import {Gutter} from './AllList.tsx';
+import {ConversationFrom, Gutter} from './AllList.tsx';
 import {askCard, Reader} from './Reader.tsx';
 import {navigate} from './router.ts';
 import {LoadFailed, useLoadFailed} from './states/Loading.tsx';
@@ -94,7 +94,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
     const index = rows.findIndex(row => row.id === id);
     return index < 0 ? null : rows[index + delta]?.id ?? null;
   };
-  const listed = (id: number): MessageRowOut | undefined => rows.find(row => row.id === id) ?? getCached<MessageOut>(messagePath(id));
+  const listed = (id: number): MessageRowOut | undefined => rows.find(row => row.id === id) ?? cachedEmail(id);
   const {data: settings} = useResource<Settings>(SETTINGS_PATH);
   const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
 
@@ -109,9 +109,10 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   /** A change that may take the email out of the list, said in a toast with Undo and ⌘Z. Undo puts it back, and opens it again if it was open. */
   function act(id: number, {leaves, change, toast, undo, failed, undoFailed}: {
     leaves: boolean;
-    change: () => Promise<unknown>;
+    change: () => Promise<ConversationChangeOut>;
     toast: string;
-    undo: () => Promise<unknown>;
+    // Puts it back, from what the change answered (each email's state before it).
+    undo: (answer: ConversationChangeOut) => Promise<unknown>;
     failed: string;
     undoFailed: string;
   }) {
@@ -122,10 +123,10 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
       if (wasOpen) go(phone ? null : neighbour(id, 1) ?? neighbour(id, -1));
       setLeaving(ids => new Set(ids).add(id));
     }
-    const sent = change().then(() => true, error => {
+    const sent = change().then(answer => answer, error => {
       show();
       toastFailure(failed)(error);
-      return false;
+      return null;
     });
     let toastId = 0;
     const back = () => {
@@ -135,7 +136,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
       dismissToast(toastId);
       void sent.then(took => {
         if (!took) return;
-        void undo().then(() => {
+        void undo(took).then(() => {
           show();
           if (wasOpen) go(id);
         }, toastFailure(undoFailed));
@@ -149,26 +150,26 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   function unsnoozeRow(id: number) {
     const until = listed(id)?.snoozed_until;
     if (!until) return;
-    act(id, {leaves: true, change: () => unsnooze(id), toast: 'Back in the Inbox', undo: () => snooze(id, Date.parse(until)), failed: 'Failed to unsnooze', undoFailed: 'Failed to snooze'});
+    act(id, {leaves: true, change: () => unsnooze(id), toast: 'Back in the Inbox', undo: answer => undoChange(id, answer.undo), failed: 'Failed to unsnooze', undoFailed: 'Failed to snooze'});
   }
 
   /** A new time: it stays here, in its new place, with Undo going back to the old one. */
   function resnooze(id: number, next: number) {
     const until = listed(id)?.snoozed_until;
     if (!until) return;
-    act(id, {leaves: false, change: () => snooze(id, next), toast: snoozedLine(new Date(next).toISOString(), serverNow(), zone), undo: () => snooze(id, Date.parse(until)), failed: 'Failed to snooze', undoFailed: 'Failed to undo the snooze'});
+    act(id, {leaves: false, change: () => snooze(id, next), toast: snoozedLine(new Date(next).toISOString(), serverNow(), zone), undo: answer => undoChange(id, answer.undo), failed: 'Failed to snooze', undoFailed: 'Failed to undo the snooze'});
   }
 
-  /** Done ends the snooze for good, on Attention mail only. Undo takes Done back and snoozes it again. */
+  /** Done ends the snooze for good, on Attention mail only. Undo puts each email back, snoozed. */
   function doneRow(id: number) {
     const row = listed(id);
     const until = row?.snoozed_until;
     if (!row || !until || !readerActions(row).done) return;
-    act(id, {leaves: true, change: () => setDone(id), toast: 'Marked Done', undo: () => setDone(id, false).then(() => snooze(id, Date.parse(until))), failed: 'Failed to mark Done', undoFailed: 'Failed to undo Done'});
+    act(id, {leaves: true, change: () => setDone(id), toast: 'Marked Done', undo: answer => undoChange(id, answer.undo), failed: 'Failed to mark Done', undoFailed: 'Failed to undo Done'});
   }
 
   function trashRow(id: number) {
-    act(id, {leaves: true, change: () => trashMessage(id), toast: 'Moved to Trash', undo: () => untrashMessage(id), failed: 'Failed to move to Trash', undoFailed: 'Failed to bring back'});
+    act(id, {leaves: true, change: () => trashMessage(id), toast: 'Moved to Trash', undo: answer => undoChange(id, answer.undo), failed: 'Failed to move to Trash', undoFailed: 'Failed to bring back'});
   }
 
   // ⇧U: unread again, and the reader closes so it stays so, as in the Inbox.
@@ -179,7 +180,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
 
   // Open in Gmail: the email's own link, asked for now when it isn't in yet.
   function openInGmail(id: number) {
-    const url = getCached<MessageOut>(messagePath(id))?.open_url;
+    const url = cachedEmail(id)?.open_url;
     if (url) {
       window.open(url, '_blank', 'noopener');
       return;
@@ -315,7 +316,7 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
               <div key={row.id} className={classes} data-id={row.id} data-swipe-key={row.id} onMouseMove={() => at !== row.id && setCursor(row.id)} onMouseDown={keepTextUnselected} onClick={() => go(row.id)}>
                 {phone && swipes.tray(String(row.id))}
                 <Gutter beat={null} />
-                <span className="from">{line.from}</span>
+                <ConversationFrom row={row} lone={line.from} />
                 <span className="subj">
                   <b data-tip={line.title ?? undefined}>{line.subject}</b>
                   {line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}

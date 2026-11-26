@@ -9,7 +9,7 @@ import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import {deepLinkPath} from '@setpoint/shared';
-import type {AccountOut, AllOut, InboxOut, ItemsOut, MailCountsOut, MessageOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AccountOut, AllOut, InboxOut, ItemsOut, MailConversationOut, MailCountsOut, MessageOut, SnoozedOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
@@ -204,7 +204,7 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
       release = resolve;
     });
     const heldAt: string[] = [];
-    await page.route('**/api/mail/messages/*/trash', async route => {
+    await page.route('**/api/mail/conversations/*/trash', async route => {
       heldAt.push(new URL(route.request().url()).pathname);
       await held;
       await route.continue();
@@ -244,14 +244,14 @@ test('Undo right after Trash, before the server has the Trash, waits for it: the
     const held = new Promise<void>(resolve => {
       release = resolve;
     });
-    await page.route('**/api/mail/messages/*/trash', async route => {
+    await page.route('**/api/mail/conversations/*/trash', async route => {
       await held;
       await route.continue();
     });
     // Each answer to the untrash: refused only while the Trash still waits for its provider, and sent again after.
     const answers: string[] = [];
     page.on('response', async response => {
-      if (response.url().endsWith('/untrash')) answers.push(response.ok() ? 'ok' : ((await response.json()) as {error: {code: string}}).error.code);
+      if (response.url().endsWith('/conversations/undo')) answers.push(response.ok() ? 'ok' : ((await response.json()) as {error: {code: string}}).error.code);
     });
     await page.keyboard.press('e');
     await page.locator('.toast button', {hasText: 'Undo'}).click();
@@ -264,7 +264,7 @@ test('Undo right after Trash, before the server has the Trash, waits for it: the
     assert.ok(answers.at(-1) === 'ok' && answers.slice(0, -1).every(code => code === 'command_pending'), `Undo goes once the Trash is in: ${answers.join(', ')}`);
     await setpoint.idle();
     assert.equal(await page.locator('.toast').count(), 0, 'no failure shows');
-    await page.unroute('**/api/mail/messages/*/trash');
+    await page.unroute('**/api/mail/conversations/*/trash');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -284,7 +284,7 @@ test('Pin and Unpin: P on a day\'s row moves it to the shelf at once, Unpin unde
     const held = new Promise<void>(resolve => {
       release = resolve;
     });
-    await page.route('**/api/mail/messages/*/pin', async route => {
+    await page.route('**/api/mail/conversations/*/pin', async route => {
       await held;
       await route.continue();
     });
@@ -295,7 +295,7 @@ test('Pin and Unpin: P on a day\'s row moves it to the shelf at once, Unpin unde
     release();
     const id = await idOf(setpoint, 'Statement ready');
     await until('the server pinned it', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.pinned);
-    await page.unroute('**/api/mail/messages/*/pin');
+    await page.unroute('**/api/mail/conversations/*/pin');
     // Unpin under the pointer puts it back in its day, unread as it still is, and opens nothing.
     const pinned = page.locator('.list.all .row.shelf', {hasText: 'Checking ending in 1234'});
     await pinned.hover();
@@ -396,7 +396,7 @@ test('P on an email just opened: the open\'s answer, arriving after the pin\'s, 
       release = resolve;
     });
     let served = false;
-    await page.route('**/api/mail/messages/*/open', async route => {
+    await page.route('**/api/mail/conversations/*/open', async route => {
       const response = await route.fetch();
       served = true;
       await held;
@@ -430,7 +430,7 @@ test('P then P again before the pin is answered: one pin change at a time, the l
     // Each pin change's answer is held, as a slow connection can do. What's sent and answered is noted in order.
     const gates = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
     const seen: string[] = [];
-    await page.route('**/api/mail/messages/*/pin', async route => {
+    await page.route('**/api/mail/conversations/*/pin', async route => {
       const {pinned} = route.request().postDataJSON() as {pinned: boolean};
       const gate = gates[seen.filter(one => one.startsWith('send')).length];
       seen.push(`send ${pinned}`);
@@ -469,7 +469,7 @@ test('P then P again before the pin is answered: one pin change at a time, the l
     await page.locator('.rd-tools .tool:not(.active)', {hasText: 'Pin'}).waitFor();
     // No "Pinned" toast for a pin taken back before it was answered.
     assert.equal(await page.locator('.toast', {hasText: 'Pinned'}).count(), 0);
-    await page.unroute('**/api/mail/messages/*/pin');
+    await page.unroute('**/api/mail/conversations/*/pin');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -488,14 +488,14 @@ test('P on an email still loading: its first answer, from before the pin, doesn\
     let loads = 0;
     let served = false;
     let pinServed = false;
-    await page.route(/\/api\/mail\/messages\/\d+$/, async route => {
+    await page.route(/\/api\/mail\/conversations\/\d+$/, async route => {
       const gate = loads++ ? end : first;
       const response = await route.fetch();
       served = true;
       await gate.promise;
       await route.fulfill({response});
     });
-    await page.route(/\/api\/mail\/messages\/\d+\/(open|pin)$/, async route => {
+    await page.route(/\/api\/mail\/conversations\/\d+\/(open|pin)$/, async route => {
       if (pinServed) return route.continue();
       const response = await route.fetch();
       if (route.request().url().endsWith('/pin')) pinServed = true;
@@ -508,7 +508,7 @@ test('P on an email still loading: its first answer, from before the pin, doesn\
     await page.keyboard.press('p');
     await until('the server pinned it', async () => pinServed, done => done);
     await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).waitFor();
-    const delivered = page.waitForResponse(/\/messages\/\d+$/);
+    const delivered = page.waitForResponse(/\/conversations\/\d+$/);
     first.resolve();
     await delivered;
     await page.locator('.rd-body:not(:has(.sk-body))').waitFor();
@@ -834,7 +834,7 @@ test('an email read earlier shows again at once, the window\'s focus between: it
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await drawn(page, await refetched);
     const gate = Promise.withResolvers<void>();
-    await page.route(new RegExp(`/api/mail/messages/${coffee}(/body.*|/open)?$`), async route => {
+    await page.route(new RegExp(`/api/mail/(messages/${coffee}/body.*|conversations/${coffee}(/open)?)$`), async route => {
       await gate.promise;
       await route.continue().catch(() => undefined);
     });
@@ -1236,7 +1236,7 @@ test('a newsletter with its unsubscribe page offers Unsubscribe beside Ask and i
     await page.locator('.rd-acts .btn', {hasText: 'Unsubscribe'}).waitFor();
     assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Ask about this email', 'Unsubscribe']);
     // More keeps the proposals only.
-    await page.getByRole('button', {name: 'More', exact: true}).click();
+    await page.locator('.rd-tools').getByRole('button', {name: 'More', exact: true}).click();
     assert.deepEqual(await page.locator('.more-menu .menu-i').allTextContents(), ['Add to calendar', 'Add as task']);
     await page.keyboard.press('Escape');
     await page.locator('.more-menu').waitFor({state: 'detached'});
@@ -1320,11 +1320,12 @@ test('every attachment downloads: its card\'s Download, the preview\'s, and a ca
 
     // An attachment with no preview (the same file, as a zip) is one Download link, no longer a dead card.
     const other = await load(setpoint);
-    // The email's GET and its open's answer, which the app caches as the email.
-    await other.route(/\/api\/mail\/messages\/\d+(\/open)?$/, async route => {
+    // The conversation's GET and its open's answer, which the app caches as the conversation.
+    await other.route(/\/api\/mail\/conversations\/\d+(\/open)?$/, async route => {
       const response = await route.fetch();
-      const message = await response.json() as MessageOut;
-      await route.fulfill({response, json: {...message, attachments: message.attachments.map(file => ({...file, filename: 'Renewal agreement.zip', mime_type: 'application/zip'}))}});
+      const conversation = await response.json() as MailConversationOut;
+      const zipped = (message: MessageOut) => ({...message, attachments: message.attachments.map(file => ({...file, filename: 'Renewal agreement.zip', mime_type: 'application/zip'}))});
+      await route.fulfill({response, json: {...conversation, emails: conversation.emails.map(zipped)}});
     });
     await other.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     const zip = other.locator('a.attach', {hasText: 'Renewal agreement.zip'});
@@ -1551,13 +1552,13 @@ test('a Pin or Mark all as read the server refuses says so in the toast, in its 
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.route(/\/api\/mail\/(messages\/\d+\/pin|mark-all-read)$/, route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
+    await page.route(/\/api\/mail\/(conversations\/\d+\/pin|mark-all-read)$/, route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
     await point(rowOf(page, 'Pick a 30-minute slot'));
     await page.keyboard.press('p');
     await page.locator('.toast', {hasText: 'Failed to pin, Gmail didn\'t answer in time'}).waitFor();
     await page.keyboard.press('Shift+I');
     await page.locator('.toast', {hasText: 'Failed to mark all read, Gmail didn\'t answer in time'}).waitFor();
-    await page.unroute(/\/api\/mail\/(messages\/\d+\/pin|mark-all-read)$/);
+    await page.unroute(/\/api\/mail\/(conversations\/\d+\/pin|mark-all-read)$/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1633,33 +1634,54 @@ test('⇧U marks the open email unread and closes the reader; ⌘K names the key
   }
 });
 
-test('an answered email: its row has the reply mark, the reader says "You replied Oct 4", which opens the reply, and a line of its conversation opens that email', async () => {
+test('a conversation: its row names everyone with its count; the reader stacks it, the first, newest and unread emails expanded and every other collapsed; a click expands one, its head folds it, an HTML reply folds its quote behind •••, and R answers Theo', async () => {
   const setpoint = await startSetpoint();
   try {
     const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
     // All lists Theo's conversation once, as his newest email.
-    const latest = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Theo Walsh');
-    const first = {id: latest!.thread!.ids[0]!};
-    const {reply_id: reply} = await setpoint.api<MessageOut>('GET', `/mail/messages/${latest!.id}`);
-    const page = await load(setpoint, `/inbox/${latest!.id}`);
-    const line = page.locator('.rd-replied');
-    await until('the reader has the reply line', () => line.textContent(), text => text === 'You replied Oct 4');
-    assert.equal(await page.locator(`.list .row[data-id="${latest!.id}"] .replied`).getAttribute('aria-label'), 'You replied Oct 4');
-    assert.equal(await page.locator('.rd-conv-h').textContent(), 'In this conversation8');
-    assert.equal(await page.locator('.rd-conv-line[aria-current]').textContent(), 'Oct 38:45 PMTheo WalshThis email');
+    const latest = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Theo Walsh')!;
+    const ids = latest.thread!.ids;
+    // Theo's second email unread, and his "board games" email an HTML reply over a Gmail quote.
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      database.prepare('UPDATE messages SET unread = 1 WHERE id = ?').run(ids[2]!);
+      database.prepare('UPDATE message_bodies SET body_html = ? WHERE message_id = ?').run(
+        '<div dir="ltr">Got it, thanks. Could you bring the board games?</div><div class="gmail_quote"><div class="gmail_attr">On Mon, Sep 29, 2026 at 12:15 PM User wrote:</div><blockquote class="gmail_quote">Should I bring anything?</blockquote></div>', ids[4]!);
+    } finally {
+      database.close();
+    }
+    const page = await load(setpoint, `/inbox/${latest.id}`);
+    assert.equal(await page.locator(`.list .row[data-id="${latest.id}"] .from`).textContent(), 'Theo, me8');
+    const shape = () => page.locator('.cv > [data-email]').evaluateAll(found => found.map(one => (one.classList.contains('cv-mail') ? 'E' : 'c')).join(''));
+    await until('the stack', shape, shown => shown === 'EcEcccEE');
+    await page.locator(`.cv-line[data-email="${ids[4]}"]`).click();
+    const frame = page.locator(`.cv-mail[data-email="${ids[4]}"] iframe.mailframe`);
+    assert.match(await frame.getAttribute('src') ?? '', /quoted=fold/);
+    await page.locator(`.cv-mail[data-email="${ids[4]}"] .quoted button[aria-label="Show quoted text"]`).click();
+    await until('the whole email', () => frame.getAttribute('src'), src => src === `/api/mail/messages/${ids[4]}/body?images=hide`);
+    await page.locator(`.cv-mail[data-email="${ids[4]}"] .cv-head .name`).click();
+    await until('folded again', shape, shown => shown === 'EcEcccEE');
 
-    await line.click();
-    await page.locator('.mailtext', {hasText: '4 PM works.'}).waitFor();
-    assert.equal(new URL(page.url()).pathname, `/inbox/${reply}`);
-    // The reply answers nothing itself, and is the last row of its conversation, as "You".
-    assert.equal(await page.locator('.rd-replied').count(), 0);
-    await page.locator('.rd-conv-line[aria-current]', {hasText: 'Oct 48:30 AMYouThis email'}).waitFor();
-    assert.equal(await page.locator('.rd-conv-line').last().getAttribute('aria-current'), 'true');
+    // R answers Theo's newest email, past the user's own reply, at the foot.
+    await page.keyboard.press('r');
+    // Its draft is in when its To names Theo.
+    await page.locator('.cv-foot .composer', {hasText: 'Theo Walsh'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
 
-    await page.locator('.rd-conv-line.more').click();
-    await page.locator('.rd-conv-line', {hasText: 'Hey! A few of us'}).click();
-    await page.locator('.mailtext', {hasText: 'Lake Wenatchee'}).waitFor();
-    assert.equal(new URL(page.url()).pathname, `/inbox/${first.id}`);
+test('opened at an earlier email (a citation, a link), the conversation has it expanded, and the list marks its row', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const latest = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Theo Walsh')!;
+    const second = latest.thread!.ids[2]!;
+    const page = await load(setpoint, `/inbox/${second}`);
+    await page.locator(`.cv-mail[data-email="${second}"]`, {hasText: 'About $140 each'}).waitFor();
+    assert.equal(await page.locator('.list .row.open').getAttribute('data-id'), String(latest.id));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

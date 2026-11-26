@@ -5,6 +5,7 @@
 import {INBOX_GROUPS, markAllReadReads} from '@setpoint/shared';
 import type {InboxGroup, InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut, MessageType} from '@setpoint/shared';
 import type {IconName} from '../ui/glyphs.ts';
+import {holds} from './conversation.ts';
 import {countdownChange} from './format.ts';
 
 export const GROUP_LABELS: Record<InboxGroup, string> = {
@@ -166,9 +167,9 @@ export function rowLine(row: MessageRowOut): RowLine {
   return {from, subject: row.subject, summary: via, code: null, title: null};
 }
 
-/** Each email's rows, wherever the Inbox shows it. */
+/** The rows of email `id`'s conversation, wherever the Inbox shows it. */
 function rowsOf(inbox: InboxOut, id: number): {group: InboxGroupOut; row: MessageRowOut}[] {
-  return inbox.groups.flatMap(group => group.rows.filter(row => row.id === id).map(row => ({group, row})));
+  return inbox.groups.flatMap(group => group.rows.filter(row => holds(row, id)).map(row => ({group, row})));
 }
 
 function countsAfter(counts: MailCountsOut, row: MessageRowOut, change: {read: boolean; leavesAttention: boolean}): MailCountsOut {
@@ -194,8 +195,8 @@ export function inboxAfterOpen(inbox: InboxOut, id: number): InboxOut {
   if (!found?.row.unread) return inbox;
   return {
     ...inbox,
-    groups: inbox.groups.map(group => (group.rows.some(row => row.id === id)
-      ? {...group, unread: group.unread - 1, rows: group.rows.map(row => (row.id === id ? {...row, unread: false} : row))}
+    groups: inbox.groups.map(group => (group.rows.some(row => holds(row, id))
+      ? {...group, unread: group.unread - 1, rows: group.rows.map(row => (holds(row, id) ? {...row, unread: false} : row))}
       : group)),
     counts: countsAfterOpen(inbox.counts, found.row),
   };
@@ -214,8 +215,8 @@ export function inboxAfterDone(inbox: InboxOut, id: number): InboxOut {
   if (!found) return inbox;
   const wasAttention = found.group.group === 'attention';
   const groups = inbox.groups.flatMap(group => {
-    if (group.group === 'pinned' || !group.rows.some(row => row.id === id)) return [group];
-    const rows = group.rows.filter(row => row.id !== id);
+    if (group.group === 'pinned' || !group.rows.some(row => holds(row, id))) return [group];
+    const rows = group.rows.filter(row => !holds(row, id));
     return rows.length ? [{...group, count: group.count - 1, unread: group.unread - (found.row.unread ? 1 : 0), rows}] : [];
   });
   return {...inbox, groups, counts: countsAfterDone(inbox.counts, found.row, wasAttention)};
@@ -230,7 +231,7 @@ export function inboxAfterSnooze(inbox: InboxOut, id: number): InboxOut {
   if (!found.length) return inbox;
   const {row} = found[0]!;
   const wasAttention = found.some(({group}) => group.group === 'attention') && !row.done;
-  return {...inbox, groups: withoutEmails(inbox.groups, new Set([id])), counts: countsAfter(inbox.counts, row, {read: true, leavesAttention: wasAttention})};
+  return {...inbox, groups: withoutEmails(inbox.groups, new Set([row.id])), counts: countsAfter(inbox.counts, row, {read: true, leavesAttention: wasAttention})};
 }
 
 /**
@@ -242,10 +243,10 @@ export function inboxAfterPin(inbox: InboxOut, id: number, pinned: boolean, from
   const outside = from ?? undefined;
   const found = rowsOf(inbox, id).find(({group}) => group.group !== 'pinned')?.row ?? rowsOf(inbox, id)[0]?.row ?? outside;
   if (!found) return inbox;
-  const flagged = (rows: MessageRowOut[]) => rows.map(row => (row.id === id ? {...row, pinned} : row));
+  const flagged = (rows: MessageRowOut[]) => rows.map(row => (holds(row, id) ? {...row, pinned} : row));
   const rest = inbox.groups.filter(group => group.group !== 'pinned').map(group => ({...group, rows: flagged(group.rows)}));
   const shelf = inbox.groups.find(group => group.group === 'pinned');
-  const rows = (shelf?.rows ?? []).filter(row => row.id !== id);
+  const rows = (shelf?.rows ?? []).filter(row => !holds(row, id));
   if (pinned) rows.unshift({...found, pinned: true});
   if (!rows.length) return {...inbox, groups: rest};
   const pinnedGroup: InboxGroupOut = {group: 'pinned', count: rows.length, unread: rows.filter(row => row.unread).length, rows};
@@ -304,8 +305,8 @@ export function inboxAfterUnread(inbox: InboxOut, id: number): InboxOut {
   const counts = inbox.counts;
   return {
     ...inbox,
-    groups: inbox.groups.map(group => (group.rows.some(one => one.id === id)
-      ? {...group, unread: group.unread + 1, rows: group.rows.map(one => (one.id === id ? {...one, unread: true} : one))}
+    groups: inbox.groups.map(group => (group.rows.some(one => holds(one, id))
+      ? {...group, unread: group.unread + 1, rows: group.rows.map(one => (holds(one, id) ? {...one, unread: true} : one))}
       : group)),
     counts: {
       ...counts, unread: counts.unread + 1, unread_fyi: counts.unread_fyi + (row.lane === 'fyi' ? 1 : 0),

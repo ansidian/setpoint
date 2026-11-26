@@ -388,6 +388,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .from.to .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .from.to .more { font-size: 12px; }
 .from.to.unknown .who { color: var(--ink3); }
+/* A conversation's "Dominic, me  4": the names are cut before the count, which reads quieter. */
+.from.conv { display: flex; align-items: baseline; gap: 6px; }
+.from.conv .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.from.conv .cn { flex: none; font-size: 12px; font-weight: 400; color: var(--ink3); }
 /* Read and unread (DESIGN.md › Glyphs › Unread): the sender and subject in the theme's read and
    unread inks. In Night, read steps down to grey and unread is near-white; Light's are `ink2` and `ink`. */
 .row .subj .sum { color: var(--ink3); }
@@ -397,6 +401,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .row .subj.code-line { display: flex; align-items: center; gap: 10px; }
 /* The reply mark on an email the user answered, in `ink3`. */
 .row .replied { flex: none; display: inline-flex; color: var(--ink3); }
+/* A file in any of the conversation's emails, in `ink3`. */
+.row .attached { flex: none; display: inline-flex; color: var(--ink3); }
 /* The marks' box is the phone's (phone.css): here each mark sits in the row as before. */
 .row .marks { display: contents; }
 /* An email with an unsent draft says so in words, in `alert`, as a draft waiting on the user. */
@@ -581,6 +587,32 @@ button.rd-conv-line:focus-visible { background: var(--sub2); }
 .rd-conv-line.here { cursor: default; }
 .rd-conv-line.here .words { color: var(--ink2); }
 .rd-conv-line.here::before { content: ""; position: absolute; left: -1px; top: 9px; width: 2px; height: 14px; border-radius: 1px; background: var(--accent); }
+/* The desktop's conversation, stacked oldest first (ConversationStack.tsx): each email between
+   hairlines, expanded with its head and tools, or collapsed to its avatar, who and when over its
+   first words, every one shown as Gmail shows them. The foot holds the Reply box, a draft's line and
+   the composer. The pane's scroll keeps an email in place while one above it grows. */
+.cv { display: flex; flex-direction: column; flex: 1 0 auto; }
+.cv-mail { display: flex; flex-direction: column; border-top: 1px solid var(--hair); }
+.cv-mail .cv-head { padding: 16px 28px 0; cursor: pointer; }
+.cv-mail .rd-body { flex: none; padding-bottom: 20px; }
+.cv-tools { display: flex; align-items: center; gap: 2px; flex: none; margin-right: -6px; }
+.cv-line { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 12px 28px; border-top: 1px solid var(--hair); text-align: left; color: var(--ink2); }
+@media (hover: hover) { .cv-line:hover { background: var(--sub); } }
+.cv-line:focus-visible { background: var(--sub2); }
+.cv-line .lines { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cv-line .top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cv-line .who { flex: 1 1 auto; min-width: 0; color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-line .words { min-width: 0; color: var(--ink3); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-line .attached { flex: none; display: inline-flex; color: var(--ink3); }
+.cv-line .when { flex: none; color: var(--ink3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.cv-foot { display: flex; flex-direction: column; gap: 8px; padding: 16px 28px 28px; border-top: 1px solid var(--hair); }
+.cv-reply { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border: 1px solid var(--hair); border-radius: 12px; background: var(--cardOn); color: var(--ink3); text-align: left; }
+.cv-reply .kbd { margin-left: auto; }
+@media (hover: hover) { .cv-reply:hover { color: var(--ink2); border-color: var(--sub3); } }
+.cv-draft { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 10px; background: var(--sub); color: var(--ink2); text-align: left; }
+.cv-draft .drafted { color: var(--alert); }
+.cv-draft .words { color: var(--ink3); }
+.mailtext .quoted, .rd-body > .quoted { margin: 0 0 12px; }
 .mailtext { color: var(--ink); font-size: 14px; line-height: 1.55; max-width: 600px; overflow-wrap: anywhere; }
 .mailtext p { margin: 0 0 12px; }
 

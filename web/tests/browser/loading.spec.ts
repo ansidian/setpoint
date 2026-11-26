@@ -196,10 +196,10 @@ test('the reader\'s body, Calendar\'s day, News and a Settings page each say in 
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    // Opening it would answer with the email too (POST …/open), so it fails as well.
-    await failWhile(page, /^\/api\/(mail\/messages\/\d+(\/open)?|items\?.*|news|ai)$/, () => true);
+    // Opening it would answer with the conversation too (POST …/open), so it fails as well.
+    await failWhile(page, /^\/api\/(mail\/conversations\/\d+(\/open)?|items\?.*|news|ai)$/, () => true);
     await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
-    await page.locator('.pane .load-failed', {hasText: 'Failed to load this email, something went wrong'}).waitFor();
+    await page.locator('.pane .load-failed', {hasText: 'Failed to load this conversation, something went wrong'}).waitFor();
     // Its head is drawn from its row all the same.
     await page.locator('.pane .rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
 
@@ -226,12 +226,11 @@ test('the reader draws the email\'s head from its row at once, and only its body
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    let release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
+    let release = await hold(page, /^\/api\/mail\/(messages|conversations)\/\d+(\/open)?$/);
     await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
-    // At once, though the email itself is held: its account band, subject, sender and time, and its actions.
+    // At once, though the conversation itself is held: its account band, subject and actions.
     const head = page.locator('.pane .rd-head');
     await head.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
-    assert.equal(await head.locator('.name').textContent(), 'Google');
     assert.equal(await page.locator('.pane .rd-acct .name').textContent(), 'Personal');
     assert.equal(await head.locator('.rd-acts .btn', {hasText: 'Ask about this email'}).count(), 1);
     await shown(page, 'body');
@@ -243,7 +242,7 @@ test('the reader draws the email\'s head from its row at once, and only its body
     assert.equal((await rested(() => head.locator('.rd-subj').boundingBox()))!.y, subjectAt, 'the head stays where it was');
 
     // An email with an attachment holds its card's place too.
-    release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
+    release = await hold(page, /^\/api\/mail\/(messages|conversations)\/\d+(\/open)?$/);
     await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     await page.locator('.pane .rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
     await (await shown(page, 'body')).locator('.sk-attach').waitFor();
@@ -261,7 +260,7 @@ test('on the phone, a tapped email opens at once from its row, its body a skelet
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    const release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
+    const release = await hold(page, /^\/api\/mail\/(messages|conversations)\/\d+(\/open)?$/);
     await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.pane .rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     await shown(page, 'body');
