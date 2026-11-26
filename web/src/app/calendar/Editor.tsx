@@ -790,7 +790,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           {editing && <span className="card-sub">· a change to {editing.title}</span>}
           {card.missed && <span className="card-miss" role="status" data-tip={card.missed.tip ?? undefined}><Icon name="error" size={16} />{card.missed.line}</span>}
         </div>
-      ) : <div className="ed-head">
+      ) : sheet && editing ? null : <div className="ed-head">
+        {/* The phone's Edit has no head: its More held only Delete, which the detail has. */}
         {sheet ? <span className="grow" /> : <span className="grow ed-title">{title}</span>}
         {editing ? (
           <span className="menu-host">

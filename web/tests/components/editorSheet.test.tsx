@@ -156,6 +156,16 @@ test('an item opens as Edit with Save, which sends only what changed', async () 
   expect(sent[0]!.body).toEqual({changes: {title: 'Dentist checkup'}, scope: 'this', occurrence_start: null});
 });
 
+test('Edit opens with no row over its fields (Delete is the detail\'s) and the keyboard down, the title not selected', async () => {
+  server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-07', item: event()});
+  await expect.element(page.getByLabelText('Title')).toHaveValue('Dentist');
+  expect(sheet('Edit event').element().querySelector('.ed-head')).toBeNull();
+  await expect.element(sheet('Edit event').getByRole('button', {name: 'More'})).not.toBeInTheDocument();
+  expect(document.activeElement).not.toBe(page.getByLabelText('Title').element());
+});
+
 test('a repeating event\'s Save asks which of its events, the top bar\'s action waiting, and sends the one picked', async () => {
   const sent = server();
   await render(<PhoneSheets />);
