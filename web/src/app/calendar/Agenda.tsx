@@ -4,7 +4,7 @@
 // the month picker, which jumps to any day; older days than the week before are the picker's.
 // Overdue tasks lead today as its Overdue group, each with how long it's overdue, and the
 // detail of one snoozes it in the bottom sheet, as does swiping its line left (phone/swipe.tsx). The header's search button opens a plain field
-// whose results take the list's place; its clear button leaves search, as do a day picked and the tab.
+// in the header's place, with Cancel, whose results take the list's place; Cancel leaves search, as do a day picked and the tab.
 // The routes are Calendar's: /calendar/item/3?at=… opens that item's detail over the agenda.
 // /calendar/2026-10-07 brings that day to the top (or starts the agenda there when it's outside
 // what's loaded). + in the header opens the editor sheet (phone/EditorSheet.tsx) on a new event on
@@ -71,12 +71,11 @@ export function Agenda({route}: {route: CalendarRoute}) {
 
   const [searching, setSearching] = useState(false);
   const search = useCalendarSearch(true);
-  // The field's clear button leaves search, as does the header's search button again.
+  // Cancel beside the field leaves search; the field's clear button empties it.
   const leaveSearch = () => {
     search.clear();
     setSearching(false);
   };
-  const field = {...search, clear: leaveSearch};
   const results = searching && search.active;
   // The result whose detail is open, for an occurrence the agenda hasn't loaded.
   const [picked, setPicked] = useState<ItemOut | null>(null);
@@ -254,17 +253,25 @@ export function Agenda({route}: {route: CalendarRoute}) {
 
   return (
     <>
-      <header data-theme="night" className="hd">
-        <Mark />
-        <h1 className="hd-title">Agenda</h1>
-        <span className="grow" />
-        <button className="ph-month-btn" type="button" aria-haspopup="dialog" aria-label={`${agendaMonth(viewDay, today)}, go to a day`} onClick={() => setPicking(true)}>
-          {agendaMonth(viewDay, today)}<Icon name="expand_more" size={16} />
-        </button>
-        <button className={searching ? 'ibtn ph-find on' : 'ibtn ph-find'} type="button" aria-label="Search" aria-pressed={searching}
-          onClick={() => (searching ? leaveSearch() : setSearching(true))}><Icon name="search" /></button>
-        <button className="ibtn ph-new" type="button" aria-label="New event" onClick={() => openEditorSheet({kind: 'event', date: dayInView() ?? today})}><Icon name="add" /></button>
-        {searching && <SearchField search={field} label="Search events and tasks" autoFocus onEnter={() => {}} />}
+      {/* Search takes the header's place, as iOS's does: its field, then Cancel, the list staying put. */}
+      <header data-theme="night" className={searching ? 'hd ph-searching' : 'hd'}>
+        {searching ? (
+          <>
+            <SearchField search={search} label="Search events and tasks" autoFocus onEnter={() => {}} />
+            <button className="btn quiet ph-text" type="button" onClick={leaveSearch}>Cancel</button>
+          </>
+        ) : (
+          <>
+            <Mark />
+            <h1 className="hd-title">Agenda</h1>
+            <span className="grow" />
+            <button className="ph-month-btn" type="button" aria-haspopup="dialog" aria-label={`${agendaMonth(viewDay, today)}, go to a day`} onClick={() => setPicking(true)}>
+              {agendaMonth(viewDay, today)}<Icon name="expand_more" size={16} />
+            </button>
+            <button className="ibtn ph-find" type="button" aria-label="Search" onClick={() => setSearching(true)}><Icon name="search" /></button>
+            <button className="ibtn ph-new" type="button" aria-label="New event" onClick={() => openEditorSheet({kind: 'event', date: dayInView() ?? today})}><Icon name="add" /></button>
+          </>
+        )}
       </header>
       <div className="content">
         {/* The agenda stays under the results, hidden, where it was scrolled to. */}

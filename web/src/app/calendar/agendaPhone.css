@@ -7,6 +7,10 @@
   .hd > .ph-month-btn:active, .hd > .ph-find.on { background: var(--sub2); }
   /* Search is +'s size beside it, its on circle the month pill's height or more. */
   .hd > .ph-find { width: 40px; height: 40px; margin-right: -4px; }
+  /* Searching, the field takes the header's row and Cancel ends it: the list under it stays put. */
+  .hd.ph-searching { flex-wrap: nowrap; padding: 0 8px 0 12px; }
+  .hd.ph-searching > .search, .hd.ph-searching > .search.active { order: 0; flex: 1 1 auto; min-width: 0; margin: 4px 0; }
+  .hd.ph-searching > .ph-text { flex: none; height: 40px; padding: 0 8px; font-size: 15px; color: var(--ink); }
 
   /* Under the results, the agenda waits where it was scrolled to. */
   .ph-agenda[hidden] { display: none; }
