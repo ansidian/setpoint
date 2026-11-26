@@ -258,7 +258,8 @@
 @media (max-width: 639px) {
   .nw-list { view-transition-name: ph-list; }
   .nw-sec, .nw-state, .nw-line, .nw-empty, .nw-up, .nw-raw, .nw-also-hd { padding-left: 20px; padding-right: 16px; }
-  .nw-sec { height: 30px; font-size: 12px; }
+  /* A section's band stays at the top while its stories pass under it, as the Agenda's days do. */
+  .nw-sec { height: 30px; font-size: 12px; position: sticky; top: 0; z-index: 2; }
   .nw-state, .nw-line { min-height: 40px; font-size: 13px; }
   .nw-state .btn { flex: none; }
   /* No hover to read a cut line by: the states' lines and Show headlines' headlines wrap. */
