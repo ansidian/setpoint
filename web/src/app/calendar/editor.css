@@ -244,7 +244,7 @@
 .editor .eg > .icon.desc-glyph { align-self: start; margin-top: 8px; }
 .editor .desc-field { min-width: 0; border-radius: 10px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); transition: box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
 .editor .desc-field.focus { box-shadow: inset 0 0 0 1px var(--edgeFocus); background: var(--cardOn); }
-.editor .desc-edit { min-height: 34px; max-height: 174px; overflow-y: auto; padding: 7px 10px; outline: none; white-space: pre-wrap; cursor: text; }
+.editor .desc-edit { position: relative; min-height: 34px; max-height: 174px; overflow-y: auto; padding: 7px 10px; outline: none; white-space: pre-wrap; cursor: text; }
 .editor .desc-edit[data-empty]::before { content: attr(data-placeholder); color: var(--ink3); position: absolute; pointer-events: none; }
 .editor .desc-bar { display: flex; align-items: center; gap: 2px; min-height: 34px; padding: 4px 6px; border-top: 1px solid var(--hair); }
 .editor .desc-bar .ibtn[aria-pressed="true"] { background: var(--sub3); color: var(--ink); }
