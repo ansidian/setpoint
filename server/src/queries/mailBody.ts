@@ -20,14 +20,15 @@ export interface BodyPage {
 
 /**
  * The body page, with images when `images` says so, or, when it's null, when the rule allows them.
+ * `phone` is the phone's reader, whose card gives a text-like email no room of its own.
  */
-export function messageBody(store: Store, messageId: number, images: boolean | null, fold = false): BodyPage {
+export function messageBody(store: Store, messageId: number, images: boolean | null, fold = false, phone = false): BodyPage {
   const message = messageDetail(store, messageId);
   if (!message.body_html) throw notFound('That email has no HTML body.');
   const load = images ?? message.remote_content.load;
   // Folded, the email without its quoted history, or in full when it has none.
   const html = fold ? withoutQuotedHistory(message.body_html) ?? message.body_html : message.body_html;
-  return {html: emailPage(safeEmail(html, load)), policy: emailPolicy(load), load};
+  return {html: emailPage(safeEmail(html, load), phone), policy: emailPolicy(load), load};
 }
 
 /** Types the browser may show as themselves (the previews'). Anything else downloads as bytes. */

@@ -10,7 +10,7 @@ import {openDatabase} from '../../db/open.ts';
 import type {OpenDatabase} from '../../db/open.ts';
 import {busySaturday} from './busySaturday.ts';
 import {failedChange, noDinner} from './calendarChanges.ts';
-import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, positionedHtml, stitchedHtml, viewportHtml} from './mailBoards.ts';
+import {codeExpiring, coffeeHtml, gmailHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, positionedHtml, stitchedHtml, viewportHtml} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
 import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, staleIcloud, stalePersonal, staleTodoist, todoistOff, triageDown} from './states.ts';
 import {freeReview} from './freeReview.ts';
@@ -35,6 +35,8 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'stitched-html': {board: 'mail checks', apply: stitchedHtml},
   // Not a board: the mail checks show an email whose page sizes itself to the window.
   'viewport-html': {board: 'mail checks', apply: viewportHtml},
+  // Not a board: the phone's reader gives a person's HTML email room inside its card.
+  'gmail-html': {board: 'mail checks', apply: gmailHtml},
   // Not a board: the mail checks size the frame to an email held out of the page's flow.
   'positioned-html': {board: 'mail checks', apply: positionedHtml},
   // Not a board: the floating detail's place line with a link in it.

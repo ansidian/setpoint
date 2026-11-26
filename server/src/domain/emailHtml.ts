@@ -114,9 +114,32 @@ const TALL_WINDOW: [RegExp, string][] = [
 ];
 const framedMedia = (css: string) => css.replace(/@media[^{;]*\{/gi, prelude => TALL_WINDOW.reduce((text, [feature, answer]) => text.replace(feature, answer), prelude));
 
+/** A width of 400 px or more, the start of a designed email's fixed column (most are 600). */
+const WIDE = 400;
+const WIDE_IN_CSS = /(?:^|[;{\s])(?:min-|max-)?width\s*:\s*(\d+(?:\.\d+)?)px/gi;
+const wideCss = (css: string) => [...css.matchAll(WIDE_IN_CSS)].some(match => Number(match[1]) >= WIDE);
+
+/**
+ * Whether an email is really just text, as a person's email from Gmail, Outlook or Apple Mail is:
+ * no table holding another table (a layout), and nothing given a fixed width of 400 px or more, by
+ * its attribute, its own style or the email's styles. A table on its own (a signature's two
+ * columns) is still text. Images don't count: the frame keeps them to its width.
+ */
+export function textLike(doc: Document, styles: string[]): boolean {
+  if (styles.some(wideCss)) return false;
+  return !elements(doc, element => {
+    if (element.name === 'img') return false;
+    if (element.name === 'table' && elements(element.children, inner => inner.name === 'table').length > 0) return true;
+    const width = pixels(element.attribs.width?.replace(/px$/i, ''));
+    return (width !== null && width >= WIDE) || wideCss(element.attribs.style ?? '');
+  }).length;
+}
+
 export interface SafeEmail {
   styles: string[];
   body: string;
+  /** Just text (textLike), so a page on the phone gives it room inside its card. */
+  textLike: boolean;
 }
 
 /** The email's styles and body, safe for the frame. `loadImages` keeps remote content. */
@@ -136,6 +159,8 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
       element.attribs.rel = 'noopener noreferrer';
     }
   }
+  // Read before images become placeholders, which carry their picture's width.
+  const text = textLike(doc, elements(doc, item => item.name === 'style').map(style => render(style.children)));
   if (!loadImages) {
     for (const element of elements(doc, item => ['video', 'audio'].includes(item.name) || (item.name === 'source' && item.parent instanceof Element && item.parent.name === 'picture'))) removeElement(element);
     for (const image of elements(doc, item => item.name === 'img')) {
@@ -155,7 +180,7 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
     removeElement(style);
     return loadImages ? text : text.replace(REMOTE_URL, 'none');
   });
-  return {styles, body: render(shown(doc.children), {encodeEntities: 'utf8'})};
+  return {styles, body: render(shown(doc.children), {encodeEntities: 'utf8'}), textLike: text};
 }
 
 /**
@@ -205,13 +230,26 @@ export const MEASURE_SCRIPT = `(() => {
   });
 })();`;
 
+/**
+ * A text-like email's room on the phone, after the email's styles so it can't take it away: 16 px
+ * at its top and sides, as the desktop's card gives (the phone's card gives none, so a designed
+ * email keeps the screen's width). The bottom's 16 px is a block after the email, inside what the
+ * measuring script counts.
+ */
+export const PHONE_ROOM = ':root > body { padding: 16px 16px 0 !important; }';
+const ROOM_BELOW = '<setpoint-room style="display: block !important; height: 16px !important; margin: 0 !important; padding: 0 !important; border: 0 !important"></setpoint-room>';
+
 const MEASURE_HASH = createHash('sha256').update(MEASURE_SCRIPT).digest('base64');
 
-/** The frame's whole page: the base style, the email's styles, the page's own box, its body, and the measuring script. */
-export function emailPage(email: SafeEmail): string {
+/**
+ * The frame's whole page: the base style, the email's styles, the page's own box, its body, and the
+ * measuring script. On the phone (`phone`), a text-like email also gets its room.
+ */
+export function emailPage(email: SafeEmail, phone = false): string {
+  const room = phone && email.textLike;
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer">'
-    + `<style>${FRAME_STYLE}</style>${email.styles.map(style => `<style>${style}</style>`).join('')}<style>${PAGE_BOX}</style></head>`
-    + `<body>${email.body}<script>${MEASURE_SCRIPT}</script></body></html>`;
+    + `<style>${FRAME_STYLE}</style>${email.styles.map(style => `<style>${style}</style>`).join('')}<style>${PAGE_BOX}${room ? ` ${PHONE_ROOM}` : ''}</style></head>`
+    + `<body>${email.body}${room ? ROOM_BELOW : ''}<script>${MEASURE_SCRIPT}</script></body></html>`;
 }
 
 /**

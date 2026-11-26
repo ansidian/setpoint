@@ -7,6 +7,7 @@
 // import review opens over it in the full-screen sheet (the dev provider serves src/dev/icsFiles.ts by name).
 // The thread under the email and Back through it, Snooze's sheet with Undo and Pick a date…, Add to
 // calendar and Add as task from More, and an attachment's preview in its own sheet.
+// A person's HTML email (the gmail-html fixture) reads with room inside its card; a newsletter keeps the frame's width.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -517,6 +518,30 @@ test('an attachment\'s preview opens full-screen with Back and Download, and Bac
     await preview.getByRole('button', {name: 'Back'}).tap();
     await preview.waitFor({state: 'detached'});
     await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+// How far the email's boxes stay from the frame's left and right edges, in the frame's own pixels.
+const roomInside = (page: Page) => page.frameLocator('iframe.mailframe').locator('html').evaluate(root => {
+  const frame = root.getBoundingClientRect();
+  const boxes = [...document.body.querySelectorAll('*')].map(element => element.getBoundingClientRect()).filter(box => box.width > 0 && box.height > 0);
+  return {left: Math.min(...boxes.map(box => box.left)) - frame.left, right: frame.right - Math.max(...boxes.map(box => box.right))};
+});
+
+test('on the phone a person\'s HTML email starts inside its card, and a newsletter still spans the frame', async () => {
+  const setpoint = await startSetpoint({fixtures: ['gmail-html']});
+  try {
+    for (const [subject, inset] of [['Dinner Friday?', true], ['The Contoso Coffee Journal · October', false]] as const) {
+      const page = await reading(setpoint, subject);
+      await until('the frame has its height', () => page.locator('.mailframe-box').getAttribute('class'), name => name === 'mailframe-box');
+      const room = await roomInside(page);
+      if (inset) assert.ok(room.left >= 12 && room.right >= 12, `${subject} stays inside the card: ${JSON.stringify(room)}`);
+      else assert.ok(room.left < 1 && room.right < 1, `${subject} spans the frame: ${JSON.stringify(room)}`);
+      await page.close();
+    }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

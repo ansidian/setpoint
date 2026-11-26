@@ -195,6 +195,10 @@ export const POSITIONED_NOTICE_HTML = `<html><head><style>.shell { position: abs
   <p>Consolidated Messenger, 1 Harbour Way. Manage your delivery preferences.</p>
 </div></div></body></html>`;
 
+// A person's email from Gmail: its own text, nothing laid out, so on the phone it reads with room
+// inside the card.
+const GMAIL_REPLY_HTML = `<div dir="ltr">Hey! Dinner Friday? Blue Door at 7? I can book a table.<div><br></div><div>Sam</div></div>`;
+
 const bySubject = (db: Db, subject: string) => {
   const row = db.select().from(t.messages).where(eq(t.messages.subject, subject)).get();
   if (!row) throw new Error(`The seed has no email "${subject}": run \`npm run seed\` first.`);
@@ -211,6 +215,8 @@ export const newsletterHtml = ({db}: OpenDatabase) => setHtml(db, 'The Contoso C
 export const stitchedHtml = ({db}: OpenDatabase) => setHtml(db, 'Statement ready', STITCHED_NOTICE_HTML);
 
 export const positionedHtml = ({db}: OpenDatabase) => setHtml(db, 'Out for delivery', POSITIONED_NOTICE_HTML);
+
+export const gmailHtml = ({db}: OpenDatabase) => setHtml(db, 'Dinner Friday?', GMAIL_REPLY_HTML);
 
 export const viewportHtml = ({db}: OpenDatabase) => setHtml(db, 'Webinar: what\'s new in Litware 12', VIEWPORT_INVITE_HTML);
 
