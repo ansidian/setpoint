@@ -2,7 +2,7 @@
 // More, which act on the whole conversation; Reply, Reply all and Forward answer its newest email
 // someone else sent, as the stack's foot does. More opens a bottom sheet of the rest, one row each: Reply all (when the email has others to
 // reply to), Forward, Snooze (received mail not snoozed) or Snoozed with its return (a snoozed email,
-// whose sheet changes the time or ends it), Add to calendar, Add as task, Trash (when
+// whose sheet changes the time or ends it), Find in email, Add to calendar, Add as task, Trash (when
 // Done leads), and Mark read or Mark unread (not on sent mail). Open in Gmail stays on the desktop:
 // on the phone it would leave Setpoint for Gmail's site. A row is an entry in `moreRows`'s list, so
 // another action is one more entry there, its glyph in its action's colour as the swipe tray and the
@@ -43,6 +43,8 @@ export interface ReaderBarActions {
   // The editor's sheet, filled from the email.
   addEvent: () => void;
   addTask: () => void;
+  // Find in email, at the top of the reader (search/FindBar.tsx).
+  find: () => void;
 }
 
 export interface MoreRow {
@@ -60,6 +62,7 @@ export function moreRows(email: ReaderBarEmail, on: ReaderBarActions, openSnooze
     {icon: 'forward', tone: 'ink3', label: 'Forward', run: on.forward},
     email.snoozeable && {icon: 'snooze', tone: 'violet', label: 'Snooze', run: openSnooze},
     !!email.snoozed && {icon: 'snooze', tone: 'violet', label: 'Snoozed', detail: email.snoozed!.when, run: openSnooze},
+    {icon: 'search', tone: 'ink3', label: 'Find in email', run: on.find},
     {icon: 'event', tone: 'ink3', label: 'Add to calendar', run: on.addEvent},
     {icon: 'task_alt', tone: 'ink3', label: 'Add as task', run: on.addTask},
     email.doneable && {icon: 'delete', tone: 'alert', label: 'Trash', run: on.trash},

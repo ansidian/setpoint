@@ -1115,10 +1115,11 @@ test('with the email clicked into, its keys still reach Setpoint, and its text s
     await page.keyboard.press('o');
     assert.match((await opened).url(), /^https:\/\/mail\.google\.com\/mail\/\?authuser=/);
 
-    // ⌘F goes to the header's search, as it does from anywhere else.
+    // ⌘F goes to the header's search, which searches this email, as it does from anywhere else in it.
+    const subject = await page.locator('.rd-subj').textContent();
     await intoEmail();
     await page.keyboard.press('Meta+f');
-    await until('the search has the keys', () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')), label => label === 'Search mail');
+    await until('the search has the keys', () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')), label => label === `Search ${subject}`);
     await page.keyboard.press('Escape');
 
     await intoEmail();

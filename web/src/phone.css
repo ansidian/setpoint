@@ -165,6 +165,12 @@
   .pane::after { content: ""; position: absolute; inset: env(safe-area-inset-top) 0 0; z-index: -1; border-radius: 10px 10px 0 0; background: var(--card); pointer-events: none; }
   .pane > .rd-tools { display: none; }
   .ph-top { height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 6px; }
+  /* Find in email in the reader's top row: the field takes the room, then ↑, ↓ and Done. */
+  .ph-top.ph-finding { gap: 2px; padding: 0 4px 0 12px; }
+  .ph-finding > .search, .ph-finding > .search.finding.active { flex: 1 1 auto; width: auto; min-width: 0; height: 36px; margin-right: 4px; }
+  .ph-finding > .search input { font-size: 16px; }
+  .ph-finding > .search input::placeholder { font-size: 13px; }
+  .ph-finding > .ph-text { flex: none; height: 40px; padding: 0 8px; font-size: 15px; color: var(--ink); }
   .btn.ph-back { height: 40px; padding: 0 10px 0 6px; color: var(--ink); }
   .rd-head { padding: 10px 20px 0; gap: 16px; }
   .rd-acct { margin: 4px 12px 0; padding: 0 12px; }

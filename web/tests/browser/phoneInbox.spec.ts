@@ -230,7 +230,7 @@ test('phone search takes sent mail in: a conversation only the user wrote reads 
     await until('its bar', () => page.locator('.ph-acts > button').allTextContents(), shown => shown.join() === 'Trash,Reply,More');
     assert.equal(await page.locator('.ph-top button[aria-label="Pin"]').count(), 0);
     await page.locator('.ph-acts button', {hasText: 'More'}).tap();
-    assert.deepEqual(await page.locator('.ph-bs .ph-bs-i').allTextContents(), ['Forward', 'Add to calendar', 'Add as task']);
+    assert.deepEqual(await page.locator('.ph-bs .ph-bs-i').allTextContents(), ['Forward', 'Find in email', 'Add to calendar', 'Add as task']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

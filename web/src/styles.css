@@ -1189,3 +1189,24 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list.all .kh[data-kind=people] > .icon { color: var(--kindPeople); }
 .list.all .kh[data-kind=other] > .icon { color: var(--kindOther); }
 .nfold .gi { display: grid; color: var(--kindNoise); }
+
+/* ---------- Find's dim ---------- */
+/* A mail page's focused search field dims what's outside its scope (search/find.ts), fading with the
+   fast token. Searching the open email dims the sidebar, the list and the reader's toolbar; searching
+   the mail dims the sidebar and the reader. Each region reads its own level from the app, so the
+   fade never takes over a region's own transitions, and a click on a dimmed region still lands. */
+@property --dim-side { syntax: '<number>'; inherits: true; initial-value: 1; }
+@property --dim-list { syntax: '<number>'; inherits: true; initial-value: 1; }
+@property --dim-pane { syntax: '<number>'; inherits: true; initial-value: 1; }
+@property --dim-tools { syntax: '<number>'; inherits: true; initial-value: 1; }
+.app { transition: --dim-side var(--dur-fast) var(--ease), --dim-list var(--dur-fast) var(--ease), --dim-pane var(--dur-fast) var(--ease), --dim-tools var(--dur-fast) var(--ease); }
+.app[data-dim] { --dim-side: .4; }
+.app[data-dim="email"] { --dim-list: .4; --dim-tools: .4; }
+.app[data-dim="page"] { --dim-pane: .4; }
+.sb { opacity: var(--dim-side); }
+.list { opacity: var(--dim-list); }
+/* Alfred's Answer card in the results never dims: the rows around it do. */
+.list:has(> .card.answer) { opacity: 1; }
+.list:has(> .card.answer) > :not(.card.answer) { opacity: var(--dim-list); }
+.pane { opacity: var(--dim-pane); }
+.pane > :is(.rd-tools, .rd-acct), .pane > .ph-acts { opacity: var(--dim-tools); }
