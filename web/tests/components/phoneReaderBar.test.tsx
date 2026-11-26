@@ -13,13 +13,15 @@ beforeEach(async () => {
 });
 
 const actions = (): ReaderBarActions => ({
-  done: vi.fn(), trash: vi.fn(), reply: vi.fn(), replyAll: vi.fn(), forward: vi.fn(), toggleRead: vi.fn(), snooze: vi.fn(), unsnooze: vi.fn(), addEvent: vi.fn(), addTask: vi.fn(),
+  done: vi.fn(), trash: vi.fn(), reply: vi.fn(), replyAll: vi.fn(), forward: vi.fn(), toggleRead: vi.fn(), snooze: vi.fn(), unsnooze: vi.fn(), addEvent: vi.fn(), addTask: vi.fn(), find: vi.fn(),
 });
 
 const PLAIN: ReaderBarEmail = {doneable: false, replyAll: false, markedUnread: false, sent: false, snoozeable: true, snoozed: null};
 // A snoozed email where the page changes or ends its snooze (Snoozed, the Inbox's search).
 const SNOOZED = {until: '2026-10-09T16:00:00.000Z', when: 'Fri 9:00 AM'};
 const MAKE = ['Add to calendar', 'Add as task'];
+// More's Find in email, before what it makes from the email.
+const FIND = 'Find in email';
 
 async function draw(email: ReaderBarEmail, on = actions()) {
   await render(<div className="ph-acts"><ReaderBar email={email} on={on} /></div>);
@@ -37,12 +39,12 @@ test.each([
 });
 
 test.each([
-  ['mail with others to reply to, Done leading', {...PLAIN, doneable: true, replyAll: true}, ['Reply all', 'Forward', 'Snooze', ...MAKE, 'Trash', 'Mark unread']],
-  ['mail to the user alone', PLAIN, ['Forward', 'Snooze', ...MAKE, 'Mark unread']],
-  ['mail marked unread here', {...PLAIN, markedUnread: true}, ['Forward', 'Snooze', ...MAKE, 'Mark read']],
-  ['an email already snoozed: Snoozed with its return', {...PLAIN, snoozeable: false, snoozed: SNOOZED}, ['Forward', 'SnoozedFri 9:00 AM', ...MAKE, 'Mark unread']],
-  ['an email already snoozed where the page can\'t change it', {...PLAIN, snoozeable: false}, ['Forward', ...MAKE, 'Mark unread']],
-  ['sent mail: no Snooze and no read state', {...PLAIN, sent: true, snoozeable: false}, ['Forward', ...MAKE]],
+  ['mail with others to reply to, Done leading', {...PLAIN, doneable: true, replyAll: true}, ['Reply all', 'Forward', 'Snooze', FIND, ...MAKE, 'Trash', 'Mark unread']],
+  ['mail to the user alone', PLAIN, ['Forward', 'Snooze', FIND, ...MAKE, 'Mark unread']],
+  ['mail marked unread here', {...PLAIN, markedUnread: true}, ['Forward', 'Snooze', FIND, ...MAKE, 'Mark read']],
+  ['an email already snoozed: Snoozed with its return', {...PLAIN, snoozeable: false, snoozed: SNOOZED}, ['Forward', 'SnoozedFri 9:00 AM', FIND, ...MAKE, 'Mark unread']],
+  ['an email already snoozed where the page can\'t change it', {...PLAIN, snoozeable: false}, ['Forward', FIND, ...MAKE, 'Mark unread']],
+  ['sent mail: no Snooze and no read state', {...PLAIN, sent: true, snoozeable: false}, ['Forward', FIND, ...MAKE]],
 ])('More\'s rows: %s', async (_, email, rows) => {
   await draw(email);
   await page.getByRole('button', {name: 'More'}).click();
@@ -55,6 +57,7 @@ test.each([
   ['Reply all', 'reply_all', 'ink3'],
   ['Forward', 'forward', 'ink3'],
   ['Snooze', 'snooze', 'violet'],
+  ['Find in email', 'search', 'ink3'],
   ['Add to calendar', 'event', 'ink3'],
   ['Add as task', 'task_alt', 'ink3'],
   ['Trash', 'delete', 'alert'],
@@ -77,7 +80,7 @@ test('Reply in the bar, and a row of More, each run their action; the row closes
   await page.getByRole('button', {name: 'Reply', exact: true}).click();
   expect(on.reply).toHaveBeenCalledOnce();
 
-  for (const [label, action] of [['Reply all', 'replyAll'], ['Forward', 'forward'], ['Add to calendar', 'addEvent'], ['Add as task', 'addTask'], ['Trash', 'trash'], ['Mark unread', 'toggleRead']] as const) {
+  for (const [label, action] of [['Reply all', 'replyAll'], ['Forward', 'forward'], ['Find in email', 'find'], ['Add to calendar', 'addEvent'], ['Add as task', 'addTask'], ['Trash', 'trash'], ['Mark unread', 'toggleRead']] as const) {
     await page.getByRole('button', {name: 'More'}).click();
     const sheet = page.getByRole('dialog', {name: 'More'});
     await sheet.getByRole('button', {name: label}).click();

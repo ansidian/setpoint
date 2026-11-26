@@ -43,6 +43,7 @@ import {openSnooze} from './SnoozeMenu.tsx';
 import {useNow} from './clock.ts';
 import {ConversationFrom, Gutter} from './AllList.tsx';
 import {askCard, Reader} from './Reader.tsx';
+import {FindOnlyField} from './search/Search.tsx';
 import {navigate} from './router.ts';
 import {LoadFailed, useLoadFailed} from './states/Loading.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
@@ -302,6 +303,8 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
         {phone && <Mark />}
         {phone ? <TitleMenu title={mailTitle(PHONE_MENU)} rows={menuRows} /> : <h1 className="hd-title">Snoozed</h1>}
         <span className="grow" />
+        {/* Snoozed has no mail search: its field is there to search the open email (⌘F). */}
+        {!phone && open !== null && <FindOnlyField />}
       </header>
       <div className="content" style={accountWidth}>
         <section className="list snoozed-list" aria-label="Snoozed" onContextMenu={onContextMenu} onScroll={swipes.close} {...(phone ? swipes.handlers : {})}>

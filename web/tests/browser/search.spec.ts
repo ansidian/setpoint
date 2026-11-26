@@ -163,7 +163,7 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
   try {
     const page = await load(setpoint);
     await page.keyboard.press('/');
-    assert.equal(await focused(page), 'Search mail');
+    assert.equal(await focused(page), 'Search inbox');
     // Keyword results as it's typed, each word still a word, a date's too.
     await typeWords(page, setpoint, 'northwind rejection march');
     await page.locator('.list .arow.result').first().waitFor();
@@ -179,7 +179,7 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     // A click takes it, and the keys stay in the field.
     await suggestion(page).click();
     await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind Talent | TypeRejection | DateMar 2026');
-    assert.equal(await focused(page), 'Search mail');
+    assert.equal(await focused(page), 'Search inbox');
     assert.equal(await field(page).inputValue(), '');
     await until('the filtered list', () => titles(page), shown => shown.join() === 'Update on your application,Your application for Data Engineer Intern');
     assert.equal(await page.locator('.search-list .bar').textContent(), '2 results');
@@ -192,7 +192,7 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     // Enter hands the keys to the results. The cursor starts on the first, J and K move it, and Enter opens it and logs its position.
     await page.keyboard.press('Enter');
     await page.locator('.arow.result.cur', {hasText: 'Update on your application'}).waitFor();
-    assert.notEqual(await focused(page), 'Search mail');
+    assert.notEqual(await focused(page), 'Search inbox');
     await page.keyboard.press('j');
     await page.locator('.arow.result.cur', {hasText: 'Your application for Data Engineer Intern'}).waitFor();
     await page.keyboard.press('k');
@@ -226,10 +226,10 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     await page.locator('.hd-title', {hasText: 'Inbox'}).waitFor();
     assert.equal(await page.locator('.qchip').count(), 0);
     await page.locator('.list .gh.day').first().waitFor();
-    // ⌘F focuses the field too.
+    // ⌘F focuses the field too: with the email still open, to search that email.
     await page.locator('.list .gh.day').first().click();
     await page.keyboard.press('Meta+f');
-    assert.equal(await focused(page), 'Search mail');
+    assert.equal(await focused(page), `Search ${await page.locator('.rd-subj').textContent()}`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();
@@ -389,7 +389,7 @@ test('Tab takes a suggestion, with no model call; with none showing it moves on 
     await until('shown in the log', async () => log.map(({event}) => event), events => events.join() === 'shown');
     await page.keyboard.press('Tab');
     await until('the chip', () => chips(page), shown => shown.join() === 'OrgParkside Apartments');
-    assert.equal(await focused(page), 'Search mail');
+    assert.equal(await focused(page), 'Search inbox');
     await until('the search it ran', async () => searches.at(-1)!, last => last.read === 'kept' && last.text === 'renewal' && last.typed === 'renewal' && last.chips.length === 1);
     await until('accepted in the log', async () => log.map(({event}) => event), events => events.join() === 'shown,accepted');
     assert.ok(log[1]!.search_id! > 0);
@@ -540,7 +540,7 @@ test('Enter only hands over the keys: no model, no change to the list, and a sug
     const read = [...fake.read];
     await page.keyboard.press('Enter');
     await page.locator('.arow.result.cur').first().waitFor();
-    assert.notEqual(await focused(page), 'Search mail');
+    assert.notEqual(await focused(page), 'Search inbox');
     assert.deepEqual([await chips(page), await titles(page), searches.length, fake.read], [[], words, asked, read]);
     await page.keyboard.press('j');
     assert.equal(await suggestion(page).count(), 1);
@@ -555,7 +555,7 @@ test('Enter only hands over the keys: no model, no change to the list, and a sug
     await page.keyboard.type('parkside');
     await page.keyboard.press('Enter');
     await page.locator('.arow.result.cur').first().waitFor();
-    assert.notEqual(await focused(page), 'Search mail');
+    assert.notEqual(await focused(page), 'Search inbox');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();
@@ -841,7 +841,7 @@ test('a thin first section hides nothing: its fold starts open with its line, J 
     await page.keyboard.press('End');
     await page.keyboard.type('s');
     await page.keyboard.press('Enter');
-    await until('the keys handed over', () => focused(page), label => label !== 'Search mail');
+    await until('the keys handed over', () => focused(page), label => label !== 'Search inbox');
     await until('its fold', () => fold.getAttribute('aria-expanded'), expanded => expanded === 'false');
     assert.equal(await rows.count(), 3);
     // Another search decides again.
@@ -1010,11 +1010,11 @@ test('a click on a chip, the search glyph or the Esc hint keeps every chip and g
     const first = search.locator('.qchip').first().locator('.x');
     for (const [what, part] of [['the third chip', search.locator('.qchip', {hasText: 'Mar 2026'}).locator('.k')], ['the glyph', search.locator('svg.icon').first()], ['the hint', search.locator('.kbd')]] as const) {
       await page.locator('.hd-title').click();
-      await until(`the words left before ${what}`, () => focused(page), label => label !== 'Search mail');
+      await until(`the words left before ${what}`, () => focused(page), label => label !== 'Search inbox');
       await part.hover();
       assert.equal(await first.evaluate(x => x.matches(':hover')), false, `over ${what}, the first chip's × isn't lit`);
       await part.click();
-      await until(`${what} goes to the words`, () => focused(page), label => label === 'Search mail');
+      await until(`${what} goes to the words`, () => focused(page), label => label === 'Search inbox');
       assert.deepEqual(await chips(page), ['OrgNorthwind Talent', 'TypeRejection', 'DateMar 2026'], `a click on ${what}`);
     }
     // Only a chip's own × removes it.

@@ -3,7 +3,9 @@
 // matched and its matches highlighted, the fold over those that only mention the search, the line of
 // what a suggestion's chips left out, the suggestion itself in the results line, and the no-results
 // line with each chip removable. Kept thin: the rules are logic/search.ts's, and the state is
-// mailSearch.ts's and state.ts's.
+// mailSearch.ts's and state.ts's. On the mail pages the same field also searches the open email
+// (find.ts): its placeholder names the email, it counts and steps through the matches, and the
+// mail search's words and chips wait under it until find ends.
 import type {AccountOut, CalendarSearchChip, Recipient, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode, RefObject} from 'react';
@@ -25,6 +27,9 @@ import {usePhone} from '../Phone.tsx';
 import type {Search} from './mailSearch.ts';
 import type {SearchFieldState} from './state.ts';
 import {SentFrom} from '../SentFrom.tsx';
+import {findCount, findLabel} from '../../logic/find.ts';
+import type {FindScope} from '../../logic/find.ts';
+import {closeFind, openFind, setFindFocused, setFindText, stepFindBy, useFind} from './find.ts';
 import './search.css';
 import {ScrollThumb} from '../ScrollThumb.tsx';
 
@@ -58,6 +63,10 @@ interface SearchFieldProps<R> {
   // Mail's Inbox and Sent: Gmail-style operators are marked as the search reads them, and from:,
   // to:, has: and is: offer what they take.
   operators?: boolean;
+  // A mail page's field, which ⌘F scopes to the open email and whose focus dims the page around it.
+  findable?: boolean;
+  // Snoozed's, which has no mail search: it only ever searches the open email.
+  findOnly?: boolean;
 }
 
 /** What the list under an operator offers: a person (their address goes in) or a value. */
@@ -148,9 +157,12 @@ let selectWhole: (() => void) | null = null;
 
 /**
  * `/` or ⌘F: focuses the header's field and selects its whole query, chips too, so what's typed next
- * replaces it. False with no field on screen.
+ * replaces it, ending a search of the open email. In the email's scope (logic/find.ts › findScope) it
+ * opens that search instead. False with no field on screen.
  */
-export function selectSearch() {
+export function selectSearch(scope: FindScope = 'page') {
+  if (scope === 'email' && openFind()) return true;
+  closeFind();
   selectWhole?.();
   return selectWhole !== null;
 }
@@ -161,8 +173,13 @@ export function selectSearch() {
  * on as it does anywhere. ⌘Enter asks Alfred. Esc clears the search. Backspace in an empty field
  * removes the last chip.
  */
-export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus, operators = false}: SearchFieldProps<R>) {
+export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus, operators = false, findable = false, findOnly = false}: SearchFieldProps<R>) {
   const input = useRef<HTMLInputElement>(null);
+  // Searching the open email, on the desktop. The phone's is in the reader (FindBar.tsx).
+  const find = useFind();
+  const mailPage = findable || findOnly;
+  const onPhone = usePhone();
+  const scoped = mailPage && !onPhone && find.open !== null;
   const mirror = useRef<HTMLSpanElement>(null);
   useMirror(input, mirror, search.text);
   const [caret, setCaret] = useState<number | null>(null);
@@ -184,7 +201,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   const phone = usePhone();
   // While the field has focus, / types a slash and Esc is the way out, so the hint says Esc.
   const [focused, setFocused] = useState(false);
-  const marked = operators;
+  const marked = operators && !scoped;
   const list = useOperatorList(marked && focused, search.text, caret);
   const listOpen = list.offers.length > 0;
   useListAboveKeys(phone && listOpen, field);
@@ -203,6 +220,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
     search.setText(next.text);
   };
   useEffect(() => {
+    if (findOnly) return;
     const select = () => {
       input.current?.focus();
       input.current?.select();
@@ -212,8 +230,33 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
     return () => {
       if (selectWhole === select) selectWhole = null;
     };
-  }, []);
+  }, [findOnly]);
+  // ⌘F's find takes the keys here, its words selected.
+  const asked = useRef(find.focus);
+  useEffect(() => {
+    if (asked.current === find.focus) return;
+    asked.current = find.focus;
+    if (!scoped) return;
+    input.current?.focus();
+    input.current?.select();
+  }, [find.focus, scoped]);
+  // Enter and ⇧Enter step through the email's matches and keep the keys. Esc ends find. Backspace
+  // only ever deletes letters.
+  const onFindKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+      stepFindBy(event.shiftKey ? -1 : 1);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeFind();
+      input.current?.blur();
+    }
+  };
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (scoped) {
+      onFindKey(event);
+      return;
+    }
     setWhole(false);
     // Typing or deleting over the whole query replaces its chips too. The input replaces its words.
     if (whole && search.chips.length && (event.key === 'Backspace' || event.key === 'Delete' || (event.key.length === 1 && !event.metaKey && !event.ctrlKey))) {
@@ -265,27 +308,37 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
       removeChip(search.chips.length - 1);
     }
   };
+  const shownLabel = scoped ? findLabel(find.open!.subject) : label;
   const words = (
-    <input ref={input} id={inputId} className={marked ? 'q-input' : 'grow'} placeholder={search.chips.length ? '' : label} aria-label={label} value={search.text} autoFocus={autoFocus}
+    <input ref={input} id={inputId} className={marked ? 'q-input' : 'grow'} placeholder={!scoped && search.chips.length ? '' : shownLabel} aria-label={shownLabel} value={scoped ? find.text : search.text} autoFocus={autoFocus}
       role={marked ? 'combobox' : undefined} aria-expanded={marked ? listOpen : undefined} aria-autocomplete={marked ? 'list' : undefined}
       onChange={event => {
+        if (scoped) return setFindText(event.target.value);
         setCaret(event.target.selectionStart);
         search.setText(event.target.value);
       }}
-      onSelect={event => setCaret(event.currentTarget.selectionStart)} onKeyDown={onKeyDown} onMouseDown={() => setWhole(false)} onFocus={() => setFocused(true)}
+      onSelect={event => setCaret(event.currentTarget.selectionStart)} onKeyDown={onKeyDown} onMouseDown={() => setWhole(false)}
+      onFocus={() => {
+        setFocused(true);
+        if (findOnly && !scoped) openFind();
+        if (mailPage) setFindFocused(true);
+      }}
       onBlur={() => {
         setWhole(false);
         setFocused(false);
+        if (mailPage) setFindFocused(false);
       }} />
   );
+  const counted = scoped ? findCount(find.current, find.total, find.text) : null;
+  const active = scoped ? find.text !== '' : search.active;
   return (
-    <label ref={field} className={['search', marked && 'ops', search.active && 'active', search.pending && 'pending'].filter(Boolean).join(' ')} htmlFor={inputId}>
+    <label ref={field} className={['search', marked && 'ops', active && 'active', !scoped && search.pending && 'pending', scoped && 'finding'].filter(Boolean).join(' ')} htmlFor={inputId}>
       {/* While a search is on its way, once it's taken a moment, its glyph turns. */}
       <span className="glass">
-        {search.pending && <span className="spin"><Icon name="progress_activity" size={16} /></span>}
+        {!scoped && search.pending && <span className="spin"><Icon name="progress_activity" size={16} /></span>}
         <Icon name="search" size={16} />
       </span>
-      {search.chips.map((chip, index) => (
+      {!scoped && search.chips.map((chip, index) => (
         <span className={whole ? 'qchip sel' : 'qchip'} key={chipKey(chip)}>
           <span className="k">{negated(chip) ? `Not ${CHIP_KEYS[chip.kind]}` : CHIP_KEYS[chip.kind]}</span>{chip.label}
           {/* Its own click stays its own: the label would send it on to the words. */}
@@ -306,6 +359,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
         <PlaceList places={list.offers} cur={list.cur} query={list.at?.query ?? ''} floating icon={list.person ? 'person' : null} label={list.person ? 'People' : 'Values'}
           keyOf={offer => offer.value} onPick={pick} />
       )}
+      {counted && <span className={find.total ? 'find-count num' : 'find-count none'} aria-live="polite">{counted}</span>}
       {phone && search.active ? (
         // Its own tap stays its own: the label would send it on to the words.
         <button className="search-clear" type="button" aria-label="Clear search" onClick={event => {
@@ -313,9 +367,19 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
           search.clear();
           input.current?.blur();
         }}><Icon name="close" size={18} /></button>
-      ) : <span className="kbd">{search.active || focused ? 'Esc' : '/'}</span>}
+      ) : <span className="kbd">{active || focused ? 'Esc' : findOnly ? '⌘F' : '/'}</span>}
     </label>
   );
+}
+
+// Snoozed's field has no mail search under it.
+const NO_SEARCH: FieldSearch<never> = {chips: [], text: '', active: false, setText: () => {}, settle: () => Promise.resolve(null), removeChip: () => {}, clear: () => {}};
+
+/** Snoozed's header field, there while an email is open: it only ever searches that email. */
+export function FindOnlyField() {
+  const target = useFind().target;
+  if (!target) return null;
+  return <SearchField search={NO_SEARCH} findOnly label={findLabel(target.subject)} onEnter={() => {}} />;
 }
 
 /**

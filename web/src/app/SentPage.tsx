@@ -471,7 +471,7 @@ export function SentPage({route}: {route: SentRoute}) {
         )}
         <span className="grow" />
         {phone && <button className="ibtn ph-icon" type="button" aria-label="New message" onClick={() => newMessage()}><Icon name="edit" size={20} /></button>}
-        <SearchField search={search} operators label={shownAccount ? `Search sent from ${shownAccount.label}` : 'Search sent mail'} onEnter={first => setCursor(`all:${first.id}`)} />
+        <SearchField search={search} operators findable label={shownAccount ? `Search sent from ${shownAccount.label}` : 'Search sent mail'} onEnter={first => setCursor(`all:${first.id}`)} />
       </header>
       <div className="content" style={accountWidth} onContextMenu={onContextMenu}>
         {firstWait && waitedLong ? (

@@ -193,6 +193,10 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
  * A key pressed with the email clicked into also goes on to the reader, unless a field of the
  * email's own takes it. The page keeps its own defaults, so selecting and copying still work. Only
  * ⌘F, ⌘K and ⌘, are kept from the browser, as Setpoint keeps them everywhere else.
+ * Find in email asks it, by message, for the words it should mark (already folded as the reader
+ * folds them, web/src/logic/find.ts) and which match is current. It reads the page's text once,
+ * a block's edge being a line no match crosses, marks the matches with the CSS highlight API, and
+ * answers with how many there are and where the current one sits, in the frame's own pixels.
  */
 export const MEASURE_SCRIPT = `(() => {
   const root = document.documentElement;
@@ -227,6 +231,99 @@ export const MEASURE_SCRIPT = `(() => {
     if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && ['f', 'k', ','].includes(event.key.toLowerCase())) event.preventDefault();
     const {key, code, metaKey, ctrlKey, altKey, shiftKey, repeat, isComposing} = event;
     parent.postMessage({setpointMailKey: {key, code, metaKey, ctrlKey, altKey, shiftKey, repeat, isComposing}}, '*');
+  });
+  const BLOCKS = new Set(['P', 'DIV', 'LI', 'UL', 'OL', 'TR', 'TD', 'TH', 'TABLE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'BR', 'HR', 'SECTION', 'ARTICLE', 'CENTER']);
+  const fold = text => {
+    let out = '';
+    const at = [];
+    let index = 0;
+    let space = null;
+    for (const char of text) {
+      if (/\\s/.test(char)) {
+        space = space ? {from: space.from, line: space.line || char === '\\n'} : {from: index, line: char === '\\n'};
+      } else {
+        if (space) {
+          out += space.line ? '\\n' : ' ';
+          at.push(space.from);
+          space = null;
+        }
+        const piece = char.normalize('NFD').replace(/\\p{M}/gu, '').toLowerCase();
+        out += piece;
+        for (let unit = 0; unit < piece.length; unit += 1) at.push(index);
+      }
+      index += char.length;
+    }
+    if (space) {
+      out += space.line ? '\\n' : ' ';
+      at.push(space.from);
+    }
+    return {text: out, at};
+  };
+  let page = null;
+  const read = () => {
+    const nodes = [];
+    const starts = [];
+    let text = '';
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+      acceptNode: node => (node.nodeType === 1 && ['SCRIPT', 'STYLE', 'SETPOINT-END', 'SETPOINT-ROOM'].includes(node.tagName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.nodeType === 3) {
+        nodes.push(node);
+        starts.push(text.length);
+        text += node.data;
+      } else if (BLOCKS.has(node.tagName)) {
+        text += '\\n';
+      }
+    }
+    return {nodes, starts, folded: fold(text)};
+  };
+  const marks = document.createElement('style');
+  marks.textContent = '::highlight(setpoint-find) { background-color: #ffe27a; color: #1d1f22; } ::highlight(setpoint-find-current) { background-color: #ff9d2e; color: #1d1f22; }';
+  document.head.append(marks);
+  const find = (words, current) => {
+    page = page || read();
+    const {nodes, starts, folded} = page;
+    const at = offset => {
+      let index = nodes.length - 1;
+      while (index > 0 && starts[index] > offset) index -= 1;
+      return [nodes[index], offset - starts[index]];
+    };
+    const ranges = [];
+    for (let from = 0; words && nodes.length;) {
+      const start = folded.text.indexOf(words, from);
+      if (start < 0) break;
+      const range = document.createRange();
+      const [startNode, startOffset] = at(folded.at[start]);
+      const [endNode, endOffset] = at(folded.at[start + words.length - 1]);
+      range.setStart(startNode, startOffset);
+      range.setEnd(endNode, Math.min(endNode.length, endOffset + 1));
+      ranges.push(range);
+      from = start + words.length;
+    }
+    const chosen = ranges[current] || null;
+    if (typeof CSS !== 'undefined' && CSS.highlights && typeof Highlight === 'function') {
+      if (ranges.length) CSS.highlights.set('setpoint-find', new Highlight(...ranges));
+      else CSS.highlights.delete('setpoint-find');
+      if (chosen) CSS.highlights.set('setpoint-find-current', new Highlight(chosen));
+      else CSS.highlights.delete('setpoint-find-current');
+    }
+    let top = null;
+    let bottom = null;
+    if (chosen) {
+      const box = root.getBoundingClientRect();
+      const mark = chosen.getBoundingClientRect();
+      const scale = root.clientWidth / box.width;
+      top = (mark.top - box.top) * scale;
+      bottom = (mark.bottom - box.top) * scale;
+    }
+    parent.postMessage({setpointFound: {words, current, count: ranges.length, top, bottom}}, '*');
+  };
+  addEventListener('message', event => {
+    if (event.source !== parent) return;
+    const ask = event.data && event.data.setpointFind;
+    if (!ask || typeof ask.words !== 'string' || typeof ask.current !== 'number') return;
+    find(ask.words, ask.current);
   });
 })();`;
 

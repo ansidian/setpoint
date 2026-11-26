@@ -7,8 +7,16 @@
 // its images load, and the frame takes it. Keys pressed with the email clicked into come the same
 // way. They are pressed again on the frame, so Setpoint's keys still work. On the phone the page is
 // asked for as the phone's, so a text-like email has room inside the card.
+//
+// Find in email (search/find.ts) reaches the page the same way: the frame sends it the words and
+// which of its matches is current, and the page marks them and answers with its count and where the
+// current one sits, so the reading pane can bring it into view. A page loaded again (Show, the
+// quoted history) is sent them again once it says its height. `counting` is a frame that isn't
+// shown, holding the email's whole page only to count what find matches in it.
 import {useEffect, useRef, useState} from 'react';
 import {emailBodyPath} from '../api/mail.ts';
+import {findWords} from '../logic/find.ts';
+import {registerFrame, revealInPane, useFind} from './search/find.ts';
 import {usePhone} from './Phone.tsx';
 
 /** No email is taller than this. A height past it is a fault, not an email. */
@@ -37,7 +45,15 @@ function pressedKey(sent: unknown): KeyboardEventInit | null {
   return {key, code, ...Object.fromEntries(KEY_FLAGS.map(flag => [flag, (sent as Record<string, unknown>)[flag] === true]))};
 }
 
-export function MailFrame({messageId, show, title, fold = false}: {messageId: number; show: boolean; title: string; fold?: boolean}) {
+export function MailFrame({messageId, show, title, fold = false, counting = false, onCount}: {
+  messageId: number;
+  show: boolean;
+  title: string;
+  fold?: boolean;
+  counting?: boolean;
+  // How many of find's matches the page holds, as it answers.
+  onCount?: (count: number) => void;
+}) {
   // The phone's card gives the email no room, so its page gives a text-like email its own.
   const src = emailBodyPath(messageId, show, fold, usePhone());
   const frame = useRef<HTMLIFrameElement>(null);
@@ -50,15 +66,61 @@ export function MailFrame({messageId, show, title, fold = false}: {messageId: nu
   // then fades in at its height. An email seen before starts at its last height.
   const [height, setHeight] = useState<number | null>(() => heights.get(src) ?? null);
 
+  // Find's words, the matches the page last counted, and which one is current here.
+  const find = useFind();
+  const words = find.open ? findWords(find.text) : '';
+  const [count, setCount] = useState(0);
+  const box = useRef<HTMLDivElement>(null);
+  const asked = useRef({words: '', current: -1, reveal: false});
+  // Moves when a page first says its height: it's ready for the words.
+  const [ready, setReady] = useState(0);
+  const readyFor = useRef<string | null>(null);
+  const counted = useRef(onCount);
+  useEffect(() => {
+    counted.current = onCount;
+  });
+  const ask = (next: {words: string; current: number; reveal: boolean}) => {
+    asked.current = next;
+    frame.current?.contentWindow?.postMessage({setpointFind: {words: next.words, current: next.current}}, '*');
+  };
+  useEffect(() => {
+    if (!words && !asked.current.words) return;
+    ask({words, current: -1, reveal: false});
+  }, [words, ready]);
+  useEffect(() => {
+    const element = box.current;
+    if (counting || !element) return;
+    return registerFrame(element, (current, reveal) => {
+      const was = asked.current;
+      if (was.current === current && !reveal) return;
+      ask({words: was.words, current, reveal: reveal && current >= 0});
+    });
+  }, [counting]);
+
   useEffect(() => {
     const listen = (event: MessageEvent) => {
       if (!frame.current || event.source !== frame.current.contentWindow) return;
-      const data = event.data as {setpointMailHeight?: unknown; setpointMailKey?: unknown} | null;
+      const data = event.data as {setpointMailHeight?: unknown; setpointMailKey?: unknown; setpointFound?: unknown} | null;
       const reported = data?.setpointMailHeight;
       if (typeof reported === 'number' && Number.isFinite(reported) && reported >= 0) {
         const next = Math.min(Math.ceil(reported), TALLEST);
         keepHeight(shown.current, next);
         setHeight(next);
+        if (readyFor.current !== shown.current) {
+          readyFor.current = shown.current;
+          setReady(times => times + 1);
+        }
+      }
+      const found = data?.setpointFound as {words?: unknown; count?: unknown; top?: unknown; bottom?: unknown} | undefined;
+      if (found && found.words === asked.current.words && typeof found.count === 'number') {
+        setCount(found.count);
+        counted.current?.(found.count);
+        if (asked.current.reveal && typeof found.top === 'number' && typeof found.bottom === 'number') {
+          asked.current = {...asked.current, reveal: false};
+          const place = frame.current.getBoundingClientRect();
+          const scale = frame.current.offsetHeight ? place.height / frame.current.offsetHeight : 1;
+          revealInPane(frame.current.closest('.rd-scroll'), place.top + found.top * scale, place.top + found.bottom * scale);
+        }
       }
       // A key pressed in the email comes to the page's own keys as if the frame itself held it.
       const key = pressedKey(data?.setpointMailKey);
@@ -68,8 +130,11 @@ export function MailFrame({messageId, show, title, fold = false}: {messageId: nu
     return () => window.removeEventListener('message', listen);
   }, []);
 
+  if (counting) {
+    return <iframe key={src} ref={frame} className="mailframe-count" title={title} aria-hidden="true" tabIndex={-1} sandbox="allow-scripts" referrerPolicy="no-referrer" src={src} />;
+  }
   return (
-    <div className={height === null ? 'mailframe-box measuring' : 'mailframe-box'}>
+    <div ref={box} className={height === null ? 'mailframe-box measuring' : 'mailframe-box'} data-find-frame="" data-find-count={words ? count : 0}>
       <iframe key={src} ref={frame} className="mailframe" title={title} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer"
         src={src} style={{height: height ?? RESERVED}} />
     </div>

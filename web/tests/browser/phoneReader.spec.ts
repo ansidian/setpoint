@@ -125,9 +125,9 @@ test('the reader\'s actions follow the email: Attention mail has Done, other mai
     const actions = () => page.locator('.ph-acts > button').allTextContents();
     const rows = () => page.locator('.ph-bs .ph-bs-i').allTextContents();
     for (const [row, subject, labels, moreLabels] of [
-      ['.list .row:has(b[data-tip^="Final exam schedule"])', 'Final exam schedule', 'Done,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Trash,Mark unread'],
-      ['.row:has-text("Woodgrove Bank")', 'Statement ready', 'Trash,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Mark unread'],
-      ['.row:has-text("Proseware")', 'Bill is ready', 'Trash,Reply,More', 'Forward,Snooze,Add to calendar,Add as task,Mark unread'],
+      ['.list .row:has(b[data-tip^="Final exam schedule"])', 'Final exam schedule', 'Done,Reply,More', 'Forward,Snooze,Find in email,Add to calendar,Add as task,Trash,Mark unread'],
+      ['.row:has-text("Woodgrove Bank")', 'Statement ready', 'Trash,Reply,More', 'Forward,Snooze,Find in email,Add to calendar,Add as task,Mark unread'],
+      ['.row:has-text("Proseware")', 'Bill is ready', 'Trash,Reply,More', 'Forward,Snooze,Find in email,Add to calendar,Add as task,Mark unread'],
     ] as const) {
       await page.locator(row).first().tap();
       await page.locator('.rd-subj', {hasText: subject}).waitFor();

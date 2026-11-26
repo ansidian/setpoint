@@ -1,6 +1,7 @@
 // The shell: the sidebar, then the page under its header. The offline pill sits over the page while
 // Setpoint's live stream is down. The one toast (ToastPill.tsx) sits above it all, Settings included.
-// The keys that work everywhere: `1` Inbox, `2` Calendar, `3` News, `/` search, ⌘K the palette,
+// The keys that work everywhere: `1` Inbox, `2` Calendar, `3` News, `/` search (⌘F the open email
+// on the Inbox, Sent and Snoozed, search/find.ts), ⌘K the palette,
 // ⌘, Settings, ⌘J Light or Night, `4` Jobs (jobs/, a wiring point; when it's off, its page says so),
 // and `` ` `` to open or fold the sidebar from 1100 px (sidebarRail.ts). Settings is a modal over
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
@@ -28,6 +29,8 @@ import {PhoneSheets} from './phone/EditorSheet.tsx';
 import {usePhoneKeyboard} from './phone/keyboard.ts';
 import {currentRoute, navigate, useRoute} from './router.ts';
 import {selectSearch} from './search/Search.tsx';
+import {dimScope, useFind} from './search/find.ts';
+import {findScope} from '../logic/find.ts';
 import {PhoneSettings} from './settings/PhoneSettings.tsx';
 import {Settings} from './settings/Settings.tsx';
 import {openSettings} from './settings/store.ts';
@@ -61,6 +64,8 @@ export function App({arrive = false}: {arrive?: boolean}) {
   const phone = usePhone();
   usePhoneKeyboard(phone);
   const rail = useRail();
+  // A mail page's focused field dims what's outside its scope (styles.css › Find's dim).
+  const dim = dimScope(useFind());
 
   // Alfred's conversation from before a reload comes back (search/alfred.ts).
   useEffect(() => {
@@ -98,10 +103,12 @@ export function App({arrive = false}: {arrive?: boolean}) {
         flipTheme();
         return;
       }
-      // ⌘F, like `/`, focuses the header's search, even from another field.
-      // It selects the query the search holds, so typing replaces it.
+      // ⌘F, like `/`, focuses the header's search, even from another field. It selects the query
+      // the search holds, so typing replaces it. With an email open on a mail page it searches that
+      // email instead.
       if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'f') {
-        if (selectSearch()) event.preventDefault();
+        const here = currentRoute();
+        if (selectSearch(findScope(here.page, 'open' in here && here.open !== null, 'find'))) event.preventDefault();
         return;
       }
       if (isTyping(event) || event.defaultPrevented) return;
@@ -128,7 +135,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
   }, []);
 
   return (
-    <div className={['app', arrive && 'boot-after', rail && !phone && 'rail'].filter(Boolean).join(' ')}>
+    <div className={['app', arrive && 'boot-after', rail && !phone && 'rail'].filter(Boolean).join(' ')} data-dim={dim ?? undefined}>
       {!phone && <Sidebar route={route} />}
       <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
         {route.page === 'inbox' ? <InboxPage route={route} />

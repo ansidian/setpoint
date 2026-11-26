@@ -46,7 +46,7 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
             <>
               <span className="type"><Icon name={TYPE_GLYPHS[type]} /></span>
               <span className="grow names">
-                <span className="ell name selectable">{file.filename}</span>
+                <span className="ell name selectable" data-find="">{file.filename}</span>
                 <span className="size num">{attachmentLabel(file)}</span>
               </span>
             </>
@@ -97,7 +97,7 @@ function Invitation({messageId, file, phone}: {messageId: number; file: Attachme
     ])}>
       <span className="type"><Icon name="calendar_month" /></span>
       <span className="grow names">
-        <span className="ell name selectable">{file.filename}</span>
+        <span className="ell name selectable" data-find="">{file.filename}</span>
         {problem ? <span className="size problem" role="alert">{problem}</span> : <span className="size num">{attachmentLabel(file)}</span>}
       </span>
       <button type="button" className="dl" disabled={reading} aria-busy={reading || undefined} onClick={add}><Icon name="event" size={16} />Add to calendar</button>

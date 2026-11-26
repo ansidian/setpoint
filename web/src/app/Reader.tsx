@@ -14,7 +14,11 @@
 // On the phone (board 21) it covers the page and reads the same conversation: Back and Pin at the
 // top, the head and the stack full width, and Done (on Attention mail) or Trash, Reply and More at
 // the bottom (phone/ReaderBar.tsx), which act on the whole conversation, More holding Snooze, Add to
-// calendar and Add as task among the rest.
+// calendar and Add as task among the rest. Its Find in email puts the find field where Back and Pin
+// were (search/FindBar.tsx).
+//
+// Find in email (search/find.ts) searches the open conversation: ⌘F on the desktop, More's Find in
+// email on the phone. The reader holds the email as find's target and runs find over its scroller.
 //
 // EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
 // body, with no tools, actions, slot or commands of its own.
@@ -61,6 +65,8 @@ import {BodySkeleton, HeadSkeleton} from './states/Skeletons.tsx';
 import {SummaryTile} from './SummaryTile.tsx';
 import {alfredOf, closeAlfred, startAlfred, useAlfredThread, useClaim} from './search/alfred.ts';
 import {SnoozeMenu} from './SnoozeMenu.tsx';
+import {FindBar} from './search/FindBar.tsx';
+import {openFind, useFind, useFindIn, useFindTarget} from './search/find.ts';
 import {showToast, toastFailure} from './toast.ts';
 
 /**
@@ -221,10 +227,16 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
     context: {label: listed.subject, colour: accounts.get(listed.account_id)?.colour ?? 'ink3'},
     commands: offered.map(action => ({...action, section: 'email' as const})),
   } : {commands: []}));
+  // Find searches this email while it's open (⌘F, or the phone's Find in email).
+  useFindTarget(listed ? {id, subject: listed.subject} : null);
+  const pane = useRef<HTMLElement>(null);
+  useFindIn(pane);
+  const finding = useFind().open?.id === id;
   return (
-    <section className="pane" aria-label="Reading pane" style={{'--readingPane': `${width}px`} as CSSProperties}>
+    <section ref={pane} className="pane" aria-label="Reading pane" style={{'--readingPane': `${width}px`} as CSSProperties}>
       {!phone && <PaneEdge width={width} />}
-      {phone && (
+      {phone && finding && <FindBar />}
+      {phone && !finding && (
         <div className="ph-top">
           <button className="btn quiet ph-back" type="button" onClick={actions.close}><Icon name="chevron_left" size={20} />{back}</button>
           <span className="grow" />
@@ -306,6 +318,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
               reply: () => answerKey(id, 'reply'),
               replyAll: () => answerKey(id, 'reply_all'),
               forward: () => answerKey(id, 'forward'),
+              find: () => void openFind(),
             }} />
           )}
         </div>
@@ -589,7 +602,7 @@ function ConversationHead({listed, conversation, now, timeZone, unsubscribe, car
   return (
     <div className="rd-head">
       {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected, always stays in Attention</div>}
-      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" role="img" aria-label="Unread" data-tip="Unread" />}{listed.subject}</h1>
+      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'} data-find="">{unread && <span className="rd-unread" role="img" aria-label="Unread" data-tip="Unread" />}{listed.subject}</h1>
       {tile && <SummaryTile tile={tile} />}
       {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}
       <ReaderSlot row={listed} />
