@@ -50,6 +50,7 @@ import {CalendarName, DateField, NativeField, ProjectField, stepCursor, TimeFiel
 import {DescriptionField} from './DescriptionField.tsx';
 import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
+import {BottomSheet, SheetChoice} from '../phone/BottomSheet.tsx';
 import {Sheet} from '../phone/Sheet.tsx';
 import {uuid} from '../uuid.ts';
 import './editor.css';
@@ -231,6 +232,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const [kind, setKind] = useState<ItemKind>(open.kept?.kind ?? open.kind);
   useEffect(() => onKeep?.({drafts, active, kind}), [drafts, active, kind, onKeep]);
   const [asking, setAsking] = useState(false);
+  // The phone sheet's Cancel on a draft with changes, asking whether to discard them.
+  const [discarding, setDiscarding] = useState(false);
   const [scope, setScope] = useState<RecurringScope>(open.change?.scope ?? DEFAULT_SCOPE);
   const [menu, setMenu] = useState<'calendar' | 'repeat' | 'reminder' | 'labels' | 'more' | null>(null);
   const menuRef = useMenuRef(menu, () => setMenu(null));
@@ -1122,11 +1125,22 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     </form>
   );
   if (!sheet) return editor;
-  // The scope prompt, while it asks, has the say: the top bar's action waits.
+  // The scope prompt, while it asks, has the say: the top bar's action waits. Cancel on a draft with
+  // changes asks first, as iOS's Calendar does: Keep editing, or Discard. Esc closes the question
+  // while it's up.
   return (
-    <Sheet title={title} onClose={onClose} action={asking && editing ? undefined : {label: editing ? 'Save' : 'Create', disabled: editing ? !!projectProblem : ready.length !== drafts.length, onClick: submit}}>
-      {editor}
-    </Sheet>
+    <>
+      <Sheet title={title} onClose={() => (discarding ? setDiscarding(false) : onClose())} onCancel={dirty ? () => setDiscarding(true) : undefined}
+        action={asking && editing ? undefined : {label: editing ? 'Save' : 'Create', disabled: editing ? !!projectProblem : ready.length !== drafts.length, onClick: submit}}>
+        {editor}
+      </Sheet>
+      {discarding && (
+        <BottomSheet title={editing ? 'Discard your changes?' : `Discard this ${noun}?`} onClose={() => setDiscarding(false)}>
+          <SheetChoice icon="edit" label="Keep editing" onChoose={() => {}} />
+          <SheetChoice icon="delete" tone="alert" label={editing ? 'Discard changes' : `Discard ${noun}`} onChoose={onClose} />
+        </BottomSheet>
+      )}
+    </>
   );
 }
 

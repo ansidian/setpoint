@@ -476,7 +476,9 @@ test('Add to calendar and Add as task in More open the editor\'s sheet over the 
       await sheet.waitFor();
       await until(`${title} filled from the email`, () => sheet.locator('.nl-input').inputValue(), text => text.includes('Dinner'));
       assert.equal(new URL(page.url()).pathname, path, 'the reader stays under it');
+      // Filled from the email, Cancel asks before its draft goes.
       await sheet.getByRole('button', {name: 'Cancel'}).tap();
+      await page.getByRole('dialog', {name: /^Discard this/}).getByRole('button', {name: /^Discard/}).tap();
       await sheet.waitFor({state: 'detached'});
     }
     await page.locator('.rd-subj', {hasText: 'Dinner Friday?'}).waitFor();

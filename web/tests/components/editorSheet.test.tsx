@@ -2,9 +2,12 @@
 // new item opens as "New event" with Cancel and Create in the top bar, Create waiting for a title
 // and sending what the line read; an item opens as "Edit event" with Save; a repeating event's Save
 // asks This event, This and following or All events in the sheet, the top bar's action waiting
-// meanwhile; Cancel and Esc close it with nothing sent. Its fields are 16 px, so iOS doesn't zoom in
-// on them, and its date picker fits the screen. A repeating event's Delete asks the same in the
-// bottom sheet, and a delete waits out its toast: Undo sends nothing (itemActions.ts). The sheet's
+// meanwhile; Cancel and Esc close it with nothing sent, Cancel on words typed asking Keep editing or
+// Discard first. Edit opens with no row over its fields and the keyboard down. An event's All day is
+// a switch above Starts. Its fields are 16 px, so iOS doesn't zoom in on them, and its date picker
+// fits the screen. A repeating event's Delete asks Delete this event, Delete future events or Delete
+// all events in the bottom sheet, with Cancel, and a delete waits out its toast: Undo sends nothing
+// (itemActions.ts). The sheet's
 // own top bar and Esc are phoneSheets.test.tsx's; the journeys on the seed are phoneAgenda.spec.ts's.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
@@ -105,13 +108,33 @@ test('Task in the sheet makes it a task, its title "New task"', async () => {
   await expect.element(page.getByLabelText('Describe the task')).toBeVisible();
 });
 
-test('Cancel and Esc close it with nothing sent', async () => {
+test('Cancel and Esc close it with nothing sent; Cancel on a draft with words asks Keep editing or Discard first', async () => {
   const sent = server();
   await render(<PhoneSheets />);
+  // Nothing typed: Cancel closes at once.
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Cancel'}));
+  await expect.element(sheet('New event')).not.toBeInTheDocument();
+  // Words typed: Cancel asks, Keep editing keeps them, and Discard closes.
   openEditorSheet({kind: 'event', date: '2026-10-09'});
   await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch with Ana 12-1pm');
   await userEvent.click(sheet('New event').getByRole('button', {name: 'Cancel'}));
+  const asking = sheet('Discard this event?');
+  await userEvent.click(asking.getByRole('button', {name: 'Keep editing'}));
+  await expect.element(asking).not.toBeInTheDocument();
+  await expect.element(page.getByLabelText('Describe the event')).toHaveValue('Lunch with Ana 12-1pm');
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Cancel'}));
+  await userEvent.click(asking.getByRole('button', {name: 'Discard event'}));
   await expect.element(sheet('New event')).not.toBeInTheDocument();
+  // Esc while it asks closes the question alone.
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch with Ana 12-1pm');
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Cancel'}));
+  await expect.element(asking).toBeVisible();
+  await userEvent.keyboard('{Escape}');
+  await expect.element(asking).not.toBeInTheDocument();
+  await expect.element(sheet('New event')).toBeVisible();
+  closeEditorSheet();
   openEditorSheet({kind: 'event', date: '2026-10-09'});
   await expect.element(sheet('New event')).toBeVisible();
   await userEvent.keyboard('{Escape}');
