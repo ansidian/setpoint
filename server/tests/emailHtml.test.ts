@@ -2,7 +2,7 @@
 // stripped, what hidden remote content becomes, and the page's own policy.
 import {createHash} from 'node:crypto';
 import {describe, expect, test} from 'vitest';
-import {emailPage, emailPolicy, MEASURE_SCRIPT, PAGE_BOX, safeEmail} from '../src/domain/emailHtml.ts';
+import {emailPage, emailPolicy, MEASURE_SCRIPT, PAGE_BOX, PHONE_ROOM, safeEmail} from '../src/domain/emailHtml.ts';
 
 const body = (html: string, load = false) => safeEmail(html, load).body;
 
@@ -25,7 +25,7 @@ describe('what never reaches the frame', () => {
 
   test('the head\'s styles come along, without @import; the rest of the head doesn\'t', () => {
     const email = safeEmail('<html><head><title>T</title><style>@import url(https://x.example/a.css); p { margin: 0; }</style></head><body><p>Hi</p></body></html>', true);
-    expect(email).toEqual({styles: [' p { margin: 0; }'], body: '<p>Hi</p>'});
+    expect(email).toEqual({styles: [' p { margin: 0; }'], body: '<p>Hi</p>', textLike: true});
   });
 
   test('text and attributes keep their characters, escaped where they must be', () => {
@@ -50,7 +50,7 @@ describe('what a browser would show', () => {
 
   test('each document\'s styles come along, in order, and what each must never do stays out', () => {
     const email = safeEmail('<html><head><style>p { margin: 0; }</style></head><body><p>One</p></body></html><html><head><style>h1 { margin: 0; }</style></head><body onload="steal()"><h1>Two</h1><script>steal()</script></body></html>', false);
-    expect(email).toEqual({styles: ['p { margin: 0; }', 'h1 { margin: 0; }'], body: '<p>One</p><h1>Two</h1>'});
+    expect(email).toEqual({styles: ['p { margin: 0; }', 'h1 { margin: 0; }'], body: '<p>One</p><h1>Two</h1>', textLike: true});
   });
 
   // Markup a browser repairs is repaired as a browser does, so the email keeps the shape its sender
@@ -126,18 +126,18 @@ describe('remote content', () => {
   });
 
   test('the page: the base style, then the email\'s styles and body', () => {
-    const page = emailPage({styles: ['p { margin: 0; }'], body: '<p>Hi</p>'});
+    const page = emailPage({styles: ['p { margin: 0; }'], body: '<p>Hi</p>', textLike: true});
     expect(page).toMatch(/^<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>html, body \{ margin: 0;/);
     expect(page).toMatch(/<style>p \{ margin: 0; \}<\/style><style>[^<]*<\/style><\/head><body><p>Hi<\/p><script>/);
   });
 
   test('the page\'s own box comes last, after the email\'s styles, so an email can\'t size it to the window', () => {
-    const page = emailPage({styles: ['html, body { height: 100vh !important; display: inline-flex !important; }'], body: '<p>Hi</p>'});
+    const page = emailPage({styles: ['html, body { height: 100vh !important; display: inline-flex !important; }'], body: '<p>Hi</p>', textLike: true});
     expect(page).toContain(`<style>html, body { height: 100vh !important; display: inline-flex !important; }</style><style>${PAGE_BOX}</style></head>`);
   });
 
   test('the page turns text autosizing off, so a page zoomed to fit keeps its text at the size its line heights expect', () => {
-    const head = emailPage({styles: [], body: '<p>Hi</p>'}).split('</head>')[0];
+    const head = emailPage({styles: [], body: '<p>Hi</p>', textLike: true}).split('</head>')[0];
     expect(head).toMatch(/html \{[^}]*-webkit-text-size-adjust: 100%;[^}]*\}/);
     expect(head).toMatch(/html \{[^}]*[^-]text-size-adjust: 100%;[^}]*\}/);
   });
@@ -146,5 +146,36 @@ describe('remote content', () => {
     const page = emailPage(safeEmail('<p>Hi</p><script>steal()</script>', false));
     expect(page.endsWith(`<p>Hi</p><script>${MEASURE_SCRIPT}</script></body></html>`)).toBe(true);
     expect(page.match(/<script/g)).toHaveLength(1);
+  });
+});
+
+describe('a text-like email', () => {
+  test.each([
+    ['a Gmail reply', '<div dir="ltr">Thanks, see you then.<br></div><br><div class="gmail_quote"><div dir="ltr" class="gmail_attr">On Tue, Sam wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex"><div dir="ltr">Lunch at noon?</div></blockquote></div>', true],
+    ['an Outlook reply', '<html><head><style>@page WordSection1 {size:8.5in 11.0in; margin:1.0in 1.0in 1.0in 1.0in;} div.WordSection1 {page:WordSection1;} p.MsoNormal {margin:0in; font-size:11.0pt;}</style></head><body lang="EN-US" link="#0563C1"><div class="WordSection1"><p class="MsoNormal">Hi Sam,</p><p class="MsoNormal">Friday works.</p><div style="border:none;border-top:solid #E1E1E1 1.0pt;padding:3.0pt 0in 0in 0in"><p class="MsoNormal"><b>From:</b> Sam</p></div></div></body></html>', true],
+    ['an Apple Mail reply', '<html><head></head><body style="overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;"><div dir="auto">Sounds good.</div><div><br><blockquote type="cite"><div>On 3 Nov, Sam wrote:</div><div dir="ltr">Can you call?</div></blockquote></div></body></html>', true],
+    ['a reply with a two-column signature table', '<div dir="ltr">Thanks!</div><table cellpadding="0"><tr><td><img src="https://example.com/logo.png" width="64"></td><td>Sam Reyes<br>Studio Lumen</td></tr></table>', true],
+    ['a reply with a wide pasted photo', '<div dir="ltr">Look at this.<br><img src="https://example.com/photo.jpg" width="1200" height="800"></div>', true],
+    ['a 600 px table newsletter', '<table width="100%" bgcolor="#f4f4f4"><tr><td align="center"><table width="600" cellpadding="0"><tr><td>This week</td></tr></table></td></tr></table>', false],
+    ['a receipt with a fixed width', '<div style="width: 480px; margin: 0 auto;"><h1>Receipt</h1><p>Total $12.00</p></div>', false],
+    ['a design whose column is in its styles', '<style>.wrap { max-width: 600px; margin: 0 auto; }</style><div class="wrap"><p>Our news</p></div>', false],
+    ['a layout of nested tables', '<table><tr><td><table><tr><td>Left</td><td>Right</td></tr></table></td></tr></table>', false],
+  ])('%s: text-like is %s', (_name, html, expected) => {
+    expect(safeEmail(html, false).textLike).toBe(expected);
+  });
+
+  test('gets room on the phone, after the email\'s styles, and the same page as ever elsewhere', () => {
+    const email = safeEmail('<style>body { padding: 0 !important; }</style><div dir="ltr">Hi</div>', false);
+    const phone = emailPage(email, true);
+    expect(phone).toContain(`<style>body { padding: 0 !important; }</style><style>${PAGE_BOX} ${PHONE_ROOM}</style></head>`);
+    expect(phone).toMatch(/<div dir="ltr">Hi<\/div><setpoint-room [^>]*><\/setpoint-room><script>/);
+    expect(emailPage(email)).not.toContain(PHONE_ROOM);
+    expect(emailPage(email)).not.toContain('setpoint-room');
+  });
+
+  test('a designed email keeps the phone\'s whole width', () => {
+    const page = emailPage(safeEmail('<table width="600"><tr><td>Sale</td></tr></table>', false), true);
+    expect(page).not.toContain(PHONE_ROOM);
+    expect(page).not.toContain('setpoint-room');
   });
 });

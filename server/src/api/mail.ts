@@ -79,9 +79,10 @@ export function mailApi(store: Store, {engine, drafting, draftFiles}: MailApiOpt
   // Show), ?images=hide doesn't, and without it the rule decides. The page named either way is
   // always the same page. So the browser keeps it a while, and an email opened again shows without
   // asking (sign-out clears it). ?quoted=fold leaves its quoted history out, which ••• shows again.
+  // ?on=phone is the phone's reader, where a text-like email gets room inside its card.
   api.get('/mail/messages/:id/body', c => {
     const images = c.req.query('images');
-    const page = messageBody(store, id(c.req.param('id')), images === 'show' ? true : images === 'hide' ? false : null, c.req.query('quoted') === 'fold');
+    const page = messageBody(store, id(c.req.param('id')), images === 'show' ? true : images === 'hide' ? false : null, c.req.query('quoted') === 'fold', c.req.query('on') === 'phone');
     if (images === 'show' || images === 'hide') c.header('Cache-Control', `private, max-age=${BODY_KEPT_S}`);
     c.header('Content-Security-Policy', page.policy);
     c.header('X-Content-Type-Options', 'nosniff');

@@ -44,7 +44,7 @@ export const TRIAGE_PATH = '/mail/triage';
  * its remote images or not, as the rule or Show has it. Either way is named, so the browser keeps it.
  * Folded (`fold`), its quoted history is left out, for ••• to show again.
  */
-export const emailBodyPath = (id: number, images: boolean, fold = false) => `/api/mail/messages/${id}/body?images=${images ? 'show' : 'hide'}${fold ? '&quoted=fold' : ''}`;
+export const emailBodyPath = (id: number, images: boolean, fold = false, phone = false) => `/api/mail/messages/${id}/body?images=${images ? 'show' : 'hide'}${fold ? '&quoted=fold' : ''}${phone ? '&on=phone' : ''}`;
 
 /** Email `id` as last loaded: on its own (the phone's reader) or in a conversation the reader holds. */
 export function cachedEmail(id: number): MessageOut | undefined {

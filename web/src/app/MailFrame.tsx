@@ -5,9 +5,11 @@
 // allows them or the user said Show. The sandbox gives the page no origin of its own, so nothing can
 // reach in to measure it. Instead the measuring script posts the page's height as it lays out and as
 // its images load, and the frame takes it. Keys pressed with the email clicked into come the same
-// way. They are pressed again on the frame, so Setpoint's keys still work.
+// way. They are pressed again on the frame, so Setpoint's keys still work. On the phone the page is
+// asked for as the phone's, so a text-like email has room inside the card.
 import {useEffect, useRef, useState} from 'react';
 import {emailBodyPath} from '../api/mail.ts';
+import {usePhone} from './Phone.tsx';
 
 /** No email is taller than this. A height past it is a fault, not an email. */
 const TALLEST = 200_000;
@@ -36,7 +38,8 @@ function pressedKey(sent: unknown): KeyboardEventInit | null {
 }
 
 export function MailFrame({messageId, show, title, fold = false}: {messageId: number; show: boolean; title: string; fold?: boolean}) {
-  const src = emailBodyPath(messageId, show, fold);
+  // The phone's card gives the email no room, so its page gives a text-like email its own.
+  const src = emailBodyPath(messageId, show, fold, usePhone());
   const frame = useRef<HTMLIFrameElement>(null);
   // The page the frame holds, for the height it says.
   const shown = useRef(src);
