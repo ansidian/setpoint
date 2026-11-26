@@ -585,6 +585,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .cv-mail { display: flex; flex-direction: column; border-top: 1px solid var(--hair); }
 .cv-mail .cv-head { padding: 16px 28px 0; cursor: pointer; }
 .cv-mail .rd-body { flex: none; padding-bottom: 20px; }
+/* An expanded email's security facts: under its head, inset as its body is. */
+.cv-mail > .facts-card { margin: 12px 28px 0; }
 .cv-tools { display: flex; align-items: center; gap: 2px; flex: none; margin-right: -6px; }
 .cv-line { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 12px 28px; border-top: 1px solid var(--hair); text-align: left; color: var(--ink2); }
 @media (hover: hover) { .cv-line:hover { background: var(--sub); } }
