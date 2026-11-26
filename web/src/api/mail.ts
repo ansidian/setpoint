@@ -241,34 +241,47 @@ export function setDone(id: number, done = true): Promise<ConversationChangeOut>
 // unpinned. So a change made while one is on its way only updates what's wanted. That is sent once
 // the one in flight is answered, if it differs. The server keeps the last asked. The lists and the
 // email hold their answers meanwhile, so one landing between the two can't show the pin back.
-const pinning = new Map<number, {wanted: boolean; mark: number; done: Promise<boolean>}>();
+const pinning = new Map<number, {wanted: boolean; mark: number; done: Promise<Pinned>}>();
 
-/**
- * Pin (`P`) puts the conversation on the Pinned shelf, or takes it off, at once on screen. Every way
- * to pin comes here (the reader's P, the Pinned toast's Undo, the shelf's Unpin). It resolves with
- * whether it's pinned on the server once the last change asked is in.
- */
-export function setPinned(id: number, pinned: boolean): Promise<boolean> {
+/** Where a pin change left a conversation: pinned or not on the server, and what puts it back as it was before the first. */
+export interface Pinned {
+  pinned: boolean;
+  undo: ConversationUndo;
+}
+
+/** The conversation pinned or not, at once on screen: the shelf, its rows and the reader. A change, as `edit` marks it. */
+function showPinned(id: number, pinned: boolean): number {
   const fromAll = cachedAllRow(id);
   for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterPin(inbox, id, pinned, fromAll));
   updateAllRows(row => (holds(row, id) ? {...row, pinned} : row));
-  const mark = updateMessage(id, {pinned});
+  return updateMessage(id, {pinned});
+}
+
+/**
+ * Pin (`P`) puts the conversation on the Pinned shelf, or takes it off, at once on screen. Every way
+ * to pin comes here (the reader's P, the shelf's Unpin). It resolves once the last change asked is
+ * in, with whether it's pinned on the server and the first change's Undo.
+ */
+export function setPinned(id: number, pinned: boolean): Promise<Pinned> {
+  const mark = showPinned(id, pinned);
   const queued = pinning.get(id);
   if (queued) {
     queued.wanted = pinned;
     queued.mark = mark;
     return queued.done;
   }
-  const state = {wanted: pinned, mark} as {wanted: boolean; mark: number; done: Promise<boolean>};
+  const state = {wanted: pinned, mark} as {wanted: boolean; mark: number; done: Promise<Pinned>};
   const release = holdLoads(['/mail/inbox', '/mail/all', messagePath(id), ...conversationsOf(id)]);
   state.done = change(async () => {
     try {
       let sent: boolean;
+      let first: ConversationUndo | null = null;
       do {
         sent = state.wanted;
-        await afterPending(() => sendJson<ConversationChangeOut>('POST', `${conversationPath(id)}/pin`, {pinned: sent}));
+        const answer = await afterPending(() => sendJson<ConversationChangeOut>('POST', `${conversationPath(id)}/pin`, {pinned: sent}));
+        first ??= answer.undo;
       } while (state.wanted !== sent);
-      return sent;
+      return {pinned: sent, undo: first};
     } finally {
       pinning.delete(id);
       release();
@@ -307,12 +320,17 @@ export function unsnooze(id: number): Promise<ConversationChangeOut> {
   return changeConversation(id, updateMessage(id, {snoozed_until: undefined}), 'unsnooze');
 }
 
-/** Mark unread (⇧U, ⌘K): commands the provider confirms. */
-export function markUnread(id: number): Promise<ConversationChangeOut> {
+/** The conversation unread, at once on screen: its dot and the counts. A change, as `edit` marks it. */
+function showUnread(id: number): number {
   for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterUnread(inbox, id));
   followInboxCounts();
   updateAllRows(row => (holds(row, id) ? {...row, unread: true} : row));
-  return changeConversation(id, updateMessage(id, {unread: true}), 'read', {unread: true});
+  return updateMessage(id, {unread: true});
+}
+
+/** Mark unread (⇧U, ⌘K): commands the provider confirms. */
+export function markUnread(id: number): Promise<ConversationChangeOut> {
+  return changeConversation(id, showUnread(id), 'read', {unread: true});
 }
 
 /** Mark read (a copied code, the menu's Mark read, the phone's reader after Mark unread). */
@@ -333,8 +351,15 @@ export const trashMessage = (id: number) => changeConversation(id, edit(id), 'tr
  * A change's Undo: each email of the conversation back as it was before it (Done, pin, snooze,
  * read state, out of the trash). `id` is the conversation's, to load it again.
  */
-export const undoChange = (id: number, undo: ConversationUndo) =>
-  change(() => afterPending(() => sendJson<ConversationChangeOut>('POST', `${CONVERSATIONS_PATH}/undo`, undo)).finally(() => settled(id, edit(id))));
+export function undoChange(id: number, undo: ConversationUndo, mark = edit(id)): Promise<ConversationChangeOut> {
+  return change(() => afterPending(() => sendJson<ConversationChangeOut>('POST', `${CONVERSATIONS_PATH}/undo`, undo)).finally(() => settled(id, mark)));
+}
+
+/** The Pinned toast's Undo: the pin taken back on screen at once, and each email as it was before it. */
+export const undoPin = (id: number, pinned: Pinned) => undoChange(id, pinned.undo, showPinned(id, !pinned.pinned));
+
+/** Mark read's Undo: unread again on screen at once, and only the emails that were unread back so. */
+export const undoRead = (id: number, undo: ConversationUndo) => undoChange(id, undo, showUnread(id));
 
 /** "Always show from contosocoffee.example": remote content from this domain loads from now on. */
 export async function trustDomain(domain: string, messageId: number): Promise<TrustedDomainOut[]> {

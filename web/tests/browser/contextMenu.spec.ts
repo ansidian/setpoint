@@ -10,8 +10,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {CommandOut, ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
+import type {AllOut, CommandOut, ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, holdToast, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -72,6 +73,43 @@ test('an email\'s right-click: its actions at the pointer, the cursor there, not
     await item(page, 'Copy code').click();
     await page.locator('.toast', {hasText: 'Copied 482913'}).waitFor();
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '482913');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Mark read\'s Undo on a conversation puts back only the emails that were unread', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+    const theo = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Theo Walsh')!;
+    const ids = theo.thread!.ids;
+    // Two of Theo's emails unread, the rest of his read.
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      database.prepare('UPDATE messages SET unread = 1 WHERE id IN (?, ?)').run(ids[0]!, ids[2]!);
+    } finally {
+      database.close();
+    }
+    const unread = async () => (await Promise.all(ids.map(id => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`)))).filter(one => one.unread).map(one => one.id);
+    const page = await setpoint.page('target');
+    await openInbox(page, setpoint.base);
+    // Found by its words: its one result, the conversation.
+    await page.keyboard.press('/');
+    await page.keyboard.type('board games');
+    const result = page.locator('.search-list:not(.pending) .arow.result');
+    await until('the one result', () => result.count(), count => count === 1);
+    await rightClick(result);
+    await item(page, 'Mark read').click();
+    const toast = await holdToast(page);
+    await until('read', unread, found => found.length === 0);
+    await setpoint.idle();
+    await toast.locator('button', {hasText: 'Undo'}).click();
+    await until('the two back unread', unread, found => JSON.stringify(found) === JSON.stringify([ids[0], ids[2]]));
+    await setpoint.idle();
+    assert.deepEqual(await unread(), [ids[0], ids[2]], 'and no other');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -45,7 +45,7 @@ import {serverNow, timeZone} from '../api/auth.ts';
 import {getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
 import {SETTINGS_PATH} from '../api/items.ts';
 import {
-  allPath, answerPrompt, cachedEmail, changeEach, conversationPath, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, refusals, setDone, setPinned, snooze, trashMessage, undoChange, unsnooze,
+  allPath, answerPrompt, cachedEmail, changeEach, conversationPath, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, refusals, setDone, setPinned, snooze, trashMessage, undoChange, undoPin, undoRead, unsnooze,
 } from '../api/mail.ts';
 import type {SearchScope} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
@@ -557,13 +557,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
         const refused = refusals(changing, outcomes);
         if (refused.length) toastFailure(pinning ? counted(refused.length, 'Failed to pin', n => `Failed to pin ${n}`) : counted(refused.length, 'Failed to unpin', n => `Failed to unpin ${n}`))(refused[0]!.error);
         // Only those still as asked once the last P is in: a pin taken back before it was answered says nothing.
-        const moved = changing.filter((_, at) => {
+        const moved = changing.flatMap((id, at) => {
           const outcome = outcomes[at]!;
-          return outcome.status === 'fulfilled' && outcome.value === pinning;
+          return outcome.status === 'fulfilled' && outcome.value.pinned === pinning ? [{id, pinned: outcome.value}] : [];
         });
         if (says && moved.length) {
           const line = pinning ? counted(moved.length, 'Pinned', n => `Pinned ${n}`) : counted(moved.length, 'Unpinned', n => `Unpinned ${n}`);
-          showToast(line, {label: 'Undo', run: () => void changeEach(moved, id => setPinned(id, !pinning)).then(results => {
+          // Undo puts each email back as it was: a pin some had before, a rule's waiting trash the pin spared.
+          showToast(line, {label: 'Undo', run: () => void changeEach(moved.map(one => one.id), id => undoPin(id, moved.find(one => one.id === id)!.pinned)).then(results => {
             if (results.some(result => result.status === 'rejected')) toastFailure(pinning ? 'Failed to unpin' : 'Failed to pin')(results.find(result => result.status === 'rejected')!.reason);
           })});
         }
@@ -594,21 +595,23 @@ export function InboxPage({route}: {route: InboxRoute}) {
       });
     },
     // The unread ones of `ids` read, in place: they stay where they are and Attention's count doesn't
-    // move. A copied code's email reads so, with nothing to say. The ids read.
+    // move. A copied code's email reads so, with nothing to say. The ids read, and each one's Undo
+    // once the server has the change.
     read: (ids: number[]) => {
       const unread = ids.filter(id => rowOf(id)?.unread ?? true);
-      if (!unread.length) return unread;
+      if (!unread.length) return {unread, took: Promise.resolve([])};
       if (searching) for (const id of unread) search.mark(id, {unread: false});
-      void changeEach(unread, id => markRead(id)).then(outcomes => {
+      const took = changeEach(unread, id => markRead(id)).then(outcomes => {
         const refused = refusals(unread, outcomes);
         if (refused.length) toastFailure(counted(refused.length, 'Failed to mark read', n => `Failed to mark ${n} read`))(refused[0]!.error);
+        return outcomes.flatMap((outcome, at) => (outcome.status === 'fulfilled' ? [{id: unread[at]!, undo: outcome.value.undo}] : []));
       });
-      return unread;
+      return {unread, took};
     },
     // The menu's Mark read on unread rows, as Mark all as read is for them: read in place, and
     // Undo or ⌘Z marks them unread again.
     markRead: (ids: number[]) => {
-      const unread = on.read(ids);
+      const {unread, took} = on.read(ids);
       if (!unread.length) return;
       let toast = 0;
       const back = () => {
@@ -617,10 +620,11 @@ export function InboxPage({route}: {route: InboxRoute}) {
         undos.splice(at, 1);
         dismissToast(toast);
         if (searching) for (const id of unread) search.mark(id, {unread: true});
-        void changeEach(unread, id => markUnread(id)).then(outcomes => {
-          const refused = refusals(unread, outcomes);
+        // Once the read is in, only the emails that were unread go back so (an Undo sent before it is refused).
+        void took.then(read => changeEach(read.map(one => one.id), id => undoRead(id, read.find(one => one.id === id)!.undo)).then(outcomes => {
+          const refused = refusals(read.map(one => one.id), outcomes);
           if (refused.length) toastFailure(counted(refused.length, 'Failed to mark unread', n => `Failed to mark ${n} unread`))(refused[0]!.error);
-        });
+        }));
       };
       undos.push(back);
       toast = showToast(counted(unread.length, 'Marked as read', n => `Marked ${n} as read`), {label: 'Undo', run: back, key: '⌘Z'});

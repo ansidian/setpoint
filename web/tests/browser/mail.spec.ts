@@ -550,6 +550,33 @@ test('a pin out of the shelf\'s sight says so, with Undo, and lands on the shelf
   }
 });
 
+test('the Pinned toast\'s Undo puts the conversation back as it was: a rule\'s waiting trash, which the pin spared, waits again', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const id = await idOf(setpoint, 'Final exam schedule');
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      database.prepare('UPDATE messages SET trash_due_at = ? WHERE id = ?').run('2026-10-08T14:02:00.000Z', id);
+    } finally {
+      database.close();
+    }
+    // A short window, so the shelf is out of sight and the pin says so.
+    const page = await setpoint.page({width: 1677, height: 220});
+    await page.goto(`${setpoint.base}/inbox`);
+    await point(page.locator('.row:not(.shelf):has(b[data-tip^="Final exam schedule"])'));
+    await page.keyboard.press('p');
+    const toast = await holdToast(page);
+    await until('pinned, its trash spared', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.pinned && message.trash_due_at === null);
+    await setpoint.idle();
+    await toast.locator('button', {hasText: 'Undo'}).click();
+    await until('unpinned, its trash waiting again', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => !message.pinned && message.trash_due_at === '2026-10-08T14:02:00.000Z');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a key pressed as soon as the hover has moved the cursor acts on the row under the pointer', async () => {
   const setpoint = await startSetpoint();
   try {
