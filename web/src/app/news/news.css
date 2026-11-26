@@ -277,12 +277,13 @@
   .nw-lead .hl { font-size: 18px; line-height: 1.3; }
   .nw-lead .sm { font-size: 14px; }
 
-  .nw-row { grid-template-columns: 12px minmax(0, 1fr) 72px; grid-template-areas: "nd txt img" "nd side img"; align-items: start; column-gap: 8px; row-gap: 4px; padding: 10px 16px 10px 8px; min-height: 68px; }
+  .nw-row { grid-template-columns: 12px minmax(0, 1fr) 76px; grid-template-areas: "nd txt img" "nd side img"; align-items: start; column-gap: 8px; row-gap: 4px; padding: 10px 16px 10px 8px; min-height: 68px; }
   .nw-row > .nd { grid-area: nd; height: 20px; }
   .nw-row > .txt { grid-area: txt; }
   .nw-row > .side { grid-area: side; flex-direction: row; align-items: center; gap: 0; min-width: 0; }
   .nw-row > .side > .nw-meta + .nw-meta::before { content: "·"; margin-left: 6px; color: var(--ink3); }
-  .nw-row > :last-child { grid-area: img; margin-left: 4px; }
+  /* The thumbnail ends on the row's 16 px edge, as the lead's image and the headlines do. */
+  .nw-row > :last-child { grid-area: img; justify-self: end; }
   .nw-row .hl { font-size: 15px; line-height: 20px; }
   .nw-row .nw-meta, .nw-lead .nw-meta { font-size: 12.5px; }
 
