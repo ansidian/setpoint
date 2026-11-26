@@ -38,6 +38,9 @@
   .ph-agenda .ph-res-line, .ph-agenda .ph-res-why { line-height: 18px; color: var(--ink3); font-size: 12.5px; }
   .ph-agenda .ph-res-why b { color: var(--ink2); font-weight: 500; }
   .ph-agenda.ph-agenda-search .no-results { margin: 16px 20px; }
+  /* A search that couldn't run says so on a line of its own, its warning in `caution`, as the Inbox's. */
+  .ph-agenda .bar { min-height: 40px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 20px; border-bottom: 1px solid var(--hair); color: var(--ink3); font-size: 13px; }
+  .ph-agenda .bar.failing { color: var(--caution); }
 
   /* The month picker: the mini month at a finger's size, Today under it. A sideways drag is its
      swipe to the next or previous month (AgendaMonthPicker.tsx), one up or down the sheet's. */
