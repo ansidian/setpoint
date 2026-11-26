@@ -80,6 +80,10 @@
   /* The words and the mirror that marks their operators are 16 px together, so the marks stay on their letters. */
   .hd > .search :is(input, .q-marks) { font-size: 16px; }
   .hd > .search input::placeholder { font-size: 13px; }
+  /* Searching (the Agenda's and News's), the field takes the header's row and Cancel ends it. */
+  .hd.ph-searching { flex-wrap: nowrap; padding: 0 8px 0 12px; }
+  .hd.ph-searching > .search, .hd.ph-searching > .search.active { order: 0; flex: 1 1 auto; min-width: 0; margin: 4px 0; }
+  .hd.ph-searching > .ph-text { flex: none; height: 40px; padding: 0 8px; font-size: 15px; color: var(--ink); }
   /* The list under an operator: rows to the thumb, as the title's menu, ending above the keys (Search.tsx). */
   .hd > .search > .places { overflow-y: auto; overscroll-behavior: contain; }
   .hd > .search .places .menu-i { height: 44px; font-size: 15px; color: var(--ink); }

@@ -176,6 +176,14 @@ export function NewsPage({route}: {route: NewsRoute}) {
   // Search news: its results replace the list, as their own shelf.
   const search = useNewsSearch();
   const searching = search.active;
+  // The phone's search, from a tap on its field until Cancel, which empties the field and leaves it.
+  const [finding, setFinding] = useState(false);
+  const phoneFinding = phone && (finding || searching);
+  const leaveSearch = () => {
+    search.clear();
+    setFinding(false);
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  };
   const found = search.results;
   const rows = useMemo(() => {
     const merged = new Map(known);
@@ -424,17 +432,20 @@ export function NewsPage({route}: {route: NewsRoute}) {
 
   return (
     <>
-      <header data-theme="night" className="hd">
-        {phone && <Mark />}
-        {phone && !searching
-          ? <TitleMenu title={view === 'all' ? 'News' : SECTION_LABELS[view]} rows={VIEW_SEGMENTS.map(segment => ({label: segment.label, checked: segment.value === view, onChoose: () => switchTo(segment.value)}))} />
+      {/* On the phone, tapping the field moves it up into the title's row with Cancel, as the Agenda's
+          search does. The field stays one element throughout, so it keeps its focus as it moves. */}
+      <header data-theme="night" className={phoneFinding ? 'hd ph-searching' : 'hd'} onFocus={event => phone && event.target.closest('.search') && setFinding(true)}>
+        {phone && !phoneFinding && <Mark />}
+        {phone
+          ? !phoneFinding && <TitleMenu title={view === 'all' ? 'News' : SECTION_LABELS[view]} rows={VIEW_SEGMENTS.map(segment => ({label: segment.label, checked: segment.value === view, onChoose: () => switchTo(segment.value)}))} />
           : <h1 className="hd-title">{searching ? 'Search' : 'News'}</h1>}
         {!searching && !phone && (
           <Segmented value={view} onChange={switchTo} onTab={stepSection} segments={VIEW_SEGMENTS} />
         )}
-        <span className="grow" />
+        {!phoneFinding && <span className="grow" />}
         <EmptyPaneButton pane={pane} />
         <SearchField search={search} label="Search news" onEnter={first => setCursor(storyKey(SEARCH_SHELF, first.id))} />
+        {phoneFinding && <button className="btn quiet ph-text" type="button" onClick={leaveSearch}>Cancel</button>}
       </header>
       <div className="content">
         <section className="nw-list" onContextMenu={onContextMenu} aria-label={searching ? 'Stories found' : view === 'all' ? 'Stories' : `${SECTION_LABELS[view]} stories`}>
