@@ -723,6 +723,19 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     // The fields it was beside go: the editor keeps focus, for ⌘Enter and Esc.
     form.current?.focus();
   };
+  // The phone's All day switch: on, an event's times go, kept to come back when it's turned off.
+  const heldTimes = useRef<{start: number; end: number | null; days: number} | null>(null);
+  const setAllDay = (on: boolean) => {
+    if (on && draft.start !== null) {
+      heldTimes.current = {start: draft.start, end: draft.end, days: extraDays(draft.start, draft.end, 1) + 1};
+      removeTime();
+      return;
+    }
+    const held = heldTimes.current;
+    heldTimes.current = null;
+    if (held && held.days === draft.days) change({start: held.start, end: held.end, days: 1}, ['time']);
+    else addTime();
+  };
   const addTime = () => change({start: DEFAULT_START, end: kind === 'event' ? (draft.days - 1) * 1440 + DEFAULT_START + DEFAULT_LENGTH : null, days: 1}, ['time']);
   const dateClass = `date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`;
   // On the phone the day and times are iOS's own pickers, in rows as its Calendar has them: an
@@ -732,6 +745,12 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const ends = draft.start !== null && draft.end !== null ? endOf(draft.date, draft.end) : null;
   const phoneWhen = (
     <div className={`ph-when ${kind}${sk}`}>
+      {/* An event's All day, a switch on its own row above Starts, as iOS's Calendar has it. */}
+      {kind === 'event' && !draft.undated && (
+        <button type="button" className="ph-allday" role="switch" aria-checked={draft.start === null} aria-label="All day" onClick={() => setAllDay(draft.start !== null)}>
+          All day<span className={draft.start === null ? 'switch on' : 'switch'} />
+        </button>
+      )}
       {kind === 'event' && <span className="ph-when-label">Starts</span>}
       <NativeField type="date" className={dateClass} label={kind === 'task' ? 'Due date' : 'Date'} value={draft.undated ? '' : draft.date}
         shown={draft.undated ? '' : dayTitle(draft.date)} placeholder={kind === 'event' ? 'Pick a day' : 'No date'}
@@ -745,7 +764,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             }} />
           {kind === 'task' && <button type="button" className="ibtn sm" aria-label="Remove time" onClick={removeTime}><Icon name="close" size={16} /></button>}
         </>
-      ) : <button type="button" className="btn quiet sm ph-add-time" onClick={addTime}>Add a time</button>}
+      ) : kind === 'task' ? <button type="button" className="btn quiet sm ph-add-time" onClick={addTime}>Add a time</button> : null}
       {kind === 'task' && mark('date', 'time')}
       {kind === 'event' && !draft.undated && (
         <>
@@ -761,7 +780,6 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                   const minutes = readInputTime(value);
                   if (minutes !== null) change({end: endTimePicked(draft.start!, draft.end!, minutes)}, ['time']);
                 }} />
-              <button type="button" className="ibtn sm" aria-label="All day" onClick={removeTime}><Icon name="close" size={16} /></button>
             </>
           )}
         </>

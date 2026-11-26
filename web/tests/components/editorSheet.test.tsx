@@ -246,12 +246,30 @@ test('an all-day event\'s Starts and Ends are its first and last days', async ()
   await render(<PhoneSheets />);
   openEditorSheet({kind: 'event', date: '2026-10-09'});
   await userEvent.fill(page.getByLabelText('Describe the event'), 'Trip');
-  await userEvent.click(sheet('New event').getByRole('button', {name: 'All day', exact: true}));
+  await userEvent.click(sheet('New event').getByRole('switch', {name: 'All day'}));
   await expect.element(page.getByLabelText('Start', {exact: true})).not.toBeInTheDocument();
   await userEvent.fill(page.getByLabelText('End date', {exact: true}), '2026-10-11');
   await userEvent.click(sheet('New event').getByRole('button', {name: 'Create'}));
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]!.body).toMatchObject({title: 'Trip', all_day: true, start_date: '2026-10-09', end_date: '2026-10-12'});
+});
+
+test('an event\'s All day is a switch above Starts: on, its times go; off, the times it had come back', async () => {
+  server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-07', item: event()});
+  const allDay = sheet('Edit event').getByRole('switch', {name: 'All day'});
+  await expect.element(allDay).toHaveAttribute('aria-checked', 'false');
+  // Above Starts, and no × beside the end time.
+  const order = [...sheet('Edit event').element().querySelectorAll('[role="switch"], .ph-when-label')].map(part => part.getAttribute('aria-label') ?? part.textContent);
+  expect(order.slice(0, 2)).toEqual(['All day', 'Starts']);
+  expect(sheet('Edit event').element().querySelector('.ph-when .ibtn')).toBeNull();
+  await userEvent.click(allDay);
+  await expect.element(allDay).toHaveAttribute('aria-checked', 'true');
+  await expect.element(page.getByLabelText('Start', {exact: true})).not.toBeInTheDocument();
+  await userEvent.click(allDay);
+  await expect.element(page.getByLabelText('Start', {exact: true})).toHaveValue('14:30');
+  await expect.element(page.getByLabelText('End', {exact: true})).toHaveValue('15:30');
 });
 
 test('a task\'s due day and time are iOS\'s pickers too, and its × leaves it with no date', async () => {

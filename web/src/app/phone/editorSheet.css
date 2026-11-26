@@ -34,6 +34,15 @@
   .ph-editor .ph-when-label { grid-column: 1; min-width: 46px; display: flex; align-items: center; gap: 4px; color: var(--ink2); font-size: 15px; }
   .ph-editor .ph-when > .ph-add-time { grid-column: span 2; justify-self: start; height: 40px; font-size: 15px; }
   .ph-editor .ph-when.event > .srcm { position: absolute; left: -27px; top: 61px; }
+  /* An event's All day: its own row above Starts, the whole row the switch's tap, the switch at the end. */
+  .ph-editor .ph-when.event { grid-template-columns: auto minmax(0, 1fr) 112px; }
+  .ph-editor .ph-allday { grid-column: 1 / -1; height: var(--ph-tap); margin: -4px 0; display: flex; align-items: center; justify-content: space-between; color: var(--ink2); font-size: 15px; }
+  /* Its switch drawn as Settings' (settings.css): a `sub3` track with an `ink3` knob, on `switchOn` with `switchKnobOn`. */
+  .ph-allday .switch { width: 34px; height: 20px; border-radius: 999px; background: var(--sub3); position: relative; flex: none; transition: background-color var(--dur-fast) var(--ease); }
+  .ph-allday .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: var(--ink3);
+    transition: left var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+  .ph-allday .switch.on { background: var(--switchOn); }
+  .ph-allday .switch.on::after { left: 16px; background: var(--switchKnobOn); }
   .ph-editor .ph-when.task { grid-template-columns: minmax(0, 1fr) 96px 24px auto; }
   .ph-editor .ph-when.task > .pick-date:last-child { grid-column: span 3; }
   .ph-editor .native-pick { min-width: 0; display: flex; }
