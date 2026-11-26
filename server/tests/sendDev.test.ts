@@ -41,8 +41,10 @@ test('a reply sent in a dev run lands in Sent, and its email says "You replied"'
   const draftId = await sendDraft({kind: 'reply', message_id: THEO}, {body: paragraph('Count me in.')});
   expect((await api.send('GET', `/api/mail/drafts/${draftId}`)).status).toBe(404);
   const rows = (await api.send('GET', '/api/mail/sent')).body.days.flatMap((day: {rows: {subject: string}[]}) => day.rows);
-  expect(rows).toHaveLength(before + 1);
+  // It joins Theo's conversation, which Sent already lists: now at the top, as this reply.
+  expect(rows).toHaveLength(before);
   expect(rows[0]).toMatchObject({subject: 'Re: Cabin weekend in November', sent_only: true, to: [{name: 'Theo Walsh', address: 'theo.walsh@example.org'}]});
+  expect((rows[0] as unknown as {thread: {ids: number[]}}).thread.ids).toContain(THEO);
   expect((await api.send('GET', `/api/mail/messages/${THEO}`)).body.replied_at).toBeDefined();
 });
 

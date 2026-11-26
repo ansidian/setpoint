@@ -5,6 +5,10 @@
 // Archive, moved out of iCloud's INBOX) also leaves the Inbox, because it was handled there and
 // providers are the truth (All and search still show it). Snoozed mail is out of the Inbox, the
 // Pinned shelf and the counts until it returns, when it sorts by its return time.
+//
+// That state is each email's. The Inbox lists conversations (an account's thread), each once, worked
+// out from its emails: a conversation is in the Inbox while any of its emails is, in the highest
+// group among them, and the counts count conversations.
 import {INBOX_GROUPS, markAllReadReads} from '@setpoint/shared';
 import type {InboxGroup, Kind, Lane} from '@setpoint/shared';
 
@@ -49,6 +53,64 @@ export function laneGroup(message: InboxCandidate, now: string): InboxGroup | nu
   return FYI_GROUPS[message.kind ?? 'other'];
 }
 
+/** An email with its conversation: its thread in its account. */
+export interface ConversationCandidate extends InboxCandidate {
+  threadId: string;
+}
+
+/** A conversation's key: a conversation never crosses accounts. */
+export const conversationKey = (message: {accountId: number; threadId: string}) => `${message.accountId}\n${message.threadId}`;
+
+/** A conversation in a list: its emails that came to the user, and the one that placed it (whose words the row shows). */
+export interface Conversation<T> {
+  key: string;
+  lead: T;
+  emails: T[];
+  // Any of its emails is unread.
+  unread: boolean;
+  // Its newest email's arrival, or return from a snooze: what its group sorts it by.
+  sortAt: string;
+}
+
+// A returned email sorts by its return, so it comes back at the top of its group.
+const sortAtOf = (message: InboxCandidate) => message.returnedAt ?? message.receivedAt;
+const newestFirst = (a: InboxCandidate, b: InboxCandidate) => sortAtOf(b).localeCompare(sortAtOf(a)) || b.id - a.id;
+
+/**
+ * Emails gathered into their conversations, each one's emails oldest first. Trashed mail is left
+ * out, unless its trash failed in place.
+ */
+export function conversationsOf<T extends ConversationCandidate>(messages: T[]): Conversation<T>[] {
+  const byKey = new Map<string, T[]>();
+  for (const message of messages) {
+    if (message.trashedAt && !message.held) continue;
+    const key = conversationKey(message);
+    byKey.set(key, [...(byKey.get(key) ?? []), message]);
+  }
+  return [...byKey].map(([key, emails]) => {
+    const sorted = [...emails].sort((a, b) => -newestFirst(a, b));
+    const newest = sorted.at(-1)!;
+    return {key, lead: newest, emails: sorted, unread: sorted.some(email => email.unread), sortAt: sortAtOf(newest)};
+  });
+}
+
+// Attention outranks Unsorted, which outranks every FYI kind, which outranks Noise.
+const rankOf = (group: InboxGroup) => (group === 'attention' ? 0 : group === 'unsorted' ? 1 : group === 'noise' ? 3 : 2);
+
+/**
+ * Where a conversation sits in the Inbox: the highest group any of its emails is in (Attention, then
+ * Unsorted, then the kind of its newest FYI email, then Noise), and the newest email in that group,
+ * which placed it. Null when none of its emails is in the Inbox, as when all are Done.
+ */
+export function conversationPlace<T extends InboxCandidate>(emails: T[], now: string): {group: InboxGroup; lead: T} | null {
+  let best: {group: InboxGroup; lead: T} | null = null;
+  for (const email of [...emails].sort(newestFirst)) {
+    const group = laneGroup(email, now);
+    if (group && (!best || rankOf(group) < rankOf(best.group))) best = {group, lead: email};
+  }
+  return best;
+}
+
 export interface Group<T> {
   group: InboxGroup;
   rows: T[];
@@ -56,23 +118,23 @@ export interface Group<T> {
 }
 
 /**
- * The groups in INBOX_GROUPS's order, empty ones left out. A pinned email is on the shelf and also in
- * its group, so the shelf never hides it from where it belongs. Every group starts expanded, and
- * the list keeps what the user collapses.
+ * The groups in INBOX_GROUPS's order, empty ones left out, each a list of conversations newest
+ * first. A conversation sits once, where conversationPlace puts it. A pinned one (any of its emails
+ * pinned) is on the shelf and also in its group, so the shelf never hides it from where it belongs.
+ * Every group starts expanded, and the list keeps what the user collapses.
  */
-export function inboxGroups<T extends InboxCandidate>(messages: T[], now: string): Group<T>[] {
-  const byGroup = new Map<InboxGroup, T[]>();
-  const add = (group: InboxGroup, message: T) => byGroup.set(group, [...(byGroup.get(group) ?? []), message]);
-  // A returned email sorts by its return, so it comes back at the top of its group.
-  const sortAt = (message: T) => message.returnedAt ?? message.receivedAt;
-  const newest = (a: T, b: T) => sortAt(b).localeCompare(sortAt(a)) || b.id - a.id;
-  for (const message of [...messages].sort(newest)) {
-    const group = laneGroup(message, now);
-    if (group) add(group, message);
+export function inboxGroups<T extends ConversationCandidate>(messages: T[], now: string): Group<Conversation<T>>[] {
+  const byGroup = new Map<InboxGroup, Conversation<T>[]>();
+  const shelf: {conversation: Conversation<T>; pinnedAt: string}[] = [];
+  for (const conversation of conversationsOf(messages)) {
+    const place = conversationPlace(conversation.emails, now);
+    if (place) byGroup.set(place.group, [...(byGroup.get(place.group) ?? []), {...conversation, lead: place.lead}]);
+    const pinned = conversation.emails.filter(email => email.pinnedAt && !snoozed(email))
+      .sort((a, b) => b.pinnedAt!.localeCompare(a.pinnedAt!) || b.id - a.id)[0];
+    if (pinned) shelf.push({conversation: {...conversation, lead: pinned}, pinnedAt: pinned.pinnedAt!});
   }
-  const pinned = messages.filter(message => message.pinnedAt && (!message.trashedAt || message.held) && !snoozed(message))
-    .sort((a, b) => b.pinnedAt!.localeCompare(a.pinnedAt!) || b.id - a.id);
-  if (pinned.length) byGroup.set('pinned', pinned);
+  for (const rows of byGroup.values()) rows.sort((a, b) => b.sortAt.localeCompare(a.sortAt) || b.lead.id - a.lead.id);
+  if (shelf.length) byGroup.set('pinned', shelf.sort((a, b) => b.pinnedAt.localeCompare(a.pinnedAt) || b.conversation.lead.id - a.conversation.lead.id).map(one => one.conversation));
   return INBOX_GROUPS.flatMap(group => {
     const rows = byGroup.get(group);
     if (!rows?.length) return [];
@@ -88,22 +150,41 @@ export interface Counts {
 }
 
 /**
- * The counts the Inbox shows: attention not Done, read or not (the pill), every unread email in the
- * Inbox (Noise included), unread FYI, and unread per account. Opening drops the unread counts. Only
- * Done drops the pill.
+ * The counts the Inbox shows, by conversation, so a count always matches the rows: Attention not
+ * Done, read or not (the pill), every unread conversation in the Inbox (Noise included), and unread
+ * per account. Opening drops the unread counts. Only Done drops the pill. Unread FYI stays a count
+ * of emails, for Home Assistant (emailCounts).
  */
-export function inboxCounts(messages: InboxCandidate[], now: string): Counts {
-  const counts: Counts = {attention: 0, unread: 0, unreadFyi: 0, byAccount: new Map()};
-  for (const message of messages) {
-    const group = laneGroup(message, now);
-    if (!group) continue;
-    if (group === 'attention') counts.attention += 1;
-    if (!message.unread) continue;
+export function inboxCounts(messages: ConversationCandidate[], now: string): Counts {
+  const counts: Counts = {attention: 0, unread: 0, unreadFyi: emailCounts(messages, now).unreadFyi, byAccount: new Map()};
+  for (const conversation of conversationsOf(messages)) {
+    const place = conversationPlace(conversation.emails, now);
+    if (!place) continue;
+    if (place.group === 'attention') counts.attention += 1;
+    if (!conversation.unread) continue;
     counts.unread += 1;
-    if (message.lane === 'fyi') counts.unreadFyi += 1;
-    counts.byAccount.set(message.accountId, (counts.byAccount.get(message.accountId) ?? 0) + 1);
+    counts.byAccount.set(place.lead.accountId, (counts.byAccount.get(place.lead.accountId) ?? 0) + 1);
   }
   return counts;
+}
+
+/**
+ * Home Assistant's counts, by email as they always were: Attention emails not Done, read or not,
+ * and unread FYI emails in the Inbox.
+ */
+export function emailCounts(messages: InboxCandidate[], now: string): {attention: number; unreadFyi: number} {
+  const counts = {attention: 0, unreadFyi: 0};
+  for (const message of messages) {
+    const group = laneGroup(message, now);
+    if (group === 'attention') counts.attention += 1;
+    if (group && message.unread && message.lane === 'fyi') counts.unreadFyi += 1;
+  }
+  return counts;
+}
+
+/** Attention emails, newest first (by arrival or return), as Home Assistant lists them. */
+export function attentionEmails<T extends InboxCandidate>(messages: T[], now: string): T[] {
+  return messages.filter(message => laneGroup(message, now) === 'attention').sort(newestFirst);
 }
 
 /** The next moment the Inbox changes by itself: a code's row expiring. */
@@ -126,7 +207,7 @@ export function markAllReadTargets<T extends Pick<InboxCandidate, 'unread' | 'tr
 }
 
 /** What the Inbox's empty pane counts from one email. */
-export interface DayCandidate extends InboxCandidate {
+export interface DayCandidate extends ConversationCandidate {
   triagedAt: string | null;
   triageSource: string | null;
 }
@@ -142,9 +223,10 @@ export interface MailDay {
 const OVERDUE_MS = 24 * 60 * 60 * 1000;
 
 /**
- * How the mail day is going since `dayStart` (the user's midnight). It counts Done today. It counts
- * what needs the user (Attention not Done, the attention pill's number), and how much of that has
- * waited over 24 hours since arriving, or since returning from a snooze. It counts what triage sorted today out of Attention, to FYI
+ * How the mail day is going since `dayStart` (the user's midnight). It counts emails Done today. It
+ * counts the conversations that need the user (Attention not Done, the attention pill's number), and
+ * how many of them have waited over 24 hours since the email that placed them arrived, or returned
+ * from a snooze. It counts the emails triage sorted today out of Attention, to FYI
  * and to Noise. The pass over backfilled history isn't today's sorting, and trashed mail counts
  * nowhere.
  */
@@ -154,14 +236,16 @@ export function mailDay(messages: DayCandidate[], now: string, dayStart: string)
   for (const message of messages) {
     if (message.trashedAt && !message.held) continue;
     if (message.doneAt && message.doneAt >= dayStart) day.done += 1;
-    if (laneGroup(message, now) === 'attention') {
-      day.needYou += 1;
-      if ((message.returnedAt ?? message.receivedAt) < overdueBefore) day.overdue += 1;
-    }
     if (message.triagedAt && message.triagedAt >= dayStart && message.triageSource !== 'history') {
       if (message.lane === 'fyi') day.sortedFyi += 1;
       else if (message.lane === 'noise') day.sortedNoise += 1;
     }
+  }
+  for (const conversation of conversationsOf(messages)) {
+    const place = conversationPlace(conversation.emails, now);
+    if (place?.group !== 'attention') continue;
+    day.needYou += 1;
+    if (sortAtOf(place.lead) < overdueBefore) day.overdue += 1;
   }
   return day;
 }

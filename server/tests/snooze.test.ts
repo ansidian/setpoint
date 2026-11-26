@@ -4,11 +4,12 @@
 import {markAllReadReads} from '@setpoint/shared';
 import {and, eq, isNull} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
+import {snoozeConversation} from '../src/commands/conversation.ts';
 import {confirmCommand} from '../src/commands/index.ts';
 import {markAllRead, setDone, setPinned, setRead, snoozeMessage, trashMessage, unsnoozeMessage} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {inboxGroups, laneGroup, markAllReadTargets} from '../src/domain/inbox.ts';
-import type {InboxCandidate} from '../src/domain/inbox.ts';
+import type {ConversationCandidate} from '../src/domain/inbox.ts';
 import {Notifier} from '../src/notify/index.ts';
 import {allMail, inbox, mailCounts, messageDetail, snoozedMail} from '../src/queries/mail.ts';
 import {updateSettings} from '../src/settings.ts';
@@ -22,13 +23,14 @@ import type {World} from './helpers.ts';
 
 const NOW = '2026-10-07T16:00:00.000Z';
 const LATER = '2026-10-08T16:00:00.000Z';
-const candidate = (fields: Partial<InboxCandidate> = {}): InboxCandidate => ({
-  id: 1, accountId: 1, lane: 'fyi', kind: 'money', unread: true, receivedAt: '2026-10-06T09:00:00.000Z', organisation: null, fromName: 'Bank',
+// Each email its own conversation, unless it says otherwise.
+const candidate = (fields: Partial<ConversationCandidate> = {}): ConversationCandidate => ({
+  id: 1, accountId: 1, threadId: `thread-${fields.id ?? 1}`, lane: 'fyi', kind: 'money', unread: true, receivedAt: '2026-10-06T09:00:00.000Z', organisation: null, fromName: 'Bank',
   pinnedAt: null, doneAt: null, trashedAt: null, codeExpiresAt: null, archivedAt: null, ...fields,
 });
 
 describe('the Inbox\'s rules for snoozed mail', () => {
-  const cases: [string, Partial<InboxCandidate>, string | null][] = [
+  const cases: [string, Partial<ConversationCandidate>, string | null][] = [
     ['unread FYI, snoozed: out of the Inbox', {snoozedUntil: LATER}, null],
     ['Attention, snoozed: out, though Attention stays until Done', {lane: 'attention', snoozedUntil: LATER}, null],
     ['Unsorted, snoozed: out', {lane: null, kind: null, snoozedUntil: LATER}, null],
@@ -50,7 +52,7 @@ describe('the Inbox\'s rules for snoozed mail', () => {
       candidate({id: 2, receivedAt: '2026-10-07T15:30:00.000Z'}),
     ], [2, 1]],
   ] as const)('%s', (_, messages, order) => {
-    expect(inboxGroups([...messages], NOW).find(group => group.group === 'money')!.rows.map(row => row.id)).toEqual(order);
+    expect(inboxGroups([...messages], NOW).find(group => group.group === 'money')!.rows.map(row => row.lead.id)).toEqual(order);
   });
 
   test('a snoozed pinned email is off the Pinned shelf too, and back on it once unsnoozed', () => {
@@ -64,7 +66,7 @@ describe('the Inbox\'s rules for snoozed mail', () => {
   });
 
   // The server's pick and the web's prediction (markAllReadReads, over a row's `done`) agree on what the Inbox shows.
-  test.each<[string, Partial<InboxCandidate>, boolean]>([
+  test.each<[string, Partial<ConversationCandidate>, boolean]>([
     ['an unread FYI email', {}, true],
     ['already read', {unread: false}, false],
     ['unread Attention waits on Done', {lane: 'attention'}, false],
@@ -201,6 +203,19 @@ describe('the return', () => {
     ]);
     await pass.tick();
     expect(ntfy.published).toHaveLength(1);
+  });
+
+  test('a snoozed conversation returns whole at its time and notifies once, for its newest email', async () => {
+    const {w, ntfy, pass} = await setUp();
+    const [older, newer] = w.store.db.select().from(t.messages).where(and(eq(t.messages.lane, 'fyi'), eq(t.messages.unread, true), eq(t.messages.received, true), isNull(t.messages.doneAt), isNull(t.messages.trashedAt)))
+      .orderBy(t.messages.receivedAt).all().filter((row, _, rows) => row.accountId === rows.at(-1)!.accountId).slice(-2);
+    w.store.db.update(t.messages).set({threadId: older!.threadId}).where(eq(t.messages.id, newer!.id)).run();
+    snoozeConversation(w.store, newer!.id, later(w, HOUR));
+    expect(snoozedMail(w.store).rows.filter(row => [older!.id, newer!.id].includes(row.id))).toHaveLength(1);
+    w.advance(HOUR);
+    await pass.tick();
+    expect([rowOf(w, older!.id), rowOf(w, newer!.id)].map(row => row.snoozedUntil)).toEqual([null, null]);
+    expect(ntfy.published.map(message => message.body.click)).toEqual([`https://setpoint.example.com/inbox/${newer!.id}`]);
   });
 
   test('an unread email returns with no change at its provider', async () => {

@@ -16,7 +16,7 @@ import {signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
 
 const search = (w: World, text: string, extra: Record<string, unknown> = {}) => searchMail(w.store, searchInput.parse({text, ...extra}));
-const broad = (w: World, text: string) => searchMail(w.store, searchInput.parse({text}), {log: false, matching: 'broad'});
+const broad = (w: World, text: string) => searchMail(w.store, searchInput.parse({text}), {log: false, matching: 'broad', byEmail: true});
 const subjects = (out: SearchOut) => out.results.map(result => result.subject);
 const reasons = (result: SearchResultOut) => result.reasons.map(reason => reason.label).join(' · ');
 const idOf = (w: World, subject: string) => w.store.db.select().from(t.messages).where(eq(t.messages.subject, subject)).get()!.id;
@@ -261,7 +261,8 @@ describe('Gmail-style operators filter exactly and stay in the text', () => {
     expect(reasons(northwind.results[0]!)).toBe('From Northwind Recruiting');
     expect(northwind.results[0]!.reasons[0]!.matched).toEqual([]);
     expect(subjects(search(w, 'from:theo.walsh@example.org'))).toEqual(subjects(search(w, 'from:walsh')));
-    expect(search(w, 'from:THEO.WALSH@example.org').total).toBe(4);
+    // Theo's four emails are one conversation, listed once.
+    expect(search(w, 'from:THEO.WALSH@example.org').total).toBe(1);
     expect(search(w, 'from:"Priya Raman"').results.map(result => result.from_name)).toEqual(['Priya Raman']);
     // The start of the address, or of a word of the name.
     expect(search(w, 'from:no-reply@northwind.example').total).toBe(4);
@@ -273,7 +274,8 @@ describe('Gmail-style operators filter exactly and stay in the text', () => {
 
   test('operators alone go newest first, combine with words, chips, an account and each other', () => {
     const w = world({seed: true});
-    expect(subjects(search(w, 'from:theo'))).toEqual(['Re: Cabin weekend in November', 'Re: Cabin weekend in November', 'Re: Cabin weekend in November', 'Cabin weekend in November']);
+    // Theo's conversation once, as its newest match.
+    expect(subjects(search(w, 'from:theo'))).toEqual(['Re: Cabin weekend in November']);
     // The words left rank as they did, and the operator only narrows.
     const words = search(w, 'application');
     const narrowed = search(w, 'from:northwind application');
@@ -295,7 +297,8 @@ describe('Gmail-style operators filter exactly and stay in the text', () => {
     // Sent's search: Sam Ortiz in To, and in Cc.
     expect(subjects(search(w, 'to:sam', {sent: 'only'}))).toEqual(['Re: Saturday hike', 'Book club dates']);
     expect(subjects(search(w, 'to:sam.ortiz@example.org', {sent: 'only'}))).toEqual(['Re: Saturday hike', 'Book club dates']);
-    expect(search(w, 'to:theo', {sent: 'only'}).total).toBe(4);
+    // The user's four replies to Theo, one conversation.
+    expect(search(w, 'to:theo', {sent: 'only'}).total).toBe(1);
     // The USPS digests have no recipients yet.
     const toNobody = search(w, '-to:user', {limit: 200});
     expect(new Set(toNobody.results.map(result => result.from_name))).toEqual(new Set(['USPS Informed Delivery']));

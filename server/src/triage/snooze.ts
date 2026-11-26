@@ -4,13 +4,15 @@
 //    once, or returned it already.
 // 2. notifies each email returned in the last hour as its arrival would have: Attention and FYI
 //    under their switches, Noise and Unsorted silent, and not once it's been read, Done, trashed,
-//    archived or snoozed again. Each return is sent once (notify()'s dedupe key), and one that
-//    failed to send is tried again on later passes within the hour.
+//    archived or snoozed again. A conversation snoozed whole returns whole, so it notifies once, for
+//    its newest email back. Each return is sent once (notify()'s dedupe key), and one that failed to
+//    send is tried again on later passes within the hour.
 // The snooze's end is stored on the email, so a restart returns everything that fell due while the
 // server was down.
 import {and, eq, gte, inArray, isNotNull, isNull, lte} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {returnFromSnooze} from '../commands/mail.ts';
+import {conversationKey} from '../domain/inbox.ts';
 import type {Notifier} from '../notify/index.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -61,7 +63,14 @@ export class SnoozeScheduler {
       gte(t.messages.returnedAt, since), isNotNull(t.messages.returnedAt), eq(t.messages.received, true), eq(t.messages.unread, true),
       inArray(t.messages.lane, ['attention', 'fyi']), isNull(t.messages.doneAt), isNull(t.messages.trashedAt), isNull(t.messages.archivedAt), isNull(t.messages.snoozedUntil),
     )).all();
+    // One per conversation and return: its newest email back.
+    const newest = new Map<string, (typeof returned)[number]>();
     for (const row of returned) {
+      const key = `${conversationKey(row)}\n${row.returnedAt}`;
+      const was = newest.get(key);
+      if (!was || row.receivedAt > was.receivedAt || (row.receivedAt === was.receivedAt && row.id > was.id)) newest.set(key, row);
+    }
+    for (const row of newest.values()) {
       await this.notifier.notify({
         kind: 'mail', topic: 'mail', lane: row.lane as 'attention' | 'fyi', ...snoozeReturnText(row),
         link: {to: 'message', id: row.id}, dedupe: `snooze:${row.id}@${row.returnedAt}`,

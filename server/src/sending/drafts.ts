@@ -229,6 +229,15 @@ export function draftedMessages(store: Store): Set<number> {
   return new Set(rows.flatMap(row => (empty.has(row.id) ? [] : [row.messageId!])));
 }
 
+/** The newest draft that answers or forwards one of these emails (a conversation's), empty ones left out. */
+export function draftAnswering(store: Store, messageIds: number[]): {id: number; message_id: number} | null {
+  if (!messageIds.length) return null;
+  const rows = store.db.select().from(t.drafts).where(inArray(t.drafts.messageId, messageIds)).orderBy(desc(t.drafts.updatedAt), desc(t.drafts.id)).all();
+  const empty = emptyDrafts(store, rows);
+  const row = rows.find(one => !empty.has(one.id));
+  return row ? {id: row.id, message_id: row.messageId!} : null;
+}
+
 /** Discards the empty drafts no one has touched for EMPTY_DRAFTS_KEPT_MS. Answers how many went. */
 export function sweepEmptyDrafts(store: Store): number {
   const before = new Date(store.now().getTime() - EMPTY_DRAFTS_KEPT_MS).toISOString();

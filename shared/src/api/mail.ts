@@ -18,12 +18,48 @@
 //   GET/POST /api/mail/trusted-domains, DELETE /api/mail/trusted-domains/:domain
 //   GET  /api/mail/indexing                    IndexingOut (the first backfill's progress)
 //   GET  /api/mail/gmail-link?account=&id=     GmailLinkOut (a description's Gmail link)
+//
+// Every list (the Inbox, All, Sent, Snoozed, search) lists conversations: an account's thread, once,
+// as the email that placed it with `thread` saying who's in it. A conversation's own routes take any
+// of its emails' ids:
+//   GET  /api/mail/conversations/:id           MailConversationOut, opened at that email, without marking it read
+//   POST /api/mail/conversations/:id/open      MailConversationOut; marks each unread email read (a command each)
+//   POST /api/mail/conversations/:id/read      {unread}   ConversationChangeOut (Mark read / unread)
+//   POST /api/mail/conversations/:id/done      {done}     ConversationChangeOut
+//   POST /api/mail/conversations/:id/pin       {pinned}   ConversationChangeOut
+//   POST /api/mail/conversations/:id/snooze    {until}    ConversationChangeOut
+//   POST /api/mail/conversations/:id/unsnooze  ConversationChangeOut
+//   POST /api/mail/conversations/:id/trash     ConversationChangeOut, the user's sent replies included
+//   POST /api/mail/conversations/undo          ConversationUndo   ConversationChangeOut (puts each email back)
 import {z} from 'zod';
 import type {InboxGroup, Kind, Lane, MessageType} from '../enums.ts';
 import type {Recipient, SecurityFacts} from '../message.ts';
+import {id, instant} from './common.ts';
 import type {CommandOut} from './common.ts';
 
-/** One email in a list: the Inbox, All, the pinned shelf or search results. */
+/** Who's in a conversation, oldest first, each once. The user is `me` (name "me") for whatever they sent. */
+export interface ConversationPersonOut {
+  name: string;
+  address: string;
+  me: boolean;
+}
+
+/** A row's conversation: its emails (sent ones included, trashed ones left out) and who's in it. */
+export interface ThreadRowOut {
+  // "Dominic, me  4": the count shows from two.
+  count: number;
+  // Its emails' ids, oldest first.
+  ids: number[];
+  people: ConversationPersonOut[];
+}
+
+/**
+ * One row in a list: the Inbox, All, the pinned shelf or search results. A row is a conversation,
+ * shown as the email that placed it (its id, sender, words, lane and code), with what holds for the
+ * whole conversation: `unread` if any email is, `pinned` if any is, `done` when all that came in are,
+ * `attachment_count`, `draft` and `snoozed_until` (the soonest) over them all, and `received_at` its
+ * newest email that came in. A lone email is a conversation of one.
+ */
 export interface MessageRowOut {
   id: number;
   account_id: number;
@@ -56,7 +92,8 @@ export interface MessageRowOut {
   // Mail the user sent to others, which never came in: only on such mail, which only the web asks
   // for (Sent, and search with `sent`). Mail to yourself is received mail and has no such key.
   sent_only?: true;
-  // When the user replied to it (the row's reply mark), left out while they haven't.
+  // When the user replied (the row's reply mark): only while their reply is the conversation's newest
+  // email. On an email in the reader, when the user replied to that email. Left out otherwise.
   replied_at?: string;
   // A draft answers it (a reply, reply all or forward the user started). Left out otherwise.
   draft?: true;
@@ -65,6 +102,8 @@ export interface MessageRowOut {
   // When it last returned from a snooze (the row's returned mark; `received_at` stays its arrival).
   // Left out while it never has.
   returned_at?: string;
+  // Its conversation. Left out on an email in the reader.
+  thread?: ThreadRowOut;
 }
 
 /** One Inbox group, in INBOX_GROUPS' order. Empty groups are left out. */
@@ -76,15 +115,16 @@ export interface InboxGroupOut {
 }
 
 /**
- * The counts, which change at once. Opening an unread email drops `unread` and its account's. Only
- * Done drops `attention`. They count what the Inbox shows, so an expired code's row leaves them too.
+ * The counts, which change at once. They count conversations, as the Inbox's rows are, so a count
+ * matches the rows. Opening an unread conversation drops `unread` and its account's. Only Done drops
+ * `attention`. They count what the Inbox shows, so an expired code's row leaves them too.
  */
 export interface MailCountsOut {
-  // Attention not Done, read or not: the sidebar's pill and mantel's attention half.
+  // Conversations in Attention, not Done, read or not: the sidebar's pill.
   attention: number;
-  // Every unread email in the Inbox, Noise included.
+  // Every unread conversation in the Inbox, Noise included.
   unread: number;
-  // Unread FYI: mantel's FYI half.
+  // Unread FYI emails, counted by email: Home Assistant's FYI half.
   unread_fyi: number;
   accounts: {account_id: number; unread: number}[];
 }
@@ -96,7 +136,7 @@ export interface MailCountsOut {
 export interface MailDayOut {
   // Emails marked Done today.
   done: number;
-  // Attention not Done, read or not (MailCountsOut.attention), and those of them waiting over 24 h.
+  // Conversations in Attention not Done, read or not (MailCountsOut.attention), and those of them waiting over 24 h.
   need_you: number;
   overdue: number;
   // What triage sorted today, out of Attention: to FYI and to Noise.
@@ -237,6 +277,49 @@ export const doneInput = z.strictObject({done: z.boolean()});
 export const pinInput = z.strictObject({pinned: z.boolean()});
 /** Snooze until an instant in the future. */
 export const snoozeInput = z.strictObject({until: z.iso.datetime({offset: true})});
+/** A conversation's email in the reader: as any email's, with what its one collapsed line shows. */
+export interface ConversationMessageOut extends MessageOut {
+  // Opens expanded: the first, the newest, any unread (before this opening read it) and the one it was opened at.
+  expanded: boolean;
+  // Its first words, for its line while collapsed.
+  excerpt: string;
+}
+
+/** A conversation in the reader: its emails oldest first, trashed ones left out (but the one it was opened at). */
+export interface MailConversationOut {
+  account_id: number;
+  thread_id: string;
+  // Its first email's subject.
+  subject: string;
+  // The email it was opened at: expanded, and the one to bring into view.
+  opened_id: number;
+  // Its row, for the conversation's tools (pinned, done, snoozed, unread).
+  row: MessageRowOut;
+  emails: ConversationMessageOut[];
+  // The draft that answers one of its emails (the newest), as a "Draft" line at its foot. Null with none.
+  draft: {id: number; message_id: number} | null;
+}
+
+/**
+ * What puts each email of a conversation back as it was before a change: its own fields (Done, pin,
+ * snooze) as they were, the read state of those whose read state changed, and the emails it trashed.
+ */
+export const conversationUndoSchema = z.strictObject({
+  emails: z.array(z.strictObject({
+    id, done_at: instant.nullable(), opened_before_done: z.boolean().nullable(), pinned_at: instant.nullable(),
+    snoozed_until: instant.nullable(), returned_at: instant.nullable(), trash_due_at: instant.nullable(),
+  })),
+  read: z.array(z.strictObject({id, unread: z.boolean()})),
+  trashed: z.array(id),
+});
+export type ConversationUndo = z.infer<typeof conversationUndoSchema>;
+
+/** A change to a whole conversation: the commands it sent its provider, and its Undo. */
+export interface ConversationChangeOut {
+  commands: CommandOut[];
+  undo: ConversationUndo;
+}
+
 /** Snoozed mail, soonest return first, with nothing trashed. */
 export interface SnoozedOut {
   rows: MessageRowOut[];

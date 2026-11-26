@@ -28,7 +28,7 @@ import {withoutLinks} from '../domain/searchBody.ts';
 import {excerptOf, FIELD_TIERS, formsOf, ftsExpression, isLinkOnly, matchTier, mergeRuns, namesType, phraseRuns, searchWords, termRuns, textLadder, textMatches, textTerms, TIER, typeWordsExpression, typeWordsIn, withoutExcluded} from '../domain/searchMatch.ts';
 import type {RankedRow, SearchWord} from '../domain/searchMatch.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
-import {indexing, messageRows} from '../queries/mail.ts';
+import {firstOfEachConversation, indexing, messageRows} from '../queries/mail.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 import {logSearch} from './log.ts';
@@ -414,10 +414,19 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
 export interface SearchOptions extends MatchOptions {
   // Alfred's searches aren't logged.
   log?: boolean;
+  // Alfred reads every email that matched. The lists show each conversation once.
+  byEmail?: boolean;
 }
 
-/** The page of `matches` the request asks for, logged as `log` says, or left out of the log. */
-export function answerSearch(store: Store, input: SearchRequest, matches: SearchMatches, reading: SearchReadingOut | null, log: {reading: SearchReadingLog | null} | null): SearchOut {
+/**
+ * The page of `matches` the request asks for, logged as `log` says, or left out of the log. Search
+ * matches emails but lists each conversation once, as its best match, which the reader opens it at,
+ * unless it's `byEmail`.
+ */
+export function answerSearch(store: Store, input: SearchRequest, emailMatches: SearchMatches, reading: SearchReadingOut | null, log: {reading: SearchReadingLog | null} | null, byEmail = false): SearchOut {
+  const ids = byEmail ? emailMatches.ids : firstOfEachConversation(store, emailMatches.ids);
+  const firstIds = new Set(emailMatches.ids.slice(0, emailMatches.first));
+  const matches = {...emailMatches, ids, first: ids.filter(id => firstIds.has(id)).length};
   const pageIds = matches.ids.slice(input.offset, input.offset + input.limit);
   const rows = messageRows(store, pageIds);
   const results = pageIds.flatMap(id => {
@@ -433,6 +442,6 @@ export function answerSearch(store: Store, input: SearchRequest, matches: Search
 }
 
 /** POST /api/search without `read`: a page of results, the chips in force, and the search log's id. */
-export function searchMail(store: Store, input: SearchRequest, {log = true, ...options}: SearchOptions = {}): SearchOut {
-  return answerSearch(store, input, matchSearch(store, input, options), null, log ? {reading: null} : null);
+export function searchMail(store: Store, input: SearchRequest, {log = true, byEmail = false, ...options}: SearchOptions = {}): SearchOut {
+  return answerSearch(store, input, matchSearch(store, input, options), null, log ? {reading: null} : null, byEmail);
 }

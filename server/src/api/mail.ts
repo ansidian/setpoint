@@ -1,10 +1,10 @@
 // Mail's routes: the Inbox, All, Sent and Snoozed, an email and its body, attachments and USPS
-// scans, read, Done, pin, snooze and trash, drafts and sending with their files, and trusted
+// scans, read, Done, pin, snooze and trash, a conversation and the same changes to all of it, drafts and sending with their files, and trusted
 // domains. Mounted under /api behind the session (app.ts), with triage's (triage.ts) right after.
 import {
-  allInput, sentInput, doneInput, inboxInput, mailpiecesInput, markAllReadInput, pinInput, readInput, snoozeInput, trustedDomainInput, gmailLinkInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput, sendInput,
+  allInput, conversationUndoSchema, sentInput, doneInput, inboxInput, mailpiecesInput, markAllReadInput, pinInput, readInput, snoozeInput, trustedDomainInput, gmailLinkInput, draftCreateInput, draftFilesTakeInput, draftUpdateInput, draftWriteInput, peopleInput, sendInput,
 } from '@setpoint/shared';
-import type {MarkAllReadOut} from '@setpoint/shared';
+import type {ConversationChangeOut, MarkAllReadOut} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {Hono} from 'hono';
 import type {Context} from 'hono';
@@ -14,6 +14,8 @@ import type {WriteOptions} from '../alfred/write.ts';
 import {commandPresenter} from '../commands/index.ts';
 import type {CommandRow} from '../commands/index.ts';
 import {readImport} from '../calendar/icsImport.ts';
+import {openConversation, setConversationDone, setConversationPinned, setConversationRead, snoozeConversation, trashConversation, undoConversation, unsnoozeConversation} from '../commands/conversation.ts';
+import type {ConversationChange} from '../commands/conversation.ts';
 import {markAllRead, openMessage, setDone, setPinned, setRead, snoozeMessage, trashMessage, unsnoozeMessage} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
 import {conflict, invalid, parse, SetpointError} from '../errors.ts';
@@ -21,7 +23,7 @@ import {suggestPeople} from '../sending/people.ts';
 import {createDraft, discardDraft, fromOptions, getDraftRow, listDrafts, presentDraft, updateDraft} from '../sending/drafts.ts';
 import {addDraftFile, removeDraftFile, sweepDraftFiles, takeDraftFiles} from '../sending/files.ts';
 import {holdSend, undoSend} from '../sending/send.ts';
-import {allMail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, sentMail, snoozedMail, trustedDomains} from '../queries/mail.ts';
+import {allMail, conversationDetail, gmailLink, inbox, indexing, mailCounts, mailDayOf, messageDetail, sentMail, snoozedMail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
 import {mailpieces, mailScan} from '../queries/mailpieces.ts';
 import {ProviderError} from '../sync/errors.ts';
@@ -150,6 +152,21 @@ export function mailApi(store: Store, {engine, drafting, draftFiles}: MailApiOpt
     return c.json(messageDetail(store, messageId));
   });
   api.get('/mail/snoozed', c => c.json(snoozedMail(store)));
+
+  // A conversation, by any of its emails' ids: the reader's, and the tools that change all of it.
+  const changed = (change: ConversationChange): ConversationChangeOut => ({commands: change.commands.map(presentCommand), undo: change.undo});
+  api.get('/mail/conversations/:id', c => c.json(conversationDetail(store, id(c.req.param('id')))));
+  api.post('/mail/conversations/undo', async c => c.json(changed(undoConversation(store, parse(conversationUndoSchema, await body(c))))));
+  api.post('/mail/conversations/:id/open', c => {
+    const messageId = id(c.req.param('id'));
+    return c.json(conversationDetail(store, messageId, openConversation(store, messageId)));
+  });
+  api.post('/mail/conversations/:id/read', async c => c.json(changed(setConversationRead(store, id(c.req.param('id')), parse(readInput, await body(c)).unread))));
+  api.post('/mail/conversations/:id/done', async c => c.json(changed(setConversationDone(store, id(c.req.param('id')), parse(doneInput, await body(c)).done))));
+  api.post('/mail/conversations/:id/pin', async c => c.json(changed(setConversationPinned(store, id(c.req.param('id')), parse(pinInput, await body(c)).pinned))));
+  api.post('/mail/conversations/:id/snooze', async c => c.json(changed(snoozeConversation(store, id(c.req.param('id')), parse(snoozeInput, await body(c)).until))));
+  api.post('/mail/conversations/:id/unsnooze', c => c.json(changed(unsnoozeConversation(store, id(c.req.param('id'))))));
+  api.post('/mail/conversations/:id/trash', c => c.json(changed(trashConversation(store, id(c.req.param('id'))))));
   api.post('/mail/mark-all-read', async c => {
     const input = parse(markAllReadInput, await body(c));
     return c.json({commands: markAllRead(store, input.account_id).map(presentCommand)} satisfies MarkAllReadOut);

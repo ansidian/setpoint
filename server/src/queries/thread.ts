@@ -1,8 +1,9 @@
-// An email's conversation: the other emails of its thread in the same account, received and sent,
-// oldest first, and the reply the user sent to it (src/domain/thread.ts). Trashed mail is left out.
+// An email's conversation: the emails of its thread in the same account, received and sent, oldest
+// first, and the reply the user sent to it (src/domain/thread.ts). Trashed mail is left out.
 import type {ConversationEmailOut} from '@setpoint/shared';
 import {and, asc, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
+import {conversationKey} from '../domain/inbox.ts';
 import {replyOf} from '../domain/thread.ts';
 import type {ThreadEmail} from '../domain/thread.ts';
 import type {Store} from '../store.ts';
@@ -14,7 +15,37 @@ const threadColumns = {
   rfc822Id: t.messages.rfc822Id, inReplyTo: t.messages.inReplyTo, referenceIds: t.messages.referenceIds,
 };
 
-const keyOf = (row: {accountId: number; threadId: string}) => `${row.accountId}\n${row.threadId}`;
+const keyOf = conversationKey;
+
+const memberColumns = {
+  id: t.messages.id, accountId: t.messages.accountId, threadId: t.messages.threadId, fromName: t.messages.fromName, fromAddress: t.messages.fromAddress,
+  sent: t.messages.sent, received: t.messages.received, receivedAt: t.messages.receivedAt, unread: t.messages.unread, pinnedAt: t.messages.pinnedAt,
+  doneAt: t.messages.doneAt, snoozedUntil: t.messages.snoozedUntil,
+};
+export type Member = {[K in keyof typeof memberColumns]: (typeof t.messages.$inferSelect)[K]};
+
+/**
+ * The conversations of these emails, by conversationKey: every email of each one's thread in its
+ * account, received and sent, oldest first, trashed mail left out. One query per account and 500
+ * threads, on the thread index.
+ */
+export function membersOf(store: Store, rows: {accountId: number; threadId: string}[]): Map<string, Member[]> {
+  const members = new Map<string, Member[]>();
+  const byAccount = new Map<number, Set<string>>();
+  for (const row of rows) byAccount.set(row.accountId, (byAccount.get(row.accountId) ?? new Set()).add(row.threadId));
+  for (const [accountId, threads] of byAccount) {
+    const threadIds = [...threads];
+    for (let at = 0; at < threadIds.length; at += 500) {
+      for (const row of store.db.select(memberColumns).from(t.messages)
+        .where(and(eq(t.messages.accountId, accountId), inArray(t.messages.threadId, threadIds.slice(at, at + 500)), isNull(t.messages.trashedAt)))
+        .orderBy(asc(t.messages.receivedAt), asc(t.messages.id)).all()) {
+        const key = keyOf(row);
+        members.set(key, [...(members.get(key) ?? []), row]);
+      }
+    }
+  }
+  return members;
+}
 
 /**
  * The reply each email has, by id: the sent email's id and when it was sent. One query for the lot:

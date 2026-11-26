@@ -7,7 +7,7 @@ import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, onTestFinished, test, vi} from 'vitest';
 import {snoozeMessage} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
-import {messageDetail} from '../src/queries/mail.ts';
+import {allMail, messageDetail} from '../src/queries/mail.ts';
 import {ICloudAdapter, icloudConnector} from '../src/providers/icloud/index.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
 import {Adapters} from '../src/sync/registry.ts';
@@ -83,6 +83,11 @@ describe('iCloud: threads', () => {
     const second = messageDetail(w.store, row('Re: Lunch? (2)').id);
     expect(second.reply_id).toBe(row('Re: Lunch? (3)').id);
     expect(second.conversation!.map(other => [other.subject, other.sent])).toEqual([['Lunch?', false], ['Re: Lunch?', true], ['Re: Lunch? (3)', true]]);
+    // All lists the conversation once, as Sam's newest email, with the user's reply as its newest.
+    const rows = allMail(w.store, {limit: 500}).days.flatMap(day => day.rows);
+    expect(rows.map(one => [one.subject, one.thread!.count, one.thread!.people.map(person => person.name), one.replied_at])).toEqual([
+      ['Re: Lunch? (2)', 4, ['Sam Ortiz', 'me'], row('Re: Lunch? (3)').receivedAt],
+    ]);
   });
 
   test('a reply that came first joins its email\'s thread when that email arrives, and a later refresh keeps it there', async () => {

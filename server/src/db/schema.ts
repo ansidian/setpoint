@@ -194,7 +194,7 @@ export const messages = sqliteTable('messages', {
   // What reads many emails' few columns reads these instead of the table, which hold every column it
   // needs. The Inbox, All, the counts and the day: src/queries/mail.ts `listColumns`.
   index('messages_list').on(
-    table.received, table.uspsDigest, table.accountId, table.lane, table.kind, table.unread, table.receivedAt, table.organisation, table.fromName,
+    table.received, table.uspsDigest, table.accountId, table.threadId, table.lane, table.kind, table.unread, table.receivedAt, table.organisation, table.fromName,
     table.pinnedAt, table.doneAt, table.trashedAt, table.codeExpiresAt, table.archivedAt, table.triagedAt, table.triageSource,
     table.snoozedUntil, table.returnedAt,
   ),

@@ -1,12 +1,12 @@
 // Setpoint's mail state for Home Assistant (GET /api/status/ha, and `@setpoint/shared`'s status.ts
-// says what the integration reads). It's built from the very queries the web app's sidebar uses:
-// the Inbox and its counts, and accounts and sources with their health. So the chip and the
-// sidebar can't drift apart.
+// says what the integration reads). Its counts and emails are by email, as they always were, though
+// Setpoint's own lists and counts are by conversation: they come from the rules the Inbox uses
+// (src/domain/inbox.ts), and accounts and sources with their health.
 import {deepLinkPath, HA_ATTENTION_EMAILS} from '@setpoint/shared';
 import type {DeepLink, HaReconnect, HaStatusOut, SourceProvider} from '@setpoint/shared';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
-import {inbox} from './mail.ts';
+import {mailByEmail} from './mail.ts';
 import {accountList, sourceList} from './sources.ts';
 
 /** `origin` is Setpoint's public URL, which every link is made absolute on. */
@@ -16,9 +16,8 @@ export function haStatus(store: Store, origin: string): HaStatusOut {
     const path = deepLinkPath(to);
     return {path, url: new URL(path, origin).href};
   };
-  const view = inbox(store);
+  const mail = mailByEmail(store, HA_ATTENTION_EMAILS);
   const accounts = new Map(accountList(store).map(account => [account.id, account]));
-  const attention = view.groups.find(group => group.group === 'attention')?.rows ?? [];
 
   // One entry per sign-in, because an account's sources (Gmail and Calendar on one Google consent) share it.
   const reconnect = new Map<string, {label: string; account_id: number | null; providers: SourceProvider[]}>();
@@ -34,14 +33,14 @@ export function haStatus(store: Store, origin: string): HaStatusOut {
 
   return {
     as_of: asOf,
-    all_clear: view.counts.attention === 0 && view.counts.unread_fyi === 0 && needsReconnect.length === 0,
-    attention: view.counts.attention,
-    unread_fyi: view.counts.unread_fyi,
-    attention_emails: attention.slice(0, HA_ATTENTION_EMAILS).map(row => {
-      const account = accounts.get(row.account_id)!;
+    all_clear: mail.attention === 0 && mail.unreadFyi === 0 && needsReconnect.length === 0,
+    attention: mail.attention,
+    unread_fyi: mail.unreadFyi,
+    attention_emails: mail.attentionEmails.map(row => {
+      const account = accounts.get(row.accountId)!;
       return {
-        id: row.id, sender: row.organisation ?? row.from_name, from_name: row.from_name, organisation: row.organisation, subject: row.subject,
-        account: {id: account.id, label: account.label, colour: account.colour}, received_at: row.received_at, unread: row.unread,
+        id: row.id, sender: row.organisation ?? row.fromName, from_name: row.fromName, organisation: row.organisation, subject: row.subject,
+        account: {id: account.id, label: account.label, colour: account.colour}, received_at: row.receivedAt, unread: row.unread,
         ...link({to: 'message', id: row.id}),
       };
     }),

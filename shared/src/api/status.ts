@@ -10,10 +10,11 @@
 // What the Home Assistant integration (`setpoint`, in the private ops workspace, in the finance
 // importer's pattern) reads from it, polling every 60 s:
 //
-// - `attention`: a sensor for the chip's tone-C half, "✉ 3 attention". Attention mail not Done,
-//   read or not: the same number as Setpoint's sidebar pill (one query feeds both).
-// - `unread_fyi`: a sensor for the plain half, "11 FYI".
-// - `attention_emails`: the popover's rows, at most three, newest first (dot from `account.colour`,
+// - `attention`: a sensor for the chip's tone-C half, "✉ 3 attention". Attention emails not Done,
+//   read or not, by the Inbox's rules, counted by email where Setpoint's sidebar pill counts
+//   conversations.
+// - `unread_fyi`: a sensor for the plain half, "11 FYI", counted by email.
+// - `attention_emails`: the popover's rows, at most three emails, newest first (dot from `account.colour`,
 //   `sender`, `subject`, age from `received_at`, a read one's sender in ink2 by `unread`). Each row
 //   opens `url`. "Open Setpoint ›" opens `open_url`.
 // - `needs_reconnect`: one alert chip per entry, "<label> needs sign-in", opening

@@ -1,0 +1,3 @@
+-- Mail lists show conversations: the list index holds each email's thread.
+DROP INDEX `messages_list`;--> statement-breakpoint
+CREATE INDEX `messages_list` ON `messages` (`received`,`usps_digest`,`account_id`,`thread_id`,`lane`,`kind`,`unread`,`received_at`,`organisation`,`from_name`,`pinned_at`,`done_at`,`trashed_at`,`code_expires_at`,`archived_at`,`triaged_at`,`triage_source`,`snoozed_until`,`returned_at`);

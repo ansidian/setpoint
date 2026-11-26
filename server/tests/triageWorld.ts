@@ -39,8 +39,10 @@ export function triageWorld(endpoints: AiEndpoints, {timeoutMs = 2000, fixtures 
     status: () => triageStatus(w.store),
     fetched: (overrides: Partial<FetchedMessage> = {}): FetchedMessage => {
       const bodyText = overrides.bodyText ?? 'Hello.';
+      const providerId = `p-${Math.random().toString(36).slice(2)}`;
+      // Each email its own conversation, as a new email is at its provider.
       return {
-        providerId: `p-${Math.random().toString(36).slice(2)}`, threadId: 'thread', rfc822Id: null, fromName: 'Sender', fromAddress: 'sender@example.com',
+        providerId, threadId: `thread-${providerId}`, rfc822Id: null, fromName: 'Sender', fromAddress: 'sender@example.com',
         subject: 'Hello', snippet: bodyText.slice(0, 120), bodyText, bodyHtml: null, receivedAt: '2026-10-07T16:00:00.000Z', senderAuth: null,
         attachments: [], unread: true, trashed: false, archived: false, ...overrides,
       };

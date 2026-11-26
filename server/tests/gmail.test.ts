@@ -422,8 +422,10 @@ describe('Gmail: a new email wakes a snoozed one in its thread', () => {
     // The user's own Mark unread reached Gmail; the snooze itself never did.
     expect(google.labels(ADDRESS, plan.providerId)).toEqual(['INBOX', 'UNREAD']);
     expect(google.requests.filter(request => request.method === 'POST' && request.path.includes(plan.providerId)).length).toBe(1);
-    const mail = (await api.send('GET', '/api/mail/inbox')).body.groups.flatMap((group: {rows: {id: number}[]}) => group.rows.map(row => row.id));
-    expect(mail).toEqual(expect.arrayContaining([plan.id, reply.id]));
+    // Back as one conversation, placed by the reply.
+    type Row = {id: number; thread: {ids: number[]}};
+    const rows: Row[] = (await api.send('GET', '/api/mail/inbox')).body.groups.flatMap((group: {rows: Row[]}) => group.rows);
+    expect(rows.filter(row => row.thread.ids.includes(plan.id)).map(row => [row.id, row.thread.ids])).toEqual([[reply.id, [plan.id, reply.id]]]);
     expect(liveEvents(w).some(event => event.type === 'mail' && event.messages.includes(plan.id) && event.messages.includes(reply.id))).toBe(true);
     w.advance(5 * MINUTE);
     await env.drain();

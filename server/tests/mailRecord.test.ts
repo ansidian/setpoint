@@ -87,7 +87,7 @@ describe('the mirror', () => {
   test('read elsewhere, archived and trashed at the provider; a waiting change keeps its state', () => {
     const w = world({seed: true});
     const business = accountId(w, 'Business');
-    const [a, b, c] = upsertMessages(w.store, business, [fetched(), fetched({providerId: 'g-2', subject: 'Two'}), fetched({providerId: 'g-3', subject: 'Three'})]).inserted;
+    const [a, b, c] = upsertMessages(w.store, business, [fetched(), fetched({providerId: 'g-2', threadId: 't-2', subject: 'Two'}), fetched({providerId: 'g-3', threadId: 't-3', subject: 'Three'})]).inserted;
     // Opened in Setpoint: its read waits for Gmail, so a stale "unread" from a sync must not undo it.
     openMessage(w.store, c!);
     const changed = applyProviderStates(w.store, business, new Map([

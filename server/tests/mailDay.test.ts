@@ -14,8 +14,10 @@ import {signedIn, world} from './helpers.ts';
 const NOW = '2026-10-07T16:12:00.000Z';
 // Midnight in Los Angeles, the day NOW is in.
 const DAY_START = '2026-10-07T07:00:00.000Z';
+// Each email its own conversation.
+let threads = 0;
 const email = (fields: Partial<DayCandidate>): DayCandidate => ({
-  id: 1, accountId: 1, lane: 'fyi', kind: 'other', unread: true, receivedAt: '2026-10-07T15:00:00.000Z', organisation: null, fromName: 'A',
+  id: 1, accountId: 1, threadId: `thread-${++threads}`, lane: 'fyi', kind: 'other', unread: true, receivedAt: '2026-10-07T15:00:00.000Z', organisation: null, fromName: 'A',
   pinnedAt: null, doneAt: null, trashedAt: null, codeExpiresAt: null, archivedAt: null, triagedAt: null, triageSource: null, ...fields,
 });
 

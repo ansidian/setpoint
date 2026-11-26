@@ -1,4 +1,5 @@
-// Which sent email answers an email of its thread, for "You replied Nov 15" and a row's reply mark.
+// Which sent email answers an email of its thread, for "You replied Nov 15", and a conversation's
+// people, reply mark and the emails its reader opens expanded.
 //
 // The reply is the earliest email the user sent after it, in its thread, that answers it:
 // - its In-Reply-To names the email's Message-ID, when both are known;
@@ -40,4 +41,49 @@ export function replyOf(email: ThreadEmail, thread: ThreadEmail[]): ThreadEmail 
     if (!between) return sent;
   }
   return null;
+}
+
+/** An email of a conversation, as its row and the reader read it. */
+export interface ConversationEmail {
+  id: number;
+  fromName: string;
+  fromAddress: string;
+  sent: boolean;
+  received: boolean;
+  receivedAt: string;
+  unread: boolean;
+}
+
+/**
+ * Everyone in a conversation, oldest first, each once: a sender by their address, and the user as
+ * "me" for whatever they sent. The row names them ("Dominic, me").
+ */
+export function conversationPeople(emails: ConversationEmail[]): {name: string; address: string; me: boolean}[] {
+  const people = new Map<string, {name: string; address: string; me: boolean}>();
+  for (const email of emails) {
+    const key = email.sent ? '' : email.fromAddress.toLowerCase();
+    if (!people.has(key)) people.set(key, {name: email.sent ? 'me' : email.fromName || email.fromAddress, address: email.fromAddress, me: email.sent});
+  }
+  return [...people.values()];
+}
+
+/**
+ * The user's reply ends the conversation: its newest email is one they sent, after one that came to
+ * them. The row's reply mark shows only then, at that reply's time.
+ */
+export function repliedLast(emails: ConversationEmail[]): ConversationEmail | null {
+  const newest = emails.at(-1);
+  return newest?.sent && emails.some(email => email.received && !email.sent) ? newest : null;
+}
+
+/**
+ * The emails the reader opens expanded: the first, the newest, every unread one, and the one it was
+ * opened at. The rest are one line each.
+ */
+export function expandedEmails(emails: Pick<ConversationEmail, 'id' | 'unread'>[], openedId: number): Set<number> {
+  const expanded = new Set<number>();
+  emails.forEach((email, at) => {
+    if (at === 0 || at === emails.length - 1 || email.unread || email.id === openedId) expanded.add(email.id);
+  });
+  return expanded;
 }
