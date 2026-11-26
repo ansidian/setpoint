@@ -242,6 +242,22 @@ test('Edit saves in the sheet, its Undo putting the item back; a repeating event
   }
 });
 
+test('a line opened under where the detail card rests comes up to sit above it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await agenda(setpoint);
+    // Next Tuesday's lecture, low on the first screen, under where the card comes to rest.
+    const lecture = page.locator('.ph-agenda [data-days="2026-10-13"] .pitem', {hasText: 'CS 101 lecture'});
+    await lecture.tap();
+    await page.locator('.ph-detail .fd-title', {hasText: 'CS 101 lecture'}).waitFor();
+    const [line, card] = await rested(() => Promise.all([lecture.boundingBox(), page.locator('.ph-detail').boundingBox()]));
+    assert.ok(line!.y + line!.height <= card!.y, `the line (to ${line!.y + line!.height}) ends above the card (${card!.y})`);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a task\'s ring in its detail completes it, and its done check reopens it, each with Undo', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

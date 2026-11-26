@@ -53,6 +53,9 @@ type CalendarRoute = Extract<Route, {page: 'calendar'}>;
 
 const AGENDA: CalendarRoute = {page: 'calendar', date: null, item: null, at: null};
 
+// The room left between a line brought up and the detail card over the list.
+const CARD_GAP = 8;
+
 // How near the end the next week starts loading.
 const NEAR_END = '0px 0px 800px 0px';
 
@@ -213,15 +216,21 @@ export function Agenda({route}: {route: CalendarRoute}) {
     revealed.current = focus.n;
   };
   // A linked item comes into view, unless a line of it shows already: an overdue task has its day's
-  // line and its Overdue group's.
+  // line and its Overdue group's. Its detail card covers the list's foot, so a line under the card
+  // comes up to sit just above it. The card's top is where it rests, not where its rise has it.
+  const detail = useRef<HTMLDivElement>(null);
+  const carded = !!selected;
   useEffect(() => {
     const scroller = list.current;
     if (!selectedKey || results || !scroller) return;
     const lines = [...scroller.querySelectorAll<HTMLElement>(`[data-key="${CSS.escape(selectedKey)}"]`)];
     const box = scroller.getBoundingClientRect();
-    if (lines.some(line => line.getBoundingClientRect().top >= box.top && line.getBoundingClientRect().bottom <= box.bottom)) return;
-    lines[0]?.scrollIntoView({block: 'nearest'});
-  }, [selectedKey, ready, results]);
+    const bottom = detail.current ? Math.min(box.bottom, detail.current.offsetTop - CARD_GAP) : box.bottom;
+    if (lines.some(line => line.getBoundingClientRect().top >= box.top && line.getBoundingClientRect().bottom <= bottom)) return;
+    const line = lines[0]?.getBoundingClientRect();
+    if (!line) return;
+    scroller.scrollTop += line.bottom > bottom ? line.bottom - bottom : line.top - box.top;
+  }, [selectedKey, ready, results, carded]);
 
   // Nearing the end loads the next week, until four empty ones in a row.
   const end = useRef<HTMLDivElement>(null);
@@ -312,7 +321,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
         {selected && (
           <>
             <button className="ph-scrim" type="button" aria-label="Close" onClick={() => navigate(AGENDA)} />
-            <div className="fd ph-detail" role="dialog" aria-label={selected.title}>
+            <div ref={detail} className="fd ph-detail" role="dialog" aria-label={selected.title}>
               <div className="card">
                 <div className="fd-body">
                   <DetailContent target={{item: selected, date: linkedDay ?? today, calendar: colours.get(selected.calendar_id)}} timeZone={zone} actions={actions}
