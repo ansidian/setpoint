@@ -559,6 +559,23 @@ describe('changes through the command layer', () => {
     expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-plants').id)).all()).toHaveLength(1);
   });
 
+  test('a repeating task closed outside Setpoint is kept done when its event reaches the log only after the next look', async () => {
+    const {w, todoist, run, tasks} = await todoistWorld();
+    await run();
+    w.advance(10 * 60_000);
+    // A script closes it through the API; the webhook's sync looks a moment later, before the
+    // log lists the close.
+    todoist.lagLog();
+    todoist.completeInTodoist('t-plants');
+    w.advance(700);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent']);
+    todoist.publishLog();
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
+  });
+
   test('a timed occurrence is kept on its local day with its time; a one-off completed in the app is done from the completed list, once', async () => {
     const {w, todoist, run, tasks, task} = await todoistWorld();
     // 09:00 in Los Angeles, a floating time as Todoist sends it.

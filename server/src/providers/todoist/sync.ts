@@ -29,6 +29,10 @@ export const COMPLETED_FIRST_LOOK_MS = 14 * DAY;
 // Free plan keeps. Asked for more, Todoist refuses the whole read (403 PREMIUM_ONLY, seen on the
 // user's account), which would read as a revoked connection.
 export const ACTIVITY_LOOK_MS = 6 * DAY;
+// How far before its cursor each look starts again. Todoist's log can list a close a moment after
+// its webhook's sync has looked (or Setpoint's clock can trail Todoist's), and a look that began
+// right at the cursor would never see it. Reading an event twice changes nothing.
+export const ACTIVITY_OVERLAP_MS = 10 * 60_000;
 
 /** The one Todoist calendar row ("Todoist", one more toggle), made on connect. */
 export function todoistCalendar(store: Store) {
@@ -237,12 +241,15 @@ function logDay(value: unknown, timeZone: string): string | null {
  * adds an `updated` one putting the due back, with no `uncompleted`. So an update that lands the
  * task on a day it holds a done row for undoes it. The row goes, as does one the same look would
  * make. Each occurrence is settled by its last event. One-off tasks are left to the completed list.
- * A look that left a held task's event alone ends where it began, so the next one reads it again.
+ * Each look starts ACTIVITY_OVERLAP_MS before its cursor. A look that left a held task's event alone
+ * ends where it began, so the next one reads it again.
  */
 export async function syncActivity(store: Store, api: TodoistApi, since: string | null): Promise<string> {
   const until = isoNow(store);
   const earliest = new Date(store.now().getTime() - ACTIVITY_LOOK_MS).toISOString();
-  const from = since && since > earliest ? since : earliest;
+  const start = since && since > earliest ? since : earliest;
+  const again = new Date(Date.parse(start) - ACTIVITY_OVERLAP_MS).toISOString();
+  const from = again > earliest ? again : earliest;
   const events: TodoistActivity[] = [...await api.activities('completed', from, until), ...await api.activities('updated', from, until)]
     .sort((a, b) => Date.parse(a.event_date) - Date.parse(b.event_date) || (a.id ?? 0) - (b.id ?? 0));
   const skipped = transaction(store, () => {
@@ -294,5 +301,5 @@ export async function syncActivity(store: Store, api: TodoistApi, since: string 
     if (touched.size) noteLive(store, {type: 'items', items: [...touched].sort((a, b) => a - b), calendars: [calendar.id], commands: []});
     return skipped;
   });
-  return skipped ? from : until;
+  return skipped ? start : until;
 }

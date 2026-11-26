@@ -53,6 +53,9 @@ export async function fakeTodoist() {
   const completed: (TodoistTask & {completed_at: string})[] = [];
   const activities: ActivityEvent[] = [];
   let activityIds = 5000;
+  // Events logged but not yet readable: Todoist's log can lag the close (and its webhook).
+  const unpublished = new Set<number>();
+  let logLags = false;
   const requestIds: string[] = [];
   const refusals: Record<string, unknown>[] = [];
   // The next task creates Todoist refuses, by title.
@@ -68,6 +71,7 @@ export async function fakeTodoist() {
   };
   const show = ({seq: _seq, everyDays: _every, ...task}: Task): TodoistTask => task;
   const log = (task: TodoistTask, event_type: ActivityEvent['event_type'], extra: Record<string, unknown>) => {
+    if (logLags) unpublished.add(activityIds + 1);
     activities.push({
       id: (activityIds += 1), object_type: 'item', object_id: task.id, event_type, event_date: clock().toISOString(), parent_project_id: task.project_id ?? null,
       parent_item_id: null, initiator_id: null, extra_data: {content: task.content, client: 'Setpoint test', ...extra},
@@ -173,6 +177,7 @@ export async function fakeTodoist() {
       if (from && Date.parse(from) < clock().getTime() - 7 * 86_400_000) return todoistError(403, 'Activity older than the plan\'s history limit is a premium only feature', 'PREMIUM_ONLY');
       const to = query.get('date_to');
       const matching = activities
+        .filter(event => !unpublished.has(event.id))
         .filter(event => (!query.get('object_type') || event.object_type === query.get('object_type')) && (!query.get('event_type') || event.event_type === query.get('event_type')))
         .filter(event => (!from || event.event_date >= new Date(from).toISOString()) && (!to || event.event_date < new Date(to).toISOString()))
         .sort((a, b) => b.event_date.localeCompare(a.event_date) || b.id - a.id);
@@ -302,6 +307,14 @@ export async function fakeTodoist() {
       logDueChange(task, save({...task, due}));
     },
     activities: () => [...activities],
+    /** New log events stay unreadable until `publishLog`, each keeping the date it happened at. */
+    lagLog() {
+      logLags = true;
+    },
+    publishLog() {
+      logLags = false;
+      unpublished.clear();
+    },
     /** Todoist's own connector's form of the log: the same fields camel-cased. */
     camelCaseLog() {
       for (const event of activities) event.extra_data = Object.fromEntries(Object.entries(event.extra_data).map(([key, value]) => [key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase()), value]));
