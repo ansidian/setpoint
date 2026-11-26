@@ -1,18 +1,20 @@
 // Settings › Calendar (not drawn): which calendars show and each Google calendar's colour (written
-// to Google). Then Time to Leave's switch and Buffer; it leaves from Home, which is Settings ›
-// Places'. Then Todoist's projects with their colours (written to Todoist) and the default project
+// to Google), in one group with each account's address heading its calendars, indented under it. Then Time to Leave's switch and Buffer; it leaves from Home, which is Settings ›
+// Places'. Then Todoist: whether its tasks show, its projects under it with their colours (written to Todoist) and the default project
 // for a task with none. Settings has no Todoist page: its connection is Accounts › Sources' row.
 // Then weather on or off and the forecast's Pirate Weather key (the weather source's credential),
 // write-only. The page scrolls.
 import type {CalendarOut, Settings, SourceOut, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
 import {SWATCH_COLOURS, TODOIST_COLOURS, TODOIST_COLOUR_NAMES} from '@setpoint/shared';
+import {Fragment} from 'react';
 import type {CSSProperties} from 'react';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, setCalendarColour, setCalendarListed, setProjectColour, settleCalendarColour, settleProjectColour, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {patchSettings, setSourceKey, SOURCES_PATH} from '../../api/settings.ts';
+import {calendarGroups} from '../../logic/calendar.ts';
 import {todoistConnected} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {dotStyle} from '../accounts.ts';
+import {dotStyle, useAccounts} from '../accounts.ts';
 import {Line, Menu, Page, Row, Section, Select, SkeletonRows, Stepper, Switch, useAttempt} from './parts.tsx';
 import {KeyRow} from './Ai.tsx';
 import {openSettings} from './store.ts';
@@ -23,6 +25,8 @@ const BUFFER_STEP = 5;
 export function CalendarPage() {
   const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
   const calendars = calendarsLoad.data;
+  const {list: accounts} = useAccounts();
+  const todoist = calendars?.find(calendar => calendar.provider === 'todoist');
   const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
   const settings = settingsLoad.data;
   const sourcesLoad = {path: SOURCES_PATH, ...useResource<SourceOut[]>(SOURCES_PATH)};
@@ -39,8 +43,15 @@ export function CalendarPage() {
       <Section label="Calendars">
         {!calendars ? <SkeletonRows count={4} one /> : (
           <div className="set-group">
-            {[...calendars].sort((a, b) => a.position - b.position).map(calendar => (
-              <CalendarRow key={calendar.id} calendar={calendar} onShow={on => void save.attempt(() => setCalendarListed(calendar.id, on))} />
+            {calendarGroups(calendars, accounts).map(group => (
+              <Fragment key={group.account?.id ?? 'other'}>
+                <div className="set-row one cal-acct" data-account={group.account?.id ?? 'other'}>
+                  <span className="t grow ell">{group.account?.address ?? 'Other'}</span>
+                </div>
+                {group.calendars.map(calendar => (
+                  <CalendarRow key={calendar.id} calendar={calendar} nested onShow={on => void save.attempt(() => setCalendarListed(calendar.id, on))} />
+                ))}
+              </Fragment>
             ))}
           </div>
         )}
@@ -53,7 +64,7 @@ export function CalendarPage() {
 
       <Section label="Todoist">
         {/* Whether it's connected is said only once it's known. */}
-        {!sources || !projects || !settings ? <SkeletonRows count={3} one /> : !todoistConnected(sources) ? (
+        {!sources || !projects || !settings || !calendars ? <SkeletonRows count={3} one /> : !todoistConnected(sources) ? (
           <div className="set-group">
             <Row title="Not connected" sub="Tasks with a date show on the calendar">
               <button className="btn out sm" type="button" onClick={() => openSettings('accounts')}>Connect in Accounts</button>
@@ -61,8 +72,13 @@ export function CalendarPage() {
           </div>
         ) : (
           <>
-            {projects.length > 0 && <div className="set-group">{projects.map(project => <ProjectRow key={project.id} project={project} />)}</div>}
-            <div className={projects.length > 0 ? 'set-group next' : 'set-group'}>
+            {(todoist || projects.length > 0) && (
+              <div className="set-group">
+                {todoist && <CalendarRow calendar={todoist} onShow={on => void save.attempt(() => setCalendarListed(todoist.id, on))} />}
+                {projects.map(project => <ProjectRow key={project.id} project={project} nested={!!todoist} />)}
+              </div>
+            )}
+            <div className={todoist || projects.length > 0 ? 'set-group next' : 'set-group'}>
               <Row title="Default project" sub="Where a task goes when it names none" kind="ctl">
                 <Select value={settings.todoist.default_project ?? INBOX} label="Default project"
                   options={[
@@ -122,13 +138,13 @@ function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Pa
  * A colour waiting for Google shows at .5 with the spinner. One Google refused stays, with Google's
  * words, Try again and Change back.
  */
-function CalendarRow({calendar, onShow}: {calendar: CalendarOut; onShow: (on: boolean) => void}) {
+function CalendarRow({calendar, nested, onShow}: {calendar: CalendarOut; nested?: boolean; onShow: (on: boolean) => void}) {
   const pick = useAttempt();
   const settle = useAttempt();
   const {command} = calendar;
   const failed = command?.state === 'failed';
   return (
-    <div className={command?.state === 'pending' ? 'set-row one cal-row pending' : 'set-row one cal-row'} data-calendar={calendar.id}>
+    <div className={`set-row one cal-row${nested ? ' nest' : ''}${command?.state === 'pending' ? ' pending' : ''}`} data-calendar={calendar.id}>
       {calendar.colour === null ? <span className="ring" /> : (
         <Menu label={`${calendar.name} colour`} align="left" button={<button className="sw" type="button" style={dotStyle(calendar.colour)} aria-label={`${calendar.name} colour`} disabled={!!command} />}>
           {close => (
@@ -170,14 +186,14 @@ const swatch = (colour: TodoistColour | null) => ({'--c': colour ? TODOIST_COLOU
  * for Todoist it shows at .5 with the spinner. One Todoist refused stays, with Todoist's words, Try
  * again and Change back.
  */
-function ProjectRow({project}: {project: TodoistProjectOut}) {
+function ProjectRow({project, nested}: {project: TodoistProjectOut; nested?: boolean}) {
   const pick = useAttempt();
   const settle = useAttempt();
   const {command} = project;
   const failed = command?.state === 'failed';
   const label = `${project.name} colour`;
   return (
-    <div className={command?.state === 'pending' ? 'set-row one cal-row pending' : 'set-row one cal-row'} data-project={project.id}>
+    <div className={`set-row one cal-row${nested ? ' nest' : ''}${command?.state === 'pending' ? ' pending' : ''}`} data-project={project.id}>
       <Menu label={label} align="left" button={<button className="sw" type="button" style={swatch(project.colour)} aria-label={label} data-tip={project.colour ? colourName(project.colour) : undefined} disabled={!!command} />}>
         {close => (
           <div className="swatches todoist">
