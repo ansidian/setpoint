@@ -12,7 +12,7 @@
 // take the day's agenda's place in the right pane while the grid stays. A click on a result, or
 // J / K to it, selects it as a click on the grid does. ↓ or Enter in the field goes to the first. E
 // hands it to the editor, and the results come back after Create or Cancel. Esc closes the floating
-// detail, then the search.
+// detail, then the search. Emptying the query keeps the search open.
 // Month | Week, M and W, and the week view (WeekGrid), whose arrows page a week. A range dragged
 // there opens the editor on it. A move or resize is sent as a drop is, with the recurring scope
 // asked first. The view rides in the address (?view=week).
@@ -580,23 +580,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     setSearchMatches(matchIds === null ? null : new Set(matchIds ? matchIds.split(',').map(Number) : []));
     return () => setSearchMatches(null);
   }, [matchIds]);
-  // Whether the open search has had a query: emptied again, it closes, as Esc does.
-  const [searched, setSearched] = useState(false);
+  // Esc closes the search. An emptied query keeps it open.
   const closeSearch = () => {
     setSearching(false);
-    setSearched(false);
     search.clear();
   };
-  if (searching && search.active && !searched) setSearched(true);
-  // Once the keystroke is over: typing over the whole query empties it a moment before its first letter.
-  useEffect(() => {
-    if (!searching || !searched || search.active) return;
-    const timer = window.setTimeout(() => {
-      setSearching(false);
-      setSearched(false);
-    });
-    return () => window.clearTimeout(timer);
-  }, [searching, searched, search.active]);
   /** A result: its day comes into view, it's selected, and the floating detail opens or glides to it. */
   const selectResult = (result: CalendarSearchResultOut, pane = false) => {
     selectItem(result.item, result.date, null, false, pane);

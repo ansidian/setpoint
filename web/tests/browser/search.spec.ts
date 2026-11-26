@@ -2098,9 +2098,18 @@ test('calendar search: the button and ⌘F, Todoist as every task under Upcoming
     assert.equal(await page.locator('.cal-search .no-results').textContent(), 'No events or tasks matchTodoistzebra');
     await page.locator('.no-results .x[aria-label="Remove zebra"]').click();
     await until('the rows', () => calendarRows(page), rows => rows.length === 4);
-    // A query emptied after searching closes the search, as Esc would.
+    // A query emptied after searching stays in Search, the keys in its field: only Esc leaves it.
     await page.keyboard.press('/');
     await page.keyboard.press('Backspace');
+    await until('emptied', () => page.locator('.search input').inputValue(), value => value === '');
+    await setpoint.idle();
+    assert.equal(await page.locator('.hd-title').textContent(), 'Search');
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Search calendar');
+    // Esc closes the floating detail ↓ opened, then the search.
+    await page.keyboard.press('Escape');
+    await detailOf(page, 'CS 101 lab report').waitFor({state: 'detached'});
+    assert.equal(await page.locator('.hd-title').textContent(), 'Search');
+    await page.keyboard.press('Escape');
     await page.locator('.hd-title', {hasText: 'October 2026'}).waitFor();
     assert.equal(await page.locator('.cal-search').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
