@@ -1,7 +1,7 @@
 // Where a right-click's menu opens, as a table: down and right from the pointer, to its left past
 // the window's right, upward past its bottom, and always 8 px inside the window.
 import {describe, expect, test} from 'vitest';
-import {opensUp, placeMenuAt} from '../src/logic/contextMenu.ts';
+import {menuInside, opensUp, placeMenuAt} from '../src/logic/contextMenu.ts';
 
 const WINDOW = {width: 1677, height: 1050};
 const MENU = {width: 220, height: 380};
@@ -32,4 +32,18 @@ describe('opensUp', () => {
     ['past the foot, more room above: up', 700, {top: 560, bottom: 588}, true],
     ['past the foot, but more room below than above: down', 700, {top: 260, bottom: 288}, false],
   ])('%s', (_, bottom, anchor, up) => expect(opensUp(bottom, anchor, ROOM)).toBe(up));
+});
+
+// Once its side is chosen, an anchored menu that would still run out of its room is kept 16 px
+// inside it: moved right past the left edge, held shorter (scrolling) past the top or the bottom.
+describe('menuInside', () => {
+  const ROOM = {top: 100, bottom: 667, left: 0};
+  const ANCHOR = {top: 380, bottom: 412};
+  test.each([
+    ['it fits: as it is', {left: 40, top: 416, height: 200}, false, {shift: 0, maxHeight: null}],
+    ['lined up past the left: moved 16 px in', {left: -24, top: 416, height: 200}, false, {shift: 40, maxHeight: null}],
+    ['down past the bottom: held 16 px short of it', {left: 40, top: 416, height: 303}, false, {shift: 0, maxHeight: 235}],
+    ['up past the top: held 16 px short of it', {left: 40, top: 416, height: 300}, true, {shift: 0, maxHeight: 260}],
+    ['ending exactly at the room\'s foot: as it is', {left: 40, top: 416, height: 251}, false, {shift: 0, maxHeight: null}],
+  ])('%s', (_, menu, up, inside) => expect(menuInside(menu, up, ANCHOR, ROOM)).toEqual(inside));
 });

@@ -1,14 +1,16 @@
 // A menu hanging under its button opens upward instead when it would run past the bottom of what
 // clips or scrolls it (Settings' page, the editor's pane) and there's more room above.
-// It lines up with its anchor's right edge when it would run past the right (the End list).
+// It lines up with its anchor's right edge when it would run past the right (the End list). One
+// that still runs out of room (a small phone's Add reminder) is moved in or held shorter, scrolling.
 import {useCallback, useEffect, useRef} from 'react';
 import type {RefObject} from 'react';
-import {opensUp} from '../logic/contextMenu.ts';
+import {menuInside, opensUp} from '../logic/contextMenu.ts';
 
 /** The area `element` can show in: its clipping ancestors' and the viewport's. */
-function room(element: HTMLElement): {top: number; bottom: number; right: number} {
+function room(element: HTMLElement): {top: number; bottom: number; left: number; right: number} {
   let top = 0;
   let bottom = window.innerHeight;
+  let left = 0;
   let right = window.innerWidth;
   for (let at = element.parentElement; at; at = at.parentElement) {
     const style = getComputedStyle(at);
@@ -16,9 +18,10 @@ function room(element: HTMLElement): {top: number; bottom: number; right: number
     const rect = at.getBoundingClientRect();
     top = Math.max(top, rect.top);
     bottom = Math.min(bottom, rect.bottom);
+    left = Math.max(left, rect.left);
     right = Math.min(right, rect.right);
   }
-  return {top, bottom, right};
+  return {top, bottom, left, right};
 }
 
 // Menus already placed. An inline ref runs again on every draw, and placing again replays the
@@ -37,10 +40,22 @@ export function placeMenu(menu: HTMLElement | null) {
   menu.style.animation = 'none';
   const rect = menu.getBoundingClientRect();
   menu.style.removeProperty('animation');
-  const {top, bottom, right} = room(menu);
+  const box = room(menu);
   const anchor = menu.parentElement.getBoundingClientRect();
-  if (rect.right > right) menu.dataset.right = '';
-  if (opensUp(rect.bottom, anchor, {top, bottom})) menu.dataset.up = '';
+  const lined = rect.right > box.right;
+  const up = opensUp(rect.bottom, anchor, box);
+  if (lined) menu.dataset.right = '';
+  if (up) menu.dataset.up = '';
+  // Where it rests now it's lined up, before it's moved in.
+  menu.style.animation = 'none';
+  const left = menu.getBoundingClientRect().left;
+  menu.style.removeProperty('animation');
+  const {shift, maxHeight} = menuInside({left, top: rect.top, height: rect.height}, up, anchor, box);
+  if (shift) menu.style.translate = `${shift}px 0`;
+  if (maxHeight !== null) {
+    menu.style.maxHeight = `${maxHeight}px`;
+    menu.style.overflowY = 'auto';
+  }
 }
 
 /**
