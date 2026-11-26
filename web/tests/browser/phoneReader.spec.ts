@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AllOut, DraftOut, DraftsOut, InboxOut, ItemsOut, MessageOut} from '@setpoint/shared';
+import type {AllOut, DraftOut, DraftsOut, InboxOut, ItemsOut, MailConversationOut, MessageOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -358,9 +358,11 @@ test('an invitation\'s card offers Add to calendar: one event opens the editor s
 
 /** Theo's newest email in the seed's cabin thread, and the one he sent on Oct 1. */
 async function cabin(setpoint: Setpoint) {
+  // All lists the conversation once; its emails are the reader's.
   const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
-  const theo = all.days.flatMap(day => day.rows).filter(row => row.from_name === 'Theo Walsh' && row.subject.endsWith('Cabin weekend in November'))
-    .sort((one, other) => other.received_at.localeCompare(one.received_at));
+  const row = all.days.flatMap(day => day.rows).find(one => one.from_name === 'Theo Walsh' && one.subject.endsWith('Cabin weekend in November'))!;
+  const conversation = await setpoint.api<MailConversationOut>('GET', `/mail/conversations/${row.id}`);
+  const theo = conversation.emails.filter(email => email.from_name === 'Theo Walsh').sort((one, other) => other.received_at.localeCompare(one.received_at));
   return {newest: theo[0]!.id, oct1: theo.find(row => row.received_at.startsWith('2026-10-02') || row.received_at.startsWith('2026-10-01'))!.id};
 }
 

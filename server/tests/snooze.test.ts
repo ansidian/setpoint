@@ -218,6 +218,21 @@ describe('the return', () => {
     expect(ntfy.published.map(message => message.body.click)).toEqual([`https://setpoint.example.com/inbox/${newer!.id}`]);
   });
 
+  test('a conversation whose emails returned moments apart still notifies once; read, its newest doesn\'t hand the notification to an older one', async () => {
+    const {w, ntfy, pass} = await setUp();
+    const [older, newer] = w.store.db.select().from(t.messages).where(and(eq(t.messages.lane, 'fyi'), eq(t.messages.unread, true), eq(t.messages.received, true), isNull(t.messages.doneAt), isNull(t.messages.trashedAt)))
+      .orderBy(t.messages.receivedAt).all().slice(-2);
+    const now = w.store.now().getTime();
+    w.store.db.update(t.messages).set({threadId: older!.threadId, accountId: older!.accountId, returnedAt: new Date(now - 5).toISOString()}).where(eq(t.messages.id, newer!.id)).run();
+    w.store.db.update(t.messages).set({unread: false, returnedAt: new Date(now - 3).toISOString()}).where(eq(t.messages.id, newer!.id)).run();
+    w.store.db.update(t.messages).set({returnedAt: new Date(now - 1).toISOString()}).where(eq(t.messages.id, older!.id)).run();
+    await pass.tick();
+    expect(ntfy.published).toEqual([]);
+    w.store.db.update(t.messages).set({unread: true}).where(eq(t.messages.id, newer!.id)).run();
+    await pass.tick();
+    expect(ntfy.published.map(message => message.body.click)).toEqual([`https://setpoint.example.com/inbox/${newer!.id}`]);
+  });
+
   test('an unread email returns with no change at its provider', async () => {
     const {w, pass} = await setUp();
     const bill = idOf(w, 'Bill is ready');

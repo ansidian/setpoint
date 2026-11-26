@@ -5,11 +5,11 @@
 // 2. notifies each email returned in the last hour as its arrival would have: Attention and FYI
 //    under their switches, Noise and Unsorted silent, and not once it's been read, Done, trashed,
 //    archived or snoozed again. A conversation snoozed whole returns whole, so it notifies once, for
-//    its newest email back. Each return is sent once (notify()'s dedupe key), and one that failed to
+//    its newest Attention or FYI email back. Each return is sent once (notify()'s dedupe key), and one that failed to
 //    send is tried again on later passes within the hour.
 // The snooze's end is stored on the email, so a restart returns everything that fell due while the
 // server was down.
-import {and, eq, gte, inArray, isNotNull, isNull, lte} from 'drizzle-orm';
+import {and, eq, gte, inArray, isNotNull, lte} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {returnFromSnooze} from '../commands/mail.ts';
 import {conversationKey} from '../domain/inbox.ts';
@@ -59,18 +59,18 @@ export class SnoozeScheduler {
     if (!this.notifier) return;
 
     const since = new Date(store.now().getTime() - NOTIFY_WITHIN_MS).toISOString();
+    // A conversation's emails return one by one, so each conversation notifies once, for its newest
+    // Attention or FYI email back, and only while that one is unread and still in the Inbox.
     const returned = store.db.select().from(t.messages).where(and(
-      gte(t.messages.returnedAt, since), isNotNull(t.messages.returnedAt), eq(t.messages.received, true), eq(t.messages.unread, true),
-      inArray(t.messages.lane, ['attention', 'fyi']), isNull(t.messages.doneAt), isNull(t.messages.trashedAt), isNull(t.messages.archivedAt), isNull(t.messages.snoozedUntil),
+      gte(t.messages.returnedAt, since), isNotNull(t.messages.returnedAt), eq(t.messages.received, true), inArray(t.messages.lane, ['attention', 'fyi']),
     )).all();
-    // One per conversation and return: its newest email back.
     const newest = new Map<string, (typeof returned)[number]>();
     for (const row of returned) {
-      const key = `${conversationKey(row)}\n${row.returnedAt}`;
-      const was = newest.get(key);
-      if (!was || row.receivedAt > was.receivedAt || (row.receivedAt === was.receivedAt && row.id > was.id)) newest.set(key, row);
+      const was = newest.get(conversationKey(row));
+      if (!was || row.receivedAt > was.receivedAt || (row.receivedAt === was.receivedAt && row.id > was.id)) newest.set(conversationKey(row), row);
     }
-    for (const row of newest.values()) {
+    const back = [...newest.values()].filter(row => row.unread && !row.doneAt && !row.trashedAt && !row.archivedAt && !row.snoozedUntil);
+    for (const row of back) {
       await this.notifier.notify({
         kind: 'mail', topic: 'mail', lane: row.lane as 'attention' | 'fyi', ...snoozeReturnText(row),
         link: {to: 'message', id: row.id}, dedupe: `snooze:${row.id}@${row.returnedAt}`,

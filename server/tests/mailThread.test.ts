@@ -9,7 +9,7 @@ import {and, eq, inArray} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {confirmCommand} from '../src/commands/index.ts';
 import {openConversation, setConversationDone, setConversationPinned, setConversationRead, snoozeConversation, trashConversation, undoConversation} from '../src/commands/conversation.ts';
-import {setDone, snoozeMessage, trashMessage} from '../src/commands/mail.ts';
+import {setDone, setRead, snoozeMessage, trashMessage} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {conversationPlace, emailCounts, inboxCounts, inboxGroups} from '../src/domain/inbox.ts';
 import type {ConversationCandidate} from '../src/domain/inbox.ts';
@@ -17,7 +17,7 @@ import {conversationPeople, expandedEmails, repliedLast, replyOf} from '../src/d
 import type {ConversationEmail, ThreadEmail} from '../src/domain/thread.ts';
 import {allMail, conversationDetail, inbox, mailCounts, messageDetail, messageRows, sentMail, snoozedMail} from '../src/queries/mail.ts';
 import {haStatus} from '../src/queries/status.ts';
-import {searchMail} from '../src/search/search.ts';
+import {answerSearch, searchMail} from '../src/search/search.ts';
 import {createDraft, updateDraft} from '../src/sending/drafts.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
 import type {FetchedMessage} from '../src/sync/mailMirror.ts';
@@ -402,6 +402,18 @@ describe('changes to a whole conversation, and their Undo', () => {
     expect(state(w, ids).every(row => row.trashedAt === null)).toBe(true);
   });
 
+  test('a change refused for one busy email changes none of them', () => {
+    const w = world({seed: true});
+    const {d1, d3, ids} = dominic(w);
+    // The newest email's own Mark unread still waits for its provider.
+    w.store.db.update(t.messages).set({unread: false}).where(eq(t.messages.id, d3.id)).run();
+    setRead(w.store, d3.id, true);
+    const before = state(w, ids);
+    expect(() => trashConversation(w.store, d1.id)).toThrow(/still waiting/);
+    expect(state(w, ids)).toEqual(before);
+    expect(w.store.db.select().from(t.commands).where(eq(t.commands.kind, 'trash')).all()).toEqual([]);
+  });
+
   test('the routes take any email of the conversation, and answer the commands and the Undo', async () => {
     const w = world({seed: true});
     const {d2, ids} = dominic(w);
@@ -456,5 +468,31 @@ describe('the reader\'s conversation', () => {
     // Read again, it expands only the first and the newest.
     expect((await api.send('GET', `/api/mail/conversations/${d1.id}`)).body.emails.map((email: {expanded: boolean}) => email.expanded)).toEqual([true, false, false, true]);
     expect(openConversation(w.store, d1.id).size).toBe(0);
+  });
+
+  test('opening leaves an email whose own change still waits as it is, and opens the rest', async () => {
+    const w = world({seed: true});
+    const {d1, d3} = dominic(w);
+    w.store.db.update(t.messages).set({unread: false}).where(eq(t.messages.id, d3.id)).run();
+    setRead(w.store, d3.id, true);
+    const api = await signedIn(w);
+    expect((await api.send('POST', `/api/mail/conversations/${d1.id}/open`)).status).toBe(200);
+    expect(w.store.db.select().from(t.commands).where(eq(t.commands.kind, 'open')).all().map(command => command.targetId)).toEqual([d1.id]);
+    expect(w.store.db.select().from(t.messages).where(eq(t.messages.id, d3.id)).get()!.unread).toBe(true);
+  });
+});
+
+describe('search lists each conversation once', () => {
+  test('as its best match, with the total, the first section and the pages counted in conversations', () => {
+    const w = world({seed: true});
+    const {d1, d3} = dominic(w);
+    const [a, b] = w.store.db.select({id: t.messages.id}).from(t.messages).where(eq(t.messages.subject, 'Bill is ready')).all()
+      .concat(w.store.db.select({id: t.messages.id}).from(t.messages).where(eq(t.messages.subject, 'Your recovery email was changed')).all()).map(row => row.id);
+    const matches = {chips: [], operators: [], text: 'x', terms: [], order: 'match' as const, partial: false, ids: [d3.id, a!, d1.id, b!], first: 3, readingTypes: false};
+    const page = (offset: number) => answerSearch(w.store, searchInput.parse({text: 'x', offset, limit: 2}), matches, null, null);
+    expect(page(0)).toMatchObject({total: 3, first_section: 2, next_offset: 2});
+    expect(page(0).results.map(result => result.id)).toEqual([d3.id, a]);
+    expect(page(2).results.map(result => result.id)).toEqual([b]);
+    expect(page(2).next_offset).toBeNull();
   });
 });

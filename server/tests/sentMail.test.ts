@@ -161,6 +161,14 @@ describe('mail the user sent to others', () => {
     expect(search('fischer')).toEqual([]);
   });
 
+  test('Sent\'s search carries no reply mark, as Sent\'s list doesn\'t; the Inbox\'s search of the same conversation does', () => {
+    const w = plainWorld({seed: true});
+    const cabin = (sent: 'include' | 'only') => searchMail(w.store, searchInput.parse({text: 'from:theo.walsh@example.org', sent}), {log: false}).results;
+    expect(cabin('include').map(result => result.replied_at)).toEqual([expect.any(String)]);
+    const sentOnly = searchMail(w.store, searchInput.parse({text: 'to:theo', sent: 'only'}), {log: false}).results;
+    expect(sentOnly.map(result => [result.subject, result.replied_at])).toEqual([['Re: Cabin weekend in November', undefined]]);
+  });
+
   test('marks itself sent-only, and its search result says who it went to; mail to yourself does only in Sent\'s search', async () => {
     const {w, deliver} = await setup();
     const sent = deliver(sentOnly(w));

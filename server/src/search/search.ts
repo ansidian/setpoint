@@ -428,7 +428,8 @@ export function answerSearch(store: Store, input: SearchRequest, emailMatches: S
   const firstIds = new Set(emailMatches.ids.slice(0, emailMatches.first));
   const matches = {...emailMatches, ids, first: ids.filter(id => firstIds.has(id)).length};
   const pageIds = matches.ids.slice(input.offset, input.offset + input.limit);
-  const rows = messageRows(store, pageIds);
+  // Sent's search carries no reply mark, as Sent's list doesn't.
+  const rows = messageRows(store, pageIds, {time: 'lead', replyMark: input.sent !== 'only'});
   const results = pageIds.flatMap(id => {
     const row = rows.get(id);
     return row ? [presentResult(store, row, matches, input.sent)] : [];

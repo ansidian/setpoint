@@ -1637,9 +1637,9 @@ test('an answered email: its row has the reply mark, the reader says "You replie
   const setpoint = await startSetpoint();
   try {
     const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
-    const theo = all.days.flatMap(day => day.rows).filter(row => row.from_name === 'Theo Walsh');
-    const [latest] = theo;
-    const first = theo.at(-1)!;
+    // All lists Theo's conversation once, as his newest email.
+    const latest = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Theo Walsh');
+    const first = {id: latest!.thread!.ids[0]!};
     const {reply_id: reply} = await setpoint.api<MessageOut>('GET', `/mail/messages/${latest!.id}`);
     const page = await load(setpoint, `/inbox/${latest!.id}`);
     const line = page.locator('.rd-replied');

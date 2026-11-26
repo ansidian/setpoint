@@ -67,9 +67,9 @@ test('the sidebar\'s Sent: its list names who each went to, an email opens with 
     await rowOf(page, 'Re: Saturday hike').waitFor();
     await until('the title', () => page.title(), title => title === 'Sent');
     assert.deepEqual(await page.locator('.hd .sent-accounts button').allTextContents(), ['All', 'Business', 'Personal', 'Work', 'Jobs', 'iCloud']);
-    // Newest first, each naming its first recipient, and how many more.
+    // A conversation each, newest first, each naming its newest sent email's first recipient, and how many more.
     assert.deepEqual(await rows(page).evaluateAll(found => found.map(row => row.querySelector('.from')?.getAttribute('aria-label'))),
-      ['To Priya Raman', 'To Sam Ortiz', 'To Mom', 'To Lena Fischer +1', 'To Theo Walsh', 'To Ravi Menon +1', 'To Theo Walsh', 'To Theo Walsh', 'To Theo Walsh', 'To Contoso Coffee', 'To Tailspin Toys Support']);
+      ['To Priya Raman', 'To Sam Ortiz', 'To Mom', 'To Lena Fischer +1', 'To Theo Walsh', 'To Ravi Menon +1', 'To Contoso Coffee', 'To Tailspin Toys Support']);
 
     // An email opens beside it with Sent's tools, and the head says who it went to.
     await rowOf(page, 'Lab notes for Friday').click();
@@ -80,7 +80,7 @@ test('the sidebar\'s Sent: its list names who each went to, an email opens with 
 
     // E: out of the list, the next one opens, and Undo puts it back in the reader.
     await page.keyboard.press('e');
-    await page.locator('.mailtext', {hasText: 'Games and a cooler'}).waitFor();
+    await page.locator('.mailtext', {hasText: 'cracked grinder lid'}).waitFor();
     await until('it left the list', () => rowOf(page, 'Lab notes for Friday').count(), count => count === 0);
     await holdToast(page);
     await page.locator('.toast button', {hasText: 'Undo'}).click();
@@ -269,7 +269,8 @@ test('search from Sent covers sent mail only, in its account; from the Inbox it 
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await page.locator('.hd .sent-accounts button', {hasText: 'Personal'}).click();
-    await until('Personal\'s', () => rows(page).count(), count => count === 7);
+    // The user's four replies to Theo are one conversation.
+    await until('Personal\'s', () => rows(page).count(), count => count === 4);
     await search(page, 'hike');
     await until('Personal\'s hike', () => results(page), found => JSON.stringify(found) === JSON.stringify([['To Sam Ortiz', 'Re: Saturday hike']]));
     assert.deepEqual(setpoint.pageErrors, []);

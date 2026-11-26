@@ -1091,7 +1091,8 @@ test('Gmail-style operators filter as they\'re typed and stay in the field, mark
     await until('Theo offered', () => people.getByRole('option').allTextContents(), shown => shown.length > 0 && shown[0]!.startsWith('Theo Walsh'));
     await page.keyboard.press('Enter');
     assert.equal(await field(page).inputValue(), 'from:theo.walsh@example.org ');
-    await until('Theo\'s emails', () => titles(page), shown => shown.length === 4 && shown.every(title => /Cabin weekend in November/.test(title)));
+    // Theo's four emails are one conversation, listed once.
+    await until('Theo\'s conversation', () => titles(page), shown => shown.length === 1 && /Cabin weekend in November/.test(shown[0]!));
     assert.deepEqual(await marks(), ['from:theo.walsh@example.org']);
     // Sent's search reads them too.
     await page.goto(`${setpoint.base}/sent`);

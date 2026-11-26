@@ -1,4 +1,4 @@
-// Home Assistant's status endpoint over the API on the seed: the chip's numbers are the sidebar's,
+// Home Assistant's status endpoint over the API on the seed: the chip's numbers are the Inbox's, by email,
 // opening never drops attention, Done and archiving do, a source needing reconnect is never all
 // clear, and only Home Assistant's own token reads it.
 import {haStatusSchema, SEED_NOW} from '@setpoint/shared';
@@ -10,6 +10,7 @@ import {markAllRead, setRead} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {ProviderError} from '../src/sync/errors.ts';
 import {recordFailure} from '../src/sync/health.ts';
+import {mailByEmail} from '../src/queries/mail.ts';
 import {applyProviderStates} from '../src/sync/mailMirror.ts';
 import {client, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -32,17 +33,19 @@ async function setup(options: {publicUrl?: string} = {}) {
     const text = await response.text();
     return {status: response.status, headers: response.headers, body: text ? JSON.parse(text) : null};
   };
-  /** Reads the status and checks it against the sidebar's own queries, read at the same moment. */
+  /**
+   * Reads the status and checks it against the Inbox's own rules, read at the same moment: by email,
+   * where the sidebar counts conversations. Unread FYI is the sidebar's number too.
+   */
   const status = async () => {
     const got = await ha();
     expect(got.status).toBe(200);
     const parsed = haStatusSchema.parse(got.body);
     const counts = (await owner.send('GET', '/api/mail/counts')).body;
-    const view = (await owner.send('GET', '/api/mail/inbox')).body;
-    expect([parsed.attention, parsed.unread_fyi]).toEqual([counts.attention, counts.unread_fyi]);
-    expect([parsed.attention, parsed.unread_fyi]).toEqual([view.counts.attention, view.counts.unread_fyi]);
-    const attention = view.groups.find((group: {group: string}) => group.group === 'attention')?.rows ?? [];
-    expect(parsed.attention_emails.map(email => [email.id, email.unread])).toEqual(attention.slice(0, 3).map((row: {id: number; unread: boolean}) => [row.id, row.unread]));
+    const byEmail = mailByEmail(w.store, 3);
+    expect([parsed.attention, parsed.unread_fyi]).toEqual([byEmail.attention, byEmail.unreadFyi]);
+    expect(parsed.unread_fyi).toBe(counts.unread_fyi);
+    expect(parsed.attention_emails.map(email => [email.id, email.unread])).toEqual(byEmail.attentionEmails.map(row => [row.id, row.unread]));
     return parsed;
   };
   return {w, owner, token, ha, status};
