@@ -4,7 +4,7 @@
 // the month picker, which jumps to any day; older days than the week before are the picker's.
 // Overdue tasks lead today as its Overdue group, each with how long it's overdue, and the
 // detail of one snoozes it in the bottom sheet, as does swiping its line left (phone/swipe.tsx). The header's search button opens a plain field
-// whose results take the list's place; its clear button leaves search.
+// whose results take the list's place; its clear button leaves search, as do a day picked and the tab.
 // The routes are Calendar's: /calendar/item/3?at=… opens that item's detail over the agenda.
 // /calendar/2026-10-07 brings that day to the top (or starts the agenda there when it's outside
 // what's loaded). + in the header opens the editor sheet (phone/EditorSheet.tsx) on a new event on
@@ -88,7 +88,9 @@ export function Agenda({route}: {route: CalendarRoute}) {
     if (linkedDay && !route.item) setFocus({day: linkedDay, n: focus.n + 1, glide: false});
   }
   const [{anchor, weeks}, setWindow] = useState(() => ({anchor: agendaAnchor(today, FIRST_WEEKS, linkedDay ?? today), weeks: FIRST_WEEKS}));
+  // A day picked, or the tab's today, leaves search for the agenda, the results being over it.
   const go = (day: string, glide = false) => {
+    if (searching) leaveSearch();
     setFocus({day, n: focus.n + 1, glide});
     navigate(day === today ? AGENDA : {...AGENDA, date: day}, {replace: true});
   };
