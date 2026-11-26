@@ -113,6 +113,15 @@ test('a story slides in over the list with Back and Open at its outlet; a source
     const [box, tabs] = await rested(() => Promise.all([pane.boundingBox(), page.locator('.ph-tabs').boundingBox()]));
     assert.ok(box!.x === 0 && box!.width === 390 && box!.y + box!.height >= tabs!.y + tabs!.height, 'the pane covers the screen');
     await until('the brush fire seen', () => stateOf(setpoint, brush), state => state === 'seen');
+    // No hover to read a cut headline by: a source's wraps, cut only past its second line.
+    await pane.locator('.src-row .h').first().waitFor();
+    const cut = await rested(() => pane.locator('.src-row .h').evaluateAll(lines => lines.filter(line => {
+      const lineHeight = parseFloat(getComputedStyle(line).lineHeight);
+      const overflows = line.scrollWidth > line.clientWidth + 1 || line.scrollHeight > line.clientHeight + 1;
+      return overflows && line.clientHeight < lineHeight * 2 - 1;
+    }).map(line => line.textContent)));
+    assert.deepEqual(cut, [], 'no headline cut to one line');
+
 
     // A source opens its article in the pane; Back goes to the story.
     await pane.locator('.src-row').first().tap();

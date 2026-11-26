@@ -318,5 +318,8 @@
   .st-body, .ar-body { padding: 16px 20px 24px; }
   .st-img { margin: 0 20px; height: auto; aspect-ratio: 16 / 9; }
   .st-sum { font-size: 15px; }
+  /* No hover to read a cut headline by: a source's wraps to two lines. */
+  .src-row { min-height: 64px; }
+  .src-row .h { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 17px; }
   .nw-up-pop { left: 12px; width: calc(100% - 24px); }
 }
