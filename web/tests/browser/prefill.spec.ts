@@ -57,7 +57,7 @@ test('Add to calendar waits for the model under skeletons, its fields locked, th
   try {
     const {page, proposal} = await propose(setpoint, EXAM);
     await proposal.locator('.skf').first().waitFor();
-    assert.equal(await proposal.locator('.skf').count(), 4, 'the title, when, place and calendar wait');
+    assert.equal(await proposal.locator('.skf').count(), 5, 'the title, when, place, calendar and colour wait');
     assert.equal(await proposal.locator('.ed-scroll[inert]').count(), 1, 'nothing can be typed while it comes');
     assert.equal(await proposal.getByRole('button', {name: 'Create event'}).isDisabled(), true);
     await until('the model asked', async () => fake.prefilled, asked => asked.includes(EXAM));
