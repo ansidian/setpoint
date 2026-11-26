@@ -8,7 +8,7 @@
 // Alfred's proposal card (`openProposalSheet`, the draft his answer proposed).
 // An invitation of two or more events opens the review instead (importRun.ts's `openReview`), which
 // shows here too. The shell draws one `PhoneSheets`.
-import type {CalendarOut, ItemOut, ItemsOut, ProposalOut} from '@setpoint/shared';
+import type {CalendarOut, ItemOut, ItemsOut, ProposalOut, RecurringScope} from '@setpoint/shared';
 import {useCallback, useEffect, useMemo, useState, useSyncExternalStore} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
@@ -24,6 +24,7 @@ import type {EditorOpen} from '../calendar/Editor.tsx';
 import {ImportPane} from '../calendar/ImportPane.tsx';
 import {handIcs, importFromEditor, useHandedIcs, useImportReview} from '../calendar/importRun.ts';
 import {CreatedItemDetail} from '../CreatedItem.tsx';
+import type {IconName} from '../../ui/glyphs.ts';
 import {BottomSheet, SheetChoice} from './BottomSheet.tsx';
 import {createFromSheet, deleteWithUndo, saveFromSheet} from './itemActions.ts';
 import './editorSheet.css';
@@ -77,7 +78,14 @@ const madeAs = (seq: number) => (id: number | null) => {
 
 export const useEditorSheet = () => useSyncExternalStore(subscribe, () => opened);
 
-// A repeating event's Delete, asking which of its events go.
+// A repeating event's Delete, asking which of its events go: each choice says it deletes, its glyph
+// in `alert` showing how much goes (the one event, it and those after, the whole series), and
+// Cancel at the foot keeps them all, as iOS's action sheets have it.
+const DELETE_CHOICES: Record<RecurringScope, {label: string; icon: IconName}> = {
+  this: {label: 'Delete this event', icon: 'event'},
+  following: {label: 'Delete future events', icon: 'arrow_forward'},
+  all: {label: 'Delete all events', icon: 'repeat'},
+};
 let asking: ItemOut | null = null;
 const ask = (item: ItemOut | null) => {
   asking = item;
@@ -120,8 +128,9 @@ export function PhoneSheets() {
     return (
       <BottomSheet title="Delete recurring event" onClose={() => ask(null)}>
         {scopeChoices(from, from).map(choice => (
-          <SheetChoice key={choice.scope} label={choice.label} detail={choice.line} onChoose={() => deleteWithUndo(deleting, choice.scope)} />
+          <SheetChoice key={choice.scope} icon={DELETE_CHOICES[choice.scope].icon} tone="alert" label={DELETE_CHOICES[choice.scope].label} detail={choice.line} onChoose={() => deleteWithUndo(deleting, choice.scope)} />
         ))}
+        <SheetChoice icon="close" tone="ink3" label="Cancel" onChoose={() => {}} />
       </BottomSheet>
     );
   }

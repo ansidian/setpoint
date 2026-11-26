@@ -1,8 +1,9 @@
 // The phone's agenda at 390 × 844 (board 21): today at the top with the past week above it, an
 // item's detail, reminders, forecasts and now. Its range: later weeks load as the end nears, until
 // four empty weeks leave Show later; the header's month opens the month picker, which jumps to any
-// day, and the tab and Today go back to today. Today's Overdue group, its snooze (from a detail or a
-// swipe) and the tab's count; search, its results and their details. Then its changes on the seed: + opens the editor sheet on the day in
+// day, and the tab and Today go back to today. A line opened under the detail card comes up above it.
+// Today's Overdue group, its snooze (from a detail or a swipe) and the tab's count; search in the
+// header's place with Cancel, its results and their details, the tab leaving it. Then its changes on the seed: + opens the editor sheet on the day in
 // view and Create adds the event there; Edit saves, with Undo; a repeating event's edit asks which
 // of its events; a task's ring completes it and its done check reopens it; Delete waits out its
 // toast, Undo keeping the item, and a repeating event's asks which of its events in the bottom
@@ -242,6 +243,22 @@ test('Edit saves in the sheet, its Undo putting the item back; a repeating event
   }
 });
 
+test('a line opened under where the detail card rests comes up to sit above it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await agenda(setpoint);
+    // Next Tuesday's lecture, low on the first screen, under where the card comes to rest.
+    const lecture = page.locator('.ph-agenda [data-days="2026-10-13"] .pitem', {hasText: 'CS 101 lecture'});
+    await lecture.tap();
+    await page.locator('.ph-detail .fd-title', {hasText: 'CS 101 lecture'}).waitFor();
+    const [line, card] = await rested(() => Promise.all([lecture.boundingBox(), page.locator('.ph-detail').boundingBox()]));
+    assert.ok(line!.y + line!.height <= card!.y, `the line (to ${line!.y + line!.height}) ends above the card (${card!.y})`);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a task\'s ring in its detail completes it, and its done check reopens it, each with Undo', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -303,8 +320,8 @@ test('Delete waits out its toast: Undo keeps the item, and left alone it goes; a
     await page.locator('.ph-detail').getByRole('button', {name: 'Delete'}).tap();
     const asking = page.getByRole('dialog', {name: 'Delete recurring event'});
     await asking.waitFor();
-    assert.deepEqual(await asking.locator('.ph-bs-i > .ell').allTextContents(), ['This event', 'This and following', 'All events']);
-    await asking.getByRole('button', {name: /^All events/}).tap();
+    assert.deepEqual(await asking.locator('.ph-bs-i > .ell').allTextContents(), ['Delete this event', 'Delete future events', 'Delete all events', 'Cancel']);
+    await asking.getByRole('button', {name: /^Delete all events/}).tap();
     const held = await holdToast(page);
     await held.getByText('Deleted Gym').waitFor();
     await fridayGym.waitFor({state: 'detached'});
@@ -315,7 +332,7 @@ test('Delete waits out its toast: Undo keeps the item, and left alone it goes; a
     // This event takes today's alone, once its toast has gone.
     await openDetail(page, 'Gym');
     await page.locator('.ph-detail').getByRole('button', {name: 'Delete'}).tap();
-    await asking.getByRole('button', {name: /^This event/}).tap();
+    await asking.getByRole('button', {name: /^Delete this event/}).tap();
     await page.locator('.toast:not(.leaving)', {hasText: 'Deleted Gym'}).waitFor();
     await page.clock.runFor(UNDO_MS);
     await until('today\'s Gym deleted', () => titles(setpoint, '2026-10-07'), list => !list.includes('Gym'), 10_000);
@@ -521,7 +538,38 @@ test('an Overdue line swiped left offers Snooze, and swiped all the way opens it
   }
 });
 
-test('search: plain words, the results in the list\'s place, a result\'s detail and back, and clear leaves it where the agenda was', async () => {
+test('search takes the header\'s place: the list stays put, and Cancel leaves search from the moment it opens', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await agenda(setpoint);
+    const list = page.locator('.ph-agenda[aria-label="Agenda"]');
+    const before = await rested(() => list.boundingBox());
+    await page.getByRole('button', {name: 'Search'}).tap();
+    const field = page.getByLabel('Search events and tasks');
+    await field.waitFor();
+    // The field is in the header's row, in the title's place: the list under it doesn't move.
+    assert.equal((await rested(() => list.boundingBox()))!.y, before!.y, 'the list stays where it was');
+    assert.equal(await page.locator('.hd .hd-title').isVisible(), false, 'the title gives the field its place');
+    // An empty field has its way out: Cancel, a fingertip's size.
+    const cancel = page.locator('.hd').getByRole('button', {name: 'Cancel'});
+    await fingertips([cancel]);
+    await cancel.tap();
+    await field.waitFor({state: 'detached'});
+    await page.locator('.hd .hd-title').waitFor();
+    // With words, Cancel leaves the results too.
+    await page.getByRole('button', {name: 'Search'}).tap();
+    await field.fill('smile');
+    await page.getByRole('region', {name: 'Search results'}).locator('.ph-res').first().waitFor();
+    await cancel.tap();
+    await page.getByRole('region', {name: 'Search results'}).waitFor({state: 'detached'});
+    assert.ok(await list.isVisible());
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('search: plain words, the results in the list\'s place, a result\'s detail and back, clear empties it, Cancel leaves it where the agenda was, and the tab leaves it for today', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await agenda(setpoint);
@@ -552,10 +600,21 @@ test('search: plain words, the results in the list\'s place, a result\'s detail 
     assert.equal(await page.locator('.hd .search .qchip').count(), 0);
     assert.equal(await field.inputValue(), 'march ');
 
-    // Clear leaves search, the agenda where it was.
+    // Clear empties the field, the agenda back under it; Cancel leaves search, the agenda where it was.
     await page.getByRole('button', {name: 'Clear search'}).tap();
+    assert.equal(await field.inputValue(), '');
+    await page.locator('.ph-agenda[aria-label="Agenda"]').waitFor();
+    await page.locator('.hd').getByRole('button', {name: 'Cancel'}).tap();
     await page.locator('.hd .search').waitFor({state: 'detached'});
     await until('the agenda where it was', () => topDay(page), day => day === '2026-10-07');
+
+    // The Agenda tab over the results leaves search for today.
+    await page.getByRole('button', {name: 'Search'}).tap();
+    await field.fill('smile');
+    await results.locator('.ph-res').first().waitFor();
+    await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
+    await page.locator('.hd .search').waitFor({state: 'detached'});
+    await until('today at the top', () => topDay(page), day => day === '2026-10-07');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

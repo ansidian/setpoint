@@ -2,9 +2,12 @@
 // new item opens as "New event" with Cancel and Create in the top bar, Create waiting for a title
 // and sending what the line read; an item opens as "Edit event" with Save; a repeating event's Save
 // asks This event, This and following or All events in the sheet, the top bar's action waiting
-// meanwhile; Cancel and Esc close it with nothing sent. Its fields are 16 px, so iOS doesn't zoom in
-// on them, and its date picker fits the screen. A repeating event's Delete asks the same in the
-// bottom sheet, and a delete waits out its toast: Undo sends nothing (itemActions.ts). The sheet's
+// meanwhile; Cancel and Esc close it with nothing sent, Cancel on words typed asking Keep editing or
+// Discard first. Edit opens with no row over its fields and the keyboard down. An event's All day is
+// a switch above Starts. Its fields are 16 px, so iOS doesn't zoom in on them, and its date picker
+// fits the screen. A repeating event's Delete asks Delete this event, Delete future events or Delete
+// all events in the bottom sheet, with Cancel, and a delete waits out its toast: Undo sends nothing
+// (itemActions.ts). The sheet's
 // own top bar and Esc are phoneSheets.test.tsx's; the journeys on the seed are phoneAgenda.spec.ts's.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
@@ -105,13 +108,33 @@ test('Task in the sheet makes it a task, its title "New task"', async () => {
   await expect.element(page.getByLabelText('Describe the task')).toBeVisible();
 });
 
-test('Cancel and Esc close it with nothing sent', async () => {
+test('Cancel and Esc close it with nothing sent; Cancel on a draft with words asks Keep editing or Discard first', async () => {
   const sent = server();
   await render(<PhoneSheets />);
+  // Nothing typed: Cancel closes at once.
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Cancel'}));
+  await expect.element(sheet('New event')).not.toBeInTheDocument();
+  // Words typed: Cancel asks, Keep editing keeps them, and Discard closes.
   openEditorSheet({kind: 'event', date: '2026-10-09'});
   await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch with Ana 12-1pm');
   await userEvent.click(sheet('New event').getByRole('button', {name: 'Cancel'}));
+  const asking = sheet('Discard this event?');
+  await userEvent.click(asking.getByRole('button', {name: 'Keep editing'}));
+  await expect.element(asking).not.toBeInTheDocument();
+  await expect.element(page.getByLabelText('Describe the event')).toHaveValue('Lunch with Ana 12-1pm');
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Cancel'}));
+  await userEvent.click(asking.getByRole('button', {name: 'Discard event'}));
   await expect.element(sheet('New event')).not.toBeInTheDocument();
+  // Esc while it asks closes the question alone.
+  openEditorSheet({kind: 'event', date: '2026-10-09'});
+  await userEvent.fill(page.getByLabelText('Describe the event'), 'Lunch with Ana 12-1pm');
+  await userEvent.click(sheet('New event').getByRole('button', {name: 'Cancel'}));
+  await expect.element(asking).toBeVisible();
+  await userEvent.keyboard('{Escape}');
+  await expect.element(asking).not.toBeInTheDocument();
+  await expect.element(sheet('New event')).toBeVisible();
+  closeEditorSheet();
   openEditorSheet({kind: 'event', date: '2026-10-09'});
   await expect.element(sheet('New event')).toBeVisible();
   await userEvent.keyboard('{Escape}');
@@ -131,6 +154,16 @@ test('an item opens as Edit with Save, which sends only what changed', async () 
   await expect.element(sheet('Edit event')).not.toBeInTheDocument();
   await expect.poll(() => sent.map(one => one.at)).toEqual(['PATCH /api/items/4']);
   expect(sent[0]!.body).toEqual({changes: {title: 'Dentist checkup'}, scope: 'this', occurrence_start: null});
+});
+
+test('Edit opens with no row over its fields (Delete is the detail\'s) and the keyboard down, the title not selected', async () => {
+  server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-07', item: event()});
+  await expect.element(page.getByLabelText('Title')).toHaveValue('Dentist');
+  expect(sheet('Edit event').element().querySelector('.ed-head')).toBeNull();
+  await expect.element(sheet('Edit event').getByRole('button', {name: 'More'})).not.toBeInTheDocument();
+  expect(document.activeElement).not.toBe(page.getByLabelText('Title').element());
 });
 
 test('a repeating event\'s Save asks which of its events, the top bar\'s action waiting, and sends the one picked', async () => {
@@ -213,12 +246,30 @@ test('an all-day event\'s Starts and Ends are its first and last days', async ()
   await render(<PhoneSheets />);
   openEditorSheet({kind: 'event', date: '2026-10-09'});
   await userEvent.fill(page.getByLabelText('Describe the event'), 'Trip');
-  await userEvent.click(sheet('New event').getByRole('button', {name: 'All day', exact: true}));
+  await userEvent.click(sheet('New event').getByRole('switch', {name: 'All day'}));
   await expect.element(page.getByLabelText('Start', {exact: true})).not.toBeInTheDocument();
   await userEvent.fill(page.getByLabelText('End date', {exact: true}), '2026-10-11');
   await userEvent.click(sheet('New event').getByRole('button', {name: 'Create'}));
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]!.body).toMatchObject({title: 'Trip', all_day: true, start_date: '2026-10-09', end_date: '2026-10-12'});
+});
+
+test('an event\'s All day is a switch above Starts: on, its times go; off, the times it had come back', async () => {
+  server();
+  await render(<PhoneSheets />);
+  openEditorSheet({kind: 'event', date: '2026-10-07', item: event()});
+  const allDay = sheet('Edit event').getByRole('switch', {name: 'All day'});
+  await expect.element(allDay).toHaveAttribute('aria-checked', 'false');
+  // Above Starts, and no × beside the end time.
+  const order = [...sheet('Edit event').element().querySelectorAll('[role="switch"], .ph-when-label')].map(part => part.getAttribute('aria-label') ?? part.textContent);
+  expect(order.slice(0, 2)).toEqual(['All day', 'Starts']);
+  expect(sheet('Edit event').element().querySelector('.ph-when .ibtn')).toBeNull();
+  await userEvent.click(allDay);
+  await expect.element(allDay).toHaveAttribute('aria-checked', 'true');
+  await expect.element(page.getByLabelText('Start', {exact: true})).not.toBeInTheDocument();
+  await userEvent.click(allDay);
+  await expect.element(page.getByLabelText('Start', {exact: true})).toHaveValue('14:30');
+  await expect.element(page.getByLabelText('End', {exact: true})).toHaveValue('15:30');
 });
 
 test('a task\'s due day and time are iOS\'s pickers too, and its × leaves it with no date', async () => {
@@ -324,7 +375,8 @@ test('a repeating event\'s Delete asks which of its events in the bottom sheet, 
   removeItem(GYM);
   const asking = page.getByRole('dialog', {name: 'Delete recurring event'});
   await expect.element(asking).toBeVisible();
-  await userEvent.click(asking.getByRole('button', {name: /^This and following/}));
+  expect([...asking.element().querySelectorAll('.ph-bs-i > .ell')].map(label => label.textContent)).toEqual(['Delete this event', 'Delete future events', 'Delete all events', 'Cancel']);
+  await userEvent.click(asking.getByRole('button', {name: /^Delete future events/}));
   await expect.element(asking).not.toBeInTheDocument();
   await expect.element(page.getByText('Deleted Gym')).toBeVisible();
   expect(sent).toEqual([]);
@@ -332,6 +384,17 @@ test('a repeating event\'s Delete asks which of its events in the bottom sheet, 
   dismissToast();
   await expect.poll(() => sent.map(one => one.at)).toEqual(['POST /api/items/1/delete']);
   expect(sent[0]!.body).toEqual({scope: 'following', occurrence_start: '2026-10-07T14:00:00.000Z'});
+});
+
+test('the repeating delete\'s Cancel keeps every event and sends nothing', async () => {
+  const sent = server();
+  await render(<><PhoneSheets /><ToastPill /></>);
+  removeItem(GYM);
+  const asking = page.getByRole('dialog', {name: 'Delete recurring event'});
+  await userEvent.click(asking.getByRole('button', {name: 'Cancel'}));
+  await expect.element(asking).not.toBeInTheDocument();
+  await expect.element(page.getByText('Deleted Gym')).not.toBeInTheDocument();
+  expect(sent).toEqual([]);
 });
 
 test('Undo on a delete keeps the item and sends nothing', async () => {

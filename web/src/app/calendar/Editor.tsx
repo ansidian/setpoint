@@ -50,6 +50,7 @@ import {CalendarName, DateField, NativeField, ProjectField, stepCursor, TimeFiel
 import {DescriptionField} from './DescriptionField.tsx';
 import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
+import {BottomSheet, SheetChoice} from '../phone/BottomSheet.tsx';
 import {Sheet} from '../phone/Sheet.tsx';
 import {uuid} from '../uuid.ts';
 import './editor.css';
@@ -231,6 +232,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const [kind, setKind] = useState<ItemKind>(open.kept?.kind ?? open.kind);
   useEffect(() => onKeep?.({drafts, active, kind}), [drafts, active, kind, onKeep]);
   const [asking, setAsking] = useState(false);
+  // The phone sheet's Cancel on a draft with changes, asking whether to discard them.
+  const [discarding, setDiscarding] = useState(false);
   const [scope, setScope] = useState<RecurringScope>(open.change?.scope ?? DEFAULT_SCOPE);
   const [menu, setMenu] = useState<'calendar' | 'repeat' | 'reminder' | 'labels' | 'more' | null>(null);
   const menuRef = useMenuRef(menu, () => setMenu(null));
@@ -372,13 +375,14 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     if (!editing && !card?.quiet) (filling ? form.current : line.current)?.focus();
   }, [editing, active, card?.quiet, filling, form]);
   // E on an item focuses its line with its title words selected, so typing renames it rather than
-  // reaching the calendar's keys, and the phrases typed stay.
+  // reaching the calendar's keys, and the phrases typed stay. The phone's Edit leaves the keyboard
+  // down: the user came as often for a time as for the title.
   const opening = useRef(titleRun(draft.text, parsed.marks));
   useEffect(() => {
-    if (!editing || card?.quiet) return;
+    if (!editing || card?.quiet || sheet) return;
     line.current?.focus();
     line.current?.setSelectionRange(opening.current.start, opening.current.end);
-  }, [editing, card?.quiet]);
+  }, [editing, card?.quiet, sheet]);
 
   // A pick removes the menu item that had focus: focus goes back to the field that opened the menu
   // (or the editor itself), so ⌘Enter and Esc keep working.
@@ -719,6 +723,19 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     // The fields it was beside go: the editor keeps focus, for ⌘Enter and Esc.
     form.current?.focus();
   };
+  // The phone's All day switch: on, an event's times go, kept to come back when it's turned off.
+  const heldTimes = useRef<{start: number; end: number | null; days: number} | null>(null);
+  const setAllDay = (on: boolean) => {
+    if (on && draft.start !== null) {
+      heldTimes.current = {start: draft.start, end: draft.end, days: extraDays(draft.start, draft.end, 1) + 1};
+      removeTime();
+      return;
+    }
+    const held = heldTimes.current;
+    heldTimes.current = null;
+    if (held && held.days === draft.days) change({start: held.start, end: held.end, days: 1}, ['time']);
+    else addTime();
+  };
   const addTime = () => change({start: DEFAULT_START, end: kind === 'event' ? (draft.days - 1) * 1440 + DEFAULT_START + DEFAULT_LENGTH : null, days: 1}, ['time']);
   const dateClass = `date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`;
   // On the phone the day and times are iOS's own pickers, in rows as its Calendar has them: an
@@ -728,6 +745,12 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const ends = draft.start !== null && draft.end !== null ? endOf(draft.date, draft.end) : null;
   const phoneWhen = (
     <div className={`ph-when ${kind}${sk}`}>
+      {/* An event's All day, a switch on its own row above Starts, as iOS's Calendar has it. */}
+      {kind === 'event' && !draft.undated && (
+        <button type="button" className="ph-allday" role="switch" aria-checked={draft.start === null} aria-label="All day" onClick={() => setAllDay(draft.start !== null)}>
+          All day<span className={draft.start === null ? 'switch on' : 'switch'} />
+        </button>
+      )}
       {kind === 'event' && <span className="ph-when-label">Starts</span>}
       <NativeField type="date" className={dateClass} label={kind === 'task' ? 'Due date' : 'Date'} value={draft.undated ? '' : draft.date}
         shown={draft.undated ? '' : dayTitle(draft.date)} placeholder={kind === 'event' ? 'Pick a day' : 'No date'}
@@ -741,7 +764,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             }} />
           {kind === 'task' && <button type="button" className="ibtn sm" aria-label="Remove time" onClick={removeTime}><Icon name="close" size={16} /></button>}
         </>
-      ) : <button type="button" className="btn quiet sm ph-add-time" onClick={addTime}>Add a time</button>}
+      ) : kind === 'task' ? <button type="button" className="btn quiet sm ph-add-time" onClick={addTime}>Add a time</button> : null}
       {kind === 'task' && mark('date', 'time')}
       {kind === 'event' && !draft.undated && (
         <>
@@ -757,7 +780,6 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                   const minutes = readInputTime(value);
                   if (minutes !== null) change({end: endTimePicked(draft.start!, draft.end!, minutes)}, ['time']);
                 }} />
-              <button type="button" className="ibtn sm" aria-label="All day" onClick={removeTime}><Icon name="close" size={16} /></button>
             </>
           )}
         </>
@@ -786,7 +808,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           {editing && <span className="card-sub">· a change to {editing.title}</span>}
           {card.missed && <span className="card-miss" role="status" data-tip={card.missed.tip ?? undefined}><Icon name="error" size={16} />{card.missed.line}</span>}
         </div>
-      ) : <div className="ed-head">
+      ) : sheet && editing ? null : <div className="ed-head">
+        {/* The phone's Edit has no head: its More held only Delete, which the detail has. */}
         {sheet ? <span className="grow" /> : <span className="grow ed-title">{title}</span>}
         {editing ? (
           <span className="menu-host">
@@ -1122,11 +1145,22 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     </form>
   );
   if (!sheet) return editor;
-  // The scope prompt, while it asks, has the say: the top bar's action waits.
+  // The scope prompt, while it asks, has the say: the top bar's action waits. Cancel on a draft with
+  // changes asks first, as iOS's Calendar does: Keep editing, or Discard. Esc closes the question
+  // while it's up.
   return (
-    <Sheet title={title} onClose={onClose} action={asking && editing ? undefined : {label: editing ? 'Save' : 'Create', disabled: editing ? !!projectProblem : ready.length !== drafts.length, onClick: submit}}>
-      {editor}
-    </Sheet>
+    <>
+      <Sheet title={title} onClose={() => (discarding ? setDiscarding(false) : onClose())} onCancel={dirty ? () => setDiscarding(true) : undefined}
+        action={asking && editing ? undefined : {label: editing ? 'Save' : 'Create', disabled: editing ? !!projectProblem : ready.length !== drafts.length, onClick: submit}}>
+        {editor}
+      </Sheet>
+      {discarding && (
+        <BottomSheet title={editing ? 'Discard your changes?' : `Discard this ${noun}?`} onClose={() => setDiscarding(false)}>
+          <SheetChoice icon="edit" label="Keep editing" onChoose={() => {}} />
+          <SheetChoice icon="delete" tone="alert" label={editing ? 'Discard changes' : `Discard ${noun}`} onChoose={onClose} />
+        </BottomSheet>
+      )}
+    </>
   );
 }
 

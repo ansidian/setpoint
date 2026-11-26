@@ -7,6 +7,8 @@
   .ph-editor, .ph-import { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; outline: none; }
   .ph-editor .ed-head { height: 52px; padding: 0 12px 0 20px; }
   .ph-editor .ed-scroll { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+  /* Edit has no head row: its fields start a step under the top bar. */
+  .ph-editor:not(:has(> .ed-head)) > .ed-scroll { padding-top: 12px; }
   .ph-sheet .kbd { display: none; }
 
   .ph-editor .field { height: 40px; }
@@ -32,6 +34,15 @@
   .ph-editor .ph-when-label { grid-column: 1; min-width: 46px; display: flex; align-items: center; gap: 4px; color: var(--ink2); font-size: 15px; }
   .ph-editor .ph-when > .ph-add-time { grid-column: span 2; justify-self: start; height: 40px; font-size: 15px; }
   .ph-editor .ph-when.event > .srcm { position: absolute; left: -27px; top: 61px; }
+  /* An event's All day: its own row above Starts, the whole row the switch's tap, the switch at the end. */
+  .ph-editor .ph-when.event { grid-template-columns: auto minmax(0, 1fr) 112px; }
+  .ph-editor .ph-allday { grid-column: 1 / -1; height: var(--ph-tap); margin: -4px 0; display: flex; align-items: center; justify-content: space-between; color: var(--ink2); font-size: 15px; }
+  /* Its switch drawn as Settings' (settings.css): a `sub3` track with an `ink3` knob, on `switchOn` with `switchKnobOn`. */
+  .ph-allday .switch { width: 34px; height: 20px; border-radius: 999px; background: var(--sub3); position: relative; flex: none; transition: background-color var(--dur-fast) var(--ease); }
+  .ph-allday .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: var(--ink3);
+    transition: left var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+  .ph-allday .switch.on { background: var(--switchOn); }
+  .ph-allday .switch.on::after { left: 16px; background: var(--switchKnobOn); }
   .ph-editor .ph-when.task { grid-template-columns: minmax(0, 1fr) 96px 24px auto; }
   .ph-editor .ph-when.task > .pick-date:last-child { grid-column: span 3; }
   .ph-editor .native-pick { min-width: 0; display: flex; }
@@ -77,7 +88,11 @@
   /* A toast (Saved, Completed, Reopened) rises under the open detail rather than over its actions:
      the card lifts clear of it while it shows. */
   .main:has(.toast:not(.leaving)) .fd.ph-detail { bottom: calc(var(--ph-bar) + env(safe-area-inset-bottom) + 24px + var(--ph-tap) + 12px); transition: bottom var(--dur-medium) var(--ease); }
-  .ph-detail .fd-mark.check { width: 32px; height: 32px; margin: -6px 2px -6px -8px; display: grid; place-items: center; }
+  /* A task's ring keeps its 17 px column, so the title lines up with the lines under it. Its tap
+     reaches the card's edge and the title's start, over the title's done line (the shared hit area's centred one
+     would run into it). */
+  .fd.ph-detail .card-h .fd-mark.check { z-index: 1; }
+  .fd.ph-detail .card-h .fd-mark.check::before { inset: -9px -11px -9px -16px; }
 
   /* An invitation's card in the reader: Add to calendar keeps its words, Download is its glyph
      alone (named still), so the file's name has room. */

@@ -31,3 +31,21 @@ export function placeMenuAt(point: {x: number; y: number}, size: {width: number;
 export function opensUp(bottom: number, anchor: {top: number; bottom: number}, room: {top: number; bottom: number}): boolean {
   return bottom > room.bottom && anchor.top - room.top > room.bottom - anchor.bottom;
 }
+
+// How far inside its room an anchored menu is kept once it would run out of it.
+export const ROOM_MARGIN = 16;
+
+/**
+ * What keeps an anchored menu inside its room once its side is chosen (ui/popover.ts › placeMenu):
+ * `shift`, how far right it moves when lining up with its anchor's right edge takes it past the
+ * room's left, and `maxHeight`, the height it's held to (scrolling inside) when it runs past the
+ * room on the side it opens to. A menu that fits stays as it is. `menu` is where it would rest.
+ */
+export function menuInside(menu: {left: number; top: number; height: number}, up: boolean, anchor: {top: number; bottom: number}, room: {top: number; bottom: number; left: number}): {shift: number; maxHeight: number | null} {
+  const gap = menu.top - anchor.bottom;
+  const space = up ? anchor.top - gap - room.top : room.bottom - menu.top;
+  return {
+    shift: menu.left < room.left ? room.left + ROOM_MARGIN - menu.left : 0,
+    maxHeight: menu.height > space ? Math.max(0, space - ROOM_MARGIN) : null,
+  };
+}
