@@ -1,7 +1,7 @@
 // News on the phone at 390 × 844 against the seed's sample: All in one column under "News ▾", whose
 // menu has All and the sections; a story sliding in over the list with Back, its sources' articles;
 // While you were away heading All, put away by Done with Undo; seen as on the desktop; Search news
-// with its clear button; Upcoming's Add to calendar in the editor sheet over News; and the states
+// in the title's row with Cancel; Upcoming's Add to calendar in the editor sheet over News; and the states
 // (newsStates.spec.ts's fixtures): Unsorted with Show headlines, a stale section, a section with
 // nothing new, and the first run.
 import assert from 'node:assert/strict';
@@ -9,6 +9,7 @@ import {after} from 'node:test';
 import type {ItemsOut, NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, holdToast, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
+import {fingertips} from './phoneHelpers.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -113,6 +114,14 @@ test('a story slides in over the list with Back and Open at its outlet; a source
     const [box, tabs] = await rested(() => Promise.all([pane.boundingBox(), page.locator('.ph-tabs').boundingBox()]));
     assert.ok(box!.x === 0 && box!.width === 390 && box!.y + box!.height >= tabs!.y + tabs!.height, 'the pane covers the screen');
     await until('the brush fire seen', () => stateOf(setpoint, brush), state => state === 'seen');
+    // No hover to read a cut headline by: a source's wraps, cut only past its second line.
+    await pane.locator('.src-row .h').first().waitFor();
+    const cut = await rested(() => pane.locator('.src-row .h').evaluateAll(lines => lines.filter(line => {
+      const lineHeight = parseFloat(getComputedStyle(line).lineHeight);
+      const overflows = line.scrollWidth > line.clientWidth + 1 || line.scrollHeight > line.clientHeight + 1;
+      return overflows && line.clientHeight < lineHeight * 2 - 1;
+    }).map(line => line.textContent)));
+    assert.deepEqual(cut, [], 'no headline cut to one line');
 
     // A source opens its article in the pane; Back goes to the story.
     await pane.locator('.src-row').first().tap();
@@ -230,16 +239,24 @@ test('seen on the phone waits while a story covers the list: the rows under it s
   }
 });
 
-test('Search news on the phone: the stories found replace the list, one opens with Back to Search, and the clear button leaves search', async () => {
+test('Search news on the phone: a tap moves the field into the title\'s row with Cancel; the stories found replace the list, one opens with Back to Search, clear empties the field and Cancel leaves search', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await news(setpoint);
-    await page.locator('.hd .search input').tap();
+    const field = page.locator('.hd .search input');
+    const cancel = page.locator('.hd').getByRole('button', {name: 'Cancel'});
+    // A tap on the field: it takes the title's row, keeping its focus, and Cancel is its way out.
+    await field.tap();
+    await cancel.waitFor();
+    assert.equal(await page.locator('.hd .ph-title-btn, .hd .hd-title').count(), 0, 'no title or menu while searching');
+    assert.ok(await field.evaluate(input => input === document.activeElement), 'the field keeps its focus');
+    const [box, cancelBox] = await rested(() => Promise.all([field.boundingBox(), cancel.boundingBox()]));
+    assert.ok(box && cancelBox && Math.abs((box.y + box.height / 2) - (cancelBox.y + cancelBox.height / 2)) < 2 && cancelBox.x >= box.x + box.width, 'Cancel beside the field, on its row');
+    await fingertips([cancel]);
+
     await page.keyboard.type('tornado');
     const results = page.locator('section.nw-list[aria-label="Stories found"]');
     await results.locator('[data-story]', {hasText: 'Tornado outbreak across Oklahoma and Kansas'}).waitFor();
-    assert.equal(await page.locator('.hd-title').textContent(), 'Search');
-    assert.equal(await page.locator('.hd .ph-title-btn').count(), 0, 'no menu while searching');
     assert.equal(await page.locator('.nw-sec, .nw-recap').count(), 0, 'the list is replaced');
 
     await results.locator('[data-story]').first().tap();
@@ -249,10 +266,14 @@ test('Search news on the phone: the stories found replace the list, one opens wi
     await until('the pane closes', () => page.locator('.pane').count(), count => count === 0);
     await results.waitFor();
 
+    // Clear only empties the field; Cancel leaves search, "News ▾" back over the list.
     await page.getByRole('button', {name: 'Clear search'}).tap();
+    await until('the field emptied', () => field.inputValue(), value => value === '');
+    assert.equal(await cancel.count(), 1, 'still searching');
+    await cancel.tap();
     await page.locator('.hd .ph-title-btn', {hasText: 'News'}).waitFor();
+    assert.equal(await cancel.count(), 0);
     await row(page, 'Brush fire near the 210').waitFor();
-    assert.equal(await page.locator('.hd .search input').inputValue(), '');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

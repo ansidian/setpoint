@@ -258,7 +258,10 @@
 @media (max-width: 639px) {
   .nw-list { view-transition-name: ph-list; }
   .nw-sec, .nw-state, .nw-line, .nw-empty, .nw-up, .nw-raw, .nw-also-hd { padding-left: 20px; padding-right: 16px; }
-  .nw-sec { height: 30px; font-size: 12px; }
+  /* A section's band stays at the top while its stories pass under it, as the Agenda's days do. */
+  .nw-sec { height: 30px; font-size: 12px; position: sticky; top: 0; z-index: 2; }
+  /* "3 results · newest first" on the headlines' line. */
+  .search-list.ph-news > .bar { padding-left: 28px; }
   .nw-state, .nw-line { min-height: 40px; font-size: 13px; }
   .nw-state .btn { flex: none; }
   /* No hover to read a cut line by: the states' lines and Show headlines' headlines wrap. */
@@ -277,12 +280,13 @@
   .nw-lead .hl { font-size: 18px; line-height: 1.3; }
   .nw-lead .sm { font-size: 14px; }
 
-  .nw-row { grid-template-columns: 12px minmax(0, 1fr) 72px; grid-template-areas: "nd txt img" "nd side img"; align-items: start; column-gap: 8px; row-gap: 4px; padding: 10px 16px 10px 8px; min-height: 68px; }
+  .nw-row { grid-template-columns: 12px minmax(0, 1fr) 76px; grid-template-areas: "nd txt img" "nd side img"; align-items: start; column-gap: 8px; row-gap: 4px; padding: 10px 16px 10px 8px; min-height: 68px; }
   .nw-row > .nd { grid-area: nd; height: 20px; }
   .nw-row > .txt { grid-area: txt; }
   .nw-row > .side { grid-area: side; flex-direction: row; align-items: center; gap: 0; min-width: 0; }
   .nw-row > .side > .nw-meta + .nw-meta::before { content: "·"; margin-left: 6px; color: var(--ink3); }
-  .nw-row > :last-child { grid-area: img; margin-left: 4px; }
+  /* The thumbnail ends on the row's 16 px edge, as the lead's image and the headlines do. */
+  .nw-row > :last-child { grid-area: img; justify-self: end; }
   .nw-row .hl { font-size: 15px; line-height: 20px; }
   .nw-row .nw-meta, .nw-lead .nw-meta { font-size: 12.5px; }
 
@@ -316,5 +320,15 @@
   .st-body, .ar-body { padding: 16px 20px 24px; }
   .st-img { margin: 0 20px; height: auto; aspect-ratio: 16 / 9; }
   .st-sum { font-size: 15px; }
+  /* No hover to read a cut headline by: a source's wraps to two lines. */
+  .src-row { min-height: 64px; }
+  .src-row .h { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 17px; }
   .nw-up-pop { left: 12px; width: calc(100% - 24px); }
+}
+
+/* A short phone (an SE's 667 px): the lead's image cropped wider and its summary on one line, so
+   two stories show under it. */
+@media (max-width: 639px) and (max-height: 700px) {
+  .nw-lead > .nw-ph { aspect-ratio: 2.4 / 1; }
+  .nw-lead .sm { -webkit-line-clamp: 1; }
 }
