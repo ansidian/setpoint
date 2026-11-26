@@ -126,7 +126,8 @@ test('what Alfred set shows on one line under the place, and in the full card ma
   await chip.getByRole('button', {name: 'Edit'}).click();
   const full = page.getByRole('form', {name: 'Proposal: add to calendar'});
   await expect.element(full.getByRole('button', {name: 'Repeat'})).toHaveTextContent('Weekly on Tuesday');
-  await expect.element(full.getByText('Its own colour')).toBeVisible();
+  // His colour is the Colour button's, his mark on it.
+  await expect.element(full.getByRole('button', {name: 'Colour', exact: true}).getByRole('img', {name: 'From Alfred'})).toBeVisible();
   await expect.element(full.getByText('Time to Leave')).toBeVisible();
   // Repeat, reminders and colour each carry his mark, and the foot says what it means.
   expect(full.getByRole('img', {name: 'From Alfred'}).elements()).toHaveLength(3);
