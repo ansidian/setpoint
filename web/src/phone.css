@@ -233,9 +233,8 @@
   .ph-agenda .pwx .hi { color: var(--ink2); }
   .ph-agenda .pwx.cloud { color: var(--ink2); }
   .ph-agenda .pwx.rain { color: var(--cool); }
-  .ph-agenda .none { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
-  /* An empty day with a forecast: "No events" beside its date, the forecast at the end. */
-  .ph-agenda .none:has(+ .pwx) { margin-left: 0; }
+  /* "No events" always beside its date, a forecast at the end when there is one. */
+  .ph-agenda .none { text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 400; color: var(--ink3); }
   .ph-agenda .pitem { display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 20px; flex: none; color: var(--ink); }
   .ph-agenda .pitem.sel { background: var(--sub2); }
   .ph-agenda .pitem .when { width: 96px; flex: none; white-space: nowrap; color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
