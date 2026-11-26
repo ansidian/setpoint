@@ -443,3 +443,17 @@ export function calendarLabel(calendar: Pick<CalendarOut, 'name' | 'account_id'>
   const account = twice && calendar.account_id !== null ? accounts.find(one => one.id === calendar.account_id)?.label ?? null : null;
   return {name: calendar.name, account};
 }
+
+/**
+ * Settings › Calendar's Google calendars by account: one group per account in Accounts' order, its
+ * calendars in Google's order, then any whose account isn't known (account null). An account with
+ * no calendars has no group. Todoist isn't here: it's the Todoist section's.
+ */
+export function calendarGroups<C extends Pick<CalendarOut, 'provider' | 'account_id' | 'position'>, A extends {id: number}>(calendars: C[], accounts: A[]): {account: A | null; calendars: C[]}[] {
+  const google = [...calendars].sort((a, b) => a.position - b.position).filter(calendar => calendar.provider !== 'todoist');
+  const known = new Set(accounts.map(account => account.id));
+  return [
+    ...accounts.map(account => ({account, calendars: google.filter(calendar => calendar.account_id === account.id)})),
+    {account: null, calendars: google.filter(calendar => calendar.account_id === null || !known.has(calendar.account_id))},
+  ].filter(group => group.calendars.length > 0);
+}

@@ -698,13 +698,13 @@ test('Send test: it shows it\'s sending, a failure says so in words, a test that
   }
 });
 
-test('Calendar, Places and Appearance: a calendar unlisted, Time to Leave pointing to Places for Home, Home set with its coordinates, a place added, a clash refused, renamed and removed, Time to Leave on with its buffer, Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
+test('Calendar, Places and Appearance: each account\'s calendars under its address and Todoist\'s projects under its switch, a calendar and Todoist unlisted, Time to Leave pointing to Places for Home, Home set with its coordinates, a place added, a clash refused, renamed and removed, Time to Leave on with its buffer, Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'calendar');
     const settings = () => setpoint.api<Settings>('GET', '/settings');
-    // Every group has its label. Home is Places', and Todoist's projects and default project are a section.
+    // Every group has its label. Home is Places', and Todoist's switch, projects and default project are a section.
     await page.getByRole('switch', {name: 'Show Classes'}).waitFor();
     assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Time to Leave', 'Todoist', 'Weather']);
     // Without Home, Time to Leave can't work: off and disabled, saying what's missing and where it's set.
@@ -713,8 +713,16 @@ test('Calendar, Places and Appearance: a calendar unlisted, Time to Leave pointi
     assert.deepEqual([await leave.isDisabled(), await leave.getAttribute('aria-checked')], [true, 'false']);
     assert.equal(await leaveRow.locator('.s').textContent(), 'Set Home first');
 
+    // One group: each account's address heads its calendars, Todoist's switch heads its projects.
+    const rows = (section: string) => page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: section})}).locator('.set-group').first()
+      .locator('.set-row').evaluateAll(list => list.map(row => `${row.classList.contains('nest') ? '  ' : ''}${row.querySelector('.t')?.textContent ?? ''}`));
+    assert.deepEqual(await rows('Calendars'), ['user@example.com', '  Personal', '  Classes', '  Holidays in United States', 'user.jobs@example.com', '  Jobs']);
+    assert.deepEqual((await rows('Todoist')).slice(0, 2), ['Todoist', '  Inbox']);
+
     await page.getByRole('switch', {name: 'Show Classes'}).click();
     await settled('Classes hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Classes')?.listed === false);
+    await page.getByRole('switch', {name: 'Show Todoist'}).click();
+    await settled('Todoist hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.provider === 'todoist')?.listed === false);
 
     // Places: Home first, then Add place, then the Maps key last.
     await leaveRow.getByRole('button', {name: 'Set Home in Places'}).click();
@@ -800,7 +808,7 @@ test('a calendar\'s colour, picked from the swatches, waits for Google at .5 wit
       ['ink2', 'ink3', 'cool', 'warm', 'comf', 'good', 'sun', 'violet', 'cyan']);
     await page.locator('.settings .swatches .sw[aria-label="violet"]').click();
     await personal.locator('.spin').waitFor({state: 'attached'});
-    assert.equal(await personal.getAttribute('class'), 'set-row one cal-row pending');
+    assert.ok(await personal.evaluate(row => row.classList.contains('pending')), 'Personal waits at .5');
     provider.release();
     await settled('Personal is violet at Google', calendars, list => list.some(calendar => calendar.name === 'Personal' && calendar.colour === 'violet' && calendar.command === null));
     await personal.locator('.spin').waitFor({state: 'detached'});
@@ -854,7 +862,7 @@ test('a Todoist project\'s colour, picked from Todoist\'s 20, waits for Todoist 
     assert.equal(await page.locator('.settings .swatches .sw.on').getAttribute('aria-label'), 'Orange');
     await page.getByRole('button', {name: 'Teal', exact: true}).click();
     await home.locator('.spin').waitFor({state: 'attached'});
-    assert.equal(await home.getAttribute('class'), 'set-row one cal-row pending');
+    assert.ok(await home.evaluate(row => row.classList.contains('pending')), 'Home waits at .5');
     provider.release();
     await settled('Home is teal at Todoist', projects, list => list.some(project => project.name === 'Home' && project.colour === 'teal' && project.command === null));
     await home.locator('.spin').waitFor({state: 'detached'});

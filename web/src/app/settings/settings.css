@@ -409,3 +409,7 @@
   .settings.ph-set :is(.btn, .select) { height: 40px; font-size: 15px; }
   .settings.ph-set .menu-i { height: var(--ph-tap); font-size: 15px; }
 }
+/* Calendar's calendars under each account's address, and Todoist's projects under Todoist: one
+   group, the heading row in `ink2`, the rows under it indented. */
+.settings .cal-acct { min-height: 34px; padding-top: 4px; padding-bottom: 4px; font-size: 12.5px; color: var(--ink2); }
+.settings .cal-row.nest { padding-left: 36px; }

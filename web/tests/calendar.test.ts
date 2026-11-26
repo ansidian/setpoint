@@ -5,7 +5,7 @@ import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  addMonths, agenda, calendarLabel, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, withSlot, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
+  addMonths, agenda, calendarGroups, calendarLabel, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, withSlot, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
   itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, playsDone, rangePick, rowsInView, subtaskDue, tasksHeading, timeRange, weatherOf, weekday, weekIndex, weekOutOfView,
 } from '../src/logic/calendar.ts';
 
@@ -405,6 +405,20 @@ describe('a calendar\'s name in a list', () => {
     ['one without an account (Todoist\'s) carries none', cal('Todoist', null), [cal('Todoist', null), cal('Todoist', 1)], {name: 'Todoist', account: null}],
     ['an account not loaded yet shows none', cal('Work', 9), [cal('Work', 9), cal('Work', 1)], {name: 'Work', account: null}],
   ])('%s', (_, calendar, all, label) => expect(calendarLabel(calendar, all, accounts)).toEqual(label));
+});
+
+describe('Settings › Calendar\'s calendars under their accounts', () => {
+  const accounts = [{id: 2, position: 0}, {id: 1, position: 1}];
+  const cal = (name: string, account_id: number | null, position: number, provider: 'google' | 'todoist' = 'google') => ({name, account_id, position, provider});
+  // Each group as its account's id ('other' for none) and its calendars' names.
+  const shape = (calendars: ReturnType<typeof cal>[]) => calendarGroups(calendars, accounts).map(group => [group.account?.id ?? 'other', group.calendars.map(one => one.name)]);
+  test.each([
+    ['accounts in Accounts\' order, calendars in Google\'s', [cal('Work', 1, 3), cal('Personal', 1, 1), cal('Jobs', 2, 2)], [[2, ['Jobs']], [1, ['Personal', 'Work']]]],
+    ['Todoist is left out: it\'s the Todoist section\'s', [cal('Todoist', null, 0, 'todoist'), cal('Jobs', 2, 1)], [[2, ['Jobs']]]],
+    ['an account with no calendars has no group', [cal('Personal', 1, 1)], [[1, ['Personal']]]],
+    ['a calendar whose account is gone goes last, under Other', [cal('Old', 9, 0), cal('Personal', 1, 1)], [[1, ['Personal']], ['other', ['Old']]]],
+    ['nothing to list, no groups', [], []],
+  ])('%s', (_, calendars, groups) => expect(shape(calendars)).toEqual(groups));
 });
 
 describe('a dated subtask\'s date in its checklist row', () => {
