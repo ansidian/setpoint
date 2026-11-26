@@ -17,6 +17,7 @@ check_circle
 chevron_left
 chevron_right
 close
+close_fullscreen
 cloud
 cloud_off
 computer
