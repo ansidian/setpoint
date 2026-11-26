@@ -1296,7 +1296,7 @@ test('a newsletter with its unsubscribe page offers Unsubscribe beside Ask and i
   }
 });
 
-test('an attachment opens its preview over the reading pane; Esc closes the preview first', async () => {
+test('an attachment opens its preview over the whole window, Shrink puts it over the reading pane, and Esc closes the preview first', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -1312,6 +1312,24 @@ test('an attachment opens its preview over the reading pane; Esc closes the prev
     assert.equal(response.status(), 200);
     assert.equal(response.headers()['content-type'], 'application/pdf');
     assert.match(response.headers()['content-disposition']!, /^inline; filename="Renewal agreement.pdf"/);
+    // Expanded, it lies over the list and its scrim over the sidebar; shrunk, it lies inside the reading pane.
+    const onTop = () => page.evaluate(() => ['.list', '.sb'].map(selector => {
+      const box = document.querySelector(selector)!.getBoundingClientRect();
+      const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return top?.closest('.attach-preview') ? 'preview' : top?.classList.contains('preview-scrim') ? 'scrim' : 'uncovered';
+    }));
+    assert.deepEqual(await rested(onTop), ['preview', 'scrim']);
+    const boxes = () => page.evaluate(() => Object.fromEntries(['.attach-preview', '.pane:not(.idle)'].map(selector => {
+      const box = document.querySelector(selector)!.getBoundingClientRect();
+      return [selector, [box.left, box.top, box.right, box.bottom]];
+    })));
+    const holds = (outer: number[], inner: number[]) => outer[0]! <= inner[0]! && outer[1]! <= inner[1]! && outer[2]! >= inner[2]! && outer[3]! >= inner[3]!;
+    await page.locator('.attach-preview button[aria-label="Shrink"]').click();
+    await page.locator('.attach-preview:not(.expanded)').waitFor();
+    const at = await rested(boxes);
+    assert.ok(holds(at['.pane:not(.idle)']!, at['.attach-preview']!), 'shrunk, it lies inside the reading pane');
+    await page.locator('.attach-preview button[aria-label="Expand"]').click();
+    await page.locator('.attach-preview.expanded').waitFor();
     await page.keyboard.press('Escape');
     await until('the preview closes', () => page.locator('.attach-preview').count(), count => count === 0);
     assert.equal(await page.locator('.pane:not(.idle)').count(), 1, 'the reader stays');
