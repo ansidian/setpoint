@@ -231,6 +231,7 @@ export interface AiOut {
   // searches, Alfred, help me write and News, News in its parts.
   usage_this_month: {
     since: string;
+    // Triage, with the summaries it writes of conversations.
     triage: AiUsageOut;
     search_terms: AiUsageOut;
     search_reading: AiUsageOut;

@@ -83,6 +83,9 @@ export function HeadSkeleton() {
   );
 }
 
+/** The reader's summary line (.rd-sum) while its conversation loads. */
+export const SummarySkeleton = () => <Sk kind="summary" className="sk-rd-sum"><Bar w="44%" /></Sk>;
+
 /** An attachment's preview (.preview-body) while its file loads: a page's shape. */
 export const PreviewSkeleton = () => <Sk kind="preview" className="sk-preview"><span className="sk-img" /></Sk>;
 

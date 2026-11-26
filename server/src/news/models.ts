@@ -75,12 +75,12 @@ export function newsAiOverview(store: Store): NewsAiOut {
   };
 }
 
-/** "Usage this month": Triage, search terms, reading searches, Alfred, help me write and News, News in its parts. */
+/** "Usage this month": Triage (with its conversation summaries), search terms, reading searches, Alfred, help me write and News, News in its parts. */
 export function usageThisMonth(store: Store): AiOut['usage_this_month'] {
   const since = monthStart(isoNow(store), store.timeZone);
   const part = (purpose: NewsPurpose) => usage(store, since, [purpose]);
   return {
-    since, triage: usage(store, since, ['triage']), search_terms: usage(store, since, ['search_terms']), search_reading: usage(store, since, ['search_reading']), alfred: usage(store, since, ['alfred']), mail_drafts: usage(store, since, ['mail_drafts']),
+    since, triage: usage(store, since, ['triage', 'mail_conversations']), search_terms: usage(store, since, ['search_terms']), search_reading: usage(store, since, ['search_reading']), alfred: usage(store, since, ['alfred']), mail_drafts: usage(store, since, ['mail_drafts']),
     news: {...usage(store, since, NEWS_PURPOSES), articles: part('news_articles'), grouping: part('news_grouping'), stories: part('news_stories'), ranking: part('news_ranking')},
   };
 }

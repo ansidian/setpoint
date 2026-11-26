@@ -23,7 +23,7 @@ const email = (id: number, fields: Partial<ConversationMessageOut> = {}): Conver
 });
 
 const conversation = (emails: ConversationMessageOut[], opened = emails.at(-1)!.id): MailConversationOut => ({
-  account_id: 1, thread_id: 't1', subject: 'Cabin weekend in November', opened_id: opened, row: emails.find(one => one.id === opened)!, emails, draft: null,
+  account_id: 1, thread_id: 't1', subject: 'Cabin weekend in November', opened_id: opened, row: emails.find(one => one.id === opened)!, emails, draft: null, summary: null,
 });
 
 const posted: {url: string; body: unknown}[] = [];
