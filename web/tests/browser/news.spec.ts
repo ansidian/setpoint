@@ -351,7 +351,7 @@ test('While you were away: All\'s empty pane holds the recap, each section\'s bi
   }
 });
 
-test('a recap story opens in a panel over the list\'s column, the pane live beside it; J / K step, a row switches, Esc or a click elsewhere closes; opened, it\'s seen', async () => {
+test('a recap story opens in a panel over the list\'s column, the pane live beside it; J / K step, a row switches, ⌘F still reaches the search, Esc or a click elsewhere closes; opened, it\'s seen', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -391,6 +391,10 @@ test('a recap story opens in a panel over the list\'s column, the pane live besi
     await until('closed', () => panel.count(), count => count === 0);
     await recap.locator('.nd-row').nth(2).click();
     await panel.locator('.rd-subj', {hasText: 'iOS 26.1'}).waitFor();
+    // ⌘F goes to News's search with a recap story open, never the browser's find.
+    await page.keyboard.press('Meta+f');
+    await until('the search has the keys', () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')), label => label === 'Search news');
+    await page.keyboard.press('Escape');
     await page.locator('.hd-title').click();
     await until('closed by a click elsewhere', () => panel.count(), count => count === 0);
     // A story from the list still opens in the pane.

@@ -5,7 +5,8 @@
 // `O`, previous and next, and ×. The pane marks the open story's row. J / K or ← → step through the
 // recap, and a click on another of its rows switches to that story in place. A source opens its article
 // in the panel. Esc goes from an article back to its story, then closes it, as × and a click anywhere
-// else do. No scrim: the pane stays live. While it's open the page's own keys are held.
+// else do. No scrim: the pane stays live. While it's open the page's own keys are held, but not ⌘K, ⌘,
+// or ⌘F, which go to the palette, Settings and the header's search as anywhere else.
 //
 // In a narrow window the pane covers the list, so the panel has no column: it opens as a modal in
 // Settings's frame instead, over a scrim.
@@ -139,7 +140,8 @@ export function RecapPanel({ids, at, closing, rows, now, zone, onAt, onSeen, onC
   const keys = useRef<(event: KeyboardEvent) => void>(() => {});
   useEffect(() => {
     keys.current = event => {
-      if ((event.metaKey || event.ctrlKey) && ['k', ','].includes(event.key.toLowerCase())) return;
+      // ⌘K, ⌘, and ⌘F (the header's search, never the browser's find) are the app's.
+      if ((event.metaKey || event.ctrlKey) && ['k', ',', 'f'].includes(event.key.toLowerCase())) return;
       const target = event.target as HTMLElement;
       if (event.defaultPrevented || target.closest?.('input, textarea, [contenteditable], .settings')) return;
       event.stopPropagation();
