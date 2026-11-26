@@ -539,7 +539,7 @@ test('on the phone a person\'s HTML email starts inside its card, and a newslett
     for (const [subject, inset] of [['Dinner Friday?', true], ['The Contoso Coffee Journal · October', false]] as const) {
       const page = await reading(setpoint, subject);
       await until('the frame has its height', () => page.locator('.mailframe-box').getAttribute('class'), name => name === 'mailframe-box');
-      const room = await roomInside(page);
+      const room = await rested(() => roomInside(page));
       if (inset) assert.ok(room.left >= 12 && room.right >= 12, `${subject} stays inside the card: ${JSON.stringify(room)}`);
       else assert.ok(room.left < 1 && room.right < 1, `${subject} spans the frame: ${JSON.stringify(room)}`);
       await page.close();
