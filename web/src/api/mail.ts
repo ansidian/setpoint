@@ -57,6 +57,13 @@ export function cachedEmail(id: number): MessageOut | undefined {
   return undefined;
 }
 
+/** Refreshes each conversation on screen that holds email `id`: its draft line or its emails changed. */
+export function refreshConversationsOf(id: number) {
+  for (const path of cachedPaths(CONVERSATIONS_PATH)) {
+    if (getCached<MailConversationOut>(path)?.emails.some(one => one.id === id)) refreshIfShown(path);
+  }
+}
+
 /**
  * What R (and the stacked reader's foot) answers on email `id`'s conversation: its newest email
  * someone else sent, from the reader's copy or asked for now. Email `id` itself when it can't be read.

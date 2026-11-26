@@ -263,6 +263,8 @@ test('on the phone compose\'s format bar fits the screen with no Discard, and Ca
     await asks.locator('.ph-bs-i', {hasText: 'Save draft'}).tap();
     await reply.waitFor({state: 'detached'});
     await until('it is kept as typed', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'Count me in.');
+    // The conversation's foot shows it as a Draft line, which opens it again.
+    await page.locator('.cv-foot .cv-draft', {hasText: 'Open the reply you started'}).waitFor();
 
     const desk = await setpoint.page('target');
     await desk.goto(page.url());

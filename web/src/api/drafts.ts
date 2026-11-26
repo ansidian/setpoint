@@ -4,7 +4,7 @@
 // stream's `drafts` key (logic/live.ts).
 import type {DraftCreateInput, DraftFileOut, DraftFilesTakeInput, DraftOut, DraftSavedOut, DraftUpdateInput, DraftWriteInput, DraftWrittenOut, PeopleOut, Recipient} from '@setpoint/shared';
 import {getCached, getJson, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
-import {messagePath} from './mail.ts';
+import {messagePath, refreshConversationsOf} from './mail.ts';
 
 export const DRAFTS_PATH = '/mail/drafts';
 export const FROM_PATH = '/mail/from';
@@ -32,7 +32,10 @@ export async function saveDraft(id: number, changes: DraftUpdateInput, {keepaliv
 export async function discardDraft(id: number, messageId: number | null, {keepalive = false} = {}): Promise<void> {
   await sendJson<void>('DELETE', draftPath(id), undefined, {keepalive});
   refreshIfShown(DRAFTS_PATH);
-  if (messageId !== null) refreshIfShown(messagePath(messageId));
+  if (messageId !== null) {
+    refreshIfShown(messagePath(messageId));
+    refreshConversationsOf(messageId);
+  }
 }
 
 /** Send, and Try again after a failure: the server holds it SEND_HOLD_MS. */
@@ -41,6 +44,7 @@ export async function sendDraft(id: number, at?: number): Promise<DraftOut> {
   const draft = await sendJson<DraftOut>('POST', `${draftPath(id)}/send`, at === undefined ? undefined : {send_at: new Date(at).toISOString()});
   setCached(draftPath(id), draft);
   refreshIfShown(DRAFTS_PATH);
+  if (draft.message_id !== null) refreshConversationsOf(draft.message_id);
   return draft;
 }
 
@@ -49,6 +53,7 @@ export async function undoSend(id: number): Promise<DraftOut> {
   const draft = await sendJson<DraftOut>('POST', `${draftPath(id)}/undo`);
   setCached(draftPath(id), draft);
   refreshIfShown(DRAFTS_PATH);
+  if (draft.message_id !== null) refreshConversationsOf(draft.message_id);
   return draft;
 }
 

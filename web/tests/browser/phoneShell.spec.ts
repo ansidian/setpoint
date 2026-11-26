@@ -79,7 +79,7 @@ test('every control a finger needs takes a 44 px tap, and none takes its neighbo
     await page.locator('.hd > .search input').fill('tailspin');
     await fingertips([page.getByRole('button', {name: 'Clear search'})]);
 
-    // The reader's stack: a collapsed line, an email's ••• and the foot's Reply; then Trash's Undo.
+    // The reader's stack: a collapsed line, an email's •••, the foot's Reply and its Draft line; then Trash's Undo.
     const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
     const cabin = all.days.flatMap(day => day.rows).filter(row => row.from_name === 'Theo Walsh' && row.subject.endsWith('Cabin weekend in November'))
       .sort((one, other) => other.received_at.localeCompare(one.received_at))[0]!.id;
@@ -92,8 +92,11 @@ test('every control a finger needs takes a 44 px tap, and none takes its neighbo
     // Reply's bar and header: Cancel, Send, the reply's kind, From, Cc Bcc, a recipient's ×, and the quote's fold.
     await fingertips([reply.getByRole('button', {name: 'Cancel'}), reply.getByRole('button', {name: 'Send'}), reply.locator('.cmp-copies'),
       reply.locator('.cmp-from > .btn'), reply.locator('.cmp-chip-x').first(), reply.locator('.cmp-fold')]);
+    // Something typed, so Save draft keeps it as the foot's Draft line.
+    await page.keyboard.type('Thanks.');
     await saveDraft(reply);
     await reply.waitFor({state: 'detached'});
+    await fingertips([page.locator('.cv-foot .cv-draft')]);
     await page.locator('.ph-acts button', {hasText: 'Trash'}).tap();
     const toast = await holdToast(page);
     const undo = toast.getByRole('button', {name: 'Undo'});

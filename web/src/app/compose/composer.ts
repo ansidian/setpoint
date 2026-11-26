@@ -67,7 +67,7 @@ import {useSyncExternalStore} from 'react';
 import {serverNow, timeZone} from '../../api/auth.ts';
 import {ApiFailure, getCached, getJson, refresh, setCached} from '../../api/client.ts';
 import {discardDraft, draftPath, DRAFTS_PATH, FROM_PATH, loadDraft, removeDraftFile, saveDraft, sendDraft, startDraft, takeDraftFiles, undoSend, uploadDraftFile, writeDraft} from '../../api/drafts.ts';
-import {cachedEmail, messagePath, replyTargetOf} from '../../api/mail.ts';
+import {cachedEmail, messagePath, refreshConversationsOf, replyTargetOf} from '../../api/mail.ts';
 import {emptyDraft, fillAround, hasOthers, NO_VERSIONS, recordVersion} from '../../logic/composer.ts';
 import {broughtBackLine, counted, discardedLine, discardFailedLine, scheduledAt} from '../../logic/selection.ts';
 import {scheduledWhen} from '../../logic/snooze.ts';
@@ -237,7 +237,10 @@ function discardIfEmpty(draftId: number, {keepalive = false} = {}): boolean {
  * the server filled it, discarded quietly, so an R or C let go of leaves nothing in Drafts.
  */
 function letGo(draftId: number) {
-  if (!discardIfEmpty(draftId)) void flushSave(draftId).catch(() => {});
+  if (discardIfEmpty(draftId)) return;
+  // Once what was typed is saved, its conversation's foot shows it as a "Draft" line.
+  const messageId = getCached<DraftOut>(draftPath(draftId))?.message_id ?? null;
+  void flushSave(draftId).then(() => messageId !== null && refreshConversationsOf(messageId), () => {});
 }
 
 /** A composer gives way: its draft let go of, or, still waiting, the draft once it arrives (arrive). */
