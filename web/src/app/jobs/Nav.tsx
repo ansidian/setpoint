@@ -41,8 +41,9 @@ const JOBS = {page: 'jobs', open: null} as const;
 /** Whether Jobs is on, as last answered (or last seen in this browser), for `4`. */
 export const jobsOn = () => (cachedNav() ?? remembered())?.enabled ?? false;
 
-/** `4`: Jobs, on or off (off, its page says so, with Turn on). */
+/** `4`: Jobs, while it's on. Off, the key is left alone (its address still opens the off page). */
 export function goToJobs(): boolean {
+  if (!jobsOn()) return false;
   goTo('jobs');
   return true;
 }

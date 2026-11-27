@@ -2,7 +2,7 @@
 // Setpoint's live stream is down. The one toast (ToastPill.tsx) sits above it all, Settings included.
 // The keys that work everywhere: `1` Inbox, `2` Calendar, `3` News, `/` search (⌘F the open email
 // on the Inbox, Sent and Snoozed, search/find.ts), ⌘K the palette,
-// ⌘, Settings, ⌘J Light or Night, `4` Jobs (jobs/, a wiring point; when it's off, its page says so),
+// ⌘, Settings, ⌘J Light or Night, `4` Jobs while it's on (jobs/, a wiring point),
 // and `` ` `` to open or fold the sidebar from 1100 px (sidebarRail.ts). Settings is a modal over
 // the page, not in the address bar: /settings/<page> opens it over the Inbox. Below 640 px the
 // phone's shell (Phone.tsx) takes the sidebar's place and Calendar is the agenda. Settings is a page

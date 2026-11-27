@@ -118,7 +118,7 @@ test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable sinc
   }
 });
 
-test('board 38c: Jobs off: the header alone and "Jobs is off" and Turn on, no sidebar item, `4` opens it; Turn on opens Settings › Jobs with the switch focused, and on brings Jobs back under News', async () => {
+test('board 38c: Jobs off: the header alone and "Jobs is off" and Turn on, no sidebar item, `4` does nothing, its address opens it; Turn on opens Settings › Jobs with the switch focused, and on brings Jobs back under News', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     await setpoint.api('PATCH', '/jobs/settings', {enabled: false});
@@ -128,10 +128,14 @@ test('board 38c: Jobs off: the header alone and "Jobs is off" and Turn on, no si
     await setpoint.idle();
     assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Sent', 'Calendar', 'News', 'Settings⌘,']);
 
+    // `4` is Jobs's key only while it's on: off, it stays on the Inbox.
     await page.keyboard.press('4');
+    await setpoint.idle();
+    assert.equal(new URL(page.url()).pathname, '/inbox');
+
+    await page.goto(`${setpoint.base}/jobs`);
     const empty = page.locator('.jb-empty');
     await empty.waitFor();
-    assert.equal(new URL(page.url()).pathname, '/jobs');
     // The header is "Jobs" alone: no numbers, no search, once what Jobs asked is answered and drawn.
     await setpoint.idle();
     assert.equal(await page.locator('.hd').textContent(), 'Jobs');

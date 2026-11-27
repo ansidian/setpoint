@@ -84,7 +84,7 @@ files marked *imports* import the folders.
 | `server/src/dev/sample.ts`, the last of `SAMPLE_EMAILS` | the Indeed match email Jobs's sample reads (mail's own data; it can stay) |
 | `web/src/logic/live.ts`, `pathsForEvent`'s `jobs` case | a `jobs` event refreshes what's mounted under `/jobs`: the page, the shell's item (`/jobs/nav`), an open application and a search |
 | `web/src/logic/route.ts`, the `jobs` route | `/jobs` and `/jobs/12` (an application open) in the address bar, `/jobs/12/posting` (Full posting from mail), `?q=` (Applied before's search) and `/jobs/from-history` (Settings › Jobs's Show); it names no module, so it imports nothing |
-| `web/src/app/App.tsx`, the `./jobs/index.ts` import (*imports*) | `JobsPage` for the `jobs` route (the phone's goes to the Inbox), `goToJobs` for `4` (on or off) and `jobsMailSlots` |
+| `web/src/app/App.tsx`, the `./jobs/index.ts` import (*imports*) | `JobsPage` for the `jobs` route (the phone's goes to the Inbox), `goToJobs` for `4` (while it's on) and `jobsMailSlots` |
 | `web/src/app/App.tsx`, `fillMailSlots(jobsMailSlots)` and the `./slots.tsx` import | Jobs fills mail's slots ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)): the reader's JD chip, and Applied before on the reader and the rows |
 | `web/src/app/slots.tsx` | the generic slots the line above fills: a hook the Inbox's list calls with its rows, and the reader head's component; unfilled, both draw nothing; it names no module, so it can stay |
 | `web/src/app/AllList.tsx`, `useRowSlot` and `{afterSubject(row)}` | each row draws the slot after its subject; it imports only `slots.tsx`, so it can stay |
