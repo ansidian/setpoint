@@ -55,6 +55,9 @@
    below. A press on either doesn't push the text in. */
 .overdue-title > .overdue-snooze { vertical-align: middle; margin-left: 10px; }
 .overdue.in .overdue-mask:has(.overdue-menu) { overflow: visible; }
+/* The title and the due line (or a refilled row) are each a stacking context while their animations
+   hold, so the one with the open menu is lifted above the ones after it. */
+.overdue-mask:has(.overdue-menu), .overdue-list li:has(.overdue-menu) { position: relative; z-index: 1; }
 .overdue-snooze { position: relative; display: inline-flex; flex: none; animation: fade-in var(--ov-snoozeIn) var(--ease) both; }
 .overdue-snooze:has(.overdue-menu) { z-index: 2; }
 .overdue-snooze-button { color: var(--ink3); transition: color var(--dur-fast) var(--ease); }
