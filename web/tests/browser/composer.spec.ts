@@ -8,7 +8,7 @@
 // account; a composer left with nothing written, which leaves no draft; a forward, its attachment
 // taken off; a file attached by the attach button, kept on the server through a pop-out and
 // Discard's Undo and held with the reply; and a reply popped out, kept up while other mail and Calendar show, and docked back on
-// its email; help me write, from ⌘J through a lookup to the draft sent as written; and Send asking
+// its email; a reply under an email taller than the pane, which scrolls with it to Send; help me write, from ⌘J through a lookup to the draft sent as written; and Send asking
 // first about an empty subject or an attachment the text mentions. The fields, chips, the fold, the saving and what carries across a pop-out are
 // components/composer.test.tsx's, how windows fold when they don't fit composer.test.ts's, a send
 // that reaches the dev provider the server's (sendDev.test.ts).
@@ -463,6 +463,33 @@ test('a reply popped out stays up while other mail and Calendar show, clear of t
     assert.equal(await page.locator('.cmp-window').count(), 0);
     // One draft, listed once its words are saved (an untouched one isn't).
     await until('the reply is saved', () => drafts(setpoint), found => found.length === 1 && found[0]!.snippet === 'Count me in.');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a reply under an email taller than the pane scrolls with it: nothing between Send and the pane scrolls on its own, and at the pane\'s end Send shows', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await openEmail(setpoint, await idOf(setpoint, 'Dinner Friday?'));
+    await page.setViewportSize({width: page.viewportSize()!.width, height: 560});
+    await page.locator('.cv-mail').last().getByRole('button', {name: 'Reply', exact: true}).click();
+    await answered(page);
+    const pane = page.locator('.rd-scroll');
+    assert.ok(await pane.evaluate(box => box.scrollHeight > box.clientHeight), 'the conversation and its reply are taller than the pane');
+    // A scroller of the composer's own would take the wheel over it and hold the pane still.
+    const scrollers = await rested(() => composer(page).locator('.cmp-send').evaluate(send => {
+      const found: string[] = [];
+      for (let at = send.parentElement; at && !at.classList.contains('rd-scroll'); at = at.parentElement) {
+        if (/auto|scroll/.test(getComputedStyle(at).overflowY)) found.push(at.className);
+      }
+      return found;
+    }));
+    assert.deepEqual(scrollers, []);
+    await pane.evaluate(box => box.scrollTo({top: box.scrollHeight, behavior: 'instant'}));
+    const [send, shown] = await rested(() => Promise.all([composer(page).locator('.cmp-send').boundingBox(), pane.boundingBox()]));
+    assert.ok(send!.y >= shown!.y && send!.y + send!.height <= shown!.y + shown!.height, `Send inside the pane: ${send!.y}+${send!.height} in ${shown!.y}+${shown!.height}`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
