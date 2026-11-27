@@ -9,7 +9,7 @@ import {offlineRefuses, pathsForEvent} from '../src/logic/live.ts';
 import {parseRoute, routePath} from '../src/logic/route.ts';
 import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
-import {sidebarChoice, sidebarFoldable, sidebarFolded} from '../src/logic/sidebar.ts';
+import {sidebarChoice, sidebarChoices, sidebarFoldable, sidebarFolded} from '../src/logic/sidebar.ts';
 import {byTime, nextUp, shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
 import {TOAST_MS, toastGlyph, toastMs, toastTone} from '../src/logic/toast.ts';
 
@@ -430,6 +430,15 @@ describe('whether the sidebar is the rail', () => {
     ['wide', null],
     ['', null],
   ] as const)('the kept choice %j reads as %j', (stored, expected) => expect(sidebarChoice(stored)).toBe(expected));
+
+  test.each<[string, string | null, Record<string, string>]>([
+    ['nothing kept', null, {}],
+    ['junk', 'wide', {}],
+    ['a list', '["rail"]', {}],
+    ['a lone choice, from before: the screen in front', 'rail', {'1512x982': 'rail'}],
+    ['a choice per screen', '{"1512x982":"rail","2560x1440":"open"}', {'1512x982': 'rail', '2560x1440': 'open'}],
+    ['only choices', '{"1512x982":"wide","2560x1440":1}', {}],
+  ])('kept per screen: %s', (_name, stored, expected) => expect(sidebarChoices(stored, '1512x982')).toEqual(expected));
 
   test.each([[1099, false], [1100, true]] as const)('opens and folds by hand at %i: %s', (width, expected) => expect(sidebarFoldable(width)).toBe(expected));
 });

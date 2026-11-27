@@ -2,11 +2,10 @@
 // (localStorage, as the theme is), since how wide it should be depends on the screen. So it's
 // kept per screen: an external display and the laptop's own each have theirs.
 import {useSyncExternalStore} from 'react';
-import {paneWidth, paneWidths, READING_PANE, screenKey} from '../logic/reader.ts';
+import {paneWidth, paneWidths, READING_PANE} from '../logic/reader.ts';
+import {here, onScreenChange} from './screen.ts';
 
 const KEY = 'setpoint.readingPane';
-
-const here = () => screenKey(window.screen);
 
 function stored(): Record<string, number> {
   try {
@@ -30,18 +29,8 @@ export function setReadingPaneWidth(next: number) {
   changed();
 }
 
-// The window moved to another screen: that screen's width takes over. The query names the screen
-// it was made on, so each change watches the next one. A resize covers a browser that doesn't
-// re-read the query on the move.
-function watchScreen() {
-  const query = window.matchMedia(`(device-width: ${window.screen.width}px) and (device-height: ${window.screen.height}px)`);
-  query.addEventListener('change', () => {
-    changed();
-    watchScreen();
-  }, {once: true});
-}
-watchScreen();
-window.addEventListener('resize', changed);
+// The window moved to another screen: that screen's width takes over.
+onScreenChange(changed);
 
 const subscribe = (listener: () => void) => {
   listeners.add(listener);

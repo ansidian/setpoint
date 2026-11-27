@@ -634,7 +634,7 @@ test('below 1600 px the sidebar starts as the rail with its next-up slot; [, its
     await rail.waitFor();
     await page.reload();
     await rail.waitFor();
-    assert.equal(await page.evaluate(() => localStorage.getItem('setpoint.sidebarRail')), 'rail');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('setpoint.sidebarRail')!)[`${screen.width}x${screen.height}`]), 'rail');
 
     // ⌘K offers it, under Appearance with its key.
     await page.keyboard.press('Meta+k');
