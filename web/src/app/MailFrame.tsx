@@ -12,7 +12,8 @@
 // which of its matches is current, and the page marks them and answers with its count and where the
 // current one sits, so the reading pane can bring it into view. A page loaded again (Show, the
 // quoted history) is sent them again once it says its height. `counting` is a frame that isn't
-// shown, holding the email's whole page only to count what find matches in it.
+// shown, holding the email's whole page only to count what find matches in it: with no layout it
+// can't say a height, so it's sent them once its page has loaded.
 import {useEffect, useRef, useState} from 'react';
 import {emailBodyPath} from '../api/mail.ts';
 import {findWords} from '../logic/find.ts';
@@ -131,7 +132,9 @@ export function MailFrame({messageId, show, title, fold = false, counting = fals
   }, []);
 
   if (counting) {
-    return <iframe key={src} ref={frame} className="mailframe-count" title={title} aria-hidden="true" tabIndex={-1} sandbox="allow-scripts" referrerPolicy="no-referrer" src={src} />;
+    // Unseen, its page has no layout to say a height from, so its load says it's ready for the words.
+    return <iframe key={src} ref={frame} className="mailframe-count" title={title} aria-hidden="true" tabIndex={-1} sandbox="allow-scripts" referrerPolicy="no-referrer" src={src}
+      onLoad={() => setReady(times => times + 1)} />;
   }
   return (
     <div ref={box} className={height === null ? 'mailframe-box measuring' : 'mailframe-box'} data-find-frame="" data-find-count={words ? count : 0}>

@@ -80,6 +80,15 @@ test('⌘F with an email open searches it: a match in a collapsed email, in an H
   try {
     const {latest, ids} = await cabin(setpoint);
     const page = await setpoint.page('target');
+    // Theo's HTML email's page is held until the words are typed, so it answers after the last of them.
+    let typed = () => {};
+    const done = new Promise<void>(resolve => {
+      typed = resolve;
+    });
+    await page.route(new RegExp(`/api/mail/messages/${ids[4]}/body`), async route => {
+      await done;
+      await route.continue();
+    });
     await page.goto(`${setpoint.base}/inbox/${latest.id}`);
     await page.locator('.cv > [data-email]').first().waitFor();
     const folded = await until('the stack', () => shape(page), shown => shown.length === ids.length);
@@ -89,6 +98,7 @@ test('⌘F with an email open searches it: a match in a collapsed email, in an H
     assert.equal(await dim(page), 'email');
     // Theo's HTML email and the user's plain answer, both collapsed.
     await page.keyboard.type('cooler');
+    typed();
     await until('the count', () => count(page), line => line === '1 of 2');
     await until('the HTML email opens, its match marked and in view', () => frameMatch(page, ids[4]!), match => match?.text === 'cooler' && match.shown);
     await page.keyboard.press('Enter');
