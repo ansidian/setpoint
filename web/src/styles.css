@@ -582,12 +582,19 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .cv-line .attached { flex: none; display: inline-flex; color: var(--ink3); }
 .cv-line .when { flex: none; color: var(--ink3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .cv-foot { display: flex; flex-direction: column; gap: 8px; padding: 16px 28px 28px; border-top: 1px solid var(--hair); }
-.cv-reply { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border: 1px solid var(--hair); border-radius: 12px; background: var(--cardOn); color: var(--ink3); text-align: left; }
+.cv-reply { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border: 1px solid var(--hair); border-radius: 12px; background: var(--cardOn); color: var(--ink3); text-align: left;
+  transition: color 120ms, border-color 120ms, box-shadow 120ms; }
 .cv-reply .kbd { margin-left: auto; }
-@media (hover: hover) { .cv-reply:hover { color: var(--ink2); border-color: var(--sub3); } }
-.cv-draft { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 10px; background: var(--sub); color: var(--ink2); text-align: left; }
+@media (hover: hover) { .cv-reply:hover { color: var(--ink); border-color: var(--edgeHover); box-shadow: inset 0 0 0 100vmax var(--sub); } }
+.cv-reply:focus-visible { box-shadow: inset 0 0 0 100vmax var(--sub2); }
+.cv-reply:active { box-shadow: inset 0 0 0 100vmax var(--sub2); }
+.cv-draft { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 10px; background: var(--sub); color: var(--ink2); text-align: left; transition: background 120ms; }
 .cv-draft .drafted { color: var(--alert); }
-.cv-draft .words { color: var(--ink3); }
+.cv-draft .words { color: var(--ink3); transition: color 120ms; }
+.cv-draft .kbd { margin-left: auto; }
+@media (hover: hover) { .cv-draft:hover { background: var(--sub2); } .cv-draft:hover .words { color: var(--ink2); } }
+.cv-draft:focus-visible { background: var(--sub2); }
+.cv-draft:active { background: var(--sub3); }
 .mailtext .quoted, .rd-body > .quoted { margin: 0 0 12px; }
 .mailtext { color: var(--ink); font-size: 14px; line-height: 1.55; max-width: 600px; overflow-wrap: anywhere; }
 .mailtext p { margin: 0 0 12px; }

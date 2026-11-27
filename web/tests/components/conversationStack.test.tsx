@@ -1,7 +1,8 @@
 // The desktop reader's stacked conversation: which emails open expanded (the opening's answer, held
 // through later loads), every other email collapsed to its sender, paperclip, time and first words,
 // a click on a collapsed email expanding it and one on an expanded email's head folding it back, and
-// the foot's Reply answering the newest email someone else sent. The server is faked at `fetch`.
+// the foot's Reply answering the newest email someone else sent, a saved draft's line in its place, and
+// no foot while a composer is popped out on the conversation. The server is faked at `fetch`.
 import type {ConversationMessageOut, MailConversationOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {afterEach, expect, test, vi} from 'vitest';
@@ -9,6 +10,7 @@ import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {openMessage} from '../../src/api/mail.ts';
 import {ConversationStack} from '../../src/app/ConversationStack.tsx';
+import {closeComposer, startComposer} from '../../src/app/compose/composer.ts';
 
 const NOW = Date.parse(SEED_NOW);
 const HOUR = 60 * 60_000;
@@ -27,13 +29,15 @@ const conversation = (emails: ConversationMessageOut[], opened = emails.at(-1)!.
 });
 
 const posted: {url: string; body: unknown}[] = [];
+// The draft a conversation's Draft line opens.
+const saved = {id: 5, message_id: 2, kind: 'reply', to: [], cc: [], bcc: []};
 
 /** The server: the opening's answer, and a draft started for each composer. */
-function serve(opening: MailConversationOut) {
+function serve(opening: MailConversationOut, started = {id: 9, message_id: 3}) {
   vi.spyOn(window, 'fetch').mockImplementation((input, init) => {
     const url = String(input);
     if (init?.method === 'POST') posted.push({url, body: init.body ? JSON.parse(String(init.body)) as unknown : null});
-    const answer = url.endsWith('/open') ? opening : url.includes('/drafts') ? {id: 9, message_id: 3} : {};
+    const answer = url.endsWith('/open') ? opening : url.endsWith('/drafts/5') ? saved : url.includes('/drafts') ? started : {};
     return Promise.resolve(new Response(JSON.stringify(answer), {status: 200, headers: {'Content-Type': 'application/json'}}));
   });
 }
@@ -93,4 +97,31 @@ test('the foot\'s Reply answers the newest email someone else sent, past the use
   await stack(conversation(emails));
   await userEvent.click(page.getByRole('button', {name: /Reply to Theo Walsh/}));
   await expect.poll(() => posted.find(one => one.url.includes('/drafts'))?.body).toMatchObject({kind: 'reply', message_id: 3});
+});
+
+test('a saved draft stands in for the foot\'s Reply, R and all, and opens again from its line', async () => {
+  const emails = [email(1, {expanded: true}), email(2, {expanded: true})];
+  const drafted = {...conversation(emails), draft: {id: 5, message_id: 2}};
+  serve(drafted);
+  await stack(drafted);
+  expect(page.getByRole('button', {name: /Reply to Theo Walsh/}).query()).toBeNull();
+  expect(document.querySelector('.cv-foot [data-hint="r"]')?.textContent).toContain('Open the reply you started');
+  const fetched = vi.mocked(window.fetch);
+  await userEvent.click(page.getByRole('button', {name: /Open the reply you started/}));
+  await expect.poll(() => fetched.mock.calls.some(([input]) => String(input).endsWith('/drafts/5'))).toBe(true);
+});
+
+test('a composer popped out on the conversation takes its foot away, Draft line and Reply both, and closing it brings Reply back', async () => {
+  const emails = [email(1, {expanded: true}), email(2), email(3, {expanded: true})];
+  serve(conversation(emails), {id: 11, message_id: 1});
+  // Whatever an earlier check left in the pane goes first.
+  closeComposer();
+  await stack(conversation(emails));
+  startComposer({kind: 'forward', message_id: 1}, {floating: true});
+  await expect.poll(() => document.querySelector('.cv-foot')).toBeNull();
+  // Closed once its draft is in, as its window's ✕ would.
+  await expect.poll(() => {
+    closeComposer(11);
+    return page.getByRole('button', {name: /Reply to Theo Walsh/}).query() !== null;
+  }).toBe(true);
 });
