@@ -20,8 +20,8 @@ function watch(query: () => string) {
 }
 watch(() => `(device-width: ${window.screen.width}px) and (device-height: ${window.screen.height}px)`);
 watch(() => `(resolution: ${window.devicePixelRatio}dppx)`);
-// TypeScript's DOM types don't have Screen as the EventTarget it is.
-(window.screen as Screen & EventTarget).addEventListener('change', moved);
+// Chromium's Screen is an EventTarget, which TypeScript's DOM types don't say; Safari's isn't.
+(window.screen as Screen & Partial<EventTarget>).addEventListener?.('change', moved);
 window.addEventListener('resize', moved);
 window.addEventListener('focus', moved);
 
