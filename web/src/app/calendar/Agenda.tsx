@@ -13,6 +13,7 @@
 // which of its events. Nothing drags: moving and resizing stay on the desktop's grids.
 import type {CalendarOut, CalendarSearchResultOut, ItemOut, ItemsOut, WeatherDayOut} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useKept, useOnLeave, usePlace} from '../keptPlace.ts';
 import type {CSSProperties} from 'react';
 import {serverNow, timeZone} from '../../api/auth.ts';
 import {useResource, useResources} from '../../api/client.ts';
@@ -69,8 +70,15 @@ export function Agenda({route}: {route: CalendarRoute}) {
   const {data: linkedItem} = useResource<ItemOut>(route.item && !route.at ? itemPath(route.item) : null);
   const linkedDay = route.date ?? (route.at ? localDate(route.at, zone) : linkedItem?.id === route.item && linkedItem ? itemDays(linkedItem, zone)[0] ?? null : null);
 
-  const [searching, setSearching] = useState(false);
+  const [searching, setSearching] = useKept('searching', false);
   const search = useCalendarSearch(true);
+  // The day that was at the top as the page was left comes back to the top with it.
+  const place = usePlace();
+  const [keptDay] = useState(() => place?.values.get('day') as string | undefined);
+  useOnLeave(() => {
+    const day = dayInView();
+    if (day) place?.values.set('day', day);
+  });
   // Cancel beside the field leaves search; the field's clear button empties it.
   const leaveSearch = () => {
     search.clear();
@@ -83,13 +91,13 @@ export function Agenda({route}: {route: CalendarRoute}) {
   // The day the agenda opens on, and the weeks loaded after it. A day to bring to the top (`focus`):
   // a link's, the picker's or today's, each once, by its count.
   // `glide`: scrolled there smoothly, as the tab bar takes the Inbox and News to their tops.
-  const [focus, setFocus] = useState({day: linkedDay ?? today, n: 0, glide: false});
+  const [focus, setFocus] = useState({day: keptDay ?? linkedDay ?? today, n: 0, glide: false});
   const [seenLink, setSeenLink] = useState(linkedDay);
   if (seenLink !== linkedDay) {
     setSeenLink(linkedDay);
     if (linkedDay && !route.item) setFocus({day: linkedDay, n: focus.n + 1, glide: false});
   }
-  const [{anchor, weeks}, setWindow] = useState(() => ({anchor: agendaAnchor(today, FIRST_WEEKS, linkedDay ?? today), weeks: FIRST_WEEKS}));
+  const [{anchor, weeks}, setWindow] = useState(() => ({anchor: agendaAnchor(today, FIRST_WEEKS, keptDay ?? linkedDay ?? today), weeks: FIRST_WEEKS}));
   // A day picked, or the tab's today, leaves search for the agenda, the results being over it.
   const go = (day: string, glide = false) => {
     if (searching) leaveSearch();

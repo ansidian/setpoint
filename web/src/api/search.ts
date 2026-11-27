@@ -14,8 +14,8 @@ export interface SearchQuery {
   read?: SearchRead;
   // With `read`: the words as typed, which rank and which the chips' "more" number counts from.
   typed?: string;
-  // A later page of the same search.
-  page?: {search_id: number; offset: number};
+  // A later page of the same search, or with `limit` its pages so far again (a kept search back on screen).
+  page?: {search_id: number; offset: number; limit?: number};
   // Where it's searched from: the Inbox's with sent mail too, Sent's with sent mail only, in an account.
   scope?: SearchScope;
 }

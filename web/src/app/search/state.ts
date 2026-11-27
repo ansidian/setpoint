@@ -12,6 +12,7 @@ import {searchNews} from '../../api/news.ts';
 import {searchCalendar} from '../../api/search.ts';
 import type {ShownFix} from '../../api/search.ts';
 import {finishedWords, isSearching} from '../../logic/search.ts';
+import {useOnLeave, usePlace} from '../keptPlace.ts';
 
 export const TYPING_MS = 120;
 
@@ -47,15 +48,26 @@ export interface SearchFieldState<C, O, R> {
   update: (change: (results: R[]) => R[]) => void;
 }
 
+/** A search as its page was left, kept in the page's place (app/keptPlace.ts). */
+interface KeptField<C, R, O> {
+  chips: C[];
+  text: string;
+  out: O;
+  results: R[];
+}
+
 /**
  * The field's state: `fetch` answers the field's chips and words, or the page after `after`. A
- * `plain` field (the phone's) leaves the words as typed, never chips.
+ * `plain` field (the phone's) leaves the words as typed, never chips. A `keep` one comes back with
+ * its page: its field and results at once, then its first page asked again in place.
  */
-function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips: C[], after: O | null) => Promise<O>, plain: boolean): SearchFieldState<C, O, R> {
-  const [chips, setChips] = useState<C[]>([]);
-  const [text, setTextState] = useState('');
-  const [out, setOut] = useState<O | null>(null);
-  const [results, setResults] = useState<R[]>([]);
+function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips: C[], after: O | null) => Promise<O>, plain: boolean, keep = false): SearchFieldState<C, O, R> {
+  const place = usePlace();
+  const [kept] = useState(() => (keep ? place?.values.get('search') as KeptField<C, R, O> | undefined : undefined));
+  const [chips, setChips] = useState<C[]>(kept?.chips ?? []);
+  const [text, setTextState] = useState(kept?.text ?? '');
+  const [out, setOut] = useState<O | null>(kept?.out ?? null);
+  const [results, setResults] = useState<R[]>(kept?.results ?? []);
   const [error, setError] = useState<string | null>(null);
   // The latest request, so an older answer never replaces a newer one, and the field as it is now.
   const latest = useRef(0);
@@ -122,6 +134,24 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
     });
   }
 
+  // Kept, its first page is asked again. It takes the kept results' place while it holds them all,
+  // so a longer list loaded further never shortens under the user.
+  const fetchKept = useRef(fetch);
+  useEffect(() => {
+    if (!kept) return;
+    const id = ++latest.current;
+    fetchKept.current(kept.out.text, kept.out.chips, null).then(answer => {
+      if (id !== latest.current || (answer.next_offset !== null && answer.results.length < kept.results.length)) return;
+      setOut(answer);
+      setResults(answer.results);
+    }, () => {});
+  }, [kept]);
+  useOnLeave(() => {
+    if (!keep || !place) return;
+    if (out && isSearching(chips, text)) place.values.set('search', {chips, text, out, results} satisfies KeptField<C, R, O>);
+    else place.values.delete('search');
+  });
+
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   return {
@@ -164,7 +194,7 @@ export type CalendarSearch = SearchFieldState<CalendarSearchChip, CalendarSearch
 
 /** The calendar's search, its results in the right pane. The phone's Agenda's is `plain`: its words as typed, never chips. */
 export const useCalendarSearch = (plain = false): CalendarSearch =>
-  useSearchField<CalendarSearchChip, CalendarSearchResultOut, CalendarSearchOut>((text, chips, after) => searchCalendar({text, chips, offset: after?.next_offset ?? 0}), plain);
+  useSearchField<CalendarSearchChip, CalendarSearchResultOut, CalendarSearchOut>((text, chips, after) => searchCalendar({text, chips, offset: after?.next_offset ?? 0}), plain, true);
 
 /** News's search: words only, no chips, over the 90-day archive. One page of stories, newest first. */
 export interface NewsSearchPage {
@@ -177,7 +207,7 @@ export interface NewsSearchPage {
 export type NewsSearch = SearchFieldState<never, NewsSearchPage, StoryRowOut>;
 
 export const useNewsSearch = (): NewsSearch => useSearchField<never, StoryRowOut, NewsSearchPage>(
-  text => searchNews(text).then(out => ({chips: [], text, results: out.stories, next_offset: null, total: out.total})), true);
+  text => searchNews(text).then(out => ({chips: [], text, results: out.stories, next_offset: null, total: out.total})), true, true);
 
 export interface Alfred {
   // Whether the card shows.

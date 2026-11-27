@@ -18,6 +18,7 @@
 // asked first. The view rides in the address (?view=week).
 import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, ItemChanges, ItemCreateInput, ItemOut, ItemsOut, RecurringScope, SubtaskOut, WeatherDayOut} from '@setpoint/shared';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useKept} from '../keptPlace.ts';
 import type {DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {ApiFailure, getJson, useResource} from '../../api/client.ts';
@@ -256,7 +257,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const [previews, setPreviews] = useState<{items: ItemOut[]; day: string | null}>({items: [], day: null});
   const clipboard = useRef<ItemOut[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [searching, setSearching] = useKept('searching', false);
+  // A search kept from before comes back without taking focus, until it's left.
+  const [keptSearch, setKeptSearch] = useState(searching);
+  if (keptSearch && !searching) setKeptSearch(false);
   const search = useCalendarSearch();
   // In the compact tier the day's pane is brought over the grid by its header button, and closed on
   // every load. The editor and search take its place as they take each other's.
@@ -1177,7 +1181,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             }}><Icon name="right_panel_open" /></button>
         )}
         {searching
-          ? <SearchField search={{...search, active: true}} label="Search calendar" arrowDown autoFocus onEnter={selectResult} onEscape={escape} />
+          ? <SearchField search={{...search, active: true}} label="Search calendar" arrowDown autoFocus={!keptSearch} onEnter={selectResult} onEscape={escape} />
           : <button className="ibtn" aria-label="Search calendar" data-tip="Search · /" onClick={() => {
             setDayPane(false);
             setPopover(null);

@@ -141,10 +141,10 @@ test('37c: Applied before on the Contoso Pharmaceuticals match email, on its Noi
     await page.keyboard.press('Escape');
     await until('the query cleared', () => field.inputValue(), value => value === '');
 
-    // The row's badge goes there too, without opening its email.
+    // The row's badge goes there too, without opening its email. Back comes to the Inbox as it was
+    // left, its Noise still open.
     await page.goBack();
     await page.goBack();
-    await page.locator('.list.all .nfold', {has: page.locator('.preview', {hasText: 'Indeed'})}).click();
     await badge.click();
     await until('Jobs', () => pathOf(page), at => at === '/jobs');
     assert.equal(await page.getByRole('textbox', {name: 'Search jobs'}).inputValue(), 'contoso pharmaceuticals');

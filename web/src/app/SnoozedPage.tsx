@@ -49,6 +49,7 @@ import {LoadFailed, useLoadFailed} from './states/Loading.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
 import {toInbox} from './toInbox.ts';
+import {useKept, useKeptOpen, useKeptScroll} from './keptPlace.ts';
 import {phoneSlide} from '../logic/phone.ts';
 import {usePhone} from './Phone.tsx';
 import {TitleMenu} from './phone/TitleMenu.tsx';
@@ -82,7 +83,8 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   // Emails Done, Trash or Unsnooze took out here, hidden at once until Undo or the list no longer has them.
   const [leaving, setLeaving] = useState<ReadonlySet<number>>(new Set());
   const rows = useMemo(() => (load.data?.rows ?? []).filter(row => !leaving.has(row.id)), [load.data, leaving]);
-  const [cursor, setCursor] = useState<number | null>(null);
+  const [cursor, setCursor] = useKept<number | null>('cursor', null);
+  useKeptScroll('list', () => document.querySelector<HTMLElement>('.snoozed-list'), load.data !== undefined, 'id');
   const open = route.open;
   const at = cursor !== null && rows.some(row => row.id === cursor) ? cursor : null;
   // On the phone, the emails a conversation's line was opened from, newest last, as the Inbox's:
@@ -107,6 +109,8 @@ export function SnoozedPage({route}: {route: SnoozedRoute}) {
   useEffect(() => {
     if (open !== null) void openMessage(open, {listed: listedOpen.current === open}).catch(toastFailure('Failed to mark read'));
   }, [open]);
+  // A kept email that left Snoozed meanwhile (it came back, or was snoozed again elsewhere) comes back closed.
+  useKeptOpen(open, id => rows.some(row => row.id === id), load.data !== undefined, () => navigate({page: 'snoozed', open: null}, {replace: true}));
   const subject = open !== null ? listed(open)?.subject ?? null : null;
   useEffect(() => {
     document.title = tabTitle({page: 'snoozed', subject});

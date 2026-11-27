@@ -6,6 +6,7 @@ import type {MailCountsOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {useResource} from '../api/client.ts';
 import {COUNTS_PATH} from '../api/mail.ts';
+import type {PlacePage} from '../logic/keptPlace.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {viewport} from '../tokens.ts';
@@ -13,8 +14,7 @@ import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {agendaToToday} from './calendar/agendaToday.ts';
 import {useOverdue} from './calendar/overdueGroup.ts';
-import {currentRoute, navigate} from './router.ts';
-import {toInbox} from './toInbox.ts';
+import {currentRoute, goTo} from './router.ts';
 import {SelectBar, useSelectBar} from './phone/selectBar.tsx';
 
 const PHONE = window.matchMedia(`(max-width: ${viewport.phoneBelow - 1}px)`);
@@ -38,7 +38,7 @@ export const isPhone = () => PHONE.matches;
 export const useCompact = () => useSyncExternalStore(onCompact, () => COMPACT.matches);
 
 // Each tab's glyph, and its filled one for the current tab. Material's newspaper is the same path filled.
-const TABS: {label: string; icon: IconName; on: IconName; page: Route['page']; to: Route; scroller: string}[] = [
+const TABS: {label: string; icon: IconName; on: IconName; page: PlacePage; to: Route; scroller: string}[] = [
   {label: 'Inbox', icon: 'inbox', on: 'inbox-fill', page: 'inbox', to: {page: 'inbox', open: null}, scroller: '.content > .list'},
   {label: 'Agenda', icon: 'calendar_today', on: 'calendar_today-fill', page: 'calendar', to: {page: 'calendar', date: null, item: null, at: null}, scroller: '.ph-agenda'},
   {label: 'News', icon: 'newspaper', on: 'newspaper', page: 'news', to: {page: 'news', view: 'all', story: null, article: null}, scroller: '.ph-news'},
@@ -69,8 +69,10 @@ export function PhoneTabs({route}: {route: Route}) {
           <a key={tab.page} className={on ? 'ph-tab on' : 'ph-tab'} href={routePath(tab.to)} aria-current={on ? 'page' : undefined} onClick={event => {
             event.preventDefault();
             const was = currentRoute().page;
-            navigate(tab.page === 'inbox' ? toInbox() : tab.to);
-            if (was === tab.page && !(tab.page === 'calendar' && agendaToToday())) document.querySelector(tab.scroller)?.scrollTo({top: 0, behavior: 'smooth'});
+            // On the Agenda its glide to today is its fresh start: it leaves search and the open item.
+            if (was === 'calendar' && tab.page === 'calendar' && agendaToToday()) return;
+            goTo(tab.page);
+            if (was === tab.page) document.querySelector(tab.scroller)?.scrollTo({top: 0, behavior: 'smooth'});
           }}>
             <Icon name={on ? tab.on : tab.icon} size={22} />{tab.label}
             {tab.page === 'inbox' && waiting > 0 && <span className="ph-badge num" data-tip="Attention, not Done">{waiting}</span>}

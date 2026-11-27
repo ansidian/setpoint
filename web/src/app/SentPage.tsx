@@ -66,6 +66,7 @@ import {NewMessagePane} from './compose/Composer.tsx';
 import type {ReaderActions, Travel} from './Reader.tsx';
 import {navigate} from './router.ts';
 import {SearchField, SearchResults} from './search/Search.tsx';
+import {useKept, useKeptOpen, useKeptScroll} from './keptPlace.ts';
 import {useSearch} from './search/mailSearch.ts';
 import {AnswerTools, PaneTool, SelectionPane} from './SelectionPane.tsx';
 import {ALL_ACCOUNTS, SentAccounts} from './SentAccounts.tsx';
@@ -125,7 +126,7 @@ export function SentPage({route}: {route: SentRoute}) {
 
   // The pages for this account: the first, then one more each time the list nears its end. Another
   // account starts again at its top.
-  const [paging, setPaging] = useState<{account: number | null; befores: string[]}>({account, befores: []});
+  const [paging, setPaging] = useKept<{account: number | null; befores: string[]}>('befores', {account, befores: []});
   if (paging.account !== account) setPaging({account, befores: []});
   const befores = paging.account === account ? paging.befores : [];
   const pages = useResources<SentOut>([sentPath(account), ...befores.map(before => sentPath(account, before))]);
@@ -151,7 +152,7 @@ export function SentPage({route}: {route: SentRoute}) {
   const sentRows = useMemo(() => new Map(pages.flatMap(page => page?.days.flatMap(day => day.rows) ?? []).map(row => [row.id, row])), [pages]);
 
   const scope = useMemo((): SearchScope => ({sent: 'only', ...(account ? {account_id: account} : {})}), [account]);
-  const search = useSearch(true, scope);
+  const search = useSearch(true, scope, true);
   const searching = search.active;
   const firstWait = searching && search.out === null && search.error === null;
   const waitedLong = useAfter(firstWait, skeleton.delayMs);
@@ -161,7 +162,7 @@ export function SentPage({route}: {route: SentRoute}) {
   const stops = useMemo((): Stop[] => (searching ? searchStops(sections) : dayStops(days)), [searching, sections, days]);
   // The cursor, kept with the stops it was set among, so when the list changes it lands on the stop
   // that took its place.
-  const [track, setTrack] = useState<{stops: Stop[]; cursor: string | null}>({stops, cursor: null});
+  const [track, setTrack] = useKept<{stops: Stop[]; cursor: string | null}>('cursor', {stops, cursor: null});
   let cursor = track.cursor;
   if (track.stops !== stops) {
     cursor = keepCursor(track.stops, stops, track.cursor);
@@ -257,6 +258,8 @@ export function SentPage({route}: {route: SentRoute}) {
     const row = sentRows.get(id);
     return row ? asSent(row) : search.listed.find(result => result.id === id);
   };
+  // A kept email that left Sent meanwhile comes back closed.
+  useKeptOpen(open, id => rowOf(id) !== undefined, searching ? search.out !== null : pages.every(page => page !== undefined), () => navigate({...route, open: null}, {replace: true}));
   const subject = open !== null ? rowOf(open)?.subject ?? cachedEmail(open)?.subject ?? null : null;
   useEffect(() => {
     document.title = tabTitle({page: 'sent', subject});
@@ -451,6 +454,8 @@ export function SentPage({route}: {route: SentRoute}) {
   const more = pages.length > 1 && pages.at(-1) === undefined;
   const shownAccount = account ? accounts.get(account) ?? null : null;
   const empty = ready && !days.length && !more && !pages.at(-1)?.next_before;
+  // The list's scroll comes back with the page, once its rows (or the kept search's) are there.
+  useKeptScroll('list', () => document.querySelector<HTMLElement>('.main > .content > .list'), searching ? search.out !== null : ready && !more);
   // A conversation others wrote in names them, as the Inbox's rows do; mail only the user sent names who it went to.
   const from = (row: MessageRowOut) => {
     if ((row.thread?.people.length ?? 0) > 1) return <ConversationFrom row={row} lone={row.from_name} />;

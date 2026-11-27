@@ -1731,26 +1731,29 @@ test('⌘Z in the line takes back a phrase made words, newest first, and once ty
   }
 });
 
-test('E on an edit with phrases typed selects only its title words, so typing renames it and the phrases stay', async () => {
+test('E on an edit selects its title words, so typing renames it; left with phrases typed and come back to, it holds them with no field focused', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openCalendar(page, setpoint.base);
     const title = page.locator('.editor input[aria-label="Title"]');
+    const selected = () => title.evaluate((input: HTMLInputElement) => (input === document.activeElement ? input.value.slice(input.selectionStart!, input.selectionEnd!) : null));
     await chip(page, '2026-10-15', 'Career fair').click();
     await page.locator('.fd').waitFor();
     await page.keyboard.press('e');
+    await until('the title words selected', selected, words => words === 'Career fair');
     await title.press('End');
     await title.pressSequentially(' fri 7pm @Blue Door');
     await page.locator('.nl .tok-p', {hasText: '@Blue Door'}).waitFor();
-    // Left and come back to, the edit opens again as E does: its title words selected, not its phrases.
+    // Left and come back to, the edit holds what was typed with no field focused: the user had to
+    // leave the field to go, so there's no knowing which one they were in.
     await page.locator('.sb').getByText('Inbox', {exact: true}).click();
     await page.locator('.list .row').first().waitFor();
     await page.goBack();
     await title.waitFor();
-    await until('the title words selected', () => title.evaluate((input: HTMLInputElement) => (input === document.activeElement ? input.value.slice(input.selectionStart!, input.selectionEnd!) : null)), selected => selected === 'Career fair');
-    await page.keyboard.type('Expo');
-    assert.equal(await title.inputValue(), 'Expo fri 7pm @Blue Door');
+    assert.equal(await title.inputValue(), 'Career fair fri 7pm @Blue Door');
+    // The sidebar's Inbox link the check clicked may keep focus; nothing in the editor has it.
+    assert.equal(await page.evaluate(() => document.activeElement?.closest('.editor') ?? null), null);
     await page.locator('.nl .tok-d', {hasText: 'fri 7pm'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

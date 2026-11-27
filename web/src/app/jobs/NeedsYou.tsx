@@ -16,6 +16,7 @@
 // says what happened, with Undo, which folds it back. The last item takes the band with it.
 import type {AccountOut, ApplicationRowOut, JdCandidateOut, NeedsYouItemOut} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
+import {useKept} from '../keptPlace.ts';
 import {age, fullTimestamp, localDate} from '../../logic/format.ts';
 import type {Entry, FoldRules} from '../../logic/fold.ts';
 import {motion} from '../../tokens.ts';
@@ -83,7 +84,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   // An application's email, for this item, from Assign to….
   onLook: (item: NeedsYouItemOut, row: ApplicationRowOut) => void;
 }) {
-  const [open, setOpen] = useState(unfoldHistory > 0);
+  const [open, setOpen] = useKept('history', unfoldHistory > 0);
   const [asked, setAsked] = useState(unfoldHistory);
   if (asked !== unfoldHistory) {
     setAsked(unfoldHistory);

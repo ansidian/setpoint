@@ -8,6 +8,7 @@
 // sidebar's row shows only while something is scheduled; the list emptied here says so.
 import type {DraftRowOut, DraftsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
+import {useKept, useKeptScroll} from '../keptPlace.ts';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
@@ -50,7 +51,8 @@ export function ScheduledPage({route}: {route: ScheduledRoute}) {
       return at && !going.has(row.id) ? [{row, at}] : [];
     })
     .sort((a, b) => a.at.localeCompare(b.at) || a.row.id - b.row.id), [listed, going, now]);
-  const [cursor, setCursor] = useState<number | null>(null);
+  const [cursor, setCursor] = useKept<number | null>('cursor', null);
+  useKeptScroll('list', () => document.querySelector<HTMLElement>('.scheduled-list'), listed !== undefined, 'id');
   const shown = route.open;
   const openOne = rows.find(one => one.row.id === shown);
   const go = (id: number | null) => navigate({page: 'scheduled', open: id});

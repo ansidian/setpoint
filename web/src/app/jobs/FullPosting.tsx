@@ -8,6 +8,7 @@
 // the pane at it, with no motion.
 import type {PostingOut} from '@setpoint/shared';
 import {Fragment, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState} from 'react';
+import {useKept} from '../keptPlace.ts';
 import type {ReactNode, Ref} from 'react';
 import {localDate} from '../../logic/format.ts';
 import {motion} from '../../tokens.ts';
@@ -85,18 +86,21 @@ export function blocks(markdown: string): ReactNode[] {
   return out;
 }
 
-export function FullPosting({posting, title, company, timeZone, today, arrived = false, ref}: {
+export function FullPosting({posting, title, company, timeZone, today, arrived = false, keptAs = 'posting', ref}: {
   posting: PostingOut;
   title: string;
   company: string;
   timeZone: string;
   today: string;
   arrived?: boolean;
+  // What names it in the page's kept place, where an unfolded posting comes back unfolded.
+  keptAs?: string;
   ref?: Ref<FullPostingHandle>;
 }) {
-  const [state, setState] = useState<'row' | 'open' | 'folding'>(arrived ? 'open' : 'row');
+  const [unfolded, setUnfolded] = useKept(keptAs, arrived);
+  const [state, setState] = useState<'row' | 'open' | 'folding'>(unfolded ? 'open' : 'row');
   // Unfolded as it was drawn: no unfolding, and the pane at it at once.
-  const [still, setStill] = useState(arrived);
+  const [still, setStill] = useState(unfolded);
   const root = useRef<HTMLDivElement>(null);
   // Where the pane stood before it unfolded, to go back to. And the pane's scroll under way, so a
   // fold started while it unfolds takes over from it.
@@ -113,15 +117,20 @@ export function FullPosting({posting, title, company, timeZone, today, arrived =
     before.current = scroller()?.scrollTop ?? 0;
     setStill(false);
     setState('open');
+    setUnfolded(true);
   };
-  const fold = () => setState(current => (current === 'open' ? 'folding' : current));
+  const fold = () => {
+    setState(current => (current === 'open' ? 'folding' : current));
+    setUnfolded(false);
+  };
   useImperativeHandle(ref, () => ({
     escape: () => {
       if (state !== 'open') return false;
-      fold();
+      setState('folding');
+      setUnfolded(false);
       return true;
     },
-  }), [state]);
+  }), [state, setUnfolded]);
 
   // Unfolded: the pane scrolls the head up under the tools as the text unfolds.
   useLayoutEffect(() => {

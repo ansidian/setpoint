@@ -53,6 +53,7 @@ import {Marked} from './search/Search.tsx';
 import {countFinds, findWords} from '../logic/find.ts';
 import {registerFold, useFind} from './search/find.ts';
 import {toastFailure} from './toast.ts';
+import {useKept} from './keptPlace.ts';
 
 /** A card asked for on one email of the conversation: a proposal, or Alfred about it. */
 export type CardAsk = (id: number, card: ItemKind | 'ask') => void;
@@ -76,7 +77,7 @@ export function ConversationStack({conversation, accounts, now, timeZone, marks,
   const opening = openingOf(conversation.opened_id);
   const [seeded, setSeeded] = useState<Map<number, boolean> | null>(null);
   if (!seeded && opening) setSeeded(new Map(opening.emails.map(email => [email.id, email.expanded])));
-  const [toggled, setToggled] = useState<Map<number, boolean>>(new Map());
+  const [toggled, setToggled] = useKept<Map<number, boolean>>(`earlier:${conversation.opened_id}`, () => new Map());
   const expanded = (email: MailConversationOut['emails'][number]) => toggled.get(email.id) ?? seeded?.get(email.id) ?? email.expanded;
   const toggle = (id: number, open: boolean) => setToggled(state => new Map(state).set(id, open));
   // Find opens a collapsed email to reach a match in it, and folds it back as it ends.
@@ -86,7 +87,7 @@ export function ConversationStack({conversation, accounts, now, timeZone, marks,
       fold: () => setToggled(state => new Map(state).set(email.id, false)),
     }));
     return () => unregister.forEach(off => off());
-  }, [emails]);
+  }, [emails, setToggled]);
   const byId = new Map(emails.map(email => [email.id, email]));
   const answering = composer && !composer.floating && composer.messageId !== null && byId.has(composer.messageId) ? composer.messageId : null;
   const target = replyTarget(emails);
@@ -269,7 +270,7 @@ function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, onC
 export function Body({message, marks, arrived, fold, findable = false}: {message: MessageOut; marks: string[]; arrived: boolean; fold?: 'html' | 'text'; findable?: boolean}) {
   // "Show" loads this email's images this time. It lasts while it's open.
   const [shown, setShown] = useState(false);
-  const [history, setHistory] = useState(false);
+  const [history, setHistory] = useKept(`quoted:${message.id}`, false);
   const images = remoteImages(message.remote_content, hasRemoteContent(message.body_html), shown);
   const text = (body: string) => paragraphs(body).map((lines, index) => (
     <p key={index} data-find="">{lines.map((one, at) => <Fragment key={at}>{at > 0 && <br />}<Marked parts={segments(one, phraseRuns(one, marks))} /></Fragment>)}</p>
@@ -278,7 +279,7 @@ export function Body({message, marks, arrived, fold, findable = false}: {message
   // Find reaches into the folded history, and folds it back as it ends.
   const find = useFind();
   const words = findable && find.open ? findWords(find.text) : '';
-  useEffect(() => (findable ? registerFold(`quoted:${message.id}`, {unfold: () => setHistory(true), fold: () => setHistory(false)}) : undefined), [findable, message.id]);
+  useEffect(() => (findable ? registerFold(`quoted:${message.id}`, {unfold: () => setHistory(true), fold: () => setHistory(false)}) : undefined), [findable, message.id, setHistory]);
   // An HTML email's folded history: what its whole page holds less what the folded page shows.
   const [whole, setWhole] = useState(0);
   const [folded, setFolded] = useState(0);
