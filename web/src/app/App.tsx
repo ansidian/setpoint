@@ -19,6 +19,7 @@ import {isTyping, plainKey} from '../ui/keys.ts';
 import {CalendarPage} from './calendar/CalendarPage.tsx';
 import {Agenda} from './calendar/Agenda.tsx';
 import {InboxPage} from './InboxPage.tsx';
+import {KeptPlace} from './keptPlace.ts';
 import {SentPage} from './SentPage.tsx';
 import {goToJobs, jobsMailSlots, JobsPage} from './jobs/index.ts';
 import {NewsPage} from './news/NewsPage.tsx';
@@ -27,7 +28,7 @@ import {Palette} from './palette/Palette.tsx';
 import {isPhone, PhoneTabs, usePhone} from './Phone.tsx';
 import {PhoneSheets} from './phone/EditorSheet.tsx';
 import {usePhoneKeyboard} from './phone/keyboard.ts';
-import {currentRoute, navigate, useRoute} from './router.ts';
+import {currentRoute, goTo, navigate, useRoute} from './router.ts';
 import {selectSearch} from './search/Search.tsx';
 import {dimScope, useFind} from './search/find.ts';
 import {findScope} from '../logic/find.ts';
@@ -113,15 +114,16 @@ export function App({arrive = false}: {arrive?: boolean}) {
       }
       if (isTyping(event) || event.defaultPrevented) return;
       // 1 goes to the Inbox from another page. On the Inbox, U goes to the next unread email.
+      // Each goes to its page's kept place, or from the page itself to its fresh start (router.ts › goTo).
       if (plainKey(event, '1') && currentRoute().page !== 'inbox') {
         event.preventDefault();
-        navigate(toInbox());
+        goTo('inbox');
       } else if (plainKey(event, '2')) {
         event.preventDefault();
-        navigate({page: 'calendar', date: null, item: null, at: null});
+        goTo('calendar');
       } else if (plainKey(event, '3') && !isPhone()) {
         event.preventDefault();
-        navigate({page: 'news', view: 'all', story: null, article: null});
+        goTo('news');
       } else if (plainKey(event, '4') && !isPhone()) {
         if (goToJobs()) event.preventDefault();
       } else if (plainKey(event, '`') && !isPhone() && toggleSidebar()) {
@@ -138,6 +140,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
     <div className={['app', arrive && 'boot-after', rail && !phone && 'rail'].filter(Boolean).join(' ')} data-dim={dim ?? undefined}>
       {!phone && <Sidebar route={route} />}
       <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
+        <KeptPlace page={route.page}>
         {route.page === 'inbox' ? <InboxPage route={route} />
           : route.page === 'sent' ? <SentPage route={route} />
           : route.page === 'drafts' ? <DraftsPage route={route} />
@@ -147,6 +150,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
             : route.page === 'news' ? <NewsPage route={route} />
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)
               : phone ? <PhoneSettings page={route.section} /> : null}
+        </KeptPlace>
         {!phone && <ComposerWindows />}
         {phone ? <PhoneAlfred route={route} /> : <AlfredWindow />}
         {phone && <PhoneSheets />}

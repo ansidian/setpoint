@@ -20,6 +20,8 @@ import {useResource} from '../api/client.ts';
 import {DRAFTS_PATH} from '../api/drafts.ts';
 import {COUNTS_PATH, markAllRead, SNOOZED_PATH} from '../api/mail.ts';
 import {Count} from './Count.tsx';
+import {freshRoute} from '../logic/keptPlace.ts';
+import type {PlacePage} from '../logic/keptPlace.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {scheduledAt} from '../logic/selection.ts';
@@ -31,15 +33,17 @@ import {TodayBlock} from './TodayBlock.tsx';
 import {UnreadBadge} from './UnreadBadge.tsx';
 import {JobsNavItem} from './jobs/index.ts';
 import {offered} from './palette/commands.ts';
-import {currentRoute, navigate} from './router.ts';
+import {currentRoute, goTo} from './router.ts';
 import {openSettings} from './settings/store.ts';
 import {toggleSidebar, useRail, useSidebarFoldable} from './sidebarRail.ts';
 import {toastFailure} from './toast.ts';
-import {toInbox} from './toInbox.ts';
 
-/** A link that the app follows itself. ⌘-click still opens a new tab. `tip` names it, in its tooltip and for a screen reader. */
+/**
+ * A page's link, which the app follows itself to the page's kept place (router.ts › goTo). ⌘-click
+ * still opens its fresh start in a new tab. `tip` names it, in its tooltip and for a screen reader.
+ */
 function Link({to, className, style, tip, onContextMenu, children}: {
-  to: Route;
+  to: PlacePage;
   className: string;
   style?: CSSProperties;
   tip?: string;
@@ -49,9 +53,9 @@ function Link({to, className, style, tip, onContextMenu, children}: {
   const onClick = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
-    navigate(to);
+    goTo(to);
   };
-  return <a className={className} style={style} aria-label={tip} data-tip={tip} href={routePath(to)} onClick={onClick} onContextMenu={onContextMenu}>{children}</a>;
+  return <a className={className} style={style} aria-label={tip} data-tip={tip} href={routePath(freshRoute(to))} onClick={onClick} onContextMenu={onContextMenu}>{children}</a>;
 }
 
 /**
@@ -149,7 +153,7 @@ export function Sidebar({route}: {route: Route}) {
           <Mark />
           {!rail && <span className="sb-name">Setpoint</span>}
         </div>
-        <Link className={route.page === 'inbox' || (rail && (route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed' || route.page === 'scheduled')) ? 'nav on' : 'nav'} tip={named('Inbox')} to={toInbox()}
+        <Link className={route.page === 'inbox' || (rail && (route.page === 'sent' || route.page === 'drafts' || route.page === 'snoozed' || route.page === 'scheduled')) ? 'nav on' : 'nav'} tip={named('Inbox')} to="inbox"
           onContextMenu={event => counts && counts.unread > 0 && openContextMenu(event, event.currentTarget, [
             {id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: markAllReadNow()},
           ])}>
@@ -158,37 +162,37 @@ export function Sidebar({route}: {route: Route}) {
           {counts && <UnreadBadge value={counts.unread} tip="Unread" />}
         </Link>
         {!rail && (
-          <Link className={route.page === 'sent' ? 'nav sub on' : 'nav sub'} to={{page: 'sent', open: null}}>
+          <Link className={route.page === 'sent' ? 'nav sub on' : 'nav sub'} to="sent">
             <Icon name="send" size={16} />
             <span className="grow">Sent</span>
           </Link>
         )}
         {!rail && writing > 0 && (
-          <Link className={route.page === 'drafts' ? 'nav sub on' : 'nav sub'} to={{page: 'drafts', open: null}}>
+          <Link className={route.page === 'drafts' ? 'nav sub on' : 'nav sub'} to="drafts">
             <Icon name="draft" size={16} />
             <span className="grow">Drafts</span>
             <span className="cnt num"><Count value={writing} /></span>
           </Link>
         )}
         {!rail && snoozed !== undefined && snoozed.rows.length > 0 && (
-          <Link className={route.page === 'snoozed' ? 'nav sub on' : 'nav sub'} to={{page: 'snoozed', open: null}}>
+          <Link className={route.page === 'snoozed' ? 'nav sub on' : 'nav sub'} to="snoozed">
             <Icon name="snooze" size={16} />
             <span className="grow">Snoozed</span>
             <span className="cnt num"><Count value={snoozed.rows.length} /></span>
           </Link>
         )}
         {!rail && scheduled > 0 && (
-          <Link className={route.page === 'scheduled' ? 'nav sub on' : 'nav sub'} to={{page: 'scheduled', open: null}}>
+          <Link className={route.page === 'scheduled' ? 'nav sub on' : 'nav sub'} to="scheduled">
             <Icon name="schedule" size={16} />
             <span className="grow">Scheduled</span>
             <span className="cnt num"><Count value={scheduled} /></span>
           </Link>
         )}
-        <Link className={route.page === 'calendar' ? 'nav on' : 'nav'} tip={named('Calendar')} to={{page: 'calendar', date: null, item: null, at: null}}>
+        <Link className={route.page === 'calendar' ? 'nav on' : 'nav'} tip={named('Calendar')} to="calendar">
           <Icon name="calendar_month" />
           <span className="grow">Calendar</span>
         </Link>
-        <Link className={route.page === 'news' ? 'nav on' : 'nav'} tip={named('News')} to={{page: 'news', view: 'all', story: null, article: null}}>
+        <Link className={route.page === 'news' ? 'nav on' : 'nav'} tip={named('News')} to="news">
           <Icon name="newspaper" />
           <span className="grow">News</span>
         </Link>

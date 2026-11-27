@@ -372,19 +372,24 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   useMirror(line, lineMarks, draft.text);
   const projectProblem = projectChosen && 'problem' in projectChosen ? projectChosen.problem : null;
 
+  // A draft kept from before the user left Calendar comes back with no field focused: they had to
+  // leave the field to go, so there's no knowing which one they were in. Focus is the editor's again
+  // once anything changes from how it came back.
+  const [cameBack] = useState(() => (open.kept ? {active, filling} : null));
+  const asCameBack = cameBack !== null && cameBack.active === active && cameBack.filling === filling;
   useEffect(() => {
     // While the prefill comes, the card holds focus, for Esc.
-    if (!editing && !card?.quiet) (filling ? form.current : line.current)?.focus();
-  }, [editing, active, card?.quiet, filling, form]);
+    if (!editing && !card?.quiet && !asCameBack) (filling ? form.current : line.current)?.focus();
+  }, [editing, active, card?.quiet, filling, form, asCameBack]);
   // E on an item focuses its line with its title words selected, so typing renames it rather than
   // reaching the calendar's keys, and the phrases typed stay. The phone's Edit leaves the keyboard
   // down: the user came as often for a time as for the title.
   const opening = useRef(titleRun(draft.text, parsed.marks));
   useEffect(() => {
-    if (!editing || card?.quiet || sheet) return;
+    if (!editing || card?.quiet || sheet || cameBack) return;
     line.current?.focus();
     line.current?.setSelectionRange(opening.current.start, opening.current.end);
-  }, [editing, card?.quiet, sheet]);
+  }, [editing, card?.quiet, sheet, cameBack]);
 
   // A pick removes the menu item that had focus: focus goes back to the field that opened the menu
   // (or the editor itself), so ⌘Enter and Esc keep working.

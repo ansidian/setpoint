@@ -13,7 +13,7 @@ import {Icon} from '../../ui/Icon.tsx';
 import {Count} from '../Count.tsx';
 import type {Command} from '../palette/commands.ts';
 import {foldRef} from '../fold.ts';
-import {navigate} from '../router.ts';
+import {goTo} from '../router.ts';
 import {useRail} from '../sidebarRail.ts';
 import {cachedNav, NAV_PATH} from './api.ts';
 
@@ -43,12 +43,12 @@ export const jobsOn = () => (cachedNav() ?? remembered())?.enabled ?? false;
 
 /** `4`: Jobs, on or off (off, its page says so, with Turn on). */
 export function goToJobs(): boolean {
-  navigate(JOBS);
+  goTo('jobs');
   return true;
 }
 
 /** ⌘K's Go to: "Jobs 4", while it's on. */
-export const jobsCommands = (): Command[] => (jobsOn() ? [{id: 'jobs', section: 'goto', label: 'Jobs', icon: 'work', hint: '4', run: () => navigate(JOBS)}] : []);
+export const jobsCommands = (): Command[] => (jobsOn() ? [{id: 'jobs', section: 'goto', label: 'Jobs', icon: 'work', hint: '4', run: () => goTo('jobs')}] : []);
 
 /** The sidebar's item, or the rail's slot. */
 export function JobsNavItem({current}: {current: boolean}) {
@@ -68,7 +68,7 @@ export function JobsNavItem({current}: {current: boolean}) {
   const onClick = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
-    navigate(JOBS);
+    goTo('jobs');
   };
   return (
     <a ref={was.arrives ? foldRef('in') : undefined} className={current ? 'nav jobs on' : 'nav jobs'} href={routePath(JOBS)} aria-label={rail ? tip : undefined} data-tip={rail ? tip : undefined} onClick={onClick}>

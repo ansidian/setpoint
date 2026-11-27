@@ -36,6 +36,7 @@
 // and settles the same way. In a filtered view a row stays put until the next visit.
 import type {ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut, JobsPageOut, JobsSearchOut, NeedsYouItemOut} from '@setpoint/shared';
 import type {MouseEvent as ReactMouseEvent} from 'react';
+import {useKept, useKeptScroll} from '../keptPlace.ts';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {timeZone as userZone} from '../../api/auth.ts';
 import {getJson, updateCached, useResource} from '../../api/client.ts';
@@ -110,19 +111,20 @@ export function JobsPage({route}: {route: JobsRoute}) {
   // Off (38c), the page is its one line: no header numbers, no search, nothing for the keys.
   const enabled = page?.enabled ?? true;
 
-  const [filter, setFilter] = useState<Filter>('all');
-  const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
-  const [cursor, setCursor] = useState<string | null>(null);
+  // The filter, sort, cursor and search come back with the page (app/keptPlace.ts). A query from mail is the page's anew.
+  const [filter, setFilter] = useKept<Filter>('filter', 'all');
+  const [sort, setSort] = useKept<Sort>('sort', DEFAULT_SORT);
+  const [cursor, setCursor] = useKept<string | null>('cursor', null);
 
   // Search (36a, 36b): its own state, never mail's.
-  const [searching, setSearching] = useState(Boolean(route.q));
-  const [query, setQuery] = useState(route.q ?? '');
-  // Searched from mail: the field shows the query, without taking focus, so J / K and Esc are the page's.
-  const arrivedSearching = useRef(Boolean(route.q));
+  const [searching, setSearching] = useKept('searching', Boolean(route.q));
+  const [query, setQuery] = useKept('query', route.q ?? '');
+  // Searched from mail, or kept from before: the field shows the query, without taking focus, so J / K and Esc are the page's.
+  const arrivedSearching = useRef(searching);
   const q = searching ? query.trim() : '';
   const {data: answer} = useResource<JobsSearchOut>(q ? searchPath(q) : null);
   // The results as last answered for a query, so typing never blanks them between answers.
-  const [found, setFound] = useState<JobsSearchOut | null>(null);
+  const [found, setFound] = useKept<JobsSearchOut | null>('found', null);
   if (answer && answer !== found && answer.query === q) setFound(answer);
   const results = q && found ? found : null;
   const field = useRef<HTMLInputElement>(null);
@@ -166,7 +168,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
 
   // A filtered view holds its rows for the visit: one an email moves out of the filter stays put.
   const rows = useMemo(() => page?.rows ?? [], [page]);
-  const [hold, setHold] = useState<{filter: Filter; ids: ReadonlySet<number>}>({filter: 'all', ids: new Set()});
+  const [hold, setHold] = useKept<{filter: Filter; ids: ReadonlySet<number>}>('hold', {filter: 'all', ids: new Set()});
   const held = useMemo(() => (hold.filter === filter ? hold.ids : new Set<number>()), [hold, filter]);
   // Memoized, so the table's rows (and their folds) change only when the page's answer or the filter does.
   const filtered = useMemo(() => rows.filter(row => matches(row, filter) || held.has(row.id)), [rows, filter, held]);
@@ -185,6 +187,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const open = route.open;
   // An application open as the page mounts arrives: its pane is simply there until it closes (37b).
   const [arriving, setArriving] = useState(open !== null);
+  // The table's scroll comes back with the page, once its rows are there.
+  useKeptScroll('list', () => scroller.current, page !== undefined && (!q || found !== null));
   if (arriving && open === null) setArriving(false);
   // Full posting from mail: that application's posting arrives unfolded, once.
   const [unfold, setUnfold] = useState(route.posting ? open : null);

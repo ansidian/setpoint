@@ -52,6 +52,7 @@ import {Body, ConversationStack, MoreMenu} from './ConversationStack.tsx';
 import {copyText, openContextMenu} from './ContextMenu.tsx';
 import {emailActions} from './emailActions.ts';
 import {foldAway} from './fold.ts';
+import {onUserScroll, useOnLeave, usePlace} from './keptPlace.ts';
 import {useCommands} from './palette/commands.ts';
 import {usePhone} from './Phone.tsx';
 import {setReadingPaneWidth, useReadingPaneWidth} from './readingPane.ts';
@@ -338,6 +339,19 @@ function Swap({id, travel, anchor = null, children}: {id: number; travel: Travel
   const [moved, setMoved] = useState(false);
   if (!moved && id !== arrived) setMoved(true);
   const scroller = useRef<HTMLDivElement>(null);
+  const swap = useRef<HTMLDivElement>(null);
+  // Where the email was read to when its page was left, back with the page (app/keptPlace.ts).
+  const place = usePlace();
+  const [keptAt] = useState(() => {
+    const kept = place?.values.get('reader') as ReaderAt | undefined;
+    return kept?.id === id ? kept : null;
+  });
+  const restoring = useRef(keptAt);
+  useEffect(() => void place?.values.delete('reader'), [place]);
+  useOnLeave(() => {
+    const at = scroller.current ? readerAt(scroller.current, id) : null;
+    if (at) place?.values.set('reader', at);
+  });
   useLayoutEffect(() => {
     if (scroller.current) scroller.current.scrollTop = 0;
   }, [id]);
@@ -345,14 +359,60 @@ function Swap({id, travel, anchor = null, children}: {id: number; travel: Travel
   useLayoutEffect(() => {
     const box = scroller.current;
     const email = anchor === null ? null : box?.querySelector<HTMLElement>(`.cv > [data-email="${anchor}"]`);
-    if (!box || !email || email === box.querySelector('.cv > [data-email]')) return;
+    if (restoring.current || !box || !email || email === box.querySelector('.cv > [data-email]')) return;
     box.scrollTop += email.getBoundingClientRect().top - box.getBoundingClientRect().top - 8;
   }, [id, anchor]);
+  // A kept place is reached as the email's parts (its frames, the conversation) take their height,
+  // until it's there or the user scrolls first.
+  useLayoutEffect(() => {
+    const box = scroller.current;
+    const content = swap.current;
+    if (!keptAt || !box || !content) return;
+    const reach = () => {
+      if (!restoring.current || restoring.current.id !== id) return stop();
+      if (backTo(box, restoring.current)) stop();
+    };
+    const resized = new ResizeObserver(reach);
+    const stop = () => {
+      restoring.current = null;
+      resized.disconnect();
+      listening();
+    };
+    const listening = onUserScroll(box, stop);
+    resized.observe(content);
+    reach();
+    return stop;
+  }, [keptAt, id]);
   return (
     <div className="rd-scroll" ref={scroller}>
-      <div key={id} className="rd-swap" data-swap={moved ? travel ?? 'fade' : undefined}>{children}</div>
+      <div key={id} ref={swap} className="rd-swap" data-swap={moved ? travel ?? 'fade' : undefined}>{children}</div>
     </div>
   );
+}
+
+/** How far the reader was read: into which of the conversation's emails, and how far into it. */
+interface ReaderAt {
+  id: number;
+  email: string | null;
+  into: number;
+}
+
+
+function readerAt(box: HTMLElement, id: number): ReaderAt | null {
+  if (box.scrollTop <= 0) return null;
+  const top = box.getBoundingClientRect().top;
+  const emails = [...box.querySelectorAll<HTMLElement>('.cv > [data-email]')];
+  const email = emails.find(one => one.getBoundingClientRect().bottom > top) ?? null;
+  return email ? {id, email: email.dataset.email!, into: top - email.getBoundingClientRect().top} : {id, email: null, into: box.scrollTop};
+}
+
+/** Scrolls the reader to a kept place, as far as it can yet: whether it got there. */
+function backTo(box: HTMLElement, at: ReaderAt): boolean {
+  const email = at.email === null ? null : box.querySelector<HTMLElement>(`.cv > [data-email="${CSS.escape(at.email)}"]`);
+  if (at.email !== null && !email) return false;
+  const target = email ? box.scrollTop + email.getBoundingClientRect().top - box.getBoundingClientRect().top + at.into : at.into;
+  box.scrollTop = target;
+  return Math.abs(box.scrollTop - target) < 1;
 }
 
 /** The email alone, for a pane on another page. Reading it here turns nothing read. */

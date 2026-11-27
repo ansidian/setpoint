@@ -40,6 +40,7 @@ import type {
 } from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useKept, useKeptScroll} from '../keptPlace.ts';
 import type {CSSProperties, MouseEvent as ReactMouseEvent, RefObject} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {getCached, refresh, useResource, useResources} from '../../api/client.ts';
@@ -154,7 +155,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const listFailed = useLoadFailed([listLoad]);
   const listArrived = useArrival(latest !== null, view);
 
-  const [hold, setHold] = useState<Hold>(() => ({path, stale: getCached(path), held: null, known: new Map(), from: null}));
+  // The visit's held list, kept with the page so the rows don't reshuffle under a kept scroll.
+  const [hold, setHold] = useKept<Hold>('hold', () => ({path, stale: getCached(path), held: null, known: new Map(), from: null}));
   let current: Hold = hold.path === path ? hold : {path, stale: getCached(path), held: null, known: new Map(), from: null};
   if (latest && current.held === null && data !== current.stale) current = {...current, held: {layout: latest.layout}};
   if (latest && current.from !== latest) current = {...current, known: new Map([...current.known, ...latest.rows]), from: latest};
@@ -163,7 +165,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
 
   // The recap held for the visit, from All's first answer of it, across the sections. Undefined
   // until that answer, while the cache's is drawn.
-  const [recapHold, setRecapHold] = useState<{stale: unknown; from: RecapOut | null | undefined; held: HeldRecap | null | undefined}>(() => ({stale: getCached(NEWS_PATH), from: undefined, held: undefined}));
+  const [recapHold, setRecapHold] = useKept<{stale: unknown; from: RecapOut | null | undefined; held: HeldRecap | null | undefined}>('recap', () => ({stale: getCached(NEWS_PATH), from: undefined, held: undefined}));
   let recapNow = recapHold;
   if (view === 'all' && latest && data !== recapNow.stale && latest.recap !== recapNow.from) recapNow = {...recapNow, from: latest.recap, held: holdRecap(recapNow.held, latest.recap)};
   if (recapNow !== recapHold) setRecapHold(recapNow);
@@ -177,7 +179,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const search = useNewsSearch();
   const searching = search.active;
   // The phone's search, from a tap on its field until Cancel, which empties the field and leaves it.
-  const [finding, setFinding] = useState(false);
+  const [finding, setFinding] = useKept('finding', false);
   const phoneFinding = phone && (finding || searching);
   const leaveSearch = () => {
     search.clear();
@@ -193,7 +195,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   }, [known, loose, found]);
   const shown: Layout = useMemo(() => (searching ? [{key: SEARCH_SHELF, ids: found.map(story => story.id), more: 0}] : layout), [searching, found, layout]);
   // The visit's dots: each story's on arrival, kept once seen.
-  const [visit, setVisit] = useState<{from: ReadonlyMap<number, StoryRowOut> | null; dots: VisitDots}>({from: null, dots: new Map()});
+  const [visit, setVisit] = useKept<{from: ReadonlyMap<number, StoryRowOut> | null; dots: VisitDots}>('dots', {from: null, dots: new Map()});
   let dots = visit.dots;
   if (visit.from !== rows) {
     dots = visitDots(visit.dots, rows.values());
@@ -202,6 +204,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const pending = held && latest ? waiting(held.layout, latest.layout, latest.rows) : null;
   const pill = pending ? pillParts(pending) : null;
   const list = useRef<HTMLDivElement>(null);
+  // The list's scroll comes back with the page, once its rows (or the kept search's) are there.
+  useKeptScroll('list', () => list.current, searching ? search.out !== null : latest !== null);
   // The rows N brought onto the list, settling in from `sub2` for a moment.
   const [arrived, setArrived] = useState<ReadonlySet<number>>(() => new Set());
   const takeNew = () => {
@@ -240,7 +244,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   // The story rows J and K move through, and after them Also reported's, which open their article, never the pane.
   const storyKeys = useMemo(() => shown.flatMap(shelf => shelf.ids.filter(id => rows.has(id)).map(id => storyKey(shelf.key, id))), [shown, rows]);
   const keys = useMemo(() => [...storyKeys, ...also.map(one => storyKey(ALSO_SHELF, one.story_id))], [storyKeys, also]);
-  const [cursor, setCursor] = useState<string | null>(null);
+  const [cursor, setCursor] = useKept<string | null>('cursor', null);
   const open = route.story;
   const [openKey, setOpenKey] = useState<string | null>(null);
   const shownOpenKey = open === null ? null : openKey !== null && keyStory(openKey) === open && storyKeys.includes(openKey) ? openKey : storyKeys.find(key => keyStory(key) === open) ?? null;
@@ -266,7 +270,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
     return () => {
       live = false;
     };
-  }, [open]);
+  }, [open, setVisit]);
   const looked = open === null ? null : dots.get(open)?.looked ?? lookedAt(opened?.id === open ? opened.before : null);
   useEffect(() => () => {
     lastOpened = null;

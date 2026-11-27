@@ -18,6 +18,7 @@ import {searchChipRemoved, searchMail, searchOpened, searchSuggestion, searchSug
 import type {SearchQuery, SearchScope} from '../../api/search.ts';
 import {alfredQuestion, asksForSuggestion, foldFor, isSearching, sameSuggestion, standsForWords, suggestionKey, toggledFold, typedAfter, wordsBack} from '../../logic/search.ts';
 import type {LeftOut, MentionsFold} from '../../logic/search.ts';
+import {useOnLeave, usePlace} from '../keptPlace.ts';
 import {TYPING_MS} from './state.ts';
 import type {SearchFieldState, Settled} from './state.ts';
 
@@ -64,17 +65,40 @@ interface LeftRows extends LeftOut<SearchResultOut> {
 
 const atField = (at: FieldAt | null, chips: SearchChip[], text: string) => at !== null && at.chips === chips && at.text.trim() === text.trim();
 
-/** Mail's search under the header. A `plain` one (the phone's) leaves the words as typed, never chips. */
-export function useSearch(plain = false, scope: SearchScope = {}): Search {
+/** A search as its page was left, kept in the page's place (app/keptPlace.ts). A suggestion showing isn't kept. */
+interface KeptSearch {
+  chips: SearchChip[];
+  text: string;
+  out: SearchOut;
+  results: SearchResultOut[];
+  fold: MentionsFold | null;
+  left: LeftRows | null;
+  landed: FieldAt | null;
+  declined: Set<string>;
+  typed: string | null;
+  keptTyped: string;
+  keptUndated: string;
+}
+
+// The most a search asks again for at once, as the server allows.
+const MOST_AT_ONCE = 200;
+
+/**
+ * Mail's search under the header. A `plain` one (the phone's) leaves the words as typed, never chips.
+ * A `kept` one comes back with its page: its field and results at once, then asked again in place.
+ */
+export function useSearch(plain = false, scope: SearchScope = {}, keep = false): Search {
   // The latest render's, for every request.
   const scoped = useRef(scope);
   useLayoutEffect(() => {
     scoped.current = scope;
   });
-  const [chips, setChips] = useState<SearchChip[]>([]);
-  const [text, setTextState] = useState('');
-  const [out, setOut] = useState<SearchOut | null>(null);
-  const [results, setResults] = useState<SearchResultOut[]>([]);
+  const place = usePlace();
+  const [kept] = useState(() => (keep ? place?.values.get('search') as KeptSearch | undefined : undefined));
+  const [chips, setChips] = useState<SearchChip[]>(kept?.chips ?? []);
+  const [text, setTextState] = useState(kept?.text ?? '');
+  const [out, setOut] = useState<SearchOut | null>(kept?.out ?? null);
+  const [results, setResults] = useState<SearchResultOut[]>(kept?.results ?? []);
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<SearchSuggestionOut | null>(null);
   // The latest request, so an older answer never replaces a newer one.
@@ -89,8 +113,8 @@ export function useSearch(plain = false, scope: SearchScope = {}): Search {
   // to want, and its rows would land under the new answer's.
   const listedBy = useRef(0);
   // The list's answer as it last came, and the field it answers.
-  const shown = useRef<SearchOut | null>(null);
-  const landed = useRef<FieldAt | null>(null);
+  const shown = useRef<SearchOut | null>(kept?.out ?? null);
+  const landed = useRef<FieldAt | null>(kept?.landed ?? null);
   // The words' answer on its way, which a suggestion waits for: it speaks of the list on screen.
   const wordsIn = useRef<Promise<unknown>>(Promise.resolve());
   // The pause before a suggestion, the suggestion on its way, and the one showing.
@@ -98,13 +122,13 @@ export function useSearch(plain = false, scope: SearchScope = {}): Search {
   const suggesting = useRef<AbortController | null>(null);
   const offered = useRef<SearchSuggestionOut | null>(null);
   // The text a suggestion was turned down for, by taking its chip off, for as long as the page stays.
-  const declined = useRef(new Set<string>());
+  const declined = useRef(kept?.declined ?? new Set<string>());
   // The whole search in the order typed, for Alfred. Null once an edit lost it.
-  const typed = useRef<string | null>('');
+  const typed = useRef<string | null>(kept ? kept.typed : '');
   // The words the chips' "more" number counts from: a suggestion's `typed`, and what's typed after it.
   // And the same less the words a date chip stands for, which × gives back only with the date.
-  const keptTyped = useRef('');
-  const keptUndated = useRef('');
+  const keptTyped = useRef(kept?.keptTyped ?? '');
+  const keptUndated = useRef(kept?.keptUndated ?? '');
 
   function answer(id: number, query: SearchQuery, at: FieldAt): Promise<SearchOut | null> {
     return searchMail({...query, scope: scoped.current}).then(found => {
@@ -212,12 +236,12 @@ export function useSearch(plain = false, scope: SearchScope = {}): Search {
     });
   }
 
-  const [fold, setFold] = useState<MentionsFold | null>(null);
+  const [fold, setFold] = useState<MentionsFold | null>(kept?.fold ?? null);
   const current = foldFor(fold, out);
   if (current !== fold) setFold(current);
   const answering = JSON.stringify([out?.chips, out?.text]);
 
-  const [left, setLeft] = useState<LeftRows | null>(null);
+  const [left, setLeft] = useState<LeftRows | null>(kept?.left ?? null);
   if (left && left.answering !== answering) setLeft(null);
   const shownLeft = left?.answering === answering ? left : null;
   const leftPaging = useRef<number | null>(null);
@@ -235,6 +259,31 @@ export function useSearch(plain = false, scope: SearchScope = {}): Search {
       merge(now => ({...now, open: false}));
     });
   }
+
+  // Kept, it's asked again for as many as it showed, under its own log entry: rows that changed
+  // meanwhile take their place, and those gone leave.
+  useEffect(() => {
+    if (!kept) return;
+    const id = ++latest.current;
+    const again = kept.out.reading ? {read: 'kept' as const, typed: kept.out.reading.typed} : {};
+    const limit = Math.min(MOST_AT_ONCE, Math.max(kept.results.length, 1));
+    searchMail({text: kept.out.text, chips: kept.out.chips, ...again, page: {search_id: kept.out.search_id, offset: 0, limit}, scope: scoped.current}).then(found => {
+      if (id !== latest.current) return;
+      shown.current = found;
+      listedBy.current = id;
+      setOut(found);
+      setResults(found.results);
+    }, () => {});
+  }, [kept]);
+
+  // What a page that's left keeps: a search with its answer.
+  useOnLeave(() => {
+    if (!keep || !place) return;
+    if (!out || !isSearching(chips, text)) return void place.values.delete('search');
+    place.values.set('search', {
+      chips, text, out, results, fold, left, landed: landed.current, declined: declined.current, typed: typed.current, keptTyped: keptTyped.current, keptUndated: keptUndated.current,
+    } satisfies KeptSearch);
+  });
 
   useEffect(() => () => {
     window.clearTimeout(timer.current);

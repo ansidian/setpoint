@@ -1,9 +1,12 @@
 // The address bar as the app's route (logic/route.ts has the paths): history.pushState
 // and a store React reads with useSyncExternalStore.
 import {useSyncExternalStore} from 'react';
+import {wayIn} from '../logic/keptPlace.ts';
+import type {PlacePage} from '../logic/keptPlace.ts';
 import {parseRoute, routePath} from '../logic/route.ts';
 import type {Route} from '../logic/route.ts';
 import {rememberedMode} from './calendar/mode.ts';
+import {dropPlace, keepAddress, keptAddress} from './keptPlace.ts';
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach(listener => listener());
@@ -24,6 +27,7 @@ export function currentRoute(): Route {
   if (here !== lastAddress) {
     lastAddress = here;
     lastRoute = parseRoute(window.location.pathname, window.location.search);
+    keepAddress(lastRoute);
   }
   return lastRoute;
 }
@@ -54,13 +58,25 @@ function withView(route: Route): Route {
 
 /**
  * `overList` marks the entry as one the app's Back leaves with the history's Back (logic/phone.ts's
- * readerStep): the list it was opened from is the entry under it.
+ * readerStep): the list it was opened from is the entry under it. Arriving at another page drops the
+ * place it kept (app/keptPlace.ts), unless `kept` says this is a way back to it (`goTo`).
  */
-export function navigate(route: Route, {replace = false, overList = false} = {}) {
+export function navigate(route: Route, {replace = false, overList = false, kept = false} = {}) {
   const path = routePath(withView(route));
   if (path === address()) return;
+  if (!kept && route.page !== currentRoute().page) dropPlace(route.page);
   window.history[replace ? 'replaceState' : 'pushState'](overList ? {overList: true} : null, '', path);
   notify();
+}
+
+/**
+ * A page's way in (its link, number key, palette or phone tab): its kept place, or from the page
+ * itself its fresh start (logic/keptPlace.ts).
+ */
+export function goTo(page: PlacePage) {
+  const {route, fresh} = wayIn(page, currentRoute(), keptAddress(page));
+  if (fresh) dropPlace(page);
+  navigate(route, {kept: true});
 }
 
 /** Whether the entry showing was marked by navigate's `overList`. */

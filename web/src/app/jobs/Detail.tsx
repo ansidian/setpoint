@@ -260,7 +260,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
         {/* Before it's read, only the location: nothing else is claimed, "Salary not stated" least of all. */}
         <JdFacts posting={saved} location={location} reading={hasReading(saved)} />
         <JdLists posting={saved} />
-        <FullPosting ref={posting} posting={saved} title={titleOf(detail)} company={detail.company} timeZone={timeZone} today={today} arrived={unfolded} />
+        <FullPosting ref={posting} keptAs={`posting:${detail.id}`} posting={saved} title={titleOf(detail)} company={detail.company} timeZone={timeZone} today={today} arrived={unfolded} />
       </>
     );
   }

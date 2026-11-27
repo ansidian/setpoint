@@ -96,15 +96,15 @@ import {InboxDay, PANE_PATHS} from './InboxDay.tsx';
 import type {Travel} from './Reader.tsx';
 import {useCommands} from './palette/commands.ts';
 import type {Command} from './palette/commands.ts';
-import {back as historyBack, navigate, overList} from './router.ts';
+import {back as historyBack, goTo, navigate, overList} from './router.ts';
 import {AnswerCard} from './search/AnswerCard.tsx';
 import {SearchField, SearchResults} from './search/Search.tsx';
 import {LoadFailed, useAfter, useArrival, useLoadFailed} from './states/Loading.tsx';
 import {AllSkeleton, SearchSkeleton} from './states/Skeletons.tsx';
 import {skeleton} from '../tokens.ts';
+import {useKept, useKeptOpen, useKeptScroll} from './keptPlace.ts';
 import {useSearch} from './search/mailSearch.ts';
 import {alfredOf, closeAlfred, startAlfred, useAlfredThread, useClaim} from './search/alfred.ts';
-import {toInbox} from './toInbox.ts';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
 import {EmptyView} from './EmptyView.tsx';
 
@@ -195,7 +195,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // Undo, or a refused Trash, lets one back.
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
   const untrashing = (id: number) => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
-  const search = useSearch(phone, WITH_SENT);
+  const search = useSearch(phone, WITH_SENT, true);
   // Alfred's thread from search shows above the results while the search is active; elsewhere it's in
   // Alfred's window, or the phone's pill and sheet (search/alfred.ts).
   // The place is claimed before any question, so a thread asked here never shows in the window first.
@@ -211,13 +211,13 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const waitedLong = useAfter(firstWait, skeleton.delayMs);
 
   // All's pages: the first, then one more each time the list nears its end.
-  const [befores, setBefores] = useState<string[]>([]);
+  const [befores, setBefores] = useKept<string[]>('befores', []);
   const allPaths = [allPath(), ...befores.map(before => allPath(before))];
   const allPages = useResources<AllOut>(allPaths);
   const {error: allError} = useResource<AllOut>(allPath());
   const allRows = useMemo(() => allPages.flatMap(page => page?.days.flatMap(day => day.rows) ?? []).filter(row => !trashing.has(row.id)), [allPages, trashing]);
   // The days whose Noise the user opened here. Each starts folded.
-  const [noiseOpen, setNoiseOpen] = useState<ReadonlySet<string>>(new Set());
+  const [noiseOpen, setNoiseOpen] = useKept<ReadonlySet<string>>('noise', () => new Set());
   const toggleNoise = (date: string) => setNoiseOpen(dates => (dates.has(date) ? new Set([...dates].filter(one => one !== date)) : new Set(dates).add(date)));
   const loadMore = () => {
     const next = allPages.at(-1)?.next_before;
@@ -287,7 +287,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     [searching, sections, dayViews, shelf, attention]);
   // The cursor, kept with the stops it was set among, so when the list changes it lands on the stop
   // that took its place.
-  const [track, setTrack] = useState<{stops: Stop[]; cursor: string | null}>({stops, cursor: null});
+  const [track, setTrack] = useKept<{stops: Stop[]; cursor: string | null}>('cursor', {stops, cursor: null});
   let cursor = track.cursor;
   if (track.stops !== stops) {
     cursor = keepCursor(track.stops, stops, track.cursor);
@@ -439,6 +439,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // was opened at another (an Alfred citation, a notification).
   const listedOpen = open === null ? null : latestRows.has(open) || unreadRows.has(open) || search.listed.some(row => row.id === open) ? open
     : rowHolding([...latestRows.values(), ...search.listed], open)?.id ?? open;
+  // A kept email that left the list meanwhile comes back closed.
+  useKeptOpen(open, id => latestRows.has(id) || unreadRows.has(id) || rowHolding([...latestRows.values(), ...search.listed], id) !== undefined || search.listed.some(row => row.id === id),
+    searching ? search.out !== null : ready && !allPages.some(page => page === undefined), () => navigate({...route, open: null}, {replace: true}));
   // What H, E and P act on: the open conversation, else the row under the cursor.
   const target = listedOpen ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
   // A conversation's row, from the open one or the list it's in (the Inbox's, a day's, Unread's or search's).
@@ -870,10 +873,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
         else if (target !== null) run(() => answerOn(target, cursorStop?.kind === 'row' && cursorStop.id === target ? cursorStop.key : undefined, kind), hint);
       } else if (plainKey(event, 'i', {shift: true}) && view !== 'attention') run(actions.markAllRead, 'shift+i');
       else if (plainKey(event, 'u', {shift: true})) run(actions.markUnread);
-      // U goes to the next unread email. 1, the Inbox's key elsewhere, goes back to All from a
-      // search, another view or on the phone.
+      // U goes to the next unread email. 1, the Inbox's key elsewhere, goes to its fresh start.
       else if (plainKey(event, 'u') && !searching) run(actions.toUnread);
-      else if (plainKey(event, '1') && (searching || phone || view !== 'all')) run(() => navigate(toInbox()));
+      else if (plainKey(event, '1')) run(() => goTo('inbox'));
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
         else if (open !== null && answersOpen(openComposer()?.messageId) && !openComposer()?.floating) run(closeComposer);
@@ -911,6 +913,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // The view has nothing in it, and nothing more to come: its empty state shows, and there's nothing to Select.
   const emptied = Boolean(shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before));
   const selectedSet = useMemo(() => new Set(selected), [selected]);
+  // The list's scroll comes back with the page, once its rows (or the kept search's) are there.
+  useKeptScroll('list', () => document.querySelector<HTMLElement>('.main > .content > .list'), searching ? search.out !== null : ready && !allMore);
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Failed to unpin'));
 
   /**

@@ -23,6 +23,7 @@
 // Discard (not one being sent), which a full swipe runs, with Undo in the toast. Nothing selects.
 import type {DraftOut, DraftRowOut, DraftsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useKept, useKeptScroll} from '../keptPlace.ts';
 import type {CSSProperties, MouseEvent as ReactMouseEvent, ReactNode} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
@@ -104,7 +105,8 @@ export function DraftsPage({route}: {route: DraftsRoute}) {
   const stops = useMemo(() => rows.map((row): Stop => ({key: `draft:${row.id}`, kind: 'row', group: 'all', id: row.id})), [rows]);
   const failed = useLoadFailed([load]);
   const composer = useOpenComposer();
-  const [cursor, setCursor] = useState<number | null>(null);
+  const [cursor, setCursor] = useKept<number | null>('cursor', null);
+  useKeptScroll('list', () => document.querySelector<HTMLElement>('.drafts-list'), listed !== undefined, 'id');
   const shown = route.open;
   // The drafts ⌘ or Ctrl-click and ⇧-click selected: those still listed, in the list's order.
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
