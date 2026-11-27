@@ -1,6 +1,7 @@
-/* The composer, in the reading pane under its email: the email keeps the pane's top and scrolls,
-   the composer takes up to 70% of the height under it and scrolls as one past that (fields, body
-   and quote), its format row held at its foot. It slides up 12 px over a pane's 180 ms as it opens (DESIGN.md › Motion). */
+/* The composer, in the reading pane at the conversation's foot (ConversationStack.tsx): it scrolls
+   with the conversation as part of the pane's one scroll, its format row held at the pane's foot
+   while the composer is in view. A new message's pane has the composer to itself, and it slides up
+   12 px over a pane's 180 ms as it opens (DESIGN.md › Motion). */
 /* The composer is mounted once, in a host its places take in turn (place.ts). The place and the host
    draw no box of their own, so the composer lays out as the pane's or the window's own child. */
 .cmp-place, .cmp-host { display: contents; }
@@ -10,6 +11,9 @@
 .pane > .rd-scroll:has(+ .cmp-place) { flex-basis: 30%; }
 /* A new message, or a new message's draft, has the pane to itself. */
 .pane.writing > .cmp-place .composer { flex: 1 1 auto; max-height: none; border-top: none; }
+/* At the conversation's foot the composer is no scroller of its own: one would take the wheel over
+   it and hold the pane still, leaving Send out of reach under a long email. */
+.cv-foot .composer { overflow: visible; overscroll-behavior: auto; }
 
 /* Popped out: windows along the main area's foot, 16 px in from its bottom right corner, lined up
    leftward (placed by ComposerWindows). The row's top stays under the reading pane's tools, and
