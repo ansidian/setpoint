@@ -1,7 +1,8 @@
 // Find in email with the app around it, on the seed's cabin conversation:
 // - ⌘F with an email open searches that email: a match in a collapsed email, inside an HTML email's
-//   frame and in its folded quoted history opens what holds it and is marked and in view; Esc folds
-//   back what it opened and gives the field back to the Inbox
+//   frame and in the oldest email's folded quoted history opens what holds it and is marked and in
+//   view, while a newer email's folded quote, which repeats the emails above it, finds nothing; Esc
+//   folds back what it opened and gives the field back to the Inbox
 // - `/` with an email open, and ⌘F with none open, search the Inbox
 // - the field's focus dims the page around its scope, and a click on a dimmed part ends it and does
 //   what it does
@@ -20,7 +21,10 @@ after(cleanUp);
 
 const SUBJECT = 'Re: Cabin weekend in November';
 
-/** Theo's cabin conversation, his "board games" email an HTML reply over a Gmail quote that asks for a thermos. */
+/**
+ * Theo's cabin conversation, his "board games" email an HTML reply over a Gmail quote that asks for a
+ * thermos, and its first email an HTML one over a forwarded note about a hammock.
+ */
 async function cabin(setpoint: Setpoint): Promise<{latest: MessageRowOut; ids: number[]}> {
   const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
   const latest = all.days.flatMap(day => day.rows).find(row => row.from_name === 'Theo Walsh')!;
@@ -30,6 +34,8 @@ async function cabin(setpoint: Setpoint): Promise<{latest: MessageRowOut; ids: n
     database.exec('PRAGMA busy_timeout = 5000');
     database.prepare('UPDATE message_bodies SET body_html = ? WHERE message_id = ?').run(
       '<div dir="ltr">Got it, thanks. Could you bring the board games and a cooler?</div><div class="gmail_quote"><div class="gmail_attr">On Mon, Sep 29, 2026 at 12:15 PM User wrote:</div><blockquote class="gmail_quote">Should I bring anything? I have a thermos.</blockquote></div>', ids[4]!);
+    database.prepare('UPDATE message_bodies SET body_html = ? WHERE message_id = ?').run(
+      '<div dir="ltr">Passing this on for the weekend.</div><div class="gmail_quote"><div class="gmail_attr">On Fri, Sep 26, 2026 at 9:02 AM Mara wrote:</div><blockquote class="gmail_quote">The cabin has a hammock on the porch.</blockquote></div>', ids[0]!);
   } finally {
     database.close();
   }
@@ -91,12 +97,16 @@ test('⌘F with an email open searches it: a match in a collapsed email, in an H
     assert.equal(await focused(page), `Search ${SUBJECT}`, 'Enter keeps the keys');
     assert.equal(await dim(page), 'email');
 
-    // Only in the HTML email's folded history: it opens to the email's whole page.
+    // Only in a newer email's folded quote, which repeats the emails above it: nothing.
     await page.keyboard.press('Meta+a');
     await page.keyboard.type('thermos');
+    await until('the count', () => count(page), line => line === 'No matches');
+    // Only in the oldest email's folded history: it opens to the email's whole page.
+    await page.keyboard.press('Meta+a');
+    await page.keyboard.type('hammock');
     await until('the count', () => count(page), line => line === '1 of 1');
-    await until('the whole email', () => page.locator(`.cv-mail[data-email="${ids[4]}"] iframe.mailframe`).getAttribute('src'), src => src === `/api/mail/messages/${ids[4]}/body?images=hide`);
-    await until('the history\'s match marked and in view', () => frameMatch(page, ids[4]!), match => match?.text === 'thermos' && match.shown);
+    await until('the whole email', () => page.locator(`.cv-mail[data-email="${ids[0]}"] iframe.mailframe`).getAttribute('src'), src => src === `/api/mail/messages/${ids[0]}/body?images=hide`);
+    await until('the history\'s match marked and in view', () => frameMatch(page, ids[0]!), match => match?.text === 'hammock' && match.shown);
 
     await page.keyboard.press('Escape');
     await until('folded back', () => shape(page), shown => shown === folded);

@@ -23,7 +23,8 @@
 // files on screen, and what's folded by its text. A collapsed email and a folded quoted history
 // count their matches unseen and open when find steps onto one. An HTML email's folded history is
 // counted from its whole page in a frame that isn't shown, less what the folded page shows, asked
-// for once while find is on.
+// for once while find is on. In a conversation only the oldest email's folded history counts: a
+// newer one's repeats the emails above it (logic/find.ts › findsQuoted).
 import type {AccountOut, FromOut, ItemKind, MailConversationOut, MessageOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';
 import type {MouseEvent} from 'react';
@@ -50,7 +51,7 @@ import {EmailSheetButton} from './phone/ReaderBar.tsx';
 import {usePhone} from './Phone.tsx';
 import {QuotedHistory} from './QuotedHistory.tsx';
 import {Marked} from './search/Search.tsx';
-import {countFinds, findWords} from '../logic/find.ts';
+import {countFinds, findsQuoted, findWords} from '../logic/find.ts';
 import {registerFold, useFind} from './search/find.ts';
 import {toastFailure} from './toast.ts';
 import {useKept} from './keptPlace.ts';
@@ -100,11 +101,12 @@ export function ConversationStack({conversation, accounts, now, timeZone, marks,
   const reply = !windowed && !conversation.draft ? answered : undefined;
   return (
     <div className="cv">
-      {emails.map(email => {
+      {emails.map((email, position) => {
         const opened = email.id === conversation.opened_id;
+        const quoted = findsQuoted(position, emails.length);
         return expanded(email)
-          ? <ExpandedEmail key={email.id} email={email} opened={opened} accounts={accounts} now={now} timeZone={timeZone} marks={marks} from={from} onCollapse={() => toggle(email.id, false)} onCard={onCard} />
-          : <CollapsedEmail key={email.id} email={email} opened={opened} accounts={accounts} now={now} timeZone={timeZone} onExpand={() => toggle(email.id, true)} />;
+          ? <ExpandedEmail key={email.id} email={email} opened={opened} accounts={accounts} now={now} timeZone={timeZone} marks={marks} from={from} findQuoted={quoted} onCollapse={() => toggle(email.id, false)} onCard={onCard} />
+          : <CollapsedEmail key={email.id} email={email} opened={opened} accounts={accounts} now={now} timeZone={timeZone} findQuoted={quoted} onExpand={() => toggle(email.id, true)} />;
       })}
       {(docked || draft || reply) && (
         <div className="cv-foot">
@@ -140,23 +142,25 @@ function headText(email: MessageOut): string {
 }
 
 /** A collapsed email: its avatar, who, a paperclip when it has files and when, then its first words. */
-function CollapsedEmail({email, opened, accounts, now, timeZone, onExpand}: {
+function CollapsedEmail({email, opened, accounts, now, timeZone, findQuoted, onExpand}: {
   email: MailConversationOut['emails'][number];
   opened: boolean;
   accounts: Map<number, AccountOut>;
   now: number;
   timeZone: string;
+  // Whether its folded quoted history counts. Opened, the email shows it folded.
+  findQuoted: boolean;
   onExpand: () => void;
 }) {
   const find = useFind();
   const words = find.open ? findWords(find.text) : '';
   const [inPage, setInPage] = useState(0);
   const count = words ? countFinds(headText(email), words) + email.attachments.reduce((sum, file) => sum + countFinds(file.filename, words), 0)
-    + (email.body_html ? inPage : countFinds(email.body_text, words)) : 0;
+    + (email.body_html ? inPage : countFinds(findQuoted ? email.body_text : splitQuoted(email.body_text).fresh, words)) : 0;
   return (
     <button type="button" className={opened ? 'cv-line opened' : 'cv-line'} data-email={email.id} aria-expanded={false} onClick={onExpand}
       data-find-hidden={`email:${email.id}`} data-find-count={count}>
-      {!!words && !!email.body_html && <MailFrame messageId={email.id} show={false} title={email.subject} counting onCount={setInPage} />}
+      {!!words && !!email.body_html && <MailFrame messageId={email.id} show={false} title={email.subject} fold={!findQuoted && email.quoted_history} counting onCount={setInPage} />}
       <Avatar email={email} accounts={accounts} />
       <span className="lines">
         <span className="top">
@@ -171,7 +175,7 @@ function CollapsedEmail({email, opened, accounts, now, timeZone, onExpand}: {
 }
 
 /** An expanded email: its head and tools, its security facts, its body and its files. */
-function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, onCollapse, onCard}: {
+function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, findQuoted, onCollapse, onCard}: {
   email: MailConversationOut['emails'][number];
   opened: boolean;
   accounts: Map<number, AccountOut>;
@@ -179,6 +183,7 @@ function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, onC
   timeZone: string;
   marks: string[];
   from: FromOut | undefined;
+  findQuoted: boolean;
   onCollapse: () => void;
   onCard: CardAsk;
 }) {
@@ -257,7 +262,7 @@ function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, onC
           </dl>
         </div>
       )}
-      <Body message={email} marks={marks} arrived={false} fold={email.quoted_history ? 'html' : 'text'} findable />
+      <Body message={email} marks={marks} arrived={false} fold={email.quoted_history ? 'html' : 'text'} findable findQuoted={findQuoted} />
     </article>
   );
 }
@@ -267,7 +272,7 @@ function ExpandedEmail({email, opened, accounts, now, timeZone, marks, from, onC
  * after a wait (`arrived`). With `fold`, its quoted history folds behind •••: plain text's as the web
  * finds it, an HTML email's (`html`, when the server found one) by its folded page.
  */
-export function Body({message, marks, arrived, fold, findable = false}: {message: MessageOut; marks: string[]; arrived: boolean; fold?: 'html' | 'text'; findable?: boolean}) {
+export function Body({message, marks, arrived, fold, findable = false, findQuoted = true}: {message: MessageOut; marks: string[]; arrived: boolean; fold?: 'html' | 'text'; findable?: boolean; findQuoted?: boolean}) {
   // "Show" loads this email's images this time. It lasts while it's open.
   const [shown, setShown] = useState(false);
   const [history, setHistory] = useKept(`quoted:${message.id}`, false);
@@ -283,7 +288,8 @@ export function Body({message, marks, arrived, fold, findable = false}: {message
   // An HTML email's folded history: what its whole page holds less what the folded page shows.
   const [whole, setWhole] = useState(0);
   const [folded, setFolded] = useState(0);
-  const hiddenHtml = !!words && fold === 'html' && !history;
+  // A folded history that find skips counts nothing until the user opens it.
+  const hiddenHtml = !!words && fold === 'html' && !history && findQuoted;
   return (
     <div className={arrived ? 'rd-body sk-arrive' : 'rd-body'}>
       {images.bar && (
@@ -305,7 +311,7 @@ export function Body({message, marks, arrived, fold, findable = false}: {message
       ) : quoted?.quoted ? (
         <div className="mailtext">
           {text(quoted.fresh)}
-          <QuotedHistory open={history} onToggle={setHistory} find={!!words && !history ? {key: `quoted:${message.id}`, count: countFinds(quoted.quoted, words)} : undefined}>{text(quoted.quoted)}</QuotedHistory>
+          <QuotedHistory open={history} onToggle={setHistory} find={!!words && !history && findQuoted ? {key: `quoted:${message.id}`, count: countFinds(quoted.quoted, words)} : undefined}>{text(quoted.quoted)}</QuotedHistory>
         </div>
       ) : <div className="mailtext">{text(message.body_text)}</div>}
       <Attachments messageId={message.id} files={message.attachments} />

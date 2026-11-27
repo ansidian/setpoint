@@ -2,7 +2,8 @@
 // ⌘F's scope names the email, counts its matches and steps through them with Enter and ⇧Enter,
 // wrapping; Backspace never leaves the scope; Esc gives the field back to the mail search with its
 // words. Over a conversation (ConversationStack.tsx), a match in a collapsed email or a folded
-// quoted history opens it, and Esc folds back only what find opened. The app around it (the keys,
+// quoted history opens it, and Esc folds back only what find opened. A newer email's folded quote,
+// which repeats the emails above it, isn't searched until the user opens it. The app around it (the keys,
 // the dim, the frame, the phone) is findInEmail.spec.ts's.
 import type {ConversationMessageOut, MailConversationOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
@@ -131,4 +132,23 @@ test('a match in a folded quoted history or a collapsed email opens it, and Esc 
   await userEvent.keyboard('{Escape}');
   await expect.poll(shape).toBe('EcEE');
   expect(history()).toBe('Show quoted text');
+});
+
+test('in a conversation find skips a newer email\'s folded quote, the oldest\'s still counting, and one the user opens counts', async () => {
+  const quote = (fresh: string, quoted: string) => `${fresh}\n\nOn Mon, Sep 29, 2026, Ana wrote:\n> ${quoted}`;
+  const emails = [
+    email(1, quote('Bring the cooler?', 'Is there a cooler at the cabin?'), true),
+    email(2, quote('Got it.', 'Bring the cooler?'), false),
+    email(3, quote('Fine by me.', 'Bring the cooler?'), true),
+    email(4, 'I have a cooler.', true),
+  ];
+  const conversation: MailConversationOut = {account_id: 1, thread_id: 't1', subject: SUBJECT, opened_id: 4, row: emails[3]!, emails, draft: null, summary: null};
+  await render(<Reader><ConversationStack conversation={conversation} accounts={new Map()} now={NOW} timeZone={SEED_TIME_ZONE} marks={[]} from={undefined} composer={null} onCard={vi.fn()} /></Reader>);
+  selectSearch('email');
+  await userEvent.keyboard('cooler');
+  // Email 1's words and its quote, and email 4's: email 2's and 3's quotes repeat email 1.
+  await expect.poll(count).toBe('1 of 3');
+  // The user opens email 3's quote, and its words are on screen to count.
+  await userEvent.click(document.querySelector<HTMLButtonElement>('.cv-mail[data-email="3"] .quoted > button')!);
+  await expect.poll(count).toMatch(/ of 4$/);
 });

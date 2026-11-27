@@ -89,6 +89,14 @@ export function findRuns(text: string, query: string): Run[] {
 /** How many times the words fall in a text. */
 export const countFinds = (text: string, query: string) => findRuns(text, query).length;
 
+/**
+ * Whether find reads an email's folded quoted history, by its place in its conversation, oldest first.
+ * A newer email's quote repeats the emails above it, so only the oldest's is read: it can hold mail
+ * the conversation doesn't (a cc partway through, a forwarded chain). A quote the user opened is on
+ * screen and is read either way.
+ */
+export const findsQuoted = (position: number, emails: number) => emails < 2 || position === 0;
+
 /** The match after (`1`) or before (`-1`) the current one, wrapping at either end. */
 export function stepFind(current: number, total: number, delta: 1 | -1): number {
   if (total <= 0) return 0;

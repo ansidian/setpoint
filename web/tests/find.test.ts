@@ -1,8 +1,8 @@
 // Find in email's rules (src/logic/find.ts) as tables: the scope a key opens on each page with and
 // without an email open, where the words fall in a text (case, accents and spaces aside, never
-// across a line), how stepping wraps, and how the field's count reads.
+// across a line), how stepping wraps, how the field's count reads, and whose folded quote it reads.
 import {describe, expect, test} from 'vitest';
-import {countFinds, findCount, findRuns, findScope, stepFind} from '../src/logic/find.ts';
+import {countFinds, findCount, findRuns, findScope, findsQuoted, stepFind} from '../src/logic/find.ts';
 import type {Route} from '../src/logic/route.ts';
 
 describe('the scope a key opens', () => {
@@ -75,5 +75,18 @@ describe('the field\'s count', () => {
     [0, 4, '  ', null],
   ])('%i of %i for "%s": %s', (current, total, query, line) => {
     expect(findCount(current, total, query)).toBe(line);
+  });
+});
+
+describe('whose folded quoted history find reads', () => {
+  test.each([
+    [0, 1, true],
+    [0, 2, true],
+    [1, 2, false],
+    [0, 5, true],
+    [3, 5, false],
+    [4, 5, false],
+  ])('the email at %i of %i, oldest first: %s', (position, emails, reads) => {
+    expect(findsQuoted(position, emails)).toBe(reads);
   });
 });
