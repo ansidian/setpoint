@@ -9,8 +9,9 @@
 // Each expanded email has its head (sender, to, time) with its own Reply, Reply all, Forward and More
 // (Add to calendar, Add as task, Ask about this email), its security facts, the images-hidden bar, its
 // body with its quoted history folded behind •••, and its attachments. The foot holds the composer
-// when one is open on any of its emails, else a draft's "Draft" line and the Reply box, which answers
-// the newest email someone else sent.
+// when one is open on any of its emails, else a draft's "Draft" line (R opens it), else the Reply box,
+// which answers the newest email someone else sent. With a composer popped out on it, neither: the
+// foot is gone.
 //
 // On the phone each expanded email has one ••• in place of its tools, a finger's size, opening a
 // bottom sheet of Reply, Reply all, Forward, Add to calendar and Add as task (phone/ReaderBar.tsx ›
@@ -39,7 +40,7 @@ import {Icon} from '../ui/Icon.tsx';
 import {colourVar} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
 import {ComposerSlot} from './compose/Composer.tsx';
-import {openDraft, startComposer} from './compose/composer.ts';
+import {openDraft, startComposer, useComposers} from './compose/composer.ts';
 import type {OpenComposer} from './compose/composer.ts';
 import {copyText, openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
@@ -90,6 +91,12 @@ export function ConversationStack({conversation, accounts, now, timeZone, marks,
   const answering = composer && !composer.floating && composer.messageId !== null && byId.has(composer.messageId) ? composer.messageId : null;
   const target = replyTarget(emails);
   const answered = target !== null ? byId.get(target) : undefined;
+  // A composer popped out on one of its emails is the answer already open, and its ✕ puts it back
+  // here, so the foot offers neither the Draft line nor a second Reply.
+  const windowed = useComposers().some(one => one.floating && one.messageId !== null && byId.has(one.messageId));
+  const docked = answering !== null && !phone;
+  const draft = !windowed ? conversation.draft : null;
+  const reply = !windowed && !conversation.draft ? answered : undefined;
   return (
     <div className="cv">
       {emails.map(email => {
@@ -98,23 +105,21 @@ export function ConversationStack({conversation, accounts, now, timeZone, marks,
           ? <ExpandedEmail key={email.id} email={email} opened={opened} accounts={accounts} now={now} timeZone={timeZone} marks={marks} from={from} onCollapse={() => toggle(email.id, false)} onCard={onCard} />
           : <CollapsedEmail key={email.id} email={email} opened={opened} accounts={accounts} now={now} timeZone={timeZone} onExpand={() => toggle(email.id, true)} />;
       })}
-      <div className="cv-foot">
-        {/* On the phone the composer is in its own sheet, over the reader. */}
-        {answering !== null && !phone ? <ComposerSlot open={composer} messageId={answering} /> : (
-          <>
-            {conversation.draft && (
-              <button type="button" className="cv-draft" onClick={() => openDraft(conversation.draft!.id)}>
-                <Icon name="draft" size={16} /><span className="drafted">Draft</span><span className="words">Open the reply you started</span>
-              </button>
-            )}
-            {answered && (
-              <button type="button" className="cv-reply" data-hint="r" onClick={() => startComposer({kind: 'reply', message_id: answered.id})}>
-                <Icon name="reply" size={18} />{answered.sent_only ? 'Reply' : `Reply to ${answered.from_name}`}{!phone && <span className="kbd">R</span>}
-              </button>
-            )}
-          </>
-        )}
-      </div>
+      {(docked || draft || reply) && (
+        <div className="cv-foot">
+          {/* On the phone the composer is in its own sheet, over the reader. */}
+          {docked ? <ComposerSlot open={composer} messageId={answering} /> : draft ? (
+            // A draft stands in for the Reply box, R and all: replying again would start a second answer.
+            <button type="button" className="cv-draft" data-hint="r" onClick={() => openDraft(draft.id)}>
+              <Icon name="draft" size={16} /><span className="drafted">Draft</span><span className="words">Open the reply you started</span>{!phone && <span className="kbd">R</span>}
+            </button>
+          ) : reply && (
+            <button type="button" className="cv-reply" data-hint="r" onClick={() => startComposer({kind: 'reply', message_id: reply.id})}>
+              <Icon name="reply" size={18} />{reply.sent_only ? 'Reply' : `Reply to ${reply.from_name}`}{!phone && <span className="kbd">R</span>}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
