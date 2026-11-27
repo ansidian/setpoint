@@ -1,7 +1,7 @@
 // The shell's small rules as tables: the Today block and the rail's next-up slot, whether the sidebar
 // is the rail, the tab title, the routes, a plain-text body's paragraphs, what a live event refreshes,
 // and the toast's tone.
-import type {ItemOut, LiveEvent} from '@setpoint/shared';
+import type {CalendarOut, ItemOut, LiveEvent} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE, deepLinkPath} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {paragraphs} from '../src/logic/body.ts';
@@ -10,7 +10,7 @@ import {parseRoute, routePath} from '../src/logic/route.ts';
 import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
 import {sidebarChoice, sidebarChoices, sidebarFoldable, sidebarFolded} from '../src/logic/sidebar.ts';
-import {byTime, nextUp, shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
+import {byTime, nextUp, onListed, shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
 import {TOAST_MS, toastGlyph, toastMs, toastTone} from '../src/logic/toast.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -383,6 +383,30 @@ describe('how long the toast stays', () => {
     ['on the phone, a failure with an action', {tone: 'failed', action: true, phone: true}, TOAST_MS.failed],
     ['on the phone, a confirm', {tone: 'plain', action: true, confirm: true, phone: true}, TOAST_MS.line],
   ] as const)('%s: %s', (_name, toast, ms) => expect(toastMs(toast)).toBe(ms));
+});
+
+// Settings › Calendar's switch leaves a calendar, or Todoist, out of the Today block and the rail's
+// slot as it does out of Calendar. The Calendar sidebar's checkbox is Calendar's own filter.
+describe('the Today block leaves out what Settings › Calendar turns off', () => {
+  const calendar = (id: number, fields: Partial<CalendarOut>): CalendarOut => ({
+    id, provider: 'google', account_id: 1, name: `Calendar ${id}`, colour: 'cool', position: id, visible: true, listed: true, writable: true, command: null, ...fields,
+  });
+  const work = event('Work standup', '2026-10-07T17:00:00.000Z', '2026-10-07T17:30:00.000Z', {calendar_id: 2});
+  const chore = task('Water plants', '2026-10-07', {calendar_id: 3});
+  const items = [dentist, work, chore];
+  const titles = (calendars: CalendarOut[]) => onListed(items, calendars).map(one => one.title);
+  test.each([
+    ['everything listed: all of it', [calendar(1, {}), calendar(2, {}), calendar(3, {provider: 'todoist'})], ['Dentist', 'Work standup', 'Water plants']],
+    ['a Google calendar switched off: its events go', [calendar(1, {}), calendar(2, {listed: false}), calendar(3, {provider: 'todoist'})], ['Dentist', 'Water plants']],
+    ['Todoist switched off: its tasks go', [calendar(1, {}), calendar(2, {}), calendar(3, {provider: 'todoist', listed: false})], ['Dentist', 'Work standup']],
+    ['unchecked in the Calendar sidebar only: it stays', [calendar(1, {}), calendar(2, {visible: false}), calendar(3, {provider: 'todoist'})], ['Dentist', 'Work standup', 'Water plants']],
+  ] as const)('%s', (_name, calendars, expected) => expect(titles([...calendars])).toEqual(expected));
+
+  test('an unlisted calendar\'s event is neither the next event nor the rail\'s slot', () => {
+    const listed = onListed(items, [calendar(1, {}), calendar(2, {listed: false}), calendar(3, {provider: 'todoist'})]);
+    expect(todayBlock(listed, now, zone).event?.title).toBe('Dentist');
+    expect(nextUp(listed, now, zone)?.title).toBe('Dentist');
+  });
 });
 
 // The folded rail's one slot, today's next timed item alike for an event or a task (the seed's

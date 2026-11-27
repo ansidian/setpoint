@@ -2,7 +2,7 @@
 // tasks due today, a timed one with its time ("9:00 AM"). They are in one list by time with the
 // untimed tasks after. Then, under its own Tomorrow label, come tomorrow's events and its open tasks
 // in the same order. Confirmed data only, and nothing for an empty line.
-import type {ItemOut} from '@setpoint/shared';
+import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, localDate, startsIn} from './format.ts';
 import {isOverdue} from './overdue.ts';
 import {completion} from '../tokens.ts';
@@ -76,6 +76,15 @@ export function todayRange(now: number, timeZone: string): {from: string; to: st
 
 /** Where an item sits in a day's time order: an event's start, a timed task's time. Null for an untimed task. */
 export const lineTime = (item: ItemOut): string | null => (item.kind === 'task' ? item.due_at : item.starts_at);
+
+/**
+ * The items of the calendars listed in Settings › Calendar, Todoist's included: one switched off
+ * there is left out here too. The Calendar sidebar's checkbox is Calendar's own filter, so it doesn't count.
+ */
+export function onListed(items: ItemOut[], calendars: readonly Pick<CalendarOut, 'id' | 'listed'>[]): ItemOut[] {
+  const off = new Set(calendars.filter(calendar => !calendar.listed).map(calendar => calendar.id));
+  return off.size ? items.filter(item => !off.has(item.calendar_id)) : items;
+}
 
 /**
  * A day's lines in time order: the timed ones by their time, an event before a task at the

@@ -22,7 +22,7 @@ import {CALENDARS_PATH, completeItem, createSubtask, deleteItem, itemsPath, move
 import type {Entry, FoldRules} from '../logic/fold.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
-import {byTime, DONE_MOMENT_MS, nextUp, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
+import {byTime, DONE_MOMENT_MS, nextUp, onListed, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
 import type {TodayEvent, TodayTask, TomorrowEvent} from '../logic/today.ts';
 import {Burst} from '../ui/Burst.tsx';
 import {Icon, TaskGlyph} from '../ui/Icon.tsx';
@@ -67,7 +67,7 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   const zone = timeZone();
   const range = todayRange(now, zone);
   const {data} = useResource<ItemsOut>(itemsPath(range.from, range.to));
-  const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  const {data: calendars, error: calendarsFailed} = useResource<CalendarOut[]>(CALENDARS_PATH);
   const ring = useRingColour();
   // "3 more due tomorrow" opens every line until the page reloads.
   const [all, setAll] = useState(false);
@@ -79,8 +79,10 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   // whatever the server's list says meanwhile.
   const [ticked, setTicked] = useState<ReadonlyMap<string, {line: TodayTask; at: number}>>(new Map());
 
-  const today = useMemo(() => todayBlock((data?.items ?? []).filter(item => !gone.has(item.key)), now, zone), [data, gone, now, zone]);
-  const next = useMemo(() => (rail ? nextUp((data?.items ?? []).filter(item => !gone.has(item.key)), now, zone) : null), [rail, data, gone, now, zone]);
+  // Settings › Calendar's switched-off calendars and Todoist are left out, as on Calendar.
+  const items = useMemo(() => onListed(data?.items ?? [], calendars ?? []).filter(item => !gone.has(item.key)), [data, calendars, gone]);
+  const today = useMemo(() => todayBlock(items, now, zone), [items, now, zone]);
+  const next = useMemo(() => (rail ? nextUp(items, now, zone) : null), [rail, items, now, zone]);
   const tasks = useMemo(() => {
     const listed: TaskLine[] = today.tasks.filter(task => !ticked.has(task.item.key)).map(task => ({...task, done: false}));
     for (const {line, at} of [...ticked.values()].sort((a, b) => a.at - b.at)) listed.splice(Math.min(at, listed.length), 0, {...line, done: true});
@@ -102,7 +104,8 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   const lines = [...(today.event ? [today.event.item] : []), ...today.tomorrowEvents.map(event => event.item), ...today.tasks.map(task => task.item)];
   const opened = lines.find(item => item.key === openKey) ?? null;
 
-  if (!data) {
+  // Until the calendars come too (or fail), so a switched-off calendar's event never shows for a moment.
+  if (!data || (!calendars && !calendarsFailed)) {
     if (rail) return null;
     return (
       <div className="sb-sec today">
