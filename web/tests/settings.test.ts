@@ -5,7 +5,7 @@ import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   connectFailed, connectNote, DOMAINS_SHOWN, domainTools, todoistConnected, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, fixedLines, ruleDestination, ruleFormStart, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, sendersMatch, wordsMatch,
-  shifts, splitRules, stateTip, taskTime, waitingChoices, waitingTitle, withPatch, withSender,
+  shifts, splitRules, stateTip, taskTime, typedDraft, typedStep, waitingChoices, waitingTitle, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
 const health = (fields: Partial<HealthOut>): HealthOut => ({state: 'healthy', as_of: null, reason: null, last_check_at: null, ...fields});
@@ -234,5 +234,36 @@ describe('Trusted domains\' count and Filter show once there are more than Show 
     [DOMAINS_SHOWN, 'wood', true], [0, ' x ', true], [5, '  ', false],
   ])('%i domains, filter "%s": %s', (count, filter, shown) => {
     expect(domainTools(count, filter)).toBe(shown);
+  });
+});
+
+// Overdue for's field: 1 to 30 days.
+describe('a stepper\'s field takes the limit as it\'s typed', () => {
+  test.each([
+    ['a number in range stays', '5', '3', '5'],
+    ['past the most is the most', '50', '5', '30'],
+    ['under the least is the least', '0', '3', '1'],
+    ['a negative is the least', '-2', '-', '1'],
+    ['a leading zero goes', '05', '0', '5'],
+    ['empty stays, to type on from', '', '3', ''],
+    ['a lone minus stays', '-', '', '-'],
+    ['a letter isn\'t taken', '3x', '3', '3'],
+    ['a decimal point isn\'t taken', '2.', '2', '2'],
+  ])('%s', (_name, text, before, expected) => {
+    expect(typedDraft(text, before, 1, 30)).toBe(expected);
+  });
+});
+
+describe('a stepper\'s typed text sets a whole number in range, or keeps the value', () => {
+  test.each([
+    ['a number', '7', 7],
+    ['past the most', '50', 30],
+    ['under the least', '-2', 1],
+    ['a decimal, rounded', '2.6', 3],
+    ['empty keeps it', '', 3],
+    ['a lone minus keeps it', '-', 3],
+    ['words keep it', 'abc', 3],
+  ])('%s', (_name, text, expected) => {
+    expect(typedStep(text, 3, 1, 30)).toBe(expected);
   });
 });

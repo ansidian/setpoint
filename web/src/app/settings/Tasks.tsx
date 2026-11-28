@@ -1,8 +1,10 @@
 // Settings › Tasks (not drawn): Todoist, whether its tasks show, its projects under it with their
 // colours (written to Todoist) and the default project for a task with none. Its connection is
-// Accounts › Sources' row, and a task's reminder time is Notifications'.
+// Accounts › Sources' row, and a task's reminder time is Notifications'. Then Overdue: how many
+// days back the banner, the sidebar and the phone look (1 to 30), and the banner's pause after it
+// was last on screen, in 5 min steps from 0 to 120 min. Each can be typed, kept in range.
 import type {CalendarOut, Settings, SourceOut, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
-import {TODOIST_COLOURS, TODOIST_COLOUR_NAMES} from '@setpoint/shared';
+import {OVERDUE_MAX_COOLDOWN, OVERDUE_MAX_DAYS, TODOIST_COLOURS, TODOIST_COLOUR_NAMES} from '@setpoint/shared';
 import type {CSSProperties} from 'react';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, setCalendarListed, setProjectColour, settleProjectColour, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
@@ -11,10 +13,11 @@ import {todoistConnected} from '../../logic/settings.ts';
 import {refusalWords, withCode} from '../../logic/providerWords.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {CalendarRow} from './Calendar.tsx';
-import {Line, Menu, Page, Row, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
+import {Line, Menu, Page, Row, Section, Select, SkeletonRows, Stepper, useAttempt} from './parts.tsx';
 import {openSettings} from './store.ts';
 
 const INBOX = '';
+const PAUSE_STEP = 5;
 
 export function TasksPage() {
   const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
@@ -28,6 +31,7 @@ export function TasksPage() {
   const projects = projectsLoad.data;
   const save = useAttempt();
   const saveProject = useAttempt();
+  const saveOverdue = useAttempt();
 
   return (
     <Page title="Tasks" loads={[calendarsLoad, settingsLoad, sourcesLoad, projectsLoad]}>
@@ -62,7 +66,26 @@ export function TasksPage() {
         <Line text={(saveProject.line ?? save.line)?.text ?? null} tone={(saveProject.line ?? save.line)?.tone} />
       </Section>
 
+      <Section label="Overdue">
+        {!settings ? <SkeletonRows count={2} /> : <Overdue settings={settings} change={overdue => void saveOverdue.attempt(() => patchSettings({overdue}))} />}
+        <Line text={saveOverdue.line?.text ?? null} tone={saveOverdue.line?.tone} />
+      </Section>
     </Page>
+  );
+}
+
+/** Overdue for, in days, and the banner's pause, in 5 min steps; 0 is no pause. Each can be typed. */
+function Overdue({settings, change}: {settings: Settings; change: (patch: Partial<Settings['overdue']>) => void}) {
+  const {days, cooldown_minutes: pause} = settings.overdue;
+  return (
+    <div className="set-group">
+      <Row title="Overdue for" sub="How far back the banner, the sidebar and the phone look" kind="ctl">
+        <Stepper value={days} min={1} max={OVERDUE_MAX_DAYS} unit={value => (value === 1 ? 'day' : 'days')} label="Overdue for" onChange={next => change({days: next})} />
+      </Row>
+      <Row title="Banner pause" sub="Quiet for this long after the banner was last on screen" kind="ctl">
+        <Stepper value={pause} min={0} max={OVERDUE_MAX_COOLDOWN} step={PAUSE_STEP} unit={() => 'min'} label="Banner pause" onChange={next => change({cooldown_minutes: next})} />
+      </Row>
+    </div>
   );
 }
 

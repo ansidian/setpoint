@@ -1,5 +1,5 @@
 // The phone's Overdue group (in the desktop banner's place): the open Todoist tasks overdue
-// over the banner's 30 days, the most recently due first, without those a snooze holds off. The
+// over the banner's days (Settings › Tasks › Overdue), the most recently due first, without those a snooze holds off. The
 // Agenda shows them at the top of today and its tab counts them. A snooze is the banner's: 1 hour, 3
 // hours or Tomorrow, kept in this browser (overdueSnoozed.ts) until it ends or the task moves on.
 import type {ItemOut, ItemsOut, Settings} from '@setpoint/shared';
@@ -18,8 +18,9 @@ import {usePhoneChanges} from '../phone/itemActions.ts';
 export function useOverdue(): ItemOut[] {
   const now = useNow();
   const zone = timeZone();
-  const range = bannerRange(now, zone);
-  const {data} = useResource<ItemsOut>(itemsPath(range.from, range.to));
+  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
+  const range = settings && bannerRange(now, zone, settings.overdue.days);
+  const {data} = useResource<ItemsOut>(range ? itemsPath(range.from, range.to) : null);
   const {gone, ticking} = usePhoneChanges();
   // Read again whenever the snoozes change.
   useSyncExternalStore(onSnoozes, snoozesVersion);

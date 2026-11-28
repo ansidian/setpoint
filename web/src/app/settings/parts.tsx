@@ -1,11 +1,12 @@
 // Settings' row pattern: a page's head, sections with their uppercase label,
 // `sub` groups of rows 52 px or more, 34 × 20 switches, selects, steppers and small menus. Every
 // page is built from these, the drawn ones (boards 17, 18a, 18b) and the rest alike.
-import {cloneElement, useEffect, useRef, useState} from 'react';
+import {cloneElement, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, ReactElement, ReactNode} from 'react';
 import type {Colour} from '@setpoint/shared';
 import type {HealthKind} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {typedDraft, typedStep} from '../../logic/settings.ts';
 import {placeMenu} from '../../ui/popover.ts';
 import {dotStyle} from '../accounts.ts';
 import {ScrollThumb} from '../ScrollThumb.tsx';
@@ -83,12 +84,68 @@ export function Select<T extends string | number>({value, options, label, align,
   );
 }
 
-export function Stepper({value, label, onStep}: {value: string; label: string; onStep: (delta: 1 | -1) => void}) {
+/**
+ * A number with − and + either side, `step` apart, and the number itself a field to type in. A
+ * number typed past `min`…`max` becomes the limit as it's typed ("50" with 30 the most is 30), and
+ * only digits and a leading minus are taken. Enter or leaving it sets it; Esc, or leaving it empty,
+ * puts the value back. ↑ ↓ in the field step it. `unit` follows it
+ * ("days", "min"), said for the value it's given.
+ */
+export function Stepper({value, min, max, step = 1, unit, label, onChange}: {
+  value: number; min: number; max: number; step?: number; unit: (value: number) => string; label: string; onChange: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const field = useRef<HTMLInputElement>(null);
+  // After Enter, still in the field, the next number typed replaces the one it set: selected
+  // again as it's drawn, until the value it set has come back.
+  const reselect = useRef<number | null>(null);
+  // A click into the field selects its number, as Tab does: the click's own mouseup would put the caret in.
+  const clicked = useRef(false);
+  useLayoutEffect(() => {
+    if (reselect.current === null) return;
+    if (document.activeElement === field.current) field.current?.select();
+    if (reselect.current === value) reselect.current = null;
+  });
+  const set = (next: number) => {
+    const kept = Math.min(max, Math.max(min, next));
+    if (kept !== value) onChange(kept);
+  };
+  const commit = () => {
+    const next = draft === null ? value : typedStep(draft, value, min, max);
+    set(next);
+    setDraft(null);
+    return next;
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') reselect.current = commit();
+    else if (event.key === 'Escape' && draft !== null) {
+      // Puts the value back, and Settings stays open.
+      event.stopPropagation();
+      setDraft(null);
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      setDraft(null);
+      set((draft === null ? value : typedStep(draft, value, min, max)) + (event.key === 'ArrowUp' ? step : -step));
+    }
+  };
+  const shown = draft ?? String(value);
   return (
     <span className="stepper" role="group" aria-label={label}>
-      <button className="ibtn sm" type="button" aria-label="Less" onClick={() => onStep(-1)}><Icon name="remove" size={16} /></button>
-      <span className="v num">{value}</span>
-      <button className="ibtn sm" type="button" aria-label="More" onClick={() => onStep(1)}><Icon name="add" size={16} /></button>
+      <button className="ibtn sm" type="button" aria-label="Less" onClick={() => set(value - step)}><Icon name="remove" size={16} /></button>
+      <label className="v num">
+        <input ref={field} type="text" inputMode="numeric" aria-label={label} value={shown} style={{width: `${Math.max(1, shown.length)}ch`}}
+          onChange={event => setDraft(typedDraft(event.target.value, shown, min, max))} onBlur={commit} onKeyDown={onKeyDown}
+          onMouseDown={event => {
+            clicked.current = document.activeElement !== event.currentTarget;
+          }}
+          onMouseUp={event => {
+            if (clicked.current) event.preventDefault();
+            clicked.current = false;
+          }}
+          onFocus={event => event.target.select()} />
+        <span className="u">{unit(value)}</span>
+      </label>
+      <button className="ibtn sm" type="button" aria-label="More" onClick={() => set(value + step)}><Icon name="add" size={16} /></button>
     </span>
   );
 }

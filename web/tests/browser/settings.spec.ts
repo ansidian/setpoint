@@ -698,7 +698,7 @@ test('Send test: it shows it\'s sending, a failure says so in words, a test that
   }
 });
 
-test('Calendar, Tasks, Places and Appearance: each account\'s calendars under its address, one unlisted, Time to Leave pointing to Places for Home, Home set with its coordinates, a place added, a clash refused, renamed and removed, Time to Leave on with its buffer, weather off; on Tasks Todoist\'s projects under its switch, Todoist unlisted, its default project; Light; Todoist reconnects from Accounts', async () => {
+test('Calendar, Tasks, Places and Appearance: each account\'s calendars under its address, one unlisted, Time to Leave pointing to Places for Home, Home set with its coordinates, a place added, a clash refused, renamed and removed, Time to Leave on with its buffer, weather off; on Tasks Todoist\'s projects under its switch, Todoist unlisted, its default project, how far back overdue looks typed past its limit, the banner\'s pause; Light; Todoist reconnects from Accounts', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -765,15 +765,15 @@ test('Calendar, Tasks, Places and Appearance: each account\'s calendars under it
     await leave.click();
     await page.getByRole('group', {name: 'Buffer'}).getByRole('button', {name: 'More'}).click();
     await settled('Time to Leave on, buffer', settings, value => value.time_to_leave.enabled && value.time_to_leave.buffer_minutes === 10);
-    await page.locator('.settings .stepper .v', {hasText: '10 min'}).waitFor();
+    await until('the buffer shown', () => page.getByRole('textbox', {name: 'Buffer'}).inputValue(), value => value === '10');
 
     await page.getByRole('switch', {name: 'Weather'}).click();
     await settled('weather off', settings, value => !value.calendar.weather);
 
-    // Tasks: Todoist's switch heads its projects, then its default project.
+    // Tasks: Todoist's switch heads its projects, then its default project, then Overdue.
     await page.locator('.settings .set-nav .nav', {hasText: 'Tasks'}).click();
     await page.getByRole('switch', {name: 'Show Todoist'}).waitFor();
-    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Todoist']);
+    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Todoist', 'Overdue']);
     assert.deepEqual((await rows('Todoist')).slice(0, 2), ['Todoist', '  Inbox']);
     // Todoist has its ring and no colour to pick.
     assert.equal(await page.locator('.settings [data-calendar]', {hasText: 'Todoist'}).locator('.sw').count(), 0);
@@ -781,6 +781,16 @@ test('Calendar, Tasks, Places and Appearance: each account\'s calendars under it
     await settled('Todoist hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.provider === 'todoist')?.listed === false);
     await choose(page, 'Default project', 'School');
     await settled('default project', settings, value => value.todoist.default_project === 'School');
+    // 3 days back by default; 50 typed is 30, the most, set on Enter. The pause steps by 5 min.
+    const days = page.getByRole('textbox', {name: 'Overdue for'});
+    assert.equal(await days.inputValue(), '3');
+    await days.click();
+    await page.keyboard.type('50');
+    assert.equal(await days.inputValue(), '30');
+    await page.keyboard.press('Enter');
+    await settled('overdue for 30 days', settings, value => value.overdue.days === 30);
+    await page.getByRole('group', {name: 'Banner pause'}).getByRole('button', {name: 'More'}).click();
+    await settled('a 10 min pause', settings, value => value.overdue.cooldown_minutes === 10);
 
     // Reconnect is in Todoist's row's menu on Accounts. The dev run has no Todoist app, so it says why under Sources.
     await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).click();

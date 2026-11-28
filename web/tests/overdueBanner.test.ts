@@ -108,9 +108,13 @@ describe('when each was due', () => {
   });
 });
 
-describe('the load looks 30 days back through today', () => {
-  test('from Sep 7 to Oct 8, `to` exclusive', () => {
-    expect(bannerRange(now, SEED_TIME_ZONE)).toEqual({from: '2026-09-07', to: '2026-10-08'});
+describe('the load looks back Settings › Tasks\' days through today, `to` exclusive', () => {
+  test.each([
+    [1, '2026-10-06'],
+    [3, '2026-10-04'],
+    [30, '2026-09-07'],
+  ])('%i days: from %s to Oct 8', (days, from) => {
+    expect(bannerRange(now, SEED_TIME_ZONE, days)).toEqual({from, to: '2026-10-08'});
   });
 });
 
@@ -161,14 +165,17 @@ describe('a browser keeps a snooze while its task is still overdue with that due
   });
 });
 
-describe('arrivals stay quiet for 5 minutes after the banner was last on screen', () => {
+describe('arrivals stay quiet for the banner\'s pause after it was last on screen', () => {
   test.each([
-    ['never on screen: shows', null, now, false],
-    ['just left: quiet', now, now, true],
-    ['4 minutes 59 after: quiet', now, now + 299_000, true],
-    ['5 minutes after: shows', now, now + 300_000, false],
-    ['the clock gone back before it: shows', now, now - 60_000, false],
-  ])('%s', (_name, seen, at, quiet) => {
-    expect(inCooldown(seen, at)).toBe(quiet);
+    ['never on screen: shows', null, now, 5, false],
+    ['just left: quiet', now, now, 5, true],
+    ['4 minutes 59 after: quiet', now, now + 299_000, 5, true],
+    ['5 minutes after: shows', now, now + 300_000, 5, false],
+    ['15 minutes\' pause, 10 after: quiet', now, now + 600_000, 15, true],
+    ['no pause, just left: shows', now, now, 0, false],
+    ['the clock gone back before it: shows', now, now - 60_000, 5, false],
+  ])('%s', (_name, seen, at, minutes, quiet) => {
+    expect(inCooldown(seen, at, minutes)).toBe(quiet);
   });
 });
+

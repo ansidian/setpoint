@@ -280,7 +280,7 @@ test.each(['rail', 'calendar'] as const)('with no Today lines on screen (%s), th
 /** The arrivals' banner, each arrival coming at the browser's clock now. */
 function arrivals(came: Omit<Arrival, 'clock'> | null, items: ItemOut[], present = true, taskTime: string | null = null) {
   const arrival = came && {...came, clock: Date.now()};
-  return <OverdueArrivals arrival={arrival} present={present} items={items} taskTime={taskTime} timeZone={SEED_TIME_ZONE} />;
+  return <OverdueArrivals arrival={arrival} present={present} items={items} taskTime={taskTime} cooldownMinutes={5} timeZone={SEED_TIME_ZONE} />;
 }
 
 test('with the user there, a task going overdue draws nothing; the next arrival draws it', async () => {

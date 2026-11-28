@@ -467,7 +467,7 @@ test('overdue tasks lead today as its Overdue group, the tab counts them, and a 
     const rows = () => group.locator('.pitem').evaluateAll(lines => lines.map(one => `${one.querySelector('.when')!.textContent}|${one.querySelector('.ell')!.textContent}`));
     assert.equal(await group.locator('.ph-overdue-h').textContent(), 'Overdue3');
     // The most recently due first, each saying how long it's been overdue.
-    assert.deepEqual(await rows(), ['1 hr overdue|Call the landlord about the heater', '2 days overdue|Submit the parking permit form', '13 days overdue|Renew the library card']);
+    assert.deepEqual(await rows(), ['1 hr overdue|Call the landlord about the heater', '2 days overdue|Submit the parking permit form', '3 days overdue|Renew the library card']);
     // Today's own lines leave out the one due today; Monday keeps its own.
     assert.equal(await page.locator('.ph-agenda [data-days="2026-10-07"] > .pitem', {hasText: 'Call the landlord'}).count(), 0);
     assert.equal(await page.locator('.ph-agenda [data-days="2026-10-05"] .pitem', {hasText: 'Submit the parking permit form'}).count(), 1);

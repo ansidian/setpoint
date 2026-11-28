@@ -83,10 +83,7 @@ function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Pa
         <Switch on={leave.enabled && !!home} disabled={!home} label="Time to Leave" onChange={on => change({time_to_leave: {enabled: on}})} />
       </Row>
       <Row title="Buffer" kind="ctl">
-        <Stepper value={`${leave.buffer_minutes} min`} label="Buffer" onStep={delta => {
-          const next = Math.min(120, Math.max(0, leave.buffer_minutes + delta * BUFFER_STEP));
-          if (next !== leave.buffer_minutes) change({time_to_leave: {buffer_minutes: next}});
-        }} />
+        <Stepper value={leave.buffer_minutes} min={0} max={120} step={BUFFER_STEP} unit={() => 'min'} label="Buffer" onChange={next => change({time_to_leave: {buffer_minutes: next}})} />
       </Row>
     </div>
   );

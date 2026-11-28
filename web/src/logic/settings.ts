@@ -366,3 +366,26 @@ export const monthTotal = (usage: Record<'triage' | 'search_terms' | 'search_rea
 export function usageLine(usage: {calls: number; input_tokens: number; output_tokens: number}): string {
   return `${usage.calls.toLocaleString('en-US')} ${usage.calls === 1 ? 'call' : 'calls'} · ${tokens(usage.input_tokens)} tokens in · ${tokens(usage.output_tokens)} out`;
 }
+
+/**
+ * A stepper's field as it's typed in, so the limit shows at once: a whole number past `max` or
+ * under `min` becomes it ("50" with 30 the most is "30", "0" with 1 the least is "1"). Empty and a
+ * lone "-" stay, to type on from. Anything else isn't taken, leaving `before`.
+ */
+export function typedDraft(text: string, before: string, min: number, max: number): string {
+  if (text === '' || text === '-') return text;
+  if (!/^-?\d+$/.test(text)) return before;
+  const typed = Number(text);
+  return String(Math.min(max, Math.max(min, typed)));
+}
+
+/**
+ * What a stepper's typed text sets: a whole number, kept to `min`…`max` ("50" with 30 the most is
+ * 30, "-2" with 1 the least is 1). Text that isn't a number keeps `current`.
+ */
+export function typedStep(text: string, current: number, min: number, max: number): number {
+  const trimmed = text.trim();
+  const typed = trimmed === '' ? NaN : Number(trimmed);
+  if (!Number.isFinite(typed)) return current;
+  return Math.min(max, Math.max(min, Math.round(typed)));
+}

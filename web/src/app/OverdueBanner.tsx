@@ -3,7 +3,7 @@
 // coming back to the tab or the window (app/arrival.ts), never a page change inside the app, so a
 // task going overdue mid-use raises nothing until the next one, and a banner due while they're away
 // waits for their return. An arrival shows every overdue task not snoozed, until it's done, unless
-// the banner was on screen in this browser less than 5 minutes before (its cooldown). One
+// the banner was on screen in this browser less than Settings › Tasks' Banner pause before (5 minutes by default). One
 // task is its title over its ring, project and due ("Errands · Due today, 8:00 AM"). Several are
 // "3 tasks" over a list, the most recently due first, four and "and 3 more".
 // It enters by Reveal: the veil and label fade in, the title slides up from behind its own
@@ -60,27 +60,31 @@ function forgetShown() {
   }
 }
 
-/** The arrivals' banner: the last 30 days' items, judged as each arrival comes, and Settings' task time for Tomorrow. */
+/**
+ * The arrivals' banner: the items of as many days back as Settings › Tasks › Overdue says, judged as
+ * each arrival comes, its pause, and Settings' task time for Tomorrow. Nothing loads until Settings has.
+ */
 export function OverdueArrival() {
   const zone = timeZone();
   const {arrival, present} = useArrival();
-  // The range follows the day of the latest arrival, so a tab left open overnight looks at the new one.
-  const range = bannerRange(arrival?.at ?? serverNow(), zone);
-  const {data} = useResource<ItemsOut>(itemsPath(range.from, range.to));
   const {data: settings} = useResource<Settings>(SETTINGS_PATH);
-  return <OverdueArrivals arrival={arrival} present={present} items={data?.items} taskTime={settings?.reminders.task_time ?? null} timeZone={zone} />;
+  // The range follows the day of the latest arrival, so a tab left open overnight looks at the new one.
+  const range = settings && bannerRange(arrival?.at ?? serverNow(), zone, settings.overdue.days);
+  const {data} = useResource<ItemsOut>(range ? itemsPath(range.from, range.to) : null);
+  return <OverdueArrivals arrival={arrival} present={present} items={data?.items} taskTime={settings?.reminders.task_time ?? null}
+    cooldownMinutes={settings?.overdue.cooldown_minutes ?? 0} timeZone={zone} />;
 }
 
 /**
  * The banner for each arrival over `items`: judged once the user is there and the items are in, and
  * shown unless one is up already, without the tasks a snooze holds off. An arrival with nothing to
  * show is done with, so a task that goes overdue later waits for the next one, as do one dismissed
- * and one whose snooze ends mid-use. An arrival within the cooldown after the banner was last on
+ * and one whose snooze ends mid-use. An arrival within `cooldownMinutes` after the banner was last on
  * screen, by this browser's clock, shows nothing. Each arrival drops the snoozes no longer needed.
  * It waits while Settings or ⌘K is open. A snooze picked on it is kept from then, Tomorrow at
  * `taskTime`.
  */
-export function OverdueArrivals({arrival, present, items, taskTime, timeZone: zone}: {arrival: Arrival | null; present: boolean; items: readonly ItemOut[] | undefined; taskTime: string | null; timeZone: string}) {
+export function OverdueArrivals({arrival, present, items, taskTime, cooldownMinutes, timeZone: zone}: {arrival: Arrival | null; present: boolean; items: readonly ItemOut[] | undefined; taskTime: string | null; cooldownMinutes: number; timeZone: string}) {
   const [judged, setJudged] = useState(0);
   const [shown, setShown] = useState<{tasks: Overdue[]; at: number; key: number} | null>(null);
   // What the latest arrival was judged over, for its snoozes to be pruned once it's drawn.
@@ -91,7 +95,7 @@ export function OverdueArrivals({arrival, present, items, taskTime, timeZone: zo
   if (arrival && arrival.count > judged && items && present) {
     setJudged(arrival.count);
     setPruning({items, at: arrival.at});
-    if (!shown && !inCooldown(readSeen(), arrival.clock)) {
+    if (!shown && !inCooldown(readSeen(), arrival.clock, cooldownMinutes)) {
       const snoozes = readSnoozes();
       const tasks = arrivalTasks(overdueTasks(items, arrival.at, zone), zone).filter(task => !isSnoozed(task.item, snoozes, arrival.at));
       if (tasks.length) setShown({tasks, at: arrival.at, key: arrival.count});

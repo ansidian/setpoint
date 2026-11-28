@@ -10,6 +10,10 @@ const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'A 24-hour time such
 /** How long a verification code's row stays in the Inbox after the email arrives (Settings › Mail). */
 export const CODE_EXPIRY_PRESETS = [5, 10, 15, 30, 60] as const;
 
+/** The longest Settings › Tasks › Overdue allows: how many days back, and the banner's pause in minutes. */
+export const OVERDUE_MAX_DAYS = 30;
+export const OVERDUE_MAX_COOLDOWN = 120;
+
 /** Home, for Time to Leave's routes and the forecast: the first saved place (Settings › Places). */
 export const homeSchema = z.strictObject({
   label: z.string().min(1).max(80),
@@ -60,6 +64,12 @@ export const settingsSchema = z.strictObject({
     // A project's name, where a task with none goes. Null is Todoist's Inbox.
     default_project: z.string().min(1).nullable(),
   }),
+  // Settings › Tasks › Overdue: how many days back the banner, the sidebar and the phone look for
+  // overdue tasks, and how long arrivals stay quiet after the banner was last on screen.
+  overdue: z.strictObject({
+    days: z.number().int().min(1).max(OVERDUE_MAX_DAYS),
+    cooldown_minutes: z.number().int().min(0).max(OVERDUE_MAX_COOLDOWN),
+  }),
   ai: z.strictObject({
     // Model ids, chosen in Settings › AI. Null uses the built-in choice.
     triage_model: z.string().min(1).nullable(),
@@ -93,6 +103,7 @@ export const DEFAULT_SETTINGS: Settings = {
   calendar: {weather: true, home: null},
   places: {saved: []},
   todoist: {default_project: null},
+  overdue: {days: 3, cooldown_minutes: 5},
   ai: {triage_model: null, triage_strong_model: null, alfred_model: null, history_model: null},
   news: {monthly_cap_usd: 40},
 };
@@ -107,6 +118,7 @@ export const settingsPatchInput = z.strictObject({
   calendar: shape.calendar.partial().optional(),
   places: shape.places.partial().optional(),
   todoist: shape.todoist.partial().optional(),
+  overdue: shape.overdue.partial().optional(),
   ai: shape.ai.partial().optional(),
   news: shape.news.partial().optional(),
 });

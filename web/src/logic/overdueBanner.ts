@@ -3,7 +3,7 @@
 // the way out and how long that takes, and the snooze: when each preset ends, which tasks a snooze
 // holds off, and which snoozes the browser keeps (app/overdueSnoozed.ts), and the cooldown that
 // keeps arrivals quiet for a while after it was last on screen. Which tasks are overdue is
-// logic/overdue.ts's; this looks 30 days back.
+// logic/overdue.ts's; this looks back as many days as Settings › Tasks › Overdue says.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, daysBetween, instantAt, localDate} from './format.ts';
 import type {Overdue} from './overdue.ts';
@@ -59,26 +59,20 @@ export function keptSnoozes(snoozes: readonly Snooze[], items: readonly ItemOut[
   return snoozes.filter(snooze => snooze.until > now && items.some(item => item.kind === 'task' && !item.done && holds(snooze, item)));
 }
 
-/** How long arrivals stay quiet after the banner was last on screen. */
-export const COOLDOWN_MS = 5 * 60_000;
-
 /**
- * Whether an arrival at `now` (this browser's clock) falls in the cooldown after the banner was
- * last on screen at `seen`. A `seen` ahead of `now`, the clock having gone back, holds nothing.
+ * Whether an arrival at `now` (this browser's clock) falls in the cooldown of `minutes` after the
+ * banner was last on screen at `seen`. A `seen` ahead of `now`, the clock having gone back, holds nothing.
  */
-export function inCooldown(seen: number | null, now: number): boolean {
-  return seen !== null && seen <= now && now - seen < COOLDOWN_MS;
+export function inCooldown(seen: number | null, now: number, minutes: number): boolean {
+  return seen !== null && seen <= now && now - seen < minutes * 60_000;
 }
-
-/** How many days back an arrival looks for overdue tasks. */
-export const OVERDUE_DAYS = 30;
 /** How many of several tasks are listed before the rest fold into "and N more". */
 export const LISTED = 4;
 
-/** The range to load for it: the last 30 days through today, `to` exclusive. */
-export function bannerRange(now: number, timeZone: string): {from: string; to: string} {
+/** The range to load for it: the last `days` days through today, `to` exclusive. */
+export function bannerRange(now: number, timeZone: string, days: number): {from: string; to: string} {
   const today = localDate(now, timeZone);
-  return {from: addDays(today, -OVERDUE_DAYS), to: addDays(today, 1)};
+  return {from: addDays(today, -days), to: addDays(today, 1)};
 }
 
 const dueDay = (item: ItemOut, timeZone: string) => (item.due_at ? localDate(item.due_at, timeZone) : item.due_date!);
@@ -139,3 +133,4 @@ export function shortDue(item: ItemOut, now: number, timeZone: string): string {
   if (days === 1) return 'Yesterday';
   return days < 7 ? onDay(day, {weekday: 'short'}) : dateOf(day, today);
 }
+

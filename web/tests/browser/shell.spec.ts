@@ -400,12 +400,13 @@ test('a timed task shows its time and takes its place by it, among the Today blo
 
 test('a load with overdue tasks opens on their banner over the Inbox; a click sends it, a page change in the app doesn\'t bring it back, nor a reload within 5 minutes, and one after does', async () => {
   // Three overdue tasks: one due at 8:00 AM today, before the seed's 9:12 AM, one from Monday and one
-  // from Sep 24. The seed itself has none, so no other check meets the banner.
+  // from Sunday, and Sep 24's left out, past the 3 days looked back. The seed itself has none, so no
+  // other check meets the banner.
   const setpoint = await startSetpoint({fixtures: ['overdue-tasks']});
   try {
     const page = await setpoint.page('target');
     await page.clock.install();
-    const loaded = () => page.waitForResponse(response => response.url().includes('/api/items?from=2026-09-07&to=2026-10-08'));
+    const loaded = () => page.waitForResponse(response => response.url().includes('/api/items?from=2026-10-04&to=2026-10-08'));
     const first = loaded();
     await page.goto(`${setpoint.base}/inbox`);
     const answer = await first;
@@ -414,7 +415,7 @@ test('a load with overdue tasks opens on their banner over the Inbox; a click se
     await banner.waitFor();
     assert.equal(await banner.locator('.overdue-title').textContent(), '3 tasks');
     assert.deepEqual(await banner.locator('.overdue-list li').allTextContents(),
-      ['Call the landlord about the heater8:00 AM', 'Submit the parking permit formMon', 'Renew the library cardSep 24']);
+      ['Call the landlord about the heater8:00 AM', 'Submit the parking permit formMon', 'Renew the library cardSun']);
     // Over the Inbox and the sidebar: what's under a row and the Today block is the banner.
     await page.locator('.list .row').first().waitFor();
     const covered = await rested(() => page.evaluate(() => ['.list .row', '.sb .today-row'].map(selector => {
@@ -477,7 +478,7 @@ test('a task going overdue mid-use raises no banner, only its Today line, nor do
     }
     const page = await setpoint.page('target');
     await page.clock.install();
-    const loaded = page.waitForResponse(response => response.url().includes('/api/items?from=2026-09-07&to=2026-10-08'));
+    const loaded = page.waitForResponse(response => response.url().includes('/api/items?from=2026-10-04&to=2026-10-08'));
     await page.goto(`${setpoint.base}/inbox`);
     await drawn(page, await loaded);
     const payRent = page.locator('.sb .today-row', {hasText: 'Pay rent'}).locator('.t');
@@ -545,7 +546,7 @@ test('a snoozed task stays off the banner until its snooze ends, and comes back 
   try {
     const page = await setpoint.page('target');
     await page.clock.install();
-    const loaded = page.waitForResponse(response => response.url().includes('/api/items?from=2026-09-07&to=2026-10-08'));
+    const loaded = page.waitForResponse(response => response.url().includes('/api/items?from=2026-10-04&to=2026-10-08'));
     await page.goto(`${setpoint.base}/inbox`);
     await drawn(page, await loaded);
     const banner = page.getByRole('dialog', {name: 'Overdue tasks'});
@@ -559,7 +560,7 @@ test('a snoozed task stays off the banner until its snooze ends, and comes back 
     await page.getByRole('menuitem', {name: '1 hour'}).click();
     await page.clock.fastForward(1000);
     await until('the snoozed title gone', () => rows.allTextContents(), texts => texts.length === 2);
-    assert.deepEqual(await rows.allTextContents(), ['Submit the parking permit formMon', 'Renew the library cardSep 24']);
+    assert.deepEqual(await rows.allTextContents(), ['Submit the parking permit formMon', 'Renew the library cardSun']);
     assert.equal(await banner.locator('.overdue-title').textContent(), '2 tasks');
 
     const tab = (state: 'hidden' | 'visible') => page.evaluate(shown => {
