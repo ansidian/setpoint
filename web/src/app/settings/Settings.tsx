@@ -1,6 +1,6 @@
 // Settings (boards 17, 18a, 18b, 30a, 30b, 39a): a 1040 × 720 modal over the page,
 // the scrim behind, not in the address bar. The 220 px nav holds the pages in three groups with a gap
-// between them (Accounts · Mail, Calendar, Places, News, Jobs · Notifications, AI, Appearance, Security).
+// between them (Accounts · Mail, Calendar, Tasks, Places, News, Jobs · Notifications, AI, Appearance, Security).
 // Accounts is marked while a source needs sign-in and News while a feed fails, and Sign out is at its
 // foot. ↑ ↓ in the nav change page. Esc closes the topmost thing (a menu first, then Settings). Keys
 // inside never reach the page under it, and focus goes back where it was. Opening it loads every
@@ -31,6 +31,7 @@ import {NewsSettingsPage} from './News.tsx';
 import {NotificationsPage} from './Notifications.tsx';
 import {PlacesPage} from './Places.tsx';
 import {SecurityPage} from './Security.tsx';
+import {TasksPage} from './Tasks.tsx';
 import {closeSettings, openSettings, useSettingsPage} from './store.ts';
 import './settings.css';
 
@@ -43,7 +44,7 @@ const PAGE_PATHS = [
 const PREFETCH_AFTER_MS = 250;
 
 const PAGES: Record<SettingsPage, () => JSX.Element> = {
-  accounts: AccountsPage, calendar: CalendarPage, places: PlacesPage, notifications: NotificationsPage,
+  accounts: AccountsPage, calendar: CalendarPage, tasks: TasksPage, places: PlacesPage, notifications: NotificationsPage,
   mail: MailPage, news: NewsSettingsPage, jobs: JobsSettingsPage, ai: AiPage, appearance: AppearancePage, security: SecurityPage,
 };
 

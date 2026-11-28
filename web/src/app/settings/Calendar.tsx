@@ -1,45 +1,36 @@
 // Settings › Calendar (not drawn): which calendars show and each Google calendar's colour (written
 // to Google), in one group with each account's address heading its calendars, indented under it. Then Time to Leave's switch and Buffer; it leaves from Home, which is Settings ›
-// Places'. Then Todoist: whether its tasks show, its projects under it with their colours (written to Todoist) and the default project
-// for a task with none. Settings has no Todoist page: its connection is Accounts › Sources' row.
-// Then weather on or off and the forecast's Pirate Weather key (the weather source's credential),
+// Places'. Then weather on or off and the forecast's Pirate Weather key (the weather source's credential),
 // write-only. The page scrolls.
-import type {CalendarOut, Settings, SourceOut, TodoistColour, TodoistProjectOut} from '@setpoint/shared';
-import {SWATCH_COLOURS, TODOIST_COLOURS, TODOIST_COLOUR_NAMES} from '@setpoint/shared';
+import type {CalendarOut, Settings, SourceOut} from '@setpoint/shared';
+import {SWATCH_COLOURS} from '@setpoint/shared';
 import {Fragment} from 'react';
-import type {CSSProperties} from 'react';
 import {useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, setCalendarColour, setCalendarListed, setProjectColour, settleCalendarColour, settleProjectColour, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
+import {CALENDARS_PATH, setCalendarColour, setCalendarListed, settleCalendarColour, SETTINGS_PATH} from '../../api/items.ts';
 import {patchSettings, setSourceKey, SOURCES_PATH} from '../../api/settings.ts';
 import {calendarGroups} from '../../logic/calendar.ts';
-import {todoistConnected} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle, useAccounts} from '../accounts.ts';
-import {Line, Menu, Page, Row, Section, Select, SkeletonRows, Stepper, Switch, useAttempt} from './parts.tsx';
+import {Line, Menu, Page, Row, Section, SkeletonRows, Stepper, Switch, useAttempt} from './parts.tsx';
 import {KeyRow} from './Ai.tsx';
 import {openSettings} from './store.ts';
 import {refusalWords, withCode} from '../../logic/providerWords.ts';
 
-const INBOX = '';
 const BUFFER_STEP = 5;
 export function CalendarPage() {
   const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
   const calendars = calendarsLoad.data;
   const {list: accounts} = useAccounts();
-  const todoist = calendars?.find(calendar => calendar.provider === 'todoist');
   const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
   const settings = settingsLoad.data;
   const sourcesLoad = {path: SOURCES_PATH, ...useResource<SourceOut[]>(SOURCES_PATH)};
   const sources = sourcesLoad.data;
   const weather = sources?.find(source => source.provider === 'weather');
-  const projectsLoad = {path: TODOIST_PROJECTS_PATH, ...useResource<TodoistProjectOut[]>(TODOIST_PROJECTS_PATH)};
-  const projects = projectsLoad.data;
   const save = useAttempt();
-  const saveProject = useAttempt();
   const saveLeave = useAttempt();
 
   return (
-    <Page title="Calendar" loads={[calendarsLoad, settingsLoad, sourcesLoad, projectsLoad]}>
+    <Page title="Calendar" loads={[calendarsLoad, settingsLoad, sourcesLoad]}>
       <Section label="Calendars">
         {!calendars ? <SkeletonRows count={4} one /> : (
           <div className="set-group">
@@ -60,37 +51,6 @@ export function CalendarPage() {
       <Section label="Time to Leave">
         {!settings ? <SkeletonRows count={2} /> : <TimeToLeave settings={settings} change={patch => void saveLeave.attempt(() => patchSettings(patch))} />}
         <Line text={saveLeave.line?.text ?? null} tone={saveLeave.line?.tone} />
-      </Section>
-
-      <Section label="Todoist">
-        {/* Whether it's connected is said only once it's known. */}
-        {!sources || !projects || !settings || !calendars ? <SkeletonRows count={3} one /> : !todoistConnected(sources) ? (
-          <div className="set-group">
-            <Row title="Not connected" sub="Tasks with a date show on the calendar">
-              <button className="btn out sm" type="button" onClick={() => openSettings('accounts')}>Connect in Accounts</button>
-            </Row>
-          </div>
-        ) : (
-          <>
-            {(todoist || projects.length > 0) && (
-              <div className="set-group">
-                {todoist && <CalendarRow calendar={todoist} onShow={on => void save.attempt(() => setCalendarListed(todoist.id, on))} />}
-                {projects.map(project => <ProjectRow key={project.id} project={project} nested={!!todoist} />)}
-              </div>
-            )}
-            <div className={todoist || projects.length > 0 ? 'set-group next' : 'set-group'}>
-              <Row title="Default project" sub="Where a task goes when it names none" kind="ctl">
-                <Select value={settings.todoist.default_project ?? INBOX} label="Default project"
-                  options={[
-                    {value: INBOX, label: projects.find(project => project.inbox)?.name ?? 'Inbox'},
-                    ...projects.filter(project => !project.inbox).map(project => ({value: project.name, label: project.name})),
-                  ]}
-                  onChange={name => void saveProject.attempt(() => patchSettings({todoist: {default_project: name || null}}))} />
-              </Row>
-            </div>
-          </>
-        )}
-        <Line text={saveProject.line?.text ?? null} tone={saveProject.line?.tone} />
       </Section>
 
       <Section label="Weather">
@@ -138,7 +98,7 @@ function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Pa
  * A colour waiting for Google shows at .5 with the spinner. One Google refused stays, with Google's
  * words, Try again and Change back.
  */
-function CalendarRow({calendar, nested, onShow}: {calendar: CalendarOut; nested?: boolean; onShow: (on: boolean) => void}) {
+export function CalendarRow({calendar, nested, onShow}: {calendar: CalendarOut; nested?: boolean; onShow: (on: boolean) => void}) {
   const pick = useAttempt();
   const settle = useAttempt();
   const {command} = calendar;
@@ -172,52 +132,6 @@ function CalendarRow({calendar, nested, onShow}: {calendar: CalendarOut; nested?
         </>
       )}
       <Switch on={calendar.listed} label={`Show ${calendar.name}`} onChange={onShow} />
-    </div>
-  );
-}
-
-/** Todoist's name for a colour, as words: berry_red → "Berry red". */
-const colourName = (colour: TodoistColour) => colour[0]!.toUpperCase() + colour.slice(1).replace('_', ' ');
-const swatch = (colour: TodoistColour | null) => ({'--c': colour ? TODOIST_COLOURS[colour] : 'var(--ink2)'}) as CSSProperties;
-
-/**
- * A project's row, as Settings › Calendar's calendar rows: its colour, picked from
- * Todoist's own 20 and written to Todoist, so its apps match and its tasks' rings take it. Waiting
- * for Todoist it shows at .5 with the spinner. One Todoist refused stays, with Todoist's words, Try
- * again and Change back.
- */
-function ProjectRow({project, nested}: {project: TodoistProjectOut; nested?: boolean}) {
-  const pick = useAttempt();
-  const settle = useAttempt();
-  const {command} = project;
-  const failed = command?.state === 'failed';
-  const label = `${project.name} colour`;
-  return (
-    <div className={`set-row one cal-row${nested ? ' nest' : ''}${command?.state === 'pending' ? ' pending' : ''}`} data-project={project.id}>
-      <Menu label={label} align="left" button={<button className="sw" type="button" style={swatch(project.colour)} aria-label={label} data-tip={project.colour ? colourName(project.colour) : undefined} disabled={!!command} />}>
-        {close => (
-          <div className="swatches todoist">
-            {TODOIST_COLOUR_NAMES.map(colour => (
-              <button key={colour} type="button" className={colour === project.colour ? 'sw on' : 'sw'} style={swatch(colour)} aria-label={colourName(colour)} data-tip={colourName(colour)} data-colour={colour} onClick={() => {
-                close();
-                if (colour !== project.colour) void pick.attempt(() => setProjectColour(project.id, colour));
-              }} />
-            ))}
-          </div>
-        )}
-      </Menu>
-      <div className="lines grow">
-        <span className="t">{project.name}</span>
-        {failed && <span className="s failed" role="alert" data-tip={withCode(refusalWords('todoist', command.provider_message, 'Todoist didn’t answer.'), command.provider_message)}>{refusalWords('todoist', command.provider_message, 'Todoist didn’t answer.')}</span>}
-        {(pick.line ?? settle.line) && <span className="s failed" role="alert">{(pick.line ?? settle.line)!.text}</span>}
-      </div>
-      {command?.state === 'pending' && <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>}
-      {failed && (
-        <>
-          <button className="btn sm" type="button" onClick={() => void settle.attempt(() => settleProjectColour(command.id, 'retry'))}><Icon name="refresh" size={16} />Try again</button>
-          <button className="btn out sm" type="button" onClick={() => void settle.attempt(() => settleProjectColour(command.id, 'move-back'))}><Icon name="undo" size={16} />Change back</button>
-        </>
-      )}
     </div>
   );
 }

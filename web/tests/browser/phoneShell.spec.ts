@@ -310,7 +310,7 @@ test('phone Settings: an index of the phone\'s pages, each under Back to it; a s
     await until('Light', () => page.evaluate(() => document.documentElement.dataset.theme), theme => theme === 'light');
 
     // Each other page says it's on the desktop, and lists the phone's pages.
-    for (const [page_, label] of [['mail', 'Mail'], ['calendar', 'Calendar'], ['news', 'News'], ['jobs', 'Jobs'], ['ai', 'AI'], ['security', 'Security']] as const) {
+    for (const [page_, label] of [['mail', 'Mail'], ['calendar', 'Calendar'], ['tasks', 'Tasks'], ['news', 'News'], ['jobs', 'Jobs'], ['ai', 'AI'], ['security', 'Security']] as const) {
       await page.goto(`${setpoint.base}/settings/${page_}`);
       await page.locator('.ph-set-away', {hasText: `${label} is on the desktop`}).waitFor();
       assert.equal(await page.locator('.hd .hd-title').textContent(), label);

@@ -1,7 +1,7 @@
 // Settings on the phone: a page, not the desktop's modal. /settings is its index, listing the pages
 // the phone has (Places, Notifications and Appearance), each a row to its page, which is the
 // desktop's own page in the phone's column under a Back to the index. Each of the other pages
-// (Accounts, Mail, Calendar, News, Jobs, AI, Security) says it's on the desktop and lists the phone's
+// (Accounts, Mail, Calendar, Tasks, News, Jobs, AI, Security) says it's on the desktop and lists the phone's
 // pages under that, so a reconnect alert's link or a notification always lands on a page that leads
 // somewhere. Sign out is at the foot of each, asking once in the toast. The Inbox's tab is lit here,
 // as Settings is the Inbox's title menu's. Security stays on the desktop: signing out a device or

@@ -385,9 +385,9 @@ describe('how long the toast stays', () => {
   ] as const)('%s: %s', (_name, toast, ms) => expect(toastMs(toast)).toBe(ms));
 });
 
-// Settings › Calendar's switch leaves a calendar, or Todoist, out of the Today block and the rail's
+// Settings › Calendar's switch leaves a calendar out, and Settings › Tasks' leaves Todoist out, of the Today block and the rail's
 // slot as it does out of Calendar. The Calendar sidebar's checkbox is Calendar's own filter.
-describe('the Today block leaves out what Settings › Calendar turns off', () => {
+describe('the Today block leaves out what Settings › Calendar or Tasks turns off', () => {
   const calendar = (id: number, fields: Partial<CalendarOut>): CalendarOut => ({
     id, provider: 'google', account_id: 1, name: `Calendar ${id}`, colour: 'cool', position: id, visible: true, listed: true, writable: true, command: null, ...fields,
   });

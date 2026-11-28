@@ -117,7 +117,7 @@ export function boardRefusals(store: Store, command: CommandRow): string | null 
   // A failed calendar colour, for Settings › Calendar. Google refuses `sun` as a calendar's colour (one
   // Settings offers, which `alert` no longer is).
   if (command.kind === 'calendar_colour') return command.payload.colour === 'sun' ? 'The caller does not have permission (403 Forbidden)' : null;
-  // A failed project colour, for Settings › Calendar's Todoist projects: Todoist refuses taupe as a project's colour.
+  // A failed project colour, for Settings › Tasks' Todoist projects: Todoist refuses taupe as a project's colour.
   if (command.kind === 'project_colour') return command.payload.colour === 'taupe' ? 'Insufficient permissions (403 Forbidden)' : null;
   // A refused .ics import, left in the review with Retry. Google refuses "Poster session" the first
   // time it's sent, and takes it on Retry.

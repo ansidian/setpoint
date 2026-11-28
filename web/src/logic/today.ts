@@ -78,8 +78,8 @@ export function todayRange(now: number, timeZone: string): {from: string; to: st
 export const lineTime = (item: ItemOut): string | null => (item.kind === 'task' ? item.due_at : item.starts_at);
 
 /**
- * The items of the calendars listed in Settings › Calendar, Todoist's included: one switched off
- * there is left out here too. The Calendar sidebar's checkbox is Calendar's own filter, so it doesn't count.
+ * The items of the calendars listed in Settings › Calendar, and of Todoist while Settings › Tasks
+ * lists it: one switched off is left out here too. The Calendar sidebar's checkbox is Calendar's own filter, so it doesn't count.
  */
 export function onListed(items: ItemOut[], calendars: readonly Pick<CalendarOut, 'id' | 'listed'>[]): ItemOut[] {
   const off = new Set(calendars.filter(calendar => !calendar.listed).map(calendar => calendar.id));

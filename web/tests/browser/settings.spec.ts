@@ -108,13 +108,13 @@ test('board 30a: Settings › News, after Calendar, its warning glyph while FOX 
     await openAt(page, setpoint.base, 'news');
     const fox = page.locator('.settings .news-src', {hasText: 'FOX 11'});
     await fox.waitFor();
-    // The nav's three groups: Accounts · Mail, Calendar, Places, News, Jobs (its page is
+    // The nav's three groups: Accounts · Mail, Calendar, Tasks, Places, News, Jobs (its page is
     // jobsStates.spec.ts's) · Notifications, AI, Appearance, Security, a gap before each group's first.
-    assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Mail', 'Calendar', 'Places', 'News', 'Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Sign out']);
+    assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Mail', 'Calendar', 'Tasks', 'Places', 'News', 'Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Sign out']);
     assert.deepEqual(await page.locator('.settings .set-nav .nav.gap').allTextContents(), ['Mail', 'Notifications']);
     // ↑ ↓ walk the nav in its order, wrapping at the ends, all the way round to News.
     await page.locator('.settings .set-nav .nav.on').focus();
-    for (const [key, next] of [...['Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Accounts', 'Mail', 'Calendar', 'Places', 'News'].map(name => ['ArrowDown', name]), ['ArrowUp', 'Places'], ['ArrowDown', 'News']]) {
+    for (const [key, next] of [...['Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Accounts', 'Mail', 'Calendar', 'Tasks', 'Places', 'News'].map(name => ['ArrowDown', name]), ['ArrowUp', 'Places'], ['ArrowDown', 'News']]) {
       await page.keyboard.press(key!);
       await page.locator('.settings .set-nav .nav.on', {hasText: new RegExp(`^${next}$`)}).waitFor();
     }
@@ -698,31 +698,28 @@ test('Send test: it shows it\'s sending, a failure says so in words, a test that
   }
 });
 
-test('Calendar, Places and Appearance: each account\'s calendars under its address and Todoist\'s projects under its switch, a calendar and Todoist unlisted, Time to Leave pointing to Places for Home, Home set with its coordinates, a place added, a clash refused, renamed and removed, Time to Leave on with its buffer, Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
+test('Calendar, Tasks, Places and Appearance: each account\'s calendars under its address, one unlisted, Time to Leave pointing to Places for Home, Home set with its coordinates, a place added, a clash refused, renamed and removed, Time to Leave on with its buffer, weather off; on Tasks Todoist\'s projects under its switch, Todoist unlisted, its default project; Light; Todoist reconnects from Accounts', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'calendar');
     const settings = () => setpoint.api<Settings>('GET', '/settings');
-    // Every group has its label. Home is Places', and Todoist's switch, projects and default project are a section.
+    // Every group has its label. Home is Places', and Todoist is Tasks'.
     await page.getByRole('switch', {name: 'Show Classes'}).waitFor();
-    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Time to Leave', 'Todoist', 'Weather']);
+    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Time to Leave', 'Weather']);
     // Without Home, Time to Leave can't work: off and disabled, saying what's missing and where it's set.
     const leave = page.getByRole('switch', {name: 'Time to Leave'});
     const leaveRow = page.locator('.settings .set-row', {has: leave});
     assert.deepEqual([await leave.isDisabled(), await leave.getAttribute('aria-checked')], [true, 'false']);
     assert.equal(await leaveRow.locator('.s').textContent(), 'Set Home first');
 
-    // One group: each account's address heads its calendars, Todoist's switch heads its projects.
+    // One group: each account's address heads its calendars.
     const rows = (section: string) => page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: section})}).locator('.set-group').first()
       .locator('.set-row').evaluateAll(list => list.map(row => `${row.classList.contains('nest') ? '  ' : ''}${row.querySelector('.t')?.textContent ?? ''}`));
     assert.deepEqual(await rows('Calendars'), ['user@example.com', '  Personal', '  Classes', '  Holidays in United States', 'user.jobs@example.com', '  Jobs']);
-    assert.deepEqual((await rows('Todoist')).slice(0, 2), ['Todoist', '  Inbox']);
 
     await page.getByRole('switch', {name: 'Show Classes'}).click();
     await settled('Classes hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Classes')?.listed === false);
-    await page.getByRole('switch', {name: 'Show Todoist'}).click();
-    await settled('Todoist hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.provider === 'todoist')?.listed === false);
 
     // Places: Home first, then Add place, then the Maps key last.
     await leaveRow.getByRole('button', {name: 'Set Home in Places'}).click();
@@ -770,11 +767,20 @@ test('Calendar, Places and Appearance: each account\'s calendars under its addre
     await settled('Time to Leave on, buffer', settings, value => value.time_to_leave.enabled && value.time_to_leave.buffer_minutes === 10);
     await page.locator('.settings .stepper .v', {hasText: '10 min'}).waitFor();
 
-    await choose(page, 'Default project', 'School');
-    await settled('default project', settings, value => value.todoist.default_project === 'School');
-
     await page.getByRole('switch', {name: 'Weather'}).click();
     await settled('weather off', settings, value => !value.calendar.weather);
+
+    // Tasks: Todoist's switch heads its projects, then its default project.
+    await page.locator('.settings .set-nav .nav', {hasText: 'Tasks'}).click();
+    await page.getByRole('switch', {name: 'Show Todoist'}).waitFor();
+    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Todoist']);
+    assert.deepEqual((await rows('Todoist')).slice(0, 2), ['Todoist', '  Inbox']);
+    // Todoist has its ring and no colour to pick.
+    assert.equal(await page.locator('.settings [data-calendar]', {hasText: 'Todoist'}).locator('.sw').count(), 0);
+    await page.getByRole('switch', {name: 'Show Todoist'}).click();
+    await settled('Todoist hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.provider === 'todoist')?.listed === false);
+    await choose(page, 'Default project', 'School');
+    await settled('default project', settings, value => value.todoist.default_project === 'School');
 
     // Reconnect is in Todoist's row's menu on Accounts. The dev run has no Todoist app, so it says why under Sources.
     await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).click();
@@ -799,8 +805,6 @@ test('a calendar\'s colour, picked from the swatches, waits for Google at .5 wit
     await openAt(page, setpoint.base, 'calendar');
     const calendars = () => setpoint.api<CalendarOut[]>('GET', '/calendars');
     const personal = page.locator('.settings [data-calendar]', {hasText: 'Personal'});
-    // Todoist has its ring and no colour to pick.
-    assert.equal(await page.locator('.settings [data-calendar]', {hasText: 'Todoist'}).locator('.sw').count(), 0);
 
     await personal.getByRole('button', {name: 'Personal colour'}).click();
     // Nine swatches: caution and alert keep their jobs.
@@ -850,7 +854,7 @@ test('a Todoist project\'s colour, picked from Todoist\'s 20, waits for Todoist 
   const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_PROVIDER_HOLD: provider.file}});
   try {
     const page = await setpoint.page('target');
-    await openAt(page, setpoint.base, 'calendar');
+    await openAt(page, setpoint.base, 'tasks');
     const projects = () => setpoint.api<TodoistProjectOut[]>('GET', '/todoist/projects');
     const home = page.locator('.settings [data-project]', {hasText: 'Home'});
     const colourOf = (row: typeof home) => row.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim());
@@ -1186,7 +1190,7 @@ for (const width of [852, 640]) test(`in a ${width} px window ${width === 852 ? 
   }
 });
 
-test('Todoist not connected says so on Accounts with Connect Todoist, which says why it can\'t here, and on Calendar with a way to Accounts', async () => {
+test('Todoist not connected says so on Accounts with Connect Todoist, which says why it can\'t here, and on Tasks with a way to Accounts', async () => {
   const setpoint = await startSetpoint({fixtures: ['todoist-off'], clock: 'frozen'});
   try {
     const page = await setpoint.page({width: 1280, height: 800});
@@ -1202,8 +1206,8 @@ test('Todoist not connected says so on Accounts with Connect Todoist, which says
     assert.equal(await page.getByRole('menuitem', {name: 'Reconnect'}).count(), 0);
     await page.keyboard.press('Escape');
 
-    // Calendar's Todoist section has no projects to show: it says so and leads to Accounts.
-    await page.locator('.settings .set-nav .nav', {hasText: 'Calendar'}).click();
+    // Tasks' Todoist section has no projects to show: it says so and leads to Accounts.
+    await page.locator('.settings .set-nav .nav', {hasText: 'Tasks'}).click();
     const section = page.locator('.settings .set-sec').filter({has: page.locator('.set-label', {hasText: /^Todoist$/})});
     await section.getByText('Not connected').waitFor();
     await section.getByRole('button', {name: 'Connect in Accounts'}).click();

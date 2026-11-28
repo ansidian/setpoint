@@ -10,6 +10,7 @@ import {repeats} from './tip.ts';
 export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}> = {
   accounts: {label: 'Accounts', icon: 'alternate_email'},
   calendar: {label: 'Calendar', icon: 'calendar_month'},
+  tasks: {label: 'Tasks', icon: 'task_alt'},
   places: {label: 'Places', icon: 'location_on'},
   notifications: {label: 'Notifications', icon: 'notifications'},
   mail: {label: 'Mail', icon: 'mail'},
