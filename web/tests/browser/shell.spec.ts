@@ -430,6 +430,10 @@ test('a load with overdue tasks opens on their banner over the Inbox; a click se
     await page.locator('.overdue[data-state="in"]').waitFor({state: 'detached'});
     // The click opened nothing under it: the Inbox has no email open.
     assert.equal(new URL(page.url()).pathname, '/inbox');
+    // The sidebar keeps the earlier days' under Overdue, above Today, each over its day; today's is Today's.
+    const sidebar = () => page.locator('.sb .today').locator('.sb-label, .today-row').evaluateAll(lines => lines.map(line => (line.classList.contains('sb-label')
+      ? `# ${line.textContent}` : `${line.querySelector('.title')?.textContent ?? ''}|${line.querySelector('.when')?.textContent ?? ''}`)));
+    assert.deepEqual((await sidebar()).slice(0, 5), ['# Overdue', 'Submit the parking permit form|Mon', 'Renew the library card|Sun', '# Today', 'Call the landlord about the heater|8:00 AM']);
 
     // A page change inside the app is no arrival: Calendar opens with no banner.
     await page.locator('.overdue').waitFor({state: 'detached'});

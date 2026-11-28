@@ -6,7 +6,7 @@ import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Overdue} from '../src/logic/overdue.ts';
-import {arrivalTasks, bannerRange, dueLine, exitLength, exitSplit, inCooldown, isSnoozed, keptSnoozes, listed, shortDue, snoozeFor, snoozeUntil} from '../src/logic/overdueBanner.ts';
+import {arrivalTasks, bannerRange, dueLine, earlierOverdue, exitLength, exitSplit, inCooldown, isSnoozed, keptSnoozes, listed, shortDue, snoozeFor, snoozeUntil} from '../src/logic/overdueBanner.ts';
 import type {Snooze, SnoozeChoice} from '../src/logic/overdueBanner.ts';
 
 let nextId = 1;
@@ -179,3 +179,19 @@ describe('arrivals stay quiet for the banner\'s pause after it was last on scree
   });
 });
 
+describe('the sidebar\'s Overdue lists earlier days\' overdue tasks, the most recently due first, without the snoozed', () => {
+  const eight = timed('2026-10-07', '2026-10-07T15:00:00.000Z', 'Today 8:00 AM');
+  const monday = untimed('2026-10-05', 'Monday');
+  const yesterday = timed('2026-10-06', '2026-10-07T00:00:00.000Z', 'Yesterday 5:00 PM');
+  const snoozed = untimed('2026-10-06', 'Yesterday, snoozed');
+  const held = snoozeFor(snoozed, now + 3_600_000);
+  const ended = snoozeFor(monday, now - 60_000);
+  test.each([
+    ['today\'s has a Today line instead', [eight], [], []],
+    ['earlier days, the latest first', [monday, eight, yesterday], [], ['Yesterday 5:00 PM', 'Monday']],
+    ['a snooze holding one leaves it out', [snoozed, monday], [held], ['Monday']],
+    ['an ended snooze holds nothing', [monday], [ended], ['Monday']],
+  ])('%s', (_name, tasks, snoozes, expected) => {
+    expect(titles(earlierOverdue(overdue(...tasks), snoozes, now, SEED_TIME_ZONE))).toEqual(expected);
+  });
+});

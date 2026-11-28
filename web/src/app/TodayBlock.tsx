@@ -1,4 +1,7 @@
-// The sidebar's Today block on mail pages. It shows "Dentist" over "2:30 PM · in 5h" and the open
+// The sidebar's Today block on mail pages. Under an Overdue label (none when nothing is) come the
+// open tasks overdue from earlier days, as far back as Settings › Tasks › Overdue says, the most
+// recently due first, each over when it was due ("Yesterday", "Mon") in caution, without those a
+// banner snooze holds off. Then Today. It shows "Dentist" over "2:30 PM · in 5h" and the open
 // tasks due today, a timed one over its time ("9:00 AM") and one with subtasks ending in their
 // count ("1/3"), in one list by time with the untimed tasks after. Under a Tomorrow label of its own (none when nothing's on) come tomorrow's events and open
 // tasks in the same order: the first two and "3 more due tomorrow" when there are more than three.
@@ -13,13 +16,15 @@
 // Folded to the rail, it's one slot instead: a clock over the time until today's next timed item,
 // event or task alike. Its tooltip names that item with what else is left, and it opens the same
 // card. The slot shows nothing once no timed item is left today.
-import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
-import {useMemo, useState} from 'react';
+import type {CalendarOut, ItemOut, ItemsOut, Settings} from '@setpoint/shared';
+import {useMemo, useState, useSyncExternalStore} from 'react';
 import type {MouseEvent, ReactNode} from 'react';
 import {timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
-import {CALENDARS_PATH, completeItem, createSubtask, deleteItem, itemsPath, moveBack, reorderSubtasks, retryChange} from '../api/items.ts';
+import {CALENDARS_PATH, completeItem, createSubtask, deleteItem, itemsPath, moveBack, reorderSubtasks, retryChange, SETTINGS_PATH} from '../api/items.ts';
 import type {Entry, FoldRules} from '../logic/fold.ts';
+import {overdueTasks} from '../logic/overdue.ts';
+import {bannerRange, earlierOverdue, shortDue} from '../logic/overdueBanner.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {byTime, DONE_MOMENT_MS, nextUp, onListed, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
@@ -39,6 +44,7 @@ import {openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
 import {foldIn, foldOut, useFold} from './fold.ts';
 import {TodaySkeleton} from './states/Skeletons.tsx';
+import {onSnoozes, readSnoozes, snoozesVersion} from './overdueSnoozed.ts';
 import {navigate} from './router.ts';
 import {showToast, toastFailure} from './toast.ts';
 
@@ -49,9 +55,10 @@ function follows(event: MouseEvent): boolean {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0;
 }
 
-/** A task's line, and whether it's showing its done check. */
+/** A task's line, whether it's showing its done check, and whether it's under the Overdue label. */
 interface TaskLine extends TodayTask {
   done: boolean;
+  overdue?: true;
 }
 
 /** A line under the Tomorrow label: one of its events, or a task. */
@@ -68,6 +75,12 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   const range = todayRange(now, zone);
   const {data} = useResource<ItemsOut>(itemsPath(range.from, range.to));
   const {data: calendars, error: calendarsFailed} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  // Earlier days' overdue tasks, over the banner's range, so it's the banner's load. Not in the rail.
+  const {data: settings, error: settingsFailed} = useResource<Settings>(SETTINGS_PATH);
+  const late = settings && !rail ? bannerRange(now, zone, settings.overdue.days) : null;
+  const {data: lateData, error: lateFailed} = useResource<ItemsOut>(late ? itemsPath(late.from, late.to) : null);
+  // Read again whenever the snoozes change.
+  const snoozed = useSyncExternalStore(onSnoozes, snoozesVersion);
   const ring = useRingColour();
   // "3 more due tomorrow" opens every line until the page reloads.
   const [all, setAll] = useState(false);
@@ -79,15 +92,21 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   // whatever the server's list says meanwhile.
   const [ticked, setTicked] = useState<ReadonlyMap<string, {line: TodayTask; at: number}>>(new Map());
 
-  // Settings › Calendar's switched-off calendars and Todoist are left out, as on Calendar.
+  // The calendars switched off in Settings › Calendar, and Todoist in Settings › Tasks, are left out, as on Calendar.
   const items = useMemo(() => onListed(data?.items ?? [], calendars ?? []).filter(item => !gone.has(item.key)), [data, calendars, gone]);
   const today = useMemo(() => todayBlock(items, now, zone), [items, now, zone]);
+  const overdue = useMemo((): TaskLine[] => {
+    const listed = onListed(lateData?.items ?? [], calendars ?? []).filter(item => !gone.has(item.key));
+    return earlierOverdue(overdueTasks(listed, now, zone), readSnoozes(), now, zone)
+      .map(({item}) => ({item, title: item.title, time: shortDue(item, now, zone), tomorrow: false, passed: true, done: false, overdue: true}));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `snoozed` reads the snoozes again.
+  }, [lateData, calendars, gone, now, zone, snoozed]);
   const next = useMemo(() => (rail ? nextUp(items, now, zone) : null), [rail, items, now, zone]);
   const tasks = useMemo(() => {
-    const listed: TaskLine[] = today.tasks.filter(task => !ticked.has(task.item.key)).map(task => ({...task, done: false}));
+    const listed: TaskLine[] = [...overdue, ...today.tasks.map(task => ({...task, done: false}))].filter(task => !ticked.has(task.item.key));
     for (const {line, at} of [...ticked.values()].sort((a, b) => a.at - b.at)) listed.splice(Math.min(at, listed.length), 0, {...line, done: true});
     return listed;
-  }, [today, ticked]);
+  }, [overdue, today, ticked]);
   // Tomorrow's lines fold to two and "N more", counted in time order with the untimed tasks
   // last, as Today's.
   const {shown: tomorrowShown, more} = useMemo(() => shownTomorrow<TomorrowLine>(byTime([
@@ -96,16 +115,18 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   ], tomorrowItem), all, line => 'event' in line), [today, tasks, all]);
   const tomorrowEvents = tomorrowShown.flatMap(line => ('event' in line ? [line.event] : []));
   const shown = useMemo(() => [
-    ...tasks.filter(task => !task.tomorrow),
+    ...tasks.filter(task => task.overdue),
+    ...tasks.filter(task => !task.tomorrow && !task.overdue),
     ...tomorrowShown.flatMap(line => ('task' in line ? [line.task] : [])),
   ], [tasks, tomorrowShown]);
   const entries = useMemo(() => shown.map((line): Entry<TaskLine> => ({key: line.item.key, id: line.item.id, item: line})), [shown]);
   const folded = useFold(entries, FOLDS);
-  const lines = [...(today.event ? [today.event.item] : []), ...today.tomorrowEvents.map(event => event.item), ...today.tasks.map(task => task.item)];
+  const lines = [...(today.event ? [today.event.item] : []), ...today.tomorrowEvents.map(event => event.item), ...overdue.map(task => task.item), ...today.tasks.map(task => task.item)];
   const opened = lines.find(item => item.key === openKey) ?? null;
 
-  // Until the calendars come too (or fail), so a switched-off calendar's event never shows for a moment.
-  if (!data || (!calendars && !calendarsFailed)) {
+  // Until the calendars come too (or fail), so a switched-off calendar's event never shows for a
+  // moment, and the overdue tasks, so they never arrive over Today's lines.
+  if (!data || (!calendars && !calendarsFailed) || (!rail && !settingsFailed && (!settings || (!lateData && !lateFailed)))) {
     if (rail) return null;
     return (
       <div className="sb-sec today">
@@ -122,8 +143,10 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
   const lineItem = (line: Line) => ('event' in line ? line.event.item : line.task.item.item);
   const todayLines = byTime<Line>([
     ...(today.event ? [{event: today.event}] : []),
-    ...folded.filter(line => !line.item.tomorrow).map(task => ({task})),
+    ...folded.filter(line => !line.item.tomorrow && !line.item.overdue).map(task => ({task})),
   ], lineItem);
+  // Most recently due first, as the banner lists them.
+  const overdueLines = folded.filter(line => line.item.overdue);
   const tomorrowLines = byTime<Line>([
     ...tomorrowEvents.map(event => ({event})),
     ...folded.filter(line => line.item.tomorrow).map(task => ({task})),
@@ -278,6 +301,8 @@ export function TodayBlock({rail = false}: {rail?: boolean}) {
 
   return (
     <div className="sb-sec today">
+      {overdueLines.length > 0 && <div className="sb-label">Overdue</div>}
+      {overdueLines.map(line => taskLine(line))}
       {todayLines.length > 0 && <div className="sb-label">Today</div>}
       {todayLines.map(line => ('task' in line ? taskLine(line.task) : 'in' in line.event
         ? eventLine(line.event.item, line.event.key, line.event.title, <>

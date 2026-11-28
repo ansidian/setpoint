@@ -134,3 +134,10 @@ export function shortDue(item: ItemOut, now: number, timeZone: string): string {
   return days < 7 ? onDay(day, {weekday: 'short'}) : dateOf(day, today);
 }
 
+/**
+ * The sidebar's Overdue lines: the overdue tasks among `overdue` due before today (today's have
+ * Today lines), the most recently due first, without those a snooze holds off, as the phone's group.
+ */
+export function earlierOverdue(overdue: readonly Overdue[], snoozes: readonly Snooze[], now: number, timeZone: string): Overdue[] {
+  return arrivalTasks(overdue.filter(task => !task.today && !isSnoozed(task.item, snoozes, now)), timeZone);
+}
