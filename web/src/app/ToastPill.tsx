@@ -33,12 +33,12 @@ export function ToastPill() {
 
 /**
  * It leads with its tone's glyph in a tinted disc, its time a ring draining around it (none while it
- * waits). A failure is one line, wrapping when long. A confirm has Cancel (Esc) and its action (Enter).
+ * waits). A failure is one line, wrapping when long.
  * Swiped left or right, by a drag or two fingers on a trackpad, it follows and fades, and goes once
  * past SWIPE_PX. There's no ×, and no hint that it swipes.
  */
 function Pill({toast}: {toast: Toast}) {
-  const {action, tone, confirm} = toast;
+  const {action, tone} = toast;
   const phone = usePhone();
   const ref = useRef<HTMLDivElement>(null);
   const [dx, setDx] = useState(0);
@@ -90,27 +90,6 @@ function Pill({toast}: {toast: Toast}) {
       window.clearTimeout(rest);
     };
   }, [toast.id]);
-
-  /**
-   * A confirm takes Enter and Esc while it's up, ahead of the page's own keys (Esc closing Settings,
-   * Enter pressing a focused button). Not in a field, where Enter and Esc are the field's, nor a held
-   * key's repeats. The Enter that asked (⌘K's) has gone by before this listens.
-   */
-  useEffect(() => {
-    if (!confirm || phone || toast.leaving) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
-      if (event.key !== 'Enter' && event.key !== 'Escape') return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (event.key === 'Enter') action?.run();
-      dismissToast(toast.id);
-    };
-    window.addEventListener('keydown', onKey, {capture: true});
-    return () => window.removeEventListener('keydown', onKey, {capture: true});
-  }, [confirm, phone, toast.leaving, toast.id, action]);
 
   /**
    * A press on the pill, followed on the window, so a flick that leaves the pill in one move still
@@ -184,26 +163,23 @@ function Pill({toast}: {toast: Toast}) {
     );
   }
 
-  const className = ['toast', `t-${tone}`, confirm && 'confirm', tone === 'failed' && 'wraps', ...motionClasses].filter(Boolean).join(' ');
+  const className = ['toast', `t-${tone}`, tone === 'failed' && 'wraps', ...motionClasses].filter(Boolean).join(' ');
   return (
     <div ref={ref} className={className} role="status" style={style} onPointerDown={press}>
-      {!confirm && (
-        <span className="disc">
-          <Icon name={toast.glyph} size={14} />
-          {toast.ms !== null && (
-            <svg className="time" viewBox="0 0 22 22" aria-hidden="true">
-              <circle className="trk" cx="11" cy="11" r={RING_R} />
-              <circle className="arc" cx="11" cy="11" r={RING_R} pathLength={100} />
-            </svg>
-          )}
-        </span>
-      )}
+      <span className="disc">
+        <Icon name={toast.glyph} size={14} />
+        {toast.ms !== null && (
+          <svg className="time" viewBox="0 0 22 22" aria-hidden="true">
+            <circle className="trk" cx="11" cy="11" r={RING_R} />
+            <circle className="arc" cx="11" cy="11" r={RING_R} pathLength={100} />
+          </svg>
+        )}
+      </span>
       <span className="txt">{toast.text}</span>
-      {confirm && <button className="tb quiet" type="button" onClick={() => dismissToast(toast.id)}>Cancel<span className="kbd">Esc</span></button>}
       {action && (
-        <button className={confirm ? 'tb solid' : 'tb'} type="button" onClick={run}>
+        <button className="tb" type="button" onClick={run}>
           {action.label}
-          {confirm ? <span className="kbd">↵</span> : action.key && <span className="kbd">{action.key}</span>}
+          {action.key && <span className="kbd">{action.key}</span>}
         </button>
       )}
     </div>

@@ -26,6 +26,14 @@
 /* The nav's own glyph colours (ink3, ink on the current page) stop at the mark, which stays caution. */
 .settings .set-nav .nav .warn .icon { color: inherit; }
 .settings .set-nav .foot { margin-top: auto; }
+/* Sign out asking in its place (SignOut.tsx): the question in `ink2`, then Cancel where Sign out
+   was, and Sign out solid `ink` beside it. */
+.settings .sign-out-ask { display: flex; flex-direction: column; gap: 8px; padding: 6px 10px 4px; outline: none; }
+.settings .sign-out-ask .ask-q { margin: 0; font-size: 13px; color: var(--ink2); }
+.settings .sign-out-ask .acts { display: flex; gap: 6px; }
+.settings .sign-out-ask .acts .btn.quiet { margin-left: -10px; }
+.settings .sign-out-ask .btn:has(.kbd) { padding-right: 4px; }
+.settings .sign-out-ask .btn:not(.quiet) .kbd { background: color-mix(in srgb, var(--onInk) 14%, transparent); color: color-mix(in srgb, var(--onInk) 70%, var(--ink)); }
 /* The nav's three groups, a gap between them. */
 .settings .set-nav .nav.gap { margin-top: 14px; }
 

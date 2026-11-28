@@ -204,8 +204,9 @@ test('deep links at the iPhone size: an email, an event, one occurrence, a task\
     await page.locator('.ph-set', {hasText: 'Accounts is on the desktop'}).waitFor();
     assert.equal(new URL(page.url()).pathname, '/settings/accounts');
     await page.locator('.ph-set-foot button', {hasText: 'Sign out'}).tap();
-    // It asks once, in the toast.
-    await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).tap();
+    // It asks once, in its place, staying on the page.
+    await page.locator('.ph-set-foot').getByRole('group', {name: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).tap();
+    assert.equal(new URL(page.url()).pathname, '/settings/accounts');
     await page.getByLabel('Password').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

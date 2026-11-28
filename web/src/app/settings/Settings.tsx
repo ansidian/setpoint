@@ -2,14 +2,13 @@
 // the scrim behind, not in the address bar. The 220 px nav holds the pages in three groups with a gap
 // between them (Accounts · Mail, Calendar, Tasks, Places, News, Jobs · Notifications, AI, Appearance, Security).
 // Accounts is marked while a source needs sign-in and News while a feed fails, and Sign out is at its
-// foot. ↑ ↓ in the nav change page. Esc closes the topmost thing (a menu first, then Settings). Keys
+// foot, asking there (SignOut.tsx). ↑ ↓ in the nav change page. Esc closes the topmost thing (a menu first, then Settings). Keys
 // inside never reach the page under it, and focus goes back where it was. Opening it loads every
 // page's answers, so a page switched to shows at once. Until a group's answers come it draws skeleton
 // rows, never a default as a fact.
 import type {AccountOut, NewsSourcesOut} from '@setpoint/shared';
 import {useEffect, useRef} from 'react';
 import type {JSX, KeyboardEvent} from 'react';
-import {askSignOut} from '../signOut.ts';
 import {prefetch, useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
@@ -31,6 +30,7 @@ import {NewsSettingsPage} from './News.tsx';
 import {NotificationsPage} from './Notifications.tsx';
 import {PlacesPage} from './Places.tsx';
 import {SecurityPage} from './Security.tsx';
+import {SignOut} from './SignOut.tsx';
 import {TasksPage} from './Tasks.tsx';
 import {closeSettings, openSettings, useSettingsPage} from './store.ts';
 import './settings.css';
@@ -69,7 +69,8 @@ function Open({page}: {page: SettingsPage}) {
   }, []);
 
   useEffect(() => {
-    modal.current?.querySelector<HTMLElement>('.set-nav .nav.on')?.focus();
+    // Opened asking (⌘K's Sign out), the question has it.
+    (modal.current?.querySelector<HTMLElement>('.sign-out-ask') ?? modal.current?.querySelector<HTMLElement>('.set-nav .nav.on'))?.focus();
   }, []);
 
   function onKeyDown(event: KeyboardEvent) {
@@ -107,13 +108,7 @@ function Open({page}: {page: SettingsPage}) {
               {name === 'news' && failing && <span className="warn" role="img" aria-label="A feed is failing" data-tip="A feed is failing"><Icon name="warning" size={16} /></span>}
             </button>
           )))}
-          <button type="button" className="nav foot" onClick={() => {
-            closeSettings();
-            askSignOut();
-          }}>
-            <Icon name="door_open" />
-            <span className="grow">Sign out</span>
-          </button>
+          <SignOut />
         </nav>
         <Body />
       </div>

@@ -1,13 +1,13 @@
 // The one toast (ToastPill.tsx on toast.ts). A new one replaces the last. It doesn't wait under the
 // pointer, it swipes away and it fades out. A failure stays longer. What's held back until it goes
-// is let go however it goes. A failure with an action and a confirm wait for an answer; a confirm takes
-// Enter and Esc. Its look and its motion are by eye, and a swipe is read by its outcome.
+// is let go however it goes. A failure with an action waits for an answer. Its look and its motion
+// are by eye, and a swipe is read by its outcome.
 // The clock is Vitest's, so its six and eight seconds pass at once.
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
-import {dismissToast, showConfirm, showToast, toastFailure, UNDO_MS} from '../../src/app/toast.ts';
+import {dismissToast, showToast, toastFailure, UNDO_MS} from '../../src/app/toast.ts';
 import {ApiFailure} from '../../src/api/client.ts';
 import {motion} from '../../src/tokens.ts';
 
@@ -195,53 +195,3 @@ test('a failure with an action waits past its eight seconds, and goes by its act
   await expect.element(toast).toMatchTextContent('Moved to Trash');
 });
 
-/** A key pressed on what has focus, as the keyboard does, answering whether the page saw it. */
-function press(key: string, on: Element = document.body, init: KeyboardEventInit = {}) {
-  let pageSaw = false;
-  const seen = () => { pageSaw = true; };
-  window.addEventListener('keydown', seen);
-  on.dispatchEvent(new KeyboardEvent('keydown', {key, bubbles: true, cancelable: true, ...init}));
-  window.removeEventListener('keydown', seen);
-  return pageSaw;
-}
-
-test('a confirm waits for its answer: Enter runs its action once, Esc and Cancel take it away, and the page doesn\'t see those keys', async () => {
-  const run = vi.fn();
-  const shown = Date.now();
-  showConfirm('Sign out of Setpoint?', {label: 'Sign out', run});
-  advanceTo(shown + UNDO_MS * 3);
-  await expect.element(toast).not.toHaveClass('leaving');
-  // A held key's repeat isn't an answer.
-  press('Enter', document.body, {repeat: true});
-  expect(run).not.toHaveBeenCalled();
-  expect(press('Enter')).toBe(false);
-  expect(run).toHaveBeenCalledTimes(1);
-  vi.advanceTimersByTime(motion.fast);
-  await expect.element(toast).not.toBeInTheDocument();
-  press('Enter');
-  expect(run).toHaveBeenCalledTimes(1);
-
-  showConfirm('Sign out of Setpoint?', {label: 'Sign out', run});
-  await expect.element(toast).toBeVisible();
-  expect(press('Escape')).toBe(false);
-  vi.advanceTimersByTime(motion.fast);
-  await expect.element(toast).not.toBeInTheDocument();
-
-  showConfirm('Sign out of Setpoint?', {label: 'Sign out', run});
-  await toast.getByRole('button', {name: /Cancel/}).click();
-  vi.advanceTimersByTime(motion.fast);
-  await expect.element(toast).not.toBeInTheDocument();
-  expect(run).toHaveBeenCalledTimes(1);
-});
-
-test('a confirm leaves Enter and Esc to a field that has focus', async () => {
-  const run = vi.fn();
-  const field = document.body.appendChild(document.createElement('input'));
-  showConfirm('Sign out of Setpoint?', {label: 'Sign out', run});
-  await expect.element(toast).toBeVisible();
-  expect(press('Enter', field)).toBe(true);
-  expect(press('Escape', field)).toBe(true);
-  expect(run).not.toHaveBeenCalled();
-  await expect.element(toast).not.toHaveClass('leaving');
-  field.remove();
-});

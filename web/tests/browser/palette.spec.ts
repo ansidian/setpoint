@@ -186,7 +186,7 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
     await page.keyboard.type('sign');
     assert.deepEqual(await items(page), ['Sign out']);
     await page.keyboard.press('Enter');
-    await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).click();
+    await page.locator('.settings').getByRole('group', {name: 'Sign out of Setpoint?'}).getByRole('button', {name: /Sign out/}).click();
     await page.locator('.sign-in').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -249,7 +249,7 @@ test('typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" 
   }
 });
 
-test('Sign out from ⌘K asks once in the toast, and the Enter that asked doesn\'t answer; Esc cancels it, Enter signs out', async () => {
+test('Sign out from ⌘K opens Settings asking at its foot, and the Enter that asked doesn\'t answer; Esc cancels it, Settings staying, Enter signs out', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -258,15 +258,18 @@ test('Sign out from ⌘K asks once in the toast, and the Enter that asked doesn\
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('sign out');
     await page.keyboard.press('Enter');
-    const ask = page.locator('.toast', {hasText: 'Sign out of Setpoint?'});
+    const ask = page.locator('.settings').getByRole('group', {name: 'Sign out of Setpoint?'});
     await ask.waitFor();
     // Nothing happens to wait for: asking signs nothing out.
     await page.waitForTimeout(300);
     await setpoint.idle();
     assert.equal(await page.locator('.sign-in').count(), 0, 'still signed in');
-    // Esc cancels it.
+    // Esc cancels it, and Settings stays open with Sign out back in its place.
     await page.keyboard.press('Escape');
     await ask.waitFor({state: 'detached'});
+    await page.locator('.settings .set-nav .nav.foot', {hasText: 'Sign out'}).waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('.settings').waitFor({state: 'detached'});
     // Asked again, Enter answers it.
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('sign out');

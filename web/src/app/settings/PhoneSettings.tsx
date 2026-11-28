@@ -3,17 +3,17 @@
 // desktop's own page in the phone's column under a Back to the index. Each of the other pages
 // (Accounts, Mail, Calendar, Tasks, News, Jobs, AI, Security) says it's on the desktop and lists the phone's
 // pages under that, so a reconnect alert's link or a notification always lands on a page that leads
-// somewhere. Sign out is at the foot of each, asking once in the toast. The Inbox's tab is lit here,
+// somewhere. Sign out is at the foot of each, asking there. The Inbox's tab is lit here,
 // as Settings is the Inbox's title menu's. Security stays on the desktop: signing out a device or
 // adding a passkey is rare and awkward on a phone.
 import {SETTINGS_NAV} from '../../logic/settings.ts';
 import type {SettingsPage} from '../../logic/route.ts';
 import {Icon, Mark} from '../../ui/Icon.tsx';
 import {navigate} from '../router.ts';
-import {askSignOut} from '../signOut.ts';
 import {AppearancePage} from './Appearance.tsx';
 import {NotificationsPage} from './Notifications.tsx';
 import {PlacesPage} from './Places.tsx';
+import {SignOut} from './SignOut.tsx';
 import './settings.css';
 
 const ON_THE_PHONE = ['places', 'notifications', 'appearance'] as const satisfies readonly SettingsPage[];
@@ -61,7 +61,7 @@ export function PhoneSettings({page}: {page: SettingsPage | null}) {
           </section>
         )}
         <div className="ph-set-foot">
-          <button className="btn ghost" type="button" onClick={askSignOut}><Icon name="door_open" size={17} />Sign out</button>
+          <SignOut phone />
         </div>
       </div>
     </>

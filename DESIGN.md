@@ -334,12 +334,15 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   Trash, deleted and discarded `alert` `delete`, Sending `accent` `send`, a pin `sunGlyph` `keep`,
   a snooze `violet` `snooze` ("Snoozed until Mon 9:00 AM"), a failure `alert` `error`, any other line `ink2` with a glyph that fits (Copied `content_copy`,
   otherwise `info`). A failure stays 8 seconds as one line, wrapping at
-  380 px at most, with an `alert` edge. A failure with an action (Open, Try again) and a confirm
-  (Sign out) wait for an answer, with no ring; a confirm has a quiet Cancel (Esc) and a solid `ink`
-  action (↵), and takes those keys outside a field. The phone's toast is as it was: `cardOn`, a bare
+  380 px at most, with an `alert` edge. A failure with an action (Open, Try again) waits for an
+  answer, with no ring. A toast never asks a question. The phone's toast is as it was: `cardOn`, a bare
   glyph, a hairline, and everything runs its time. It keeps 16 px from the screen's sides: a long
   line ends in an ellipsis, a failure wraps to two lines, and its action keeps its size. Send joins it: the server holds a sent email 6 seconds, and the toast reads
   "Sending" with Undo, which opens the composer again as it was.
+- **Asking first:** an ask sits where it was asked, in place of the control that asked it, never in
+  the toast. Sign out at Settings' foot becomes "Sign out of Setpoint?" over a quiet Cancel (Esc)
+  where Sign out was and a solid `ink` Sign out (↵), with the keys taken outside a field. ⌘K's Sign out
+  opens Settings with the question up.
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
 - **Tap size:** on the phone every control takes a tap at least 44 px across (`--ph-tap`). Where its
   look stays smaller, its hit area grows around it, never over a neighbour's.

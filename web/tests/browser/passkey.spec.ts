@@ -47,8 +47,8 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
 
     // Sign out (the foot of Settings' nav), then the password, then the passkey.
     await page.locator('.settings .set-nav .nav', {hasText: 'Sign out'}).click();
-    // It asks once, in the toast.
-    await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).click();
+    // It asks once, in its place.
+    await page.locator('.settings').getByRole('group', {name: 'Sign out of Setpoint?'}).getByRole('button', {name: /Sign out/}).click();
     await page.locator('.sign-in').waitFor();
     await page.locator('.sign-in input[type="password"]').fill(password);
     await page.keyboard.press('Enter');
@@ -63,7 +63,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
     await choose(page, 'Sign in with', 'A password or a passkey');
     await page.locator('.settings .line', {hasText: 'Sign-in changed'}).waitFor();
     await page.locator('.settings .set-nav .nav', {hasText: 'Sign out'}).click();
-    await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).click();
+    await page.locator('.settings').getByRole('group', {name: 'Sign out of Setpoint?'}).getByRole('button', {name: /Sign out/}).click();
     await page.getByRole('button', {name: 'Use a passkey'}).click();
     await page.locator('.list .row').first().waitFor();
     const me = await page.evaluate(() => fetch('/api/me').then(response => response.json() as Promise<{method: string}>));

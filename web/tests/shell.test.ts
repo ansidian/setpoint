@@ -371,17 +371,15 @@ describe('the toast\'s glyph: its tone\'s, or for a plain line one that fits it'
   ] as const)('%s %s: %s', (tone, text, glyph) => expect(toastGlyph(tone, text)).toBe(glyph));
 });
 
-// How long a toast stays, or null while it waits for an answer. The phone's toast can't be swiped or
-// cancelled, so there everything runs its time.
+// How long a toast stays, or null while it waits for an answer. The phone's toast can't be swiped,
+// so there everything runs its time.
 describe('how long the toast stays', () => {
   test.each([
     ['a line', {tone: 'plain', action: false}, TOAST_MS.line],
     ['an Undo', {tone: 'gone', action: true}, TOAST_MS.line],
     ['a failure', {tone: 'failed', action: false}, TOAST_MS.failed],
     ['a failure with an action waits', {tone: 'failed', action: true}, null],
-    ['a confirm waits', {tone: 'plain', action: true, confirm: true}, null],
     ['on the phone, a failure with an action', {tone: 'failed', action: true, phone: true}, TOAST_MS.failed],
-    ['on the phone, a confirm', {tone: 'plain', action: true, confirm: true, phone: true}, TOAST_MS.line],
   ] as const)('%s: %s', (_name, toast, ms) => expect(toastMs(toast)).toBe(ms));
 });
 

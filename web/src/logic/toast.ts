@@ -37,11 +37,11 @@ export function toastGlyph(tone: ToastTone, text: string): IconName {
 }
 
 /**
- * How long it stays, or null when it waits: a confirm, and a failure with an action (Open, Try
- * again), wait to be answered, swiped away or replaced. The phone's toast doesn't swipe and has no
- * Cancel, so there every toast still runs its time.
+ * How long it stays, or null when it waits: a failure with an action (Open, Try again) waits to be
+ * answered, swiped away or replaced. The phone's toast doesn't swipe, so there every toast still runs
+ * its time.
  */
-export function toastMs({tone, action, confirm = false, phone = false}: {tone: ToastTone; action: boolean; confirm?: boolean; phone?: boolean}): number | null {
-  if (!phone && (confirm || (tone === 'failed' && action))) return null;
+export function toastMs({tone, action, phone = false}: {tone: ToastTone; action: boolean; phone?: boolean}): number | null {
+  if (!phone && tone === 'failed' && action) return null;
   return tone === 'failed' ? TOAST_MS.failed : TOAST_MS.line;
 }

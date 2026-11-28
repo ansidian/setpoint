@@ -7,8 +7,7 @@
 // one replaces the last, whose action is then gone. A failed change says what failed and why with
 // toastFailure("Failed to pin"), one line: "Failed to pin, can't reach Setpoint". A line leads with its
 // tone's glyph in a disc (logic/toast.ts), its time a ring draining around it, and stays 6 seconds (a
-// failure 8), the pointer resting on it or not. A failure with an action, and a confirm
-// (showConfirm), wait instead. Swiping it away ends it sooner.
+// failure 8), the pointer resting on it or not. A failure with an action waits instead. Swiping it away ends it sooner.
 // Going, it stays drawn for motion.fast to fade out, unless a new one takes its place. A caller that
 // holds something back until the toast goes (Calendar's delete) passes `onGone`, run once however it
 // goes: its time ended, swiped away, replaced, or its action run.
@@ -45,8 +44,6 @@ export interface Toast {
   action: ToastAction | null;
   tone: ToastTone;
   glyph: IconName;
-  // A question with Cancel and its action, rather than a line.
-  confirm: boolean;
   // How long it stays, or null while it waits.
   ms: number | null;
   // Going: drawn for its fade only, taking no clicks.
@@ -89,15 +86,12 @@ function startTimer(id: number, ms: number | null) {
  */
 export function showToast(text: string, action: ToastAction | null = null, look: ToastTone | ToastLook | null = null, onGone: (() => void) | null = null): number {
   const {tone = toastTone(text), glyph} = typeof look === 'string' ? {tone: look} : (look ?? {});
-  return show({text, action, tone, glyph: glyph ?? toastGlyph(tone, text), confirm: false}, onGone);
+  return show({text, action, tone, glyph: glyph ?? toastGlyph(tone, text)}, onGone);
 }
-
-/** Asks before something that can't be taken back: the question, Cancel, and its action, waiting for an answer. */
-export const showConfirm = (text: string, action: ToastAction) => show({text, action, tone: 'plain', glyph: 'info', confirm: true}, null);
 
 function show(said: Omit<Toast, 'id' | 'ms' | 'leaving'>, onGone: (() => void) | null): number {
   ended();
-  const ms = toastMs({tone: said.tone, action: said.action !== null, confirm: said.confirm, phone: isPhone()});
+  const ms = toastMs({tone: said.tone, action: said.action !== null, phone: isPhone()});
   const toast: Toast = {...said, id: nextId++, ms, leaving: false};
   current = toast;
   gone = onGone;

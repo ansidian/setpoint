@@ -726,9 +726,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
    phone, covering no header control, and above Settings (30–31). */
 .toast { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); min-height: 40px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 7px 0 9px; border-radius: 999px; background: var(--toast); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); white-space: nowrap; z-index: 35;
   translate: var(--dx, 0px) var(--lift, 0px); transition: translate var(--dur-fast) var(--ease); user-select: none; -webkit-user-select: none; }
-/* A line with no button keeps the room its disc has on the other side; a confirm, with no disc, the same at its start. */
+/* A line with no button keeps the room its disc has on the other side. */
 .toast:not(:has(button)) { padding-right: 16px; }
-.toast.confirm { padding-left: 16px; }
 /* Each toast rises in over 180 ms, one replacing another afresh (App.tsx keys it), and fades out over
    120 ms, sinking 4 px, taking no clicks meanwhile. */
 .toast { animation: toast-in var(--dur-medium) var(--ease); }
@@ -764,12 +763,6 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .toast .tb:has(.kbd) { padding-right: 4px; }
 @media (hover: hover) { .toast .tb:hover { background: var(--sub3); } }
 .toast .tb:active { background: var(--sub4); }
-/* A confirm's Cancel is quiet and its action solid `ink`, side by side. */
-.toast .tb.quiet { background: transparent; color: var(--ink2); }
-@media (hover: hover) { .toast .tb.quiet:hover { background: var(--sub2); color: var(--ink); } }
-.toast .tb.solid { margin-left: 0; background: var(--ink); color: var(--toast); }
-@media (hover: hover) { .toast .tb.solid:hover { background: color-mix(in srgb, var(--ink) 88%, var(--toast)); } }
-.toast .tb.solid .kbd { background: color-mix(in srgb, var(--toast) 14%, transparent); color: color-mix(in srgb, var(--toast) 70%, var(--ink)); }
 /* A failure has an `alert` edge, and stacks what failed over why (12.5 px, `ink2`), 380 px at most. */
 .toast.t-failed { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent), var(--shadow-pill); }
 .toast.wraps { align-items: flex-start; width: max-content; max-width: min(380px, calc(100% - 32px)); white-space: normal; border-radius: 20px; padding: 9px 7px 9px 9px; }
