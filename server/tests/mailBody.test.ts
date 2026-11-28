@@ -64,9 +64,16 @@ describe('GET /api/mail/messages/:id/body', () => {
     expect((await api.send('GET', `/api/mail/messages/${id}/body`)).headers.get('cache-control')).toBe('no-store');
   });
 
-  test('signing out clears what the browser kept', async () => {
+  // Signing out answers at once: the browser can take seconds over Clear-Site-Data, holding the
+  // answer that carries it, so the clearing has its own route, asked after, signed in or not.
+  test('signing out answers at once, and its own route clears what the browser kept', async () => {
     const {api} = await coffee();
-    expect((await api.send('POST', '/api/auth/sign-out')).headers.get('clear-site-data')).toBe('"cache"');
+    const out = await api.send('POST', '/api/auth/sign-out');
+    expect(out.status).toBe(204);
+    expect(out.headers.get('clear-site-data')).toBeNull();
+    const cleared = await api.send('POST', '/api/auth/clear-cache');
+    expect(cleared.status).toBe(204);
+    expect(cleared.headers.get('clear-site-data')).toBe('"cache"');
   });
 
   test('?quoted=fold leaves a reply\'s quoted history out, which the conversation says it has; an email with none shows in full', async () => {

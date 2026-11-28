@@ -1,25 +1,28 @@
 // Sign out at Settings' foot (SignOut.tsx) on its own: it asks in place of itself, with focus on the
 // question. On the desktop Esc cancels it and Enter answers it, the page seeing neither key, while a
 // held key's repeat, a modifier or a field's own Enter and Esc don't answer. Cancel puts focus back on
-// Sign out. Answered, Settings closes and the sign-out goes to the server. ⌘K's ask opens Settings
+// Sign out. Answered, Settings closes and the sign-out goes to the server, then the clearing of what
+// the browser kept, the sign-in card not waiting for that. ⌘K's ask opens Settings
 // asking, and another page cancels it. The phone asks the same way but leaves the keys alone. The
 // server is faked at `fetch`. Its look is by eye, and the journeys are the browser's (palette.spec.ts,
 // passkey.spec.ts, phoneShell.spec.ts).
 import {afterEach, expect, test, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
+import {useAuth} from '../../src/api/auth.ts';
 import {SignOut} from '../../src/app/settings/SignOut.tsx';
 import {askSignOut, closeSettings, openSettings, useSettingsPage, useSigningOut} from '../../src/app/settings/store.ts';
 
 const question = page.getByRole('group', {name: 'Sign out of Setpoint?'});
 const trigger = page.getByRole('button', {name: 'Sign out', exact: true});
 
-/** The sign-outs the page sent. */
+/** What the page sent. The clearing's answer never comes, as a browser can take seconds over it. */
 function server() {
   const sent: string[] = [];
-  vi.spyOn(window, 'fetch').mockImplementation(async input => {
+  vi.spyOn(window, 'fetch').mockImplementation(input => {
     sent.push(String(input));
-    return new Response(null, {status: 204});
+    if (String(input).endsWith('/clear-cache')) return new Promise<Response>(() => {});
+    return Promise.resolve(new Response(null, {status: 204}));
   });
   return sent;
 }
@@ -38,7 +41,8 @@ function press(key: string, on: Element = document.activeElement ?? document.bod
 function Around({phone = false}: {phone?: boolean}) {
   const settings = useSettingsPage();
   const asking = useSigningOut();
-  return <div data-page={settings ?? ''} data-asking={String(asking)}><SignOut phone={phone} /></div>;
+  const auth = useAuth();
+  return <div data-page={settings ?? ''} data-asking={String(asking)} data-auth={auth}><SignOut phone={phone} /></div>;
 }
 const around = () => document.querySelector<HTMLElement>('[data-page]')!.dataset;
 
@@ -71,7 +75,9 @@ test('Enter answers it once, not on a held key\'s repeat or with a modifier; Set
   await expect.element(question).toBeInTheDocument();
   expect(press('Enter')).toBe(false);
   await vi.waitFor(() => expect(around().page).toBe(''));
-  await vi.waitFor(() => expect(sent).toEqual(['/api/auth/sign-out']));
+  // Signed out with the clearing still on its way.
+  await vi.waitFor(() => expect(around().auth).toBe('out'));
+  expect(sent).toEqual(['/api/auth/sign-out', '/api/auth/clear-cache']);
 });
 
 test('a field keeps its own Enter and Esc while it asks', async () => {
@@ -98,7 +104,7 @@ test('Cancel and Sign out answer it by click', async () => {
   expect(sent).toEqual([]);
   await trigger.click();
   await question.getByRole('button', {name: /Sign out/}).click();
-  await vi.waitFor(() => expect(sent).toEqual(['/api/auth/sign-out']));
+  await vi.waitFor(() => expect(sent).toEqual(['/api/auth/sign-out', '/api/auth/clear-cache']));
 });
 
 test('⌘K\'s ask opens Settings asking, keeps an open page, and another page cancels it', async () => {
@@ -126,5 +132,5 @@ test('the phone asks the same way and leaves the keys to the page', async () => 
   expect(press('Escape')).toBe(true);
   await expect.element(question).toBeInTheDocument();
   await question.getByRole('button', {name: 'Sign out'}).click();
-  await vi.waitFor(() => expect(sent).toEqual(['/api/auth/sign-out']));
+  await vi.waitFor(() => expect(sent).toEqual(['/api/auth/sign-out', '/api/auth/clear-cache']));
 });

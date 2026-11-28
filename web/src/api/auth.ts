@@ -123,8 +123,13 @@ export async function signInWithPasskey(): Promise<void> {
   await enter();
 }
 
+/**
+ * Signs out, then asks the browser to clear what it kept (the email bodies) without waiting: a
+ * browser can take seconds over that answer, and the sign-in card shows meanwhile.
+ */
 export async function signOut() {
   await sendJson('POST', '/auth/sign-out');
   clearCache();
   set('out');
+  void sendJson('POST', '/auth/clear-cache', undefined, {quiet401: true, keepalive: true}).catch(() => {});
 }

@@ -276,7 +276,14 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     cancelPendingSignIn(store, readCookie(c, cookies.pending));
     clearCookie(c, cookies, 'session');
     clearCookie(c, cookies, 'pending');
-    // The email bodies the browser kept go with the session.
+    return c.body(null, 204);
+  });
+
+  // The email bodies the browser kept go with the session, asked for after sign-out answers: a
+  // browser can hold the answer that carries Clear-Site-Data for seconds while it clears. It clears
+  // only the asking browser's own copies, so it needs no session.
+  app.post('/api/auth/clear-cache', c => {
+    ownPage(c);
     c.header('Clear-Site-Data', '"cache"');
     return c.body(null, 204);
   });
